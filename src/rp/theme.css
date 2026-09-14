@@ -78,15 +78,17 @@ button, input { font: inherit; color: inherit; }
 @media (min-width: 1024px) { .rp-shell { grid-template-columns: 240px minmax(0, 1fr); } }
 .rp-top { position: sticky; top: 0; z-index: 2; grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 24px; padding: 0 24px; min-height: 64px; background: var(--rp-base); }
 @media (min-width: 1024px) { .rp-top { grid-template-columns: 216px minmax(0, 1fr) auto; } }
-.rp-brand { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 800; color: var(--rp-text); text-decoration: none; }
+.rp-brand { grid-column: 1; display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 800; color: var(--rp-text); text-decoration: none; }
 .rp-brand img { width: 28px; height: 28px; }
-.rp-search-wrap { display: none; justify-content: center; }
+.rp-search-wrap { grid-column: 2; display: none; justify-content: center; }
 @media (min-width: 1024px) { .rp-search-wrap { display: flex; } }
 .rp-search { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 500px; height: 40px; padding: 0 12px 0 14px; border: 1px solid var(--rp-hl-high); border-radius: 999px; background: var(--rp-surface); color: var(--rp-subtle); cursor: text; text-align: start; }
 .rp-search:hover, .rp-search[data-focus-visible] { border-color: var(--rp-muted); }
 .rp-search .grow { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .rp-kbd { font-size: 11px; padding: 2px 8px; border: 1px solid var(--rp-hl-high); border-radius: 999px; color: var(--rp-subtle); }
-.rp-actions { display: flex; align-items: center; gap: 4px; }
+.rp-actions { grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.rp-search-compact { display: inline-flex; }
+@media (min-width: 1024px) { .rp-search-compact { display: none; } }
 .rp-vrule { width: 2px; height: 32px; margin: 0 4px; background: var(--rp-hl-med); border-radius: 1px; }
 .rp-side { display: none; flex-direction: column; padding: 16px 12px 16px 24px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow: auto; }
 @media (min-width: 1024px) { .rp-side { display: flex; } }
