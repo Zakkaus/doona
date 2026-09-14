@@ -38,16 +38,16 @@ export function ConfigPage({query}: PageProps) {
         <div className="rp-col">
           <div className="rp-card">
             <Switch isSelected={edit} onChange={startEdit} isDisabled={!src.editable}>無損編輯</Switch>
-            <span className="rp-label">唯讀檢視預設遮罩機密（訂閱網址、密碼），遮罩文字永不寫回。開啟編輯才讀取原文（control 權限、no-store）。</span>
+            <span className="rp-label">唯讀檢視預設遮罩機密（訂閱網址、密碼），遮罩文字永不寫回。只有啟用編輯時才會讀取原文（control 權限、no-store）。</span>
           </div>
           <div className="rp-card">
             <h3 className="rp-h3">需重啟的項</h3>
             <div className="rp-list">{restartItems.map(k => <span key={k} className="rp-code">{k}</span>)}</div>
-            <span className="rp-label">監聽器、NFQUEUE、TProxy、DNS 綁定在啟動期決定；改這些 reload 不生效。</span>
+            <span className="rp-label">監聽器、NFQUEUE、TProxy、DNS 綁定在啟動期決定；修改這些項目後 reload 不會生效。</span>
           </div>
           <div className="rp-card">
             <h3 className="rp-h3">外部改動</h3>
-            <span className="rp-label">應用時用 If-Match r{runtime.diskRevision}；磁碟被別人改過就顯示衝突，不覆蓋。沒有自動 reload 開關。</span>
+            <span className="rp-label">套用時使用 If-Match r{runtime.diskRevision}；若磁碟已被其他程序修改則顯示衝突，不覆蓋。不提供自動 reload。</span>
           </div>
         </div>
       </div>

@@ -53,7 +53,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         <div className="rp-card"><span className="rp-tile-head"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.down)}</span><span className="rp-delta">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.pine} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.up)}</span><span className="rp-delta">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.rose} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{conns.length}</span><span className="rp-delta">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.iris} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, desc: n.alive ? n.tcp + ' ms' : t('act.timeout')}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta">↓ 12%</span>}</span><Light tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
+        <div className="rp-card"><span className="rp-tile-head"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, desc: n.alive ? n.tcp + ' ms' : t('act.timeout')}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
       </div>
 
       <div className="rp-g21">
@@ -79,7 +79,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.issues')}</span>{issues.length > 0 && <span className="rp-label">{issues.length}</span>}</span><Button quiet small onPress={() => go('overview')}>{t('act.viewAll')}</Button></div>
-          {issues.length === 0 ? <span className="rp-label">{t('act.noIssues')}</span> : <div className="rp-issues">{issues.map(i => <div key={i.text}><div className="rp-issue"><span className="lvl"><Light tone={i.level}>{lvl(i.level)}</Light></span><span className="txt">{i.text}</span></div></div>)}</div>}
+          {issues.length === 0 ? <span className="rp-label">{t('act.noIssues')}</span> : <div className="rp-issues">{issues.map(i => <div key={i.text}><div className="rp-issue"><span className="lvl"><Light small tone={i.level}>{lvl(i.level)}</Light></span><span className="txt">{i.text}</span></div></div>)}</div>}
         </div>
       </div>
     </>
