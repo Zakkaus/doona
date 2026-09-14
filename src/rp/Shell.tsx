@@ -96,7 +96,7 @@ function Frame({lang, pickLang, theme, setTheme, dark, route, go, openSearch, ma
           <Button quiet icon label={t('refresh')}><Refresh /></Button>
           <div className="rp-vrule" />
           <MenuButton quiet label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet label={t('theme')} value={theme} onChange={k => setTheme(k as Theme)} items={[{id: 'system', label: t('theme.system')}, {id: 'dawn', label: 'Dawn'}, {id: 'moon', label: 'Moon'}]}>{dark ? <Lighten /> : <Contrast />}</MenuButton>
+          <MenuButton quiet label={t('theme')} value={theme} onChange={k => setTheme(k as Theme)} items={[{id: 'system', label: t('theme.system')}, {id: 'dawn', label: 'Latte'}, {id: 'moon', label: 'Mocha'}]}>{dark ? <Lighten /> : <Contrast />}</MenuButton>
         </div>
       </header>
       <nav className="rp-side">
@@ -112,7 +112,7 @@ function Frame({lang, pickLang, theme, setTheme, dark, route, go, openSearch, ma
       <main className="rp-main">
         <div className="rp-content">
           <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
-          {route === 'activity' ? <Activity go={go} /> : <p className="rp-placeholder">Rosé Pine 版目前只做了活動頁。</p>}
+          {route === 'activity' ? <Activity go={go} /> : <p className="rp-placeholder">Catppuccin 版目前只做了活動頁。</p>}
         </div>
       </main>
     </div>
