@@ -19,7 +19,7 @@ export default defineConfig({
     target: ['es2022'],
     cssMinify: 'lightningcss',
     rollupOptions: {
-      input: {index: fileURLToPath(new URL('index.html', import.meta.url)), design: fileURLToPath(new URL('design.html', import.meta.url)), s2: fileURLToPath(new URL('s2-panel.html', import.meta.url))},
+      input: {index: fileURLToPath(new URL('index.html', import.meta.url)), design: fileURLToPath(new URL('design.html', import.meta.url)), themed: fileURLToPath(new URL('themed.html', import.meta.url))},
       output: {
         manualChunks(id) {
           if (/macro-(.*)\.css$/.test(id) || /@react-spectrum\/s2\/.*\.css$/.test(id)) {
