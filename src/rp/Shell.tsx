@@ -1,5 +1,5 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type ReactElement} from 'react';
 import {Button as RButton, Dialog, Modal, ModalOverlay, SearchField, Input, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
 import Search from '@react-spectrum/s2/icons/Search';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
@@ -22,18 +22,26 @@ import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
 import {Button, MenuButton} from './ui';
 import {Activity} from './Activity';
-import {Provider} from '@react-spectrum/s2';
-import {ToastContainer} from '@react-spectrum/s2/Toast';
 import Color from '@react-spectrum/s2/icons/Color';
-import {S2_LOCALE} from '../app/i18n';
-import {PAGES} from '../app/Shell';
+import {Overview} from './pages/Overview';
+import {Connections} from './pages/Connections';
+import {Clients} from './pages/Clients';
+import {Policies} from './pages/Policies';
+import {Rules} from './pages/Rules';
+import {Dns} from './pages/Dns';
+import {Resources} from './pages/Resources';
+import {ConfigPage} from './pages/ConfigPage';
+import {Events} from './pages/Events';
+import {Toasts} from './ui';
+import type {PageProps} from './pages/types';
+const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events};
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
 type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord';
 const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
-  {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn'}]},
-  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte'}]},
+  {title: 'Rosé Pine', items: [{id: 'rose-pine/moon', label: 'Moon', desc: '暗版較柔'}, {id: 'rose-pine/main', label: 'Main', desc: '暗版最深'}]},
+  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: '暗版最淺'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: '暗版'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: '暗版最深'}]},
   {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]}
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
@@ -92,21 +100,21 @@ export function Shell() {
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => { const on = () => setRoute(location.hash.replace(/^#\/?/, '').split('?')[0] || 'activity'); addEventListener('hashchange', on); return () => removeEventListener('hashchange', on); }, []);
   useEffect(() => { const on = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(true); } }; addEventListener('keydown', on); return () => removeEventListener('keydown', on); }, []);
-  const go = (p: string) => { location.hash = '#/' + p; };
+  const go = (p: string, q?: string) => { location.hash = '#/' + p + (q ? '?' + q : ''); };
   const pickLang = (l: Lang) => { setLang(l); try { localStorage.setItem('doona-lang', l); } catch { /* private mode */ } };
   const mac = navigator.platform.startsWith('Mac');
   return (
     <LangContext.Provider value={lang}>
       <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
+      <Toasts />
     </LangContext.Provider>
   );
 }
 
 function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();
-  const s2Page = PAGES[route];
-  const S2Page = route === 'activity' ? null : s2Page?.[1];
+  const Page = route === 'activity' ? null : PAGES[route];
   const titleKey = NAV.flatMap(([, items]) => items).find(([k]) => k === route)?.[1] ?? 'nav.activity';
   return (
     <div className="rp-shell">
@@ -135,7 +143,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
       <main className="rp-main">
         <div className="rp-content">
           <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
-          {S2Page ? <div className="rp-s2host"><Provider locale={S2_LOCALE[lang]} colorScheme={ap.dark ? 'dark' : 'light'} background="base" router={{navigate: (h: string) => { location.hash = h; }}}><ToastContainer /><S2Page go={go as never} query={location.hash.split('?')[1] ?? ''} /></Provider></div> : <Activity go={go} />}
+          {Page ? <Page go={go} query={location.hash.split('?')[1] ?? ''} /> : <Activity go={go} />}
         </div>
       </main>
     </div>
