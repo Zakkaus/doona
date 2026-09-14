@@ -79,7 +79,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.issues')}</span>{issues.length > 0 && <span className="rp-label">{issues.length}</span>}</span><Button quiet small onPress={() => go('overview')}>{t('act.viewAll')}</Button></div>
-          {issues.length === 0 ? <span className="rp-label">{t('act.noIssues')}</span> : <div>{issues.map((i, idx) => <div key={i.text}>{idx > 0 && <hr className="rp-hr" />}<div className="rp-issue"><span className="lvl"><Light tone={i.level}>{lvl(i.level)}</Light></span><span className="txt">{i.text}</span></div></div>)}</div>}
+          {issues.length === 0 ? <span className="rp-label">{t('act.noIssues')}</span> : <div className="rp-issues">{issues.map(i => <div key={i.text}><div className="rp-issue"><span className="lvl"><Light tone={i.level}>{lvl(i.level)}</Light></span><span className="txt">{i.text}</span></div></div>)}</div>}
         </div>
       </div>
     </>
