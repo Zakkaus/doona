@@ -219,11 +219,14 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.xl[data-selected] { background: var(--rp-pine); color: var(--rp-surface); }
 .rp-btn.xl .n { font-weight: 600; }
 .rp-btn.xl .n, .rp-btn.xl .s, .rp-member .n, .rp-member .s { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rp-btn.xl .s { font-size: 12px; line-height: 16px; font-weight: 400; opacity: 0.85; }
+.rp-btn.xl .s { font-size: 13px; line-height: 16px; font-weight: 400; }
+.rp-btn.xl:not([data-selected]) .s { color: var(--rp-subtle); }
+.rp-btn.xl[data-selected] .s { opacity: 0.9; }
 .rp-member { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 56px; padding: 8px 12px; border-radius: 8px; background: var(--rp-overlay); text-align: center; min-width: 0; }
 .rp-member.cur { background: color-mix(in srgb, var(--rp-pine) 14%, transparent); color: var(--rp-pine); }
 .rp-member .n { font-weight: 600; }
-.rp-member .s { font-size: 12px; line-height: 16px; }
+.rp-member .s { font-size: 13px; line-height: 16px; color: var(--rp-subtle); }
+.rp-member.cur .s { color: inherit; opacity: 0.9; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
 .rp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .rp-switch .track { width: 32px; height: 18px; border-radius: 9px; background: var(--rp-hl-high); position: relative; transition: background 150ms; flex-shrink: 0; }
