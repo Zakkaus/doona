@@ -1,6 +1,8 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
 import {useEffect, useState, type ReactElement} from 'react';
-import {Button as RButton, Dialog, Modal, ModalOverlay, SearchField, Input, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
+import {Button as RButton, Dialog, Modal, ModalOverlay, SearchField, Input, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
+import Close from '@react-spectrum/s2/icons/Close';
+import {toast} from './ui';
 import Search from '@react-spectrum/s2/icons/Search';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Translate from '@react-spectrum/s2/icons/Translate';
@@ -20,7 +22,7 @@ import logo from '../logo.svg';
 import GitHub from '../app/icons/GitHub';
 import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
-import {Button, MenuButton} from './ui';
+import {Button, MenuButton, Toasts} from './ui';
 import {Activity} from './Activity';
 import Color from '@react-spectrum/s2/icons/Color';
 import {Overview} from './pages/Overview';
@@ -32,7 +34,6 @@ import {Dns} from './pages/Dns';
 import {Resources} from './pages/Resources';
 import {ConfigPage} from './pages/ConfigPage';
 import {Events} from './pages/Events';
-import {Toasts} from './ui';
 import type {PageProps} from './pages/types';
 const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events};
 
@@ -66,7 +67,7 @@ function useAppearance() {
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
-  return <span className="rp-icon-stack"><Contrast UNSAFE_style={{opacity: dark ? 0 : 1, transform: dark ? 'rotate(-90deg) scale(0.5)' : 'rotate(0deg) scale(1)'}} /><Lighten UNSAFE_style={{opacity: dark ? 1 : 0, transform: dark ? 'rotate(0deg) scale(1)' : 'rotate(90deg) scale(0.5)'}} /></span>;
+  return <span className="rp-icon-stack" data-dark={dark || undefined}><Contrast UNSAFE_className="moon" /><Lighten UNSAFE_className="sun" /></span>;
 }
 
 function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, go: (p: string) => void}) {
@@ -82,7 +83,9 @@ function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, 
   return (
     <ModalOverlay className="rp-underlay" isOpen={open} onOpenChange={o => { if (!o) onClose(); }} isDismissable>
       <Modal><Dialog className="rp-dialog" aria-label={t('search')}>
-        <SearchField aria-label={t('search')} value={q} onChange={setQ} autoFocus className="rp-input"><Search /><Input placeholder={t('search')} /></SearchField>
+        <RButton className="rp-btn quiet icon close" onPress={onClose} aria-label={t('close')}><Close /></RButton>
+        <SearchField aria-label={t('search')} value={q} onChange={setQ} autoFocus className="rp-input lg"><Search /><Input placeholder={t('search')} /><RButton className="clear" aria-label={t('clear')}><Close /></RButton></SearchField>
+        {hits.conns.length + hits.nodes.length + hits.rules.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
         <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
           {hits.conns.length > 0 && <ListBoxSection id="conns"><Header className="rp-section-h">{t('nav.connections')}</Header>{hits.conns.map(c => <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item" textValue={c.host || c.dst}><span>{c.host || c.dst}</span><span className="desc">{c.chain.join(' → ')}</span></ListBoxItem>)}</ListBoxSection>}
           {hits.nodes.length > 0 && <ListBoxSection id="nodes"><Header className="rp-section-h">{t('search.nodes')}</Header>{hits.nodes.map(n => <ListBoxItem key={n} id={'node:' + n} className="rp-item" textValue={n}>{n}</ListBoxItem>)}</ListBoxSection>}
@@ -119,12 +122,12 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
   return (
     <div className="rp-shell">
       <header className="rp-top">
-        <a className="rp-brand" href="#/activity"><img src={logo} alt="" />doona</a>
+        <RLink className="rp-brand" href="#/activity"><img src={logo} alt="" />doona</RLink>
         <div className="rp-search-wrap"><RButton className="rp-search" onPress={openSearch}><Search /><span className="grow">{t('search')}</span><span className="rp-kbd">{mac ? '⌘K' : 'Ctrl K'}</span></RButton></div>
         <div className="rp-actions">
           <span className="rp-search-compact"><Button quiet icon label={t('search')} onPress={openSearch}><Search /></Button></span>
-          <Button quiet icon label={t('refresh')}><Refresh /></Button>
-          <div className="rp-vrule" />
+          <Button quiet icon label={t('refresh')} onPress={() => toast('positive', t('refreshed'))}><Refresh /></Button>
+          <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
           <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
@@ -134,11 +137,11 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         {NAV.map(([g, items]) => (
           <div key={g}>
             <div className="rp-group">{t(g as 'grp.status')}</div>
-            {items.map(([k, label, Icon]) => <a key={k} className="rp-nav" href={'#/' + k} aria-current={route === k ? 'page' : undefined}><Icon />{t(label as 'nav.activity')}</a>)}
+            {items.map(([k, label, Icon]) => <RLink key={k} className="rp-nav" href={'#/' + k} aria-current={route === k ? 'page' : undefined}><Icon />{t(label as 'nav.activity')}</RLink>)}
           </div>
         ))}
         <div className="rp-side-grow" />
-        <button className="rp-version" onClick={() => window.open('https://github.com/daeuniverse/honk', '_blank')}><GitHub />honk 0.9.3</button>
+        <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}><GitHub />honk 0.9.3</RButton>
       </nav>
       <main className="rp-main">
         <div className="rp-content">

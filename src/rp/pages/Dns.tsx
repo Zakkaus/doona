@@ -25,8 +25,8 @@ export function Dns(_: PageProps) {
             </>)}
           </div>
           <DataTable label="快取" height={292} rows={dnsCache}
-            cols={[{id: 'q', label: 'qname', isRowHeader: true}, {id: 't', label: 'qtype', width: 88}, {id: 'k', label: '正負', width: 80}, {id: 'u', label: '上游', width: 170}, {id: 'e', label: '過期', width: 100}, {id: 'a', label: '刪除', width: 64}]}
-            render={c => [<span className="rp-code">{c.qname}</span>, c.qtype, c.kind, c.upstream, c.expires, <Button quiet icon small label="刪這條快取" onPress={() => toast('positive', '已刪 ' + c.qname + ' ' + c.qtype)}><Delete /></Button>]} />
+            cols={[{id: 'q', label: 'qname', isRowHeader: true}, {id: 't', label: 'qtype', width: 88}, {id: 'k', label: '正負', width: 80}, {id: 'u', label: '上游', width: 170}, {id: 'e', label: '過期', width: 100, align: 'end'}, {id: 'a', label: '刪除', width: 64}]}
+            render={c => [<span className="rp-code">{c.qname}</span>, c.qtype, c.kind, c.upstream, c.expires, <Button quiet icon small label="刪除這筆快取" onPress={() => toast('positive', '已刪 ' + c.qname + ' ' + c.qtype)}><Delete /></Button>]} />
         </div>
         <div className="rp-card">
           <h3 className="rp-h3">flush</h3>
@@ -34,7 +34,7 @@ export function Dns(_: PageProps) {
           {scope === 'suffix' && <TextField label="後綴" defaultValue="bilibili.com" />}
           <span className="rp-label">{dnsCache.length} 條，正 3，負 2</span>
           <Button negative onPress={() => toast('positive', 'flush 完成，清除 ' + (scope === 'all' ? dnsCache.length : 2) + ' 條')}>flush</Button>
-          <span className="rp-label">列表與單刪要引擎補 GET / DELETE；現在只有整體 flush。查詢用 qname，不用 domain。</span>
+          <span className="rp-label">列表與逐筆刪除需引擎提供 GET / DELETE；目前僅支援整體 flush。查詢使用 qname，不使用 domain。</span>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import {useState} from 'react';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Data from '@react-spectrum/s2/icons/Data';
 import {groups, runtime, type Node} from '../../app/mock';
-import {Button, LabeledSelect, Light, Segmented, ToggleTile, toast} from '../ui';
+import {Badge, Button, LabeledSelect, Light, Segmented, ToggleTile, toast} from '../ui';
 import type {PageProps} from './types';
 
 const health = (n: Node) => n.alive ? 'TCP ' + n.tcp + ' ms，UDP ' + n.udp + ' ms' + (n.v6 ? '，v6' : '') : '逾時';
@@ -14,15 +14,15 @@ export function Policies({go}: PageProps) {
     <div className="rp-page">
       <div className="rp-toolbar">
         <Segmented label="出站模式" value={mode} onChange={k => { setMode(k); toast('positive', '出站模式已改為 ' + k); }} items={[['rule', '規則'], ['global', '全域'], ['direct', '直連']]} />
-        <LabeledSelect label="Global 目標" side value={target} onChange={setTarget} isDisabled={mode !== 'global'} items={groups.map(g => ({id: g.name, label: g.name}))} />
+        <LabeledSelect label="全域目標" side value={target} onChange={setTarget} isDisabled={mode !== 'global'} items={groups.map(g => ({id: g.name, label: g.name}))} />
         <Button onPress={() => go('resources')}><Data />訂閱來源</Button>
       </div>
-      <p className="rp-note">{mode === 'rule' ? '規則由上至下逐條測試，第一條命中的決定出站。' : 'must 與 block 規則在全域、直連下仍然終結。'}只有 selector 組能手選，其他組由策略自動決定。</p>
+      <p className="rp-note">{mode === 'rule' ? '規則由上至下逐條比對，第一條命中者決定出站。' : 'must 與 block 規則在全域、直連模式下仍然生效。'}只有 selector 組可手動選擇，其他組由策略自動決定。</p>
       <div className="rp-list">
         {groups.map(g => (
           <div key={g.name} className="rp-card">
             <div className="rp-row">
-              <span className="rp-cluster"><h3 className="rp-h3">{g.name}</h3><span className="rp-label">{g.policy}</span><Light tone="ok">解析到 {g.policy === 'selector' ? sel[g.name] || g.leaf : g.leaf}</Light></span>
+              <span className="rp-cluster"><h3 className="rp-h3">{g.name}</h3><Badge>{g.policy}</Badge><Light small tone="ok">解析到 {g.policy === 'selector' ? sel[g.name] || g.leaf : g.leaf}</Light></span>
               <Button small onPress={() => toast('positive', g.name + ' 測試完成，' + g.nodes.filter(n => !n.alive).map(n => n.name + ' 逾時').join('，'))}><Refresh />測試全部</Button>
             </div>
             <div className="rp-nodes">

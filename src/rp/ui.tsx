@@ -44,8 +44,8 @@ export function InlineSelect({items, value, onChange, label}: {items: Array<{id:
     </Select>
   );
 }
-export function Light({tone, children}: {tone: 'ok' | 'warn' | 'err' | 'info', children: ReactNode}) {
-  return <span className={cx('rp-light', tone)}>{children}</span>;
+export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info', children: ReactNode, small?: boolean}) {
+  return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
 export function Bar({label, value, pct, color}: {label: string, value: string, pct: number, color: string}) {
   return <div className="rp-bar"><div className="top"><span className="l">{label}</span><span className="v">{value}</span></div><div className="track"><div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} /></div></div>;
@@ -85,15 +85,15 @@ export function ToggleTile({selected, onPress, name, sub}: {selected: boolean, o
 }
 
 // Table: fixed height, scrolls, optional single selection.
-export type Col = {id: string, label: string, width?: number, isRowHeader?: boolean};
+export type Col = {id: string, label: string, width?: number, isRowHeader?: boolean, align?: 'end'};
 export function DataTable<T extends {id: string}>({label, cols, rows, render, height = 442, selected, onSelect, empty}: {label: string, cols: Col[], rows: T[], render: (r: T) => ReactNode[], height?: number, selected?: string | null, onSelect?: (id: string | null) => void, empty?: string}) {
   const keys: Selection = selected ? new Set([selected]) : new Set();
   return (
     <div className="rp-table" style={{height}}>
       <Table aria-label={label} selectionMode={onSelect ? 'single' : 'none'} selectedKeys={keys} onSelectionChange={k => onSelect && onSelect(k === 'all' ? null : (k.size ? String([...k][0]) : null))} disallowEmptySelection={!!onSelect}>
-        <TableHeader>{cols.map(c => <Column key={c.id} id={c.id} isRowHeader={c.isRowHeader} style={c.width ? {width: c.width} : undefined}>{c.label}</Column>)}</TableHeader>
+        <TableHeader>{cols.map(c => <Column key={c.id} id={c.id} isRowHeader={c.isRowHeader} className={c.align === 'end' ? 'end' : undefined} style={c.width ? {width: c.width} : undefined}>{c.label}</Column>)}</TableHeader>
         <TableBody items={rows} renderEmptyState={() => <div className="empty">{empty ?? ''}</div>}>
-          {r => <Row id={r.id}>{render(r).map((cell, i) => <Cell key={cols[i].id}>{cell}</Cell>)}</Row>}
+          {r => <Row id={r.id}>{render(r).map((cell, i) => <Cell key={cols[i].id} className={cols[i].align === 'end' ? 'end' : undefined}>{cell}</Cell>)}</Row>}
         </TableBody>
       </Table>
     </div>
@@ -101,20 +101,20 @@ export function DataTable<T extends {id: string}>({label, cols, rows, render, he
 }
 
 // Dialogs
-export function ModalDialog({trigger, title, children, footer, narrow}: {trigger: ReactElement, title: string, children: ReactNode | ((close: () => void) => ReactNode), footer?: (close: () => void) => ReactNode, narrow?: boolean}) {
+export function ModalDialog({trigger, title, children, footer, narrow, alert}: {trigger: ReactElement, title: string, children: ReactNode | ((close: () => void) => ReactNode), footer?: (close: () => void) => ReactNode, narrow?: boolean, alert?: boolean}) {
   return (
     <DialogTrigger>
       {trigger}
-      <ModalOverlay className="rp-underlay" isDismissable><Modal><Dialog className={cx('rp-dialog', narrow && 'narrow')}>
+      <ModalOverlay className="rp-underlay" isDismissable={!alert}><Modal><Dialog className={cx('rp-dialog', narrow && 'narrow')} role={alert ? 'alertdialog' : 'dialog'}>
         {({close}) => <><Heading slot="title">{title}</Heading>{typeof children === 'function' ? children(close) : children}{footer && <div className="foot">{footer(close)}</div>}</>}
       </Dialog></Modal></ModalOverlay>
     </DialogTrigger>
   );
 }
-export function Tabs({tabs, children}: {tabs: Array<[string, string]>, children: (id: string) => ReactNode}) {
+export function Tabs({tabs, children, label}: {tabs: Array<[string, string]>, children: (id: string) => ReactNode, label: string}) {
   return (
     <RTabs className="rp-tabs">
-      <RTabList className="rp-tablist">{tabs.map(([id, l]) => <RTab key={id} id={id} className="rp-tab">{l}</RTab>)}</RTabList>
+      <RTabList className="rp-tablist" aria-label={label}>{tabs.map(([id, l]) => <RTab key={id} id={id} className="rp-tab">{l}</RTab>)}</RTabList>
       {tabs.map(([id]) => <RTabPanel key={id} id={id}>{children(id)}</RTabPanel>)}
     </RTabs>
   );
