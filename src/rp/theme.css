@@ -133,8 +133,7 @@ button, input { font: inherit; color: inherit; }
 .rp-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: var(--rp-overlay); color: var(--rp-text); cursor: pointer; font-weight: 500; white-space: nowrap; }
 .rp-btn:hover { background: var(--rp-hl-med); }
 .rp-btn[data-pressed] { background: var(--rp-hl-high); }
-.rp-btn[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: 1px; }
-.rp-group-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rp-btn[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: 2px; }
 .rp-btn.quiet { background: transparent; }
 .rp-btn.quiet:hover { background: var(--rp-hl-low); }
 .rp-btn.sm { height: 28px; padding: 0 8px; font-size: 13px; line-height: 20px; }
@@ -281,6 +280,7 @@ button, input { font: inherit; color: inherit; }
 @media (min-width: 1024px) { .rp-check { grid-template-columns: 200px minmax(0, 1fr) auto; } }
 .rp-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .rp-fail { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rp-hl-med); }
+.rp-group-btns { display: flex; gap: 4px; flex-wrap: wrap; }
 .rp-table .rp-group-btns { flex-wrap: nowrap; }
 .rp-table [role='gridcell']:has(.rp-group-btns) { overflow: visible; }
 .rp-kv.inline { display: flex; gap: 24px; flex-wrap: wrap; }
