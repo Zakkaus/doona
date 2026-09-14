@@ -32,7 +32,8 @@ export function Dns(_: PageProps) {
           <h3 className="rp-h3">flush</h3>
           <LabeledSelect label="範圍" value={scope} onChange={setScope} items={[{id: 'all', label: '全部'}, {id: 'neg', label: '只清負快取'}, {id: 'expired', label: '只清已過期'}, {id: 'suffix', label: 'qname 後綴'}]} />
           {scope === 'suffix' && <TextField label="後綴" defaultValue="bilibili.com" />}
-          <div className="rp-between"><span className="rp-label">{dnsCache.length} 條，正 3，負 2</span><Button negative onPress={() => toast('positive', 'flush 完成，清除 ' + (scope === 'all' ? dnsCache.length : 2) + ' 條')}>flush</Button></div>
+          <span className="rp-label">{dnsCache.length} 條，正 3，負 2</span>
+          <Button negative onPress={() => toast('positive', 'flush 完成，清除 ' + (scope === 'all' ? dnsCache.length : 2) + ' 條')}>flush</Button>
           <span className="rp-label">列表與單刪要引擎補 GET / DELETE；現在只有整體 flush。查詢用 qname，不用 domain。</span>
         </div>
       </div>

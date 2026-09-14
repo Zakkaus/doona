@@ -142,7 +142,7 @@ export function LogLine({text}: {text: string}) {
   const m = text.match(/^\[(\w+)\]\s?(.*)$/);
   if (!m) return <span>{text}</span>;
   const cls = m[1] === 'WARN' ? 'rp-lv-warn' : m[1] === 'ERROR' ? 'rp-lv-err' : 'rp-lv-info';
-  return <span><span className={cls}>{m[1].padEnd(5)}</span>  {m[2]}</span>;
+  return <span><span className={'rp-lv ' + cls}>{m[1]}</span>{m[2]}</span>;
 }
 
 // Toasts: a tiny queue, rendered once by the shell.
