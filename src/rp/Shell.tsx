@@ -6,7 +6,7 @@ import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Translate from '@react-spectrum/s2/icons/Translate';
 import Contrast from '@react-spectrum/s2/icons/Contrast';
 import Lighten from '@react-spectrum/s2/icons/Lighten';
-import GraphTrend from '@react-spectrum/s2/icons/ChartTrend';
+import GraphTrend from '@react-spectrum/s2/icons/SpeedFast';
 import Home from '@react-spectrum/s2/icons/Home';
 import Link from '@react-spectrum/s2/icons/Link';
 import Devices from '@react-spectrum/s2/icons/DeviceAll';
