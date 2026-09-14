@@ -34,16 +34,16 @@ export function Connections({go, query}: PageProps) {
             <h3 className="rp-h3">{cur.host || cur.dst}</h3>
             <Light tone={cur.plane === '拒絕' ? 'err' : 'ok'}>{cur.plane === '拒絕' ? '已拒絕' : cur.plane + '轉發'}，{cur.proto.toUpperCase()}{cur.host ? '，' + cur.dst : ''}</Light>
             <Kv items={[['來源', cur.src], ['MAC', cur.mac || '未知'], ['規則', cur.rule], ['引用', cur.ruleRef || '無'], ['選擇鏈', cur.chain.join(' → ')], ['流量', '上傳 ' + cur.up + '，下載 ' + cur.down], ['追蹤', cur.age]]} />
-            <div className="rp-group-btns">
-              <Button small onPress={() => go('rules')}><ListBulleted />規則</Button>
-              <Button small onPress={() => go('clients')}><DeviceAll />客戶端</Button>
-            </div>
             <div className="rp-col">
-              <RuleDialog trigger={<Button accent>加規則</Button>} presets={[
+              <div className="rp-group-btns">
+                <RuleDialog trigger={<Button accent>加規則</Button>} presets={[
                 ...(cur.host ? [{label: '域名 ' + cur.host, cond: 'domain(full: ' + cur.host + ')'}] : []),
                 {label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '') + ')'},
                 {label: '來源 ' + cur.src, cond: 'sip(' + cur.src + ')'},
                 ...(cur.mac ? [{label: 'MAC ' + cur.mac, cond: 'mac(' + cur.mac + ')'}] : [])]} />
+                <Button onPress={() => go('rules')}><ListBulleted />規則</Button>
+                <Button onPress={() => go('clients')}><DeviceAll />客戶端</Button>
+              </div>
               {cur.chain[0] === proxy.name && <LabeledSelect label={proxy.name + ' 的選擇（只影響後續撥號）'} value={proxy.selected ?? proxy.members[0]} onChange={k => toast('positive', proxy.name + ' 改選 ' + k + '，已持久化')} items={proxy.members.map(m => ({id: m, label: m}))} />}
               <Button negative isDisabled={!cur.canTerminate} tip={cur.canTerminate ? undefined : cur.plane === '拒絕' ? '沒有連線可中止' : '這條流在內核轉發，honk 不能中止它'} onPress={() => toast('positive', '已中止 ' + (cur.host || cur.dst))}>中止這條連線</Button>
             </div>
