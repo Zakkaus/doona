@@ -1,0 +1,16 @@
+node_modules
+dist
+# agent tooling state
+.agents
+.claude
+.grok
+.pi
+.reasonix
+skills-lock.json
+# staged copies of build output for sharing
+artifact/assets
+artifact/dist
+artifact/files.json
+artifact/doona.html
+artifact/doona-s2.html
+artifact/panel.html

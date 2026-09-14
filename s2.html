@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>doona 設計語言 · Spectrum 2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="vendor/noto-tc.css">
+<link rel="stylesheet" href="vendor/s2.css">
+<style>
+  html, body { margin: 0; min-height: 100%; }
+  /* S2 sets CJK weights and line-heights itself; only its zh font stack (Adobe Clean Han, absent) needs replacing. */
+  [lang="zh-TW"] :lang(zh), [lang="zh-TW"][lang], [lang="zh-TW"] input, [lang="zh-TW"] textarea, [lang="zh-TW"] button, #root { -webkit-font-smoothing: auto; font-family: "Noto Sans TC Balanced", "Noto Sans TC", adobe-clean-spectrum-vf, sans-serif; }
+  /* Shell copied from react-spectrum.adobe.com: grey ground, top bar, SideNav on the ground, one white panel with a 16px radius. */
+  .shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: 64px 1fr; min-height: 100vh; }
+  .topbar { grid-column: 1 / -1; display: grid; grid-template-columns: 236px minmax(280px, 640px) auto 1fr; align-items: center; gap: 24px; padding: 0 24px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+  .brand i { width: 28px; height: 28px; border-radius: 8px; background: var(--s2-accent, #2680eb); display: inline-block; }
+  .topbar .search { min-width: 0; }
+  .topbar .links { display: flex; align-items: center; gap: 16px; font-size: 15px; }
+  .sidebar { padding: 8px 12px 40px 20px; position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 64px); overflow: auto; }
+  .panel { margin: 0 24px 40px 0; border-radius: 16px; padding: 56px 48px 80px; min-width: 0; }
+  .panel-inner { max-width: 1040px; }
+  .doc { color: light-dark(rgb(34, 34, 34), rgb(235, 235, 235)); }
+  h1.title { font-size: 56px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 24px; }
+  .lead { font-size: 20px; line-height: 1.6; max-width: 40em; margin: 0 0 40px; }
+  section { margin-top: 72px; scroll-margin-top: 80px; }
+  section h2 { font-size: 28px; line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 12px; }
+  section .note { font-size: 16px; line-height: 1.8; max-width: 38em; margin: 0 0 24px; opacity: .85; }
+  .well { border-radius: 12px; padding: 40px; background: light-dark(rgb(245, 245, 245), rgb(34, 34, 34)); }
+  .well + .well { margin-top: 16px; }
+  .well.tight { padding: 8px; }
+  .frame .grid3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .frame .grid3 .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .frame .grid2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .frame { display: grid; grid-template-columns: 200px 1fr; height: 760px; border-radius: 12px; overflow: hidden; background: light-dark(#fff, #1d1d1d); }
+  .frame .side { border-right: 1px solid rgba(128,128,128,.25); padding: 12px 8px; overflow: auto; }
+  .frame .main { padding: 24px 32px; overflow: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .grid3 > *, .grid2 > *, .split > *, .swatches > * { min-width: 0; width: 100%; max-width: none; box-sizing: border-box; }
+  .grid2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+  .split { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; align-items: start; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 40px; }
+  .facts > * { width: auto; flex: none; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .num { font-size: 28px; line-height: 1.3; font-weight: 700; }
+  .code { font-family: source-code-pro, "SF Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.7; }
+  [role="gridcell"] .code, [role="rowheader"] .code { font-size: 13px; line-height: 1; }
+  .spark { width: 100%; height: 56px; display: block; margin-top: auto; }
+  .ln { display: grid; grid-template-columns: 48px 1fr; white-space: pre; font-family: source-code-pro, "SF Mono", ui-monospace, monospace; font-size: 12px; line-height: 24px; }
+  .ln > span:first-child { text-align: right; padding-right: 12px; opacity: .5; user-select: none; }
+  .nodes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .wide { width: 100%; max-width: none; box-sizing: border-box; }
+  .ln { overflow: hidden; text-overflow: ellipsis; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .skel h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+  .skel p { margin: 0; font-size: 14px; line-height: 1.8; opacity: .8; }
+  .sect-gap { display: flex; flex-direction: column; gap: 24px; }
+  .codeblock { position: relative; background: light-dark(#fff, #1d1d1d); border-radius: 12px; padding: 20px 20px 20px 8px; }
+  .codeblock .acts { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; background: light-dark(#fff, #2a2a2a); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.14); padding: 2px; }
+  .ln { font-size: 14px; line-height: 26px; }
+  .kw { color: light-dark(#d7263d, #ff7b86); } .fn { color: light-dark(#d7263d, #ff7b86); } .str { color: light-dark(#b45309, #ffb84d); } .arg { color: light-dark(#0f6b8b, #4cc2ff); } .cmt { color: light-dark(#8a8a8a, #9a9a9a); } .out { color: light-dark(#0f6b8b, #4cc2ff); font-weight: 600; }
+  table.spec { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.spec th, table.spec td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(128,128,128,.25); vertical-align: top; }
+  table.spec th { font-size: 12px; opacity: .7; }
+  @media (max-width: 1500px) { .split { grid-template-columns: 1fr; } }
+  .nav-picker { display: none; }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .topbar { flex-wrap: wrap; padding: 12px 16px; height: auto; }
+    .topbar .links { margin-left: 0; }
+    .sidebar { display: none; }
+    .panel { margin: 0 12px 24px; padding: 28px 20px 48px; border-radius: 12px; }
+    h1.title { font-size: 36px; }
+    .lead { font-size: 17px; }
+    .well { padding: 16px; }
+    .frame { grid-template-columns: 1fr; height: auto; }
+    .frame .side { display: none; }
+    .frame .main { padding: 16px; }
+    .nav-picker { display: block; }
+    .grid3, .grid2, .split { grid-template-columns: 1fr; }
+    .nodes { grid-template-columns: 1fr 1fr; }
+    .grid3 .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+    .between { flex-wrap: wrap; }
+    }
+  html, body { overflow-x: hidden; }
+</style>
+<body>
+<div id="root"></div>
+<script data-errcatch>window.addEventListener("error",e=>{var r=document.getElementById("root");if(!r.children.length)r.textContent="ERR "+e.message+" @"+(e.filename||"")+":"+e.lineno;});</script>
+<script type="module">
+import { S, I, React, createRoot, htm } from './vendor/s2.js';
+const { useState } = React;
+const h = htm.bind(React.createElement);
+const { Provider, Heading, Text, Content, Divider, Button, ActionButton, ActionButtonGroup, ToggleButton, ToggleButtonGroup, SegmentedControl, SegmentedControlItem, Switch, Checkbox, Picker, PickerItem, TextField, SearchField, TableView, TableHeader, TableBody, Column, Row, Cell, StatusLight, Badge, Meter, ProgressBar, DialogTrigger, Dialog, ButtonGroup, TooltipTrigger, Tooltip, InlineAlert, Form, Card, SideNav, SideNavItem, SideNavItemContent, SideNavSection, SideNavHeader, ToastContainer, ToastQueue, Link, LabeledValue, Skeleton } = S;
+
+const UP = [[0,40],[20,34],[40,36],[60,22],[80,26],[100,18],[120,24],[140,12],[160,20],[180,16],[200,14]];
+const Spark = ({ pts, color }) => { const d = pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + y).join(' '); return h`<svg class="spark" viewBox="0 0 200 46" preserveAspectRatio="none"><path d=${d + ' L200 46 L0 46 Z'} fill=${color} opacity="0.12" /><path d=${d} fill="none" stroke=${color} stroke-width="1.5" /><circle cx="200" cy=${pts[10][1]} r="2.5" fill=${color} /></svg>`; };
+const Sect = ({ id, title, note, tight, children }) => h`<section id=${id}><h2>${title}</h2>${note && h`<p class="note">${note}</p>`}${children && h`<div class=${'well' + (tight ? ' tight' : '')}>${children}</div>`}</section>`;
+const Spec = ({ cols, rows }) => h`<table class="spec"><thead><tr>${cols.map(c => h`<th key=${c}>${c}</th>`)}</tr></thead><tbody>${rows.map((r, i) => h`<tr key=${i}>${r.map((c, j) => h`<td key=${j}>${j === 0 ? h`<span class="code">${c}</span>` : c}</td>`)}</tr>`)}</tbody></table>`;
+const Lbl = ({ children }) => h`<${Text} UNSAFE_style=${{ fontSize: 12, opacity: .75 }}>${children}<//>`;
+const toast = (k, m) => ToastQueue[k](m, { timeout: 4000 });
+const esc = x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const hl = t => { const e = esc(t); if (/^\s*#/.test(t)) return `<span class="cmt">${e}</span>`; return e.replace(/^(\s*)(routing|fallback)/, '$1<span class="kw">$2</span>').replace(/\b(domain|dip|sip|pname|dport|l4proto|mac|ipversion)\(/g, '<span class="fn">$1</span>(').replace(/\(([^()]*?)\)/g, (m, a) => '(<span class="str">' + a + '</span>)').replace(/-&gt; (\w+)(\(must\))?/, '-&gt; <span class="out">$1$2</span>').replace(/: (resilient|proxy|direct|block)$/, ': <span class="out">$1</span>'); };
+
+const NAV = [[null, [['activity', '活動', I.ChartTrend], ['overview', '概覽', I.Home]]], ['網路', [['conns', '連線', I.LinkV], ['clients', '客戶端', I.DeviceAll]]], ['代理', [['policies', '策略', I.Share], ['rules', '規則', I.ListBulleted], ['dns', 'DNS', I.GlobeGrid]]], ['系統', [['resources', '資源', I.Data], ['config', '配置', I.FileText], ['events', '事件', I.History]]]];
+
+function Nav({ route, go }) {
+  return h`<${SideNav} aria-label="導覽" selectedRoute=${'#' + route}>
+    ${NAV.map(([grp, items]) => grp
+      ? h`<${SideNavSection} key=${grp}><${SideNavHeader}>${grp}<//>${items.map(([k, label, Icon]) => h`<${SideNavItem} key=${k} id=${k} href=${'#' + k} textValue=${label}><${SideNavItemContent}><${Icon} /><${Text}>${label}<//><//><//>`)}<//>`
+      : items.map(([k, label, Icon]) => h`<${SideNavItem} key=${k} id=${k} href=${'#' + k} textValue=${label}><${SideNavItemContent}><${Icon} /><${Text}>${label}<//><//><//>`))}
+  <//>`;
+}
+
+function Frame({ scheme }) {
+  const [route, setRoute] = useState('activity');
+  return h`<${Provider} colorScheme=${scheme} router=${{ navigate: href => setRoute(href.replace('#', '')) }}>
+    <div class="frame">
+      <div class="side"><${Nav} route=${route} go=${setRoute} /></div>
+      <div class="main">
+        <div class="between">
+          <${Heading} level=${1} UNSAFE_style=${{ margin: 0 }}>${{ activity: '活動', overview: '概覽', conns: '連線', clients: '客戶端', policies: '策略', rules: '規則', dns: 'DNS', resources: '資源', config: '配置', events: '事件' }[route]}<//>
+          <div class="row"><div class="nav-picker"><${Picker} aria-label="頁面" selectedKey=${route} onSelectionChange=${k => setRoute(String(k))}>${NAV.flatMap(([g, items]) => items).map(([k, label]) => h`<${PickerItem} key=${k} id=${k}>${label}<//>`)}<//></div><${SearchField} aria-label="搜尋" placeholder="搜尋連線、節點、規則" /><${ActionButton} aria-label="設定"><${I.Settings} /><//></div>
+        </div>
+        <div class="row"><${StatusLight} variant="notice"><${Text}>nfqueue 未就緒 · nfnetlink_queue 未載入<//><//><${Link} href="#overview"><${Text}>看檢查<//><//></div>
+        <div class="facts">${[['配置', '/etc/honk/config.dae'], ['出站模式', '規則 · Global → proxy'], ['datapath', 'eBPF · wan0 · lan0'], ['執行', '3 天 4 小時']].map(([k, v]) => h`<${LabeledValue} key=${k} label=${k} value=${v} />`)}</div>
+        <div class="grid3">
+          <${Card} variant="secondary" size="M"><div class="col"><div class="between"><${Lbl}>探測 · hk-01<//><${ActionButton} isQuiet size="S" onPress=${() => toast('positive', '探測完成 · TCP 39 ms · HTTP 121 ms · UDP DNS 9 ms')}><${I.Refresh} /><${Text}>重測<//><//></div><span class="num">126 <${Lbl}>ms<//></span><div class="grid3">${[['TCP 連線', '41 ms'], ['HTTP', '126 ms'], ['UDP DNS', '9 ms']].map(([k, v]) => h`<${LabeledValue} key=${k} label=${k} value=${v} />`)}</div></div><//>
+          <${Card} variant="secondary" size="M"><div class="col" style=${{ height: '100%' }}><div class="between"><${Lbl}>上傳<//><${StatusLight} variant="positive" size="S"><${Text}>wan0<//><//></div><span class="num">312 <${Lbl}>KB/s<//></span><${Spark} pts=${UP} color="var(--s2-accent, #2680eb)" /></div><//>
+          <${Card} variant="secondary" size="M"><div class="col" style=${{ height: '100%' }}><div class="between"><${Lbl}>下載<//><${StatusLight} variant="positive" size="S"><${Text}>wan0<//><//></div><span class="num">4.8 <${Lbl}>MB/s<//></span><${Spark} pts=${UP} color="#1ba0d7" /></div><//>
+        </div>
+        <div class="grid2">
+          <${Card} variant="secondary" size="M"><div class="col"><div class="between"><${Lbl}>流量 · 本次觀察 12 分鐘<//><${SegmentedControl} aria-label="範圍" defaultSelectedKey="all"><${SegmentedControlItem} id="all"><${Text}>全部<//><//><${SegmentedControlItem} id="proxy"><${Text}>僅代理<//><//><//></div><${Spark} pts=${UP} color="#1ba0d7" /><${Spark} pts=${UP} color="var(--s2-accent, #2680eb)" /></div><//>
+          <${Card} variant="secondary" size="M"><div class="col"><div class="between"><${Lbl}>活動連線<//><${Link} href="#conns"><${Text}>全部 47<//><//></div><div class="grid3">${[['內核', '39'], ['userspace', '8'], ['客戶端', '6']].map(([k, v]) => h`<${LabeledValue} key=${k} label=${k} value=${v} />`)}</div><${Meter} label="proxy → hk-01" value=${61} size="S" /><${Meter} label="direct" value=${35} variant="positive" size="S" /><${Meter} label="block" value=${4} variant="negative" size="S" /></div><//>
+        </div>
+      </div>
+    </div>
+  <//>`;
+}
+
+function Doc() {
+  const hostTheme = document.documentElement.getAttribute('data-theme');
+  const [sec, setSec] = useState(location.hash.slice(1) || 'pos');
+  React.useEffect(() => { const f = () => setSec(location.hash.slice(1) || 'pos'); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
+  const [scheme, setScheme] = useState(() => { try { return localStorage.getItem('doona-s2') || 'light dark'; } catch (e) { return 'light dark'; } });
+  const effective = scheme === 'light dark' && (hostTheme === 'dark' || hostTheme === 'light') ? hostTheme : scheme;
+  const pick = s => { setScheme(s); try { localStorage.setItem('doona-s2', s); } catch (e) {} };
+  const [sel, setSel] = useState(new Set(['2']));
+  const [node, setNode] = useState(new Set(['hk-01']));
+  const conns = [{ id: '1', dst: 'api.telegram.org:443', src: '10.0.0.12', out: 'proxy → hk-01', path: 'userspace', bytes: '1.2 MB', age: '4m 12s' }, { id: '2', dst: 'cdn.bilibili.com:443', src: '10.0.0.7', out: 'direct', path: '內核', bytes: '84 MB', age: '12m 03s' }, { id: '3', dst: '52.84.19.3:443', src: '10.0.0.7', out: 'proxy → hk-01', path: '內核', bytes: '312 KB', age: '18s' }, { id: '4', dst: 'doubleclick.net:443', src: '10.0.0.31', out: 'block', path: '拒絕', bytes: '0', age: '—' }, { id: '5', dst: '1.1.1.1:53 (udp)', src: '10.0.0.12', out: 'direct(must)', path: '內核', bytes: '2 KB', age: '1s' }];
+  const rules = [['1', 'domain(suffix: doubleclick.net)', 'block', '', 'config.dae:38', '廣告'], ['2', 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', 'direct', 'must', 'config.dae:39', ''], ['3', 'dip(geoip: private)', 'direct', 'must', 'config.dae:40', 'LAN'], ['4', 'domain(geosite: cn)', 'direct', '', 'config.dae:41', ''], ['5', 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', 'direct', '', 'rules.dae:3', '電視'], ['—', 'fallback', 'resilient', '', 'config.dae:44', '']];
+
+  return h`<${Provider} colorScheme=${effective} locale="zh-TW" background="layer-1">
+    <${ToastContainer} />
+    <div class="doc shell">
+      <div class="topbar">
+        <div class="brand"><i></i>doona</div>
+        <div class="search"><${SearchField} aria-label="搜尋" placeholder="搜尋設計語言" /></div>
+        <div class="links"><${ActionButtonGroup} isQuiet>${[['spec','規範'],['controls','元件'],['skeleton','頁面骨架']].map(([k,l]) => h`<${ActionButton} key=${k} isQuiet onPress=${() => { location.hash = k; }}><${Text}>${l}<//><//>`)}<//><${Divider} orientation="vertical" size="S" UNSAFE_style=${{ height: 24 }} /><${TooltipTrigger}><${ActionButton} isQuiet aria-label="切換主題" onPress=${() => pick(scheme === 'light dark' ? 'light' : scheme === 'light' ? 'dark' : 'light dark')}><${I.Contrast} /><//><${Tooltip}>主題：${scheme === 'light dark' ? '跟隨系統' : scheme === 'light' ? '亮' : '暗'}<//><//></div>
+      </div>
+      <nav class="sidebar">
+        <${SideNav} aria-label="目錄" selectedRoute=${'#' + sec}>
+          <${SideNavSection}><${SideNavHeader}>設計語言<//>${[['pos','定位'],['shell','應用骨架'],['spec','規範'],['color','色彩']].map(([k,l]) => h`<${SideNavItem} key=${k} id=${k} href=${'#'+k} textValue=${l}><${SideNavItemContent}><${Text}>${l}<//><//><//>`)}<//>
+          <${SideNavSection}><${SideNavHeader}>元件<//>${[['controls','控件'],['conns','連線與就地操作'],['policies','策略'],['rules','規則表'],['config','配置編輯器']].map(([k,l]) => h`<${SideNavItem} key=${k} id=${k} href=${'#'+k} textValue=${l}><${SideNavItemContent}><${Text}>${l}<//><//><//>`)}<//>
+          <${SideNavSection}><${SideNavHeader}>產品<//>${[['skeleton','頁面骨架']].map(([k,l]) => h`<${SideNavItem} key=${k} id=${k} href=${'#'+k} textValue=${l}><${SideNavItemContent}><${Text}>${l}<//><//><//>`)}<//>
+        <//>
+      </nav>
+      <${Provider} background="base" UNSAFE_className="panel"><div class="panel-inner">
+      <h1 class="title">doona 設計語言</h1>
+      <p class="lead">honk 的控制面板，用 Adobe Spectrum 2 做。色、字、間距、圓角、控件尺寸與亮暗都由它決定；這裡只決定怎麼組合，每一節先寫用了哪個元件，再放實樣。</p>
+      <${Sect} id="pos" title="定位" note="對象是一台 Linux 網關上的 honk。使用者一天開幾次，每次為了一件事：看某條流為什麼走了那裡、給它加一條規則、換一個節點、改配置後 reload。介面照 Surge 的骨架與操作邏輯：左欄導覽、物件在哪就在哪操作、狀態用同一組語義色說話。" />
+
+      <${Sect} id="shell" title="應用骨架" tight note="真的 S2 SideNav（分區、圖標、選中態）加內容區；工具列是 SearchField 與 ActionButton；警告是 StatusLight 加 Link；事實列用 LabeledValue；卡片是 S2 Card secondary；數值條是 Meter。點左欄會切換標題。">
+        <${Frame} scheme=${effective} />
+      <//>
+
+      <${Sect} id="spec" title="規範：S2 的尺寸" note="S2 的間距與尺寸內建在元件裡，頁面佈局只用它的間距步進：4、8、12、16、24、32、40。">
+        <${Spec} cols=${['項', '值', '用在']} rows=${[['Button / ActionButton size M', '32px 高，最小寬 2.25 倍高', '所有按鈕；S 24px 用在卡片標題行'], ['TextField / Picker / SearchField M', '32px', '表單與工具列'], ['TableView regular', '行 40px，內距 16', '連線、規則、DNS、資源、事件'], ['Card size M density regular', '內距 16，圓角 12', '活動卡、狀態卡、窗格'], ['SideNav item', '32px 高，圖標 18，縮排 8', '左欄'], ['Toast', '52px', '操作結果'], ['字級', 'Heading 1 28 / 2 22 / 3 18；正文 14；標籤 12', 'CJK 行高由 S2 自動加到 1.5 / 1.7'], ['間距', '同組 8 · 卡片內 12 · 卡片之間 16 · 區塊之間 24 · 頁面內距 32', '佈局層唯一要記的一組數']]} />
+      <//>
+
+      <${Sect} id="color" title="色彩" note="S2 的語義色：accent 藍做選中與主要動作；positive / notice / negative 只表示狀態；中性由 background 層決定。亮暗由 Provider 的 colorScheme 切換，不自訂色值。">
+        <div class="sect-gap"><div class="row">
+          <${StatusLight} variant="positive"><${Text}>監聽 :53 · 上游 2 個<//><//><${StatusLight} variant="notice"><${Text}>127.0.0.1:9090 · secret 為空<//><//><${StatusLight} variant="negative"><${Text}>nfnetlink_queue 未載入<//><//><${StatusLight} variant="neutral"><${Text}>未啟用<//><//>
+        </div>
+        <div class="row">
+          <${Badge} variant="neutral"><${Text}>內核<//><//><${Badge} variant="neutral" fillStyle="outline"><${Text}>must<//><//><${Badge} variant="negative"><${Text}>拒絕<//><//><${Badge} variant="informative"><${Text}>udp<//><//><${Badge} variant="notice"><${Text}>未儲存<//><//><${Badge} variant="positive"><${Text}>45 個節點<//><//>
+        </div></div>
+      <//>
+
+      <${Sect} id="controls" title="控件" note="照文檔寫法：Button variant accent / primary / secondary / negative，fillStyle fill / outline；圖標按鈕用 ActionButton，圖標配 Text；成組放 ButtonGroup 或 ActionButtonGroup；分段選擇用 SegmentedControl。">
+        <div class="col" style=${{ gap: 20 }}>
+          <div class="stack"><${Lbl}>ButtonGroup<//><${ButtonGroup}><${Button} variant="secondary"><${Text}>取消<//><//><${Button} variant="primary"><${Text}>校驗<//><//><${Button} variant="accent"><${Text}>加入並 reload<//><//><//></div>
+          <div class="stack"><${Lbl}>變體<//><${ButtonGroup}><${Button} variant="negative" fillStyle="outline"><${Text}>中止這條連線<//><//><${Button} variant="accent" isDisabled><${Text}>中止（內核流）<//><//><${Button} variant="primary" fillStyle="outline"><${Text}>重新探測<//><//><${Button} variant="secondary" fillStyle="outline"><${Text}>看診斷<//><//><//></div>
+          <div class="stack"><${Lbl}>ActionButtonGroup<//><${ActionButtonGroup}><${ActionButton}><${I.Refresh} /><${Text}>重測<//><//><${ActionButton}><${I.Add} /><${Text}>加規則<//><//><${ActionButton}><${I.Filter} /><${Text}>只看未就緒<//><//><${ActionButton} isQuiet><${Text}>測試全部<//><//><//></div>
+          <div class="stack"><${Lbl}>SegmentedControl<//><div class="row"><${SegmentedControl} aria-label="出站模式" defaultSelectedKey="rule"><${SegmentedControlItem} id="direct"><${Text}>直連<//><//><${SegmentedControlItem} id="global"><${Text}>全域<//><//><${SegmentedControlItem} id="rule"><${Text}>規則<//><//><//><${SegmentedControl} aria-label="過濾" defaultSelectedKey="all"><${SegmentedControlItem} id="all"><${Text}>全部 47<//><//><${SegmentedControlItem} id="u"><${Text}>userspace 8<//><//><${SegmentedControlItem} id="b"><${Text}>拒絕 3<//><//><//></div></div>
+          <div class="stack"><${Lbl}>Switch、Checkbox<//><div class="row"><${Switch} defaultSelected>must<//><${Checkbox}>只看未就緒<//></div></div>
+          <div class="stack"><${Lbl}>Form<//><div class="row" style=${{ alignItems: 'flex-end' }}><${TextField} label="條件" defaultValue="domain(suffix: bilibili.com)" UNSAFE_style=${{ width: 320 }} /><${Picker} label="出站" defaultSelectedKey="direct"><${PickerItem} id="direct">direct<//><${PickerItem} id="proxy">proxy<//><${PickerItem} id="block">block<//><${PickerItem} id="resilient">resilient<//><//><${SearchField} label="搜尋" placeholder="連線、節點、規則" /></div></div>
+          <div class="stack"><${Lbl}>Meter 與 ProgressBar<//><div class="row" style=${{ gap: 24 }}><${Meter} label="proxy → hk-01" value=${61} /><${Meter} label="direct" value=${35} variant="positive" /><${Meter} label="block" value=${4} variant="negative" /><${ProgressBar} label="reload" value=${70} /></div></div>
+        </div>
+      <//>
+
+      <${Sect} id="conns" title="元件：連線表與就地操作" note="TableView 一般密度；選中一條，右側 Card 列它的路由結果與能做的事。加規則走 DialogTrigger + Dialog：Heading、Content 裡放 Form、ButtonGroup 取消在前確認在後。">
+        <div class="split">
+          <${TableView} aria-label="連線" selectionMode="single" selectionStyle="highlight" selectedKeys=${sel} onSelectionChange=${setSel} UNSAFE_style=${{ height: 296 }}>
+            <${TableHeader}><${Column} id="dst" isRowHeader minWidth=${170}>目標<//><${Column} id="src" width=${100}>來源<//><${Column} id="out" width=${130}>出站<//><${Column} id="path" width=${132}>路徑<//><${Column} id="bytes" align="end" width=${84}>流量<//><${Column} id="age" align="end" width=${90}>時長<//><//>
+            <${TableBody} items=${conns}>${item => h`<${Row} id=${item.id} columns=${['dst', 'src', 'out', 'path', 'bytes', 'age']}>${col => h`<${Cell}>${col === 'path' ? (item.path === '拒絕' ? h`<${Badge} variant="negative" size="S" overflowMode="wrap"><${Text}>拒絕<//><//>` : h`<${Badge} variant="neutral" size="S" overflowMode="wrap"><${Text}>${item.path}<//><//>`) : col === 'src' ? h`<span class="code">${item.src}</span>` : item[col]}<//>`}<//>`}<//>
+          <//>
+          <${Card} variant="secondary" size="M"><div class="col">
+            <${Heading} level=${3} UNSAFE_style=${{ margin: 0 }}>cdn.bilibili.com:443<//>
+            <${StatusLight} variant="positive" size="S"><${Text}>內核轉發 · TCP<//><//>
+            <div class="col" style=${{ gap: 8 }}>${[['來源', '10.0.0.7:51422'], ['解析', '120.92.78.14'], ['命中', '#4 domain(geosite: cn) -> direct'], ['流量', '↑ 1.1 MB ↓ 83 MB']].map(([k, v]) => h`<${LabeledValue} key=${k} label=${k} value=${v} />`)}</div>
+            <${Divider} size="S" />
+            <div class="stack">
+              <${DialogTrigger}><${Button} variant="primary"><${Text}>為 bilibili.com 加規則<//><//><${Dialog}>${({ close }) => h`<${React.Fragment}><${Heading} slot="title">加規則<//><${Content}><${Form}><${TextField} label="條件" defaultValue="domain(suffix: bilibili.com)" /><${Picker} label="出站" defaultSelectedKey="direct"><${PickerItem} id="direct">direct<//><${PickerItem} id="proxy">proxy<//><${PickerItem} id="block">block<//><//><${Picker} label="位置" defaultSelectedKey="fb"><${PickerItem} id="fb">fallback 之前（第 44 行）<//><${PickerItem} id="hit">命中的 #4 之前（第 41 行）<//><//><${Switch}>must<//><//><div style=${{ marginTop: 16 }}><${InlineAlert} variant="notice" fillStyle="border"><${Heading}>第 40 行 geosite: cn 可能先命中<//><${Content}>寫進 config.dae，校驗通過後 reload。<//><//></div><//><${ButtonGroup}><${Button} variant="secondary" onPress=${close}><${Text}>取消<//><//><${Button} variant="accent" onPress=${() => { close(); toast('positive', '已加入 · domain(suffix: bilibili.com) -> direct · 已 reload · r42'); }}><${Text}>加入並 reload<//><//><//><//><//>`}<//><//>
+              <${Button} variant="secondary"><${Text}>為 10.0.0.7 加規則<//><//>
+              <${Button} variant="secondary"><${Text}>切換 proxy 的選擇<//><//>
+              <${TooltipTrigger}><${Button} variant="negative" fillStyle="outline" isDisabled><${Text}>中止這條連線<//><//><${Tooltip}>這條流在內核轉發，honk 不能中止它<//><//>
+            </div>
+          </div><//>
+        </div>
+      <//>
+
+      <${Sect} id="policies" title="元件：策略" note="出站模式是 SegmentedControl；節點卡是 ToggleButtonGroup 裡的 ToggleButton isEmphasized，選中即 accent 藍底；score 組用 Card 唯讀。">
+        <div class="row" style=${{ marginBottom: 16 }}><${SegmentedControl} aria-label="出站模式" defaultSelectedKey="rule"><${SegmentedControlItem} id="direct"><${Text}>直連<//><//><${SegmentedControlItem} id="global"><${Text}>全域<//><//><${SegmentedControlItem} id="rule"><${Text}>規則<//><//><//><${Text}>規則由上至下逐條測試，第一條命中的決定出站。全域時走 proxy。<//></div>
+        <div class="between"><${Heading} level=${3} UNSAFE_style=${{ margin: 0 }}>proxy · selector<//><${ActionButton} isQuiet onPress=${() => toast('positive', 'proxy · 5 個成員測完 · jp-01 逾時')}><${Text}>測試全部<//><//></div>
+        <div style=${{ marginTop: 8 }}><${ToggleButtonGroup} aria-label="節點" selectionMode="single" disallowEmptySelection selectedKeys=${node} onSelectionChange=${k => { setNode(k); toast('positive', 'proxy 改選 ' + [...k][0] + ' · 已寫入 cache.db'); }} UNSAFE_className="nodes">
+          ${[['AnyTLS', 'hk-01', '84 ms'], ['AnyTLS', 'hk-02', '91 ms'], ['Hysteria2', 'sg-01', '63 ms'], ['TUIC', 'jp-01', '逾時'], ['VLESS', 'us-01', '188 ms'], ['組', 'resilient', '→ hk-01']].map(([p, n, l]) => h`<${ToggleButton} key=${n} id=${n} isEmphasized UNSAFE_style=${{ height: 'auto', padding: '12px 16px', justifyContent: 'flex-start' }}><div class="col" style=${{ gap: 2, alignItems: 'flex-start' }}><${Text} UNSAFE_style=${{ fontSize: 12, opacity: .75 }}>${p}<//><${Text} UNSAFE_style=${{ fontWeight: 700 }}>${n}<//><${Text} UNSAFE_style=${{ fontSize: 12, opacity: l === '逾時' ? 1 : .75, color: l === '逾時' ? 'var(--s2-negative, #d7373f)' : undefined }}>${l}<//></div><//>`)}
+        <//></div>
+      <//>
+
+      <${Sect} id="rules" title="元件：規則表" note="TableView；條件用等寬字；must 獨立欄；來源指到檔案與行。">
+        <${TableView} aria-label="規則" UNSAFE_style=${{ height: 346 }}>
+          <${TableHeader}><${Column} id="n" width=${56}>#<//><${Column} id="c" isRowHeader>條件<//><${Column} id="o" width=${110}>出站<//><${Column} id="m" width=${100}>must<//><${Column} id="s" width=${150}>來源<//><${Column} id="x" width=${90}>注釋<//><//>
+          <${TableBody}>${rules.map((r, i) => h`<${Row} key=${i} id=${i}><${Cell}>${r[0]}<//><${Cell}><span class="code">${r[1]}</span><//><${Cell}>${r[2]}<//><${Cell}>${r[3] && h`<${Badge} variant="neutral" fillStyle="outline" size="S" overflowMode="wrap"><${Text}>must<//><//>`}<//><${Cell}>${r[4]}<//><${Cell}>${r[5]}<//><//>`)}<//>
+        <//>
+      <//>
+
+      <${Sect} id="config" title="元件：配置編輯器與回饋" note="編輯器本體之後接 CodeMirror；外框是 Card，工具列與診斷用 S2。">
+        <div class="col" style=${{ gap: 16 }}>
+          <div class="between"><div class="row"><span class="code">/etc/honk/config.dae</span><${Badge} variant="notice" size="S"><${Text}>未儲存<//><//><${Lbl}>磁碟 r41 · 執行中 r40<//></div><${ButtonGroup}><${Button} variant="secondary" onPress=${() => toast('negative', '校驗失敗 · 第 42 行出站 gaming 不存在')}><${Text}>校驗<//><//><${Button} variant="accent" onPress=${() => toast('positive', '已 reload · 45 個節點 · 8 條規則 · r41')}><${Text}>應用並 reload<//><//><//></div>
+          <div class="codeblock"><div class="acts"><${ActionButton} isQuiet size="S" aria-label="複製" onPress=${() => toast('positive', '已複製 9 行')}><${I.Copy} /><//><${ActionButton} isQuiet size="S" aria-label="在編輯器打開"><${I.OpenIn} /><//></div>${[[36, 'routing {'], [37, '    # 廣告'], [38, '    domain(suffix: doubleclick.net) -> block'], [39, '    dip(geoip: private) -> direct(must)'], [40, '    domain(geosite: cn) -> direct'], [41, '    domain(suffix: bilibili.com) -> direct', 'rgba(38,128,235,.12)'], [42, '    domain(geosite: category-games@cn) -> gaming', 'rgba(215,55,63,.12)'], [43, '    fallback: resilient'], [44, '}']].map(([n, t, c]) => h`<div key=${n} class="ln" style=${{ background: c }}><span>${n}</span><span dangerouslySetInnerHTML=${{ __html: hl(t) }}></span></div>`)}</div>
+          <${InlineAlert} variant="negative" fillStyle="border"><${Heading}>第 42 行：出站 gaming 不存在<//><${Content}>可用的組：proxy、resilient。<//><//>
+        </div>
+      <//>
+
+      <${Sect} id="skeleton" title="頁面骨架" note="只列 honk 有的能力。不做行程頁、HTTP 捕獲 / 解密 / 重寫、腳本、模組、多配置。">
+        <div class="swatches" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+          ${[['活動', '事實列、探測、流量、活動連線、本次觀察出站'], ['概覽', '狀態卡：datapath、nfqueue、TProxy、DNS、Clash API、內嵌介面；唯讀診斷'], ['連線', '列表加詳情，就地加規則、換組、中止（能力門控）'], ['客戶端', '可見連線聚合的來源 IP 與 MAC，就地加規則'], ['策略', '出站模式加 Global 目標、各組卡片、測速'], ['規則', '表、來源、fallback 行'], ['DNS', '查詢工具、快取列表、flush'], ['資源', '訂閱與 geo 資產狀態、刷新訂閱'], ['配置', '來源清單、原文編輯、校驗、應用、reload'], ['事件', '即時事件加有限重放']].map(([t, d]) => h`<${Card} key=${t} variant="secondary" size="M"><div class="skel"><h3>${t}</h3><p>${d}</p></div><//>`)}
+        </div>
+      <//>
+      </div><//>
+    </div>
+  <//>`;
+}
+createRoot(document.getElementById('root')).render(h`<${Doc} />`);
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>doona 設計語言 · Spectrum</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="vendor/spectrum.css">
+<style>
+  html, body { margin: 0; min-height: 100%; }
+  /* Spectrum ships Adobe Clean Han for zh and no CJK line-height; its own tokens say body 1.7, heading/detail 1.5.
+     Same specificity as the library rule, declared later, so it wins. */
+  [lang="zh-TW"][lang] {
+    font-family: "PingFang TC", "Noto Sans CJK TC", "IBM Plex Sans TC", "Microsoft JhengHei", sans-serif;
+    --spectrum-alias-body-text-line-height: 1.7;
+    --spectrum-alias-heading-text-line-height: 1.5;
+    --spectrum-alias-font-family-base: "PingFang TC", "Noto Sans CJK TC", "IBM Plex Sans TC", sans-serif;
+  }
+  /* Document layout only. Every size below is a Spectrum token value: spacing-300 16, spacing-400 24, spacing-600 40, spacing-800 64. */
+  .doc { max-width: 1120px; margin: 0 auto; padding: 40px 32px 96px; }
+  /* Typography roles that React Spectrum v3 does not export as components; values from spectrum-tokens (CJK set). */
+  .detail { font-size: 12px; line-height: 1.5; font-weight: 700; color: var(--spectrum-global-color-gray-700); }
+  .body-xs { font-size: 12px; line-height: 1.7; color: var(--spectrum-global-color-gray-700); }
+  .code { font-family: "SF Mono", "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.7; }
+  .num { font-size: 28px; line-height: 1.5; font-weight: 700; letter-spacing: -0.01em; }
+  /* Card per spectrum-tokens: edge-to-content default medium 16, header-to-description 4, radius medium-default 8, border gray-300. */
+  .card { background: var(--spectrum-global-color-gray-50); border: 1px solid var(--spectrum-global-color-gray-300); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+  .swatch { height: 48px; }
+  .spark { width: 100%; height: 56px; display: block; margin-top: auto; }
+  .ln { display: grid; grid-template-columns: 48px 1fr; white-space: pre; font-family: "SF Mono", "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; line-height: 24px; }
+  .ln > span:first-child { text-align: right; padding-right: 12px; color: var(--spectrum-global-color-gray-600); user-select: none; }
+  .node { text-align: left; }
+  .node > span, .node > div { width: 100%; justify-content: flex-start; padding: 0 12px; box-sizing: border-box; }
+  table.spec { width: 100%; border-collapse: collapse; }
+  table.spec th, table.spec td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--spectrum-global-color-gray-300); vertical-align: top; }
+  table.spec th { color: var(--spectrum-global-color-gray-700); font-weight: 700; font-size: 12px; }
+</style>
+<body>
+<div id="root"></div>
+<script data-errcatch>window.addEventListener("error",e=>{var r=document.getElementById("root");if(!r.children.length)r.textContent="ERR "+e.message+" @"+(e.filename||"")+":"+e.lineno;});</script>
+<script type="module">
+import { S, React, createRoot, htm, Refresh, Add, expressTheme } from './vendor/spectrum.js';
+const { useState } = React;
+const h = htm.bind(React.createElement);
+const { ToastContainer, ToastQueue, Provider, defaultTheme, View, Flex, Grid, Heading, Text, Content, Divider, Button, ActionButton, ActionGroup, Item, ToggleButton, Switch, Checkbox, Picker, TextField, SearchField, TableView, TableHeader, TableBody, Column, Row, Cell, StatusLight, Badge, ProgressBar, Meter, DialogTrigger, Dialog, ButtonGroup, TooltipTrigger, Tooltip, InlineAlert, Well, Form, Link, Keyboard } = S;
+
+const UP = [[0,40],[20,34],[40,36],[60,22],[80,26],[100,18],[120,24],[140,12],[160,20],[180,16],[200,14]];
+const Spark = ({ pts, color }) => { const d = pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + y).join(' '); return h`<svg class="spark" viewBox="0 0 200 46" preserveAspectRatio="none"><path d=${d + ' L200 46 L0 46 Z'} fill=${color} opacity="0.12" /><path d=${d} fill="none" stroke=${color} stroke-width="1.5" /><circle cx="200" cy=${pts[10][1]} r="2.5" fill=${color} /></svg>`; };
+
+const Sect = ({ title, note, children }) => h`<${View} marginTop="size-600">
+  <${Divider} size="S" />
+  <${Heading} level=${2} marginTop="size-300" marginBottom="size-100">${title}<//>
+  ${note && h`<${View} maxWidth="68ch" marginBottom="size-300"><${Text}>${note}<//><//>`}
+  ${children}
+<//>`;
+const Detail = ({ children }) => h`<span class="detail">${children}</span>`;
+const Card = ({ children }) => h`<div class="card">${children}</div>`;
+const Spec = ({ rows, cols }) => h`<table class="spec"><thead><tr>${cols.map(c => h`<th key=${c}>${c}</th>`)}</tr></thead><tbody>${rows.map((r, i) => h`<tr key=${i}>${r.map((c, j) => h`<td key=${j}>${j === 0 ? h`<span class="code">${c}</span>` : c}</td>`)}</tr>`)}</tbody></table>`;
+
+function Doc() {
+  const [scheme, setScheme] = useState(() => { try { return localStorage.getItem('doona-sp') || 'system'; } catch (e) { return 'system'; } });
+  const [scale, setScale] = useState('medium');
+  const [style, setStyle] = useState(new URLSearchParams(location.search).get('style') || 'spectrum');
+  const [sel, setSel] = useState(new Set(['2']));
+  const [node, setNode] = useState('hk-01');
+  const pick = s => { setScheme(s); try { localStorage.setItem('doona-sp', s); } catch (e) {} };
+  const conns = [
+    { id: '1', dst: 'api.telegram.org:443', src: '10.0.0.12', out: 'proxy → hk-01', path: 'userspace', bytes: '1.2 MB', age: '4m 12s' },
+    { id: '2', dst: 'cdn.bilibili.com:443', src: '10.0.0.7', out: 'direct', path: '內核', bytes: '84 MB', age: '12m 03s' },
+    { id: '3', dst: '52.84.19.3:443', src: '10.0.0.7', out: 'proxy → hk-01', path: '內核', bytes: '312 KB', age: '18s' },
+    { id: '4', dst: 'doubleclick.net:443', src: '10.0.0.31', out: 'block', path: '拒絕', bytes: '0', age: '—' },
+    { id: '5', dst: '1.1.1.1:53 (udp)', src: '10.0.0.12', out: 'direct(must)', path: '內核', bytes: '2 KB', age: '1s' },
+  ];
+  const rules = [['1', 'domain(suffix: doubleclick.net)', 'block', '', 'config.dae:38', '廣告'], ['2', 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', 'direct', 'must', 'config.dae:39', ''], ['3', 'dip(geoip: private)', 'direct', 'must', 'config.dae:40', 'LAN'], ['4', 'domain(geosite: cn)', 'direct', '', 'config.dae:41', ''], ['5', 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', 'direct', '', 'rules.dae:3', '電視'], ['—', 'fallback', 'resilient', '', 'config.dae:44', '']];
+
+  return h`<${Provider} theme=${style === 'express' ? expressTheme : defaultTheme} colorScheme=${scheme === 'system' ? undefined : scheme} scale=${scale} locale="zh-TW">
+    <${ToastContainer} />
+    <div class="doc">
+      <${Flex} justifyContent="space-between" alignItems="start" gap="size-400" wrap>
+        <${View} maxWidth="68ch"><${Heading} level=${1} margin="0">doona 設計語言 · Spectrum<//><${View} marginTop="size-100"><${Text}>honk 的控制面板。元件、色、字級、間距、控件高度全部取自 Adobe Spectrum 的 token，本頁只決定怎麼組合；每一節先寫用了哪個 token，再放實樣。<//><//><//>
+        <${Flex} gap="size-200" alignItems="end" wrap>
+          <${Picker} label="主題" selectedKey=${scheme} onSelectionChange=${pick} width="size-1600"><${Item} key="system">跟隨系統<//><${Item} key="light">亮<//><${Item} key="dark">暗<//><//>
+          <${Picker} label="密度" selectedKey=${scale} onSelectionChange=${setScale} width="size-1600"><${Item} key="medium">桌面<//><${Item} key="large">觸控<//><//>
+          <${Picker} label="風格" selectedKey=${style} onSelectionChange=${setStyle} width="size-1600"><${Item} key="spectrum">Spectrum<//><${Item} key="express">Express<//><//>
+        <//>
+      <//>
+
+      <${Sect} title="定位" note="對象是一台 Linux 網關上的 honk。使用者一天開幾次，每次為了一件事：看某條流為什麼走了那裡、給它加一條規則、換一個節點、改配置後 reload。介面照 Surge 的骨架與操作邏輯：左欄導覽、物件在哪就在哪操作、狀態用同一組語義色說話。外觀交給 Spectrum，不自訂樣式。" />
+
+      <${Sect} title="規範：取自 spectrum-tokens 的數值" note="下面每個數都是 @adobe/spectrum-tokens 裡的 token，桌面檔。實作時用 token 名，不寫像素。">
+        <${Flex} direction="column" gap="size-400">
+          <${View}><${Heading} level=${3} marginBottom="size-100">間距尺 spacing-*<//>
+            <${Spec} cols=${['token', '值', '用在']} rows=${[['spacing-75', '4px', '圖標與字之間、卡片標題與說明之間（card-header-to-description）'], ['spacing-100', '8px', '同一組控件之間、狀態點與字之間、彈窗內距（popover-padding）'], ['spacing-200', '12px', '卡片內各行之間、表格單元內距（table-item-padding-regular）'], ['spacing-300', '16px', '卡片內距（card-edge-to-content-default-medium）、卡片之間、表格邊到內容（table-edge-to-content）'], ['spacing-400', '24px', '頁面區塊之間、對話框內容與按鈕之間'], ['spacing-600', '40px', '對話框內距、章節之間'], ['spacing-800', '64px', '頁面頂部留白']]} /><//>
+          <${View}><${Heading} level=${3} marginBottom="size-100">高度 component-height-*<//>
+            <${Spec} cols=${['token', '桌面', '觸控', '用在']} rows=${[['component-height-75', '24px', '30px', '小號 ActionButton、Badge'], ['component-height-100', '32px', '40px', 'Button、ActionButton、TextField、Picker、Switch 行高、表頭行'], ['component-height-200', '40px', '50px', 'TableView 一般密度的行（table-row-height-medium）'], ['toast-height', '52px', '60px', 'Toast'], ['button-minimum-width-multiplier', '2.25 × 高', '', 'Button 最小寬 72px，中文短標籤不會縮成方塊']]} /><//>
+          <${View}><${Heading} level=${3} marginBottom="size-100">字級與行高（CJK 檔）<//>
+            <${Spec} cols=${['角色', '字級', '行高', '字重', '用在']} rows=${[['heading-cjk-size-l', '25px', '1.5', 'extra-bold', '頁標題（Heading level 1）'], ['heading-cjk-size-s', '18px', '1.5', 'extra-bold', '區塊標題（Heading level 2）'], ['heading-cjk-size-xs', '16px', '1.5', 'bold', '卡片標題、窗格標題（Heading level 3）'], ['body-cjk-size-m', '14px', '1.7', 'regular', '正文、表格、按鈕、輸入（Text）'], ['body-cjk-size-s', '12px', '1.7', 'regular', '次要說明'], ['detail-cjk-size-m', '12px', '1.5', 'bold', '標籤、表頭'], ['code-cjk-size-xs', '12px', '1.7', 'regular', '規則、位址、配置']]} /><//>
+          <${View}><${Heading} level=${3} marginBottom="size-100">圓角與線<//>
+            <${Spec} cols=${['token', '值', '用在']} rows=${[['corner-radius-small-default', '4px', 'Badge、ActionButton'], ['corner-radius-medium-default', '8px', '卡片、Well、TableView 外框'], ['corner-radius-large-default', '10px', 'Dialog、Toast'], ['corner-radius-full', '50 %', 'Button（Spectrum 的膠囊）、StatusLight 點'], ['border', '1px gray-300', '卡片與表格外框、分隔線（Divider size S）']]} /><//>
+        <//>
+      <//>
+
+      <${Sect} title="色彩" note="Spectrum 的語義色：gray 階做底與文字，blue 做強調，positive / notice / negative 做狀態。只選階，不自訂色值；亮暗兩套由 Provider 切換。">
+        <${Grid} columns="repeat(auto-fill, minmax(140px, 1fr))" gap="size-200">
+          ${[['gray-50', '卡片底'], ['gray-100', '頁面底'], ['gray-300', '分隔線、外框'], ['gray-700', '次要文字'], ['gray-900', '正文'], ['blue-600', '強調、選中'], ['blue-400', '選中底'], ['green-600', 'positive'], ['orange-600', 'notice'], ['red-600', 'negative'], ['celery-600', '下載曲線']].map(([c, l]) => h`<${View} key=${c} borderWidth="thin" borderColor="gray-300" borderRadius="medium" overflow="hidden"><div class="swatch" style=${{ background: `var(--spectrum-global-color-${c})` }}></div><${View} paddingX="size-150" paddingY="size-100"><${Text}>${l}<//><br /><span class="code">${c}</span><//><//>`)}
+        <//>
+      <//>
+
+      <${Sect} title="字體" note="Spectrum 對 zh 的預設是 Adobe Clean Han，退回 Heiti TC Light，且沒套 CJK 行高，中文會又細又擠。本頁按它自己的 token 修正：字族換 PingFang TC / Noto Sans CJK TC / IBM Plex Sans TC，正文行高 1.7、標題 1.5。">
+        <${Flex} direction="column" gap="size-200">
+          <${Heading} level=${1} margin="0">活動<//>
+          <${Heading} level=${2} margin="0">網路接管<//>
+          <${Heading} level=${3} margin="0">proxy · selector<//>
+          <${View} maxWidth="68ch"><${Text}>規則由上至下逐條測試，第一條命中的決定出站。改配置後校驗，通過才 reload；失敗保留上一版，診斷標在行上。<//><//>
+          <span class="body-xs">次要說明：IPv4 · 目標來自 tcp_check_url 與 udp_check_dns</span>
+          <${Detail}>標籤 · 出站模式<//>
+          <span class="code">domain(suffix: doubleclick.net) -> block</span>
+        <//>
+      <//>
+
+      <${Sect} title="控件" note="全部照 React Spectrum 文檔的範例寫法：Button 分 accent / primary / secondary / negative，圖標加 Text 子元素；成組的按鈕放 ButtonGroup；分段選擇用 ActionGroup selectionMode single；狀態行用 StatusLight。">
+        <${Flex} direction="column" gap="size-300">
+          <${View}><${Detail}>Button 與 ButtonGroup<//><${View} marginTop="size-100"><${ButtonGroup}><${Button} variant="secondary">取消<//><${Button} variant="primary">校驗<//><${Button} variant="accent">加入並 reload<//><//><//><//>
+          <${View}><${Detail}>Button 變體<//><${View} marginTop="size-100"><${ButtonGroup}><${Button} variant="negative" style="outline">中止這條連線<//><${Button} variant="accent" isDisabled>中止（內核流）<//><${Button} variant="primary" style="outline">重新探測<//><//><//><//>
+          <${View}><${Detail}>ActionButton<//><${View} marginTop="size-100"><${Flex} gap="size-100"><${ActionButton}><${Refresh} /><${Text}>重測<//><//><${ActionButton} isQuiet><${Add} /><${Text}>加規則<//><//><${ActionButton} isQuiet>測試全部<//><//><//><//>
+          <${View}><${Detail}>ActionGroup 當分段控件<//><${View} marginTop="size-100"><${Flex} gap="size-300" wrap><${ActionGroup} selectionMode="single" defaultSelectedKeys=${['rule']}><${Item} key="direct">直連<//><${Item} key="global">全域<//><${Item} key="rule">規則<//><//><${ActionGroup} selectionMode="single" defaultSelectedKeys=${['all']} isQuiet><${Item} key="all">全部 47<//><${Item} key="u">userspace 8<//><${Item} key="b">拒絕 3<//><//><//><//><//>
+          <${View}><${Detail}>Switch、Checkbox<//><${View} marginTop="size-100"><${Flex} gap="size-300"><${Switch} defaultSelected>must<//><${Checkbox}>只看未就緒<//><//><//><//>
+          <${View}><${Detail}>Form：TextField、Picker、SearchField<//><${View} marginTop="size-100"><${Flex} gap="size-200" wrap alignItems="end"><${TextField} label="條件" defaultValue="domain(suffix: bilibili.com)" width="size-3600" /><${Picker} label="出站" defaultSelectedKey="direct" width="size-2000"><${Item} key="direct">direct<//><${Item} key="proxy">proxy<//><${Item} key="block">block<//><${Item} key="resilient">resilient<//><//><${SearchField} label="搜尋" placeholder="連線、節點、規則" width="size-3000" /><//><//><//>
+          <${View}><${Detail}>StatusLight 與 Badge<//><${View} marginTop="size-100"><${Flex} gap="size-300" wrap alignItems="center"><${StatusLight} variant="positive">監聽 :53 · 上游 2 個<//><${StatusLight} variant="notice">127.0.0.1:9090 · secret 為空<//><${StatusLight} variant="negative">nfnetlink_queue 未載入<//><${StatusLight} variant="neutral">未啟用<//><${Badge} variant="neutral">內核<//><${Badge} variant="neutral">must<//><${Badge} variant="negative">拒絕<//><${Badge} variant="info">udp<//><//><//><//>
+          <${View}><${Detail}>ProgressBar 與 Meter<//><${View} marginTop="size-100"><${Flex} gap="size-300" wrap><${ProgressBar} label="proxy → hk-01" value=${61} width="size-3000" /><${Meter} label="direct" value=${35} variant="positive" width="size-3000" /><${Meter} label="block" value=${4} variant="critical" width="size-3000" /><//><//><//>
+        <//>
+      <//>
+
+      <${Sect} title="元件：活動頁卡片" note="卡片內距 16、行間 12、標題行高 32 對齊按鈕；大數字 28px 行高 1.5；卡片之間 16。">
+        <${Grid} columns="1fr 1fr 1fr" gap="size-300">
+          <${Card}><div class="head"><${Detail}>探測 · 經 proxy → hk-01<//><${ActionButton} isQuiet onPress=${() => ToastQueue.positive('探測完成 · TCP 39 ms · HTTP 121 ms · UDP DNS 9 ms', { timeout: 4000 })}><${Refresh} /><${Text}>重測<//><//></div><span class="num">126 <span class="body-xs">ms</span></span><${Grid} columns="1fr 1fr 1fr" gap="size-100"><${View}><${Detail}>TCP 連線<//><br /><${Text}>41 ms<//><//><${View}><${Detail}>HTTP<//><br /><${Text}>126 ms<//><//><${View}><${Detail}>UDP DNS<//><br /><${Text}>9 ms<//><//><//><span class="body-xs">IPv4 · 目標來自 tcp_check_url 與 udp_check_dns</span><//>
+          <${Card}><div class="head"><${Detail}>上傳<//><${StatusLight} variant="positive">wan0<//></div><span class="num">312 <span class="body-xs">KB/s</span></span><${Spark} pts=${UP} color="var(--spectrum-global-color-blue-600)" /><//>
+          <${Card}><div class="head"><${Detail}>下載<//><${StatusLight} variant="positive">wan0<//></div><span class="num">4.8 <span class="body-xs">MB/s</span></span><${Spark} pts=${UP} color="var(--spectrum-global-color-celery-600)" /><//>
+        <//>
+      <//>
+
+      <${Sect} title="元件：連線表與就地操作" note="TableView 一般密度，行高 40；選中一條，右側窗格列它的路由結果，下面是能做的事。加規則走 Dialog，結構照文檔：Heading、Divider、Content 裡放 Form、ButtonGroup 裡取消在前確認在後。">
+        <${Grid} columns="minmax(0,1fr) 320px" gap="size-300" alignItems="start">
+          <${TableView} aria-label="連線" selectionMode="single" selectionStyle="highlight" selectedKeys=${sel} onSelectionChange=${setSel} density="regular" height="size-3600">
+            <${TableHeader}><${Column} key="dst" minWidth=${200}>目標<//><${Column} key="src" width=${110}>來源<//><${Column} key="out" width=${140}>出站<//><${Column} key="path" width=${100}>路徑<//><${Column} key="bytes" align="end" width=${90}>流量<//><${Column} key="age" align="end" width=${90}>時長<//><//>
+            <${TableBody} items=${conns}>${item => h`<${Row}>${key => h`<${Cell}>${key === 'path' ? (item.path === '拒絕' ? h`<${Badge} variant="negative">拒絕<//>` : h`<${Badge} variant="neutral">${item.path}<//>`) : key === 'src' ? h`<span class="code">${item.src}</span>` : item[key]}<//>`}<//>`}<//>
+          <//>
+          <${Card}>
+            <${Heading} level=${3} margin="0">cdn.bilibili.com:443<//>
+            <${StatusLight} variant="positive" marginStart="calc(-1 * var(--spectrum-global-dimension-size-100))">內核轉發 · TCP<//>
+            <${Grid} columns="56px 1fr" gap="size-75"><${Detail}>來源<//><span class="code">10.0.0.7:51422</span><${Detail}>解析<//><span class="code">120.92.78.14</span><${Detail}>命中<//><span class="code">#4 domain(geosite: cn) -> direct</span><${Detail}>流量<//><${Text}>↑ 1.1 MB ↓ 83 MB<//><//>
+            <${Divider} size="S" />
+            <${Flex} direction="column" gap="size-100">
+              <${DialogTrigger}><${Button} variant="primary">為 bilibili.com 加規則<//>${close => h`<${Dialog}><${Heading}>加規則<//><${Divider} /><${Content}><${Form}><${TextField} label="條件" defaultValue="domain(suffix: bilibili.com)" /><${Picker} label="出站" defaultSelectedKey="direct"><${Item} key="direct">direct<//><${Item} key="proxy">proxy<//><${Item} key="block">block<//><//><${Picker} label="位置" defaultSelectedKey="fb"><${Item} key="fb">fallback 之前（第 44 行）<//><${Item} key="hit">命中的 #4 之前（第 41 行）<//><//><${Switch}>must<//><//><${Well} marginTop="size-300"><span class="code">domain(suffix: bilibili.com) -&gt; direct</span><//><${InlineAlert} variant="notice" marginTop="size-300"><${Heading}>第 40 行 geosite: cn 可能先命中<//><${Content}>寫進 config.dae，校驗通過後 reload。<//><//><//><${ButtonGroup}><${Button} variant="secondary" onPress=${close}>取消<//><${Button} variant="accent" onPress=${() => { close(); ToastQueue.positive('已加入 · domain(suffix: bilibili.com) -> direct · 已 reload · r42', { timeout: 4000 }); }} autoFocus>加入並 reload<//><//><//>`}<//>
+              <${Button} variant="secondary">為 10.0.0.7 加規則<//>
+              <${Button} variant="secondary">切換 proxy 的選擇<//>
+              <${TooltipTrigger}><${Button} variant="negative" style="outline" isDisabled>中止這條連線<//><${Tooltip}>這條流在內核轉發，honk 不能中止它<//><//>
+            <//>
+          <//>
+        <//>
+      <//>
+
+      <${Sect} title="元件：策略" note="出站模式是 ActionGroup；節點卡是 ToggleButton isEmphasized，選中即 Spectrum 的藍底；score 組唯讀不做成按鈕。卡片之間 8。">
+        <${Flex} gap="size-300" alignItems="center" marginBottom="size-300" wrap><${ActionGroup} selectionMode="single" defaultSelectedKeys=${['rule']}><${Item} key="direct">直連<//><${Item} key="global">全域<//><${Item} key="rule">規則<//><//><${Text}>規則由上至下逐條測試，第一條命中的決定出站。全域時走 proxy。<//><//>
+        <${Flex} justifyContent="space-between" alignItems="center"><${Heading} level=${3} margin="0">proxy · selector<//><${ActionButton} isQuiet onPress=${() => ToastQueue.positive('proxy · 5 個成員測完 · jp-01 逾時', { timeout: 4000 })}>測試全部<//><//>
+        <${Grid} columns="repeat(6, 1fr)" gap="size-100" marginTop="size-100">
+          ${[['AnyTLS', 'hk-01', '84 ms'], ['AnyTLS', 'hk-02', '91 ms'], ['Hysteria2', 'sg-01', '63 ms'], ['TUIC', 'jp-01', '逾時'], ['VLESS', 'us-01', '188 ms'], ['組', 'resilient', '→ hk-01']].map(([p, n, l]) => h`<${ToggleButton} key=${n} isEmphasized isSelected=${node === n} onChange=${() => { setNode(n); ToastQueue.positive('proxy 改選 ' + n + ' · 已寫入 cache.db', { timeout: 4000 }); }} UNSAFE_className="node" height="auto"><${View} paddingY="size-100"><${Flex} direction="column" gap="size-50" alignItems="start"><span class="body-xs" style=${{ color: 'inherit', opacity: 0.8 }}>${p}</span><${Text}>${n}<//><span class="body-xs" style=${{ color: l === '逾時' ? 'var(--spectrum-global-color-red-600)' : 'inherit', opacity: 0.8 }}>${l}</span><//><//><//>`)}
+        <//>
+      <//>
+
+      <${Sect} title="元件：規則表" note="TableView，條件用等寬字；must 獨立欄；來源指到檔案與行。">
+        <${TableView} aria-label="規則" density="regular" height="size-3600">
+          <${TableHeader}><${Column} key="n" width=${56}>#<//><${Column} key="c">條件<//><${Column} key="o" width=${110}>出站<//><${Column} key="m" width=${80}>must<//><${Column} key="s" width=${130}>來源<//><${Column} key="x" width=${90}>注釋<//><//>
+          <${TableBody}>${rules.map((r, i) => h`<${Row} key=${i}><${Cell}>${r[0]}<//><${Cell}><span class="code">${r[1]}</span><//><${Cell}>${r[2]}<//><${Cell}>${r[3] && h`<${Badge} variant="neutral">must<//>`}<//><${Cell}>${r[4]}<//><${Cell}>${r[5]}<//><//>`)}<//>
+        <//>
+      <//>
+
+      <${Sect} title="元件：配置編輯器與回饋" note="編輯器本體之後接 CodeMirror；工具列、狀態與診斷用 Spectrum。工具列高 48，內距 16；程式碼行高 24。">
+        <${View} borderWidth="thin" borderColor="gray-300" borderRadius="medium" overflow="hidden">
+          <${Flex} justifyContent="space-between" alignItems="center" height="size-600" paddingX="size-300" UNSAFE_style=${{ borderBottom: '1px solid var(--spectrum-global-color-gray-300)' }}><${Flex} gap="size-200" alignItems="center"><span class="code">/etc/honk/config.dae</span><${Badge} variant="yellow">未儲存<//><span class="body-xs">磁碟 r41 · 執行中 r40</span><//><${ButtonGroup}><${Button} variant="secondary" onPress=${() => ToastQueue.negative('校驗失敗 · 第 42 行出站 gaming 不存在', { timeout: 4000 })}>校驗<//><${Button} variant="accent" onPress=${() => ToastQueue.positive('已 reload · 45 個節點 · 8 條規則 · r41', { timeout: 4000 })}>應用並 reload<//><//><//>
+          <${View} paddingY="size-100" backgroundColor="gray-50">
+            ${[[36, 'routing {'], [37, '    # 廣告'], [38, '    domain(suffix: doubleclick.net) -> block'], [39, '    dip(geoip: private) -> direct(must)'], [40, '    domain(geosite: cn) -> direct'], [41, '    domain(suffix: bilibili.com) -> direct', 'blue-400'], [42, '    domain(geosite: category-games@cn) -> gaming', 'red-400'], [43, '    fallback: resilient'], [44, '}']].map(([n, t, c]) => h`<div key=${n} class="ln" style=${{ background: c ? `color-mix(in srgb, var(--spectrum-global-color-${c}) 25%, transparent)` : undefined }}><span>${n}</span><span>${t}</span></div>`)}
+          <//>
+          <${InlineAlert} variant="negative" UNSAFE_style=${{ borderRadius: 0, borderWidth: 0, borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}><${Heading}>第 42 行：出站 gaming 不存在<//><${Content}>可用的組：proxy、resilient。<//><//>
+        <//>
+      <//>
+
+      <${Sect} title="頁面骨架" note="只列 honk 有的能力。不做行程頁、HTTP 捕獲 / 解密 / 重寫、腳本、模組、多配置。">
+        <${Grid} columns="repeat(auto-fill, minmax(220px, 1fr))" gap="size-200">
+          ${[['活動', '事實列、探測、流量、活動連線、本次觀察出站'], ['概覽', '狀態卡：datapath、nfqueue、TProxy、DNS、Clash API、內嵌介面；唯讀診斷'], ['連線', '列表加詳情，就地加規則、換組、中止（能力門控）'], ['客戶端', '可見連線聚合的來源 IP 與 MAC，就地加規則'], ['策略', '出站模式加 Global 目標、各組卡片、測速'], ['規則', '表、來源、fallback 行'], ['DNS', '查詢工具、快取列表、flush'], ['資源', '訂閱與 geo 資產狀態、刷新訂閱'], ['配置', '來源清單、原文編輯、校驗、應用、reload'], ['事件', '即時事件加有限重放']].map(([t, d]) => h`<${Card} key=${t}><${Heading} level=${3} margin="0">${t}<//><${Text}>${d}<//><//>`)}
+        <//>
+      <//>
+    </div>
+  <//>`;
+}
+createRoot(document.getElementById('root')).render(h`<${Doc} />`);
+</script>
+</body>
+</html>

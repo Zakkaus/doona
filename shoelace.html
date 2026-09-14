@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-Hant" class="sl-theme-light">
+<meta charset="utf-8">
+<title>doona · Shoelace</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/dark.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/shoelace-autoloader.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+TC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout only; sizes, colours, radii and spacing come from Shoelace tokens (--sl-*). */
+  :root, .sl-theme-dark { --sl-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "IBM Plex Sans TC", system-ui, sans-serif; --sl-font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace; --sl-input-height-medium: 2.25rem; }
+  html, body { height: 100%; margin: 0; }
+  body { font: var(--sl-font-size-small)/var(--sl-line-height-normal) var(--sl-font-sans); color: var(--sl-color-neutral-900); background: var(--sl-color-neutral-50); font-variant-numeric: tabular-nums; }
+  .win { display: grid; grid-template-columns: 208px 1fr; height: 100vh; }
+  .side { background: var(--sl-color-neutral-0); border-right: 1px solid var(--sl-color-neutral-200); display: flex; flex-direction: column; padding: var(--sl-spacing-small); gap: 2px; }
+  .side .grp { font-size: var(--sl-font-size-x-small); color: var(--sl-color-neutral-500); padding: var(--sl-spacing-medium) var(--sl-spacing-small) var(--sl-spacing-2x-small); font-weight: var(--sl-font-weight-semibold); }
+  .side a { display: flex; align-items: center; gap: var(--sl-spacing-x-small); height: 2.25rem; padding: 0 var(--sl-spacing-small); border-radius: var(--sl-border-radius-medium); color: var(--sl-color-neutral-900); text-decoration: none; }
+  .side a:hover { background: var(--sl-color-neutral-100); }
+  .side a[aria-current] { background: var(--sl-color-primary-50); color: var(--sl-color-primary-700); font-weight: var(--sl-font-weight-semibold); }
+  .sl-theme-dark .side a[aria-current] { background: var(--sl-color-primary-950); color: var(--sl-color-primary-300); }
+  .side sl-icon { font-size: 1rem; }
+  .side .spacer { flex: 1; }
+  .content { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sl-spacing-medium); padding: var(--sl-spacing-small) var(--sl-spacing-x-large); }
+  .page { flex: 1; overflow: auto; padding: 0 var(--sl-spacing-x-large) var(--sl-spacing-2x-large); }
+  .page[hidden] { display: none; }
+  h1 { font-size: var(--sl-font-size-2x-large); font-weight: var(--sl-font-weight-bold); margin: var(--sl-spacing-small) 0 var(--sl-spacing-medium); letter-spacing: -0.02em; }
+  .lead { color: var(--sl-color-neutral-600); margin: calc(-1 * var(--sl-spacing-x-small)) 0 var(--sl-spacing-medium); }
+  .facts { display: flex; gap: var(--sl-spacing-2x-large); flex-wrap: wrap; margin-bottom: var(--sl-spacing-medium); }
+  .label { font-size: var(--sl-font-size-x-small); color: var(--sl-color-neutral-600); }
+  .fact b { display: block; font-weight: var(--sl-font-weight-semibold); font-size: var(--sl-font-size-medium); }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sl-spacing-medium); margin-bottom: var(--sl-spacing-medium); }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sl-spacing-medium); margin-bottom: var(--sl-spacing-medium); }
+  .g6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sl-spacing-small); margin-bottom: var(--sl-spacing-large); }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sl-spacing-medium); align-items: start; }
+  sl-card { width: 100%; --padding: var(--sl-spacing-large); }
+  sl-card::part(base) { height: 100%; }
+  sl-card::part(body) { display: flex; flex-direction: column; gap: var(--sl-spacing-small); height: 100%; box-sizing: border-box; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: var(--sl-spacing-small); min-height: 1.75rem; }
+  .big { font-size: 2rem; font-weight: var(--sl-font-weight-bold); letter-spacing: -0.02em; line-height: 1.1; }
+  .big small { font-size: var(--sl-font-size-x-small); font-weight: var(--sl-font-weight-normal); color: var(--sl-color-neutral-600); margin-left: 3px; }
+  .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sl-spacing-small); }
+  .cols3 b { display: block; font-weight: var(--sl-font-weight-semibold); }
+  .st { display: inline-flex; align-items: center; gap: var(--sl-spacing-x-small); color: var(--sl-color-neutral-600); font-size: var(--sl-font-size-x-small); }
+  .st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sl-color-neutral-400); }
+  .st.ok::before { background: var(--sl-color-success-600); } .st.warn::before { background: var(--sl-color-warning-500); } .st.bad::before { background: var(--sl-color-danger-600); }
+  .st.bad { color: var(--sl-color-neutral-900); }
+  .spark { width: 100%; height: 56px; display: block; margin-top: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--sl-color-neutral-0); border: 1px solid var(--sl-color-neutral-200); border-radius: var(--sl-border-radius-large); overflow: hidden; }
+  th { text-align: left; font-weight: var(--sl-font-weight-semibold); font-size: var(--sl-font-size-x-small); color: var(--sl-color-neutral-600); padding: 0 var(--sl-spacing-medium); height: 2.5rem; border-bottom: 1px solid var(--sl-color-neutral-200); white-space: nowrap; }
+  td { padding: 0 var(--sl-spacing-medium); height: 2.75rem; border-bottom: 1px solid var(--sl-color-neutral-100); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--sl-color-neutral-50); }
+  tbody tr[aria-selected="true"] { background: var(--sl-color-primary-50); }
+  .sl-theme-dark tbody tr[aria-selected="true"] { background: var(--sl-color-primary-950); }
+  td.num, th.num { text-align: right; } .dim { color: var(--sl-color-neutral-500); }
+  .mono { font-family: var(--sl-font-mono); font-size: var(--sl-font-size-x-small); }
+  .kv { display: grid; grid-template-columns: 64px 1fr; gap: var(--sl-spacing-x-small) var(--sl-spacing-small); font-size: var(--sl-font-size-x-small); }
+  .kv dt { color: var(--sl-color-neutral-500); margin: 0; } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-direction: column; gap: var(--sl-spacing-x-small); padding-top: var(--sl-spacing-small); border-top: 1px solid var(--sl-color-neutral-200); }
+  .actions sl-button::part(label) { display: flex; justify-content: space-between; width: 100%; }
+  .node::part(body) { gap: var(--sl-spacing-2x-small); cursor: pointer; }
+  .node[data-sel]::part(base) { background: var(--sl-color-primary-600); border-color: var(--sl-color-primary-600); color: white; }
+  .node[data-sel] .label, .node[data-sel] .st { color: rgba(255,255,255,0.8); }
+  .node[data-dis]::part(body) { cursor: default; }
+  .grp-head { display: flex; align-items: center; justify-content: space-between; min-height: 2.25rem; margin-bottom: var(--sl-spacing-x-small); font-weight: var(--sl-font-weight-semibold); color: var(--sl-color-neutral-600); }
+  .code { font-family: var(--sl-font-mono); font-size: var(--sl-font-size-x-small); line-height: 22px; padding: var(--sl-spacing-x-small) 0; }
+  .ln { display: grid; grid-template-columns: 44px 1fr; white-space: pre; }
+  .ln > span:first-child { color: var(--sl-color-neutral-400); text-align: right; padding-right: var(--sl-spacing-small); }
+  .ln.new { background: var(--sl-color-primary-50); } .ln.err { background: var(--sl-color-danger-50); }
+  .sl-theme-dark .ln.new { background: var(--sl-color-primary-950); } .sl-theme-dark .ln.err { background: var(--sl-color-danger-950); }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sl-spacing-small); padding: var(--sl-spacing-x-small) var(--sl-spacing-medium); border-bottom: 1px solid var(--sl-color-neutral-200); }
+  .diag { display: flex; align-items: center; gap: var(--sl-spacing-x-small); padding: var(--sl-spacing-x-small) var(--sl-spacing-medium); border-top: 1px solid var(--sl-color-neutral-200); color: var(--sl-color-danger-700); font-size: var(--sl-font-size-x-small); }
+  .editor { --padding: 0; }
+  .bars { display: grid; grid-template-columns: 110px 1fr; gap: var(--sl-spacing-x-small) var(--sl-spacing-small); align-items: center; font-size: var(--sl-font-size-x-small); color: var(--sl-color-neutral-600); }
+  .field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: var(--sl-spacing-small); margin-bottom: var(--sl-spacing-small); }
+  sl-dialog::part(footer) { display: flex; justify-content: flex-end; gap: var(--sl-spacing-x-small); }
+  .preview { font-family: var(--sl-font-mono); font-size: var(--sl-font-size-x-small); background: var(--sl-color-neutral-100); border-radius: var(--sl-border-radius-medium); padding: var(--sl-spacing-x-small) var(--sl-spacing-small); }
+  .row { display: flex; align-items: center; gap: var(--sl-spacing-small); flex-wrap: wrap; }
+</style>
+<body>
+<div class="win">
+  <nav class="side" id="nav"></nav>
+  <div class="content">
+    <div class="toolbar">
+      <sl-badge variant="warning" pill><span class="st warn" style="color:inherit">nfqueue 未就緒 · nfnetlink_queue 未載入</span></sl-badge>
+      <div class="row">
+        <sl-input size="small" placeholder="搜尋連線、節點、規則" style="width:240px"><sl-icon library="lucide" name="search" slot="prefix"></sl-icon></sl-input>
+        <sl-radio-group size="small" value="system" id="theme">
+          <sl-radio-button value="system"><sl-icon library="lucide" name="monitor"></sl-icon></sl-radio-button>
+          <sl-radio-button value="light"><sl-icon library="lucide" name="sun"></sl-icon></sl-radio-button>
+          <sl-radio-button value="dark"><sl-icon library="lucide" name="moon"></sl-icon></sl-radio-button>
+        </sl-radio-group>
+      </div>
+    </div>
+    <div id="pages"></div>
+  </div>
+</div>
+
+<sl-dialog id="dlg" label="加規則" style="--width:460px">
+  <div class="field"><span class="label">條件</span><sl-input id="dlg-cond" size="medium" class="mono"></sl-input></div>
+  <div class="field"><span class="label">出站</span><sl-select id="dlg-out" value="direct" size="medium"><sl-option value="direct">direct</sl-option><sl-option value="proxy">proxy</sl-option><sl-option value="block">block</sl-option><sl-option value="resilient">resilient</sl-option></sl-select></div>
+  <div class="field"><span class="label">must</span><sl-switch id="dlg-must"></sl-switch></div>
+  <div class="field"><span class="label">位置</span><sl-select value="fb" size="medium"><sl-option value="fb">fallback 之前（第 44 行）</sl-option><sl-option value="hit">命中的 #4 之前（第 41 行）</sl-option><sl-option value="top">最前面（第 38 行）</sl-option></sl-select></div>
+  <div class="preview" id="dlg-prev"></div>
+  <p class="st" style="margin:var(--sl-spacing-small) 0 0">第 40 行 geosite: cn 可能先命中</p>
+  <sl-button slot="footer" variant="default" data-close>取消</sl-button>
+  <sl-button slot="footer" variant="primary" data-close id="dlg-ok">加入並 reload</sl-button>
+</sl-dialog>
+
+<script type="module">
+import { registerIconLibrary } from 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/utilities/icon-library.js';
+registerIconLibrary('lucide', { resolver: n => `https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/${n}.svg`, mutator: svg => { svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '1.75'); } });
+
+const ic = n => `<sl-icon library="lucide" name="${n}"></sl-icon>`;
+const st = (k, t) => `<span class="st ${k}">${t}</span>`;
+const spark = (pts, color) => { const d = pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + y).join(' '); return `<svg class="spark" viewBox="0 0 200 46" preserveAspectRatio="none"><path d="${d} L200 46 L0 46 Z" fill="${color}" opacity=".12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="1.5"/><circle cx="200" cy="${pts[10][1]}" r="2.5" fill="${color}"/></svg>`; };
+const UP = [[0,40],[20,34],[40,36],[60,22],[80,26],[100,18],[120,24],[140,12],[160,20],[180,16],[200,14]], DN = [[0,38],[20,30],[40,32],[60,14],[80,20],[100,10],[120,18],[140,8],[160,16],[180,12],[200,10]];
+const NAV = [['activity','活動','activity'],['overview','概覽','layout-grid'],['網路'],['conns','連線','arrow-right-left'],['clients','客戶端','monitor-smartphone'],['代理'],['policies','策略','git-fork'],['rules','規則','list'],['dns','DNS','globe'],['系統'],['resources','資源','package'],['config','配置','file-text'],['events','事件','history']];
+document.getElementById('nav').innerHTML = NAV.map(n => n.length === 1 ? `<div class="grp">${n[0]}</div>` : `<a href="#${n[0]}" data-page="${n[0]}">${ic(n[2])}${n[1]}</a>`).join('') + `<div class="spacer"></div><div class="st ok" style="padding:var(--sl-spacing-small)">gw.lan · honk 0.0.1-alpha</div>`;
+
+const cap = (t, d, k, s, extra = '') => `<sl-card><div class="head"><b>${t}</b><sl-badge variant="neutral" pill>啟動期</sl-badge></div><span class="label">${d}</span><div style="margin-top:auto">${st(k, s)}</div>${extra}</sl-card>`;
+const CONNS = [['api.telegram.org:443','10.0.0.12','proxy → hk-01','userspace','1.2 MB','4m 12s'],['cdn.bilibili.com:443','10.0.0.7','direct','內核','84 MB','12m 03s'],['52.84.19.3:443','10.0.0.7','proxy → hk-01','內核','312 KB','18s'],['doubleclick.net:443','10.0.0.31','block','拒絕','0','—'],['1.1.1.1:53','10.0.0.12','direct(must)','內核','2 KB','1s','udp'],['github.com:443','10.0.0.12','proxy → hk-01','userspace','5.6 MB','2m 40s'],['mtalk.google.com:5228','10.0.0.9','proxy → hk-01','userspace','12 KB','1h 02m']];
+const path = p => p === '拒絕' ? `<span style="color:var(--sl-color-danger-600)">拒絕</span>` : `<sl-badge variant="neutral">${p}</sl-badge>`;
+const node = (p, n, l, sel, dis, extra = '') => `<sl-card class="node" ${sel ? 'data-sel' : ''} ${dis ? 'data-dis' : ''} data-node="${n}"><span class="label">${p}</span><b>${n}</b><span class="st" style="justify-content:space-between;display:flex${l === '逾時' || l === '分數 0.00' ? ';color:var(--sl-color-danger-600)' : ''}">${l}${extra}</span></sl-card>`;
+
+const PAGES = {
+activity: `<h1>活動</h1>
+<div class="facts"><div class="fact"><span class="label">配置</span><b>/etc/honk/config.dae</b></div><div class="fact"><span class="label">出站模式</span><b>規則 · Global → proxy</b></div><div class="fact"><span class="label">datapath</span><b>eBPF · wan0 · lan0</b></div><div class="fact"><span class="label">執行</span><b>3 天 4 小時</b></div></div>
+<div class="g3">
+  <sl-card><div class="head"><span class="label">探測 · 經 proxy → hk-01</span><sl-button size="small" variant="text" data-toast="success" data-msg="探測完成 · TCP 39 ms · HTTP 121 ms · UDP DNS 9 ms">${ic('refresh-cw')} 重測</sl-button></div><div class="big">126<small>ms</small></div><div class="cols3"><div><span class="label">TCP 連線</span><b>41 ms</b></div><div><span class="label">HTTP</span><b>126 ms</b></div><div><span class="label">UDP DNS</span><b>9 ms</b></div></div><span class="label">IPv4 · 目標來自 tcp_check_url 與 udp_check_dns</span></sl-card>
+  <sl-card><div class="head"><span class="label">上傳</span>${st('ok','wan0')}</div><div class="big">312<small>KB/s</small></div>${spark(UP,'var(--sl-color-primary-600)')}</sl-card>
+  <sl-card><div class="head"><span class="label">下載</span>${st('ok','wan0')}</div><div class="big">4.8<small>MB/s</small></div>${spark(DN,'var(--sl-color-sky-500)')}</sl-card>
+</div>
+<div class="g2">
+  <sl-card><div class="head"><span class="label">流量 · 本次觀察 12 分鐘</span><sl-radio-group size="small" value="all"><sl-radio-button value="all">全部</sl-radio-button><sl-radio-button value="proxy">僅代理</sl-radio-button></sl-radio-group></div>${spark(DN,'var(--sl-color-sky-500)')}${spark(UP,'var(--sl-color-primary-600)')}<span class="label">— 上傳 　— 下載</span></sl-card>
+  <sl-card><div class="head"><span class="label">活動連線</span><a href="#conns" data-page-go="conns">全部 47</a></div><div class="cols3"><div><span class="label">內核</span><b style="font-size:1.25rem">39</b></div><div><span class="label">userspace</span><b style="font-size:1.25rem">8</b></div><div><span class="label">客戶端</span><b style="font-size:1.25rem">6</b></div></div>
+  <div class="head"><span class="label">按出站</span><sl-radio-group size="small" value="out"><sl-radio-button value="out">出站</sl-radio-button><sl-radio-button value="cli">客戶端</sl-radio-button><sl-radio-button value="dom">域名</sl-radio-button></sl-radio-group></div>
+  <div class="bars"><span>proxy → hk-01</span><sl-progress-bar value="61" style="--height:6px"></sl-progress-bar><span>direct</span><sl-progress-bar value="35" style="--height:6px;--indicator-color:var(--sl-color-neutral-400)"></sl-progress-bar><span>block</span><sl-progress-bar value="4" style="--height:6px;--indicator-color:var(--sl-color-danger-600)"></sl-progress-bar></div></sl-card>
+</div>`,
+overview: `<h1>概覽</h1><p class="lead">這些都在啟動時決定，改配置後要重啟。卡上只有狀態與檢查，沒有開關。</p>
+<div class="grp-head">datapath</div><div class="g3">${cap('eBPF','直連與已決定的流在內核轉發，不進 userspace。','ok','tc 已掛在 wan0、lan0 · 路由表已發布')}${cap('nfqueue','eBPF 不能決定的封包交 userspace 判定。','bad','nfnetlink_queue 未載入',`<div class="row"><sl-button size="small" data-toast="danger" data-msg="檢查完成 · 1 項失敗 · modprobe nfnetlink_queue">${ic('stethoscope')} 重跑檢查</sl-button><span class="label">requested 是 · effective 否</span></div>`)}${cap('TProxy','透明代理入口，LAN 的流量從這裡進來。','ok','監聽 :12345 · mark 0x2a')}</div>
+<div class="grp-head">服務</div><div class="g3">${cap('DNS','honk 自己的解析器，帶快取與分流。','ok','監聽 :53 · 上游 2 個 · 快取 1,204 條')}${cap('Clash API','相容層，現成面板與殼程式靠它。','warn','127.0.0.1:9090 · secret 為空')}${cap('原生 API','doona 與 honk-tool 用的介面。','ok','127.0.0.1:9091 · /api/v1 · bearer')}</div>
+<div class="grp-head">介面</div><div class="g3">${cap('內嵌 doona','在 API 監聽器上托管這個介面。','ok','/ui · 0.3.0 · 與 API 同一個 origin')}${cap('cache_file','記住選擇、出站模式與 DNS 快取。','ok','/var/lib/honk/cache.db · 1.2 MB')}</div>`,
+conns: `<h1>連線</h1>
+<div class="row" style="margin-bottom:var(--sl-spacing-medium)"><sl-radio-group size="small" value="all"><sl-radio-button value="all">全部 47</sl-radio-button><sl-radio-button value="u">userspace 8</sl-radio-button><sl-radio-button value="b">拒絕 3</sl-radio-button></sl-radio-group><span class="label">選一條，右邊是它的路由結果與能做的事。</span></div>
+<div class="split"><table><thead><tr><th>目標</th><th>來源</th><th>出站</th><th>路徑</th><th class="num">流量</th><th class="num">時長</th></tr></thead><tbody>${CONNS.map((c, i) => `<tr ${i === 1 ? 'aria-selected="true"' : ''}><td>${c[0]} ${c[6] ? '<sl-badge variant="neutral">udp</sl-badge>' : ''}</td><td class="mono dim">${c[1]}</td><td>${c[2]}</td><td>${path(c[3])}</td><td class="num">${c[4]}</td><td class="num dim">${c[5]}</td></tr>`).join('')}</tbody></table>
+<sl-card><div><b style="font-size:var(--sl-font-size-medium)">cdn.bilibili.com:443</b><div style="margin-top:4px">${st('ok','內核轉發 · TCP')}</div></div>
+<dl class="kv"><dt>來源</dt><dd class="mono">10.0.0.7:51422<br>aa:bb:cc:dd:ee:07</dd><dt>解析</dt><dd class="mono">120.92.78.14</dd><dt>命中</dt><dd class="mono">#4 domain(geosite: cn) -> direct</dd><dt>出站</dt><dd>direct</dd><dt>流量</dt><dd>↑ 1.1 MB ↓ 83 MB</dd></dl>
+<div class="actions"><sl-button data-dialog="domain(suffix: bilibili.com)">為 bilibili.com 加規則 <kbd>R</kbd></sl-button><sl-button data-dialog="sip(10.0.0.7/32)">為 10.0.0.7 加規則 <kbd>D</kbd></sl-button><sl-button data-page-go="policies">切換 proxy 的選擇 <kbd>G</kbd></sl-button><sl-tooltip content="這條流在內核轉發，honk 不能中止它"><sl-button variant="text" disabled style="width:100%">中止這條連線 <kbd>⌫</kbd></sl-button></sl-tooltip></div></sl-card></div>`,
+clients: `<h1>客戶端</h1><p class="lead">從可見連線聚合的來源 IP；MAC 只在 eBPF 看得到時顯示。不是裝置清單，也不累計。</p>
+<div class="split"><table><thead><tr><th>來源 IP</th><th>MAC</th><th class="num">連線</th><th class="num">本次流量</th><th>主要出站</th></tr></thead><tbody>${[['10.0.0.7','aa:bb:cc:dd:ee:07',12,'84 MB','direct 90 %'],['10.0.0.12','aa:bb:cc:dd:ee:12',19,'7.1 MB','proxy 80 %'],['10.0.0.31','—',4,'96 B','block 50 %'],['10.0.0.9','aa:bb:cc:dd:ee:09',3,'12 KB','proxy 100 %'],['10.0.0.40','aa:bb:cc:dd:ee:40',9,'21 MB','direct 100 %'],['fd00::1c2f','—',1,'3 KB','proxy 100 %']].map((c, i) => `<tr ${i === 0 ? 'aria-selected="true"' : ''}><td class="mono">${c[0]}</td><td class="mono dim">${c[1]}</td><td class="num">${c[2]}</td><td class="num">${c[3]}</td><td>${c[4]}</td></tr>`).join('')}</tbody></table>
+<sl-card><div><b style="font-size:var(--sl-font-size-medium)">10.0.0.7</b><div style="margin-top:4px">${st('ok','12 條連線 · 內核 11 · userspace 1')}</div></div><dl class="kv"><dt>MAC</dt><dd class="mono">aa:bb:cc:dd:ee:07</dd><dt>最近</dt><dd>cdn.bilibili.com、52.84.19.3</dd><dt>命中</dt><dd class="mono">#4 domain(geosite: cn) ×9</dd></dl><div class="actions"><sl-button data-dialog="sip(10.0.0.7/32)">為 10.0.0.7 加規則 <kbd>D</kbd></sl-button><sl-button data-dialog="mac(aa:bb:cc:dd:ee:07)">為 aa:bb:cc:dd:ee:07 加規則 <kbd>M</kbd></sl-button></div></sl-card></div>`,
+policies: `<h1>策略</h1>
+<div class="row" style="margin-bottom:var(--sl-spacing-large)"><sl-radio-group value="rule" size="medium"><sl-radio-button value="direct">直連</sl-radio-button><sl-radio-button value="global">全域</sl-radio-button><sl-radio-button value="rule">規則</sl-radio-button></sl-radio-group><span class="label">規則由上至下逐條測試，第一條命中的決定出站。全域時走 proxy。</span></div>
+<div class="grp-head"><span>proxy · selector</span><sl-button size="small" variant="text" data-toast="success" data-msg="proxy · 5 個成員測完 · jp-01 逾時">測試全部</sl-button></div>
+<div class="g6" id="proxy-nodes">${node('AnyTLS','hk-01','84 ms',true,false,'<span>選用中</span>')}${node('AnyTLS','hk-02','91 ms')}${node('Hysteria2','sg-01','63 ms')}${node('TUIC','jp-01','逾時')}${node('VLESS','us-01','188 ms')}${node('組','resilient','→ hk-01')}</div>
+<div class="grp-head"><span>resilient · score</span>${st('','每 30 s 自動評分，不能手選')}</div>
+<div class="g6">${node('AnyTLS','hk-01','分數 0.92',false,true,'<span>使用中</span>')}${node('Hysteria2','sg-01','分數 0.88',false,true)}${node('TUIC','jp-01','分數 0.00',false,true)}</div>
+<div class="grp-head"><span>訂閱</span><a href="#resources" data-page-go="resources">資源頁</a></div>
+<div class="g2"><sl-card><div class="head"><b>airport-a</b>${st('ok','45 個節點')}</div><span class="label">2 小時前刷新</span></sl-card><sl-card><div class="head"><b>backup</b>${st('bad','HTTP 502')}</div><span class="label">3 天前刷新失敗 · 保留上次的 12 個節點</span></sl-card></div>`,
+rules: `<h1>規則</h1><div class="head" style="margin-bottom:var(--sl-spacing-medium)"><span class="label">由上至下，第一條命中的決定出站。dip(介面位址) -> direct(must) 是 honk 自動加的，不在這裡。</span><sl-button size="small" data-dialog="domain(suffix: example.com)">${ic('plus')} 加規則</sl-button></div>
+<table><thead><tr><th>#</th><th>條件</th><th>出站</th><th>must</th><th>來源</th><th>注釋</th></tr></thead><tbody>${[[1,'domain(suffix: doubleclick.net)','block',0,'config.dae:38','廣告'],[2,'pname(NetworkManager, systemd-resolved) &amp;&amp; l4proto(udp) &amp;&amp; dport(53)','direct',1,'config.dae:39',''],[3,'dip(geoip: private)','direct',1,'config.dae:40','LAN'],[4,'domain(geosite: cn)','direct',0,'config.dae:41',''],[5,'mac(aa:bb:cc:dd:ee:ff) &amp;&amp; ipversion(4)','direct',0,'rules.dae:3','電視'],[6,'!domain(geosite: category-ads-all) &amp;&amp; !dip(geoip: cn)','resilient',0,'config.dae:43',''],['—','fallback','resilient',0,'config.dae:44','']].map(r => `<tr><td class="dim">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3] ? '<sl-badge variant="neutral">must</sl-badge>' : ''}</td><td class="dim">${r[4]}</td><td class="dim">${r[5]}</td></tr>`).join('')}</tbody></table>`,
+dns: `<h1>DNS</h1><sl-card style="margin-bottom:var(--sl-spacing-medium)"><b>查詢</b><div class="row"><sl-input value="www.bilibili.com" class="mono" style="width:280px"></sl-input><sl-select value="A" style="width:100px"><sl-option value="A">A</sl-option><sl-option value="AAAA">AAAA</sl-option><sl-option value="HTTPS">HTTPS</sl-option></sl-select><sl-button variant="primary" data-toast="success" data-msg="www.bilibili.com A · 120.92.78.14 · 上游 223.5.5.5 · 9 ms · 未命中快取">查詢</sl-button></div><span class="label">走 honk 自己的解析與分流，結果與客戶端看到的一致。</span></sl-card>
+<div class="grp-head"><span>快取 · 1,204 條</span><sl-button size="small" data-toast="success" data-msg="已清空 DNS 快取 · 1,204 條">全部清空</sl-button></div>
+<table><thead><tr><th>名稱</th><th>類型</th><th>回應</th><th>上游</th><th class="num">剩餘</th><th></th></tr></thead><tbody>${[['cdn.bilibili.com','A','120.92.78.14','223.5.5.5','4m 12s'],['api.telegram.org','A','149.154.167.220','proxy · 1.1.1.1','58s'],['doubleclick.net','A','<span style="color:var(--sl-color-danger-600)">拒絕</span>','—','1h'],['nonexist.example','AAAA','<sl-badge variant="neutral">NXDOMAIN</sl-badge>','223.5.5.5','12m']].map(r => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td class="dim mono">${r[3]}</td><td class="num">${r[4]}</td><td><sl-button size="small" variant="text" data-toast="success" data-msg="已刪除 ${r[0]} ${r[1]}">刪除</sl-button></td></tr>`).join('')}</tbody></table>`,
+resources: `<h1>資源</h1><div class="head" style="margin-bottom:var(--sl-spacing-medium)"><sl-switch size="small">只看未就緒</sl-switch><sl-button size="small" data-toast="success" data-msg="已刷新 2 個訂閱 · backup 仍是 HTTP 502">${ic('refresh-cw')} 刷新全部訂閱</sl-button></div>
+<table><thead><tr><th>類型</th><th>名稱</th><th>來源</th><th>最後成功</th><th>狀態</th><th></th></tr></thead><tbody>
+<tr><td>訂閱</td><td>airport-a</td><td class="mono dim">https://sub.example.net/…</td><td class="dim">2 小時前</td><td>${st('ok','45 個節點')}</td><td><sl-button size="small" variant="text" data-toast="success" data-msg="airport-a 已刷新 · 45 個節點">刷新</sl-button></td></tr>
+<tr><td>訂閱</td><td>backup</td><td class="mono dim">https://b.example.org/…</td><td class="dim">3 天前</td><td>${st('bad','HTTP 502 · 保留上次的 12 個節點')}</td><td><sl-button size="small" variant="text" data-toast="danger" data-msg="backup 刷新失敗 · HTTP 502">刷新</sl-button></td></tr>
+<tr><td>geoip</td><td>geoip.dat</td><td class="mono dim">/var/lib/honk/geoip.dat</td><td class="dim">2026-09-10</td><td>${st('ok','sha256 相符')}</td><td class="label">唯讀</td></tr>
+<tr><td>geosite</td><td>geosite.dat</td><td class="mono dim">/var/lib/honk/geosite.dat</td><td class="dim">—</td><td>${st('warn','檔案不存在 · 用到它的規則 2 條被跳過')}</td><td class="label">唯讀</td></tr></tbody></table>`,
+config: `<h1>配置</h1><div class="row" style="margin-bottom:var(--sl-spacing-medium)"><sl-radio-group size="small" value="a"><sl-radio-button value="a">config.dae</sl-radio-button><sl-radio-button value="b">rules.dae</sl-radio-button></sl-radio-group><span class="label">rules.dae 由 config.dae 第 12 行 include。</span></div>
+<sl-card class="editor"><div class="bar"><span class="row"><span class="mono">/etc/honk/config.dae</span><sl-badge variant="warning">未儲存</sl-badge><span class="label">磁碟 r41 · 執行中 r40</span></span><span class="row"><sl-button size="small" data-toast="danger" data-msg="校驗失敗 · 第 42 行出站 gaming 不存在">校驗</sl-button><sl-button size="small" variant="primary" data-toast="success" data-msg="已 reload · 45 個節點 · 8 條規則 · r41">應用並 reload</sl-button></span></div>
+<div class="code">${[[36,'routing {'],[37,'    # 廣告'],[38,'    domain(suffix: doubleclick.net) -> block'],[39,'    dip(geoip: private) -> direct(must)'],[40,'    domain(geosite: cn) -> direct'],[41,'    domain(suffix: bilibili.com) -> direct','new'],[42,'    domain(geosite: category-games@cn) -> gaming','err'],[43,'    fallback: resilient'],[44,'}']].map(l => `<div class="ln ${l[2] || ''}"><span>${l[0]}</span><span>${l[1]}</span></div>`).join('')}</div>
+<div class="diag">${st('bad','')}第 42 行：出站 <code>gaming</code> 不存在。可用的組：proxy、resilient。</div></sl-card>`,
+events: `<h1>事件</h1><div class="row" style="margin-bottom:var(--sl-spacing-medium)"><sl-radio-group size="small" value="all">${['全部','reload','訂閱','探測','datapath'].map(t => `<sl-radio-button value="${t}">${t}</sl-radio-button>`).join('')}</sl-radio-group><span class="label">行程內保留最近 500 條；重啟後從頭開始。</span></div>
+<table><thead><tr><th>時間</th><th>種類</th><th>內容</th><th></th></tr></thead><tbody>${[['12:11:03','datapath','danger','nfqueue 未就緒：nfnetlink_queue 未載入','overview','概覽'],['12:09:41','reload','neutral','r40 已發布 · 45 個節點 · 7 條規則 · 1.2 s','config','配置'],['12:09:40','reload','neutral','SIGHUP 收到，讀取 /etc/honk/config.dae'],['10:02:15','訂閱','warning','backup 刷新失敗 · HTTP 502 · 保留上次的 12 個節點','resources','資源'],['10:02:11','訂閱','neutral','airport-a 刷新成功 · 45 個節點'],['09:30:00','探測','neutral','proxy · hk-01 84 ms · jp-01 逾時 · 選擇未變','policies','策略']].map(e => `<tr><td class="dim">${e[0]}</td><td><sl-badge variant="${e[2]}">${e[1]}</sl-badge></td><td>${e[3]}</td><td>${e[4] ? `<a href="#${e[4]}" data-page-go="${e[4]}">${e[5]}</a>` : ''}</td></tr>`).join('')}</tbody></table>`,
+};
+const host = document.getElementById('pages');
+host.innerHTML = Object.entries(PAGES).map(([k, v]) => `<section class="page" id="page-${k}" hidden>${v}</section>`).join('');
+
+function go(k) { document.querySelectorAll('.page').forEach(p => p.hidden = p.id !== 'page-' + k); document.querySelectorAll('[data-page]').forEach(a => a.getAttribute('data-page') === k ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')); history.replaceState(null, '', '#' + k); }
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-page],[data-page-go]'); if (a) { e.preventDefault(); go(a.getAttribute('data-page') || a.getAttribute('data-page-go')); return; }
+  const t = e.target.closest('[data-toast]'); if (t) { toast(t.getAttribute('data-toast'), t.getAttribute('data-msg')); }
+  const d = e.target.closest('[data-dialog]'); if (d) { openDlg(d.getAttribute('data-dialog')); }
+  const tr = e.target.closest('tbody tr'); if (tr && !e.target.closest('sl-button,a')) { tr.parentElement.querySelectorAll('tr').forEach(x => x.removeAttribute('aria-selected')); tr.setAttribute('aria-selected', 'true'); }
+  const n = e.target.closest('.node:not([data-dis])'); if (n) { n.parentElement.querySelectorAll('.node').forEach(x => x.removeAttribute('data-sel')); n.setAttribute('data-sel', ''); toast('success', 'proxy 改選 ' + n.getAttribute('data-node') + ' · 已寫入 cache.db'); }
+});
+go(location.hash.slice(1) || 'activity');
+
+function toast(variant, msg) { const a = Object.assign(document.createElement('sl-alert'), { variant, closable: true, duration: 4000, innerHTML: `<sl-icon slot="icon" library="lucide" name="${variant === 'success' ? 'check' : 'alert-circle'}"></sl-icon>${msg}` }); document.body.append(a); a.toast(); }
+const dlg = document.getElementById('dlg'), cond = document.getElementById('dlg-cond'), out = document.getElementById('dlg-out'), must = document.getElementById('dlg-must'), prev = document.getElementById('dlg-prev');
+const upd = () => prev.textContent = `${cond.value} -> ${out.value}${must.checked ? '(must)' : ''}`;
+[cond, out, must].forEach(el => el.addEventListener('sl-input', upd) || el.addEventListener('sl-change', upd));
+function openDlg(seed) { cond.value = seed; upd(); dlg.show(); }
+dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.hide()));
+document.getElementById('dlg-ok').addEventListener('click', () => toast('success', '已加入 · ' + prev.textContent + ' · 已 reload · r42'));
+
+const theme = document.getElementById('theme');
+const mq = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(v) { const dark = v === 'dark' || (v === 'system' && mq.matches); document.documentElement.classList.toggle('sl-theme-dark', dark); document.documentElement.classList.toggle('sl-theme-light', !dark); try { localStorage.setItem('doona-sl', v); } catch (e) {} }
+theme.addEventListener('sl-change', () => applyTheme(theme.value));
+try { theme.value = localStorage.getItem('doona-sl') || 'system'; } catch (e) {}
+applyTheme(theme.value); mq.addEventListener('change', () => applyTheme(theme.value));
+</script>
+</body>
+</html>
