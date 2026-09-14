@@ -13,7 +13,7 @@ export function usePalette() {
   const [p, setP] = useState<Palette>(() => read());
   useEffect(() => {
     const mo = new MutationObserver(() => setP(read()));
-    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
     return () => mo.disconnect();
   }, []);
   return p;

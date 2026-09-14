@@ -6,7 +6,7 @@ import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Translate from '@react-spectrum/s2/icons/Translate';
 import Contrast from '@react-spectrum/s2/icons/Contrast';
 import Lighten from '@react-spectrum/s2/icons/Lighten';
-import GraphTrend from '@react-spectrum/s2/icons/ChartTrend';
+import GraphTrend from '@react-spectrum/s2/icons/SpeedFast';
 import Home from '@react-spectrum/s2/icons/Home';
 import Link from '@react-spectrum/s2/icons/Link';
 import Devices from '@react-spectrum/s2/icons/DeviceAll';
@@ -22,8 +22,20 @@ import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
 import {Button, MenuButton} from './ui';
 import {Activity} from './Activity';
+import {Provider} from '@react-spectrum/s2';
+import {ToastContainer} from '@react-spectrum/s2/Toast';
+import Color from '@react-spectrum/s2/icons/Color';
+import {S2_LOCALE} from '../app/i18n';
+import {PAGES} from '../app/Shell';
 
-type Theme = 'system' | 'dawn' | 'moon';
+type Scheme = 'system' | 'light' | 'dark';
+// A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
+type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord';
+const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
+  {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn'}]},
+  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte'}]},
+  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]}
+];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
   ['grp.network', [['connections', 'nav.connections', Link], ['clients', 'nav.clients', Devices]]],
@@ -32,14 +44,21 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 ];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
-function useTheme(): [Theme, (t: Theme) => void, boolean] {
-  const [theme, setTheme] = useState<Theme>(() => { try { return (localStorage.getItem('doona-rp-theme') as Theme) || 'system'; } catch { return 'system'; } });
+function useAppearance() {
+  const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
+  const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
-  const dark = theme === 'moon' || (theme === 'system' && sysDark);
-  useEffect(() => { document.documentElement.dataset.theme = dark ? 'moon' : 'dawn'; }, [dark]);
-  const pick = (t: Theme) => { setTheme(t); try { localStorage.setItem('doona-rp-theme', t); } catch { /* private mode */ } };
-  return [theme, pick, dark];
+  const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
+  useEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
+  // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
+  const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; setScheme(next); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
+  const pickPalette = (p: PaletteId) => { setPalette(p); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
+  return {scheme, dark, toggle, palette, pickPalette};
+}
+
+function SchemeIcon({dark}: {dark: boolean}) {
+  return <span className="rp-icon-stack"><Contrast UNSAFE_style={{opacity: dark ? 0 : 1, transform: dark ? 'rotate(-90deg) scale(0.5)' : 'rotate(0deg) scale(1)'}} /><Lighten UNSAFE_style={{opacity: dark ? 1 : 0, transform: dark ? 'rotate(0deg) scale(1)' : 'rotate(90deg) scale(0.5)'}} /></span>;
 }
 
 function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, go: (p: string) => void}) {
@@ -68,7 +87,7 @@ function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, 
 
 export function Shell() {
   const [lang, setLang] = useState<Lang>(readLang);
-  const [theme, setTheme, dark] = useTheme();
+  const ap = useAppearance();
   const [route, setRoute] = useState(() => location.hash.replace(/^#\/?/, '').split('?')[0] || 'activity');
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => { const on = () => setRoute(location.hash.replace(/^#\/?/, '').split('?')[0] || 'activity'); addEventListener('hashchange', on); return () => removeEventListener('hashchange', on); }, []);
@@ -78,14 +97,16 @@ export function Shell() {
   const mac = navigator.platform.startsWith('Mac');
   return (
     <LangContext.Provider value={lang}>
-      <Frame lang={lang} pickLang={pickLang} theme={theme} setTheme={setTheme} dark={dark} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+      <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
     </LangContext.Provider>
   );
 }
 
-function Frame({lang, pickLang, theme, setTheme, dark, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, theme: Theme, setTheme: (t: Theme) => void, dark: boolean, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
+function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();
+  const s2Page = PAGES[route];
+  const S2Page = route === 'activity' ? null : s2Page?.[1];
   const titleKey = NAV.flatMap(([, items]) => items).find(([k]) => k === route)?.[1] ?? 'nav.activity';
   return (
     <div className="rp-shell">
@@ -93,10 +114,12 @@ function Frame({lang, pickLang, theme, setTheme, dark, route, go, openSearch, ma
         <a className="rp-brand" href="#/activity"><img src={logo} alt="" />doona</a>
         <div className="rp-search-wrap"><RButton className="rp-search" onPress={openSearch}><Search /><span className="grow">{t('search')}</span><span className="rp-kbd">{mac ? '⌘K' : 'Ctrl K'}</span></RButton></div>
         <div className="rp-actions">
+          <span className="rp-search-compact"><Button quiet icon label={t('search')} onPress={openSearch}><Search /></Button></span>
           <Button quiet icon label={t('refresh')}><Refresh /></Button>
           <div className="rp-vrule" />
-          <MenuButton quiet label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet label={t('theme')} value={theme} onChange={k => setTheme(k as Theme)} items={[{id: 'system', label: t('theme.system')}, {id: 'dawn', label: 'Latte'}, {id: 'moon', label: 'Mocha'}]}>{dark ? <Lighten /> : <Contrast />}</MenuButton>
+          <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
+          <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
       <nav className="rp-side">
@@ -112,7 +135,7 @@ function Frame({lang, pickLang, theme, setTheme, dark, route, go, openSearch, ma
       <main className="rp-main">
         <div className="rp-content">
           <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
-          {route === 'activity' ? <Activity go={go} /> : <p className="rp-placeholder">Catppuccin 版目前只做了活動頁。</p>}
+          {S2Page ? <div className="rp-s2host"><Provider locale={S2_LOCALE[lang]} colorScheme={ap.dark ? 'dark' : 'light'} background="base" router={{navigate: (h: string) => { location.hash = h; }}}><ToastContainer /><S2Page go={go as never} query={location.hash.split('?')[1] ?? ''} /></Provider></div> : <Activity go={go} />}
         </div>
       </main>
     </div>

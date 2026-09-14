@@ -53,7 +53,7 @@ const NAV: Array<[GrpKey | null, Array<[string, NavKey, ComponentType, Component
   ['grp.proxy', [['policies', 'nav.policies', Share, Policies], ['rules', 'nav.rules', ListBulleted, Rules], ['dns', 'nav.dns', GlobeGrid, Dns]]],
   ['grp.system', [['resources', 'nav.resources', Data, Resources], ['config', 'nav.config', FileText, ConfigPage], ['events', 'nav.events', History, Events]]]
 ];
-const PAGES = Object.fromEntries(NAV.flatMap(([, i]) => i).map(([k, l, , C]) => [k, [l, C] as const]));
+export const PAGES = Object.fromEntries(NAV.flatMap(([, i]) => i).map(([k, l, , C]) => [k, [l, C] as const]));
 
 // Whole frame capped and centred like the S2 docs site: top bar, side nav and panel share one column.
 const shell = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], lg: [240, 'minmax(0, 1fr)']}, gridTemplateRows: ['auto', '1fr'], minHeight: 'screen', width: 'full', maxWidth: 1600, marginX: 'auto'});
