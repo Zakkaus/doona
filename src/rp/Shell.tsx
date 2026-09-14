@@ -40,8 +40,8 @@ type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
 type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord';
 const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
-  {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn'}]},
-  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte'}]},
+  {title: 'Rosé Pine', items: [{id: 'rose-pine/moon', label: 'Moon', desc: '暗版較柔'}, {id: 'rose-pine/main', label: 'Main', desc: '暗版最深'}]},
+  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: '暗版最淺'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: '暗版'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: '暗版最深'}]},
   {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]}
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
