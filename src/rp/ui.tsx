@@ -1,6 +1,6 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import type {ReactNode} from 'react';
-import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
+import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
@@ -19,13 +19,15 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
     </ToggleButtonGroup>
   );
 }
-export function MenuButton({children, items, value, onChange, label, quiet, chevron = true}: {children: ReactNode, items: Array<{id: string, label: string, desc?: string}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean}) {
+type Item = {id: string, label: string, desc?: string};
+const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</MenuItem>;
+export function MenuButton({children, items, sections, value, onChange, label, quiet, chevron = true}: {children: ReactNode, items?: Item[], sections?: Array<{title: string, items: Item[]}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean}) {
   return (
     <MenuTrigger>
       <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>{children}{chevron && <ChevronDown />}</RButton>
       <Popover className="rp-popover" placement="bottom end">
         <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={k => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }} aria-label={label}>
-          {items.map(i => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</MenuItem>)}
+          {sections ? sections.map(sec => <MenuSection key={sec.title} id={sec.title}><Header className="rp-sec-h">{sec.title}</Header>{sec.items.map(item)}</MenuSection>) : (items ?? []).map(item)}
         </Menu>
       </Popover>
     </MenuTrigger>

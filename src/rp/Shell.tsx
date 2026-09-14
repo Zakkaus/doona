@@ -29,8 +29,13 @@ import {S2_LOCALE} from '../app/i18n';
 import {PAGES} from '../app/Shell';
 
 type Scheme = 'system' | 'light' | 'dark';
-type PaletteId = 'rose-pine' | 'catppuccin' | 'nord';
-const PALETTES: Array<[PaletteId, string]> = [['rose-pine', 'Rosé Pine'], ['catppuccin', 'Catppuccin'], ['nord', 'Nord']];
+// A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
+type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord';
+const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
+  {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn'}]},
+  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte'}]},
+  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]}
+];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
   ['grp.network', [['connections', 'nav.connections', Link], ['clients', 'nav.clients', Devices]]],
@@ -41,11 +46,11 @@ const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
-  const [palette, setPalette] = useState<PaletteId>(() => { try { return (localStorage.getItem('doona-palette') as PaletteId) || 'rose-pine'; } catch { return 'rose-pine'; } });
+  const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useEffect(() => { document.documentElement.dataset.scheme = dark ? 'dark' : 'light'; document.documentElement.dataset.palette = palette; }, [dark, palette]);
+  useEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
   // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
   const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; setScheme(next); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
   const pickPalette = (p: PaletteId) => { setPalette(p); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
@@ -112,7 +117,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <Button quiet icon label={t('refresh')}><Refresh /></Button>
           <div className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} items={PALETTES.map(([id, label]) => ({id, label}))}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
