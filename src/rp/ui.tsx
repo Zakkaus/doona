@@ -19,10 +19,10 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
     </ToggleButtonGroup>
   );
 }
-export function MenuButton({children, items, value, onChange, label, quiet}: {children: ReactNode, items: Array<{id: string, label: string, desc?: string}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean}) {
+export function MenuButton({children, items, value, onChange, label, quiet, chevron = true}: {children: ReactNode, items: Array<{id: string, label: string, desc?: string}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean}) {
   return (
     <MenuTrigger>
-      <RButton className={cx('rp-btn', quiet && 'quiet')} aria-label={label}>{children}<ChevronDown /></RButton>
+      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>{children}{chevron && <ChevronDown />}</RButton>
       <Popover className="rp-popover" placement="bottom end">
         <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={k => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }} aria-label={label}>
           {items.map(i => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</MenuItem>)}

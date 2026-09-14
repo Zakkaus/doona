@@ -111,8 +111,8 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         <div className="rp-actions">
           <Button quiet icon label={t('refresh')}><Refresh /></Button>
           <div className="rp-vrule" />
-          <MenuButton quiet label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} items={PALETTES.map(([id, label]) => ({id, label}))}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} items={PALETTES.map(([id, label]) => ({id, label}))}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
