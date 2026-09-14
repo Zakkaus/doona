@@ -1,21 +1,54 @@
-/* Catppuccin skin: Latte by day, Mocha by night (github.com/catppuccin/palette). Same variable roles as the Rosé Pine skin. */
-:root {
+/* Palettes: Rosé Pine (Dawn/Moon), Catppuccin (Latte/Mocha), Nord (light/dark). data-palette picks the family,
+   data-scheme picks light or dark; every component reads the same --rp-* roles. */
+:root { --iconPrimary: currentColor; color-scheme: light; }
+:root[data-scheme='dark'] { color-scheme: dark; }
+
+:root, :root[data-palette='rose-pine'] {
+  --rp-base: #faf4ed; --rp-surface: #fffaf3; --rp-overlay: #f2e9e1;
+  --rp-muted: #9893a5; --rp-subtle: #797593; --rp-text: #575279;
+  --rp-love: #b4637a; --rp-gold: #ea9d34; --rp-rose: #d7827e; --rp-pine: #286983; --rp-foam: #56949f; --rp-iris: #907aa9;
+  --rp-hl-low: #f4ede8; --rp-hl-med: #dfdad9; --rp-hl-high: #cecacd;
+  --rp-shadow: 0 1px 2px rgba(87, 82, 121, 0.08);
+}
+:root[data-palette='rose-pine'][data-scheme='dark'] {
+  --rp-base: #232136; --rp-surface: #2a273f; --rp-overlay: #393552;
+  --rp-muted: #6e6a86; --rp-subtle: #908caa; --rp-text: #e0def4;
+  --rp-love: #eb6f92; --rp-gold: #f6c177; --rp-rose: #ea9a97; --rp-pine: #3e8fb0; --rp-foam: #9ccfd8; --rp-iris: #c4a7e7;
+  --rp-hl-low: #2a283e; --rp-hl-med: #44415a; --rp-hl-high: #56526e;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+:root[data-palette='catppuccin'] {
   --rp-base: #e6e9ef; --rp-surface: #eff1f5; --rp-overlay: #dce0e8;
   --rp-muted: #9ca0b0; --rp-subtle: #6c6f85; --rp-text: #4c4f69;
   --rp-love: #d20f39; --rp-gold: #df8e1d; --rp-rose: #fe640b; --rp-pine: #1e66f5; --rp-foam: #179299; --rp-iris: #8839ef;
   --rp-hl-low: #dce0e8; --rp-hl-med: #ccd0da; --rp-hl-high: #bcc0cc;
   --rp-shadow: 0 1px 2px rgba(76, 79, 105, 0.1);
-  --iconPrimary: currentColor;
-  color-scheme: light;
 }
-:root[data-theme='moon'] {
+:root[data-palette='catppuccin'][data-scheme='dark'] {
   --rp-base: #181825; --rp-surface: #1e1e2e; --rp-overlay: #313244;
   --rp-muted: #6c7086; --rp-subtle: #a6adc8; --rp-text: #cdd6f4;
   --rp-love: #f38ba8; --rp-gold: #f9e2af; --rp-rose: #fab387; --rp-pine: #89b4fa; --rp-foam: #94e2d5; --rp-iris: #cba6f7;
   --rp-hl-low: #313244; --rp-hl-med: #45475a; --rp-hl-high: #585b70;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  color-scheme: dark;
 }
+:root[data-palette='nord'] {
+  --rp-base: #e5e9f0; --rp-surface: #eceff4; --rp-overlay: #d8dee9;
+  --rp-muted: #7b88a1; --rp-subtle: #4c566a; --rp-text: #2e3440;
+  --rp-love: #bf616a; --rp-gold: #d08770; --rp-rose: #b48ead; --rp-pine: #5e81ac; --rp-foam: #8fbcbb; --rp-iris: #81a1c1;
+  --rp-hl-low: #e5e9f0; --rp-hl-med: #d8dee9; --rp-hl-high: #c2c9d6;
+  --rp-shadow: 0 1px 2px rgba(46, 52, 64, 0.1);
+}
+:root[data-palette='nord'][data-scheme='dark'] {
+  --rp-base: #2e3440; --rp-surface: #3b4252; --rp-overlay: #434c5e;
+  --rp-muted: #7b88a1; --rp-subtle: #d8dee9; --rp-text: #eceff4;
+  --rp-love: #bf616a; --rp-gold: #ebcb8b; --rp-rose: #d08770; --rp-pine: #81a1c1; --rp-foam: #8fbcbb; --rp-iris: #b48ead;
+  --rp-hl-low: #434c5e; --rp-hl-med: #4c566a; --rp-hl-high: #5b6678;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+/* The S2 pages that are not re-skinned yet sit on their own surface inside the frame. */
+.rp-s2host { border-radius: 12px; overflow: hidden; }
+.rp-icon-stack { position: relative; width: 20px; height: 20px; display: block; }
+.rp-icon-stack > svg { position: absolute; inset: 0; transition: opacity 200ms ease-out, transform 200ms ease-out; }
 html, body { margin: 0; min-height: 100%; background: var(--rp-base); color: var(--rp-text); }
 body { font: 14px/1.5 'adobe-clean-han-traditional', 'Noto Sans TC', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 * { box-sizing: border-box; }
