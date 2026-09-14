@@ -91,7 +91,7 @@ export function DataTable<T extends {id: string}>({label, cols, rows, render, he
   return (
     <div className="rp-table" style={{height}}>
       <Table aria-label={label} selectionMode={onSelect ? 'single' : 'none'} selectedKeys={keys} onSelectionChange={k => onSelect && onSelect(k === 'all' ? null : (k.size ? String([...k][0]) : null))} disallowEmptySelection={!!onSelect}>
-        <TableHeader>{cols.map(c => <Column key={c.id} id={c.id} isRowHeader={c.isRowHeader} width={c.width} minWidth={c.width ? undefined : 120}>{c.label}</Column>)}</TableHeader>
+        <TableHeader>{cols.map(c => <Column key={c.id} id={c.id} isRowHeader={c.isRowHeader} style={c.width ? {width: c.width} : undefined}>{c.label}</Column>)}</TableHeader>
         <TableBody items={rows} renderEmptyState={() => <div className="empty">{empty ?? ''}</div>}>
           {r => <Row id={r.id}>{render(r).map((cell, i) => <Cell key={cols[i].id}>{cell}</Cell>)}</Row>}
         </TableBody>
