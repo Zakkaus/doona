@@ -170,7 +170,17 @@ button, input { font: inherit; color: inherit; }
 .rp-delta { font-size: 12px; line-height: 16px; color: var(--rp-subtle); }
 /* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
 .rp-tile-head > svg, .rp-qlabel > svg { flex: none; }
-.rp-tint-pine > svg { color: var(--rp-pine); } .rp-tint-rose > svg { color: var(--rp-rose); } .rp-tint-iris > svg { color: var(--rp-iris); } .rp-tint-gold > svg { color: var(--rp-gold); } .rp-tint-foam > svg { color: var(--rp-foam); }
+/* "Vivid" colour level: role colours on icons, nav groups, and the wordmark. "Mono" keeps only the primary accent. */
+[data-colour='vivid'] .rp-tint-pine > svg { color: var(--rp-pine); } [data-colour='vivid'] .rp-tint-rose > svg { color: var(--rp-rose); } [data-colour='vivid'] .rp-tint-iris > svg { color: var(--rp-iris); } [data-colour='vivid'] .rp-tint-gold > svg { color: var(--rp-gold); } [data-colour='vivid'] .rp-tint-foam > svg { color: var(--rp-foam); }
+[data-colour='vivid'] .rp-side [data-group='status'] { --rp-group: var(--rp-pine); } [data-colour='vivid'] .rp-side [data-group='network'] { --rp-group: var(--rp-foam); } [data-colour='vivid'] .rp-side [data-group='proxy'] { --rp-group: var(--rp-iris); } [data-colour='vivid'] .rp-side [data-group='system'] { --rp-group: var(--rp-gold); }
+[data-colour='vivid'] .rp-nav > svg { color: var(--rp-group, currentColor); }
+[data-colour='vivid'] .rp-nav[aria-current='page'] { color: var(--rp-group, var(--rp-pine)); }
+[data-colour='vivid'] .rp-nav[aria-current='page']::before { background: var(--rp-group, var(--rp-pine)); }
+[data-colour='vivid'] .rp-nav:hover { color: var(--rp-text); }
+[data-colour='vivid'] .rp-brand span { background: linear-gradient(90deg, var(--rp-pine), var(--rp-iris), var(--rp-rose)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+[data-colour='vivid'] .rp-h1 { color: var(--rp-text); }
+[data-colour='vivid'] .rp-table [role='columnheader'] { color: var(--rp-pine); }
+[data-colour='vivid'] .rp-light.info::before { background: var(--rp-foam); }
 .rp-delta.good { color: var(--rp-pine); } .rp-delta.bad { color: var(--rp-rose); }
 .rp-spark { flex: 1 1 80px; min-width: 80px; max-width: 120px; }
 /* Controls on react-aria-components */

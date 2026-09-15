@@ -60,14 +60,20 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
 }
 type Item = {id: string, label: string, desc?: string};
 const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</MenuItem>;
-export function MenuButton({children, items, sections, value, onChange, label, quiet, chevron = true}: {children: ReactNode, items?: Item[], sections?: Array<{title: string, items: Item[]}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean}) {
+type Picked = {value: string, onChange: (k: string) => void};
+const pick = (on: (k: string) => void) => (k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) on(String(v)); };
+// `extra` is a second section with its own selection (a setting beside the main choice).
+export function MenuButton({children, items, sections, value, onChange, label, quiet, chevron = true, extra}: {children: ReactNode, items?: Item[], sections?: Array<{title: string, items: Item[]}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean, extra?: {title: string, items: Item[]} & Picked}) {
   return (
     <MenuTrigger>
       <PressButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>{children}{chevron && <ChevronDown />}</PressButton>
       <Popover className="rp-popover" placement="bottom end">
-        <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={k => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }} aria-label={label}>
-          {sections ? sections.map(sec => <MenuSection key={sec.title} id={sec.title}><Header className="rp-sec-h">{sec.title}</Header>{sec.items.map(item)}</MenuSection>) : (items ?? []).map(item)}
-        </Menu>
+        {sections
+          ? <Menu aria-label={label}>
+              {sections.map(sec => <MenuSection key={sec.title} id={sec.title} selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)}><Header className="rp-sec-h">{sec.title}</Header>{sec.items.map(item)}</MenuSection>)}
+              {extra && <MenuSection id={extra.title} selectionMode="single" selectedKeys={[extra.value]} onSelectionChange={pick(extra.onChange)}><Header className="rp-sec-h">{extra.title}</Header>{extra.items.map(item)}</MenuSection>}
+            </Menu>
+          : <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)} aria-label={label}>{(items ?? []).map(item)}</Menu>}
       </Popover>
     </MenuTrigger>
   );

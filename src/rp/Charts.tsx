@@ -4,16 +4,16 @@ import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, Respo
 
 export type Series = {label: string, color: string, values: number[]};
 const VARS = ['base', 'surface', 'overlay', 'muted', 'subtle', 'text', 'love', 'gold', 'rose', 'pine', 'foam', 'iris', 'hl-low', 'hl-med', 'hl-high'] as const;
-export type Palette = Record<typeof VARS[number], string>;
+export type Palette = Record<typeof VARS[number], string> & {vivid: boolean};
 function read(): Palette {
   const cs = getComputedStyle(document.documentElement);
-  return Object.fromEntries(VARS.map(v => [v, cs.getPropertyValue('--rp-' + v).trim()])) as Palette;
+  return {...Object.fromEntries(VARS.map(v => [v, cs.getPropertyValue('--rp-' + v).trim()])), vivid: document.documentElement.dataset.colour !== 'mono'} as Palette;
 }
 export function usePalette() {
   const [p, setP] = useState<Palette>(() => read());
   useEffect(() => {
     const mo = new MutationObserver(() => setP(read()));
-    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
+    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme', 'data-colour']});
     return () => mo.disconnect();
   }, []);
   return p;

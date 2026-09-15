@@ -20,6 +20,7 @@ const TOP: Record<string, Top> = {
 };
 const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
 const latest = throughput[throughput.length - 1];
+const RANK_COLOURS = ['pine', 'foam', 'iris', 'gold', 'rose'] as const;
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT(); const p = usePalette();
@@ -71,7 +72,7 @@ export function Activity({go}: {go: (page: string) => void}) {
       <div className="rp-g3">
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.topDevices')}</span><Segmented label={t('act.topDevices')} value={by} onChange={setBy} items={[['dev', t('act.devices')], ['host', t('act.domains')]]} /></div>
-          <div className="rp-list">{TOP[by].map(([k, v, tx, kind]) => <div key={k} className="rp-dev">{kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}<Bar label={k} value={tx + sep + v + '%'} pct={v} color={p.pine} /></div>)}</div>
+          <div className="rp-list">{TOP[by].map(([k, v, tx, kind], i) => <div key={k} className="rp-dev">{kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}<Bar label={k} value={tx + sep + v + '%'} pct={v} color={p.vivid ? p[RANK_COLOURS[i % RANK_COLOURS.length]] : p.pine} /></div>)}</div>
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.probeLatency')}</span><Button quiet small onPress={() => go('policies')}>{t('act.viewAll')}</Button></div>
