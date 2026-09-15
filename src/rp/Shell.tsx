@@ -56,6 +56,16 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
 type Wordmark = 'gradient' | 'plain';
+const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+// Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
+// paint the default palette and every control would then transition to the stored one (a visible flash on load).
+export function stampAppearance() {
+  const scheme = (read('doona-scheme') as Scheme) || 'system';
+  const paletteRaw = read('doona-palette'); const palette = paletteRaw && paletteRaw.includes('/') ? paletteRaw : 'rose-pine/moon';
+  const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset;
+  d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; d.wordmark = (read('doona-wordmark') as Wordmark) || 'gradient';
+}
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
