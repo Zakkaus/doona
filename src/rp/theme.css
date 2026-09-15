@@ -77,40 +77,71 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-/* Glass: translucent surfaces over a soft gradient, blurred (backdrop-filter). Accents follow Apple's system colours. */
+/* Glass: frosted panels over a colourful wallpaper. Top bar, sidebar and content area are transparent so every card blurs
+   the wallpaper itself (a blurred parent would hide it from nested backdrop filters).
+   Accents follow Apple's system colours. */
 :root[data-family='glass'] {
-  --rp-base: rgba(255, 255, 255, 0.55); --rp-surface: rgba(255, 255, 255, 0.42); --rp-overlay: rgba(255, 255, 255, 0.55);
-  --rp-muted: #8e8e93; --rp-subtle: #636366; --rp-text: #1c1c1e;
+  --rp-base: rgba(255, 255, 255, 0.5); --rp-surface: rgba(255, 255, 255, 0.55); --rp-overlay: rgba(120, 120, 128, 0.14);
+  --rp-muted: #8e8e93; --rp-subtle: #48484a; --rp-text: #1c1c1e;
   --rp-love: #ff3b30; --rp-gold: #ff9500; --rp-rose: #ff9f0a; --rp-pine: #007aff; --rp-foam: #34c759; --rp-iris: #af52de;
   --rp-c1: #007aff; --rp-c2: #34c759; --rp-c3: #af52de; --rp-c4: #ff9500; --rp-c5: #5ac8fa; --rp-c6: #ff2d55; --rp-c7: #ffcc00; --rp-c8: #ff3b30;
-  --rp-hl-low: rgba(255, 255, 255, 0.35); --rp-hl-med: rgba(60, 60, 67, 0.18); --rp-hl-high: rgba(60, 60, 67, 0.3);
+  --rp-hl-low: rgba(120, 120, 128, 0.1); --rp-hl-med: rgba(120, 120, 128, 0.2); --rp-hl-high: rgba(120, 120, 128, 0.32);
   --rp-on-accent: #ffffff; --rp-on-text: #ffffff; --rp-line: rgba(60, 60, 67, 0.14);
-  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.18);
-  --rp-glass-border: rgba(255, 255, 255, 0.6);
-  --rp-bg: radial-gradient(1200px 800px at 10% 0%, #d8e6ff 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #ffe0ec 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #dcf5e6 0%, transparent 55%), #eef1f6;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(31, 38, 80, 0.1); --rp-shadow-lg: 0 24px 64px rgba(31, 38, 80, 0.25);
+  --rp-glass: rgba(255, 255, 255, 0.55); --rp-glass-strong: rgba(255, 255, 255, 0.72); --rp-glass-border: rgba(60, 60, 67, 0.12); --rp-glass-edge: transparent;
+  --rp-underlay: rgba(20, 20, 30, 0.3);
+  --rp-bg: radial-gradient(900px 700px at 12% 8%, #8ec5ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffb3d9 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffd9a1 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #a5f0d6 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #d9c8ff 0%, transparent 65%), #e9ecf5;
 }
 :root[data-family='glass'][data-scheme='dark'] {
-  --rp-base: rgba(28, 28, 30, 0.55); --rp-surface: rgba(44, 44, 46, 0.45); --rp-overlay: rgba(255, 255, 255, 0.1);
-  --rp-muted: #8e8e93; --rp-subtle: #aeaeb2; --rp-text: #f2f2f7;
+  --rp-base: rgba(255, 255, 255, 0.06); --rp-surface: rgba(30, 30, 34, 0.55); --rp-overlay: rgba(255, 255, 255, 0.1);
+  --rp-muted: #8e8e93; --rp-subtle: #b8b8be; --rp-text: #f2f2f7;
   --rp-love: #ff453a; --rp-gold: #ff9f0a; --rp-rose: #ffb340; --rp-pine: #0a84ff; --rp-foam: #30d158; --rp-iris: #bf5af2;
   --rp-c1: #0a84ff; --rp-c2: #30d158; --rp-c3: #bf5af2; --rp-c4: #ff9f0a; --rp-c5: #64d2ff; --rp-c6: #ff375f; --rp-c7: #ffd60a; --rp-c8: #ff453a;
-  --rp-hl-low: rgba(255, 255, 255, 0.06); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
+  --rp-hl-low: rgba(255, 255, 255, 0.07); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
   --rp-on-accent: #ffffff; --rp-on-text: #1c1c1e; --rp-line: rgba(255, 255, 255, 0.12);
-  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
-  --rp-glass-border: rgba(255, 255, 255, 0.12);
-  --rp-bg: radial-gradient(1200px 800px at 10% 0%, #1e2a5a 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #4a1d3f 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #123a2e 0%, transparent 55%), #0b0b10;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35); --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --rp-glass: rgba(28, 28, 32, 0.5); --rp-glass-strong: rgba(36, 36, 40, 0.78); --rp-glass-border: rgba(255, 255, 255, 0.14); --rp-glass-edge: rgba(255, 255, 255, 0.22);
+  --rp-underlay: rgba(0, 0, 0, 0.45);
+  --rp-bg: radial-gradient(900px 700px at 12% 8%, #2451c9 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #a3287e 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #b35c00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0e7a63 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #3b2a7a 0%, transparent 65%), #0c0d14;
 }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
+/* The chrome sits straight on the wallpaper; only panels are glass. */
 :root[data-family='glass'] .rp-top { background: transparent; }
-:root[data-family='glass'] .rp-main, :root[data-family='glass'] .rp-card, :root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog, :root[data-family='glass'] .rp-search, :root[data-family='glass'] .rp-table, :root[data-family='glass'] .rp-frame {
-  backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid var(--rp-glass-border);
+:root[data-family='glass'] .rp-side { background: transparent; }
+/* The content area keeps its edge as a faint tinted sheet (no blur of its own, so the cards inside still blur the wallpaper). */
+:root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.28); border: 1px solid var(--rp-glass-border); border-bottom: 0; box-shadow: inset 0 1px 0 var(--rp-glass-edge); }
+:root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.22); }
+:root[data-family='glass'] .rp-search { background: rgba(255, 255, 255, 0.35); border-color: var(--rp-glass-border); }
+:root[data-family='glass'][data-scheme='dark'] .rp-search { background: rgba(255, 255, 255, 0.08); }
+:root[data-family='glass'] .rp-vrule { background: var(--rp-glass-border); }
+/* Panels: blur the wallpaper, a lit top edge, a soft drop shadow. */
+:root[data-family='glass'] .rp-card, :root[data-family='glass'] .rp-table, :root[data-family='glass'] .rp-frame {
+  background: var(--rp-glass); backdrop-filter: blur(30px) saturate(1.8);
+  border: 1px solid var(--rp-glass-border); box-shadow: inset 0 1px 0 var(--rp-glass-edge), var(--rp-shadow);
 }
-:root[data-family='glass'] .rp-main { border-bottom: 0; }
-:root[data-family='glass'] .rp-card { box-shadow: var(--rp-shadow); }
-:root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog { background: rgba(255, 255, 255, 0.78); }
-:root[data-family='glass'][data-scheme='dark'] .rp-popover, :root[data-family='glass'][data-scheme='dark'] .rp-dialog { background: rgba(44, 44, 46, 0.78); }
-:root[data-family='glass'] .rp-underlay { backdrop-filter: blur(8px); }
+:root[data-family='glass'] .rp-card { border-radius: 18px; }
+:root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog {
+  background: var(--rp-glass-strong); backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid var(--rp-glass-border); box-shadow: inset 0 1px 0 var(--rp-glass-edge), var(--rp-shadow-lg);
+}
+:root[data-family='glass'] .rp-table [role='columnheader'] { background: transparent; }
+:root[data-family='glass'] .rp-frame .head { background: transparent; }
+/* Controls in the iOS idiom: the selected segment is a lit pill, switches have a white knob, buttons are tinted glass. */
+:root[data-family='glass'] .rp-seg { background: var(--rp-overlay); }
+:root[data-family='glass'] .rp-slider { background: var(--rp-glass-strong); border-color: transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+:root[data-family='glass'] .rp-seg .rp-btn, :root[data-family='glass'] .rp-seg .rp-btn:hover { background: transparent; }
+:root[data-family='glass'] .rp-seg .rp-btn[data-selected] { color: var(--rp-text); }
+:root[data-family='glass'][data-scheme='dark'] .rp-slider { background: rgba(255, 255, 255, 0.16); }
+:root[data-family='glass'] .rp-switch .track::after { background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+:root[data-family='glass'] .rp-btn { background: var(--rp-overlay); }
+:root[data-family='glass'] .rp-btn:hover { background: var(--rp-hl-high); }
+:root[data-family='glass'] .rp-btn.quiet { background: transparent; }
+:root[data-family='glass'] .rp-btn.quiet:hover { background: var(--rp-hl-med); }
+:root[data-family='glass'] .rp-btn.accent, :root[data-family='glass'] .rp-btn.primary { background: var(--rp-pine); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 8px rgba(0, 122, 255, 0.35); }
+:root[data-family='glass'] .rp-node { background: var(--rp-overlay); }
+:root[data-family='glass'] .rp-input { background: rgba(255, 255, 255, 0.4); border-color: var(--rp-glass-border); }
+:root[data-family='glass'][data-scheme='dark'] .rp-input { background: rgba(255, 255, 255, 0.08); }
+:root[data-family='glass'] .rp-toast { backdrop-filter: blur(30px) saturate(1.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--rp-shadow-lg); }
 /* The S2 pages that are not re-skinned yet sit on their own surface inside the frame. */
 .rp-s2host { border-radius: 12px; overflow-x: auto; scrollbar-width: thin; }
 .rp-icon-stack { position: relative; width: 20px; height: 20px; display: block; }
@@ -294,7 +325,11 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.negative:hover { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
 .rp-btn.primary { background: var(--rp-pine); color: var(--rp-on-accent); }
 .rp-btn.primary:hover { filter: brightness(1.08); }
-.rp-btn[data-disabled] { opacity: 0.4; cursor: default; pointer-events: none; }
+.rp-btn[data-disabled] { cursor: default; pointer-events: none; color: var(--rp-muted); background: var(--rp-hl-low); border-color: transparent; }
+.rp-btn.quiet[data-disabled] { background: transparent; }
+.rp-btn.negative[data-disabled] { background: transparent; border-color: var(--rp-hl-med); }
+.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); filter: none; }
+.rp-btn[data-disabled] > svg { opacity: 0.6; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
 .rp-grow { flex: 1; }
 /* Node tiles */
