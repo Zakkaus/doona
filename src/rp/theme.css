@@ -137,6 +137,7 @@
 :root[data-family='glass'] .rp-btn:hover { background: var(--rp-hl-high); }
 :root[data-family='glass'] .rp-btn.quiet { background: transparent; }
 :root[data-family='glass'] .rp-btn.quiet:hover { background: var(--rp-hl-med); }
+:root[data-family='glass'] .rp-btn.accent:hover, :root[data-family='glass'] .rp-btn.primary:hover, :root[data-family='glass'] .rp-btn.accent[data-pressed], :root[data-family='glass'] .rp-btn.primary[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 :root[data-family='glass'] .rp-btn.accent, :root[data-family='glass'] .rp-btn.primary { background: var(--rp-pine); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 8px rgba(0, 122, 255, 0.35); }
 :root[data-family='glass'] .rp-node { background: var(--rp-overlay); }
 :root[data-family='glass'] .rp-input { background: rgba(255, 255, 255, 0.4); border-color: var(--rp-glass-border); }
@@ -243,7 +244,7 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.sm.accent, .rp-btn.sm.primary, .rp-btn.sm.negative { padding: 0 10px; }
 .rp-btn.icon { width: 32px; padding: 0; justify-content: center; }
 .rp-btn.accent { background: var(--rp-pine); color: var(--rp-on-accent); }
-.rp-btn.accent:hover { filter: brightness(1.08); }
+.rp-btn.accent:hover, .rp-btn.accent[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 .rp-seg { display: inline-flex; gap: 4px; max-width: 100%; background: var(--rp-overlay); border-radius: 10px; padding: 2px; }
 .rp-seg .rp-btn { flex: 0 1 auto; min-width: 0; padding: 0 10px; }
 .rp-seg .rp-btn { height: 28px; background: transparent; color: var(--rp-subtle); border-radius: 8px; border: 2px solid transparent; }
@@ -254,7 +255,7 @@ button, input { font: inherit; color: inherit; }
 .rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 4px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
 .rp-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 12px; border-radius: 6px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
-.rp-item[data-pressed] { background: var(--rp-hl-med); scale: 0.98; transition-duration: 100ms; }
+.rp-item[data-pressed] { background: var(--rp-hl-med); }
 .rp-item[data-selected] { background: color-mix(in srgb, var(--rp-pine) 10%, transparent); }
 .rp-item[data-selected] { font-weight: 600; }
 .rp-item .desc { color: var(--rp-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -330,13 +331,13 @@ button, input { font: inherit; color: inherit; }
 .rp-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; font-size: 12px; line-height: 16px; font-weight: 500; border: 1px solid var(--rp-hl-high); color: var(--rp-subtle); }
 .rp-badge.warn { border-color: transparent; background: var(--rp-gold); color: var(--rp-on-accent); }
 .rp-btn.negative { background: transparent; border-color: var(--rp-love); color: var(--rp-love); }
-.rp-btn.negative:hover { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
+.rp-btn.negative:hover, .rp-btn.negative[data-pressed] { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
 .rp-btn.primary { background: var(--rp-pine); color: var(--rp-on-accent); }
-.rp-btn.primary:hover { filter: brightness(1.08); }
+.rp-btn.primary:hover, .rp-btn.primary[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 .rp-btn[data-disabled] { cursor: default; pointer-events: none; color: var(--rp-muted); background: var(--rp-hl-low); border-color: transparent; }
 .rp-btn.quiet[data-disabled] { background: transparent; }
 .rp-btn.negative[data-disabled] { background: transparent; border-color: var(--rp-hl-med); }
-.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); filter: none; }
+.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); }
 .rp-btn[data-disabled] > svg { opacity: 0.6; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
 .rp-grow { flex: 1; }
@@ -420,14 +421,11 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
 :root { --rp-on-accent: var(--rp-surface); --rp-on-text: var(--rp-surface); --rp-line: var(--rp-hl-low); --rp-ease: cubic-bezier(0.45, 0, 0.4, 1); --rp-ease-in: cubic-bezier(0.5, 0, 1, 1); --rp-ease-out: cubic-bezier(0, 0, 0.4, 1); }
 .rp-btn, .rp-nav, .rp-item, .rp-select, .rp-selectbtn, .rp-search, .rp-tab, .rp-input, .rp-version, .rp-brand, .rp-input .clear, .rp-table [role='row'], .rp-switch, .rp-check, .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, filter, outline-color, scale;
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
   transition-duration: 150ms; transition-timing-function: var(--rp-ease);
 }
-/* Press: a quick, small settle (100ms in, 200ms back). Icon buttons shrink a touch more since they are all glyph. */
-.rp-btn, .rp-select, .rp-selectbtn, .rp-node, .rp-nav { transition-duration: 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 200ms; }
-.rp-btn[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed] { scale: 0.97; transition-duration: 100ms; transition-timing-function: var(--rp-ease-out); }
-.rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed] { scale: 0.92; }
-.rp-nav[data-pressed] { scale: 0.98; }
+/* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
+:root { --rp-ink-mix: #000; } :root[data-scheme='dark'] { --rp-ink-mix: #fff; }
 .rp-bar .fill { transition: width 200ms var(--rp-ease-out); }
 /* Segmented control and tabs: the selection slides between items (200ms, ease-out). */
 .rp-seg, .rp-tabhead { position: relative; }
@@ -499,8 +497,6 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 300ms; }
 .rp-spin svg { animation: rp-spin 600ms var(--rp-ease); }
 @keyframes rp-spin { to { rotate: 360deg; } }
-.rp-btn > svg, .rp-nav > svg { transition: scale 200ms var(--rp-ease-out); }
-.rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: 1.08; }
-.rp-node, .rp-card { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease), box-shadow 150ms var(--rp-ease), translate 150ms var(--rp-ease); }
-button.rp-node:hover { translate: 0 -1px; box-shadow: var(--rp-shadow); }
-@media (prefers-reduced-motion: reduce) { .rp-content, .rp-tabs [role='tabpanel'] { animation: rp-fade-in 200ms var(--rp-ease); } .rp-nav-slider { transition: none; } .rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: none; } .rp-btn[data-pressed], .rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed], .rp-nav[data-pressed] { scale: none; } }
+.rp-node { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease); }
+button.rp-node:hover { background: var(--rp-hl-med); }
+@media (prefers-reduced-motion: reduce) { .rp-content, .rp-tabs [role='tabpanel'] { animation: rp-fade-in 200ms var(--rp-ease); } .rp-nav-slider { transition: none; } }
