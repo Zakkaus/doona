@@ -13,6 +13,7 @@ export function usePalette() {
   const [p, setP] = useState<Palette>(() => read());
   useEffect(() => {
     const mo = new MutationObserver(() => setP(read()));
+    setP(read()); // the shell stamps the palette attributes in a layout effect, before this observer exists
     mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
     return () => mo.disconnect();
   }, []);

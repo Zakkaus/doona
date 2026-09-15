@@ -40,11 +40,12 @@ const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overvie
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
 type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord' | 'glass/glass';
-const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
-  {title: 'Rosé Pine', items: [{id: 'rose-pine/moon', label: 'Moon', desc: '暗版較柔'}, {id: 'rose-pine/main', label: 'Main', desc: '暗版最深'}]},
-  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: '暗版最淺'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: '暗版'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: '暗版最深'}]},
-  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]},
-  {title: 'Glass', items: [{id: 'glass/glass', label: 'Glass', desc: '毛玻璃'}]}
+// Each entry pairs the light variant with a dark one; the description names both with their official variant names.
+const palettes = (glass: string): Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> => [
+  {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn / Main'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn / Moon'}]},
+  {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte / Frappé'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte / Macchiato'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte / Mocha'}]},
+  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord', desc: 'Snow Storm / Polar Night'}]},
+  {title: 'Glass', items: [{id: 'glass/glass', label: 'Glass', desc: glass}]}
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
@@ -136,7 +137,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <span className={spinning ? 'rp-spin' : undefined}><Button quiet icon label={t('refresh')} onPress={() => { setSpinning(true); setTimeout(() => setSpinning(false), 600); toast('positive', t('refreshed')); }}><Refresh /></Button></span>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
