@@ -825,8 +825,7 @@ body {
 /* Integer line heights everywhere so 1px rules land on whole pixels. */
 body {
   font:
-    14px/20px 'adobe-clean-han-traditional',
-    'Noto Sans TC',
+    14px/20px 'Noto Sans TC',
     system-ui,
     sans-serif;
   -webkit-font-smoothing: antialiased;

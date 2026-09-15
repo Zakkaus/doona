@@ -285,7 +285,7 @@ export function Shell() {
   // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px adobe-clean-han-traditional`, sample).catch(() => {});
+    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px 'Noto Sans TC'`, sample).catch(() => {});
   }, []);
   return (
     <LangContext.Provider value={lang}>
