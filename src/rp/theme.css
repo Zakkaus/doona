@@ -90,7 +90,7 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(31, 38, 80, 0.1); --rp-shadow-lg: 0 24px 64px rgba(31, 38, 80, 0.25);
   --rp-glass: rgba(255, 255, 255, 0.55); --rp-glass-strong: rgba(255, 255, 255, 0.72); --rp-glass-border: rgba(60, 60, 67, 0.12); --rp-glass-edge: transparent;
   --rp-underlay: rgba(20, 20, 30, 0.3);
-  --rp-bg: radial-gradient(900px 700px at 12% 8%, #8ec5ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffb3d9 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffd9a1 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #a5f0d6 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #d9c8ff 0%, transparent 65%), #e9ecf5;
+  --rp-bg: radial-gradient(900px 700px at 12% 8%, #b7d8ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffc9e4 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffe3b8 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #c2f3e1 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #e2d6ff 0%, transparent 65%), #eceef6;
 }
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.06); --rp-surface: rgba(30, 30, 34, 0.55); --rp-overlay: rgba(255, 255, 255, 0.1);
@@ -102,12 +102,16 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35); --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
   --rp-glass: rgba(28, 28, 32, 0.5); --rp-glass-strong: rgba(36, 36, 40, 0.78); --rp-glass-border: rgba(255, 255, 255, 0.14); --rp-glass-edge: rgba(255, 255, 255, 0.22);
   --rp-underlay: rgba(0, 0, 0, 0.45);
-  --rp-bg: radial-gradient(900px 700px at 12% 8%, #2451c9 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #a3287e 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #b35c00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0e7a63 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #3b2a7a 0%, transparent 65%), #0c0d14;
+  --rp-bg: radial-gradient(900px 700px at 12% 8%, #1a3282 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #6e1c58 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #7a3f00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0b5546 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #2b1f5c 0%, transparent 65%), #0c0d14;
 }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
 /* The chrome sits straight on the wallpaper; only panels are glass. */
-:root[data-family='glass'] .rp-top { background: transparent; }
-:root[data-family='glass'] .rp-side { background: transparent; }
+/* Top bar and sidebar stay on the wallpaper, with a soft scrim so labels read over a colour blob. */
+:root[data-family='glass'] .rp-top { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0)); }
+:root[data-family='glass'] .rp-side { background: linear-gradient(to right, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0)); }
+:root[data-family='glass'][data-scheme='dark'] .rp-top { background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)); }
+:root[data-family='glass'][data-scheme='dark'] .rp-side { background: linear-gradient(to right, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)); }
+:root[data-family='glass'][data-scheme='dark'] { --rp-subtle: #d0d0d6; }
 /* The content area keeps its edge as a faint tinted sheet (no blur of its own, so the cards inside still blur the wallpaper). */
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.28); border: 1px solid var(--rp-glass-border); border-bottom: 0; box-shadow: inset 0 1px 0 var(--rp-glass-edge); }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.22); }
@@ -250,14 +254,16 @@ button, input { font: inherit; color: inherit; }
 .rp-seg .rp-btn { height: 28px; background: transparent; color: var(--rp-subtle); border-radius: 8px; border: 2px solid transparent; }
 .rp-seg .rp-btn:hover { color: var(--rp-text); }
 .rp-seg .rp-btn[data-selected] { background: var(--rp-surface); color: var(--rp-pine); border-color: var(--rp-pine); }
-.rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 12px 2px; }
+.rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 8px 2px 32px; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 4px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
-.rp-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 12px; border-radius: 6px; cursor: default; outline: none; color: var(--rp-text); }
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+.rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
-.rp-item[data-selected] { background: color-mix(in srgb, var(--rp-pine) 10%, transparent); }
 .rp-item[data-selected] { font-weight: 600; }
+.rp-item .rp-check-mark { width: 16px; height: 16px; visibility: hidden; color: var(--rp-text); }
+.rp-item[data-selected] .rp-check-mark { visibility: visible; }
+.rp-item.plain { grid-template-columns: minmax(0, 1fr) auto; padding-left: 12px; }
 .rp-item .desc { color: var(--rp-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
 .rp-item .desc.ok { color: var(--rp-foam); } .rp-item .desc.warn { color: var(--rp-gold); } .rp-item .desc.err { color: var(--rp-love); }
 .rp-il { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }

@@ -4,6 +4,7 @@ import {flushSync} from 'react-dom';
 import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import Close from '@react-spectrum/s2/icons/Close';
+import Checkmark from '@react-spectrum/s2/icons/Checkmark';
 import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle';
 import InfoCircle from '@react-spectrum/s2/icons/InfoCircle';
@@ -66,7 +67,9 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
 type Item = {id: string, label: string, desc?: string, icon?: ReactNode, tone?: 'ok' | 'warn' | 'err'};
 // Label with an optional leading icon (a flag, a swatch); shared by menu items and the rendered value of a select.
 const ItemLabel = ({i}: {i: Item}) => <span className="rp-il">{i.icon && <span className="ic">{i.icon}</span>}<span>{i.label}</span></span>;
-const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</MenuItem>;
+// S2 marks the selected item with a checkmark in a leading column, not with a background.
+export const Check = () => <Checkmark UNSAFE_className="rp-check-mark" />;
+const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><Check /><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</MenuItem>;
 type Picked = {value: string, onChange: (k: string) => void};
 const pick = (on: (k: string) => void) => (k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) on(String(v)); };
 // `extra` is a second section with its own selection (a setting beside the main choice).
@@ -90,7 +93,7 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[], va
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }}>
       <PressButton className="rp-select"><SelectValue>{({selectedItem}) => selectedItem ? <ItemLabel i={selectedItem as Item} /> : value}</SelectValue><ChevronDown /></PressButton>
       <Popover className="rp-popover" placement="bottom start">
-        <ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox>
+        <ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><Check /><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox>
       </Popover>
     </Select>
   );
@@ -119,7 +122,7 @@ export function LabeledSelect({label, items, value, onChange, isDisabled, side, 
   const sel = (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }} isDisabled={isDisabled}>
       <PressButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => selectedItem ? <ItemLabel i={selectedItem as Item} /> : value}</SelectValue><ChevronDown /></PressButton>
-      <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
+      <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><Check /><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
     </Select>
   );
   if (bare) return sel;
