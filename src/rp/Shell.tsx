@@ -116,7 +116,7 @@ export function Shell() {
   );
 }
 
-function ToastHost() { const t = useT(); return <Toasts closeLabel={t('close')} />; }
+function ToastHost() { const t = useT(); return <Toasts labels={{close: t('close'), showAll: t('toast.showAll'), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />; }
 
 function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();

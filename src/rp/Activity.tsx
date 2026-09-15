@@ -10,7 +10,7 @@ import DeviceDesktop from '@react-spectrum/s2/icons/DeviceDesktop';
 import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {runtime, checks, conns, groups, events, throughput, connSeries, type Mode} from '../app/mock';
 import {useT} from '../app/i18n';
-import {Button, Segmented, MenuButton, InlineSelect, Light, Bar} from './ui';
+import {Button, Segmented, MenuButton, InlineSelect, Light, Bar, toast} from './ui';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from './Charts';
 
 type Top = Array<[string, number, string, 'desktop' | 'phone']>;
@@ -44,7 +44,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   return (
     <>
       <div className="rp-quick">
-        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-iris"><Shuffle />{t('act.mode')}</span><Segmented label={t('act.mode')} value={mode} onChange={k => setMode(k as Mode)} items={[['rule', t('mode.rule')], ['global', t('mode.global')], ['direct', t('mode.direct')]]} /></div></div>
+        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-iris"><Shuffle />{t('act.mode')}</span><Segmented label={t('act.mode')} value={mode} onChange={k => { setMode(k as Mode); toast('positive', t('act.mode') + (t('lang') === 'Language' ? ': ' : '：') + t(`mode.${k}` as 'mode.rule')); }} items={[['rule', t('mode.rule')], ['global', t('mode.global')], ['direct', t('mode.direct')]]} /></div></div>
         <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-foam"><Filter />{t('act.global')}</span><MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>{target}</MenuButton></div></div>
         <div className="rp-card"><div className="rp-row"><Light tone="ok">{t('act.running')}</Light><Button quiet onPress={() => go('overview')}>{t('act.viewDetails')}</Button></div></div>
       </div>

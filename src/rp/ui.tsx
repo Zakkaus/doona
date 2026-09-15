@@ -3,6 +3,9 @@ import {useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, t
 import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import Close from '@react-spectrum/s2/icons/Close';
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle';
+import InfoCircle from '@react-spectrum/s2/icons/InfoCircle';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -183,22 +186,58 @@ export function LogLine({text}: {text: string}) {
   return <span><span className={'rp-lv ' + cls}>{m[1]}</span>{m[2]}</span>;
 }
 
-// Toasts: a tiny queue, rendered once by the shell.
+// Toasts: a queue rendered once by the shell, stacked like S2's ToastContainer.
+// The newest toast sits on top; older ones peek out behind it. Clicking the stack or "show all" expands the list over an underlay.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
-type ToastItem = {id: number, kind: ToastKind, msg: string, exiting?: boolean};
+type ToastItem = {id: number, kind: ToastKind, msg: string, exiting?: boolean, timer?: ReturnType<typeof setTimeout>, left: number, since: number};
 let listeners: Array<(t: ToastItem[]) => void> = [];
-let queue: ToastItem[] = []; let seq = 0;
+let queue: ToastItem[] = []; let seq = 0; let paused = false;
 const publish = () => listeners.forEach(l => l(queue));
-const EXIT_MS = 400;
+const EXIT_MS = 400; const TIMEOUT_MS = 5000;
+const arm = (t: ToastItem) => { t.since = Date.now(); t.timer = setTimeout(() => dismiss(t.id), t.left); };
+const disarm = (t: ToastItem) => { if (t.timer) { clearTimeout(t.timer); t.timer = undefined; t.left = Math.max(1000, t.left - (Date.now() - t.since)); } };
+const setPaused = (p: boolean) => { if (p === paused) return; paused = p; queue.forEach(t => { if (t.exiting) return; if (p) disarm(t); else if (!t.timer) arm(t); }); };
 const dismiss = (id: number) => {
-  if (!queue.some(t => t.id === id && !t.exiting)) return;
-  queue = queue.map(t => t.id === id ? {...t, exiting: true} : t); publish();
-  setTimeout(() => { queue = queue.filter(t => t.id !== id); publish(); }, EXIT_MS);
+  const t = queue.find(t => t.id === id); if (!t || t.exiting) return;
+  disarm(t); queue = queue.map(x => x.id === id ? {...x, exiting: true} : x); publish();
+  setTimeout(() => { queue = queue.filter(x => x.id !== id); publish(); }, EXIT_MS);
 };
-export const toast = (kind: ToastKind, msg: string) => { const id = ++seq; queue = [...queue, {id, kind, msg}]; publish(); setTimeout(() => dismiss(id), 5000); };
-export function Toasts({closeLabel = 'Close'}: {closeLabel?: string}) {
+const clearAll = () => queue.forEach(t => dismiss(t.id));
+export const toast = (kind: ToastKind, msg: string) => { const t: ToastItem = {id: ++seq, kind, msg, left: TIMEOUT_MS, since: Date.now()}; if (!paused) arm(t); queue = [...queue, t]; publish(); };
+const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
+export function Toasts({labels}: {labels: {close: string, showAll: string, collapse: string, clearAll: string}}) {
   const [items, setItems] = useState(queue);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => { listeners.push(setItems); return () => { listeners = listeners.filter(l => l !== setItems); }; }, []);
-  return <div className="rp-toasts" role="region" aria-live="polite">{items.map(t => <div key={t.id} className={cx('rp-toast', t.kind, t.exiting && 'exiting')}><span className="grow">{t.msg}</span><RButton className="rp-btn quiet icon close" aria-label={closeLabel} onPress={() => dismiss(t.id)}><Close /></RButton></div>)}</div>;
+  const live = items.filter(t => !t.exiting);
+  useEffect(() => { if (live.length === 0 && expanded) setExpanded(false); }, [live.length, expanded]);
+  useEffect(() => { setPaused(expanded); }, [expanded]);
+  useEffect(() => { if (!expanded) return; const on = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); }; addEventListener('keydown', on); return () => removeEventListener('keydown', on); }, [expanded]);
+  if (items.length === 0) return null;
+  // Newest first: index 0 is the main toast, the rest stack behind it when collapsed.
+  const ordered = [...items].reverse();
+  return (
+    <>
+      {expanded && <div className="rp-toast-underlay" onClick={() => setExpanded(false)} />}
+      <div className={cx('rp-toasts', expanded && 'expanded')} role="region" aria-live="polite" onMouseEnter={() => setPaused(true)} onMouseLeave={() => { if (!expanded) setPaused(false); }}>
+        {expanded && <div className="rp-toast-controls"><RButton className="rp-btn sm" onPress={clearAll}>{labels.clearAll}</RButton><RButton className="rp-btn sm" onPress={() => setExpanded(false)}>{labels.collapse}</RButton></div>}
+        <div className="rp-toast-list" onClick={e => { if (!expanded && live.length > 1 && !(e.target as Element).closest('button')) setExpanded(true); }}>
+          {ordered.map((t, i) => {
+            const idx = t.exiting ? 0 : live.length - 1 - live.indexOf(t); const Icon = TOAST_ICON[t.kind];
+            const background = !expanded && idx > 0;
+            return (
+              <div key={t.id} className={cx('rp-toast', t.kind, t.exiting && 'exiting', background && 'background')} style={{zIndex: ordered.length - i, '--i': Math.min(idx, 3)} as CSSProperties} aria-hidden={background || undefined}>
+                <div className="main">
+                  <span className="body">{Icon && <Icon />}<span className="grow">{t.msg}</span></span>
+                  {!expanded && idx === 0 && live.length > 1 && <RButton className="rp-btn sm quiet more" onPress={() => setExpanded(true)}>{labels.showAll} ({live.length})</RButton>}
+                </div>
+                <RButton className="rp-btn quiet icon close" aria-label={labels.close} onPress={() => dismiss(t.id)}><Close /></RButton>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
 }
 export type {SortDescriptor};

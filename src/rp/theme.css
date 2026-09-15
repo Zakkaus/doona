@@ -324,12 +324,6 @@ button, input { font: inherit; color: inherit; }
 .rp-dialog h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; }
 .rp-dialog.narrow { width: min(480px, 90vw); }
 .rp-form { display: flex; flex-direction: column; gap: 12px; }
-.rp-toasts { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 20; }
-.rp-toast { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; min-width: 280px; border-radius: 10px; background: var(--rp-text); color: var(--rp-surface); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); }
-.rp-toast > .grow { flex: 1; }
-.rp-toast > .close { color: inherit; width: 24px; height: 24px; min-width: 0; } .rp-toast > .close > svg { width: 12px; height: 12px; }
-.rp-toast > .close:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
-.rp-toast.negative { background: var(--rp-love); } .rp-toast.positive { background: var(--rp-pine); }
 .rp-fb { display: flex; align-items: center; gap: 16px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; padding: 0 16px; min-height: 40px; background: var(--rp-base); border-radius: 8px; }
 .rp-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @media (min-width: 1280px) { .rp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -375,12 +369,41 @@ button, input { font: inherit; color: inherit; }
 @keyframes rp-fade-out { to { opacity: 0; } }
 @keyframes rp-dialog-in { from { opacity: 0; translate: 0 20px; } }
 /* Toasts slide in from below and back out. */
-.rp-toast { animation: rp-toast-in 400ms var(--rp-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .rp-slider, .rp-bar .fill { transition: none; }
+  .rp-popover[data-entering], .rp-tip[data-entering], .rp-underlay[data-entering] .rp-dialog { animation: rp-fade-in 200ms var(--rp-ease); }
+  .rp-popover[data-exiting], .rp-tip[data-exiting], .rp-underlay[data-exiting] .rp-dialog { animation: rp-fade-out 130ms var(--rp-ease) forwards; }
+}
+/* ---- Toast stack (after S2 ToastContainer): bottom centre, newest on top, older toasts peek out behind; expanded = list over an underlay. ---- */
+.rp-toast-underlay { position: fixed; inset: 0; background: var(--rp-underlay); z-index: 19; animation: rp-fade-in 250ms var(--rp-ease); }
+.rp-toasts { position: fixed; left: 0; right: 0; bottom: 16px; margin: 0 auto; width: fit-content; max-width: 90vw; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 20; }
+.rp-toasts.expanded { bottom: 0; top: 0; padding: 16px 8px; max-height: 100vh; }
+.rp-toast-list { position: relative; display: flex; flex-direction: column-reverse; gap: 8px; }
+.rp-toasts.expanded .rp-toast-list { overflow: auto; padding: 8px; margin: 0 -8px; }
+.rp-toast-controls { display: flex; justify-content: flex-end; gap: 8px; }
+.rp-toast { display: flex; align-items: center; gap: 16px; padding: 12px 8px 12px 16px; min-height: 56px; width: 336px; max-width: 90vw; border-radius: 10px; background: var(--rp-text); color: var(--rp-surface); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); box-sizing: border-box; flex-shrink: 0; transition: translate 400ms var(--rp-ease), scale 400ms var(--rp-ease), opacity 400ms var(--rp-ease); }
+.rp-toast .main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.rp-toast .body { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.rp-toast .body > svg { flex: none; }
+.rp-toast .grow { flex: 1; min-width: 0; }
+.rp-toast .more { color: inherit; flex: none; margin-left: -8px; }
+.rp-toast .more:hover, .rp-toast .close:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
+.rp-toast > .close { color: inherit; width: 24px; height: 24px; min-width: 0; flex: none; align-self: flex-start; margin-top: -2px; } .rp-toast > .close > svg { width: 12px; height: 12px; }
+.rp-toast.negative { background: var(--rp-love); } .rp-toast.positive { background: var(--rp-pine); } .rp-toast.info { background: var(--rp-foam); color: var(--rp-base); }
+.rp-toast.info .close:hover, .rp-toast.info .more:hover { background: color-mix(in srgb, var(--rp-base) 16%, transparent); }
+/* Collapsed stack: toasts behind the main one sit on it, pushed up and shrunk by their depth; only three show. */
+.rp-toast.background { position: absolute; inset: 0; width: 100%; min-height: 0; translate: 0 calc(var(--i) * -10px); scale: calc(1 - var(--i) * 0.06); opacity: 1; }
+.rp-toast.background > * { visibility: hidden; }
+.rp-toast.background[style*='--i: 3'] { opacity: 0; }
+.rp-toast-list:hover .rp-toast.background { translate: 0 calc(var(--i) * -14px); }
+.rp-toasts:not(.expanded) .rp-toast-list { cursor: default; }
+.rp-toast:not(.background):not(.exiting) { animation: rp-toast-in 400ms var(--rp-ease); }
 .rp-toast.exiting { animation: rp-toast-out 400ms var(--rp-ease) forwards; pointer-events: none; }
+.rp-toast.exiting.background { animation: rp-fade-out 400ms var(--rp-ease) forwards; }
 @keyframes rp-toast-in { from { opacity: 0; translate: 0 calc(100% + 12px); } }
 @keyframes rp-toast-out { to { opacity: 0; translate: 0 calc(100% + 12px); } }
 @media (prefers-reduced-motion: reduce) {
-  .rp-slider, .rp-bar .fill { transition: none; }
-  .rp-popover[data-entering], .rp-tip[data-entering], .rp-underlay[data-entering] .rp-dialog, .rp-toast { animation: rp-fade-in 200ms var(--rp-ease); }
-  .rp-popover[data-exiting], .rp-tip[data-exiting], .rp-underlay[data-exiting] .rp-dialog, .rp-toast.exiting { animation: rp-fade-out 130ms var(--rp-ease) forwards; }
+  .rp-toast { transition: none; }
+  .rp-toast:not(.background):not(.exiting) { animation: rp-fade-in 200ms var(--rp-ease); }
+  .rp-toast.exiting { animation: rp-fade-out 130ms var(--rp-ease) forwards; }
 }
