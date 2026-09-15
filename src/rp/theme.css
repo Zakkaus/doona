@@ -88,7 +88,7 @@
   --rp-hl-low: rgba(120, 120, 128, 0.1); --rp-hl-med: rgba(120, 120, 128, 0.2); --rp-hl-high: rgba(120, 120, 128, 0.32);
   --rp-on-accent: #ffffff; --rp-on-text: #ffffff; --rp-line: rgba(60, 60, 67, 0.14);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(31, 38, 80, 0.1); --rp-shadow-lg: 0 24px 64px rgba(31, 38, 80, 0.25);
-  --rp-glass: rgba(255, 255, 255, 0.55); --rp-glass-strong: rgba(255, 255, 255, 0.72); --rp-glass-border: rgba(255, 255, 255, 0.7); --rp-glass-edge: rgba(255, 255, 255, 0.9);
+  --rp-glass: rgba(255, 255, 255, 0.55); --rp-glass-strong: rgba(255, 255, 255, 0.72); --rp-glass-border: rgba(60, 60, 67, 0.12); --rp-glass-edge: transparent;
   --rp-underlay: rgba(20, 20, 30, 0.3);
   --rp-bg: radial-gradient(900px 700px at 12% 8%, #8ec5ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffb3d9 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffd9a1 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #a5f0d6 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #d9c8ff 0%, transparent 65%), #e9ecf5;
 }
@@ -108,7 +108,9 @@
 /* The chrome sits straight on the wallpaper; only panels are glass. */
 :root[data-family='glass'] .rp-top { background: transparent; }
 :root[data-family='glass'] .rp-side { background: transparent; }
-:root[data-family='glass'] .rp-main { background: transparent; border: 0; border-radius: 0; }
+/* The content area keeps its edge as a faint tinted sheet (no blur of its own, so the cards inside still blur the wallpaper). */
+:root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.28); border: 1px solid var(--rp-glass-border); border-bottom: 0; box-shadow: inset 0 1px 0 var(--rp-glass-edge); }
+:root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.22); }
 :root[data-family='glass'] .rp-search { background: rgba(255, 255, 255, 0.35); border-color: var(--rp-glass-border); }
 :root[data-family='glass'][data-scheme='dark'] .rp-search { background: rgba(255, 255, 255, 0.08); }
 :root[data-family='glass'] .rp-vrule { background: var(--rp-glass-border); }
