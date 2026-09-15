@@ -1,5 +1,5 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
-import {useEffect, useState, type ReactElement} from 'react';
+import {useEffect, useLayoutEffect, useState, type ReactElement} from 'react';
 import {Button as RButton, Dialog, Modal, ModalOverlay, SearchField, Input, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
 import Close from '@react-spectrum/s2/icons/Close';
 import {toast} from './ui';
@@ -22,7 +22,7 @@ import logo from '../logo.svg';
 import GitHub from '../app/icons/GitHub';
 import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
-import {Button, MenuButton, Toasts} from './ui';
+import {Button, MenuButton, Toasts, LabeledSelect, useSlider, withCrossfade} from './ui';
 import {Activity} from './Activity';
 import Color from '@react-spectrum/s2/icons/Color';
 import {Overview} from './pages/Overview';
@@ -39,11 +39,12 @@ const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overvie
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
-type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord';
+type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord' | 'glass/glass';
 const PALETTES: Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> = [
   {title: 'Rosé Pine', items: [{id: 'rose-pine/moon', label: 'Moon', desc: '暗版較柔'}, {id: 'rose-pine/main', label: 'Main', desc: '暗版最深'}]},
   {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: '暗版最淺'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: '暗版'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: '暗版最深'}]},
-  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]}
+  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord'}]},
+  {title: 'Glass', items: [{id: 'glass/glass', label: 'Glass', desc: '毛玻璃'}]}
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
@@ -59,10 +60,10 @@ function useAppearance() {
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
+  useLayoutEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
   // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
-  const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; setScheme(next); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
-  const pickPalette = (p: PaletteId) => { setPalette(p); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
+  const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; withCrossfade(() => setScheme(next)); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
+  const pickPalette = (p: PaletteId) => { withCrossfade(() => setPalette(p)); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
   return {scheme, dark, toggle, palette, pickPalette};
 }
 
@@ -110,32 +111,37 @@ export function Shell() {
     <LangContext.Provider value={lang}>
       <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
-      <Toasts />
+      <ToastHost />
     </LangContext.Provider>
   );
 }
 
+function ToastHost() { const t = useT(); return <Toasts labels={{close: t('close'), showAll: t('toast.showAll'), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />; }
+
 function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();
+  const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
+  const [spinning, setSpinning] = useState(false);
   const Page = route === 'activity' ? null : PAGES[route];
   const titleKey = NAV.flatMap(([, items]) => items).find(([k]) => k === route)?.[1] ?? 'nav.activity';
   return (
     <div className="rp-shell">
       <header className="rp-top">
-        <RLink className="rp-brand" href="#/activity"><img src={logo} alt="" />doona</RLink>
+        <RLink className="rp-brand" href="#/activity"><img src={logo} alt="" /><span>doona</span></RLink>
         <div className="rp-search-wrap"><RButton className="rp-search" onPress={openSearch}><Search /><span className="grow">{t('search')}</span><span className="rp-kbd">{mac ? '⌘K' : 'Ctrl K'}</span></RButton></div>
         <div className="rp-actions">
           <span className="rp-search-compact"><Button quiet icon label={t('search')} onPress={openSearch}><Search /></Button></span>
-          <Button quiet icon label={t('refresh')} onPress={() => toast('positive', t('refreshed'))}><Refresh /></Button>
+          <span className={spinning ? 'rp-spin' : undefined}><Button quiet icon label={t('refresh')} onPress={() => { setSpinning(true); setTimeout(() => setSpinning(false), 600); toast('positive', t('refreshed')); }}><Refresh /></Button></span>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
           <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
-      <nav className="rp-side">
+      <nav className="rp-side" ref={navRef}>
+        {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
         {NAV.map(([g, items]) => (
-          <div key={g}>
+          <div key={g} data-group={g.replace('grp.', '')}>
             <div className="rp-group">{t(g as 'grp.status')}</div>
             {items.map(([k, label, Icon]) => <RLink key={k} className="rp-nav" href={'#/' + k} aria-current={route === k ? 'page' : undefined}><Icon />{t(label as 'nav.activity')}</RLink>)}
           </div>
@@ -144,8 +150,11 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}><GitHub />honk 0.9.3</RButton>
       </nav>
       <main className="rp-main">
-        <div className="rp-content">
-          <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
+        <div className="rp-content" key={route}>
+          <div className="rp-head">
+            <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
+            <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={NAV.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity')}))} bare /></div>
+          </div>
           {Page ? <Page go={go} query={location.hash.split('?')[1] ?? ''} /> : <Activity go={go} />}
         </div>
       </main>
