@@ -23,6 +23,11 @@ export default [
   },
   ...tseslint.configs.recommended,
   {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', {ignoreRestSiblings: true, argsIgnorePattern: '^_'}]
+    }
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {globals: globals.browser}
   },

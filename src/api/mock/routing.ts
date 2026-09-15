@@ -63,13 +63,11 @@ function evaluate(input: RoutingTraceInput): Evaluation {
     outbound: string | null = null;
   const missing = new Set<string>();
   const rules: Evaluation['rules'] = configRules.rules.map(rule => {
-    const conditions = rule.cond
-      .split(/\s*&&\s*/)
-      .map((expression, i): Condition => ({
-        id: rule.id + '/' + i,
-        expression,
-        ...(matched ? {result: 'skipped', missing_inputs: []} : predicate(expression, input))
-      }));
+    const conditions = rule.cond.split(/\s*&&\s*/).map((expression, i): Condition => ({
+      id: rule.id + '/' + i,
+      expression,
+      ...(matched ? {result: 'skipped', missing_inputs: []} : predicate(expression, input))
+    }));
     const result = matched
       ? 'skipped'
       : conditions.some(c => c.result === 'not_matched')
