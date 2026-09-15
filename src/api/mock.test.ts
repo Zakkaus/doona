@@ -1,9 +1,9 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {chainLabel, clientRows, ipLiteral, navAvailable, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
+import {chainLabel, clientRows, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
 import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
-import {capabilities, capabilitiesBase, connections, trafficHistory} from './mock/fixtures';
+import {connections, trafficHistory} from './mock/fixtures';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -344,19 +344,4 @@ it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
     {id: '[2001:db8::1]', ip: '[2001:db8::1]', active: 2, download: 9007199254741000n, outbounds: 'proxy、direct'},
     {id: '10.0.0.7', ip: '10.0.0.7', active: 1, download: null, outbounds: 'proxy'}
   ]);
-});
-
-it('gates explicit resource absence but accepts either DNS resource', async () => {
-  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-profile' ? 'base' : null)});
-  const base = await createMockApi().capabilities();
-  expect(base.profiles).toEqual(['base']);
-  expect(base.resources.runtime_outbounds.available).toBe(false);
-  expect(base.resources.traffic_history.available).toBe(false);
-  await expect(createMockApi().runtimeOutbounds()).rejects.toMatchObject({status: 404});
-  await expect(createMockApi().trafficHistory()).rejects.toMatchObject({status: 404});
-  expect(['flows', 'rules', 'events'].map(route => navAvailable(route, base))).toEqual([false, false, false]);
-  expect(navAvailable('flows', undefined)).toBe(true);
-  expect(navAvailable('flows', capabilities)).toBe(true);
-  expect(navAvailable('dns', {...capabilitiesBase, resources: {...base.resources, dns_query: {...base.resources.dns_query, available: false}}})).toBe(true);
-  expect(navAvailable('config', base)).toBe(true);
 });

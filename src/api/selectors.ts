@@ -1,20 +1,7 @@
 import type {ApiEvent, Connection, ConnectionList, Datapath, EventKind, FlowStep, Group, HealthObservation, Node, ProbeResult, RuntimeMemory} from './model';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
-import type {Capabilities, RuntimeOutbounds, TrafficHistory} from './model';
+import type {RuntimeOutbounds, TrafficHistory} from './model';
 
-const navResources: Record<string, Array<keyof Capabilities['resources']>> = {
-  connections: ['connections'],
-  flows: ['flows'],
-  dns: ['dns_query', 'dns_cache'],
-  events: ['events'],
-  policies: ['groups'],
-  rules: ['routing_trace'],
-  overview: ['runtime']
-};
-export function navAvailable(route: string, capabilities: Capabilities | undefined): boolean {
-  return !capabilities || !navResources[route] || navResources[route].some(key => capabilities.resources[key].available !== false);
-}
-export const compatRoutes: Record<string, boolean> = {resources: true, config: true, validate: true};
 export type ClientRow = {id: string; ip: string; active: number; download: bigint | null; outbounds: string};
 
 export function clientRows(snapshot: ConnectionList | undefined): ClientRow[] {
