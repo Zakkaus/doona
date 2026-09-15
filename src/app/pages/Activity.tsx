@@ -60,6 +60,8 @@ const strip = style({display: 'grid', gridTemplateColumns: {default: ['repeat(2,
 const grid21 = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], lg: ['minmax(0, 2fr)', 'minmax(0, 1fr)']}, gap: 12, alignItems: 'stretch'});
 const grid3 = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], lg: ['repeat(3, minmax(0, 1fr))']}, gap: 12, alignItems: 'stretch'});
 const row = style({display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 32, flexWrap: 'wrap'});
+// Five range buttons do not fit a phone-width card; the control scrolls sideways rather than pushing the card wider.
+const scroller = style({maxWidth: 'full', overflowX: 'auto'});
 const cluster = style({display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', minWidth: 0});
 const qLabel = style({display: 'flex', alignItems: 'center', gap: 8, font: 'ui', fontWeight: 'medium', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis'});
 const title = style({font: 'title-sm'});
@@ -143,7 +145,7 @@ export function Activity({go}: PageProps) {
 
       <div className={grid21}>
         <Panel>
-          <div className={row}><span className={title}>{t('act.traffic')}</span><SegmentedControl aria-label={t('act.window')} selectedKey={range} onSelectionChange={setRange}><SegmentedControlItem id="live">{t('act.live')}</SegmentedControlItem><SegmentedControlItem id="h1">{t('act.h1')}</SegmentedControlItem><SegmentedControlItem id="h6">{t('act.h6')}</SegmentedControlItem><SegmentedControlItem id="h24">{t('act.h24')}</SegmentedControlItem><SegmentedControlItem id="d7">{t('act.d7')}</SegmentedControlItem></SegmentedControl></div>
+          <div className={row}><span className={title}>{t('act.traffic')}</span><div className={scroller}><SegmentedControl aria-label={t('act.window')} selectedKey={range} onSelectionChange={setRange}><SegmentedControlItem id="live">{t('act.live')}</SegmentedControlItem><SegmentedControlItem id="h1">{t('act.h1')}</SegmentedControlItem><SegmentedControlItem id="h6">{t('act.h6')}</SegmentedControlItem><SegmentedControlItem id="h24">{t('act.h24')}</SegmentedControlItem><SegmentedControlItem id="d7">{t('act.d7')}</SegmentedControlItem></SegmentedControl></div></div>
           {history && <Legend series={traffic} fmt={fmtRate} />}
           {history ? <AreaChart series={traffic} fmt={fmtRate} height={120} /> : <span className={label}>{t('act.noHistory')}</span>}
         </Panel>
