@@ -22,7 +22,7 @@ import logo from '../logo.svg';
 import GitHub from '../app/icons/GitHub';
 import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
-import {Button, MenuButton, Toasts} from './ui';
+import {Button, MenuButton, Toasts, LabeledSelect} from './ui';
 import {Activity} from './Activity';
 import Color from '@react-spectrum/s2/icons/Color';
 import {Overview} from './pages/Overview';
@@ -111,10 +111,12 @@ export function Shell() {
     <LangContext.Provider value={lang}>
       <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
-      <Toasts />
+      <ToastHost />
     </LangContext.Provider>
   );
 }
+
+function ToastHost() { const t = useT(); return <Toasts closeLabel={t('close')} />; }
 
 function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();
@@ -146,7 +148,10 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
       </nav>
       <main className="rp-main">
         <div className="rp-content">
-          <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
+          <div className="rp-head">
+            <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
+            <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={NAV.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity')}))} bare /></div>
+          </div>
           {Page ? <Page go={go} query={location.hash.split('?')[1] ?? ''} /> : <Activity go={go} />}
         </div>
       </main>

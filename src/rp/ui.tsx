@@ -2,6 +2,7 @@
 import type {ReactNode} from 'react';
 import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
+import Close from '@react-spectrum/s2/icons/Close';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -64,13 +65,14 @@ export function TextField({label, value, onChange, defaultValue, width}: {label:
 export function TextArea({label, value, onChange}: {label: string, value: string, onChange: (v: string) => void}) {
   return <RTextField className="rp-field" value={value} onChange={onChange} aria-label={label}><RTextArea /></RTextField>;
 }
-export function LabeledSelect({label, items, value, onChange, isDisabled, side}: {label: string, items: Item[], value: string, onChange: (k: string) => void, isDisabled?: boolean, side?: boolean}) {
+export function LabeledSelect({label, items, value, onChange, isDisabled, side, bare}: {label: string, items: Item[], value: string, onChange: (k: string) => void, isDisabled?: boolean, side?: boolean, bare?: boolean}) {
   const sel = (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }} isDisabled={isDisabled}>
       <RButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => (selectedItem as Item | null)?.label ?? value}</SelectValue><ChevronDown /></RButton>
       <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
     </Select>
   );
+  if (bare) return sel;
   if (side) return <span className="rp-cluster"><span className="rp-label">{label}</span>{sel}</span>;
   return <div className="rp-field"><span className="lbl">{label}</span>{sel}</div>;
 }
@@ -149,10 +151,11 @@ export function LogLine({text}: {text: string}) {
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 let listeners: Array<(t: {id: number, kind: ToastKind, msg: string}[]) => void> = [];
 let queue: {id: number, kind: ToastKind, msg: string}[] = []; let seq = 0;
-export const toast = (kind: ToastKind, msg: string) => { const id = ++seq; queue = [...queue, {id, kind, msg}]; listeners.forEach(l => l(queue)); setTimeout(() => { queue = queue.filter(t => t.id !== id); listeners.forEach(l => l(queue)); }, 5000); };
-export function Toasts() {
+const dismiss = (id: number) => { queue = queue.filter(t => t.id !== id); listeners.forEach(l => l(queue)); };
+export const toast = (kind: ToastKind, msg: string) => { const id = ++seq; queue = [...queue, {id, kind, msg}]; listeners.forEach(l => l(queue)); setTimeout(() => dismiss(id), 5000); };
+export function Toasts({closeLabel = 'Close'}: {closeLabel?: string}) {
   const [items, setItems] = useState(queue);
   useEffect(() => { listeners.push(setItems); return () => { listeners = listeners.filter(l => l !== setItems); }; }, []);
-  return <div className="rp-toasts">{items.map(t => <div key={t.id} className={cx('rp-toast', t.kind)}>{t.msg}</div>)}</div>;
+  return <div className="rp-toasts" role="region" aria-live="polite">{items.map(t => <div key={t.id} className={cx('rp-toast', t.kind)}><span className="grow">{t.msg}</span><RButton className="rp-btn quiet icon close" aria-label={closeLabel} onPress={() => dismiss(t.id)}><Close /></RButton></div>)}</div>;
 }
 export type {SortDescriptor};

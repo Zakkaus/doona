@@ -148,6 +148,7 @@ function Frame({lang, pick, scheme, setScheme, route, titleKey, go, query, Page}
                 </SubmenuTrigger>
               </Menu>
             </MenuTrigger>
+            <TooltipTrigger><ActionButton isQuiet aria-label={t('theme')} onPress={() => setScheme(scheme === 'light dark' ? (systemDark ? 'light' : 'dark') : 'light dark')}><ThemeIcon isDark={scheme === 'dark' || (scheme === 'light dark' && systemDark)} /></ActionButton><Tooltip>{t('theme')}：{scheme === 'light dark' ? t('theme.system') : scheme === 'light' ? t('theme.light') : t('theme.dark')}</Tooltip></TooltipTrigger>
           </div>
           <div className={icons}>
             <TooltipTrigger><ActionButton isQuiet aria-label={t('refresh')} onPress={() => toast('neutral', t('refreshed'))}><Refresh /></ActionButton><Tooltip>{t('refresh')}</Tooltip></TooltipTrigger>

@@ -141,6 +141,10 @@ button, input { font: inherit; color: inherit; }
 .rp-main { margin-right: 0; padding: 32px 40px 48px; background: var(--rp-surface); border-radius: 16px 16px 0 0; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
 @media (min-width: 1024px) { .rp-main { margin-right: 16px; } }
 .rp-content { width: 100%; max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.rp-head { display: flex; flex-direction: column; gap: 16px; }
+.rp-mobile-nav { display: block; }
+.rp-mobile-nav .rp-selectbtn { width: 100%; }
+@media (min-width: 1024px) { .rp-mobile-nav { display: none; } }
 .rp-h1 { font-size: 28px; font-weight: 800; margin: 0; line-height: 36px; color: var(--rp-text); }
 .rp-card { background: var(--rp-base); border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow: hidden; }
 .rp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; flex-wrap: wrap; min-width: 0; }
@@ -164,6 +168,10 @@ button, input { font: inherit; color: inherit; }
 .rp-tile-val { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
 .rp-big { font-size: 22px; font-weight: 700; line-height: 28px; }
 .rp-delta { font-size: 12px; line-height: 16px; color: var(--rp-subtle); }
+/* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
+.rp-tile-head > svg, .rp-qlabel > svg { flex: none; }
+.rp-tint-pine > svg { color: var(--rp-pine); } .rp-tint-rose > svg { color: var(--rp-rose); } .rp-tint-iris > svg { color: var(--rp-iris); } .rp-tint-gold > svg { color: var(--rp-gold); } .rp-tint-foam > svg { color: var(--rp-foam); }
+.rp-delta.good { color: var(--rp-pine); } .rp-delta.bad { color: var(--rp-rose); }
 .rp-spark { flex: 1 1 80px; min-width: 80px; max-width: 120px; }
 /* Controls on react-aria-components */
 .rp-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: var(--rp-overlay); color: var(--rp-text); cursor: pointer; font-weight: 500; white-space: nowrap; }
@@ -317,7 +325,11 @@ button, input { font: inherit; color: inherit; }
 .rp-dialog.narrow { width: min(480px, 90vw); }
 .rp-form { display: flex; flex-direction: column; gap: 12px; }
 .rp-toasts { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 20; }
-.rp-toast { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; background: var(--rp-text); color: var(--rp-surface); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); }
+.rp-toast { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; min-width: 280px; animation: rp-toast-in 200ms ease-out; border-radius: 10px; background: var(--rp-text); color: var(--rp-surface); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); }
+.rp-toast > .grow { flex: 1; }
+.rp-toast > .close { color: inherit; width: 24px; height: 24px; min-width: 0; } .rp-toast > .close > svg { width: 12px; height: 12px; }
+.rp-toast > .close:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
+@keyframes rp-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .rp-toast.negative { background: var(--rp-love); } .rp-toast.positive { background: var(--rp-pine); }
 .rp-fb { display: flex; align-items: center; gap: 16px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; padding: 0 16px; min-height: 40px; background: var(--rp-base); border-radius: 8px; }
 .rp-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
