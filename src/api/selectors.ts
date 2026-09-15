@@ -1,5 +1,5 @@
-import type {Connection, ConnectionList, FlowStep, Group, HealthObservation, Node, ProbeResult} from './model';
-import {addU64, formatBytes, formatRate, pctU64} from './u64';
+import type {ApiEvent, Connection, ConnectionList, Datapath, EventKind, FlowStep, Group, HealthObservation, Node, ProbeResult, RuntimeMemory} from './model';
+import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 
 /** Prefer TCP data probes, then the newest observation with the same dimensions. */
 export function preferredHealth(node: Node): HealthObservation | undefined {
@@ -71,4 +71,59 @@ export function probeSummary(result: ProbeResult): string {
   const states = [...members.values()];
   const unknown = states.filter(s => s === 'unknown').length;
   return states.filter(s => s === 'healthy').length + ' 個可用，' + states.filter(s => s === 'unavailable').length + ' 個無法使用' + (unknown ? '，' + unknown + ' 個狀態未知' : '') + '；' + (result.selection_changed.tcp || result.selection_changed.udp ? '選擇已變更' : '選擇未變更');
+}
+
+// Field lists take a label function so the pages can translate the keys; values stay contract vocabulary.
+export type LabelFn = (key: string) => string;
+export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn = key => key): Array<[string, string]> {
+  const ebpf = datapath.ebpf;
+  const occupancy = ebpf?.maps?.conn_state;
+  return [
+    [label('kind'), datapath.kind], [label('state'), datapath.state], [label('visibility'), datapath.visibility],
+    ...(ebpf ? [
+      [label('backend'), ebpf.backend], [label('programs'), ebpf.programs], [label('hooks'), ebpf.hooks],
+      [label('routing'), ebpf.routing.state + ' / ' + (ebpf.routing.generation_id ?? '—')],
+      [label('health'), ebpf.health], [label('lastError'), ebpf.last_error ?? '—'],
+      [label('maps'), ebpf.maps?.state ?? '—'],
+      [label('connState'), occupancy?.occupancy_known && occupancy.occupancy !== null ? occupancy.occupancy + ' / ' + occupancy.capacity : unknown]
+    ] as Array<[string, string]> : [])
+  ];
+}
+export function memoryFields(memory: RuntimeMemory, label: LabelFn = key => key): Array<[string, string]> {
+  const percent = pctU64(memory.cgroup?.current_bytes ?? null, memory.cgroup?.limit_bytes ?? null);
+  return [
+    [label('rss'), formatBytes(memory.process?.rss_bytes ?? null)],
+    [label('cgroupCurrent'), formatBytes(memory.cgroup?.current_bytes ?? null)],
+    [label('cgroupLimit'), formatBytes(memory.cgroup?.limit_bytes ?? null)],
+    [label('cgroupPercent'), percent === null ? '—' : percent + '%'],
+    [label('oomHigh'), memory.cgroup?.events?.high ?? '—'],
+    [label('oom'), memory.cgroup?.events?.oom ?? '—'],
+    [label('oomKill'), memory.cgroup?.events?.oom_kill ?? '—'],
+    [label('ebpfBytes'), formatBytes(memory.kernel?.ebpf_bytes ?? null)]
+  ];
+}
+/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
+export function formatDuration(seconds: string | null, units: {d: string; h: string; m: string; s: string}): string {
+  if (seconds === null) return '—';
+  const total = parseU64(seconds); if (total === null) return '—';
+  const d = total / 86400n, h = (total % 86400n) / 3600n, m = (total % 3600n) / 60n;
+  if (d > 0n) return `${d}${units.d} ${h}${units.h}`;
+  if (h > 0n) return `${h}${units.h} ${m}${units.m}`;
+  if (m > 0n) return `${m}${units.m}`;
+  return `${total}${units.s}`;
+}
+export function localTime(iso: string | null): string {
+  if (!iso) return '—';
+  const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString() : iso;
+}
+export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
+export function eventSummary(event: ApiEvent): string {
+  switch (event.event) {
+    case 'stream.ready': return event.data.instance_id;
+    case 'runtime.updated': return event.data.href;
+    case 'flow.updated': return event.data.resource_id + ' / revision ' + event.data.revision;
+    case 'operation.updated': return event.data.resource_id + ' / ' + event.data.status;
+    case 'generation.changed': return event.data.previous_generation_id + ' → ' + event.data.generation_id;
+    case 'flow.gap': return (event.data.resource_id ?? '—') + ' / ' + event.data.reason + ' / dropped_records ' + (event.data.dropped_records ?? '—');
+  }
 }

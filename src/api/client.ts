@@ -48,12 +48,13 @@ export function createApi(base: string, token?: string): Api {
       delay = retryAfter(response);
     }
   }
-  async function subscribeEvents({kinds, lastEventId, signal, onEvent}: EventOptions): Promise<void> {
+  async function subscribeEvents({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     let cursor = lastEventId;
     const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
     if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
     try {
       while (!signal?.aborted) {
+        onConnectionChange?.(false);
         const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
         const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
         if (!response.ok) {
@@ -65,18 +66,24 @@ export function createApi(base: string, token?: string): Api {
         await readSse(response.body, frame => {
           if (frame.id !== undefined) cursor = frame.id;
           if (!frame.data || !eventKinds.includes(frame.event as EventKind)) return;
+          if (frame.event === 'stream.ready') onConnectionChange?.(true);
           onEvent({id: cursor ?? '', event: frame.event, data: JSON.parse(frame.data)} as ApiEvent);
         }, signal);
+        onConnectionChange?.(false);
         await wait(retryAfter(response), signal);
       }
     } catch (error) {
       if (!signal?.aborted) throw error;
+    } finally {
+      onConnectionChange?.(false);
     }
   }
   return {
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
     capabilities: async signal => data(await client.GET('/api/v1/capabilities', {signal})),
     runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),
+    datapath: async (detail, signal) => data(await client.GET('/api/v1/datapath', {params: {query: {detail}}, signal})),
+    runtimeMemory: async signal => data(await client.GET('/api/v1/runtime/memory', {signal})),
     nodes: async (query, signal) => data(await client.GET('/api/v1/nodes', {params: {query}, signal})),
     groups: async signal => data(await client.GET('/api/v1/groups', {signal})),
     group: async (id, signal) => data(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
@@ -92,7 +99,12 @@ export function createApi(base: string, token?: string): Api {
     // Readable in openapi-fetch drops required null fields from composed schemas.
     flow: async (id, signal) => data(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => data(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
+    dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
+    deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
+    flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, signal})),
+    startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, signal})),
+    startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, signal})),
     operation: async (id, signal) => {
       const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;

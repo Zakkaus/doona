@@ -23,18 +23,39 @@ export function createMockApi(): Api {
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
   const flows = structuredClone(flowFixtures);
   const connections = structuredClone(fixtures.connections);
+  const runtime = structuredClone(fixtures.runtime);
+  const dnsCache = structuredClone(fixtures.dnsCache);
   const revisions = new Map<string, bigint>();
   const operations = new Map<string, OperationState>();
   const updating = new Set<string>();
-  const epoch = Date.now();
+  let sequence = 0;
+  const listeners = new Set<(event: ApiEvent) => void>();
+  const history: ApiEvent[] = [];
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const eventData = () => ({instance_id: fixtures.instanceId, observed_at: new Date().toISOString()});
+  function publish(event: ApiEvent) {
+    event.id = `${fixtures.instanceId}:${++sequence}`;
+    history.push(event);
+    if (history.length > 1024) history.shift();
+    listeners.forEach(listener => listener(event));
+  }
+  function runtimeUpdated() {
+    runtime.observed_at = new Date().toISOString();
+    publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
+  }
   function enqueue<K extends OperationAccepted['kind']>(kind: K, finish: () => Extract<Operation, {kind: K; status: 'succeeded'}>['result']): OperationAccepted {
     const operation_id = 'op-' + (operations.size + 1);
     const created_at = new Date().toISOString();
     const common = {operation_id, kind, created_at, started_at: created_at};
     operations.set(operation_id, {...common, finished_at: null, status: 'running', result: null, error: null, retryAfter: 1});
+    publish({id: '', event: 'operation.updated', data: {...eventData(), resource_id: operation_id, status: 'running', href: '/api/v1/operations/' + operation_id}});
     setTimeout(() => {
       try { operations.set(operation_id, {...common, status: 'succeeded', result: finish(), error: null, finished_at: new Date().toISOString()} as OperationState); }
       catch (error) { operations.set(operation_id, {...common, status: 'failed', finished_at: new Date().toISOString(), result: null, error: {code: 'operation_failed', message: error instanceof Error ? error.message : String(error)}} as OperationState); }
+      const terminal = operations.get(operation_id)!;
+      if (kind === 'reload' && (terminal.status === 'succeeded' || terminal.status === 'failed')) runtime.last_reload = {operation_id, status: terminal.status, finished_at: terminal.finished_at, error: terminal.error};
+      publish({id: '', event: 'operation.updated', data: {...eventData(), resource_id: operation_id, status: terminal.status, href: '/api/v1/operations/' + operation_id}});
+      runtimeUpdated();
     }, 1000);
     const href = '/api/v1/operations/' + operation_id;
     return {operation_id, kind, status: 'queued', href, location: href, retryAfter: 1};
@@ -43,23 +64,40 @@ export function createMockApi(): Api {
     signal?.throwIfAborted();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
-  async function events({kinds, lastEventId, signal, onEvent}: EventOptions): Promise<void> {
-    let seq = Math.max(0, Math.floor((Date.now() - epoch) / 5000));
-    if (lastEventId?.startsWith(fixtures.instanceId + ':')) seq = Math.max(seq, Number(lastEventId.split(':')[1]) || 0);
-    const emit = (event: ApiEvent) => { if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event)) onEvent(event); };
-    try {
-      signal?.throwIfAborted();
-      emit({id: `${fixtures.instanceId}:${++seq}`, event: 'stream.ready', data: {instance_id: fixtures.instanceId, observed_at: new Date().toISOString()}});
-      while (!signal?.aborted) {
-        await wait(5, signal);
-        emit({id: `${fixtures.instanceId}:${++seq}`, event: 'runtime.updated', data: {instance_id: fixtures.instanceId, observed_at: new Date().toISOString(), href: '/api/v1/runtime'}});
-      }
-    } catch (error) { if (!signal?.aborted) throw error; }
+  async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
+    if (signal?.aborted) return;
+    const emit = (event: ApiEvent) => { if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event)) onEvent(structuredClone(event)); };
+    const cursor = lastEventId?.startsWith(fixtures.instanceId + ':') ? Number(lastEventId.split(':')[1]) : sequence;
+    onConnectionChange?.(true);
+    emit({id: `${fixtures.instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
+    for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);
+    if (signal?.aborted) { onConnectionChange?.(false); return; }
+    listeners.add(emit);
+    if (!timer) timer = setInterval(runtimeUpdated, 5000);
+    await new Promise<void>(resolve => {
+      signal?.addEventListener('abort', () => {
+        listeners.delete(emit);
+        if (!listeners.size) { clearInterval(timer); timer = undefined; }
+        onConnectionChange?.(false);
+        resolve();
+      }, {once: true});
+    });
   }
   return {
     version: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.version); },
     capabilities: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.capabilities); },
-    runtime: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.runtime); },
+    runtime: async signal => {
+      signal?.throwIfAborted();
+      if (runtime.lifecycle.started_at) runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((Date.now() - Date.parse(runtime.lifecycle.started_at)) / 1000)));
+      return structuredClone(runtime);
+    },
+    datapath: async (detail, signal) => {
+      signal?.throwIfAborted();
+      const snapshot = structuredClone(fixtures.datapath);
+      if (detail !== 'full' && snapshot.ebpf) { delete snapshot.ebpf.attachments; delete snapshot.ebpf.maps; }
+      return snapshot;
+    },
+    runtimeMemory: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.runtimeMemory); },
     nodes: async (query, signal) => {
       signal?.throwIfAborted();
       const result = page(query?.group_id ? nodes.filter(n => n.group_ids.includes(query.group_id!)) : nodes, query?.cursor, query?.limit);
@@ -146,13 +184,47 @@ export function createMockApi(): Api {
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
       const name = query?.name ?? query?.domain;
-      const entries = fixtures.dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
+      const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
       const result = page(entries, query?.cursor, query?.limit);
-      return {...fixtures.dnsCache, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
+      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
+    },
+    dnsQuery: async (domain, types, signal) => {
+      signal?.throwIfAborted();
+      const name = domain.trim().toLowerCase().replace(/\.$/, '') + '.';
+      return {domain: name, cache_mode: 'normal', query_time: new Date().toISOString(), results: types.map(type => {
+        const entry = dnsCache.entries.find(e => e.domain === name && e.type === type && Date.parse(e.expires_at) > Date.now());
+        const data = type === 'AAAA' ? '2001:db8::14' : type === 'HTTPS' ? '1 . alpn="h2"' : '192.0.2.14';
+        return {
+          type, cached: !!entry, cache_entry_id: entry?.entry_id ?? null, upstream: entry ? null : 'udp://192.0.2.53',
+          route: {source: 'default' as const, rule: null}, status: entry?.status ?? 'NOERROR', elapsed_ms: entry ? 0.1 : 8.4,
+          question: {name, type}, answers: entry ? structuredClone(entry.answers ?? []) : [{name, type, class: 'IN', ttl: 60, data}]
+        };
+      })};
+    },
+    deleteDnsEntry: async (entryId, signal) => {
+      signal?.throwIfAborted();
+      const index = dnsCache.entries.findIndex(entry => entry.entry_id === entryId);
+      if (index < 0) return {deleted: 0};
+      dnsCache.entries.splice(index, 1);
+      return {deleted: 1};
+    },
+    flushDnsCache: async signal => {
+      signal?.throwIfAborted();
+      const matched = dnsCache.entries.length;
+      dnsCache.entries.length = 0;
+      return {matched, deleted: matched};
     },
     startReload: async signal => {
       signal?.throwIfAborted();
       return enqueue('reload', () => ({active_generation_id: '40', datapath_generation_id: '40'}));
+    },
+    startSuspend: async signal => {
+      signal?.throwIfAborted();
+      return enqueue('suspend', () => { runtime.lifecycle.state = 'suspended'; return {runtime_state: 'suspended'}; });
+    },
+    startResume: async signal => {
+      signal?.throwIfAborted();
+      return enqueue('resume', () => { runtime.lifecycle.state = 'running'; return {runtime_state: 'running'}; });
     },
     operation,
     pollOperation: async (accepted: OperationAccepted, signal?: AbortSignal) => {

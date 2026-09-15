@@ -91,4 +91,17 @@ describe('native transport', () => {
     expect(new Headers(request.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer secret');
     expect(String(request.mock.calls[0][0])).toBe('https://honk.test/api/v1/events?kinds=runtime.updated');
   });
+  it('reports readiness and disconnection while waiting to resume the stream', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const states: boolean[] = [];
+    const frame = 'id: instance:4\nevent: stream.ready\ndata: {\"instance_id\":\"instance\",\"observed_at\":\"2026-09-15T14:00:00Z\"}\n\n';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(frame, {headers: {'Content-Type': 'text/event-stream', 'Retry-After': '3'}})));
+    const stream = createApi('https://honk.test').subscribeEvents({signal: controller.signal, onEvent: () => {}, onConnectionChange: state => states.push(state)});
+    await vi.advanceTimersByTimeAsync(1);
+    expect(states).toEqual([false, true, false]);
+    controller.abort();
+    await stream;
+    expect(states.at(-1)).toBe(false);
+  });
 });

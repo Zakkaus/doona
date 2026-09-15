@@ -1,4 +1,4 @@
-import type {Capabilities, Connection, ConnectionList, DnsCacheList, Group, HealthObservation, MockHistory, Node, Runtime, Version} from '../model';
+import type {Capabilities, Connection, ConnectionList, Datapath, DnsCacheList, Group, HealthObservation, MockHistory, Node, Runtime, RuntimeMemory, Version} from '../model';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
 const now = Date.now();
@@ -26,11 +26,25 @@ export const runtime: Runtime = {
   traffic: {scope: 'visible', observed_by: 'mixed', counter_since: ago(3600), connections: {tcp: 6, udp: 2, total: 8}, bytes: {upload: '1450000', download: '1412108000'}, rates: {window_seconds: 1, upload_bytes_per_second: String(BigInt(latest.up) * 1000n), download_bytes_per_second: String(BigInt(latest.down) * 1000n)}},
   process: {pid: 1842, cpu_percent: 2.1}, last_reload: {operation_id: 'op-1182', status: 'succeeded', finished_at: observedAt, error: null}
 };
+export const datapath: Datapath = {
+  observed_at: observedAt, kind: 'ebpf', state: 'degraded', visibility: 'full',
+  ebpf: {
+    ...runtime.datapath.ebpf!, health: 'degraded', last_error: 'Routing map sample delayed',
+    attachments: ['lan0', 'wan0'].flatMap(iface => (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, interface: iface, direction, state: 'attached' as const}))),
+    maps: {state: 'ready', conn_state: {occupancy: 8, capacity: 65536, occupancy_known: true}}
+  },
+  errors: [{code: 'sample_delayed', message: 'Routing map sample delayed'}]
+};
+export const runtimeMemory: RuntimeMemory = {
+  observed_at: observedAt, process: {rss_bytes: '48234496'},
+  cgroup: {scope: 'service', current_bytes: '67108864', limit_bytes: '268435456', events: {high: '2', oom: '0', oom_kill: '0'}},
+  kernel: {ebpf_bytes: '18874368', sampled_at: observedAt}
+};
 export const capabilities: Capabilities = {
   observed_at: observedAt, profiles: ['base', 'full_transparency'],
   limits: {max_request_target_bytes: 4096, max_header_bytes: 16384, max_json_body_bytes: 65536},
   resources: {
-    runtime: {available: true}, runtime_memory: {available: true, metrics: ['process.rss_bytes']}, datapath: {available: true, kinds: ['ebpf'], details: ['attachments', 'maps']},
+    runtime: {available: true}, runtime_memory: {available: true, metrics: ['process.rss_bytes', 'cgroup.current_bytes', 'cgroup.limit_bytes', 'cgroup.events.high', 'cgroup.events.oom', 'cgroup.events.oom_kill', 'kernel.ebpf_bytes']}, datapath: {available: true, kinds: ['ebpf'], details: ['attachments', 'maps']},
     nodes: {available: true}, groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {available: true, targets: ['node', 'group'], kinds: ['tcp_connect', 'http', 'dns'], purposes: ['data', 'dns'], transports: ['tcp', 'udp'], ip_versions: ['ipv4', 'ipv6'], limits: {max_members_per_job: 1000, max_results_per_job: 4000, max_active_jobs: 4, max_queued_jobs: 16, max_concurrent_per_target: 1, job_timeout_ms: 30000, per_principal_requests_per_minute: 60, global_requests_per_minute: 120}},
     connections: {available: true}, flows: {available: true, recording: 'on', scopes: ['userspace_tcp', 'userspace_udp', 'kernel_direct', 'kernel_block', 'dns_intercept', 'kernel_bypass'], max_flows: 4096, max_steps_per_flow: 64, retention_seconds: 300, snapshot_ttl_seconds: 60, max_page_size: 1000},
@@ -91,10 +105,10 @@ export const connections: ConnectionList = {
 export const dnsCache: DnsCacheList = {
   observed_at: observedAt, coverage: {positive: true, negative: true, persistent: false}, total: 5, next_cursor: null,
   entries: [
-    {entry_id: 'c1', domain: 'api.telegram.org.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(240), stale_until: null},
-    {entry_id: 'c2', domain: 'cdn.bilibili.com.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(60), stale_until: null},
+    {entry_id: 'c1', domain: 'api.telegram.org.', type: 'A', class: 'IN', status: 'NOERROR', answers: [{name: 'api.telegram.org.', type: 'A', class: 'IN', ttl: 240, data: '149.154.167.220'}], expires_at: ahead(240), stale_until: null},
+    {entry_id: 'c2', domain: 'cdn.bilibili.com.', type: 'A', class: 'IN', status: 'NOERROR', answers: [{name: 'cdn.bilibili.com.', type: 'A', class: 'IN', ttl: 60, data: '120.92.78.14'}], expires_at: ahead(60), stale_until: ahead(120)},
     {entry_id: 'c3', domain: 'cdn.bilibili.com.', type: 'AAAA', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(60), stale_until: null},
-    {entry_id: 'c4', domain: 'doubleclick.net.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(3600), stale_until: null},
+    {entry_id: 'c4', domain: 'doubleclick.net.', type: 'A', class: 'IN', status: 'NOERROR', answers: [{name: 'doubleclick.net.', type: 'A', class: 'IN', ttl: 3600, data: '0.0.0.0'}], expires_at: ahead(3600), stale_until: null},
     {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null}
   ]
 };

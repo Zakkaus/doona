@@ -1,8 +1,10 @@
-// Mock data shaped like the doona contract (plans/doona.pages.v1.md). Replace with API clients later.
+// Compatibility fixtures remain for pages without native API resources.
+// Retained for app/pages/Activity.tsx and rp/Activity.tsx.
 export type Mode = 'rule' | 'global' | 'direct';
 // Retained for app/ui.tsx.
 export type Plane = '內核' | 'userspace' | '拒絕';
 
+// Retained for both Activity, Clients, ConfigPage, Rules, Validate pages and RuleDialog components.
 export const runtime = {
   version: 'honk 0.9.3 (d6ccc15f)',
   configPath: '/etc/honk/config.dae',
@@ -17,6 +19,7 @@ export const runtime = {
   window: '本次瀏覽器會話，12 分鐘'
 };
 
+// Retained for app/pages/Activity.tsx and rp/Activity.tsx.
 export type Check = {id: string, name: string, requested: string, effective: string, ready: boolean, detail: string, restart?: boolean, fix?: string, manual?: string};
 export const checks: Check[] = [
   {id: 'ebpf', name: 'eBPF datapath', requested: 'ebpf', effective: 'ebpf', ready: true, detail: 'tc 已掛 wan0、lan0；程式 honk_tc_egress / honk_tc_ingress'},
@@ -41,6 +44,7 @@ export const conns: Conn[] = [
   {id: '8', dst: '10.0.0.1:53', src: '10.0.0.20', mac: 'aa:bb:cc:dd:ee:20', out: 'direct', chain: ['direct'], rule: 'dip(geoip: private) -> direct(must)', ruleRef: 'config.dae:40', plane: '內核', up: '1 KB', down: '3 KB', age: '3s', proto: 'udp', canTerminate: false}
 ];
 
+// Retained for both Clients pages.
 export type Client = {ip: string, mac?: string, active: number, sampled: string, firstSeen: string};
 export const clients: Client[] = [
   {ip: '10.0.0.7', mac: 'aa:bb:cc:dd:ee:02', active: 2, sampled: '84 MB', firstSeen: '12m 前'},
@@ -80,6 +84,7 @@ function bigGroup(count: number): Group {
 const bigCount = (() => { try { const v = localStorage.getItem('doona-mock-big'); return v == null ? 100 : Number(v) || 0; } catch { return 100; } })();
 if (bigCount > 0) groups.push(bigGroup(bigCount));
 
+// Retained for both Rules pages, app/SearchTrigger.tsx, and rp/Shell.tsx.
 export type Rule = {id: string, n: number, cond: string, target: string, must: boolean, source: string, note: string, editable: boolean, generated?: boolean};
 export const rules: Rule[] = [
   {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
@@ -91,28 +96,23 @@ export const rules: Rule[] = [
   {id: 'r7', n: 7, cond: 'domain(geosite: discord)', target: 'proxy', must: false, source: 'rules.dae:7', note: '', editable: true},
   {id: 'r8', n: 8, cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false, source: '生成，subscription policy', note: '', editable: false, generated: true}
 ];
+// Retained for both Rules pages.
 export const fallbackRule = {target: 'resilient', source: 'config.dae:44'};
 
-export type CacheEntry = {id: string, qname: string, qtype: string, kind: '正' | '負', upstream: string, expires: string};
-export const dnsCache: CacheEntry[] = [
-  {id: 'c1', qname: 'api.telegram.org', qtype: 'A', kind: '正', upstream: 'tcp://1.1.1.1', expires: '4m 02s'},
-  {id: 'c2', qname: 'cdn.bilibili.com', qtype: 'A', kind: '正', upstream: 'udp://223.5.5.5', expires: '58s'},
-  {id: 'c3', qname: 'cdn.bilibili.com', qtype: 'AAAA', kind: '負', upstream: 'udp://223.5.5.5', expires: '58s'},
-  {id: 'c4', qname: 'doubleclick.net', qtype: 'A', kind: '正', upstream: '本機，block', expires: '—'},
-  {id: 'c5', qname: 'discord.com', qtype: 'HTTPS', kind: '負', upstream: 'tcp://1.1.1.1', expires: '9m 11s'}
-];
-
+// Retained for both Resources pages.
 export type Sub = {id: string, name: string, source: string, ready: boolean, lastTry: string, lastOk: string, published: string, nodes?: number, error?: string, refreshable: boolean};
 export const subs: Sub[] = [
   {id: 's1', name: 'sub-a', source: 'https://example.net/sub/a', ready: true, lastTry: '10 分鐘前', lastOk: '10 分鐘前', published: 'r40', nodes: 38, refreshable: true},
   {id: 's2', name: 'sub-b', source: 'https://example.org/b.txt', ready: false, lastTry: '3 分鐘前', lastOk: '2 天前', published: 'r33', nodes: 7, error: 'HTTP 503', refreshable: true},
   {id: 's3', name: 'local-nodes', source: '/etc/honk/nodes.dae', ready: true, lastTry: '—', lastOk: '—', published: 'r40', nodes: 2, refreshable: false}
 ];
+// Retained for both Resources pages.
 export const geo = [
   {name: 'geoip.dat', path: '/usr/share/honk/geoip.dat', ready: true, size: '9.8 MB', mtime: '2026-09-01'},
   {name: 'geosite.dat', path: '/usr/share/honk/geosite.dat', ready: true, size: '4.1 MB', mtime: '2026-09-01'}
 ];
 
+// Retained for both ConfigPage and Validate pages.
 export type Src = {id: string, path: string, editable: boolean, lines: string[]};
 export const sources: Src[] = [
   {id: 'main', path: '/etc/honk/config.dae', editable: true, lines: [
@@ -124,8 +124,7 @@ export const sources: Src[] = [
     'routing {', '    # 廣告', '    domain(suffix: doubleclick.net) -> block', '    pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)', '    dip(geoip: private) -> direct(must)', '    domain(geosite: cn) -> direct', '    domain(geosite: telegram) -> proxy', '    domain(geosite: category-games@cn) -> gaming2', '    fallback: resilient', '}']},
   {id: 'rules', path: '/etc/honk/rules.dae', editable: true, lines: ['# 家裡的裝置', 'routing {', '    mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct', '    # discord 走代理', '    domain(geosite: discord) -> proxy', '}']}
 ];
-// Diagnostics as honk collects them: the parser stays lenient and records everything, Config::validate then decides
-// what is fatal. `action` says what the runtime did or will do with the value.
+// Retained for both ConfigPage and Validate pages.
 export type Diag = {id: string, source: string, line: number, level: 'error' | 'warn' | 'info', msg: string, why: string, action: '拒絕' | '用預設' | '夾到邊界' | '照收'};
 export const diagnostics: Diag[] = [
   {id: 'd1', source: 'main', line: 43, level: 'error', msg: '出站 gaming2 不存在；可用的組：proxy、resilient、gaming', why: '猜錯會改變流量去向', action: '拒絕'},
@@ -135,8 +134,9 @@ export const diagnostics: Diag[] = [
   {id: 'd5', source: 'main', line: 3, level: 'info', msg: 'log_level 未設定時採用 info', why: '未表達意圖，用預設永遠正確', action: '用預設'},
   {id: 'd6', source: 'main', line: 21, level: 'info', msg: '訂閱 sub-a 有 3 個節點同名，已加上序號後綴', why: '不影響路由，只影響顯示', action: '照收'}
 ];
+// Retained for both Validate pages.
 export const restartItems = ['global.tproxy_port', 'global.lan_interface', 'global.wan_interface'];
-// What the disk revision changes against the running one, and whether reload can pick it up.
+// Retained for both Validate pages.
 export type Pending = {key: string, from: string, to: string, restart: boolean};
 export const pending: Pending[] = [
   {key: 'global.log_level', from: 'info', to: 'debug', restart: false},
@@ -144,6 +144,7 @@ export const pending: Pending[] = [
   {key: 'routing', from: '11 條', to: '12 條', restart: false}
 ];
 
+// Retained for app/pages/Activity.tsx and rp/Activity.tsx.
 export type Ev = {id: string, t: string, kind: 'reload' | '訂閱' | '探測' | 'datapath' | 'operation', level: 'info' | 'warn' | 'error', msg: string, ref?: string};
 export const events: Ev[] = [
   {id: 'e1', t: '14:02:11', kind: 'reload', level: 'info', msg: 'reload 完成，r40，45 個節點，8 條規則', ref: '#/config'},
@@ -153,5 +154,6 @@ export const events: Ev[] = [
   {id: 'e5', t: '13:40:59', kind: 'operation', level: 'info', msg: 'diagnose op-1183 完成，7 項檢查，2 項失敗', ref: '#/overview'},
   {id: 'e6', t: '11:12:07', kind: 'reload', level: 'info', msg: '啟動，honk 0.9.3，eBPF datapath 已掛 wan0、lan0'}
 ];
+// Retained for the Clash tab in both Events pages.
 export const clashLog = ['[INFO] tcp 10.0.0.12:51422 -> api.telegram.org:443 match geosite(telegram) using proxy[hk-01]', '[INFO] udp 10.0.0.12:60001 -> 1.1.1.1:53 match l4proto(udp)&&dport(53) using direct', '[WARN] dns query discord.com HTTPS negative cached', '[INFO] tcp 10.0.0.31:44012 -> doubleclick.net:443 match geosite(ads) using block'];
 

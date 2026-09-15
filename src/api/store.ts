@@ -1,44 +1,75 @@
 import {useCallback, useEffect, useRef, useState, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
-import type {ApiEvent, FlowList, GroupSelectionRequest, Node} from './model';
+import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
 
 type Listener = (event: ApiEvent) => void;
-const streams = new Map<Api, {listeners: Set<Listener>; controller: AbortController}>();
+type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
+type Stream = {listeners: Set<Listener>; statuses: Set<(status: StreamStatus) => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
+const streams = new Map<Api, Stream>();
+const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
 export function useEvents(onEvent: Listener) {
   const api = getApi();
   const callback = useRef(onEvent);
   useEffect(() => { callback.current = onEvent; });
-  const [error, setError] = useState<Error | null>(null);
+  const [status, setStatus] = useState(initialStatus);
   useEffect(() => {
-    let stream = streams.get(api);
-    let active = true;
     const listener: Listener = event => callback.current(event);
+    let stream = streams.get(api);
     if (!stream) {
-      stream = {listeners: new Set(), controller: new AbortController()};
+      stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus};
       streams.set(api, stream);
       const shared = stream;
-      shared.listeners.add(listener);
-      void api.subscribeEvents({signal: shared.controller.signal, onEvent: event => shared.listeners.forEach(fn => fn(event))}).catch(reason => {
-        if (active) setError(reason instanceof Error ? reason : new Error(String(reason)));
+      const update = (change: Partial<StreamStatus>) => {
+        shared.status = {...shared.status, ...change};
+        shared.statuses.forEach(fn => fn(shared.status));
+      };
+      void api.capabilities(shared.controller.signal).then(capabilities => {
+        if (shared.controller.signal.aborted) return;
+        update({available: capabilities.resources.events.available});
+        if (!capabilities.resources.events.available) return;
+        return api.subscribeEvents({
+          signal: shared.controller.signal,
+          onConnectionChange: connected => update({connected}),
+          onEvent: event => {
+            if (event.event === 'stream.ready') { shared.ready = event; update({cursor: event.id, error: null}); }
+            shared.listeners.forEach(fn => fn(event));
+          }
+        });
+      }).catch(reason => {
+        if (!shared.controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
       });
-    } else stream.listeners.add(listener);
+    }
+    stream.listeners.add(listener);
+    stream.statuses.add(setStatus);
+    setStatus(stream.status);
+    if (stream.ready) listener(stream.ready);
     return () => {
-      active = false;
       stream.listeners.delete(listener);
+      stream.statuses.delete(setStatus);
       if (!stream.listeners.size) { stream.controller.abort(); streams.delete(api); }
     };
   }, [api]);
-  return error;
+  return status;
 }
 
-export function useResource<T>(fetcher: (signal: AbortSignal) => Promise<T>, {every = 5000, deps = []}: {every?: number; deps?: DependencyList} = {}) {
-  const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: true, error: null});
+export function useEventFeed() {
+  const api = getApi();
+  const [events, setEvents] = useState<ApiEvent[]>([]);
+  useEffect(() => setEvents([]), [api]);
+  const status = useEvents(event => setEvents(previous => [event, ...previous.filter(item => item.id !== event.id)].slice(0, 200)));
+  return {...status, events};
+}
+
+export function useResource<T>(fetcher: (signal: AbortSignal) => Promise<T>, {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}) {
+  const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
   const current = useRef(fetcher);
   useEffect(() => { current.current = fetcher; });
   const refresh = useRef<() => void>(() => {});
   const refetch = useCallback(() => refresh.current(), []);
   useEffect(() => {
+    setState({data: undefined, loading: enabled, error: null});
+    if (!enabled) return;
     let controller: AbortController | undefined;
     let disposed = false;
     const load = () => {
@@ -53,17 +84,16 @@ export function useResource<T>(fetcher: (signal: AbortSignal) => Promise<T>, {ev
       });
     };
     refresh.current = load;
-    setState({data: undefined, loading: true, error: null});
     load();
     const timer = every > 0 ? setInterval(load, every) : undefined;
     return () => { disposed = true; controller?.abort(); clearInterval(timer); refresh.current = () => {}; };
-  }, [every, ...deps]);
+  }, [every, enabled, ...deps]);
   useEvents(event => { if (event.event === 'runtime.updated') refetch(); });
   return {...state, refetch};
 }
-export function useRuntime() {
+export function useRuntime(enabled = true) {
   const api = getApi();
-  return useResource(signal => api.runtime(signal), {deps: [api]});
+  return useResource(signal => api.runtime(signal), {deps: [api], enabled});
 }
 export function useNodes() {
   const api = getApi();
@@ -160,5 +190,108 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
       }
       return true;
     })
+  };
+}
+
+export function useCapabilities() {
+  const api = getApi();
+  return useResource(signal => api.capabilities(signal), {deps: [api], every: 0});
+}
+export function useDatapath(enabled = true) {
+  const api = getApi();
+  return useResource(signal => api.datapath('full', signal), {deps: [api], enabled});
+}
+export function useRuntimeMemory(enabled = true) {
+  const api = getApi();
+  return useResource(signal => api.runtimeMemory(signal), {deps: [api], enabled});
+}
+export function useDnsCache(enabled = true) {
+  const api = getApi();
+  return useResource(async signal => {
+    let cursor: string | undefined;
+    let snapshot: DnsCacheList | undefined;
+    do {
+      const result = await api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal);
+      if (snapshot) snapshot.entries.push(...result.entries); else snapshot = result;
+      cursor = result.next_cursor ?? undefined;
+    } while (cursor);
+    return snapshot!;
+  }, {deps: [api], enabled});
+}
+
+type RuntimeAction = 'reload' | 'suspend' | 'resume';
+export function useRuntimeOperations(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<RuntimeAction | null>(null);
+  const [operation, setOperation] = useState<OperationAccepted | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => { active.current?.abort(); active.current = null; }, [api]);
+  const canRun = (kind: RuntimeAction) => !!runtime && !!capabilities?.resources.operations.available && !!capabilities.resources[kind].available && (kind === 'reload' || runtime.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended'));
+  async function run(kind: RuntimeAction) {
+    if (active.current || !canRun(kind)) return;
+    const controller = new AbortController();
+    active.current = controller;
+    setBusy(kind);
+    setError(null);
+    try {
+      const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(controller.signal);
+      setOperation(accepted);
+      const terminal = await api.pollOperation(accepted, controller.signal);
+      if (controller.signal.aborted) return;
+      refetch();
+      if (terminal.status === 'failed') setError(new Error(terminal.error.message));
+      return terminal;
+    } catch (reason) {
+      if (!controller.signal.aborted) {
+        const error = reason instanceof Error ? reason : new Error(String(reason));
+        setError(error);
+        throw error;
+      }
+    } finally {
+      if (active.current === controller) { active.current = null; setBusy(null); setOperation(null); }
+    }
+  }
+  return {busy, operation, error, canRun, run};
+}
+
+export function useDnsControl() {
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const cache = useDnsCache(!!resources?.dns_cache.available && !!resources.dns_cache.read);
+  const [result, setResult] = useState<DnsQueryResponse | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => { active.current?.abort(); active.current = null; }, [api]);
+  async function run<T>(kind: string, action: (signal: AbortSignal) => Promise<T>) {
+    if (active.current) return;
+    const controller = new AbortController();
+    active.current = controller;
+    setBusy(kind);
+    setError(null);
+    try {
+      const value = await action(controller.signal);
+      if (!controller.signal.aborted) return value;
+    } catch (reason) {
+      if (!controller.signal.aborted) {
+        const error = reason instanceof Error ? reason : new Error(String(reason));
+        setError(error);
+        throw error;
+      }
+    } finally {
+      if (active.current === controller) { active.current = null; setBusy(null); }
+    }
+  }
+  return {
+    capabilities, cache, result, busy, error,
+    query: (domain: string, types: string[]) => run('query', async signal => {
+      const value = await api.dnsQuery(domain, types, signal);
+      if (!signal.aborted) setResult(value);
+      return value;
+    }),
+    remove: (id: string) => run(id, async signal => { const value = await api.deleteDnsEntry(id, signal); cache.refetch(); return value; }),
+    flush: () => run('flush', async signal => { const value = await api.flushDnsCache(signal); cache.refetch(); return value; })
   };
 }

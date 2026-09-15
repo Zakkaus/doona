@@ -42,12 +42,13 @@ it('advances reload operations and emits invalidations until aborted', async () 
   expect(events.map(e => e.event)).toEqual(['stream.ready']);
   await vi.advanceTimersByTimeAsync(1000);
   await expect(terminal).resolves.toMatchObject({status: 'succeeded', result: {active_generation_id: '40'}});
+  expect((await api.runtime()).last_reload).toMatchObject({operation_id: accepted.operation_id, status: 'succeeded'});
   await vi.advanceTimersByTimeAsync(4000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'runtime.updated']);
+  expect(events.map(e => e.event)).toEqual(['stream.ready', 'operation.updated', 'runtime.updated', 'runtime.updated']);
   controller.abort();
   await stream;
   await vi.advanceTimersByTimeAsync(5000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'runtime.updated']);
+  expect(events.map(e => e.event)).toEqual(['stream.ready', 'operation.updated', 'runtime.updated', 'runtime.updated']);
 });
 
 it('selects both networks with an independent revision and preserves configuration', async () => {
@@ -121,4 +122,43 @@ it('links recorded connections while retaining a blocked flow without a connecti
   const blocked = await api.flow('flow-blocked');
   expect(blocked).toMatchObject({state: 'blocked', connection_id: null});
   expect(blocked.trace.steps.some(s => s.stage === 'outbound' || s.stage === 'connection')).toBe(false);
+});
+
+it('changes lifecycle only after suspend and resume complete, then invalidates runtime', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const controller = new AbortController();
+  const events: ApiEvent[] = [];
+  const stream = api.subscribeEvents({signal: controller.signal, onEvent: event => events.push(event)});
+  const suspend = await api.startSuspend();
+  const suspended = api.pollOperation(suspend);
+  await vi.advanceTimersByTimeAsync(999);
+  expect((await api.runtime()).lifecycle.state).toBe('running');
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(suspended).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'suspended'}});
+  expect((await api.runtime()).lifecycle.state).toBe('suspended');
+  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: suspend.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  const resume = await api.startResume();
+  const resumed = api.pollOperation(resume);
+  expect((await api.runtime()).lifecycle.state).toBe('suspended');
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(resumed).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'running'}});
+  expect((await api.runtime()).lifecycle.state).toBe('running');
+  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: resume.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  controller.abort();
+  await stream;
+});
+
+it('deletes entries idempotently and flushes exactly the remaining cache', async () => {
+  const api = createMockApi();
+  const before = await api.dnsCache();
+  const entry = before.entries[0];
+  expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: true, cache_entry_id: entry.entry_id});
+  await expect(api.deleteDnsEntry(entry.entry_id)).resolves.toEqual({deleted: 1});
+  await expect(api.deleteDnsEntry(entry.entry_id)).resolves.toEqual({deleted: 0});
+  expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: false, cache_entry_id: null, upstream: 'udp://192.0.2.53'});
+  await expect(api.flushDnsCache()).resolves.toEqual({matched: before.total - 1, deleted: before.total - 1});
+  expect((await api.dnsCache()).entries).toEqual([]);
+  await expect(api.flushDnsCache()).resolves.toEqual({matched: 0, deleted: 0});
+  expect((await createMockApi().dnsCache()).total).toBe(before.total);
 });

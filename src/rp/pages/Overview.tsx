@@ -1,47 +1,60 @@
-import {useState} from 'react';
-import Refresh from '@react-spectrum/s2/icons/Refresh';
-import FileText from '@react-spectrum/s2/icons/FileText';
-import OpenIn from '@react-spectrum/s2/icons/OpenIn';
-import {checks} from '../../app/mock';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations} from '../../api/store';
+import {datapathFields, formatDuration, localTime, memoryFields} from '../../api/selectors';
 import {useT} from '../../app/i18n';
-import {Badge, Button, Kv, Light, Switch, toast} from '../ui';
-import type {Go} from './types';
+import {Button, DataTable, Kv, Light, toast} from '../ui';
+import type {PageProps} from './types';
 
-export function Overview({go}: {go: Go}) {
+export function Overview(_: PageProps) {
   const t = useT();
-  const [onlyBad, setOnlyBad] = useState(false);
-  const shown = onlyBad ? checks.filter(c => !c.ready) : checks;
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const runtime = useRuntime(!!resources?.runtime.available);
+  const datapath = useDatapath(!!resources?.datapath.available);
+  const memory = useRuntimeMemory(!!resources?.runtime_memory.available);
+  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
+  const state = runtime.data?.lifecycle.state;
+  const reload = runtime.data?.last_reload;
+  const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
+  async function run(kind: 'reload' | 'suspend' | 'resume') {
+    try {
+      const result = await operations.run(kind);
+      if (result) toast(result.status === 'succeeded' ? 'positive' : 'negative', t(`ov.${kind}`) + ' ' + t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed') + ' · ' + result.operation_id);
+    } catch (error) { toast('negative', t('ov.failed') + ' · ' + String(error)); }
+  }
   return (
     <div className="rp-page">
+      {capabilities.error && <p role="alert">{capabilities.error.message}</p>}
       <div className="rp-between">
-        <Kv inline items={[['上次診斷', 'op-1183，13:40，7 項，2 項失敗'], ['需重啟', '1 項']]} />
-        <div className="rp-cluster">
-          <Switch isSelected={onlyBad} onChange={setOnlyBad}>只看未就緒</Switch>
-          <Button primary onPress={() => toast('info', '診斷 op-1184 已排程')}><Refresh />重新執行診斷</Button>
-        </div>
+        <Light tone={state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn'}>{state ? t(`lifecycle.${state}`) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}</Light>
+        <Kv inline items={[[t('ov.generation'), runtime.data?.generation.active_id ?? '—'], [t('ov.revision'), runtime.data?.generation.config_revision ?? '—'], [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, {d: t('unit.d'), h: t('unit.h'), m: t('unit.m'), s: t('unit.s')})], [t('ov.lastReload'), reload ? reload.operation_id + ' · ' + t(reload.status === 'succeeded' ? 'ov.succeeded' : reload.status === 'failed' ? 'ov.failed' : 'ov.running') + ' · ' + localTime(reload.finished_at) : '—']]} />
       </div>
-      <p className="rp-note">每項列出設定值、實際值與就緒狀態。監聽器、NFQUEUE、TProxy、DNS 綁定在啟動期決定，修改後必須重新啟動；此頁不提供切換，也不會自動修復。</p>
-      <div className="rp-list">
-        {shown.map(c => (
-          <div key={c.id} className="rp-card">
-            <div className="rp-check">
-              <h3 className="rp-h3">{t(`check.${c.id}` as 'check.ebpf')}</h3>
-              <div className="rp-pair"><Kv items={[['設定', c.requested]]} /><Kv items={[['實際', c.effective]]} /></div>
-              <div className="rp-cluster">{c.restart && <Badge tone="warn">需重啟</Badge>}<Light small tone={c.ready ? 'ok' : 'err'}>{c.ready ? '就緒' : '未就緒'}</Light></div>
-            </div>
-            {c.ready ? <span className="rp-label">{c.detail}</span> : (
-              <div className="rp-fail">
-                <span>{c.detail}</span>
-                {c.fix && <span className="rp-label">處理：{c.fix}</span>}
-                <div className="rp-group-btns">
-                  <Button quiet small onPress={() => toast('info', c.name + ' 檢查已排程')}><Refresh />重新檢查</Button>
-                  <Button quiet small onPress={() => go('config', 'key=' + c.id)}><FileText />配置項</Button>
-                  {c.manual && <Button quiet small onPress={() => window.open(c.manual, '_blank')}><OpenIn />手冊</Button>}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+      {runtime.error && <p role="alert">{runtime.error.message}</p>}
+      <div className="rp-split">
+        <section className="rp-card">
+          <h3 className="rp-h3">{t('ov.datapath')}</h3>
+          {datapath.error && <p role="alert">{datapath.error.message}</p>}
+          {datapath.data ? <>
+            <Kv items={datapathFields(datapath.data, t('ov.unknown'), key => t(`ov.f.${key}` as 'ov.f.kind'))} />
+            {datapath.data.ebpf && <DataTable label={t('ov.attachments')} height={250} rows={attachments} empty={t('ov.unknown')}
+              cols={[{id: 'n', label: t('ov.name'), isRowHeader: true}, {id: 'i', label: t('ov.interface')}, {id: 'd', label: t('ov.direction')}, {id: 's', label: t('ov.state')}]}
+              render={a => [a.name, a.interface, a.direction, a.state]} />}
+            <h3 className="rp-h3">{t('ov.errors')}</h3>
+            {datapath.data.errors.length ? <ul>{datapath.data.errors.map((error, i) => <li key={i}>{error.code} · {error.message}</li>)}</ul> : <span>—</span>}
+          </> : <span className="rp-label">{capabilities.loading || datapath.loading ? t('ov.loading') : resources?.datapath.available ? '—' : t('ov.unavailable')}</span>}
+        </section>
+        <div className="rp-col">
+          <section className="rp-card">
+            <h3 className="rp-h3">{t('ov.memory')}</h3>
+            {memory.error && <p role="alert">{memory.error.message}</p>}
+            {memory.data ? <Kv items={memoryFields(memory.data, key => t(`ov.f.${key}` as 'ov.f.kind'))} /> : <span className="rp-label">{capabilities.loading || memory.loading ? t('ov.loading') : resources?.runtime_memory.available ? '—' : t('ov.unavailable')}</span>}
+          </section>
+          <section className="rp-card">
+            <h3 className="rp-h3">{t('ov.operations')}</h3>
+            <div className="rp-cluster">{(['reload', 'suspend', 'resume'] as const).map(kind => <Button key={kind} primary isDisabled={!!operations.busy || !operations.canRun(kind)} onPress={() => void run(kind)}>{t(`ov.${kind}`)}{operations.busy === kind ? ' · ' + t('ov.running') : ''}</Button>)}</div>
+            {operations.operation && <span className="rp-code">{operations.operation.operation_id}</span>}
+            {operations.error && <p role="alert">{operations.error.message}</p>}
+          </section>
+        </div>
       </div>
     </div>
   );

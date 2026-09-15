@@ -4,6 +4,9 @@ type Schema = components['schemas'];
 export type Version = Schema['Version'];
 export type Capabilities = Schema['Capabilities'];
 export type Runtime = Schema['Runtime'];
+export type Datapath = Schema['Datapath'];
+export type DatapathDetail = components['parameters']['Detail'];
+export type RuntimeMemory = Schema['RuntimeMemory'];
 export type Node = Schema['Node'];
 export type NodeList = Schema['NodeList'];
 export type HealthObservation = Schema['HealthObservation'];
@@ -21,6 +24,10 @@ export type FlowDetail = Schema['FlowDetail'];
 export type FlowList = Schema['FlowList'];
 export type FlowStep = Schema['FlowStep'];
 export type DnsCacheList = Schema['DnsCacheList'];
+export type DnsQueryResponse = Schema['DnsQueryResponse'];
+export type DnsRecordType = Schema['DnsRecordType'];
+export type DeleteCount = Schema['DeleteCount'];
+export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
 export type ErrorResponse = Schema['ErrorResponse'];
 export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};
 // The generator narrows the open OperationCommon.result object to Record<string, never>.
@@ -46,5 +53,5 @@ type EventData = {
   'generation.changed': Schema['GenerationChangedEvent'];
 };
 export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
-export type EventOptions = {kinds?: EventKind[]; lastEventId?: string; signal?: AbortSignal; onEvent: (event: ApiEvent) => void};
+export type EventOptions = {kinds?: EventKind[]; lastEventId?: string; signal?: AbortSignal; onEvent: (event: ApiEvent) => void; onConnectionChange?: (connected: boolean) => void};
 export type MockHistory = {throughput: Array<{t: number; up: number; down: number}>; connSeries: number[]};

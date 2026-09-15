@@ -1,9 +1,11 @@
-import type {Version, Capabilities, Runtime, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
+import type {Version, Capabilities, Runtime, Datapath, DatapathDetail, RuntimeMemory, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, DnsQueryResponse, DnsRecordType, DeleteCount, DeleteMatchingCount, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
 
 export interface Api {
   version(signal?: AbortSignal): Promise<Version>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   runtime(signal?: AbortSignal): Promise<Runtime>;
+  datapath(detail?: DatapathDetail, signal?: AbortSignal): Promise<Datapath>;
+  runtimeMemory(signal?: AbortSignal): Promise<RuntimeMemory>;
   nodes(query?: NodeQuery, signal?: AbortSignal): Promise<NodeList>;
   groups(signal?: AbortSignal): Promise<GroupSummary[]>;
   group(id: string, signal?: AbortSignal): Promise<Group>;
@@ -14,7 +16,12 @@ export interface Api {
   flows(query?: FlowQuery, signal?: AbortSignal): Promise<FlowList>;
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
+  dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
+  deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
   startReload(signal?: AbortSignal): Promise<OperationAccepted>;
+  startSuspend(signal?: AbortSignal): Promise<OperationAccepted>;
+  startResume(signal?: AbortSignal): Promise<OperationAccepted>;
   operation(id: string, signal?: AbortSignal): Promise<OperationState>;
   pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState>;
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
