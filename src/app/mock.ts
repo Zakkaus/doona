@@ -152,13 +152,3 @@ export const events: Ev[] = [
 ];
 export const clashLog = ['[INFO] tcp 10.0.0.12:51422 -> api.telegram.org:443 match geosite(telegram) using proxy[hk-01]', '[INFO] udp 10.0.0.12:60001 -> 1.1.1.1:53 match l4proto(udp)&&dport(53) using direct', '[WARN] dns query discord.com HTTPS negative cached', '[INFO] tcp 10.0.0.31:44012 -> doubleclick.net:443 match geosite(ads) using block'];
 
-// Active connection count over the same window, one sample every 10 s.
-export const connSeries: number[] = Array.from({length: 73}, (_, i) => Math.max(2, Math.round(8 + 2.5 * Math.sin((i - 72) / 9) + (i > 40 && i < 52 ? 4 * Math.sin(((i - 40) / 12) * Math.PI) : 0))));
-// Throughput samples for the traffic chart: one point every 10 s over the 12-minute window, KB/s. Deterministic so the mock is stable.
-export const throughput: Array<{t: number, up: number, down: number}> = Array.from({length: 73}, (_, i) => {
-  const x = i / 72;
-  const burst = i > 40 && i < 52 ? 1 : 0;
-  const down = 1400 + 2400 * Math.abs(Math.sin(x * 6.8 + 0.4)) + 6000 * burst * Math.sin(((i - 40) / 12) * Math.PI) + 60 * Math.sin(i * 0.9);
-  const up = 140 + 220 * Math.abs(Math.cos(x * 5.3)) + 900 * burst * Math.sin(((i - 40) / 12) * Math.PI) + 8 * Math.sin(i * 1.1);
-  return {t: i * 10, up: Math.max(0, Math.round(up)), down: Math.max(0, Math.round(down))};
-});

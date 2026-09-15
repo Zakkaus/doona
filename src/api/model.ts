@@ -1,0 +1,45 @@
+import type {components, operations} from './types';
+
+type Schema = components['schemas'];
+export type Version = Schema['Version'];
+export type Capabilities = Schema['Capabilities'];
+export type Runtime = Schema['Runtime'];
+export type Node = Schema['Node'];
+export type NodeList = Schema['NodeList'];
+export type HealthObservation = Schema['HealthObservation'];
+export type Group = Schema['Group'];
+export type GroupSummary = Schema['GroupSummary'];
+export type Connection = Schema['Connection'];
+export type ConnectionList = Schema['ConnectionList'];
+export type FlowSummary = Schema['FlowSummary'];
+export type FlowDetail = Schema['FlowDetail'];
+export type FlowList = Schema['FlowList'];
+export type FlowStep = Schema['FlowStep'];
+export type DnsCacheList = Schema['DnsCacheList'];
+export type ErrorResponse = Schema['ErrorResponse'];
+export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};
+// The generator narrows the open OperationCommon.result object to Record<string, never>.
+type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {kind: K; status: 'succeeded'; result: R; error: null};
+export type Operation = Schema['QueuedOperation'] | Schema['RunningOperation'] | Schema['FailedOperation']
+  | SucceededOperation<'reload', Schema['ReloadResult']>
+  | SucceededOperation<'probe', Schema['ProbeResult']>
+  | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
+  | SucceededOperation<'suspend', {runtime_state: 'suspended' | null}>
+  | SucceededOperation<'resume', {runtime_state: 'running' | null}>;
+export type OperationState = Operation & {retryAfter?: number};
+export type NodeQuery = operations['listNodes']['parameters']['query'];
+export type ConnectionQuery = operations['listConnections']['parameters']['query'];
+export type FlowQuery = operations['listFlows']['parameters']['query'];
+export type DnsCacheQuery = operations['listDnsCache']['parameters']['query'];
+export type EventKind = Schema['EventKind'];
+type EventData = {
+  'stream.ready': Schema['StreamReadyEvent'];
+  'runtime.updated': Schema['RuntimeUpdatedEvent'];
+  'flow.updated': Schema['FlowUpdatedEvent'];
+  'flow.gap': Schema['FlowGapEvent'];
+  'operation.updated': Schema['OperationUpdatedEvent'];
+  'generation.changed': Schema['GenerationChangedEvent'];
+};
+export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
+export type EventOptions = {kinds?: EventKind[]; lastEventId?: string; signal?: AbortSignal; onEvent: (event: ApiEvent) => void};
+export type MockHistory = {throughput: Array<{t: number; up: number; down: number}>; connSeries: number[]};
