@@ -28,6 +28,7 @@ import {Activity} from './Activity';
 import Color from '@react-spectrum/s2/icons/Color';
 import {Overview} from './pages/Overview';
 import {Connections} from './pages/Connections';
+import {Flows} from './pages/Flows';
 import {Clients} from './pages/Clients';
 import {Policies} from './pages/Policies';
 import {Rules} from './pages/Rules';
@@ -37,7 +38,7 @@ import {ConfigPage} from './pages/ConfigPage';
 import {Validate} from './pages/Validate';
 import {Events} from './pages/Events';
 import type {PageProps} from './pages/types';
-const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
+const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, flows: Flows, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
@@ -53,7 +54,7 @@ const palettes = (glass: string): Array<{title: string, items: Array<{id: Palett
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
-  ['grp.network', [['connections', 'nav.connections', Link], ['clients', 'nav.clients', Devices]]],
+  ['grp.network', [['connections', 'nav.connections', Link], ['flows', 'nav.flows', ListBulleted], ['clients', 'nav.clients', Devices]]],
   ['grp.proxy', [['policies', 'nav.policies', Share], ['rules', 'nav.rules', ListBulleted], ['dns', 'nav.dns', Globe]]],
   ['grp.system', [['resources', 'nav.resources', Data], ['config', 'nav.config', FileText], ['validate', 'nav.validate', CheckmarkCircle], ['events', 'nav.events', History]]]
 ];

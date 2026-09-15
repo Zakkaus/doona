@@ -1,6 +1,10 @@
 import type {Capabilities, Connection, ConnectionList, DnsCacheList, Group, HealthObservation, MockHistory, Node, Runtime, Version} from '../model';
 
-export const observedAt = '2026-09-15T14:02:12Z';
+// Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
+const now = Date.now();
+const ago = (seconds: number) => new Date(now - seconds * 1000).toISOString();
+const ahead = (seconds: number) => new Date(now + seconds * 1000).toISOString();
+export const observedAt = ago(0);
 export const instanceId = 'mock-instance-1';
 export const history: MockHistory = {
   connSeries: Array.from({length: 73}, (_, i) => Math.max(2, Math.round(8 + 2.5 * Math.sin((i - 72) / 9) + (i > 40 && i < 52 ? 4 * Math.sin(((i - 40) / 12) * Math.PI) : 0)))),
@@ -16,10 +20,10 @@ const latest = history.throughput[history.throughput.length - 1];
 export const version: Version = {api: {name: 'dae/honk-native', major: 1, status: 'draft'}, engine: {name: 'honk', version: '0.9.3'}, build: {revision: 'd6ccc15f', target: null, built_at: null}};
 export const runtime: Runtime = {
   observed_at: observedAt, instance_id: instanceId,
-  lifecycle: {state: 'running', started_at: '2026-09-12T10:02:12Z', uptime_seconds: '273600'},
+  lifecycle: {state: 'running', started_at: ago(273600), uptime_seconds: '273600'},
   generation: {active_id: '40', config_revision: '40', state: 'active', activated_at: observedAt},
   datapath: {kind: 'ebpf', state: 'active', visibility: 'full', ebpf: {backend: 'real', programs: 'loaded', hooks: 'attached', routing: {state: 'published', generation_id: '40'}, health: 'healthy', last_error: null, checked_at: observedAt}},
-  traffic: {scope: 'visible', observed_by: 'mixed', counter_since: '2026-09-15T13:02:12Z', connections: {tcp: 6, udp: 2, total: 8}, bytes: {upload: '1450000', download: '1412108000'}, rates: {window_seconds: 1, upload_bytes_per_second: String(BigInt(latest.up) * 1000n), download_bytes_per_second: String(BigInt(latest.down) * 1000n)}},
+  traffic: {scope: 'visible', observed_by: 'mixed', counter_since: ago(3600), connections: {tcp: 6, udp: 2, total: 8}, bytes: {upload: '1450000', download: '1412108000'}, rates: {window_seconds: 1, upload_bytes_per_second: String(BigInt(latest.up) * 1000n), download_bytes_per_second: String(BigInt(latest.down) * 1000n)}},
   process: {pid: 1842, cpu_percent: 2.1}, last_reload: {operation_id: 'op-1182', status: 'succeeded', finished_at: observedAt, error: null}
 };
 export const capabilities: Capabilities = {
@@ -75,8 +79,9 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   return {nodes, groups};
 }
 
+const AGES: Record<string, number> = {'1': 252, '2': 723, '3': 18, '4': 5, '5': 1, '6': 580, '7': 61, '8': 3};
 function connection(id: string, dst: string, src: string, outbound: string, download: string, upload: string, domain: string | null = null): Connection {
-  return {id, flow_id: ['1', '2', '5'].includes(id) ? 'flow-' + id : null, pname: null, state: outbound === 'block' ? 'blocked' : 'active', src, dst, domain, outbound, started_at: observedAt, observed_by: outbound === 'direct' || outbound === 'block' ? 'ebpf' : 'userspace', upload_bytes: upload, download_bytes: download, upload_bytes_per_second: '0', download_bytes_per_second: '0'};
+  return {id, flow_id: ['1', '2', '5'].includes(id) ? 'flow-' + id : null, pname: null, state: outbound === 'block' ? 'blocked' : 'active', src, dst, domain, outbound, started_at: ago(AGES[id] ?? 60), observed_by: outbound === 'direct' || outbound === 'block' ? 'ebpf' : 'userspace', upload_bytes: upload, download_bytes: download, upload_bytes_per_second: '0', download_bytes_per_second: '0'};
 }
 export const connections: ConnectionList = {
   observed_at: observedAt, instance_id: instanceId, visibility: 'full', truncated: false, total_tcp: 6, total_udp: 2,
@@ -86,10 +91,10 @@ export const connections: ConnectionList = {
 export const dnsCache: DnsCacheList = {
   observed_at: observedAt, coverage: {positive: true, negative: true, persistent: false}, total: 5, next_cursor: null,
   entries: [
-    {entry_id: 'c1', domain: 'api.telegram.org.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: '2026-09-15T14:06:14Z', stale_until: null},
-    {entry_id: 'c2', domain: 'cdn.bilibili.com.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: '2026-09-15T14:03:10Z', stale_until: null},
-    {entry_id: 'c3', domain: 'cdn.bilibili.com.', type: 'AAAA', class: 'IN', status: 'NXDOMAIN', expires_at: '2026-09-15T14:03:10Z', stale_until: null},
-    {entry_id: 'c4', domain: 'doubleclick.net.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: '2026-09-15T15:02:12Z', stale_until: null},
-    {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: '2026-09-15T14:11:23Z', stale_until: null}
+    {entry_id: 'c1', domain: 'api.telegram.org.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(240), stale_until: null},
+    {entry_id: 'c2', domain: 'cdn.bilibili.com.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(60), stale_until: null},
+    {entry_id: 'c3', domain: 'cdn.bilibili.com.', type: 'AAAA', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(60), stale_until: null},
+    {entry_id: 'c4', domain: 'doubleclick.net.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: ahead(3600), stale_until: null},
+    {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null}
   ]
 };

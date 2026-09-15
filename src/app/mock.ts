@@ -1,5 +1,6 @@
 // Mock data shaped like the doona contract (plans/doona.pages.v1.md). Replace with API clients later.
 export type Mode = 'rule' | 'global' | 'direct';
+// Retained for app/ui.tsx.
 export type Plane = '內核' | 'userspace' | '拒絕';
 
 export const runtime = {
@@ -27,7 +28,8 @@ export const checks: Check[] = [
   {id: 'ui', name: '內嵌 UI', requested: '/ui/', effective: '未啟用', ready: false, detail: 'external-ui 未設定；doona 目前以 local-controller 方式提供', fix: '設定 external-ui 或用 local-controller'}
 ];
 
-export type Conn = {id: string, dst: string, host?: string, src: string, mac?: string, out: string, chain: string[], rule: string, ruleRef?: string, plane: Plane, up: string, down: string, age: string, proto: 'tcp' | 'udp', canTerminate: boolean};
+type Conn = {id: string, dst: string, host?: string, src: string, mac?: string, out: string, chain: string[], rule: string, ruleRef?: string, plane: Plane, up: string, down: string, age: string, proto: 'tcp' | 'udp', canTerminate: boolean};
+// Retained for app/SearchTrigger.tsx and rp/Shell.tsx.
 export const conns: Conn[] = [
   {id: '1', dst: '149.154.167.220:443', host: 'api.telegram.org', src: '10.0.0.12', mac: 'aa:bb:cc:dd:ee:01', out: 'proxy', chain: ['proxy', 'hk-01'], rule: 'domain(geosite: telegram) -> proxy', ruleRef: 'config.dae:42', plane: 'userspace', up: '84 KB', down: '1.2 MB', age: '4m 12s', proto: 'tcp', canTerminate: true},
   {id: '2', dst: '120.92.78.14:443', host: 'cdn.bilibili.com', src: '10.0.0.7', mac: 'aa:bb:cc:dd:ee:02', out: 'direct', chain: ['direct'], rule: 'domain(geosite: cn) -> direct', ruleRef: 'config.dae:41', plane: '內核', up: '1.1 MB', down: '83 MB', age: '12m 03s', proto: 'tcp', canTerminate: false},
@@ -47,8 +49,9 @@ export const clients: Client[] = [
   {ip: '10.0.0.31', active: 2, sampled: '3.6 MB', firstSeen: '9m 前'}
 ];
 
-export type Node = {name: string, tcp?: number, udp?: number, v6: boolean, source: string, alive: boolean};
-export type Group = {name: string, policy: 'selector' | 'urltest' | 'loadbalance' | 'fallback' | 'score', selected?: string, members: string[], leaf: string, nodes: Node[]};
+type Node = {name: string, tcp?: number, udp?: number, v6: boolean, source: string, alive: boolean};
+type Group = {name: string, policy: 'selector' | 'urltest' | 'loadbalance' | 'fallback' | 'score', selected?: string, members: string[], leaf: string, nodes: Node[]};
+// Retained for both RuleDialog components, app/SearchTrigger.tsx, and rp/Shell.tsx.
 export const groups: Group[] = [
   {name: 'proxy', policy: 'selector', selected: 'hk-01', members: ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], leaf: 'hk-01', nodes: [
     {name: 'hk-01', tcp: 84, udp: 91, v6: true, source: 'sub-a', alive: true}, {name: 'hk-02', tcp: 91, udp: 88, v6: true, source: 'sub-a', alive: true}, {name: 'sg-01', tcp: 63, udp: 70, v6: false, source: 'sub-a', alive: true}, {name: 'jp-01', v6: false, source: 'sub-b', alive: false}, {name: 'us-01', tcp: 188, udp: 201, v6: true, source: 'sub-b', alive: true}]},

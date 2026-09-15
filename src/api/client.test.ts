@@ -24,6 +24,23 @@ describe('native transport', () => {
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({status: 403, message: 'Forbidden', requestId: null});
   });
+  it('sends conditional JSON Patch and accepts both contract success responses', async () => {
+    const body = [{op: 'replace', path: '/config/tolerance', value: 100}] as const;
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async (request: Request) => {
+      expect(request.method).toBe('PATCH');
+      expect(request.url).toBe('https://honk.test/api/v1/groups/proxy');
+      expect(request.headers.get('If-Match')).toBe('\"40\"');
+      expect(request.headers.get('Content-Type')).toBe('application/json-patch+json');
+      expect(await request.json()).toEqual(body);
+      return calls++ === 0
+        ? json({...acceptedBody, kind: 'group_update'}, 202, {Location: acceptedBody.href, 'Retry-After': '2'})
+        : json({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
+    }));
+    const api = createApi('https://honk.test');
+    await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({operation_id: 'op-1', kind: 'group_update', location: acceptedBody.href, retryAfter: 2});
+    await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
+  });
   it('follows href, honors each polling floor, and returns failure as terminal', async () => {
     vi.useFakeTimers();
     const request = vi.fn()

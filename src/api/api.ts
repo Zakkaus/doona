@@ -1,4 +1,4 @@
-import type {Version, Capabilities, Runtime, NodeList, NodeQuery, Group, GroupSummary, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
+import type {Version, Capabilities, Runtime, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
 
 export interface Api {
   version(signal?: AbortSignal): Promise<Version>;
@@ -7,6 +7,9 @@ export interface Api {
   nodes(query?: NodeQuery, signal?: AbortSignal): Promise<NodeList>;
   groups(signal?: AbortSignal): Promise<GroupSummary[]>;
   group(id: string, signal?: AbortSignal): Promise<Group>;
+  selectGroup(groupId: string, selection: GroupSelectionRequest, signal?: AbortSignal): Promise<GroupSelectionResult>;
+  patchGroup(groupId: string, ops: JsonPatch, ifMatch: string, signal?: AbortSignal): Promise<Group | OperationAccepted>;
+  startProbe(request: ProbeRequest, signal?: AbortSignal): Promise<OperationAccepted>;
   connections(query?: ConnectionQuery, signal?: AbortSignal): Promise<ConnectionList>;
   flows(query?: FlowQuery, signal?: AbortSignal): Promise<FlowList>;
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;

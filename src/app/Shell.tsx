@@ -33,6 +33,7 @@ import {toast} from './ui';
 import {Activity} from './pages/Activity';
 import {Overview} from './pages/Overview';
 import {Connections} from './pages/Connections';
+import {Flows} from './pages/Flows';
 import {Clients} from './pages/Clients';
 import {Policies} from './pages/Policies';
 import {Rules} from './pages/Rules';
@@ -47,11 +48,11 @@ type Scheme = 'light dark' | 'light' | 'dark';
 export type Go = (route: string, query?: string) => void;
 export type PageProps = {go: Go, query: string};
 
-type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.clients' | 'nav.policies' | 'nav.rules' | 'nav.dns' | 'nav.validate' | 'nav.resources' | 'nav.config' | 'nav.events';
+type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.flows' | 'nav.clients' | 'nav.policies' | 'nav.rules' | 'nav.dns' | 'nav.validate' | 'nav.resources' | 'nav.config' | 'nav.events';
 type GrpKey = 'grp.status' | 'grp.network' | 'grp.proxy' | 'grp.system';
 const NAV: Array<[GrpKey | null, Array<[string, NavKey, ComponentType, ComponentType<PageProps>]>]> = [
   ['grp.status', [['activity', 'nav.activity', ChartTrend, Activity], ['overview', 'nav.overview', Home, Overview]]],
-  ['grp.network', [['connections', 'nav.connections', LinkIcon, Connections], ['clients', 'nav.clients', DeviceAll, Clients]]],
+  ['grp.network', [['connections', 'nav.connections', LinkIcon, Connections], ['flows', 'nav.flows', ListBulleted, Flows], ['clients', 'nav.clients', DeviceAll, Clients]]],
   ['grp.proxy', [['policies', 'nav.policies', Share, Policies], ['rules', 'nav.rules', ListBulleted, Rules], ['dns', 'nav.dns', GlobeGrid, Dns]]],
   ['grp.system', [['resources', 'nav.resources', Data, Resources], ['config', 'nav.config', FileText, ConfigPage], ['validate', 'nav.validate', CheckmarkCircle, Validate], ['events', 'nav.events', History, Events]]]
 ];

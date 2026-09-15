@@ -15,6 +15,11 @@ function data<T>(result: {data?: T; response: Response}): T {
   return result.data;
 }
 
+function accepted(result: {data?: Omit<OperationAccepted, 'location' | 'retryAfter'>; response: Response}): OperationAccepted {
+  const body = data(result);
+  return {...body, location: result.response.headers.get('Location') ?? body.href, retryAfter: retryAfter(result.response)};
+}
+
 /** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string): Api {
   const baseUrl = base.replace(/\/+$/, '');
@@ -75,16 +80,19 @@ export function createApi(base: string, token?: string): Api {
     nodes: async (query, signal) => data(await client.GET('/api/v1/nodes', {params: {query}, signal})),
     groups: async signal => data(await client.GET('/api/v1/groups', {signal})),
     group: async (id, signal) => data(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
+    selectGroup: async (groupId, body, signal) => data(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
+    patchGroup: async (groupId, body, ifMatch, signal) => {
+      const result = await client.PATCH('/api/v1/groups/{groupId}', {params: {path: {groupId}, header: {'If-Match': ifMatch}}, headers: {'Content-Type': 'application/json-patch+json'}, body, signal});
+      const value = data(result);
+      return 'operation_id' in value ? accepted({data: value, response: result.response}) : value;
+    },
+    startProbe: async (body, signal) => accepted(await client.POST('/api/v1/probes', {body, signal})),
     connections: async (query, signal) => data(await client.GET('/api/v1/connections', {params: {query}, signal})),
     flows: async (query, signal) => data(await client.GET('/api/v1/flows', {params: {query}, signal})),
     // Readable in openapi-fetch drops required null fields from composed schemas.
     flow: async (id, signal) => data(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => data(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
-    startReload: async signal => {
-      const result = await client.POST('/api/v1/operations/reload', {body: {}, signal});
-      const accepted = data(result);
-      return {...accepted, location: result.response.headers.get('Location') ?? accepted.href, retryAfter: retryAfter(result.response)};
-    },
+    startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, signal})),
     operation: async (id, signal) => {
       const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
