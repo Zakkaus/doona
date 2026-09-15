@@ -480,14 +480,23 @@ export interface components {
         Timestamp: string;
         /** Format: date-time */
         NullableTimestamp: string | null;
+        /**
+         * @description Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
+         * @enum {string}
+         */
+        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable";
         /** @description Safe structured error; never raw engine output. */
         SafeError: {
             code: string;
             message: string;
             details?: Record<string, never> | null;
         };
+        /** @description HTTP error body; the code comes from ErrorCode. */
+        ApiError: components["schemas"]["SafeError"] & {
+            code?: components["schemas"]["ErrorCode"];
+        };
         ErrorResponse: {
-            error: components["schemas"]["SafeError"];
+            error: components["schemas"]["ApiError"];
             request_id: string | null;
         };
         Discovery: {
@@ -2673,7 +2682,17 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and resnapshot. */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
         };

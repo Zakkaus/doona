@@ -1892,7 +1892,28 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and resnapshot.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                event_cursor_expired:
+                  value:
+                    error:
+                      code: event_cursor_expired
+                      message: Event cursor is older than the retained window; reconnect without it.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -2837,6 +2858,28 @@ components:
         - string
         - 'null'
       format: date-time
+    ErrorCode:
+      type: string
+      description: Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
+      enum:
+        - invalid_request
+        - authentication_required
+        - permission_denied
+        - resource_not_found
+        - capability_not_supported
+        - state_conflict
+        - idempotency_conflict
+        - event_cursor_expired
+        - snapshot_unavailable
+        - snapshot_expired
+        - flow_expired
+        - stale_revision
+        - request_too_large
+        - unsupported_media_type
+        - unsupported_value
+        - precondition_required
+        - rate_limited
+        - temporarily_unavailable
     SafeError:
       type: object
       required:
@@ -2854,6 +2897,14 @@ components:
             - object
             - 'null'
       description: Safe structured error; never raw engine output.
+    ApiError:
+      allOf:
+        - $ref: '#/components/schemas/SafeError'
+        - type: object
+          properties:
+            code:
+              $ref: '#/components/schemas/ErrorCode'
+      description: HTTP error body; the code comes from ErrorCode.
     ErrorResponse:
       type: object
       required:
@@ -2861,7 +2912,7 @@ components:
         - request_id
       properties:
         error:
-          $ref: '#/components/schemas/SafeError'
+          $ref: '#/components/schemas/ApiError'
         request_id:
           type:
             - string
