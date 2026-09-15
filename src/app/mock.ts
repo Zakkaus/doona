@@ -58,7 +58,7 @@ export const groups: Group[] = [
     {name: 'jp-01', v6: false, source: 'sub-b', alive: false}, {name: 'hk-02', tcp: 91, udp: 88, v6: true, source: 'sub-a', alive: true}]}
 ];
 
-// A large airport-style subscription for stress testing: set localStorage doona-mock-big to a node count (e.g. 300).
+// A large airport-style subscription (100 nodes by default; localStorage doona-mock-big overrides the count, 0 removes it).
 function bigGroup(count: number): Group {
   const regions: Array<[string, number]> = [['香港', 60], ['台灣', 40], ['日本', 30], ['新加坡', 40], ['美國', 160], ['韓國', 50], ['英國', 120], ['德國', 130], ['澳洲', 150], ['土耳其', 170]];
   const tags = ['IPLC', 'BGP', '家寬', '解鎖', '0.5x', '2x', '流媒體', ''];
@@ -74,7 +74,7 @@ function bigGroup(count: number): Group {
   }
   return {name: 'airport', policy: 'selector', selected: nodes[0].name, members: nodes.map(n => n.name), leaf: nodes[0].name, nodes};
 }
-const bigCount = (() => { try { return Number(localStorage.getItem('doona-mock-big')) || 0; } catch { return 0; } })();
+const bigCount = (() => { try { const v = localStorage.getItem('doona-mock-big'); return v == null ? 100 : Number(v) || 0; } catch { return 100; } })();
 if (bigCount > 0) groups.push(bigGroup(bigCount));
 
 export type Rule = {id: string, n: number, cond: string, target: string, must: boolean, source: string, note: string, editable: boolean, generated?: boolean};
@@ -121,8 +121,25 @@ export const sources: Src[] = [
     'routing {', '    # 廣告', '    domain(suffix: doubleclick.net) -> block', '    pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)', '    dip(geoip: private) -> direct(must)', '    domain(geosite: cn) -> direct', '    domain(geosite: telegram) -> proxy', '    domain(geosite: category-games@cn) -> gaming2', '    fallback: resilient', '}']},
   {id: 'rules', path: '/etc/honk/rules.dae', editable: true, lines: ['# 家裡的裝置', 'routing {', '    mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct', '    # discord 走代理', '    domain(geosite: discord) -> proxy', '}']}
 ];
-export const diagnostics = [{source: 'main', line: 43, level: '錯誤', msg: '出站 gaming2 不存在；可用的組：proxy、resilient、gaming'}];
+// Diagnostics as honk collects them: the parser stays lenient and records everything, Config::validate then decides
+// what is fatal. `action` says what the runtime did or will do with the value.
+export type Diag = {id: string, source: string, line: number, level: 'error' | 'warn' | 'info', msg: string, why: string, action: '拒絕' | '用預設' | '夾到邊界' | '照收'};
+export const diagnostics: Diag[] = [
+  {id: 'd1', source: 'main', line: 43, level: 'error', msg: '出站 gaming2 不存在；可用的組：proxy、resilient、gaming', why: '猜錯會改變流量去向', action: '拒絕'},
+  {id: 'd2', source: 'rules', line: 3, level: 'error', msg: 'ipversion(4) 之後多了一個 )', why: '結構不完整，整段規則會被丟掉', action: '拒絕'},
+  {id: 'd3', source: 'main', line: 27, level: 'warn', msg: 'check_tolerance: 1m 超出範圍（最大 10s）', why: '只影響 URLTest 換節點的時序', action: '夾到邊界'},
+  {id: 'd4', source: 'main', line: 24, level: 'warn', msg: 'sub-b 訂閱回應 HTTP 503，沿用 r33 的快取', why: '節點清單可能過時', action: '照收'},
+  {id: 'd5', source: 'main', line: 3, level: 'info', msg: 'log_level 未設定時採用 info', why: '未表達意圖，用預設永遠正確', action: '用預設'},
+  {id: 'd6', source: 'main', line: 21, level: 'info', msg: '訂閱 sub-a 有 3 個節點同名，已加上序號後綴', why: '不影響路由，只影響顯示', action: '照收'}
+];
 export const restartItems = ['global.tproxy_port', 'global.lan_interface', 'global.wan_interface'];
+// What the disk revision changes against the running one, and whether reload can pick it up.
+export type Pending = {key: string, from: string, to: string, restart: boolean};
+export const pending: Pending[] = [
+  {key: 'global.log_level', from: 'info', to: 'debug', restart: false},
+  {key: 'global.tproxy_port', from: '12345', to: '12346', restart: true},
+  {key: 'routing', from: '11 條', to: '12 條', restart: false}
+];
 
 export type Ev = {id: string, t: string, kind: 'reload' | '訂閱' | '探測' | 'datapath' | 'operation', level: 'info' | 'warn' | 'error', msg: string, ref?: string};
 export const events: Ev[] = [

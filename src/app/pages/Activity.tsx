@@ -125,7 +125,7 @@ export function Activity({go}: PageProps) {
         </Panel>
         <Panel>
           <div className={row}><span className={title}>{t('act.probeLatency')}</span><More onPress={() => go('policies')}>{t('act.viewAll')}</More></div>
-          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <BarRow key={n.name} label={n.name} icon={<Flag name={n.name} />} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
+          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).slice(0, 6).map(n => <BarRow key={n.name} label={n.name} icon={<Flag name={n.name} />} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
         </Panel>
         <Panel>
           <div className={row}><span className={cluster}><span className={title}>{t('act.issues')}</span>{issues.length > 0 && <span className={label}>{issues.length}</span>}</span><More onPress={() => go('overview')}>{t('act.viewAll')}</More></div>

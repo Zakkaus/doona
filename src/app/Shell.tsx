@@ -39,19 +39,21 @@ import {Rules} from './pages/Rules';
 import {Dns} from './pages/Dns';
 import {Resources} from './pages/Resources';
 import {ConfigPage} from './pages/ConfigPage';
+import {Validate} from './pages/Validate';
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
 import {Events} from './pages/Events';
 
 type Scheme = 'light dark' | 'light' | 'dark';
 export type Go = (route: string, query?: string) => void;
 export type PageProps = {go: Go, query: string};
 
-type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.clients' | 'nav.policies' | 'nav.rules' | 'nav.dns' | 'nav.resources' | 'nav.config' | 'nav.events';
+type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.clients' | 'nav.policies' | 'nav.rules' | 'nav.dns' | 'nav.validate' | 'nav.resources' | 'nav.config' | 'nav.events';
 type GrpKey = 'grp.status' | 'grp.network' | 'grp.proxy' | 'grp.system';
 const NAV: Array<[GrpKey | null, Array<[string, NavKey, ComponentType, ComponentType<PageProps>]>]> = [
   ['grp.status', [['activity', 'nav.activity', ChartTrend, Activity], ['overview', 'nav.overview', Home, Overview]]],
   ['grp.network', [['connections', 'nav.connections', LinkIcon, Connections], ['clients', 'nav.clients', DeviceAll, Clients]]],
   ['grp.proxy', [['policies', 'nav.policies', Share, Policies], ['rules', 'nav.rules', ListBulleted, Rules], ['dns', 'nav.dns', GlobeGrid, Dns]]],
-  ['grp.system', [['resources', 'nav.resources', Data, Resources], ['config', 'nav.config', FileText, ConfigPage], ['events', 'nav.events', History, Events]]]
+  ['grp.system', [['resources', 'nav.resources', Data, Resources], ['config', 'nav.config', FileText, ConfigPage], ['validate', 'nav.validate', CheckmarkCircle, Validate], ['events', 'nav.events', History, Events]]]
 ];
 export const PAGES = Object.fromEntries(NAV.flatMap(([, i]) => i).map(([k, l, , C]) => [k, [l, C] as const]));
 

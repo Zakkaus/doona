@@ -12,10 +12,10 @@ import {TextArea} from '@react-spectrum/s2/TextArea';
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 import type {Key} from '@react-spectrum/s2';
 import {page, split, card, between, row, code, label, list, inline, col, h3, Frame, Line, DaeLine, toast} from '../ui';
-import {sources, diagnostics, restartItems, runtime} from '../mock';
+import {sources, diagnostics, runtime} from '../mock';
 import type {PageProps} from '../Shell';
 
-export function ConfigPage({query}: PageProps) {
+export function ConfigPage({query, go}: PageProps) {
   const q = new URLSearchParams(query);
   const wanted = sources.find(s => s.path.endsWith(q.get('src') || '#'));
   const [srcId, setSrcId] = useState<Key>(wanted ? wanted.id : 'main');
@@ -23,7 +23,7 @@ export function ConfigPage({query}: PageProps) {
   const [text, setText] = useState('');
   const [dirty, setDirty] = useState(false);
   const src = sources.find(s => s.id === srcId)!;
-  const errs = diagnostics.filter(d => d.source === src.id);
+  const errs = diagnostics.filter(d => d.source === src.id && d.level === 'error');
   const startEdit = (on: boolean) => { setEdit(on); if (on) setText(src.lines.join('\n')); };
   return (
     <div className={page}>
@@ -37,12 +37,12 @@ export function ConfigPage({query}: PageProps) {
               {dirty && <div className={inline}><Badge variant="notice" size="S"><Text>未儲存</Text></Badge></div>}
             </div>
             <ButtonGroup>
-              <Button variant="secondary" onPress={() => toast(errs.length ? 'negative' : 'positive', errs.length ? '校驗失敗，第 ' + errs[0].line + ' 行' : '校驗通過')}>校驗</Button>
+              <Button variant="secondary" onPress={() => go('validate')}>{errs.length ? `校驗 (${errs.length})` : '校驗'}</Button>
               <Button variant="primary" onPress={() => toast('neutral', 'reload 完成（r' + runtime.diskRevision + '）')}>reload</Button>
               <Button variant="accent" isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </ButtonGroup>
           </div>
-          {errs.map(e => <InlineAlert key={e.line} variant="negative" fillStyle="border"><Heading>第 {e.line} 行：{e.msg.split('；')[0]}</Heading><Content>{e.msg.split('；')[1]}</Content></InlineAlert>)}
+          {errs.map(e => { const [h, b] = e.msg.split('；'); return <InlineAlert key={e.line} variant="negative" fillStyle="border"><Heading>第 {e.line} 行：{h}</Heading>{b ? <Content>{b}</Content> : <Content>{e.why}</Content>}</InlineAlert>; })}
           {edit
             ? <TextArea aria-label="來源" value={text} onChange={v => { setText(v); setDirty(true); }} styles={style({width: 'full'})} />
             : <Frame title={src.path} actions={<span className={label}>{src.lines.length} 行，{src.editable ? '可編輯' : '唯讀'}</span>}>{src.lines.map((l, i) => <Line key={i} n={i + 1} err={errs.some(e => e.line === i + 1)}><DaeLine text={l} /></Line>)}</Frame>}
@@ -51,11 +51,6 @@ export function ConfigPage({query}: PageProps) {
           <div className={card}>
             <Switch isSelected={edit} onChange={startEdit} isDisabled={!src.editable}>無損編輯</Switch>
             <span className={label}>唯讀檢視預設遮罩機密（訂閱網址、密碼），遮罩文字永不寫回。開啟編輯才讀取原文（control 權限、no-store）。</span>
-          </div>
-          <div className={card}>
-            <h3 className={h3}>需重啟的項</h3>
-            <div className={list}>{restartItems.map(k => <span key={k} className={code}>{k}</span>)}</div>
-            <span className={label}>監聽器、NFQUEUE、TProxy、DNS 綁定在啟動期決定；改這些 reload 不生效。</span>
           </div>
           <div className={card}>
             <h3 className={h3}>外部改動</h3>
