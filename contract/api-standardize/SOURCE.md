@@ -1,1 +1,1 @@
-openapi.yaml: generated bundle from daeuniverse/api-standardize PR #1, branch honk, commit 1245da05e685ee9441430f365f39c23654174eb5 (2026-09-15). Regenerate src/api/types.ts with: pnpm gen:api
+openapi.yaml: generated bundle from daeuniverse/api-standardize PR #4 (branch ui-findings, our fixes on top of PR #1), commit 8bd9871 (2026-09-16). Regenerate src/api/types.ts with: pnpm gen:api

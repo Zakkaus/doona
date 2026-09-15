@@ -1,0 +1,9 @@
+src/fonts.css
+src/api/types.ts
+dist
+artifact
+vendor
+contract
+node_modules
+pnpm-lock.yaml
+*.html

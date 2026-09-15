@@ -1,7 +1,12 @@
 import type {ErrorResponse} from './model';
 
 export class ApiError extends Error {
-  constructor(public status: number, public code: string, message: string, public requestId: string | null = null) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public requestId: string | null = null
+  ) {
     super(message);
     this.name = 'ApiError';
   }

@@ -26,10 +26,12 @@ export function createApi(base: string, token?: string): Api {
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
   const client = createClient<paths>({baseUrl, headers, cache: 'no-store'});
-  client.use({onResponse: async ({response}) => {
-    if (!response.ok) throw await responseError(response);
-    return response;
-  }});
+  client.use({
+    onResponse: async ({response}) => {
+      if (!response.ok) throw await responseError(response);
+      return response;
+    }
+  });
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href, root);
@@ -59,16 +61,23 @@ export function createApi(base: string, token?: string): Api {
         const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
         if (!response.ok) {
           const error = await responseError(response);
-          if (cursor && error.status === 409 && error.code === 'event_cursor_expired') { cursor = undefined; continue; }
+          if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
+            cursor = undefined;
+            continue;
+          }
           throw error;
         }
         if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
-        await readSse(response.body, frame => {
-          if (frame.id !== undefined) cursor = frame.id;
-          if (!frame.data || !eventKinds.includes(frame.event as EventKind)) return;
-          if (frame.event === 'stream.ready') onConnectionChange?.(true);
-          onEvent({id: cursor ?? '', event: frame.event, data: JSON.parse(frame.data)} as ApiEvent);
-        }, signal);
+        await readSse(
+          response.body,
+          frame => {
+            if (frame.id !== undefined) cursor = frame.id;
+            if (!frame.data || !eventKinds.includes(frame.event as EventKind)) return;
+            if (frame.event === 'stream.ready') onConnectionChange?.(true);
+            onEvent({id: cursor ?? '', event: frame.event, data: JSON.parse(frame.data)} as ApiEvent);
+          },
+          signal
+        );
         onConnectionChange?.(false);
         await wait(retryAfter(response), signal);
       }
@@ -82,6 +91,8 @@ export function createApi(base: string, token?: string): Api {
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
     capabilities: async signal => data(await client.GET('/api/v1/capabilities', {signal})),
     runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),
+    runtimeOutbounds: async signal => data(await client.GET('/api/v1/runtime/outbounds', {signal})),
+    trafficHistory: async (query, signal) => data(await client.GET('/api/v1/runtime/traffic/history', {params: {query}, signal})),
     datapath: async (detail, signal) => data(await client.GET('/api/v1/datapath', {params: {query: {detail}}, signal})),
     runtimeMemory: async signal => data(await client.GET('/api/v1/runtime/memory', {signal})),
     nodes: async (query, signal) => data(await client.GET('/api/v1/nodes', {params: {query}, signal})),
@@ -89,7 +100,12 @@ export function createApi(base: string, token?: string): Api {
     group: async (id, signal) => data(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
     selectGroup: async (groupId, body, signal) => data(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
-      const result = await client.PATCH('/api/v1/groups/{groupId}', {params: {path: {groupId}, header: {'If-Match': ifMatch}}, headers: {'Content-Type': 'application/json-patch+json'}, body, signal});
+      const result = await client.PATCH('/api/v1/groups/{groupId}', {
+        params: {path: {groupId}, header: {'If-Match': ifMatch}},
+        headers: {'Content-Type': 'application/json-patch+json'},
+        body,
+        signal
+      });
       const value = data(result);
       return 'operation_id' in value ? accepted({data: value, response: result.response}) : value;
     },
@@ -111,7 +127,8 @@ export function createApi(base: string, token?: string): Api {
       const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
-    pollOperation, subscribeEvents,
-    history: () => null, configRules: () => null
+    pollOperation,
+    subscribeEvents,
+    configRules: () => null
   };
 }

@@ -1,26 +1,132 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {clientRows, navAvailable, outboundUsage, preferredHealth} from './selectors';
-import {formatBytes, formatRate} from './u64';
+import {chainLabel, clientRows, ipLiteral, navAvailable, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
+import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
-import {capabilities, capabilitiesBase, connections} from './mock/fixtures';
+import {capabilities, capabilitiesBase, connections, trafficHistory} from './mock/fixtures';
 
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
-it('exposes Activity figures through the same contract as native servers', async () => {
+it('serves cumulative outbound counters independently of live connection bytes', async () => {
   const api = createMockApi();
   const runtime = await api.runtime();
-  expect(formatRate(runtime.traffic.rates!.download_bytes_per_second)).toBe('3.4 MB/s');
-  expect(formatRate(runtime.traffic.rates!.upload_bytes_per_second)).toBe('257 KB/s');
-  expect(runtime.traffic.connections.total).toBe(8);
-  const nodes = await api.nodes();
-  expect(preferredHealth(nodes.nodes.find(n => n.name === 'hk-01')!)?.latency_ms).toBe(84);
-  expect(preferredHealth(nodes.nodes.find(n => n.name === 'jp-01')!)?.state).toBe('unavailable');
-  const usage = outboundUsage(await api.connections());
-  const direct = usage.rows.find(row => row.name === 'direct')!;
-  expect(formatBytes(direct.bytes)).toBe('1.1 GB');
-  expect(Math.round(direct.percent!)).toBe(78);
-  expect((await api.group('airport')).members).toHaveLength(100);
+  const counters = await api.runtimeOutbounds();
+  const history = await api.trafficHistory();
+  expect(counters.counter_since).toBe(runtime.traffic.counter_since);
+  expect(Date.parse(counters.counter_since)).toBeLessThan(Date.parse(counters.observed_at));
+  expect(addU64(...counters.outbounds.map(r => r.download_bytes))).toBe(BigInt(runtime.traffic.bytes.download!));
+  expect(addU64(...counters.outbounds.map(r => r.upload_bytes))).toBe(BigInt(runtime.traffic.bytes.upload!));
+  expect(counters.outbounds.find(r => r.name === 'block')).toMatchObject({
+    kind: 'builtin',
+    active_connections: 0,
+    upload_bytes: '0',
+    download_bytes: '0',
+    errors: '0'
+  });
+  for (const row of counters.outbounds) {
+    expect(BigInt(row.total_connections)).toBeGreaterThanOrEqual(BigInt(row.active_connections));
+    expect(BigInt(row.errors)).toBeGreaterThanOrEqual(0n);
+  }
+  const live = await api.connections();
+  expect(outboundUsage(counters).total).not.toBe(addU64(...[...live.tcp, ...live.udp].map(c => c.download_bytes)));
+  expect(runtime.traffic.sampled_at).toBe(history.samples.at(-1)?.sampled_at);
+  expect(runtime.traffic.connections.total).toBe(history.samples.at(-1)?.connections);
+  expect(formatRate(runtime.traffic.rates!.download_bytes_per_second)).toBe(formatRate(history.samples.at(-1)!.download_bytes_per_second));
+  expect(formatRate(runtime.traffic.rates!.upload_bytes_per_second)).toBe(formatRate(history.samples.at(-1)!.upload_bytes_per_second));
+});
+
+it('filters the history window before thinning backwards without changing samples', async () => {
+  const api = createMockApi();
+  const result = await api.trafficHistory({window_seconds: 60, max_points: 4});
+  expect(result.window_seconds).toBe(60);
+  expect(result.sampled_every_seconds).toBe(20);
+  expect(result.samples).toEqual([trafficHistory.samples.at(-5), trafficHistory.samples.at(-3), trafficHistory.samples.at(-1)]);
+  const single = await api.trafficHistory({window_seconds: 1, max_points: 1});
+  expect(single.samples).toEqual([trafficHistory.samples.at(-1)]);
+  expect((await api.trafficHistory({window_seconds: 720})).samples).toHaveLength(72);
+  const sample = {...single.samples[0], download_bytes_per_second: null, connections: null};
+  expect(trafficSeries({...single, samples: [sample]})).toMatchObject({down: [null], connections: [null], timestamps: [Date.parse(sample.sampled_at)]});
+  await expect(api.trafficHistory({window_seconds: 3601})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+  await expect(api.trafficHistory({max_points: 361})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+  await expect(api.trafficHistory({max_points: 0})).rejects.toMatchObject({status: 400});
+});
+
+it('filters exact source IPs and protocol before computing totals and limiting rows', async () => {
+  const api = createMockApi();
+  const result = await api.connections({src: '10.0.0.12', limit: 1});
+  expect(result).toMatchObject({total_tcp: 1, total_udp: 1, truncated: true, udp: []});
+  expect(result.tcp.map(c => c.id)).toEqual(['1']);
+  const udp = await api.connections({src: '10.0.0.12', type: 'udp', limit: 1});
+  expect(udp).toMatchObject({total_tcp: 0, total_udp: 1, tcp: [], truncated: false});
+  expect(udp.udp.map(c => c.id)).toEqual(['5']);
+  expect(await api.connections({src: '10.0.0.1'})).toMatchObject({total_tcp: 0, total_udp: 0, tcp: [], udp: [], truncated: false});
+  expect(ipLiteral('[2001:0db8::1]')).toBe('2001:db8::1');
+  expect(sourceIp('[2001:db8::1]:443')).toBe('2001:db8::1');
+  expect(sourceIp('10.0.0.12:443')).toBe('10.0.0.12');
+  for (const value of ['api.telegram.org', '256.0.0.1', '10.0.0.12:443', '1.2.3', '2001:::1']) expect(ipLiteral(value)).toBeUndefined();
+  await expect(api.connections({src: 'host.invalid'})).rejects.toMatchObject({status: 400});
+});
+
+it('finds a retained flow by connection ID when the live row has no flow ID', async () => {
+  const api = createMockApi();
+  const c = (await api.connections()).tcp.find(c => c.id === '3')!;
+  expect(c.flow_id).toBeNull();
+  const result = await api.flows({connection_id: c.id, limit: 1});
+  expect(result.flows.map(f => f.id)).toEqual(['flow-3']);
+  expect(result.next_cursor).toBeNull();
+  expect((await api.flow(result.flows[0].id)).connection_id).toBe(c.id);
+  expect((await api.flows({connection_id: c.id, network: 'udp'})).flows).toEqual([]);
+  expect((await api.flows({connection_id: 'missing'})).flows).toEqual([]);
+});
+
+it('keeps list decisions consistent with recorded traces rather than current selections', async () => {
+  const api = createMockApi();
+  await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});
+  const snapshot = await api.connections();
+  const summaries = (await api.flows()).flows;
+  for (const c of [...snapshot.tcp, ...snapshot.udp]) {
+    const flow = await api.flow(c.state === 'blocked' ? 'flow-blocked' : 'flow-' + c.id);
+    const outbound = flow.trace.steps.find(s => s.stage === 'outbound')?.data;
+    const route = flow.trace.steps.find(s => s.stage === 'route')!.data;
+    const fields = {
+      chain: outbound ? [...outbound.selection_path.map(p => p.group_id), outbound.leaf_node_id] : [],
+      chain_source: outbound ? 'evaluation' : 'unknown',
+      rule_id: route.rule_id,
+      rule_expression: route.rules.find(r => r.rule_id === route.rule_id)?.expression,
+      rule_source: route.plane === 'kernel' ? 'kernel' : 'recomputed',
+      ingress: flow.input.ingress,
+      domain_source: flow.input.domain_source
+    };
+    expect(c).toMatchObject(fields);
+    expect(summaries.find(f => f.id === flow.id)).toMatchObject(fields);
+    expect(chainLabel(c)).toBe(outbound ? c.chain.join(' → ') : c.outbound);
+    if (outbound) {
+      expect(outbound.selection_path[0].member_name).toBe(outbound.leaf_node_name);
+      expect(outbound.selection_path[0].selection?.candidates[0]).toMatchObject({
+        member_name: outbound.leaf_node_name,
+        leaf_node_name: outbound.leaf_node_name
+      });
+    }
+  }
+  expect(snapshot.tcp[0].chain).toEqual(['proxy', 'hk-01']);
+  expect((await api.groups()).find(g => g.id === 'proxy')?.config_revision).toBe((await api.group('proxy')).config_revision);
+});
+
+it('never substitutes another health tuple for the latency column', async () => {
+  const node = (await createMockApi().nodes()).nodes[0];
+  const exact = preferredHealth(node)!;
+  const alternatives = [
+    {...exact, measurement: 'http_round_trip' as const},
+    {...exact, ip_version: 'ipv6' as const},
+    {...exact, warmth: 'cold' as const},
+    {...exact, purpose: 'dns' as const},
+    {...exact, transport: 'udp' as const}
+  ];
+  expect(preferredHealth({...node, health: alternatives})).toBeUndefined();
+  expect(preferredHealth({...node, health: [...alternatives, exact]})).toBe(exact);
 });
 it('pages the airport override without losing members', async () => {
   vi.stubGlobal('localStorage', {getItem: () => '12'});
@@ -68,10 +174,18 @@ it('selects both networks with an independent revision and preserves configurati
 
 it('completes probes with fixture failures and publishes fresh health', async () => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-09-15T15:00:00Z'));
   const api = createMockApi();
   const before = preferredHealth((await api.nodes()).nodes.find(n => n.id === 'hk-01')!)!;
-  const accepted = await api.startProbe({target: {type: 'group', group_id: 'proxy'}, kind: 'tcp_connect', purpose: 'data', warmth: 'warm', transport: ['tcp'], ip_version: 'ipv4', members: 'direct'});
+  vi.setSystemTime(Date.parse(before.observed_at) + 1000);
+  const accepted = await api.startProbe({
+    target: {type: 'group', group_id: 'proxy'},
+    kind: 'tcp_connect',
+    purpose: 'data',
+    warmth: 'warm',
+    transport: ['tcp'],
+    ip_version: 'ipv4',
+    members: 'direct'
+  });
   const terminal = api.pollOperation(accepted);
   await vi.advanceTimersByTimeAsync(999);
   expect((await api.operation(accepted.operation_id)).status).toBe('running');
@@ -92,6 +206,7 @@ it('applies a conditional patch asynchronously and revises interrupted flows', a
   const api = createMockApi();
   const before = await api.group('proxy');
   const flow = await api.flow('flow-1');
+  const counters = await api.runtimeOutbounds();
   const accepted = await api.patchGroup('proxy', [{op: 'replace', path: '/config/interrupt_connections', value: true}], '\"' + before.config_revision + '\"');
   if (!('operation_id' in accepted)) throw new Error('Expected asynchronous patch');
   expect((await api.group('proxy')).config.interrupt_connections).toBe(false);
@@ -110,6 +225,10 @@ it('applies a conditional patch asynchronously and revises interrupted flows', a
   expect(after.trace.steps.at(-1)).toMatchObject({stage: 'connection', data: {state: 'closed', milestone: 'terminal'}});
   expect((await api.connections()).tcp.find(c => c.id === after.connection_id)?.state).toBe('closed');
   expect((await api.flow('flow-2')).state).toBe('active');
+  const afterCounters = await api.runtimeOutbounds();
+  const beforeProxy = counters.outbounds.find(r => r.name === 'proxy')!;
+  expect(afterCounters.counter_since).toBe(counters.counter_since);
+  expect(afterCounters.outbounds.find(r => r.name === 'proxy')).toEqual({...beforeProxy, active_connections: 0});
 });
 
 it('links recorded connections while retaining a blocked flow without a connection', async () => {
@@ -138,14 +257,20 @@ it('changes lifecycle only after suspend and resume complete, then invalidates r
   await vi.advanceTimersByTimeAsync(1);
   await expect(suspended).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'suspended'}});
   expect((await api.runtime()).lifecycle.state).toBe('suspended');
-  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: suspend.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  expect(events.slice(-2)).toMatchObject([
+    {event: 'operation.updated', data: {resource_id: suspend.operation_id, status: 'succeeded'}},
+    {event: 'runtime.updated'}
+  ]);
   const resume = await api.startResume();
   const resumed = api.pollOperation(resume);
   expect((await api.runtime()).lifecycle.state).toBe('suspended');
   await vi.advanceTimersByTimeAsync(1000);
   await expect(resumed).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'running'}});
   expect((await api.runtime()).lifecycle.state).toBe('running');
-  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: resume.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  expect(events.slice(-2)).toMatchObject([
+    {event: 'operation.updated', data: {resource_id: resume.operation_id, status: 'succeeded'}},
+    {event: 'runtime.updated'}
+  ]);
   controller.abort();
   await stream;
 });
@@ -170,7 +295,17 @@ it('traces a geosite domain and resolves each cached address in live mode', asyn
   const result = await api.routingTrace(request);
   expect(result.dns).toMatchObject([{source: 'cache', addresses: ['149.154.167.220']}]);
   expect(result.evaluations).toMatchObject([{dst_ip: '149.154.167.220', decision: 'determinate', outbound: 'proxy', missing_inputs: []}]);
-  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([['r1', 'not_matched'], ['r2', 'not_matched'], ['r3', 'not_matched'], ['r4', 'not_matched'], ['r5', 'matched'], ['r6', 'skipped'], ['r7', 'skipped'], ['r8', 'skipped'], ['fallback', 'skipped']]);
+  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([
+    ['r1', 'not_matched'],
+    ['r2', 'not_matched'],
+    ['r3', 'not_matched'],
+    ['r4', 'not_matched'],
+    ['r5', 'matched'],
+    ['r6', 'skipped'],
+    ['r7', 'skipped'],
+    ['r8', 'skipped'],
+    ['fallback', 'skipped']
+  ]);
   const unresolved = await api.routingTrace({...request, resolve: 'none'});
   expect(unresolved.dns).toEqual([]);
   expect(unresolved.evaluations[0]).toMatchObject({dst_ip: null, decision: 'indeterminate', outbound: null, missing_inputs: ['dst_ip']});
@@ -195,12 +330,16 @@ it('uses fallback when every earlier predicate is false', async () => {
 
 it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
   const c = connections.tcp[0];
-  const rows = clientRows({...connections, tcp: [
-    {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
-    {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
-    {...c, src: '10.0.0.7:123', download_bytes: null},
-    {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
-  ], udp: []});
+  const rows = clientRows({
+    ...connections,
+    tcp: [
+      {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
+      {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
+      {...c, src: '10.0.0.7:123', download_bytes: null},
+      {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
+    ],
+    udp: []
+  });
   expect(rows).toEqual([
     {id: '[2001:db8::1]', ip: '[2001:db8::1]', active: 2, download: 9007199254741000n, outbounds: 'proxy、direct'},
     {id: '10.0.0.7', ip: '10.0.0.7', active: 1, download: null, outbounds: 'proxy'}
@@ -208,9 +347,13 @@ it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
 });
 
 it('gates explicit resource absence but accepts either DNS resource', async () => {
-  vi.stubGlobal('localStorage', {getItem: (key: string) => key === 'doona-mock-profile' ? 'base' : null});
+  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-profile' ? 'base' : null)});
   const base = await createMockApi().capabilities();
   expect(base.profiles).toEqual(['base']);
+  expect(base.resources.runtime_outbounds.available).toBe(false);
+  expect(base.resources.traffic_history.available).toBe(false);
+  await expect(createMockApi().runtimeOutbounds()).rejects.toMatchObject({status: 404});
+  await expect(createMockApi().trafficHistory()).rejects.toMatchObject({status: 404});
   expect(['flows', 'rules', 'events'].map(route => navAvailable(route, base))).toEqual([false, false, false]);
   expect(navAvailable('flows', undefined)).toBe(true);
   expect(navAvailable('flows', capabilities)).toBe(true);

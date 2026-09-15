@@ -28,7 +28,8 @@ export function addU64(...values: U64[]): bigint | null {
 
 /** Only the bounded percentage is converted to Number. */
 export function pctU64(part: U64, whole: U64): number | null {
-  const p = valueOf(part), w = valueOf(whole);
+  const p = valueOf(part),
+    w = valueOf(whole);
   if (p === null || w === null) return null;
   if (w === 0n) return 0;
   return Number(((p > w ? w : p) * 10000n + w / 2n) / w) / 100;
@@ -39,12 +40,14 @@ export function formatBytes(input: U64): string {
   if (value === null) return '—';
   if (value === 0n) return '0';
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
-  let unit = 0, scale = 1n;
-  while (unit < units.length - 1 && value >= scale * 1000n) { unit++; scale *= 1000n; }
+  let unit = 0,
+    scale = 1n;
+  while (unit < units.length - 1 && value >= scale * 1000n) {
+    unit++;
+    scale *= 1000n;
+  }
   const tenths = (value * 10n + scale / 2n) / scale;
-  const text = unit > 0 && value < scale * 10n && tenths % 10n !== 0n
-    ? `${tenths / 10n}.${tenths % 10n}`
-    : String((value + scale / 2n) / scale);
+  const text = unit > 0 && value < scale * 10n && tenths % 10n !== 0n ? `${tenths / 10n}.${tenths % 10n}` : String((value + scale / 2n) / scale);
   return `${text} ${units[unit]}`;
 }
 

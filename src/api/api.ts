@@ -1,10 +1,44 @@
-import type {Version, Capabilities, Runtime, Datapath, DatapathDetail, RuntimeMemory, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, DnsQueryResponse, DnsRecordType, DeleteCount, DeleteMatchingCount, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
+import type {
+  Version,
+  Capabilities,
+  Runtime,
+  RuntimeOutbounds,
+  TrafficHistory,
+  TrafficHistoryQuery,
+  Datapath,
+  DatapathDetail,
+  RuntimeMemory,
+  NodeList,
+  NodeQuery,
+  Group,
+  GroupSummary,
+  GroupSelectionRequest,
+  GroupSelectionResult,
+  JsonPatch,
+  ProbeRequest,
+  ConnectionList,
+  ConnectionQuery,
+  FlowList,
+  FlowDetail,
+  FlowQuery,
+  DnsCacheList,
+  DnsCacheQuery,
+  DnsQueryResponse,
+  DnsRecordType,
+  DeleteCount,
+  DeleteMatchingCount,
+  OperationAccepted,
+  OperationState,
+  EventOptions
+} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
 
 export interface Api {
   version(signal?: AbortSignal): Promise<Version>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   runtime(signal?: AbortSignal): Promise<Runtime>;
+  runtimeOutbounds(signal?: AbortSignal): Promise<RuntimeOutbounds>;
+  trafficHistory(query?: TrafficHistoryQuery, signal?: AbortSignal): Promise<TrafficHistory>;
   datapath(detail?: DatapathDetail, signal?: AbortSignal): Promise<Datapath>;
   runtimeMemory(signal?: AbortSignal): Promise<RuntimeMemory>;
   nodes(query?: NodeQuery, signal?: AbortSignal): Promise<NodeList>;
@@ -28,8 +62,6 @@ export interface Api {
   pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState>;
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
-  /** Mock-only chart samples in KB/s; native servers have no history endpoint. */
-  history(): MockHistory | null;
   /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
   configRules(): MockConfigRules | null;
 }

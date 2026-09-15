@@ -33,13 +33,45 @@ import f_pl from 'flag-icons/flags/4x3/pl.svg?raw';
 import f_mo from 'flag-icons/flags/4x3/mo.svg?raw';
 import f_cn from 'flag-icons/flags/4x3/cn.svg?raw';
 
-const FLAGS: Record<string, string> = {HK: f_hk, TW: f_tw, JP: f_jp, SG: f_sg, KR: f_kr, US: f_us, CA: f_ca, GB: f_gb, DE: f_de, FR: f_fr, NL: f_nl, RU: f_ru, AU: f_au, IN: f_in, TR: f_tr, BR: f_br, AR: f_ar, MY: f_my, TH: f_th, VN: f_vn, PH: f_ph, ID: f_id, AE: f_ae, CH: f_ch, SE: f_se, FI: f_fi, IT: f_it, ES: f_es, PL: f_pl, MO: f_mo, CN: f_cn};
+const FLAGS: Record<string, string> = {
+  HK: f_hk,
+  TW: f_tw,
+  JP: f_jp,
+  SG: f_sg,
+  KR: f_kr,
+  US: f_us,
+  CA: f_ca,
+  GB: f_gb,
+  DE: f_de,
+  FR: f_fr,
+  NL: f_nl,
+  RU: f_ru,
+  AU: f_au,
+  IN: f_in,
+  TR: f_tr,
+  BR: f_br,
+  AR: f_ar,
+  MY: f_my,
+  TH: f_th,
+  VN: f_vn,
+  PH: f_ph,
+  ID: f_id,
+  AE: f_ae,
+  CH: f_ch,
+  SE: f_se,
+  FI: f_fi,
+  IT: f_it,
+  ES: f_es,
+  PL: f_pl,
+  MO: f_mo,
+  CN: f_cn
+};
 
 export function flagSvg(name: string): string | null {
   const r = regionOf(name);
-  return r ? FLAGS[r] ?? null : null;
+  return r ? (FLAGS[r] ?? null) : null;
 }
-export function Flag({name, className}: {name: string, className?: string}) {
+export function Flag({name, className}: {name: string; className?: string}) {
   const svg = flagSvg(name);
   if (!svg) return null;
   return <span className={className ?? 'flag'} role="img" aria-label={regionOf(name) ?? ''} dangerouslySetInnerHTML={{__html: svg}} />;

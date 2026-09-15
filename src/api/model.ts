@@ -4,6 +4,9 @@ type Schema = components['schemas'];
 export type Version = Schema['Version'];
 export type Capabilities = Schema['Capabilities'];
 export type Runtime = Schema['Runtime'];
+export type RuntimeOutbounds = Schema['RuntimeOutbounds'];
+export type TrafficHistory = Schema['TrafficHistory'];
+export type TrafficHistoryQuery = operations['getTrafficHistory']['parameters']['query'];
 export type Datapath = Schema['Datapath'];
 export type DatapathDetail = components['parameters']['Detail'];
 export type RuntimeMemory = Schema['RuntimeMemory'];
@@ -31,14 +34,32 @@ export type DeleteCount = Schema['DeleteCount'];
 export type RoutingTraceInput = Extract<Schema['RoutingTraceInput'], {network: unknown}> & ({domain: string} | {dst_ip: string});
 export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> & {input: RoutingTraceInput};
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
-export type ConfigRule = {id: string; n: number; cond: string; target: string; must: boolean; source: string; note: string; editable: boolean; generated?: boolean};
+export type ConfigRule = {
+  id: string;
+  n: number;
+  cond: string;
+  target: string;
+  must: boolean;
+  source: string;
+  note: string;
+  editable: boolean;
+  generated?: boolean;
+};
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
 export type ErrorResponse = Schema['ErrorResponse'];
 export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};
 // The generator narrows the open OperationCommon.result object to Record<string, never>.
-type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {kind: K; status: 'succeeded'; result: R; error: null};
-export type Operation = Schema['QueuedOperation'] | Schema['RunningOperation'] | Schema['FailedOperation']
+type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {
+  kind: K;
+  status: 'succeeded';
+  result: R;
+  error: null;
+};
+export type Operation =
+  | Schema['QueuedOperation']
+  | Schema['RunningOperation']
+  | Schema['FailedOperation']
   | SucceededOperation<'reload', Schema['ReloadResult']>
   | SucceededOperation<'probe', Schema['ProbeResult']>
   | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
@@ -59,5 +80,10 @@ type EventData = {
   'generation.changed': Schema['GenerationChangedEvent'];
 };
 export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
-export type EventOptions = {kinds?: EventKind[]; lastEventId?: string; signal?: AbortSignal; onEvent: (event: ApiEvent) => void; onConnectionChange?: (connected: boolean) => void};
-export type MockHistory = {throughput: Array<{t: number; up: number; down: number}>; connSeries: number[]};
+export type EventOptions = {
+  kinds?: EventKind[];
+  lastEventId?: string;
+  signal?: AbortSignal;
+  onEvent: (event: ApiEvent) => void;
+  onConnectionChange?: (connected: boolean) => void;
+};

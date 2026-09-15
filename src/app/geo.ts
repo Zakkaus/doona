@@ -6,7 +6,30 @@ const TABLE: Array<[string, string[]]> = [
   ['JP', ['jp', 'jpn', 'japan', 'tokyo', 'osaka', 'nrt', 'hnd', 'kix', '日本', '東京', '东京', '大阪']],
   ['SG', ['sg', 'sgp', 'singapore', 'sin', '新加坡', '獅城', '狮城']],
   ['KR', ['kr', 'kor', 'korea', 'seoul', 'icn', '韓國', '韩国', '首爾', '首尔']],
-  ['US', ['us', 'usa', 'united states', 'america', 'lax', 'sjc', 'sea', 'nyc', 'los angeles', 'san jose', 'seattle', '美國', '美国', '洛杉磯', '洛杉矶', '聖何塞', '圣何塞', '西雅圖', '西雅图']],
+  [
+    'US',
+    [
+      'us',
+      'usa',
+      'united states',
+      'america',
+      'lax',
+      'sjc',
+      'sea',
+      'nyc',
+      'los angeles',
+      'san jose',
+      'seattle',
+      '美國',
+      '美国',
+      '洛杉磯',
+      '洛杉矶',
+      '聖何塞',
+      '圣何塞',
+      '西雅圖',
+      '西雅图'
+    ]
+  ],
   ['CA', ['can', 'canada', 'toronto', 'yyz', '加拿大']],
   ['GB', ['gb', 'uk', 'united kingdom', 'britain', 'london', 'lhr', '英國', '英国', '倫敦', '伦敦']],
   ['DE', ['de', 'deu', 'germany', 'frankfurt', 'fra', '德國', '德国', '法蘭克福', '法兰克福']],
@@ -42,10 +65,14 @@ export function regionOf(name: string): string | null {
   const tokens = new Set(lower.match(ASCII) ?? []);
   for (const [iso, keys] of TABLE) {
     for (const k of keys) {
-      if (/^[a-z0-9 ]+$/.test(k)) { if (tokens.has(k) || (k.includes(' ') && lower.includes(k))) return iso; }
-      else if (name.includes(k)) return iso;
+      if (/^[a-z0-9 ]+$/.test(k)) {
+        if (tokens.has(k) || (k.includes(' ') && lower.includes(k))) return iso;
+      } else if (name.includes(k)) return iso;
     }
   }
   return null;
 }
-export function flagOf(name: string): string | null { const r = regionOf(name); return r ? flag(r) : null; }
+export function flagOf(name: string): string | null {
+  const r = regionOf(name);
+  return r ? flag(r) : null;
+}

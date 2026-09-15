@@ -29,27 +29,71 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
     ids = [...leaves];
   }
   const results: ProbeResult['results'] = [];
-  for (const member_id of ids) for (const transport of request.transport) {
-    const node = resolveLeaf(member_id, transport, nodes, groups);
-    const versions: Array<'ipv4' | 'ipv6'> = request.ip_version === 'any' ? ['ipv4', 'ipv6'] : [request.ip_version];
-    for (const ip_version of versions) {
-      const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
-      const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
-      const state = latency_ms === null ? 'unavailable' : 'healthy';
-      const error = state === 'unavailable' ? previous?.error ?? 'unavailable' : null;
-      const observation: HealthObservation = {transport, purpose: request.purpose, ip_version, warmth: request.warmth, measurement: request.kind === 'http' ? 'http_round_trip' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect', sample_source: 'probe', state, latency_ms, moving_avg_ms: latency_ms, avg10_ms: latency_ms, observed_at, error};
-      if (node) {
-        const index = node.health.findIndex(h => h.transport === transport && h.purpose === request.purpose && h.ip_version === ip_version && h.warmth === request.warmth && h.measurement === observation.measurement);
-        if (index < 0) node.health.push(observation); else node.health[index] = observation;
+  for (const member_id of ids)
+    for (const transport of request.transport) {
+      const node = resolveLeaf(member_id, transport, nodes, groups);
+      const versions: Array<'ipv4' | 'ipv6'> = request.ip_version === 'any' ? ['ipv4', 'ipv6'] : [request.ip_version];
+      for (const ip_version of versions) {
+        const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
+        const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
+        const state = latency_ms === null ? 'unavailable' : 'healthy';
+        const error = state === 'unavailable' ? (previous?.error ?? 'unavailable') : null;
+        const observation: HealthObservation = {
+          transport,
+          purpose: request.purpose,
+          ip_version,
+          warmth: request.warmth,
+          measurement: request.kind === 'http' ? 'http_round_trip' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect',
+          sample_source: 'probe',
+          state,
+          latency_ms,
+          moving_avg_ms: latency_ms,
+          avg10_ms: latency_ms,
+          observed_at,
+          error
+        };
+        if (node) {
+          const index = node.health.findIndex(
+            h =>
+              h.transport === transport &&
+              h.purpose === request.purpose &&
+              h.ip_version === ip_version &&
+              h.warmth === request.warmth &&
+              h.measurement === observation.measurement
+          );
+          if (index < 0) node.health.push(observation);
+          else node.health[index] = observation;
+        }
+        if (group) {
+          const health = {...observation, member_id, resolved_leaf_node_id: node?.id ?? null, sorting_latency_ms: latency_ms, ranking: null};
+          const index = group.runtime.health.findIndex(
+            h =>
+              h.member_id === member_id &&
+              h.transport === transport &&
+              h.purpose === request.purpose &&
+              h.ip_version === ip_version &&
+              h.warmth === request.warmth &&
+              h.measurement === observation.measurement
+          );
+          if (index < 0) group.runtime.health.push(health);
+          else group.runtime.health[index] = health;
+        }
+        results.push({
+          member_id,
+          resolved_leaf_node_id: node?.id ?? null,
+          kind: request.kind,
+          purpose: request.purpose,
+          transport,
+          ip_version,
+          warmth: request.warmth,
+          state,
+          latency_ms,
+          health_updated: !!node,
+          error,
+          observed_at
+        });
       }
-      if (group) {
-        const health = {...observation, member_id, resolved_leaf_node_id: node?.id ?? null, sorting_latency_ms: latency_ms, ranking: null};
-        const index = group.runtime.health.findIndex(h => h.member_id === member_id && h.transport === transport && h.purpose === request.purpose && h.ip_version === ip_version && h.warmth === request.warmth && h.measurement === observation.measurement);
-        if (index < 0) group.runtime.health.push(health); else group.runtime.health[index] = health;
-      }
-      results.push({member_id, resolved_leaf_node_id: node?.id ?? null, kind: request.kind, purpose: request.purpose, transport, ip_version, warmth: request.warmth, state, latency_ms, health_updated: !!node, error, observed_at});
     }
-  }
   return {target, results, selection_before: selection, selection_after: {...selection}, selection_changed: {tcp: false, udp: false}};
 }
 
@@ -57,7 +101,9 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
   const document: Record<string, unknown> = {'/policy': structuredClone(group.policy)};
   for (const [key, value] of Object.entries(group.config)) document['/config/' + key] = value;
   const mutable = (path: string) => group.capabilities.mutable_config.some(key => path === (key === 'policy' ? '/policy' : '/config/' + key));
-  const missing = (path: string) => { if (!(path in document)) throw new ApiError(422, 'invalid_patch', 'Patch path does not exist'); };
+  const missing = (path: string) => {
+    if (!(path in document)) throw new ApiError(422, 'invalid_patch', 'Patch path does not exist');
+  };
   for (const op of ops) {
     if (!mutable(op.path) || ('from' in op && !mutable(op.from))) throw new ApiError(422, 'immutable_field', 'Group field is not mutable');
     if (op.op !== 'add' && op.op !== 'copy' && op.op !== 'move') missing(op.path);
@@ -72,18 +118,35 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     } else document[op.path] = structuredClone(op.value);
   }
   const policy = document['/policy'] ?? {kind: 'selector', native: 'selector'};
-  if (typeof policy !== 'object' || policy === null || !('kind' in policy) || !['selector', 'urltest', 'loadbalance', 'fallback', 'random', 'score'].includes(String(policy.kind)) || !('native' in policy) || typeof policy.native !== 'string') throw new ApiError(422, 'invalid_policy', 'Invalid group policy');
-  const config = Object.fromEntries(Object.keys(group.config).map(key => [key, document['/config/' + key] ?? (key === 'interrupt_connections' ? false : null)])) as Group['config'];
+  if (
+    typeof policy !== 'object' ||
+    policy === null ||
+    !('kind' in policy) ||
+    !['selector', 'urltest', 'loadbalance', 'fallback', 'random', 'score'].includes(String(policy.kind)) ||
+    !('native' in policy) ||
+    typeof policy.native !== 'string'
+  )
+    throw new ApiError(422, 'invalid_policy', 'Invalid group policy');
+  const config = Object.fromEntries(
+    Object.keys(group.config).map(key => [key, document['/config/' + key] ?? (key === 'interrupt_connections' ? false : null)])
+  ) as Group['config'];
   for (const key of ['check_interval', 'tolerance', 'idle_timeout'] as const) {
     const value = config[key];
-    if (value !== null && (!Number.isSafeInteger(value) || value < (key === 'check_interval' ? 1 : 0))) throw new ApiError(422, 'invalid_config', 'Invalid group interval or tolerance');
+    if (value !== null && (!Number.isSafeInteger(value) || value < (key === 'check_interval' ? 1 : 0)))
+      throw new ApiError(422, 'invalid_config', 'Invalid group interval or tolerance');
   }
   if (typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'invalid_config', 'Invalid interruption setting');
-  for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const) if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'invalid_config', 'Invalid group configuration value');
-  if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id)) throw new ApiError(422, 'invalid_member', 'Default member is not in this group');
+  for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const)
+    if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'invalid_config', 'Invalid group configuration value');
+  if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))
+    throw new ApiError(422, 'invalid_member', 'Default member is not in this group');
   if (config.check_url !== null) {
     let url: URL;
-    try { url = new URL(config.check_url); } catch { throw new ApiError(422, 'invalid_url', 'Invalid check URL'); }
+    try {
+      url = new URL(config.check_url);
+    } catch {
+      throw new ApiError(422, 'invalid_url', 'Invalid check URL');
+    }
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new ApiError(422, 'invalid_url', 'Invalid check URL');
   }
   return {policy: policy as Group['policy'], config};

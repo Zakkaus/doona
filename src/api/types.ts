@@ -89,6 +89,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runtime/outbounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read per-outbound cumulative counters
+         * @description Mirrors honk's Clash-surface /stats counters for visible traffic, not
+         *     a sum of live connections. All rows share counter_since; restart or
+         *     counter reset starts a new interval. Requires resources.runtime_outbounds.available.
+         */
+        get: operations["getRuntimeOutbounds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runtime/traffic/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read bounded traffic history
+         * @description Reads a bounded in-memory ring of visible traffic samples without
+         *     starting sampling on GET. This is the only traffic history the native
+         *     API serves; SSE does not replay it. Requires resources.traffic_history.available.
+         *     A query above either advertised limit returns 400 invalid_request,
+         *     never a silently clamped window or point limit.
+         */
+        get: operations["getTrafficHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/datapath": {
         parameters: {
             query?: never;
@@ -434,14 +480,23 @@ export interface components {
         Timestamp: string;
         /** Format: date-time */
         NullableTimestamp: string | null;
+        /**
+         * @description Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
+         * @enum {string}
+         */
+        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable";
         /** @description Safe structured error; never raw engine output. */
         SafeError: {
             code: string;
             message: string;
             details?: Record<string, never> | null;
         };
+        /** @description HTTP error body; the code comes from ErrorCode. */
+        ApiError: components["schemas"]["SafeError"] & {
+            code?: components["schemas"]["ErrorCode"];
+        };
         ErrorResponse: {
-            error: components["schemas"]["SafeError"];
+            error: components["schemas"]["ApiError"];
             request_id: string | null;
         };
         Discovery: {
@@ -460,6 +515,10 @@ export interface components {
                 capabilities: "/api/v1/capabilities";
                 /** @constant */
                 runtime: "/api/v1/runtime";
+                /** @constant */
+                runtime_outbounds: "/api/v1/runtime/outbounds";
+                /** @constant */
+                traffic_history: "/api/v1/runtime/traffic/history";
                 /** @constant */
                 operations: "/api/v1/operations/{id}";
             };
@@ -499,6 +558,14 @@ export interface components {
                 runtime_memory: {
                     available: boolean;
                     metrics?: ("process.rss_bytes" | "cgroup.current_bytes" | "cgroup.limit_bytes" | "cgroup.events.high" | "cgroup.events.oom" | "cgroup.events.oom_kill" | "kernel.ebpf_bytes")[];
+                };
+                runtime_outbounds: components["schemas"]["AvailableResource"];
+                traffic_history: {
+                    available: boolean;
+                    /** @description Maximum look-back window in seconds; not a guarantee against bounded-ring eviction. */
+                    max_window_seconds?: components["schemas"]["SafeUInt"];
+                    /** @description Maximum returned samples per history request. */
+                    max_points?: components["schemas"]["SafeUInt"];
                 };
                 datapath: {
                     available: boolean;
@@ -625,6 +692,8 @@ export interface components {
             scope: "visible";
             observed_by: components["schemas"]["ObservedBy"];
             counter_since: components["schemas"]["NullableTimestamp"];
+            /** @description Traffic sample timestamp, or null when unavailable. Never substitute the HTTP snapshot timestamp. */
+            sampled_at: components["schemas"]["NullableTimestamp"];
             connections: {
                 tcp: components["schemas"]["NullableSafeUInt"];
                 udp: components["schemas"]["NullableSafeUInt"];
@@ -635,6 +704,7 @@ export interface components {
                 download: components["schemas"]["NullableUInt64"];
             };
             rates: null | {
+                /** @description Duration of the rate interval ending at sampled_at, in seconds. */
                 window_seconds: number;
                 upload_bytes_per_second: components["schemas"]["NullableUInt64"];
                 download_bytes_per_second: components["schemas"]["NullableUInt64"];
@@ -660,6 +730,55 @@ export interface components {
                 ebpf_bytes?: components["schemas"]["NullableUInt64"];
                 sampled_at: components["schemas"]["NullableTimestamp"];
             };
+        };
+        RuntimeOutbounds: {
+            observed_at: components["schemas"]["Timestamp"];
+            /** @description Shared cumulative counter reset boundary; changes on restart or reset. Never compute deltas across this boundary. */
+            counter_since: components["schemas"]["Timestamp"];
+            outbounds: components["schemas"]["OutboundCounters"][];
+        };
+        OutboundCounters: {
+            /** @description Engine-visible outbound name, retained with its counters across reloads. */
+            name: string;
+            /**
+             * @description Configured group, leaf node, or engine builtin such as direct/block.
+             * @enum {string}
+             */
+            kind: "group" | "node" | "builtin";
+            /** @description Currently active connections attributed to this outbound. */
+            active_connections: components["schemas"]["SafeUInt"];
+            /** @description Cumulative connections attributed to this outbound since counter_since. */
+            total_connections: components["schemas"]["UInt64"];
+            upload_bytes: components["schemas"]["UInt64"];
+            download_bytes: components["schemas"]["UInt64"];
+            /** @description Cumulative outbound failures since counter_since; policy blocks are not errors. */
+            errors: components["schemas"]["UInt64"];
+        };
+        /**
+         * @description Samples lie in (observed_at - window_seconds, observed_at], oldest first.
+         *     Retention is bounded by age and capacity and is cleared on process restart.
+         *     Return fewer points for short retention, or an empty array before sampling.
+         *     If needed, select every Nth stored sample backwards from the newest to
+         *     fit max_points; preserve original timestamps and rates, without interpolation.
+         *     Choose the smallest positive N that fits the point limit. A cumulative
+         *     counter reset makes the spanning rate sample null, never a spike.
+         */
+        TrafficHistory: {
+            observed_at: components["schemas"]["Timestamp"];
+            /** @description Requested look-back window, not the age of the oldest retained sample. */
+            window_seconds: components["schemas"]["SafeUInt"];
+            /** @description Nominal interval between returned samples after thinning, or the recorder interval for an empty result; not the rate averaging interval. */
+            sampled_every_seconds: number;
+            /** @description At most max_points retained samples; missed intervals remain gaps, never fabricated zero traffic. */
+            samples: components["schemas"]["TrafficHistorySample"][];
+        };
+        TrafficHistorySample: {
+            /** @description Original sample timestamp, never the HTTP snapshot time. */
+            sampled_at: components["schemas"]["Timestamp"];
+            upload_bytes_per_second: components["schemas"]["NullableUInt64"];
+            download_bytes_per_second: components["schemas"]["NullableUInt64"];
+            /** @description Visible active TCP and UDP connections at sampled_at, or null when unavailable. */
+            connections: components["schemas"]["NullableSafeUInt"];
         };
         /** @enum {string} */
         DatapathKind: "ebpf" | "userspace" | "mock" | "unknown";
@@ -753,6 +872,7 @@ export interface components {
             protocol: string | null;
             subscription_tag: string | null;
             group_ids: string[];
+            /** @description Latest observations, unique by (transport, purpose, measurement, ip_version, warmth) within this node. */
             health: components["schemas"]["HealthObservation"][];
         };
         NodeList: {
@@ -834,6 +954,8 @@ export interface components {
         GroupSummary: {
             id: string;
             name: string;
+            /** @description Same opaque configuration revision as Group.config_revision; preserve without numeric parsing. */
+            config_revision: string;
             policy: components["schemas"]["GroupPolicy"];
             member_count: number;
             selection: {
@@ -1017,6 +1139,25 @@ export interface components {
             dst?: string;
             domain?: string | null;
             outbound: string | null;
+            /** @description Application outbound selection_path group IDs followed by the leaf node ID, in order; empty for direct/block or an unknown path. */
+            chain: string[];
+            /**
+             * @description Selection captured at evaluation, reconstructed from retained evidence, or unavailable; never a current group snapshot.
+             * @enum {string}
+             */
+            chain_source: "evaluation" | "reconstructed" | "unknown";
+            /** @description Generation-scoped traffic rule ID, or null when unavailable. */
+            rule_id: string | null;
+            /** @description Sanitized display expression for that rule, or null when unavailable. */
+            rule_expression: string | null;
+            /**
+             * @description Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+             * @enum {string}
+             */
+            rule_source: "kernel" | "recomputed" | "unknown";
+            /** @enum {string|null} */
+            ingress: "lan" | "wan" | null;
+            domain_source: null | components["schemas"]["DomainSource"];
             started_at: components["schemas"]["NullableTimestamp"];
             observed_by: components["schemas"]["ObservedBy"];
             upload_bytes: components["schemas"]["NullableUInt64"];
@@ -1028,10 +1169,13 @@ export interface components {
             observed_at: components["schemas"]["Timestamp"];
             instance_id: string;
             visibility: components["schemas"]["Visibility"];
+            /** @description Whether limit omitted visible entries matching type and src. */
             truncated: boolean;
             tcp: components["schemas"]["Connection"][];
             udp: components["schemas"]["Connection"][];
+            /** @description Visible live TCP entries matching type and src before limit; zero when type excludes TCP. */
             total_tcp: components["schemas"]["SafeUInt"];
+            /** @description Visible live UDP entries matching type and src before limit; zero when type excludes UDP. */
             total_udp: components["schemas"]["SafeUInt"];
         };
         /** @enum {string} */
@@ -1090,6 +1234,25 @@ export interface components {
             pname: string | null;
             connection_id: string | null;
             outbound: string | null;
+            /** @description Application outbound selection_path group IDs followed by the leaf node ID, in order; empty for direct/block or an unknown path. */
+            chain: string[];
+            /**
+             * @description Selection captured at evaluation, reconstructed from retained evidence, or unavailable; never a current group snapshot.
+             * @enum {string}
+             */
+            chain_source: "evaluation" | "reconstructed" | "unknown";
+            /** @description Generation-scoped traffic rule ID, or null when unavailable. */
+            rule_id: string | null;
+            /** @description Sanitized display expression for that rule, or null when unavailable. */
+            rule_expression: string | null;
+            /**
+             * @description Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+             * @enum {string}
+             */
+            rule_source: "kernel" | "recomputed" | "unknown";
+            /** @enum {string|null} */
+            ingress: "lan" | "wan" | null;
+            domain_source: null | components["schemas"]["DomainSource"];
             observed_by: components["schemas"]["ObservedBy"];
             started_at: components["schemas"]["NullableTimestamp"];
             ended_at: components["schemas"]["NullableTimestamp"];
@@ -1186,7 +1349,9 @@ export interface components {
             must: boolean | null;
             mark: number | null;
             /** @description Immutable inputs consumed by this evaluation, typed by chain below; null means missing capture. */
-            input: Record<string, never> | null;
+            input: {
+                [key: string]: unknown;
+            } | null;
             /** @enum {string|null} */
             dns_action: "upstream" | "asis" | "accept" | "reject" | "requery" | null;
         } & (({
@@ -1328,6 +1493,8 @@ export interface components {
             mode_override: "none" | "direct" | "global" | "unknown";
             selection_path: components["schemas"]["SelectionPathItem"][];
             leaf_node_id: string | null;
+            /** @description Sanitized leaf name captured at decision time, or null when unavailable; leaf_node_id remains authoritative. */
+            leaf_node_name: string | null;
             target: string | null;
             /** @enum {string} */
             target_kind: "ip" | "domain" | "none" | "unknown";
@@ -1342,6 +1509,8 @@ export interface components {
         SelectionPathItem: {
             group_id: string;
             member_id: string | null;
+            /** @description Sanitized member name captured at decision time, or null when unavailable; member_id remains authoritative. */
+            member_name: string | null;
             policy: string;
             reason: string;
             selection: null | components["schemas"]["SelectionDecision"];
@@ -1354,7 +1523,11 @@ export interface components {
         };
         SelectionCandidate: {
             member_id: string;
+            /** @description Sanitized member name captured at decision time, or null when unavailable; member_id remains authoritative. */
+            member_name: string | null;
             leaf_node_id: string | null;
+            /** @description Sanitized leaf name captured at decision time, or null when unavailable; leaf_node_id remains authoritative. */
+            leaf_node_name: string | null;
             eligible: boolean | null;
             sorting_latency_ms: number | null;
             score: number | null;
@@ -1658,7 +1831,9 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             started_at: components["schemas"]["NullableTimestamp"];
             finished_at: components["schemas"]["NullableTimestamp"];
-            result: Record<string, never> | null;
+            result: {
+                [key: string]: unknown;
+            } | null;
             error: null | components["schemas"]["SafeError"];
         };
     };
@@ -1798,6 +1973,14 @@ export interface components {
         Detail: "summary" | "full";
         /** @example 100 */
         Limit1000: number;
+        /**
+         * @description Opaque cursor bound to the resource, running adapter instance, filters,
+         *     and retained snapshot. Restart, changed filters, or snapshot expiry or
+         *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
+         *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
+         *     that is unknown or no longer valid. Discard it and restart the page walk
+         *     without a cursor; never silently continue against a new snapshot.
+         */
         Cursor: string;
         /** @example group-proxy */
         GroupId: string;
@@ -1947,6 +2130,80 @@ export interface operations {
             429: components["responses"]["RateLimited"];
         };
     };
+    getRuntimeOutbounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outbound counter snapshot */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeOutbounds"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getTrafficHistory: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Look-back window ending at observed_at; defaults to resources.traffic_history.max_window_seconds.
+                 * @example 60
+                 */
+                window_seconds?: components["schemas"]["SafeUInt"];
+                /**
+                 * @description Maximum returned samples; defaults to resources.traffic_history.max_points.
+                 * @example 3
+                 */
+                max_points?: components["schemas"]["SafeUInt"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retained traffic samples, oldest first */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficHistory"];
+                };
+            };
+            /** @description Invalid query or window_seconds/max_points above the advertised limit */
+            400: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
     getDatapath: {
         parameters: {
             query?: {
@@ -1982,6 +2239,14 @@ export interface operations {
                 group_id?: string;
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
+                /**
+                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
+                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
+                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
+                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
+                 *     that is unknown or no longer valid. Discard it and restart the page walk
+                 *     without a cursor; never silently continue against a new snapshot.
+                 */
                 cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
@@ -2205,13 +2470,30 @@ export interface operations {
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["Unavailable"];
+            /** @description Probe queue is full */
+            503: {
+                headers: {
+                    /** @description Positive retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     listConnections: {
         parameters: {
             query?: {
                 type?: "tcp" | "udp" | "all";
+                /**
+                 * @description Exact source IP literal, without a port; applied with type before limit. Totals and truncated describe only matching visible entries.
+                 * @example 192.168.1.100
+                 */
+                src?: components["schemas"]["IpAddress"];
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
                 /** @example full */
@@ -2245,8 +2527,21 @@ export interface operations {
             query?: {
                 network?: "tcp" | "udp" | "all";
                 state?: components["schemas"]["ConnectionState"] | "all";
+                /**
+                 * @description Exact opaque connection ID within the current adapter instance; never inferred from a tuple. Matches active and retained terminal flows.
+                 * @example tcp-01HZX4K8W5
+                 */
+                connection_id?: string;
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
+                /**
+                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
+                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
+                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
+                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
+                 *     that is unknown or no longer valid. Discard it and restart the page walk
+                 *     without a cursor; never silently continue against a new snapshot.
+                 */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */
                 detail?: components["parameters"]["Detail"];
@@ -2387,7 +2682,17 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and resnapshot. */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
         };
@@ -2449,6 +2754,14 @@ export interface operations {
                 include_expired?: boolean;
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
+                /**
+                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
+                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
+                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
+                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
+                 *     that is unknown or no longer valid. Discard it and restart the page walk
+                 *     without a cursor; never silently continue against a new snapshot.
+                 */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */
                 detail?: components["parameters"]["Detail"];

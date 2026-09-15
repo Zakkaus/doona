@@ -1,0 +1,47 @@
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import prettier from 'eslint-config-prettier';
+import globals from 'globals';
+
+export default [
+  {
+    ignores: [
+      'dist/**',
+      'artifact/**',
+      'vendor/**',
+      'contract/**',
+      'src/api/types.ts',
+      'src/fonts.css',
+      'node_modules/**',
+      // S2 reference panels, pending archive (release plan 二.1)
+      'src/app/**',
+      'src/App.tsx',
+      'src/DesignPage.tsx',
+      'src/main.tsx'
+    ]
+  },
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', {ignoreRestSiblings: true, argsIgnorePattern: '^_'}]
+    }
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    languageOptions: {globals: globals.browser}
+  },
+  {
+    files: ['tools/*.mjs', '*.config.{ts,js}'],
+    languageOptions: {globals: globals.node}
+  },
+  {
+    ...reactHooks.configs.flat.recommended,
+    files: ['src/**/*.{ts,tsx}']
+  },
+  {
+    ...jsxA11y.flatConfigs.recommended,
+    files: ['src/**/*.tsx']
+  },
+  prettier
+];

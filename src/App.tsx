@@ -59,14 +59,35 @@ const panel = style({
 });
 
 const SECTIONS: Array<[string, Array<[string, string]>]> = [
-  ['設計語言', [['pos', '定位'], ['shell', '應用骨架'], ['spec', '規範'], ['color', '色彩']]],
-  ['元件', [['controls', '控件'], ['conns', '連線與就地操作'], ['policies', '策略'], ['rules', '規則表'], ['config', '配置編輯器']]],
+  [
+    '設計語言',
+    [
+      ['pos', '定位'],
+      ['shell', '應用骨架'],
+      ['spec', '規範'],
+      ['color', '色彩']
+    ]
+  ],
+  [
+    '元件',
+    [
+      ['controls', '控件'],
+      ['conns', '連線與就地操作'],
+      ['policies', '策略'],
+      ['rules', '規則表'],
+      ['config', '配置編輯器']
+    ]
+  ],
   ['產品', [['skeleton', '頁面骨架']]]
 ];
 
 export function App() {
   const [scheme, setScheme] = useState<Scheme>(() => {
-    try { return (localStorage.getItem('doona-scheme') as Scheme) || 'light dark'; } catch { return 'light dark'; }
+    try {
+      return (localStorage.getItem('doona-scheme') as Scheme) || 'light dark';
+    } catch {
+      return 'light dark';
+    }
   });
   const [route, setRoute] = useState(() => location.hash.slice(1) || 'pos');
   useEffect(() => {
@@ -74,32 +95,56 @@ export function App() {
     addEventListener('hashchange', onHash);
     return () => removeEventListener('hashchange', onHash);
   }, []);
-  const pick = (s: Scheme) => { setScheme(s); try { localStorage.setItem('doona-scheme', s); } catch { /* private mode */ } };
+  const pick = (s: Scheme) => {
+    setScheme(s);
+    try {
+      localStorage.setItem('doona-scheme', s);
+    } catch {
+      /* private mode */
+    }
+  };
   const cycle = () => pick(scheme === 'light dark' ? 'light' : scheme === 'light' ? 'dark' : 'light dark');
-  const navigate = (href: string) => { location.hash = href.replace(/^#/, ''); };
+  const navigate = (href: string) => {
+    location.hash = href.replace(/^#/, '');
+  };
 
   return (
     <Provider locale="zh-TW" colorScheme={scheme === 'light dark' ? undefined : scheme} background="layer-1" router={{navigate}}>
       <ToastContainer />
       <div className={shell}>
         <header className={topbar}>
-          <div className={brand}><img className={brandMark} src={logo} alt="" />doona</div>
+          <div className={brand}>
+            <img className={brandMark} src={logo} alt="" />
+            doona
+          </div>
           <SearchField aria-label="搜尋" placeholder="搜尋設計語言" />
           <nav className={desktopOnly + ' ' + style({gridColumnEnd: {lg: 'span 2'}})}>
             <ActionButtonGroup isQuiet>
-              <ActionButton onPress={() => navigate('#spec')}><Text>規範</Text></ActionButton>
-              <ActionButton onPress={() => navigate('#controls')}><Text>元件</Text></ActionButton>
-              <ActionButton onPress={() => navigate('#skeleton')}><Text>頁面骨架</Text></ActionButton>
+              <ActionButton onPress={() => navigate('#spec')}>
+                <Text>規範</Text>
+              </ActionButton>
+              <ActionButton onPress={() => navigate('#controls')}>
+                <Text>元件</Text>
+              </ActionButton>
+              <ActionButton onPress={() => navigate('#skeleton')}>
+                <Text>頁面骨架</Text>
+              </ActionButton>
             </ActionButtonGroup>
           </nav>
           <TooltipTrigger>
-            <ActionButton isQuiet aria-label="切換主題" onPress={cycle}><Contrast /></ActionButton>
+            <ActionButton isQuiet aria-label="切換主題" onPress={cycle}>
+              <Contrast />
+            </ActionButton>
             <Tooltip>主題：{scheme === 'light dark' ? '跟隨系統' : scheme === 'light' ? '亮' : '暗'}</Tooltip>
           </TooltipTrigger>
         </header>
         <div className={mobileBar}>
           <Picker aria-label="章節" selectedKey={route} onSelectionChange={k => k != null && navigate('#' + String(k))} styles={style({width: 'full'})}>
-            {SECTIONS.flatMap(([, items]) => items).map(([id, label]) => <PickerItem key={id} id={id}>{label}</PickerItem>)}
+            {SECTIONS.flatMap(([, items]) => items).map(([id, label]) => (
+              <PickerItem key={id} id={id}>
+                {label}
+              </PickerItem>
+            ))}
           </Picker>
         </div>
         <nav className={sidebar}>
@@ -109,7 +154,9 @@ export function App() {
                 <SideNavHeader>{title}</SideNavHeader>
                 {items.map(([id, label]) => (
                   <SideNavItem key={id} id={id} href={'#' + id} textValue={label}>
-                    <SideNavItemContent><SideNavItemLink>{label}</SideNavItemLink></SideNavItemContent>
+                    <SideNavItemContent>
+                      <SideNavItemLink>{label}</SideNavItemLink>
+                    </SideNavItemContent>
                   </SideNavItem>
                 ))}
               </SideNavSection>
