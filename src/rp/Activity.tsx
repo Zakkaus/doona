@@ -82,7 +82,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.probeLatency')}</span><Button quiet small onPress={() => go('policies')}>{t('act.viewAll')}</Button></div>
-          <div className="rp-list">{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <Bar key={n.name} icon={<Flag name={n.name} />} label={n.name} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love} />)}</div>
+          <div className="rp-list">{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).slice(0, 6).map(n => <Bar key={n.name} icon={<Flag name={n.name} />} label={n.name} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love} />)}</div>
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.issues')}</span>{issues.length > 0 && <span className="rp-label">{issues.length}</span>}</span><Button quiet small onPress={() => go('overview')}>{t('act.viewAll')}</Button></div>

@@ -18,6 +18,7 @@ import Globe from '@react-spectrum/s2/icons/GlobeGrid';
 import Data from '@react-spectrum/s2/icons/Data';
 import FileText from '@react-spectrum/s2/icons/FileText';
 import History from '@react-spectrum/s2/icons/History';
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
 import logo from '../logo.svg';
 import GitHub from '../app/icons/GitHub';
 import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
@@ -33,9 +34,10 @@ import {Rules} from './pages/Rules';
 import {Dns} from './pages/Dns';
 import {Resources} from './pages/Resources';
 import {ConfigPage} from './pages/ConfigPage';
+import {Validate} from './pages/Validate';
 import {Events} from './pages/Events';
 import type {PageProps} from './pages/types';
-const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events};
+const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
@@ -51,7 +53,7 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
   ['grp.network', [['connections', 'nav.connections', Link], ['clients', 'nav.clients', Devices]]],
   ['grp.proxy', [['policies', 'nav.policies', Share], ['rules', 'nav.rules', ListBulleted], ['dns', 'nav.dns', Globe]]],
-  ['grp.system', [['resources', 'nav.resources', Data], ['config', 'nav.config', FileText], ['events', 'nav.events', History]]]
+  ['grp.system', [['resources', 'nav.resources', Data], ['config', 'nav.config', FileText], ['validate', 'nav.validate', CheckmarkCircle], ['events', 'nav.events', History]]]
 ];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 

@@ -415,6 +415,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-lv { display: inline-block; width: 6ch; font-weight: 600; } .rp-lv-info { color: var(--rp-foam); } .rp-lv-warn { color: var(--rp-gold); } .rp-lv-err { color: var(--rp-love); }
 .rp-alert { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--rp-love); }
 .rp-alert .h { font-weight: 600; }
+.rp-p { margin: 0; line-height: 20px; }
+.rp-diff { display: flex; align-items: center; gap: 12px; min-height: 24px; } .rp-diff .v { color: var(--rp-subtle); flex: 1; white-space: nowrap; } .rp-diff .rp-code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-alert .b { font-size: 13px; line-height: 20px; color: var(--rp-subtle); }
 .rp-tabs { display: flex; flex-direction: column; gap: 24px; }
 .rp-tablist { display: flex; gap: 24px; border-bottom: 1px solid var(--rp-hl-med); }
