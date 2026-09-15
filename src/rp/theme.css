@@ -223,6 +223,7 @@
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
 :root[data-family='glass'] .rp-card { border-radius: 20px; }
+:root[data-family='glass'] .rp-popover::after { inset: 0; }
 :root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog { background: var(--rp-sheen), var(--rp-glass-strong); backdrop-filter: blur(40px) saturate(1.8); box-shadow: var(--rp-glow), var(--rp-shadow-lg); }
 :root[data-family='glass'] .rp-table [role='columnheader'] { background: transparent; }
 :root[data-family='glass'] .rp-frame .head { background: transparent; }
@@ -366,7 +367,7 @@ button, input { font: inherit; color: inherit; }
 /* A slim overlay-like scrollbar so a long menu keeps its 8px inset on both sides. */
 .rp-popover::-webkit-scrollbar { width: 6px; } .rp-popover::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--rp-hl-high); } .rp-popover::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
 /* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-popover-border); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-elevated); min-width: 160px; }
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-popover-border); border-radius: 10px; padding: 8px; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-elevated); min-width: 160px; }
 .rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
