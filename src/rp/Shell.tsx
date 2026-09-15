@@ -41,12 +41,14 @@ const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overvie
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
-type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord' | 'glass/glass';
+type PaletteId = 'rose-pine/main' | 'rose-pine/moon' | 'catppuccin/frappe' | 'catppuccin/macchiato' | 'catppuccin/mocha' | 'nord/nord' | 'glass/glass' | 'antd/antd' | 'arco/arco' | 'semi/semi';
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (glass: string): Array<{title: string, items: Array<{id: PaletteId, label: string, desc?: string}>}> => [
   {title: 'Rosé Pine', items: [{id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn / Main'}, {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn / Moon'}]},
   {title: 'Catppuccin', items: [{id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte / Frappé'}, {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte / Macchiato'}, {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte / Mocha'}]},
   {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord', desc: 'Snow Storm / Polar Night'}]},
+  {title: 'Ant Design', items: [{id: 'antd/antd', label: 'Ant Design', desc: 'Default / Dark'}]},
+  {title: 'ByteDance', items: [{id: 'arco/arco', label: 'Arco Design', desc: 'Light / Dark'}, {id: 'semi/semi', label: 'Semi Design', desc: 'Light / Dark'}]},
   {title: 'Glass', items: [{id: 'glass/glass', label: 'Glass', desc: glass}]}
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
