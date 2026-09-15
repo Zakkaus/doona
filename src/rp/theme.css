@@ -84,6 +84,7 @@
   --rp-love: #ff3b30; --rp-gold: #ff9500; --rp-rose: #ff9f0a; --rp-pine: #007aff; --rp-foam: #34c759; --rp-iris: #af52de;
   --rp-c1: #007aff; --rp-c2: #34c759; --rp-c3: #af52de; --rp-c4: #ff9500; --rp-c5: #5ac8fa; --rp-c6: #ff2d55; --rp-c7: #ffcc00; --rp-c8: #ff3b30;
   --rp-hl-low: rgba(255, 255, 255, 0.35); --rp-hl-med: rgba(60, 60, 67, 0.18); --rp-hl-high: rgba(60, 60, 67, 0.3);
+  --rp-on-accent: #ffffff; --rp-on-text: #ffffff; --rp-line: rgba(60, 60, 67, 0.14);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.18);
   --rp-glass-border: rgba(255, 255, 255, 0.6);
   --rp-bg: radial-gradient(1200px 800px at 10% 0%, #d8e6ff 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #ffe0ec 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #dcf5e6 0%, transparent 55%), #eef1f6;
@@ -94,6 +95,7 @@
   --rp-love: #ff453a; --rp-gold: #ff9f0a; --rp-rose: #ffb340; --rp-pine: #0a84ff; --rp-foam: #30d158; --rp-iris: #bf5af2;
   --rp-c1: #0a84ff; --rp-c2: #30d158; --rp-c3: #bf5af2; --rp-c4: #ff9f0a; --rp-c5: #64d2ff; --rp-c6: #ff375f; --rp-c7: #ffd60a; --rp-c8: #ff453a;
   --rp-hl-low: rgba(255, 255, 255, 0.06); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
+  --rp-on-accent: #ffffff; --rp-on-text: #1c1c1e; --rp-line: rgba(255, 255, 255, 0.12);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
   --rp-glass-border: rgba(255, 255, 255, 0.12);
   --rp-bg: radial-gradient(1200px 800px at 10% 0%, #1e2a5a 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #4a1d3f 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #123a2e 0%, transparent 55%), #0b0b10;
@@ -208,7 +210,7 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.accent, .rp-btn.primary, .rp-btn.negative { border-radius: 999px; padding: 0 14px; }
 .rp-btn.sm.accent, .rp-btn.sm.primary, .rp-btn.sm.negative { padding: 0 10px; }
 .rp-btn.icon { width: 32px; padding: 0; justify-content: center; }
-.rp-btn.accent { background: var(--rp-pine); color: var(--rp-surface); }
+.rp-btn.accent { background: var(--rp-pine); color: var(--rp-on-accent); }
 .rp-btn.accent:hover { filter: brightness(1.08); }
 .rp-seg { display: inline-flex; gap: 4px; max-width: 100%; background: var(--rp-overlay); border-radius: 10px; padding: 2px; }
 .rp-seg .rp-btn { flex: 0 1 auto; min-width: 0; padding: 0 10px; }
@@ -222,7 +224,7 @@ button, input { font: inherit; color: inherit; }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-selected] { font-weight: 600; }
 .rp-item .desc { color: var(--rp-subtle); font-size: 12px; }
-.rp-tip { background: var(--rp-text); color: var(--rp-surface); font-size: 12px; padding: 4px 8px; border-radius: 6px; }
+.rp-tip { background: var(--rp-text); color: var(--rp-on-text); font-size: 12px; padding: 4px 8px; border-radius: 6px; }
 .rp-light { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .rp-light::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--rp-muted)); flex-shrink: 0; }
 .rp-light.sm { font-size: 12px; line-height: 16px; }
@@ -286,10 +288,10 @@ button, input { font: inherit; color: inherit; }
 .rp-kv .k { display: block; font-size: 12px; line-height: 16px; color: var(--rp-muted); }
 .rp-kv .v { display: block; line-height: 20px; overflow-wrap: anywhere; }
 .rp-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; font-size: 12px; line-height: 16px; font-weight: 500; border: 1px solid var(--rp-hl-high); color: var(--rp-subtle); }
-.rp-badge.warn { border-color: transparent; background: var(--rp-gold); color: var(--rp-base); }
+.rp-badge.warn { border-color: transparent; background: var(--rp-gold); color: var(--rp-on-accent); }
 .rp-btn.negative { background: transparent; border-color: var(--rp-love); color: var(--rp-love); }
 .rp-btn.negative:hover { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
-.rp-btn.primary { background: var(--rp-pine); color: var(--rp-surface); }
+.rp-btn.primary { background: var(--rp-pine); color: var(--rp-on-accent); }
 .rp-btn.primary:hover { filter: brightness(1.08); }
 .rp-btn[data-disabled] { opacity: 0.4; cursor: default; pointer-events: none; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
@@ -325,7 +327,7 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-table [role='row'][data-selected] { background: color-mix(in srgb, var(--rp-pine) 12%, transparent); }
 .rp-table [role='row'][data-hovered]:not([data-selected]) { background: var(--rp-hl-low); }
 .rp-table [role='row'][data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
-.rp-table [role='rowheader'], .rp-table [role='gridcell'] { padding: 0 16px; height: 40px; border-bottom: 1px solid var(--rp-hl-low); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; outline: none; vertical-align: middle; }
+.rp-table [role='rowheader'], .rp-table [role='gridcell'] { padding: 0 16px; height: 40px; border-bottom: 1px solid var(--rp-line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; outline: none; vertical-align: middle; }
 .rp-table [role='row'][data-selection-mode='single'] { cursor: default; }
 .rp-table .empty { padding: 32px 16px; text-align: center; color: var(--rp-subtle); }
 .rp-table .end { text-align: end; }
@@ -362,7 +364,7 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-kv.inline { display: flex; gap: 24px; flex-wrap: wrap; }
 
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
-:root { --rp-ease: cubic-bezier(0.45, 0, 0.4, 1); --rp-ease-in: cubic-bezier(0.5, 0, 1, 1); --rp-ease-out: cubic-bezier(0, 0, 0.4, 1); }
+:root { --rp-on-accent: var(--rp-surface); --rp-on-text: var(--rp-surface); --rp-line: var(--rp-hl-low); --rp-ease: cubic-bezier(0.45, 0, 0.4, 1); --rp-ease-in: cubic-bezier(0.5, 0, 1, 1); --rp-ease-out: cubic-bezier(0, 0, 0.4, 1); }
 .rp-btn, .rp-nav, .rp-item, .rp-select, .rp-selectbtn, .rp-search, .rp-tab, .rp-input, .rp-version, .rp-brand, .rp-input .clear, .rp-table [role='row'], .rp-switch, .rp-check, .rp-badge {
   transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter, outline-color;
   transition-duration: 150ms; transition-timing-function: var(--rp-ease);
@@ -406,7 +408,7 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-toast-list { position: relative; display: flex; flex-direction: column-reverse; gap: 8px; }
 .rp-toasts.expanded .rp-toast-list { overflow: auto; padding: 8px; margin: 0 -8px; }
 .rp-toast-controls { display: flex; justify-content: flex-end; gap: 8px; }
-.rp-toast { display: flex; align-items: center; gap: 16px; padding: 12px 8px 12px 16px; min-height: 56px; width: 336px; max-width: 90vw; border-radius: 10px; background: var(--rp-text); color: var(--rp-surface); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); box-sizing: border-box; flex-shrink: 0; transition: translate 400ms var(--rp-ease), scale 400ms var(--rp-ease), opacity 400ms var(--rp-ease); }
+.rp-toast { display: flex; align-items: center; gap: 16px; padding: 12px 8px 12px 16px; min-height: 56px; width: 336px; max-width: 90vw; border-radius: 10px; background: var(--rp-text); color: var(--rp-on-text); font-size: 14px; line-height: 20px; box-shadow: var(--rp-shadow-lg); box-sizing: border-box; flex-shrink: 0; transition: translate 400ms var(--rp-ease), scale 400ms var(--rp-ease), opacity 400ms var(--rp-ease); }
 .rp-toast .main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .rp-toast .body { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .rp-toast .body > svg { flex: none; }
@@ -414,8 +416,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-toast .more { color: inherit; flex: none; margin-left: -8px; }
 .rp-toast .more:hover, .rp-toast .close:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
 .rp-toast > .close { color: inherit; width: 24px; height: 24px; min-width: 0; flex: none; align-self: flex-start; margin-top: -2px; } .rp-toast > .close > svg { width: 12px; height: 12px; }
-.rp-toast.negative { background: var(--rp-love); } .rp-toast.positive { background: var(--rp-pine); } .rp-toast.info { background: var(--rp-foam); color: var(--rp-base); }
-.rp-toast.info .close:hover, .rp-toast.info .more:hover { background: color-mix(in srgb, var(--rp-base) 16%, transparent); }
+.rp-toast.negative { background: var(--rp-love); color: var(--rp-on-accent); } .rp-toast.positive { background: var(--rp-pine); color: var(--rp-on-accent); } .rp-toast.info { background: var(--rp-foam); color: var(--rp-on-accent); }
+
 /* Collapsed stack: toasts behind the main one sit on it, pushed up and shrunk by their depth; only three show. */
 .rp-toast.background { position: absolute; inset: 0; width: 100%; min-height: 0; translate: 0 calc(var(--i) * -10px); scale: calc(1 - var(--i) * 0.06); opacity: 1; }
 .rp-toast.background > * { visibility: hidden; }
