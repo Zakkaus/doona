@@ -3,7 +3,6 @@ import {useEffect, useId, useRef, useState} from 'react';
 import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {ReactNode} from 'react';
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
-import {throughput} from './mock';
 
 export type SeriesColor = 'accent' | 'accent2' | 'orange' | 'green' | 'purple' | 'red' | 'warn' | 'dark' | 'muted' | 'muted2';
 export type Series = {label: string, color: SeriesColor, values: number[]};
@@ -21,7 +20,6 @@ const legendVal = style({fontWeight: 'bold', color: 'neutral'});
 export const fmtRate = (kb: number) => kb >= 1000 ? (kb / 1000).toFixed(kb >= 10000 || kb % 1000 === 0 ? 0 : 1) + ' MB/s' : Math.round(kb) + ' KB/s';
 export const fmtCount = (n: number) => String(Math.round(n));
 const niceMax = (v: number) => { const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10; return s * p; };
-export const latest = throughput[throughput.length - 1];
 const clock = (msAgo: number) => { const d = new Date(Date.now() - msAgo); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 // Follows the colour scheme of the surrounding S2 Provider (the CSS color-scheme property inherits down to the chart host).
@@ -77,6 +75,7 @@ export function AreaChart({series, fmt, height = 150, step = 10_000}: {series: S
 export function Spark({values, color, height = 32}: {values: number[], color: SeriesColor, height?: number}) {
   const [p, ref] = usePalette<HTMLDivElement>();
   const uid = useId();
+  if (!values.length) return null;
   const data = values.map((v, i) => ({i, v}));
   const lo = Math.min(...values) * 0.85, hi = Math.max(...values) * 1.05 || 1;
   return (
@@ -103,10 +102,10 @@ const donutBytes = style({whiteSpace: 'nowrap'});
 const donutRow = style({display: 'flex', alignItems: 'center', gap: 8, minHeight: 24, font: 'ui-sm', color: 'gray-800'});
 const donutName = style({flexGrow: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'});
 const donutPct = style({width: 36, textAlign: 'end', color: 'gray-700'});
-export function Donut({rows, total, caption}: {rows: Array<{name: string, value: number, text: string, color: SeriesColor}>, total: string, caption?: string}) {
+export function Donut({rows, total, caption}: {rows: Array<{name: string, value: number | null, text: string, color: SeriesColor}>, total: string, caption?: string}) {
   const [p, ref] = usePalette<HTMLDivElement>();
   // Every non-zero item is on the ring; minAngle keeps the 1% ones visible instead of reading as specks.
-  const data = rows.filter(r => r.value > 0);
+  const data = rows.filter(r => r.value !== null && r.value > 0);
   return (
     <div ref={ref} className={donutWrap}>
       <div className={donutBox}>
@@ -118,7 +117,7 @@ export function Donut({rows, total, caption}: {rows: Array<{name: string, value:
         </ResponsiveContainer>
         <div className={donutCenter}><span className={donutTotal}>{total}</span>{caption && <span className={donutSub}>{caption}</span>}</div>
       </div>
-      <div className={donutList}>{rows.map(r => <div key={r.name} className={donutRow}><i className={swatch + ' ' + swatchClass[r.color]} /><span className={donutName}>{r.name}</span><span className={donutBytes}>{r.text}</span><span className={donutPct}>{r.value}%</span></div>)}</div>
+      <div className={donutList}>{rows.map(r => <div key={r.name} className={donutRow}><i className={swatch + ' ' + swatchClass[r.color]} /><span className={donutName}>{r.name}</span><span className={donutBytes}>{r.text}</span><span className={donutPct}>{r.value === null ? '—' : r.value + '%'}</span></div>)}</div>
     </div>
   );
 }

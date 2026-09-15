@@ -33,6 +33,7 @@ import {toast} from './ui';
 import {Activity} from './pages/Activity';
 import {Overview} from './pages/Overview';
 import {Connections} from './pages/Connections';
+import {Flows} from './pages/Flows';
 import {Clients} from './pages/Clients';
 import {Policies} from './pages/Policies';
 import {Rules} from './pages/Rules';
@@ -42,17 +43,19 @@ import {ConfigPage} from './pages/ConfigPage';
 import {Validate} from './pages/Validate';
 import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
 import {Events} from './pages/Events';
+import {useCapabilities} from '../api/store';
+import {compatRoutes, navAvailable} from '../api/selectors';
 
 type Scheme = 'light dark' | 'light' | 'dark';
 export type Go = (route: string, query?: string) => void;
 export type PageProps = {go: Go, query: string};
 
-type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.clients' | 'nav.policies' | 'nav.rules' | 'nav.dns' | 'nav.validate' | 'nav.resources' | 'nav.config' | 'nav.events';
+type NavKey = 'nav.activity' | 'nav.overview' | 'nav.connections' | 'nav.flows' | 'nav.clients' | 'nav.policies' | 'nav.routingTrace' | 'nav.dns' | 'nav.validate' | 'nav.resources' | 'nav.config' | 'nav.events';
 type GrpKey = 'grp.status' | 'grp.network' | 'grp.proxy' | 'grp.system';
 const NAV: Array<[GrpKey | null, Array<[string, NavKey, ComponentType, ComponentType<PageProps>]>]> = [
   ['grp.status', [['activity', 'nav.activity', ChartTrend, Activity], ['overview', 'nav.overview', Home, Overview]]],
-  ['grp.network', [['connections', 'nav.connections', LinkIcon, Connections], ['clients', 'nav.clients', DeviceAll, Clients]]],
-  ['grp.proxy', [['policies', 'nav.policies', Share, Policies], ['rules', 'nav.rules', ListBulleted, Rules], ['dns', 'nav.dns', GlobeGrid, Dns]]],
+  ['grp.network', [['connections', 'nav.connections', LinkIcon, Connections], ['flows', 'nav.flows', ListBulleted, Flows], ['clients', 'nav.clients', DeviceAll, Clients]]],
+  ['grp.proxy', [['policies', 'nav.policies', Share, Policies], ['rules', 'nav.routingTrace', ListBulleted, Rules], ['dns', 'nav.dns', GlobeGrid, Dns]]],
   ['grp.system', [['resources', 'nav.resources', Data, Resources], ['config', 'nav.config', FileText, ConfigPage], ['validate', 'nav.validate', CheckmarkCircle, Validate], ['events', 'nav.events', History, Events]]]
 ];
 export const PAGES = Object.fromEntries(NAV.flatMap(([, i]) => i).map(([k, l, , C]) => [k, [l, C] as const]));
@@ -80,6 +83,7 @@ const head = style({display: 'flex', alignItems: 'center', justifyContent: 'spac
 const content = style({width: 'full', maxWidth: 1120, marginX: 'auto', display: 'flex', flexDirection: 'column', gap: 32, minWidth: 0});
 const h1 = style({font: 'heading-xl', margin: 0, flexShrink: 0});
 const mobileNav = style({display: {default: 'block', lg: 'none'}, width: 'full'});
+const compatBadge = style({display: 'inline-flex', marginStart: 8, paddingX: 4, borderWidth: 1, borderColor: 'gray-300', borderRadius: 'sm', font: 'ui-xs', color: 'gray-600'});
 
 function parseHash() { const h = location.hash.replace(/^#\/?/, ''); const [route, query = ''] = h.split('?'); return {route: PAGES[route] ? route : 'activity', query}; }
 
@@ -123,6 +127,8 @@ function ThemeIcon({isDark}: {isDark: boolean}) {
 }
 function Frame({lang, pick, scheme, setScheme, route, titleKey, go, query, Page}: {lang: Lang, pick: (l: Lang) => void, scheme: Scheme, setScheme: (s: Scheme) => void, route: string, titleKey: NavKey, go: Go, query: string, Page: ComponentType<PageProps>}) {
   const systemDark = useSystemDark();
+  const capabilities = useCapabilities();
+  const nav = NAV.map(([group, items]) => [group, items.filter(([key]) => navAvailable(key, capabilities.data))] as const);
   // Beyond the 1600px frame the html canvas shows; keep it the same colour as the shell whatever scheme is forced.
   const shellRef = useRef<HTMLDivElement>(null);
   useEffect(() => { for (let el: HTMLElement | null = shellRef.current; el && el !== document.documentElement; el = el.parentElement) { const bg = getComputedStyle(el).backgroundColor; if (bg !== 'rgba(0, 0, 0, 0)') { document.documentElement.style.backgroundColor = bg; return; } } }, [scheme, systemDark]);
@@ -164,9 +170,9 @@ function Frame({lang, pick, scheme, setScheme, route, titleKey, go, query, Page}
         </header>
         <nav className={side}>
           <SideNav aria-label="導覽" selectedRoute={'#/' + route}>
-            {NAV.map(([grp, items]) => grp
-              ? <SideNavSection key={grp}><SideNavHeader>{t(grp)}</SideNavHeader>{items.map(([k, l, Icon]) => <SideNavItem key={k} id={k} href={'#/' + k} textValue={t(l)}><SideNavItemContent><Icon /><SideNavItemLink>{t(l)}</SideNavItemLink></SideNavItemContent></SideNavItem>)}</SideNavSection>
-              : items.map(([k, l, Icon]) => <SideNavItem key={k} id={k} href={'#/' + k} textValue={t(l)}><SideNavItemContent><Icon /><SideNavItemLink>{t(l)}</SideNavItemLink></SideNavItemContent></SideNavItem>))}
+            {nav.map(([grp, items]) => grp
+              ? <SideNavSection key={grp}><SideNavHeader>{t(grp)}</SideNavHeader>{items.map(([k, l, Icon]) => <SideNavItem key={k} id={k} href={'#/' + k} textValue={t(l)}><SideNavItemContent><Icon /><SideNavItemLink>{t(l)}{compatRoutes[k] && <span className={compatBadge}>{t('nav.compat')}</span>}</SideNavItemLink></SideNavItemContent></SideNavItem>)}</SideNavSection>
+              : items.map(([k, l, Icon]) => <SideNavItem key={k} id={k} href={'#/' + k} textValue={t(l)}><SideNavItemContent><Icon /><SideNavItemLink>{t(l)}{compatRoutes[k] && <span className={compatBadge}>{t('nav.compat')}</span>}</SideNavItemLink></SideNavItemContent></SideNavItem>))}
           </SideNav>
           <div className={sideGrow} />
           <div className={sideFoot}>
@@ -177,7 +183,7 @@ function Frame({lang, pick, scheme, setScheme, route, titleKey, go, query, Page}
           <div className={content}>
           <div className={head}>
             <h1 className={h1}>{t(titleKey)}</h1>
-            <div className={mobileNav}><Picker aria-label={t('page')} selectedKey={route} onSelectionChange={k => k != null && go(String(k))} styles={style({width: 'full'})}>{NAV.flatMap(([, i]) => i).map(([k, l]) => <PickerItem key={k} id={k}>{t(l)}</PickerItem>)}</Picker></div>
+            <div className={mobileNav}><Picker aria-label={t('page')} selectedKey={route} onSelectionChange={k => k != null && go(String(k))} styles={style({width: 'full'})}>{nav.flatMap(([, i]) => i).map(([k, l]) => <PickerItem key={k} id={k} textValue={t(l)}>{t(l)}{compatRoutes[k] && <span className={compatBadge}>{t('nav.compat')}</span>}</PickerItem>)}</Picker></div>
           </div>
           <Page go={go} query={query} />
           </div>

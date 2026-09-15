@@ -616,3 +616,16 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-node { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease); }
 button.rp-node:hover { background: var(--rp-hl-med); }
 @media (prefers-reduced-motion: reduce) { .rp-nav-slider { transition: none; } }
+
+.rp-flow-timeline { display: flex; flex-direction: column; gap: 16px; margin: 0; padding-inline-start: 24px; }
+.rp-flow-step { border-inline-start: 2px solid var(--rp-hl-med); padding: 8px 0 8px 16px; }
+.rp-flow-step > .rp-toolbar { margin-bottom: 12px; }
+.rp-flow-raw { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-family: monospace; }
+
+.rp-trace-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.rp-trace-result.matched { --dot: #28a745; }
+.rp-trace-result.not_matched { --dot: var(--rp-subtle); }
+.rp-trace-result.skipped { --dot: var(--rp-muted); color: var(--rp-muted); opacity: 0.6; }
+.rp-trace-result.indeterminate { --dot: var(--rp-gold); }
+.rp-nav-compat { margin-inline-start: auto; }
+.rp-il .ic:has(> .rp-nav-compat) { order: 1; }

@@ -50,6 +50,7 @@ export function AreaChart({series, fmt, height = 150, step = 10_000}: {series: S
 }
 export function Spark({values, color, height = 32}: {values: number[], color: string, height?: number}) {
   const uid = useId();
+  if (!values.length) return null;
   const data = values.map((v, i) => ({i, v}));
   const lo = Math.min(...values) * 0.85, hi = Math.max(...values) * 1.05 || 1;
   return (
@@ -64,9 +65,9 @@ export function Spark({values, color, height = 32}: {values: number[], color: st
     </div>
   );
 }
-export function Donut({rows, total}: {rows: Array<{name: string, value: number, text: string, color: string}>, total: string}) {
+export function Donut({rows, total}: {rows: Array<{name: string, value: number | null, text: string, color: string}>, total: string}) {
   const p = usePalette();
-  const data = rows.filter(r => r.value > 0);
+  const data = rows.filter(r => r.value !== null && r.value > 0);
   return (
     <div className="rp-donut">
       <div className="box">
@@ -78,7 +79,7 @@ export function Donut({rows, total}: {rows: Array<{name: string, value: number, 
         </ResponsiveContainer>
         <div className="center">{total}</div>
       </div>
-      <div className="lst">{rows.map(r => <div key={r.name} className="r"><i className="dot" style={{background: r.color}} /><span className="n">{r.name}</span><span>{r.text}</span><span className="p">{r.value}%</span></div>)}</div>
+      <div className="lst">{rows.map(r => <div key={r.name} className="r"><i className="dot" style={{background: r.color}} /><span className="n">{r.name}</span><span>{r.text}</span><span className="p">{r.value === null ? '—' : r.value + '%'}</span></div>)}</div>
     </div>
   );
 }

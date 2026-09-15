@@ -28,6 +28,7 @@ import {Activity} from './Activity';
 import Color from '@react-spectrum/s2/icons/Color';
 import {Overview} from './pages/Overview';
 import {Connections} from './pages/Connections';
+import {Flows} from './pages/Flows';
 import {Clients} from './pages/Clients';
 import {Policies} from './pages/Policies';
 import {Rules} from './pages/Rules';
@@ -37,7 +38,9 @@ import {ConfigPage} from './pages/ConfigPage';
 import {Validate} from './pages/Validate';
 import {Events} from './pages/Events';
 import type {PageProps} from './pages/types';
-const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
+import {useCapabilities} from '../api/store';
+import {compatRoutes, navAvailable} from '../api/selectors';
+const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, flows: Flows, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
 
 type Scheme = 'system' | 'light' | 'dark';
 // A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
@@ -53,8 +56,8 @@ const palettes = (glass: string): Array<{title: string, items: Array<{id: Palett
 ];
 const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
   ['grp.status', [['activity', 'nav.activity', GraphTrend], ['overview', 'nav.overview', Home]]],
-  ['grp.network', [['connections', 'nav.connections', Link], ['clients', 'nav.clients', Devices]]],
-  ['grp.proxy', [['policies', 'nav.policies', Share], ['rules', 'nav.rules', ListBulleted], ['dns', 'nav.dns', Globe]]],
+  ['grp.network', [['connections', 'nav.connections', Link], ['flows', 'nav.flows', ListBulleted], ['clients', 'nav.clients', Devices]]],
+  ['grp.proxy', [['policies', 'nav.policies', Share], ['rules', 'nav.routingTrace', ListBulleted], ['dns', 'nav.dns', Globe]]],
   ['grp.system', [['resources', 'nav.resources', Data], ['config', 'nav.config', FileText], ['validate', 'nav.validate', CheckmarkCircle], ['events', 'nav.events', History]]]
 ];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
@@ -140,6 +143,8 @@ function ToastHost() { const t = useT(); return <Toasts labels={{close: t('close
 
 function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
   const t = useT();
+  const capabilities = useCapabilities();
+  const nav = NAV.map(([group, items]) => [group, items.filter(([key]) => navAvailable(key, capabilities.data))] as const);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
   const Page = route === 'activity' ? null : PAGES[route];
@@ -160,10 +165,10 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
       </header>
       <nav className="rp-side" ref={navRef}>
         {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
-        {NAV.map(([g, items]) => (
+        {nav.map(([g, items]) => (
           <div key={g} data-group={g.replace('grp.', '')}>
             <div className="rp-group">{t(g as 'grp.status')}</div>
-            {items.map(([k, label, Icon]) => <RLink key={k} className="rp-nav" href={'#/' + k} aria-current={route === k ? 'page' : undefined}><Icon />{t(label as 'nav.activity')}</RLink>)}
+            {items.map(([k, label, Icon]) => <RLink key={k} className="rp-nav" href={'#/' + k} aria-current={route === k ? 'page' : undefined}><Icon />{t(label as 'nav.activity')}{compatRoutes[k] && <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>}</RLink>)}
           </div>
         ))}
         <div className="rp-side-grow" />
@@ -173,7 +178,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         <div className="rp-content">
           <div className="rp-head">
             <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
-            <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={NAV.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity')}))} bare /></div>
+            <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={nav.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity'), icon: compatRoutes[k] ? <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span> : undefined}))} bare /></div>
           </div>
           {Page ? <Page go={go} query={location.hash.split('?')[1] ?? ''} /> : <Activity go={go} />}
         </div>

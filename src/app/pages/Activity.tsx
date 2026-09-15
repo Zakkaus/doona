@@ -1,5 +1,5 @@
 // Activity: overview dashboard on static gray panels. Quick switches, stat strip with sparklines, traffic and outbound usage, breakdowns, notifications.
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {Text} from '@react-spectrum/s2/Text';
 import {StatusLight} from '@react-spectrum/s2/StatusLight';
 import {Divider} from '@react-spectrum/s2/Divider';
@@ -21,11 +21,14 @@ import Filter from '@react-spectrum/s2/icons/Filter';
 import DeviceDesktop from '@react-spectrum/s2/icons/DeviceDesktop';
 import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {page, card, label, list, toast} from '../ui';
-import {runtime, checks, conns, groups, events, throughput, connSeries, type Mode} from '../mock';
+import {runtime, checks, events, type Mode} from '../mock';
+import {useConnections, useGroups, useMockHistory, useNodes, useRuntime} from '../../api/store';
+import {outboundUsage, preferredHealth} from '../../api/selectors';
+import {formatBytes, formatRate} from '../../api/u64';
 import {Flag} from '../Flag';
 const valueRow = style({display: 'inline-flex', alignItems: 'center'});
 import {useT} from '../i18n';
-import {AreaChart, BarRow, Donut, Legend, Spark, fmtRate, latest, type SeriesColor} from '../TrafficChart';
+import {AreaChart, BarRow, Donut, Legend, Spark, fmtRate, type SeriesColor} from '../TrafficChart';
 import type {PageProps} from '../Shell';
 
 type Top = Array<[string, number, string, 'desktop' | 'phone']>; // name, share %, bytes, kind
@@ -33,19 +36,23 @@ const TOP: Record<string, Top> = {
   dev: [['10.0.0.7', 84, '84 MB', 'desktop'], ['10.0.0.31', 4, '3.6 MB', 'phone'], ['10.0.0.12', 2, '1.3 MB', 'desktop'], ['10.0.0.20', 1, '140 KB', 'phone'], ['10.0.0.9', 1, '96 KB', 'desktop']],
   host: [['cdn.bilibili.com', 83, '83 MB', 'desktop'], ['discord.com', 4, '3.4 MB', 'desktop'], ['api.telegram.org', 2, '1.2 MB', 'phone'], ['52.84.19.3', 1, '312 KB', 'desktop'], ['203.0.113.9', 1, '96 KB', 'phone']]
 };
-const OUT: Array<{name: string, value: number, text: string, color: SeriesColor}> = [{name: 'direct', value: 78, text: '1.1 GB', color: 'accent'}, {name: 'proxy', value: 20, text: '312 MB', color: 'accent2'}, {name: 'resilient', value: 1, text: '96 KB', color: 'muted'}, {name: 'gaming', value: 1, text: '12 KB', color: 'muted2'}, {name: 'block', value: 0, text: '0', color: 'red'}];
-const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
+type LatencyNode = {id: string; name: string; tcp?: number; alive: boolean; unavailable: boolean};
 // Sections by region once the list is long; sorted by latency inside each section.
-const NODE_SECTIONS: Array<[string, typeof NODES]> = NODES.length > 12 ? [...NODES].sort((a, b) => (a.alive ? a.tcp ?? 0 : 1e9) - (b.alive ? b.tcp ?? 0 : 1e9)).reduce((acc, n) => { const r = regionOf(n.name) ?? '—'; const hit = acc.find(([k]) => k === r); if (hit) hit[1].push(n); else acc.push([r, [n]]); return acc; }, [] as Array<[string, typeof NODES]>) : [];
-// Sections arrive as pages, the way a real backend would hand them over: the first page shows a spinner in the trigger
-// ('loading'), scrolling to the end of the list asks for the next one ('loadingMore').
-function useNodeSections() {
-  const [pages, setPages] = useState(0);
-  const [state, setState] = useState<'loading' | 'loadingMore' | 'idle'>(NODE_SECTIONS.length ? 'loading' : 'idle');
-  useEffect(() => { if (state === 'idle') return; const id = setTimeout(() => { setPages(p => p + 1); setState('idle'); }, state === 'loading' ? 500 : 350); return () => clearTimeout(id); }, [state]);
-  const shown = NODE_SECTIONS.slice(0, pages * 3);
-  const loadMore = () => { if (state === 'idle' && shown.length < NODE_SECTIONS.length) setState('loadingMore'); };
-  return {sections: shown, loadingState: state, loadMore, done: shown.length >= NODE_SECTIONS.length};
+function useNodeSections(nodes: LatencyNode[], selectedName: string) {
+  const all = useMemo(() => nodes.length > 12 ? [...nodes].sort((a, b) => (a.alive ? a.tcp ?? 0 : 1e9) - (b.alive ? b.tcp ?? 0 : 1e9)).reduce((acc, n) => {
+    const region = regionOf(n.name) ?? '—';
+    const section = acc.find(([key]) => key === region);
+    if (section) section[1].push(n); else acc.push([region, [n]]);
+    return acc;
+  }, [] as Array<[string, LatencyNode[]]>) : [], [nodes]);
+  const [pages, setPages] = useState(1);
+  const [state, setState] = useState<'loadingMore' | 'idle'>('idle');
+  useEffect(() => { if (state === 'idle') return; const id = setTimeout(() => { setPages(p => p + 1); setState('idle'); }, 350); return () => clearTimeout(id); }, [state]);
+  const shown = all.slice(0, pages * 3);
+  const selectedSection = all.find(([, members]) => members.some(n => n.name === selectedName));
+  if (selectedSection && !shown.includes(selectedSection)) shown.push(selectedSection);
+  const loadMore = () => { if (state === 'idle' && shown.length < all.length) setState('loadingMore'); };
+  return {sections: shown, loadingState: state, loadMore, grouped: all.length > 1};
 }
 
 const quick = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], sm: ['repeat(2, minmax(0, 1fr))'], xl: ['minmax(0, 1.5fr)', 'repeat(2, minmax(0, 1fr))']}, gap: 12});
@@ -83,14 +90,31 @@ function timeoutIssues(names: string[], timeout: string, many: string, sep: stri
 }
 export function Activity({go}: PageProps) {
   const t = useT();
+  const runtimeResource = useRuntime(), nodesResource = useNodes(), groupsResource = useGroups(), connectionsResource = useConnections();
+  const history = useMockHistory();
+  const NODES = useMemo(() => (nodesResource.data ?? []).map(n => {
+    const health = preferredHealth(n);
+    return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive: health?.state === 'healthy', unavailable: health?.state === 'unavailable'};
+  }), [nodesResource.data]);
   const failing = checks.filter(c => !c.ready);
   const [by, setBy] = useState<Key>('dev');
   const [range, setRange] = useState<Key>('live');
   const [mode, setMode] = useState<Mode>(runtime.mode);
-  const [target, setTarget] = useState(runtime.globalTarget);
-  const [nodeName, setNodeName] = useState(NODES[0].name);
-  const sec = useNodeSections();
-  const node = NODES.find(n => n.name === nodeName) ?? NODES[0];
+  const [chosenTarget, setTarget] = useState(runtime.globalTarget);
+  const [chosenNode, setNodeName] = useState('');
+  const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
+  const nodeName = node?.name ?? '';
+  const sec = useNodeSections(NODES, nodeName);
+  const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? connectionsResource.error;
+  if (error) return <div role="alert">{t('act.loadFailed')} {error.message}</div>;
+  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data || !connectionsResource.data) return <div role="status">{t('act.loading')}</div>;
+  const liveRuntime = runtimeResource.data;
+  const groups = groupsResource.data;
+  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : groups[0]?.name ?? '—';
+  const {throughput = [], connSeries = []} = history ?? {};
+  const usage = outboundUsage(connectionsResource.data);
+  const colors: SeriesColor[] = ['accent', 'accent2', 'muted', 'muted2'];
+  const OUT = usage.rows.map((r, i) => ({name: r.name, value: r.percent === null ? null : Math.round(r.percent), text: formatBytes(r.bytes), color: r.name === 'block' ? 'red' as const : colors[i % colors.length]}));
   const sep = t('act.sep2');
   const sep2 = t('lang') === 'Language' ? ': ' : '：';
   const traffic = [{label: t('act.download'), color: 'accent' as const, values: throughput.map(s => s.down)}, {label: t('act.upload'), color: 'orange' as const, values: throughput.map(s => s.up)}];
@@ -98,7 +122,7 @@ export function Activity({go}: PageProps) {
   const RANK = {negative: 0, notice: 1, informative: 2};
   // Errors first, then warnings, then plain notices from the event log; capped so the panel stays one screen.
   const issues: Issue[] = [
-    ...timeoutIssues([...new Set(groups.flatMap(g => g.nodes.filter(n => !n.alive).map(n => n.name)))], t('act.timeout'), t('act.nTimeouts'), t('act.sep')).map(text => ({level: 'negative' as const, text, page: 'policies'})),
+    ...timeoutIssues(NODES.filter(n => n.unavailable).map(n => n.name), t('act.timeout'), t('act.nTimeouts'), t('act.sep')).map(text => ({level: 'negative' as const, text, page: 'policies'})),
     ...failing.map(c => ({level: 'notice' as const, text: t(`check.${c.id}` as 'check.ebpf') + ' ' + t('act.notReady') + sep + t('act.needRestart'), page: 'overview'})),
     ...events.filter(e => e.level !== 'error' && e.kind !== '探測').map(e => ({level: e.level === 'warn' ? 'notice' as const : 'informative' as const, text: t(`ev.${e.id}` as 'ev.e1'), page: (e.ref ?? '#/events').replace('#/', '')}))
   ].sort((x, y) => RANK[x.level] - RANK[y.level]).slice(0, 6);
@@ -107,25 +131,25 @@ export function Activity({go}: PageProps) {
       <div className={quick}>
         <div className={card}><div className={row}><span className={qLabel}><Shuffle styles={grayIcon} />{t('act.mode')}</span><SegmentedControl aria-label={t('act.mode')} selectedKey={mode} onSelectionChange={k => { setMode(k as Mode); toast('positive', t('act.mode') + sep2 + t(`mode.${String(k)}` as 'mode.rule')); }}><SegmentedControlItem id="rule">{t('mode.rule')}</SegmentedControlItem><SegmentedControlItem id="global">{t('mode.global')}</SegmentedControlItem><SegmentedControlItem id="direct">{t('mode.direct')}</SegmentedControlItem></SegmentedControl></div></div>
         <div className={card}><div className={row}><span className={qLabel}><Filter styles={grayIcon} />{t('act.global')}</span><MenuTrigger><ActionButton isQuiet><Text>{target}</Text><ChevronDown /></ActionButton><Menu selectionMode="multiple" disallowEmptySelection selectedKeys={[target]} onSelectionChange={k => { if (k === 'all') return; const next = [...k].find(x => x !== target); if (next) setTarget(String(next)); }}>{groups.map(g => <MenuItem key={g.name} id={g.name}>{g.name}</MenuItem>)}</Menu></MenuTrigger></div></div>
-        <div className={card}><div className={row}><StatusLight variant="positive"><Text>{t('act.running')}</Text></StatusLight><ActionButton isQuiet onPress={() => go('overview')}><Text>{t('act.viewDetails')}</Text></ActionButton></div></div>
+        <div className={card}><div className={row}><StatusLight variant={liveRuntime.lifecycle.state === 'running' ? 'positive' : 'notice'}><Text>{t(`lifecycle.${liveRuntime.lifecycle.state}` as 'lifecycle.running')}</Text></StatusLight><ActionButton isQuiet onPress={() => go('overview')}><Text>{t('act.viewDetails')}</Text></ActionButton></div></div>
       </div>
 
       <div className={strip}>
-        <Panel><span className={tileHead}><Download styles={grayIcon} />{t('act.download')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.down)}</span><span className={delta}>↑ 12%</span></span><span className={tileSpark}><Spark values={traffic[0].values} color="accent" /></span></div></Panel>
-        <Panel><span className={tileHead}><Upload styles={grayIcon} />{t('act.upload')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.up)}</span><span className={delta}>↓ 8%</span></span><span className={tileSpark}><Spark values={traffic[1].values} color="orange" /></span></div></Panel>
-        <Panel><span className={tileHead}><LinkIcon styles={grayIcon} />{t('act.active')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{conns.length}</span><span className={delta}>↑ 2</span></span><span className={tileSpark}><Spark values={connSeries} color="orange" /></span></div></Panel>
-        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} loadingState={sec.loadingState} onLoadMore={sec.loadMore} renderValue={items => { const name = (items[0] as typeof NODES[number] | undefined)?.name ?? nodeName; return <span className={valueRow}><Flag name={name} />{name}</span>; }}>{NODE_SECTIONS.length > 1 ? sec.sections.map(([r, list]) => <PickerSection key={r} id={r}><Header><Heading>{r}</Heading></Header>{list.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</PickerSection>) : NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
+        <Panel><span className={tileHead}><Download styles={grayIcon} />{t('act.download')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span><span className={delta}>↑ 12%</span></span><span className={tileSpark}><Spark values={traffic[0].values} color="accent" /></span></div></Panel>
+        <Panel><span className={tileHead}><Upload styles={grayIcon} />{t('act.upload')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span><span className={delta}>↓ 8%</span></span><span className={tileSpark}><Spark values={traffic[1].values} color="orange" /></span></div></Panel>
+        <Panel><span className={tileHead}><LinkIcon styles={grayIcon} />{t('act.active')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{liveRuntime.traffic.connections.total ?? '—'}</span><span className={delta}>↑ 2</span></span><span className={tileSpark}><Spark values={connSeries} color="orange" /></span></div></Panel>
+        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} loadingState={sec.loadingState} onLoadMore={sec.loadMore} renderValue={items => { const name = (items[0] as typeof NODES[number] | undefined)?.name ?? nodeName; return <span className={valueRow}><Flag name={name} />{name}</span>; }}>{sec.grouped ? sec.sections.map(([r, list]) => <PickerSection key={r} id={r}><Header><Heading>{r}</Heading></Header>{list.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive && n.tcp !== undefined ? n.tcp + ' ms' : n.unavailable ? t('act.timeout') : t('act.unknown')}</Text></PickerItem>)}</PickerSection>) : NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive && n.tcp !== undefined ? n.tcp + ' ms' : n.unavailable ? t('act.timeout') : t('act.unknown')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node?.alive ? (node.tcp === undefined ? '—' : node.tcp + ' ms') : '—'}</span>{node?.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node?.alive ? 'positive' : 'negative'} size="S"><Text>{node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}</Text></StatusLight></div></Panel>
       </div>
 
       <div className={grid21}>
         <Panel>
           <div className={row}><span className={title}>{t('act.traffic')}</span><SegmentedControl aria-label={t('act.window')} selectedKey={range} onSelectionChange={setRange}><SegmentedControlItem id="live">{t('act.live')}</SegmentedControlItem><SegmentedControlItem id="h1">{t('act.h1')}</SegmentedControlItem><SegmentedControlItem id="h6">{t('act.h6')}</SegmentedControlItem><SegmentedControlItem id="h24">{t('act.h24')}</SegmentedControlItem><SegmentedControlItem id="d7">{t('act.d7')}</SegmentedControlItem></SegmentedControl></div>
-          <Legend series={traffic} fmt={fmtRate} />
-          <AreaChart series={traffic} fmt={fmtRate} height={120} />
+          {history && <Legend series={traffic} fmt={fmtRate} />}
+          {history ? <AreaChart series={traffic} fmt={fmtRate} height={120} /> : <span className={label}>{t('act.noHistory')}</span>}
         </Panel>
         <Panel>
           <div className={row}><span className={cluster}><span className={title}>{t('act.outUsage')}</span><span className={label}>{t('act.lastHour')}</span></span></div>
-          <Donut rows={OUT} total="1.4 GB" />
+          <Donut rows={OUT} total={formatBytes(usage.total)} />
         </Panel>
       </div>
 
@@ -136,7 +160,7 @@ export function Activity({go}: PageProps) {
         </Panel>
         <Panel>
           <div className={row}><span className={title}>{t('act.probeLatency')}</span><More onPress={() => go('policies')}>{t('act.viewAll')}</More></div>
-          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).slice(0, 6).map(n => <BarRow key={n.name} label={n.name} icon={<Flag name={n.name} />} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
+          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).slice(0, 6).map(n => <BarRow key={n.name} label={n.name} icon={<Flag name={n.name} />} value={n.alive && n.tcp !== undefined ? n.tcp + ' ms' : n.unavailable ? t('act.timeout') : t('act.unknown')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
         </Panel>
         <Panel>
           <div className={row}><span className={cluster}><span className={title}>{t('act.issues')}</span>{issues.length > 0 && <span className={label}>{issues.length}</span>}</span><More onPress={() => go('overview')}>{t('act.viewAll')}</More></div>
