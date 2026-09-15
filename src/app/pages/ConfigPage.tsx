@@ -37,7 +37,7 @@ export function ConfigPage({query, go}: PageProps) {
               {dirty && <div className={inline}><Badge variant="notice" size="S"><Text>未儲存</Text></Badge></div>}
             </div>
             <ButtonGroup>
-              <Button variant="secondary" onPress={() => go('validate')}>校驗{errs.length ? `（${errs.length}）` : ''}</Button>
+              <Button variant="secondary" onPress={() => go('validate')}>{errs.length ? `校驗 (${errs.length})` : '校驗'}</Button>
               <Button variant="primary" onPress={() => toast('neutral', 'reload 完成（r' + runtime.diskRevision + '）')}>reload</Button>
               <Button variant="accent" isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </ButtonGroup>

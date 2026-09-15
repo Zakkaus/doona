@@ -25,7 +25,7 @@ export function ConfigPage({query, go}: PageProps) {
               {dirty && <Badge tone="warn">未儲存</Badge>}
             </div>
             <div className="rp-group-btns">
-              <Button secondary onPress={() => go('validate')}>校驗{errs.length ? `（${errs.length}）` : ''}</Button>
+              <Button secondary onPress={() => go('validate')}>校驗{errs.length > 0 && <span className="rp-count">{errs.length}</span>}</Button>
               <Button primary onPress={() => toast('neutral', 'reload 完成（r' + runtime.diskRevision + '）')}>reload</Button>
               <Button accent isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </div>
