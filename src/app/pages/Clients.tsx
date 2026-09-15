@@ -6,21 +6,26 @@ import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 import Add from '@react-spectrum/s2/icons/Add';
 import LinkIcon from '@react-spectrum/s2/icons/Link';
 import {page, code, note} from '../ui';
-import {clients, runtime} from '../mock';
+import {useClients} from '../../api/store';
+import {formatBytes} from '../../api/u64';
+import {localTime} from '../../api/selectors';
 import {RuleDialog} from '../RuleDialog';
 import type {PageProps} from '../Shell';
 
 export function Clients({go}: PageProps) {
+  const clients = useClients();
   return (
     <div className={page}>
-      <p className={note}>從可見連線聚合，只列本次觀察（{runtime.window}）裡有連線的來源 IP，不持久；MAC 只在 eBPF 看得到時才有。不做 DHCP 清單、命名與累計流量。</p>
-      <TableView aria-label="客戶端" styles={style({height: 242})}>
-        <TableHeader><Column id="ip" isRowHeader width={140}>來源 IP</Column><Column id="mac" width={190}>MAC</Column><Column id="active" width={100}>活動連線</Column><Column id="sampled" width={120}>採樣位元組</Column><Column id="first">首次看到</Column><Column id="act" width={210}>操作</Column></TableHeader>
-        <TableBody items={clients}>
-          {c => <Row id={c.ip}><Cell><span className={code}>{c.ip}</span></Cell><Cell>{c.mac ? <span className={code}>{c.mac}</span> : '未知'}</Cell><Cell>{c.active}</Cell><Cell>{c.sampled}</Cell><Cell>{c.firstSeen}</Cell><Cell>
+      <p className={note}>依連線資料的來源位址彙整。API 提供來源、目的位址與域名，不提供 MAC 或首次見到時間。下載合計僅涵蓋目前可見連線；首次見到由本頁在本次瀏覽器工作階段記錄，不持久保存。</p>
+      {clients.error && <p role="alert">{clients.error.message}</p>}
+      {clients.data?.truncated && <p className={note}>連線資料已截斷，合計可能不完整。</p>}
+      <TableView aria-label="客戶端" styles={style({height: 300})}>
+        <TableHeader><Column id="ip" isRowHeader width={150}>來源 IP</Column><Column id="active" width={100}>活動連線</Column><Column id="download" width={110}>下載合計</Column><Column id="outbound">出站</Column><Column id="first" width={190}>首次見到</Column><Column id="act" width={230}>操作</Column></TableHeader>
+        <TableBody items={clients.rows} renderEmptyState={() => clients.loading ? '載入中' : '目前沒有客戶端'}>
+          {c => <Row id={c.ip}><Cell><span className={code}>{c.ip}</span></Cell><Cell>{c.active}</Cell><Cell>{formatBytes(c.download)}</Cell><Cell>{c.outbounds || '—'}</Cell><Cell><span title={c.firstSeen}>{localTime(c.firstSeen)}</span></Cell><Cell>
             <ActionButtonGroup size="S">
-              <ActionButton onPress={() => go('connections', 'src=' + c.ip)}><LinkIcon /><Text>連線</Text></ActionButton>
-              <RuleDialog trigger={<ActionButton><Add /><Text>加規則</Text></ActionButton>} presets={[{label: '來源 ' + c.ip, cond: 'sip(' + c.ip + ')'}, ...(c.mac ? [{label: 'MAC ' + c.mac, cond: 'mac(' + c.mac + ')'}] : [])]} />
+              <ActionButton onPress={() => go('connections', 'src=' + encodeURIComponent(c.ip))}><LinkIcon /><Text>連線</Text></ActionButton>
+              <RuleDialog trigger={<ActionButton><Add /><Text>新增規則</Text></ActionButton>} presets={[{label: '來源 ' + c.ip, cond: 'sip(' + c.ip.replace(/^\[|\]$/g, '') + ')'}]} />
             </ActionButtonGroup>
           </Cell></Row>}
         </TableBody>

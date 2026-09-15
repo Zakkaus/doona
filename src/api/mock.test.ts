@@ -1,8 +1,9 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {outboundUsage, preferredHealth} from './selectors';
+import {clientRows, navAvailable, outboundUsage, preferredHealth} from './selectors';
 import {formatBytes, formatRate} from './u64';
 import type {ApiEvent} from './model';
+import {capabilities, capabilitiesBase, connections} from './mock/fixtures';
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -161,4 +162,58 @@ it('deletes entries idempotently and flushes exactly the remaining cache', async
   expect((await api.dnsCache()).entries).toEqual([]);
   await expect(api.flushDnsCache()).resolves.toEqual({matched: 0, deleted: 0});
   expect((await createMockApi().dnsCache()).total).toBe(before.total);
+});
+
+it('traces a geosite domain and resolves each cached address in live mode', async () => {
+  const api = createMockApi();
+  const request = {input: {network: 'tcp' as const, domain: 'api.telegram.org', dst_port: 443}, resolve: 'live' as const};
+  const result = await api.routingTrace(request);
+  expect(result.dns).toMatchObject([{source: 'cache', addresses: ['149.154.167.220']}]);
+  expect(result.evaluations).toMatchObject([{dst_ip: '149.154.167.220', decision: 'determinate', outbound: 'proxy', missing_inputs: []}]);
+  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([['r1', 'not_matched'], ['r2', 'not_matched'], ['r3', 'not_matched'], ['r4', 'not_matched'], ['r5', 'matched'], ['r6', 'skipped'], ['r7', 'skipped'], ['r8', 'skipped'], ['fallback', 'skipped']]);
+  const unresolved = await api.routingTrace({...request, resolve: 'none'});
+  expect(unresolved.dns).toEqual([]);
+  expect(unresolved.evaluations[0]).toMatchObject({dst_ip: null, decision: 'indeterminate', outbound: null, missing_inputs: ['dst_ip']});
+});
+
+it('keeps domain rules indeterminate for destination-IP-only input', async () => {
+  const result = await createMockApi().routingTrace({input: {network: 'tcp', dst_ip: '198.51.100.20', dst_port: 443}, resolve: 'none'});
+  const evaluation = result.evaluations[0];
+  expect(evaluation).toMatchObject({decision: 'indeterminate', outbound: null});
+  expect(evaluation.missing_inputs).toContain('domain');
+  expect(evaluation.rules.find(r => r.rule_id === 'r1')).toMatchObject({result: 'indeterminate', missing_inputs: ['domain']});
+  expect(evaluation.rules.find(r => r.rule_id === 'r2')).toMatchObject({result: 'not_matched', missing_inputs: []});
+});
+
+it('uses fallback when every earlier predicate is false', async () => {
+  const result = await createMockApi().routingTrace({input: {network: 'tcp', domain: 'example.org', dst_ip: '2001:db8::1', dst_port: 443}, resolve: 'none'});
+  const evaluation = result.evaluations[0];
+  expect(evaluation).toMatchObject({decision: 'determinate', outbound: 'resilient', missing_inputs: []});
+  expect(evaluation.rules.slice(0, -1).every(r => r.result === 'not_matched')).toBe(true);
+  expect(evaluation.rules.at(-1)).toMatchObject({rule_id: 'fallback', result: 'matched'});
+});
+
+it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
+  const c = connections.tcp[0];
+  const rows = clientRows({...connections, tcp: [
+    {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
+    {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
+    {...c, src: '10.0.0.7:123', download_bytes: null},
+    {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
+  ], udp: []});
+  expect(rows).toEqual([
+    {id: '[2001:db8::1]', ip: '[2001:db8::1]', active: 2, download: 9007199254741000n, outbounds: 'proxy、direct'},
+    {id: '10.0.0.7', ip: '10.0.0.7', active: 1, download: null, outbounds: 'proxy'}
+  ]);
+});
+
+it('gates explicit resource absence but accepts either DNS resource', async () => {
+  vi.stubGlobal('localStorage', {getItem: (key: string) => key === 'doona-mock-profile' ? 'base' : null});
+  const base = await createMockApi().capabilities();
+  expect(base.profiles).toEqual(['base']);
+  expect(['flows', 'rules', 'events'].map(route => navAvailable(route, base))).toEqual([false, false, false]);
+  expect(navAvailable('flows', undefined)).toBe(true);
+  expect(navAvailable('flows', capabilities)).toBe(true);
+  expect(navAvailable('dns', {...capabilitiesBase, resources: {...base.resources, dns_query: {...base.resources.dns_query, available: false}}})).toBe(true);
+  expect(navAvailable('config', base)).toBe(true);
 });

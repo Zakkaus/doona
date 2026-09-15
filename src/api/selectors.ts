@@ -1,5 +1,29 @@
 import type {ApiEvent, Connection, ConnectionList, Datapath, EventKind, FlowStep, Group, HealthObservation, Node, ProbeResult, RuntimeMemory} from './model';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
+import type {Capabilities} from './model';
+
+const navResources: Record<string, Array<keyof Capabilities['resources']>> = {
+  connections: ['connections'], flows: ['flows'], dns: ['dns_query', 'dns_cache'], events: ['events'], policies: ['groups'], rules: ['routing_trace'], overview: ['runtime']
+};
+export function navAvailable(route: string, capabilities: Capabilities | undefined): boolean {
+  return !capabilities || !navResources[route] || navResources[route].some(key => capabilities.resources[key].available !== false);
+}
+export const compatRoutes: Record<string, boolean> = {resources: true, config: true, validate: true};
+export type ClientRow = {id: string; ip: string; active: number; download: bigint | null; outbounds: string};
+
+export function clientRows(snapshot: ConnectionList | undefined): ClientRow[] {
+  const rows = new Map<string, {id: string; ip: string; active: number; download: bigint | null; outbounds: Set<string>}>();
+  for (const c of connectionRows(snapshot)) {
+    if (!c.src) continue;
+    const ip = c.src.startsWith('[') ? c.src.slice(0, c.src.indexOf(']') + 1) : c.src.split(':').length > 2 ? '[' + c.src + ']' : c.src.split(':')[0];
+    let row = rows.get(ip);
+    if (!row) { row = {id: ip, ip, active: 0, download: 0n, outbounds: new Set()}; rows.set(ip, row); }
+    if (c.state === 'active') row.active++;
+    row.download = addU64(row.download, c.download_bytes);
+    if (c.outbound) row.outbounds.add(c.outbound);
+  }
+  return [...rows.values()].map(row => ({...row, outbounds: [...row.outbounds].join('、')}));
+}
 
 /** Prefer TCP data probes, then the newest observation with the same dimensions. */
 export function preferredHealth(node: Node): HealthObservation | undefined {

@@ -4,7 +4,7 @@ export type Mode = 'rule' | 'global' | 'direct';
 // Retained for app/ui.tsx.
 export type Plane = '內核' | 'userspace' | '拒絕';
 
-// Retained for both Activity, Clients, ConfigPage, Rules, Validate pages and RuleDialog components.
+// Retained for both Activity, ConfigPage, Rules, Validate pages and RuleDialog components.
 export const runtime = {
   version: 'honk 0.9.3 (d6ccc15f)',
   configPath: '/etc/honk/config.dae',
@@ -44,14 +44,6 @@ export const conns: Conn[] = [
   {id: '8', dst: '10.0.0.1:53', src: '10.0.0.20', mac: 'aa:bb:cc:dd:ee:20', out: 'direct', chain: ['direct'], rule: 'dip(geoip: private) -> direct(must)', ruleRef: 'config.dae:40', plane: '內核', up: '1 KB', down: '3 KB', age: '3s', proto: 'udp', canTerminate: false}
 ];
 
-// Retained for both Clients pages.
-export type Client = {ip: string, mac?: string, active: number, sampled: string, firstSeen: string};
-export const clients: Client[] = [
-  {ip: '10.0.0.7', mac: 'aa:bb:cc:dd:ee:02', active: 2, sampled: '84 MB', firstSeen: '12m 前'},
-  {ip: '10.0.0.12', mac: 'aa:bb:cc:dd:ee:01', active: 2, sampled: '1.3 MB', firstSeen: '4m 前'},
-  {ip: '10.0.0.20', mac: 'aa:bb:cc:dd:ee:20', active: 2, sampled: '140 KB', firstSeen: '2m 前'},
-  {ip: '10.0.0.31', active: 2, sampled: '3.6 MB', firstSeen: '9m 前'}
-];
 
 type Node = {name: string, tcp?: number, udp?: number, v6: boolean, source: string, alive: boolean};
 type Group = {name: string, policy: 'selector' | 'urltest' | 'loadbalance' | 'fallback' | 'score', selected?: string, members: string[], leaf: string, nodes: Node[]};
@@ -84,20 +76,8 @@ function bigGroup(count: number): Group {
 const bigCount = (() => { try { const v = localStorage.getItem('doona-mock-big'); return v == null ? 100 : Number(v) || 0; } catch { return 100; } })();
 if (bigCount > 0) groups.push(bigGroup(bigCount));
 
-// Retained for both Rules pages, app/SearchTrigger.tsx, and rp/Shell.tsx.
-export type Rule = {id: string, n: number, cond: string, target: string, must: boolean, source: string, note: string, editable: boolean, generated?: boolean};
-export const rules: Rule[] = [
-  {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
-  {id: 'r2', n: 2, cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true, source: 'config.dae:39', note: '', editable: true},
-  {id: 'r3', n: 3, cond: 'dip(geoip: private)', target: 'direct', must: true, source: 'config.dae:40', note: 'LAN', editable: true},
-  {id: 'r4', n: 4, cond: 'domain(geosite: cn)', target: 'direct', must: false, source: 'config.dae:41', note: '', editable: true},
-  {id: 'r5', n: 5, cond: 'domain(geosite: telegram)', target: 'proxy', must: false, source: 'config.dae:42', note: '', editable: true},
-  {id: 'r6', n: 6, cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false, source: 'rules.dae:3', note: '電視', editable: true},
-  {id: 'r7', n: 7, cond: 'domain(geosite: discord)', target: 'proxy', must: false, source: 'rules.dae:7', note: '', editable: true},
-  {id: 'r8', n: 8, cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false, source: '生成，subscription policy', note: '', editable: false, generated: true}
-];
-// Retained for both Rules pages.
-export const fallbackRule = {target: 'resilient', source: 'config.dae:44'};
+// Retained for app/SearchTrigger.tsx and rp/Shell.tsx.
+export {rules} from '../api/mock/fixtures';
 
 // Retained for both Resources pages.
 export type Sub = {id: string, name: string, source: string, ready: boolean, lastTry: string, lastOk: string, published: string, nodes?: number, error?: string, refreshable: boolean};

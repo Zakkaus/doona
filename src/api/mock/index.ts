@@ -5,6 +5,7 @@ import {wait} from '../wait';
 import * as fixtures from './fixtures';
 import {flows as flowFixtures} from './flows';
 import {patchGroupConfig, probeResult, resolveLeaf} from './control';
+import {routingTrace} from './routing';
 
 function page<T>(items: T[], cursor?: string, limit = 1000) {
   const start = cursor ? Number(cursor) : 0;
@@ -20,6 +21,8 @@ function found<T>(value: T | undefined, kind: string): T {
 export function createMockApi(): Api {
   let count = 100;
   try { const value = localStorage.getItem('doona-mock-big'); if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0)); } catch {}
+  let capabilities = fixtures.capabilities;
+  try { if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase; } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
   const flows = structuredClone(flowFixtures);
   const connections = structuredClone(fixtures.connections);
@@ -85,7 +88,7 @@ export function createMockApi(): Api {
   }
   return {
     version: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.version); },
-    capabilities: async signal => { signal?.throwIfAborted(); return structuredClone(fixtures.capabilities); },
+    capabilities: async signal => { signal?.throwIfAborted(); return structuredClone(capabilities); },
     runtime: async signal => {
       signal?.throwIfAborted();
       if (runtime.lifecycle.started_at) runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((Date.now() - Date.parse(runtime.lifecycle.started_at)) / 1000)));
@@ -181,6 +184,11 @@ export function createMockApi(): Api {
       return {instance_id: fixtures.instanceId, observed_at: fixtures.observedAt, coverage: {userspace_tcp: 'full', userspace_udp: 'full', kernel_direct: 'partial', kernel_block: 'partial', dns_intercept: 'partial', kernel_bypass: 'none'}, dropped_records: '0', flows: structuredClone(result.items.map(({trace, ...summary}) => summary)), next_cursor: result.next_cursor};
     },
     flow: async (id, signal) => { signal?.throwIfAborted(); return structuredClone(found(flows.find(f => f.id === id), 'Flow')); },
+    routingTrace: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.routing_trace.available) throw new ApiError(501, 'not_supported', 'Routing trace is unavailable');
+      return routingTrace(request);
+    },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
       const name = query?.name ?? query?.domain;
@@ -236,6 +244,6 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events, history: () => fixtures.history
+    subscribeEvents: events, history: () => fixtures.history, configRules: () => fixtures.configRules
   };
 }

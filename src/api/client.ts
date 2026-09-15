@@ -1,7 +1,7 @@
 import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
-import type {ApiEvent, EventKind, EventOptions, FlowDetail, OperationAccepted, OperationState} from './model';
+import type {ApiEvent, EventKind, EventOptions, FlowDetail, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
 import {ApiError, responseError} from './error';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -102,6 +102,8 @@ export function createApi(base: string, token?: string): Api {
     dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
     deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
+    // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.
+    routingTrace: async (body, signal) => data(await client.POST('/api/v1/routing/trace', {body, signal})) as RoutingTraceResponse,
     startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, signal})),
     startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, signal})),
     startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, signal})),
@@ -110,6 +112,6 @@ export function createApi(base: string, token?: string): Api {
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
     pollOperation, subscribeEvents,
-    history: () => null
+    history: () => null, configRules: () => null
   };
 }

@@ -1,4 +1,5 @@
 import type {Version, Capabilities, Runtime, Datapath, DatapathDetail, RuntimeMemory, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, DnsQueryResponse, DnsRecordType, DeleteCount, DeleteMatchingCount, OperationAccepted, OperationState, EventOptions, MockHistory} from './model';
+import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
 
 export interface Api {
   version(signal?: AbortSignal): Promise<Version>;
@@ -19,6 +20,7 @@ export interface Api {
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
+  routingTrace(request: RoutingTraceRequest, signal?: AbortSignal): Promise<RoutingTraceResponse>;
   startReload(signal?: AbortSignal): Promise<OperationAccepted>;
   startSuspend(signal?: AbortSignal): Promise<OperationAccepted>;
   startResume(signal?: AbortSignal): Promise<OperationAccepted>;
@@ -28,4 +30,6 @@ export interface Api {
   subscribeEvents(options: EventOptions): Promise<void>;
   /** Mock-only chart samples in KB/s; native servers have no history endpoint. */
   history(): MockHistory | null;
+  /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
+  configRules(): MockConfigRules | null;
 }

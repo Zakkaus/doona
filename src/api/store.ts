@@ -2,6 +2,8 @@ import {useCallback, useEffect, useRef, useState, type DependencyList} from 'rea
 import {getApi} from './index';
 import type {Api} from './api';
 import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
+import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
+import {clientRows, type ClientRow} from './selectors';
 
 type Listener = (event: ApiEvent) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -114,9 +116,62 @@ export function useGroups() {
 }
 export function useConnections() {
   const api = getApi();
-  return useResource(signal => api.connections({type: 'all', limit: 1000}, signal), {deps: [api]});
+  return useResource(signal => api.connections({type: 'all', detail: 'full', limit: 1000}, signal), {deps: [api]});
 }
 export function useMockHistory() { return getApi().history(); }
+export function useConfigRules() { return getApi().configRules(); }
+
+const firstSeen = new Map<string, string>();
+export function useClients() {
+  const connections = useConnections();
+  const [rows, setRows] = useState<Array<ClientRow & {firstSeen: string}>>([]);
+  useEffect(() => {
+    const now = new Date().toISOString();
+    setRows(clientRows(connections.data).map(row => {
+      if (!firstSeen.has(row.ip)) firstSeen.set(row.ip, now);
+      return {...row, firstSeen: firstSeen.get(row.ip)!};
+    }));
+  }, [connections.data]);
+  return {...connections, rows};
+}
+
+export function useRoutingTrace() {
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const [form, setForm] = useState({network: 'tcp' as 'tcp' | 'udp', domain: 'api.telegram.org', dst_ip: '', dst_port: '443', src_ip: '', src_port: '', pname: '', resolve: 'none' as 'none' | 'live'});
+  const [result, setResult] = useState<RoutingTraceResponse | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [busy, setBusy] = useState(false);
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => { active.current?.abort(); active.current = null; }, [api]);
+  const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
+  const invalid = !form.domain.trim() && !form.dst_ip.trim() ? '請提供域名或目的 IP。'
+    : !portValid(form.dst_port) || (form.src_port.trim() && !portValid(form.src_port)) ? '連接埠須為 1 至 65535 的整數。'
+    : form.resolve === 'live' && (!form.domain.trim() || form.dst_ip.trim()) ? '即時解析須提供域名，且目的 IP 必須留空。' : null;
+  const resource = capabilities.data?.resources.routing_trace;
+  const modes = resource?.resolve_modes ?? ['none', 'live'];
+  const available = resource?.available !== false;
+  async function submit() {
+    if (active.current || invalid || !available || !modes.includes(form.resolve)) return;
+    const controller = new AbortController();
+    active.current = controller;
+    setBusy(true); setError(null); setResult(null);
+    const input: RoutingTraceRequest['input'] = {network: form.network, dst_port: Number(form.dst_port), ...(form.domain.trim() ? {domain: form.domain.trim()} : {dst_ip: form.dst_ip.trim().replace(/^\[|\]$/g, '')})};
+    if (form.dst_ip.trim()) input.dst_ip = form.dst_ip.trim().replace(/^\[|\]$/g, '');
+    if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
+    if (form.src_port.trim()) input.src_port = Number(form.src_port);
+    if (form.pname.trim()) input.pname = form.pname.trim();
+    try {
+      const response = await api.routingTrace({input, resolve: form.resolve}, controller.signal);
+      if (!controller.signal.aborted) setResult(response);
+    } catch (reason) {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason : new Error(String(reason)));
+    } finally {
+      if (active.current === controller) { active.current = null; setBusy(false); }
+    }
+  }
+  return {form, setForm, result, error: error ?? capabilities.error, busy, submit, invalid, available, modes};
+}
 
 export function useFlows() {
   const api = getApi();

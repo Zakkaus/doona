@@ -1,4 +1,5 @@
 import type {Capabilities, Connection, ConnectionList, Datapath, DnsCacheList, Group, HealthObservation, MockHistory, Node, Runtime, RuntimeMemory, Version} from '../model';
+import type {ConfigRule, MockConfigRules} from '../model';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
 const now = Date.now();
@@ -54,6 +55,22 @@ export const capabilities: Capabilities = {
     operations: {available: true, retention_seconds: 300}, reload: {available: true}, suspend: {available: true}, resume: {available: true}
   }
 };
+export const capabilitiesBase: Capabilities = {
+  ...capabilities, profiles: ['base'],
+  resources: {...capabilities.resources, flows: {...capabilities.resources.flows, available: false}, routing_trace: {...capabilities.resources.routing_trace, available: false}, events: {...capabilities.resources.events, available: false}}
+};
+
+export const rules: ConfigRule[] = [
+  {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
+  {id: 'r2', n: 2, cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true, source: 'config.dae:39', note: '', editable: true},
+  {id: 'r3', n: 3, cond: 'dip(geoip: private)', target: 'direct', must: true, source: 'config.dae:40', note: 'LAN', editable: true},
+  {id: 'r4', n: 4, cond: 'domain(geosite: cn)', target: 'direct', must: false, source: 'config.dae:41', note: '', editable: true},
+  {id: 'r5', n: 5, cond: 'domain(geosite: telegram)', target: 'proxy', must: false, source: 'config.dae:42', note: '', editable: true},
+  {id: 'r6', n: 6, cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false, source: 'rules.dae:3', note: '電視', editable: true},
+  {id: 'r7', n: 7, cond: 'domain(geosite: discord)', target: 'proxy', must: false, source: 'rules.dae:7', note: '', editable: true},
+  {id: 'r8', n: 8, cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false, source: '生成，subscription policy', note: '', editable: false, generated: true}
+];
+export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {transport, purpose: transport === 'tcp' ? 'data' : 'dns', ip_version, warmth: 'warm', measurement: transport === 'tcp' ? 'tcp_connect' : 'dns_round_trip', sample_source: 'probe', state: latency === null ? 'unavailable' : 'healthy', latency_ms: latency, moving_avg_ms: latency, avg10_ms: latency, observed_at: observedAt, error: latency === null ? 'timeout' : null};
