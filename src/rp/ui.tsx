@@ -1,13 +1,45 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import type {ReactNode} from 'react';
+import {useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import Close from '@react-spectrum/s2/icons/Close';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
+// Spectrum's press effect: while pressed the control sinks 2px away from the viewer, which reads as a slight shrink.
+export function usePress(): [RefObject<HTMLButtonElement | null>, (rp: {isPressed: boolean}) => CSSProperties] {
+  const ref = useRef<HTMLButtonElement>(null);
+  return [ref, ({isPressed}) => {
+    if (!isPressed || !ref.current) return {willChange: 'transform'};
+    const {width, height} = ref.current.getBoundingClientRect();
+    return {willChange: 'transform', transform: `perspective(${Math.max(height, width / 3, 24)}px) translate3d(0, 0, -2px)`};
+  }];
+}
+function PressButton(props: Parameters<typeof RButton>[0]) {
+  const [ref, style] = usePress();
+  return <RButton {...props} ref={ref} style={style} />;
+}
+function PressToggle(props: Parameters<typeof ToggleButton>[0]) {
+  const [ref, style] = usePress();
+  return <ToggleButton {...props} ref={ref} style={style} />;
+}
+
+// A selection indicator that slides between items, as in S2's SegmentedControl and Tabs.
+function useSlider(value: string) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{x: number, w: number} | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const measure = () => { const sel = el.querySelector<HTMLElement>('[data-selected]'); if (!sel) return setPos(null); setPos({x: sel.offsetLeft, w: sel.offsetWidth}); };
+    measure();
+    const ro = new ResizeObserver(measure); ro.observe(el);
+    return () => ro.disconnect();
+  }, [value]);
+  return [ref, pos] as const;
+}
+
 export function Button({children, onPress, quiet, small, icon, accent, primary, negative, label, isDisabled, tip}: {children?: ReactNode, onPress?: () => void, quiet?: boolean, small?: boolean, icon?: boolean, accent?: boolean, primary?: boolean, negative?: boolean, label?: string, isDisabled?: boolean, tip?: string}) {
-  const btn = <RButton className={cx('rp-btn', quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', primary && 'primary', negative && 'negative')} onPress={onPress} aria-label={label} isDisabled={isDisabled}>{children}</RButton>;
+  const btn = <PressButton className={cx('rp-btn', quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', primary && 'primary', negative && 'negative')} onPress={onPress} aria-label={label} isDisabled={isDisabled}>{children}</PressButton>;
   const text = label ?? tip;
   return text ? <TooltipTrigger delay={400}><Tip>{text}</Tip>{btn}</TooltipTrigger> : btn;
 }
@@ -15,9 +47,11 @@ function Tip({children}: {children: ReactNode}) {
   return <Tooltip className="rp-tip" offset={6}><OverlayArrow /> {children}</Tooltip>;
 }
 export function Segmented({items, value, onChange, label}: {items: Array<[string, string]>, value: string, onChange: (k: string) => void, label: string}) {
+  const [ref, pos] = useSlider(value);
   return (
-    <ToggleButtonGroup className="rp-seg" aria-label={label} selectionMode="single" disallowEmptySelection selectedKeys={[value]} onSelectionChange={k => { const v = [...k][0]; if (v != null) onChange(String(v)); }}>
-      {items.map(([k, l]) => <ToggleButton key={k} id={k} className="rp-btn">{l}</ToggleButton>)}
+    <ToggleButtonGroup ref={ref} className="rp-seg" aria-label={label} selectionMode="single" disallowEmptySelection selectedKeys={[value]} onSelectionChange={k => { const v = [...k][0]; if (v != null) onChange(String(v)); }}>
+      {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+      {items.map(([k, l]) => <PressToggle key={k} id={k} className="rp-btn">{l}</PressToggle>)}
     </ToggleButtonGroup>
   );
 }
@@ -26,7 +60,7 @@ const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" tex
 export function MenuButton({children, items, sections, value, onChange, label, quiet, chevron = true}: {children: ReactNode, items?: Item[], sections?: Array<{title: string, items: Item[]}>, value: string, onChange: (k: string) => void, label: string, quiet?: boolean, chevron?: boolean}) {
   return (
     <MenuTrigger>
-      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>{children}{chevron && <ChevronDown />}</RButton>
+      <PressButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>{children}{chevron && <ChevronDown />}</PressButton>
       <Popover className="rp-popover" placement="bottom end">
         <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={k => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }} aria-label={label}>
           {sections ? sections.map(sec => <MenuSection key={sec.title} id={sec.title}><Header className="rp-sec-h">{sec.title}</Header>{sec.items.map(item)}</MenuSection>) : (items ?? []).map(item)}
@@ -38,7 +72,7 @@ export function MenuButton({children, items, sections, value, onChange, label, q
 export function InlineSelect({items, value, onChange, label}: {items: Array<{id: string, label: string, desc?: string}>, value: string, onChange: (k: string) => void, label: string}) {
   return (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }}>
-      <RButton className="rp-select"><SelectValue>{({selectedItem}) => (selectedItem as {label?: string} | null)?.label ?? value}</SelectValue><ChevronDown /></RButton>
+      <PressButton className="rp-select"><SelectValue>{({selectedItem}) => (selectedItem as {label?: string} | null)?.label ?? value}</SelectValue><ChevronDown /></PressButton>
       <Popover className="rp-popover" placement="bottom start">
         <ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</ListBoxItem>}</ListBox>
       </Popover>
@@ -53,7 +87,7 @@ export function Bar({label, value, pct, color}: {label: string, value: string, p
 }
 
 // ---- Additions for the remaining pages ----
-import {useEffect, useState, type ReactElement} from 'react';
+import {useEffect, type ReactElement} from 'react';
 import {Switch as RSwitch, TextField as RTextField, TextArea as RTextArea, Label, Input as RInput, Table, TableHeader, Column, TableBody, Row, Cell, DialogTrigger, Modal, ModalOverlay, Dialog, Heading, Tabs as RTabs, TabList as RTabList, Tab as RTab, TabPanel as RTabPanel, type Selection, type SortDescriptor} from 'react-aria-components';
 
 export function Switch({children, isSelected, onChange, isDisabled}: {children: ReactNode, isSelected: boolean, onChange: (v: boolean) => void, isDisabled?: boolean}) {
@@ -68,7 +102,7 @@ export function TextArea({label, value, onChange}: {label: string, value: string
 export function LabeledSelect({label, items, value, onChange, isDisabled, side, bare}: {label: string, items: Item[], value: string, onChange: (k: string) => void, isDisabled?: boolean, side?: boolean, bare?: boolean}) {
   const sel = (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }} isDisabled={isDisabled}>
-      <RButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => (selectedItem as Item | null)?.label ?? value}</SelectValue><ChevronDown /></RButton>
+      <PressButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => (selectedItem as Item | null)?.label ?? value}</SelectValue><ChevronDown /></PressButton>
       <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
     </Select>
   );
@@ -114,9 +148,11 @@ export function ModalDialog({trigger, title, children, footer, narrow, alert}: {
   );
 }
 export function Tabs({tabs, children, label}: {tabs: Array<[string, string]>, children: (id: string) => ReactNode, label: string}) {
+  const [sel, setSel] = useState(tabs[0][0]);
+  const [ref, pos] = useSlider(sel);
   return (
-    <RTabs className="rp-tabs">
-      <RTabList className="rp-tablist" aria-label={label}>{tabs.map(([id, l]) => <RTab key={id} id={id} className="rp-tab">{l}</RTab>)}</RTabList>
+    <RTabs className="rp-tabs" selectedKey={sel} onSelectionChange={k => setSel(String(k))}>
+      <div ref={ref} className="rp-tabhead"><RTabList className="rp-tablist" aria-label={label}>{tabs.map(([id, l]) => <RTab key={id} id={id} className="rp-tab">{l}</RTab>)}</RTabList>{pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}</div>
       {tabs.map(([id]) => <RTabPanel key={id} id={id}>{children(id)}</RTabPanel>)}
     </RTabs>
   );
@@ -149,13 +185,20 @@ export function LogLine({text}: {text: string}) {
 
 // Toasts: a tiny queue, rendered once by the shell.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
-let listeners: Array<(t: {id: number, kind: ToastKind, msg: string}[]) => void> = [];
-let queue: {id: number, kind: ToastKind, msg: string}[] = []; let seq = 0;
-const dismiss = (id: number) => { queue = queue.filter(t => t.id !== id); listeners.forEach(l => l(queue)); };
-export const toast = (kind: ToastKind, msg: string) => { const id = ++seq; queue = [...queue, {id, kind, msg}]; listeners.forEach(l => l(queue)); setTimeout(() => dismiss(id), 5000); };
+type ToastItem = {id: number, kind: ToastKind, msg: string, exiting?: boolean};
+let listeners: Array<(t: ToastItem[]) => void> = [];
+let queue: ToastItem[] = []; let seq = 0;
+const publish = () => listeners.forEach(l => l(queue));
+const EXIT_MS = 400;
+const dismiss = (id: number) => {
+  if (!queue.some(t => t.id === id && !t.exiting)) return;
+  queue = queue.map(t => t.id === id ? {...t, exiting: true} : t); publish();
+  setTimeout(() => { queue = queue.filter(t => t.id !== id); publish(); }, EXIT_MS);
+};
+export const toast = (kind: ToastKind, msg: string) => { const id = ++seq; queue = [...queue, {id, kind, msg}]; publish(); setTimeout(() => dismiss(id), 5000); };
 export function Toasts({closeLabel = 'Close'}: {closeLabel?: string}) {
   const [items, setItems] = useState(queue);
   useEffect(() => { listeners.push(setItems); return () => { listeners = listeners.filter(l => l !== setItems); }; }, []);
-  return <div className="rp-toasts" role="region" aria-live="polite">{items.map(t => <div key={t.id} className={cx('rp-toast', t.kind)}><span className="grow">{t.msg}</span><RButton className="rp-btn quiet icon close" aria-label={closeLabel} onPress={() => dismiss(t.id)}><Close /></RButton></div>)}</div>;
+  return <div className="rp-toasts" role="region" aria-live="polite">{items.map(t => <div key={t.id} className={cx('rp-toast', t.kind, t.exiting && 'exiting')}><span className="grow">{t.msg}</span><RButton className="rp-btn quiet icon close" aria-label={closeLabel} onPress={() => dismiss(t.id)}><Close /></RButton></div>)}</div>;
 }
 export type {SortDescriptor};
