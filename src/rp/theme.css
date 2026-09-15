@@ -67,6 +67,35 @@
   --rp-hl-low: #363a4f; --rp-hl-med: #494d64; --rp-hl-high: #5b6078;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
+
+/* Glass: translucent surfaces over a soft gradient, blurred (backdrop-filter). Accents follow Apple's system colours. */
+:root[data-family='glass'] {
+  --rp-base: rgba(255, 255, 255, 0.55); --rp-surface: rgba(255, 255, 255, 0.42); --rp-overlay: rgba(255, 255, 255, 0.55);
+  --rp-muted: #8e8e93; --rp-subtle: #636366; --rp-text: #1c1c1e;
+  --rp-love: #ff3b30; --rp-gold: #ff9500; --rp-rose: #ff9f0a; --rp-pine: #007aff; --rp-foam: #34c759; --rp-iris: #af52de;
+  --rp-hl-low: rgba(255, 255, 255, 0.35); --rp-hl-med: rgba(60, 60, 67, 0.18); --rp-hl-high: rgba(60, 60, 67, 0.3);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.18);
+  --rp-glass-border: rgba(255, 255, 255, 0.6);
+  --rp-bg: radial-gradient(1200px 800px at 10% 0%, #d8e6ff 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #ffe0ec 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #dcf5e6 0%, transparent 55%), #eef1f6;
+}
+:root[data-family='glass'][data-scheme='dark'] {
+  --rp-base: rgba(28, 28, 30, 0.55); --rp-surface: rgba(44, 44, 46, 0.45); --rp-overlay: rgba(255, 255, 255, 0.1);
+  --rp-muted: #8e8e93; --rp-subtle: #aeaeb2; --rp-text: #f2f2f7;
+  --rp-love: #ff453a; --rp-gold: #ff9f0a; --rp-rose: #ffb340; --rp-pine: #0a84ff; --rp-foam: #30d158; --rp-iris: #bf5af2;
+  --rp-hl-low: rgba(255, 255, 255, 0.06); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); --rp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --rp-glass-border: rgba(255, 255, 255, 0.12);
+  --rp-bg: radial-gradient(1200px 800px at 10% 0%, #1e2a5a 0%, transparent 60%), radial-gradient(1000px 700px at 100% 20%, #4a1d3f 0%, transparent 55%), radial-gradient(900px 700px at 60% 100%, #123a2e 0%, transparent 55%), #0b0b10;
+}
+:root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
+:root[data-family='glass'] .rp-top { background: transparent; }
+:root[data-family='glass'] .rp-main, :root[data-family='glass'] .rp-card, :root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog, :root[data-family='glass'] .rp-search, :root[data-family='glass'] .rp-table, :root[data-family='glass'] .rp-frame {
+  backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid var(--rp-glass-border);
+}
+:root[data-family='glass'] .rp-main { border-bottom: 0; }
+:root[data-family='glass'] .rp-card { box-shadow: var(--rp-shadow); }
+:root[data-family='glass'] .rp-underlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 /* The S2 pages that are not re-skinned yet sit on their own surface inside the frame. */
 .rp-s2host { border-radius: 12px; overflow-x: auto; scrollbar-width: thin; }
 .rp-icon-stack { position: relative; width: 20px; height: 20px; display: block; }
