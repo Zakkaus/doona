@@ -498,8 +498,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
   .rp-toast.exiting { animation: rp-fade-out 130ms var(--rp-ease) forwards; }
 }
 /* Page and tab panels rise in; the sidebar marker slides to the active page; palette and scheme changes crossfade (view transitions). */
-.rp-content, .rp-tabs [role='tabpanel'] { animation: rp-page-in 250ms var(--rp-ease-out); }
-@keyframes rp-page-in { from { opacity: 0; translate: 0 8px; } }
+.rp-content, .rp-tabs [role='tabpanel'] { animation: rp-page-in 200ms var(--rp-ease-out); }
+@keyframes rp-page-in { from { opacity: 0; } }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 300ms; }
 .rp-spin svg { animation: rp-spin 600ms var(--rp-ease); }
 @keyframes rp-spin { to { rotate: 360deg; } }
