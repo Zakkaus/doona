@@ -1,11 +1,12 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
 import {useState} from 'react';
-import {useConfigRules, useRoutingTrace} from '../../api/store';
+import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
 import {runtime} from '../clash-compat/fixtures';
 import {Button, DataTable, Kv, LabeledSelect, TextField, ModalDialog, toast} from '../../ui/ui';
 import {RuleDialog} from '../activity/RuleDialog';
 import type {PageProps} from '../types';
+import {RuleDistribution} from './RuleDistribution';
 
 export function Rules({go}: PageProps) {
   const t = useT();
@@ -13,6 +14,7 @@ export function Rules({go}: PageProps) {
   const trace = useRoutingTrace();
   const {form, setForm} = trace;
   const config = useConfigRules();
+  const capabilities = useCapabilities();
   const [sel, setSel] = useState<string | null>('r4');
   const cur = config?.rules.find(r => r.id === sel);
   return (
@@ -115,6 +117,7 @@ export function Rules({go}: PageProps) {
           ))}
         </section>
       )}
+      {capabilities.data?.resources.flows.available && <RuleDistribution />}
       {config && (
         <section className="rp-col">
           <h2 className="rp-h3">{t('rule.configTitle')}</h2>
