@@ -107,6 +107,8 @@ export function Shell() {
   const go = (p: string, q?: string) => { location.hash = '#/' + p + (q ? '?' + q : ''); };
   const pickLang = (l: Lang) => { setLang(l); try { localStorage.setItem('doona-lang', l); } catch { /* private mode */ } };
   const mac = navigator.platform.startsWith('Mac');
+  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
+  useEffect(() => { const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass'; for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px adobe-clean-han-traditional`, sample).catch(() => {}); }, []);
   return (
     <LangContext.Provider value={lang}>
       <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />

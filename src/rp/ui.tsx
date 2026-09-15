@@ -21,9 +21,10 @@ export function withCrossfade(fn: () => void) {
 export function usePress(): [RefObject<HTMLButtonElement | null>, (rp: {isPressed: boolean}) => CSSProperties] {
   const ref = useRef<HTMLButtonElement>(null);
   return [ref, ({isPressed}) => {
-    if (!isPressed || !ref.current) return {willChange: 'transform'};
+    // No will-change while idle: a permanent compositor layer re-rasterises the label on every hover.
+    if (!isPressed || !ref.current) return {};
     const {width, height} = ref.current.getBoundingClientRect();
-    return {willChange: 'transform', transform: `perspective(${Math.max(height, width / 3, 24)}px) translate3d(0, 0, -2px)`};
+    return {transform: `perspective(${Math.max(height, width / 3, 24)}px) translate3d(0, 0, -2px)`};
   }];
 }
 function PressButton(props: Parameters<typeof RButton>[0]) {

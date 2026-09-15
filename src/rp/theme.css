@@ -294,7 +294,11 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.negative:hover { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
 .rp-btn.primary { background: var(--rp-pine); color: var(--rp-on-accent); }
 .rp-btn.primary:hover { filter: brightness(1.08); }
-.rp-btn[data-disabled] { opacity: 0.4; cursor: default; pointer-events: none; }
+.rp-btn[data-disabled] { cursor: default; pointer-events: none; color: var(--rp-muted); background: var(--rp-hl-low); border-color: transparent; }
+.rp-btn.quiet[data-disabled] { background: transparent; }
+.rp-btn.negative[data-disabled] { background: transparent; border-color: var(--rp-hl-med); }
+.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); filter: none; }
+.rp-btn[data-disabled] > svg { opacity: 0.6; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
 .rp-grow { flex: 1; }
 /* Node tiles */
