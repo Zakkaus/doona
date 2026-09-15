@@ -47,8 +47,9 @@ export function useSlider(value: string, selector = '[data-selected]') {
   return [ref, pos] as const;
 }
 
-export function Button({children, onPress, quiet, small, icon, accent, primary, negative, label, isDisabled, tip}: {children?: ReactNode, onPress?: () => void, quiet?: boolean, small?: boolean, icon?: boolean, accent?: boolean, primary?: boolean, negative?: boolean, label?: string, isDisabled?: boolean, tip?: string}) {
-  const btn = <PressButton className={cx('rp-btn', quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', primary && 'primary', negative && 'negative')} onPress={onPress} aria-label={label} isDisabled={isDisabled}>{children}</PressButton>;
+// accent / primary / secondary / negative are S2 Button variants (pills); the rest is an ActionButton (radius 8).
+export function Button({children, onPress, quiet, small, icon, accent, primary, secondary, negative, label, isDisabled, tip}: {children?: ReactNode, onPress?: () => void, quiet?: boolean, small?: boolean, icon?: boolean, accent?: boolean, primary?: boolean, secondary?: boolean, negative?: boolean, label?: string, isDisabled?: boolean, tip?: string}) {
+  const btn = <PressButton className={cx('rp-btn', quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', primary && 'primary', secondary && 'secondary', negative && 'negative')} onPress={onPress} aria-label={label} isDisabled={isDisabled}>{children}</PressButton>;
   const text = label ?? tip;
   return text ? <TooltipTrigger delay={400}><Tip>{text}</Tip>{btn}</TooltipTrigger> : btn;
 }
