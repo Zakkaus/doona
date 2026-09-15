@@ -198,8 +198,18 @@
    whatever the picture. The gradient look keeps the chrome bare. */
 /* Over a photo the whole window is lightly frosted, edge to edge (one even layer, no sheets, no cut-outs), so labels
    read over any picture and nothing ends in a seam; the picture stays visible as a soft wash. */
-:root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: rgba(255, 255, 255, 0.28); backdrop-filter: blur(14px) saturate(1.4); }
-:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] body::after { background: rgba(0, 0, 0, 0.38); }
+:root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(14px) saturate(1.4); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] body::after { background: rgba(0, 0, 0, 0.3); }
+/* Labels must read over any picture, blur or not: with a photo the shell spans the window so the top bar and sidebar
+   reach the screen edges, and both carry a dense tint of their own (frosted where the browser can). */
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-shell { max-width: none; }
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-top, :root[data-family='glass'][style*='--rp-wallpaper'] .rp-side { background: rgba(255, 255, 255, 0.62); backdrop-filter: blur(24px) saturate(1.6); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-top, :root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-side { background: rgba(14, 14, 22, 0.66); }
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-side { border-right: 1px solid rgba(255, 255, 255, 0.35); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-side { border-right-color: rgba(255, 255, 255, 0.08); }
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-top { border-bottom: 1px solid rgba(255, 255, 255, 0.35); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-top { border-bottom-color: rgba(255, 255, 255, 0.08); }
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-main { border-radius: 0; border: 0; }
 :root[data-family='glass'][style*='--rp-wallpaper'] { --rp-glass: rgba(255, 255, 255, 0.5); --rp-glass-strong: rgba(255, 255, 255, 0.68); }
 :root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] { --rp-glass: rgba(16, 16, 24, 0.58); --rp-glass-strong: rgba(16, 16, 24, 0.74); }
 :root[data-family='glass'][style*='--rp-wallpaper'] .rp-main { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); }
