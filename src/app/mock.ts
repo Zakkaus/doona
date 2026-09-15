@@ -58,6 +58,25 @@ export const groups: Group[] = [
     {name: 'jp-01', v6: false, source: 'sub-b', alive: false}, {name: 'hk-02', tcp: 91, udp: 88, v6: true, source: 'sub-a', alive: true}]}
 ];
 
+// A large airport-style subscription for stress testing: set localStorage doona-mock-big to a node count (e.g. 300).
+function bigGroup(count: number): Group {
+  const regions: Array<[string, number]> = [['香港', 60], ['台灣', 40], ['日本', 30], ['新加坡', 40], ['美國', 160], ['韓國', 50], ['英國', 120], ['德國', 130], ['澳洲', 150], ['土耳其', 170]];
+  const tags = ['IPLC', 'BGP', '家寬', '解鎖', '0.5x', '2x', '流媒體', ''];
+  let seed = 7; const rnd = () => { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
+  const nodes: Node[] = [];
+  for (let i = 0; i < count; i++) {
+    const [region, base] = regions[i % regions.length];
+    const n = String(Math.floor(i / regions.length) + 1).padStart(2, '0');
+    const tag = tags[Math.floor(rnd() * tags.length)];
+    const alive = rnd() > 0.06;
+    const tcp = Math.round(base + rnd() * base * 0.8);
+    nodes.push({name: region + ' ' + n + (tag ? ' · ' + tag : ''), tcp: alive ? tcp : undefined, udp: alive ? tcp + Math.round(rnd() * 20) : undefined, v6: rnd() > 0.5, source: 'sub-c', alive});
+  }
+  return {name: 'airport', policy: 'selector', selected: nodes[0].name, members: nodes.map(n => n.name), leaf: nodes[0].name, nodes};
+}
+const bigCount = (() => { try { return Number(localStorage.getItem('doona-mock-big')) || 0; } catch { return 0; } })();
+if (bigCount > 0) groups.push(bigGroup(bigCount));
+
 export type Rule = {id: string, n: number, cond: string, target: string, must: boolean, source: string, note: string, editable: boolean, generated?: boolean};
 export const rules: Rule[] = [
   {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},

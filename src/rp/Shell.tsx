@@ -55,17 +55,20 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 ];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
+type Wordmark = 'gradient' | 'plain';
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
+  const [wordmark, setWordmark] = useState<Wordmark>(() => { try { return (localStorage.getItem('doona-wordmark') as Wordmark) || 'gradient'; } catch { return 'gradient'; } });
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useLayoutEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
+  useLayoutEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; d.wordmark = wordmark; }, [dark, palette, wordmark]);
   // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
   const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; withCrossfade(() => setScheme(next)); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
   const pickPalette = (p: PaletteId) => { withCrossfade(() => setPalette(p)); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
-  return {scheme, dark, toggle, palette, pickPalette};
+  const pickWordmark = (w: Wordmark) => { setWordmark(w); try { localStorage.setItem('doona-wordmark', w); } catch { /* private mode */ } };
+  return {scheme, dark, toggle, palette, pickPalette, wordmark, pickWordmark};
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
@@ -137,7 +140,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <span className={spinning ? 'rp-spin' : undefined}><Button quiet icon label={t('refresh')} onPress={() => { setSpinning(true); setTimeout(() => setSpinning(false), 600); toast('positive', t('refreshed')); }}><Refresh /></Button></span>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))} extra={{title: t('wordmark'), value: ap.wordmark, onChange: k => ap.pickWordmark(k as Wordmark), items: [{id: 'gradient', label: t('wordmark.gradient')}, {id: 'plain', label: t('wordmark.plain')}]}}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>

@@ -15,6 +15,7 @@ import ListBulleted from '@react-spectrum/s2/icons/ListBulleted';
 import DeviceAll from '@react-spectrum/s2/icons/DeviceAll';
 import {page, split, card, code, col, label, h3, toolbar, Kv, PlaneBadge, toast} from '../ui';
 import {conns, groups, type Conn} from '../mock';
+import {Flag} from '../Flag';
 import {RuleDialog} from '../RuleDialog';
 import type {PageProps} from '../Shell';
 
@@ -59,7 +60,7 @@ export function Connections({go, query}: PageProps) {
                 {label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '') + ')'},
                 {label: '來源 ' + cur.src, cond: 'sip(' + cur.src + ')'},
                 ...(cur.mac ? [{label: 'MAC ' + cur.mac, cond: 'mac(' + cur.mac + ')'}] : [])]} />
-              {cur.chain[0] === proxy.name && <Picker label={proxy.name + ' 的選擇（只影響後續撥號）'} selectedKey={proxy.selected} onSelectionChange={k => toast('positive', proxy.name + ' 改選 ' + String(k) + '，已持久化')}>{proxy.members.map(m => <PickerItem key={m} id={m}>{m}</PickerItem>)}</Picker>}
+              {cur.chain[0] === proxy.name && <Picker label={proxy.name + ' 的選擇（只影響後續撥號）'} selectedKey={proxy.selected} onSelectionChange={k => toast('positive', proxy.name + ' 改選 ' + String(k) + '，已持久化')}>{proxy.members.map(m => <PickerItem key={m} id={m} textValue={m}><Text slot="label"><Flag name={m} />{m}</Text></PickerItem>)}</Picker>}
               <TooltipTrigger isDisabled={cur.canTerminate}>
                 <Button variant="negative" fillStyle="outline" isDisabled={!cur.canTerminate} onPress={() => toast('positive', '已中止 ' + (cur.host || cur.dst))}>中止這條連線</Button>
                 <Tooltip>{cur.plane === '拒絕' ? '沒有連線可中止' : '這條流在內核轉發，honk 不能中止它'}</Tooltip>
