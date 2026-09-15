@@ -188,7 +188,7 @@
     linear-gradient(135deg, #0b1230 0%, #2a1247 32%, #3a1a0a 64%, #06231c 100%);
 }
 :root[data-family='glass'] { --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-:root[data-family='glass'] body { background: var(--rp-wallpaper, var(--rp-bg)) center / cover no-repeat fixed; }
+:root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
 :root[data-family='glass'] body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--rp-grain); opacity: 0.14; mix-blend-mode: overlay; }
 /* The shell keeps the usual 1600px centring; the readability scrim is a fixed full-viewport layer so it ends in no seam. */
 :root[data-family='glass'] .rp-shell { position: relative; }
@@ -196,10 +196,6 @@
 :root[data-family='glass'][data-scheme='dark'] body::after { background: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%); }
 /* Over a photo the chrome becomes a vibrancy sheet (as macOS sidebars do): frosted, no border, so labels stay readable
    whatever the picture. The gradient look keeps the chrome bare. */
-/* A photo gets exactly the gradient's treatment (same layout, bare chrome, glass cards); the only addition is an even
-   frost over the whole window so labels read and nothing ends in a seam. */
-:root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: rgba(255, 255, 255, 0.22); backdrop-filter: blur(14px) saturate(1.4); }
-:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] body::after { background: rgba(0, 0, 0, 0.3); }
 :root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35); border-bottom: 0; }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.18); border-color: rgba(255, 255, 255, 0.08); }
