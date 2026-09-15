@@ -5,4 +5,8 @@ import './theme.css';
 import {Shell, stampAppearance} from './Shell';
 
 stampAppearance();
-createRoot(document.getElementById('root')!).render(<StrictMode><Shell /></StrictMode>);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Shell />
+  </StrictMode>
+);

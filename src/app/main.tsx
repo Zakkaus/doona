@@ -5,4 +5,8 @@ import '../fonts.css';
 import '../base.css';
 import {Shell} from './Shell';
 
-createRoot(document.getElementById('root')!).render(<StrictMode><Shell /></StrictMode>);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Shell />
+  </StrictMode>
+);

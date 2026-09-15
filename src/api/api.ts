@@ -1,4 +1,36 @@
-import type {Version, Capabilities, Runtime, RuntimeOutbounds, TrafficHistory, TrafficHistoryQuery, Datapath, DatapathDetail, RuntimeMemory, NodeList, NodeQuery, Group, GroupSummary, GroupSelectionRequest, GroupSelectionResult, JsonPatch, ProbeRequest, ConnectionList, ConnectionQuery, FlowList, FlowDetail, FlowQuery, DnsCacheList, DnsCacheQuery, DnsQueryResponse, DnsRecordType, DeleteCount, DeleteMatchingCount, OperationAccepted, OperationState, EventOptions} from './model';
+import type {
+  Version,
+  Capabilities,
+  Runtime,
+  RuntimeOutbounds,
+  TrafficHistory,
+  TrafficHistoryQuery,
+  Datapath,
+  DatapathDetail,
+  RuntimeMemory,
+  NodeList,
+  NodeQuery,
+  Group,
+  GroupSummary,
+  GroupSelectionRequest,
+  GroupSelectionResult,
+  JsonPatch,
+  ProbeRequest,
+  ConnectionList,
+  ConnectionQuery,
+  FlowList,
+  FlowDetail,
+  FlowQuery,
+  DnsCacheList,
+  DnsCacheQuery,
+  DnsQueryResponse,
+  DnsRecordType,
+  DeleteCount,
+  DeleteMatchingCount,
+  OperationAccepted,
+  OperationState,
+  EventOptions
+} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
 
 export interface Api {

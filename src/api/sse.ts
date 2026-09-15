@@ -5,12 +5,16 @@ export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame:
   signal?.throwIfAborted();
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '', event = '', id: string | undefined;
+  let buffer = '',
+    event = '',
+    id: string | undefined;
   let data: string[] = [];
   const line = (text: string) => {
     if (text === '') {
       onFrame({id, event: event || 'message', data: data.join('\n')});
-      event = ''; id = undefined; data = [];
+      event = '';
+      id = undefined;
+      data = [];
       return;
     }
     if (text.startsWith(':')) return;
@@ -22,7 +26,9 @@ export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame:
     if (key === 'data') data.push(value);
     if (key === 'id' && !value.includes('\0')) id = value;
   };
-  const abort = () => { void reader.cancel(signal?.reason).catch(() => {}); };
+  const abort = () => {
+    void reader.cancel(signal?.reason).catch(() => {});
+  };
   signal?.addEventListener('abort', abort, {once: true});
   try {
     while (true) {

@@ -18,7 +18,8 @@ export function Connections({go, query}: PageProps) {
   const [out, setOut] = useState('all');
   const [sel, setSel] = useState<string | null>(q.get('id') ?? '2');
   useEffect(() => {
-    const text = q.get('q') ?? q.get('src'); const id = q.get('id');
+    const text = q.get('q') ?? q.get('src');
+    const id = q.get('id');
     if (text !== null) setText(text);
     if (id !== null) setSel(id);
   }, [q]);
@@ -26,36 +27,109 @@ export function Connections({go, query}: PageProps) {
   const resource = useConnections(src);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
   const needle = text.trim().toLowerCase();
-  const shown = rows.filter(c => (network === 'all' || c.network === network) && (out === 'all' || c.outbound === out) && (src || !needle || [c.dst, c.domain, c.src, c.pname, c.outbound, c.chain.join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle)));
+  const shown = rows.filter(
+    c =>
+      (network === 'all' || c.network === network) &&
+      (out === 'all' || c.outbound === out) &&
+      (src || !needle || [c.dst, c.domain, c.src, c.pname, c.outbound, c.chain.join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+  );
   const cur = shown.find(c => c.id === sel);
-  const outbounds = [...new Set(rows.flatMap(c => c.outbound ? [c.outbound] : []))];
+  const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
   return (
     <div className="rp-page">
-      {resource.error && <p role="alert" className="rp-note">無法載入連線：{resource.error.message}</p>}
+      {resource.error && (
+        <p role="alert" className="rp-note">
+          無法載入連線：{resource.error.message}
+        </p>
+      )}
       {resource.loading && !resource.data && <p role="status">載入中…</p>}
       {resource.data?.truncated && <p className="rp-note">連線清單已截斷，僅顯示部分記錄。</p>}
       <div className="rp-toolbar">
-        <SearchField aria-label="篩選" value={text} onChange={setText} className="rp-input" style={{width: 280}}><Search /><Input placeholder="域名、IP、來源、程序" /><RButton className="clear" aria-label="清除"><Close /></RButton></SearchField>
-        <Segmented label="網路協定" value={network} onChange={setNetwork} items={[["all", '全部 ' + rows.length], ['tcp', 'TCP'], ['udp', 'UDP']]} />
+        <SearchField aria-label="篩選" value={text} onChange={setText} className="rp-input" style={{width: 280}}>
+          <Search />
+          <Input placeholder="域名、IP、來源、程序" />
+          <RButton className="clear" aria-label="清除">
+            <Close />
+          </RButton>
+        </SearchField>
+        <Segmented
+          label="網路協定"
+          value={network}
+          onChange={setNetwork}
+          items={[
+            ['all', '全部 ' + rows.length],
+            ['tcp', 'TCP'],
+            ['udp', 'UDP']
+          ]}
+        />
         <LabeledSelect label="出站" side value={out} onChange={setOut} items={[{id: 'all', label: '所有出站'}, ...outbounds.map(id => ({id, label: id}))]} />
-        <Button onPress={() => { setText(''); setNetwork('all'); setOut('all'); }}>清除篩選</Button>
+        <Button
+          onPress={() => {
+            setText('');
+            setNetwork('all');
+            setOut('all');
+          }}
+        >
+          清除篩選
+        </Button>
       </div>
       <div className="rp-page">
-        <DataTable label="連線" rows={shown} selected={sel} onSelect={setSel} empty="沒有符合的連線"
-          cols={[{id: 'dst', label: '目標', width: 200, isRowHeader: true}, {id: 'src', label: '來源', width: 136}, {id: 'chain', label: t('conn.chain'), width: 180}, {id: 'rule', label: t('conn.rule'), width: 220}, {id: 'state', label: '狀態', width: 100}, {id: 'down', label: '下載', width: 88, align: 'end'}, {id: 'age', label: '開始', width: 104, align: 'end'}]}
-          render={c => [c.domain || c.dst || '—', <span className="rp-code">{c.src ?? '—'}</span>, chainLabel(c), <span className="rp-rule"><span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>{c.rule_source === 'recomputed' ? <small className="rp-provenance">{t('conn.recomputed')}</small> : c.rule_source === 'unknown' ? <small className="rp-provenance">—</small> : null}</span>, connectionStates[c.state] ?? c.state, formatBytes(c.download_bytes), relativeStart(c.started_at)]} />
+        <DataTable
+          label="連線"
+          rows={shown}
+          selected={sel}
+          onSelect={setSel}
+          empty="沒有符合的連線"
+          cols={[
+            {id: 'dst', label: '目標', width: 200, isRowHeader: true},
+            {id: 'src', label: '來源', width: 136},
+            {id: 'chain', label: t('conn.chain'), width: 180},
+            {id: 'rule', label: t('conn.rule'), width: 220},
+            {id: 'state', label: '狀態', width: 100},
+            {id: 'down', label: '下載', width: 88, align: 'end'},
+            {id: 'age', label: '開始', width: 104, align: 'end'}
+          ]}
+          render={c => [
+            c.domain || c.dst || '—',
+            <span className="rp-code">{c.src ?? '—'}</span>,
+            chainLabel(c),
+            <span className="rp-rule">
+              <span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>
+              {c.rule_source === 'recomputed' ? (
+                <small className="rp-provenance">{t('conn.recomputed')}</small>
+              ) : c.rule_source === 'unknown' ? (
+                <small className="rp-provenance">—</small>
+              ) : null}
+            </span>,
+            connectionStates[c.state] ?? c.state,
+            formatBytes(c.download_bytes),
+            relativeStart(c.started_at)
+          ]}
+        />
         {cur ? (
           <div className="rp-card">
             <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>
-            <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>{connectionStates[cur.state] ?? cur.state} · {cur.network.toUpperCase()}</Light>
+            <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>
+              {connectionStates[cur.state] ?? cur.state} · {cur.network.toUpperCase()}
+            </Light>
             <Kv items={connectionDetails(cur)} />
-            <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>查看流程</Button>
-            <RuleDialog trigger={<Button accent>新增規則</Button>} presets={[
-              ...(cur.domain ? [{label: '域名 ' + cur.domain, cond: 'domain(full: ' + cur.domain + ')'}] : []),
-              ...(cur.dst ? [{label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '').replace(/^\[|\]$/g, '') + ')'}] : []),
-              ...(cur.src ? [{label: '來源 ' + cur.src, cond: 'sip(' + cur.src + ')'}] : [])]} />
+            <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
+              查看流程
+            </Button>
+            <RuleDialog
+              trigger={<Button accent>新增規則</Button>}
+              presets={[
+                ...(cur.domain ? [{label: '域名 ' + cur.domain, cond: 'domain(full: ' + cur.domain + ')'}] : []),
+                ...(cur.dst ? [{label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '').replace(/^\[|\]$/g, '') + ')'}] : []),
+                ...(cur.src ? [{label: '來源 ' + cur.src, cond: 'sip(' + cur.src + ')'}] : [])
+              ]}
+            />
           </div>
-        ) : <div className="rp-card"><span className="rp-label">選擇連線以查看詳細資料。</span></div>}
+        ) : (
+          <div className="rp-card">
+            <span className="rp-label">選擇連線以查看詳細資料。</span>
+          </div>
+        )}
       </div>
     </div>
   );

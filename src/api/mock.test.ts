@@ -5,7 +5,10 @@ import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
 import {capabilities, capabilitiesBase, connections, trafficHistory} from './mock/fixtures';
 
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 it('serves cumulative outbound counters independently of live connection bytes', async () => {
   const api = createMockApi();
@@ -16,7 +19,13 @@ it('serves cumulative outbound counters independently of live connection bytes',
   expect(Date.parse(counters.counter_since)).toBeLessThan(Date.parse(counters.observed_at));
   expect(addU64(...counters.outbounds.map(r => r.download_bytes))).toBe(BigInt(runtime.traffic.bytes.download!));
   expect(addU64(...counters.outbounds.map(r => r.upload_bytes))).toBe(BigInt(runtime.traffic.bytes.upload!));
-  expect(counters.outbounds.find(r => r.name === 'block')).toMatchObject({kind: 'builtin', active_connections: 0, upload_bytes: '0', download_bytes: '0', errors: '0'});
+  expect(counters.outbounds.find(r => r.name === 'block')).toMatchObject({
+    kind: 'builtin',
+    active_connections: 0,
+    upload_bytes: '0',
+    download_bytes: '0',
+    errors: '0'
+  });
   for (const row of counters.outbounds) {
     expect(BigInt(row.total_connections)).toBeGreaterThanOrEqual(BigInt(row.active_connections));
     expect(BigInt(row.errors)).toBeGreaterThanOrEqual(0n);
@@ -82,13 +91,24 @@ it('keeps list decisions consistent with recorded traces rather than current sel
     const flow = await api.flow(c.state === 'blocked' ? 'flow-blocked' : 'flow-' + c.id);
     const outbound = flow.trace.steps.find(s => s.stage === 'outbound')?.data;
     const route = flow.trace.steps.find(s => s.stage === 'route')!.data;
-    const fields = {chain: outbound ? [...outbound.selection_path.map(p => p.group_id), outbound.leaf_node_id] : [], chain_source: outbound ? 'evaluation' : 'unknown', rule_id: route.rule_id, rule_expression: route.rules.find(r => r.rule_id === route.rule_id)?.expression, rule_source: route.plane === 'kernel' ? 'kernel' : 'recomputed', ingress: flow.input.ingress, domain_source: flow.input.domain_source};
+    const fields = {
+      chain: outbound ? [...outbound.selection_path.map(p => p.group_id), outbound.leaf_node_id] : [],
+      chain_source: outbound ? 'evaluation' : 'unknown',
+      rule_id: route.rule_id,
+      rule_expression: route.rules.find(r => r.rule_id === route.rule_id)?.expression,
+      rule_source: route.plane === 'kernel' ? 'kernel' : 'recomputed',
+      ingress: flow.input.ingress,
+      domain_source: flow.input.domain_source
+    };
     expect(c).toMatchObject(fields);
     expect(summaries.find(f => f.id === flow.id)).toMatchObject(fields);
     expect(chainLabel(c)).toBe(outbound ? c.chain.join(' → ') : c.outbound);
     if (outbound) {
       expect(outbound.selection_path[0].member_name).toBe(outbound.leaf_node_name);
-      expect(outbound.selection_path[0].selection?.candidates[0]).toMatchObject({member_name: outbound.leaf_node_name, leaf_node_name: outbound.leaf_node_name});
+      expect(outbound.selection_path[0].selection?.candidates[0]).toMatchObject({
+        member_name: outbound.leaf_node_name,
+        leaf_node_name: outbound.leaf_node_name
+      });
     }
   }
   expect(snapshot.tcp[0].chain).toEqual(['proxy', 'hk-01']);
@@ -98,7 +118,13 @@ it('keeps list decisions consistent with recorded traces rather than current sel
 it('never substitutes another health tuple for the latency column', async () => {
   const node = (await createMockApi().nodes()).nodes[0];
   const exact = preferredHealth(node)!;
-  const alternatives = [{...exact, measurement: 'http_round_trip' as const}, {...exact, ip_version: 'ipv6' as const}, {...exact, warmth: 'cold' as const}, {...exact, purpose: 'dns' as const}, {...exact, transport: 'udp' as const}];
+  const alternatives = [
+    {...exact, measurement: 'http_round_trip' as const},
+    {...exact, ip_version: 'ipv6' as const},
+    {...exact, warmth: 'cold' as const},
+    {...exact, purpose: 'dns' as const},
+    {...exact, transport: 'udp' as const}
+  ];
   expect(preferredHealth({...node, health: alternatives})).toBeUndefined();
   expect(preferredHealth({...node, health: [...alternatives, exact]})).toBe(exact);
 });
@@ -151,7 +177,15 @@ it('completes probes with fixture failures and publishes fresh health', async ()
   const api = createMockApi();
   const before = preferredHealth((await api.nodes()).nodes.find(n => n.id === 'hk-01')!)!;
   vi.setSystemTime(Date.parse(before.observed_at) + 1000);
-  const accepted = await api.startProbe({target: {type: 'group', group_id: 'proxy'}, kind: 'tcp_connect', purpose: 'data', warmth: 'warm', transport: ['tcp'], ip_version: 'ipv4', members: 'direct'});
+  const accepted = await api.startProbe({
+    target: {type: 'group', group_id: 'proxy'},
+    kind: 'tcp_connect',
+    purpose: 'data',
+    warmth: 'warm',
+    transport: ['tcp'],
+    ip_version: 'ipv4',
+    members: 'direct'
+  });
   const terminal = api.pollOperation(accepted);
   await vi.advanceTimersByTimeAsync(999);
   expect((await api.operation(accepted.operation_id)).status).toBe('running');
@@ -223,14 +257,20 @@ it('changes lifecycle only after suspend and resume complete, then invalidates r
   await vi.advanceTimersByTimeAsync(1);
   await expect(suspended).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'suspended'}});
   expect((await api.runtime()).lifecycle.state).toBe('suspended');
-  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: suspend.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  expect(events.slice(-2)).toMatchObject([
+    {event: 'operation.updated', data: {resource_id: suspend.operation_id, status: 'succeeded'}},
+    {event: 'runtime.updated'}
+  ]);
   const resume = await api.startResume();
   const resumed = api.pollOperation(resume);
   expect((await api.runtime()).lifecycle.state).toBe('suspended');
   await vi.advanceTimersByTimeAsync(1000);
   await expect(resumed).resolves.toMatchObject({status: 'succeeded', result: {runtime_state: 'running'}});
   expect((await api.runtime()).lifecycle.state).toBe('running');
-  expect(events.slice(-2)).toMatchObject([{event: 'operation.updated', data: {resource_id: resume.operation_id, status: 'succeeded'}}, {event: 'runtime.updated'}]);
+  expect(events.slice(-2)).toMatchObject([
+    {event: 'operation.updated', data: {resource_id: resume.operation_id, status: 'succeeded'}},
+    {event: 'runtime.updated'}
+  ]);
   controller.abort();
   await stream;
 });
@@ -255,7 +295,17 @@ it('traces a geosite domain and resolves each cached address in live mode', asyn
   const result = await api.routingTrace(request);
   expect(result.dns).toMatchObject([{source: 'cache', addresses: ['149.154.167.220']}]);
   expect(result.evaluations).toMatchObject([{dst_ip: '149.154.167.220', decision: 'determinate', outbound: 'proxy', missing_inputs: []}]);
-  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([['r1', 'not_matched'], ['r2', 'not_matched'], ['r3', 'not_matched'], ['r4', 'not_matched'], ['r5', 'matched'], ['r6', 'skipped'], ['r7', 'skipped'], ['r8', 'skipped'], ['fallback', 'skipped']]);
+  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([
+    ['r1', 'not_matched'],
+    ['r2', 'not_matched'],
+    ['r3', 'not_matched'],
+    ['r4', 'not_matched'],
+    ['r5', 'matched'],
+    ['r6', 'skipped'],
+    ['r7', 'skipped'],
+    ['r8', 'skipped'],
+    ['fallback', 'skipped']
+  ]);
   const unresolved = await api.routingTrace({...request, resolve: 'none'});
   expect(unresolved.dns).toEqual([]);
   expect(unresolved.evaluations[0]).toMatchObject({dst_ip: null, decision: 'indeterminate', outbound: null, missing_inputs: ['dst_ip']});
@@ -280,12 +330,16 @@ it('uses fallback when every earlier predicate is false', async () => {
 
 it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
   const c = connections.tcp[0];
-  const rows = clientRows({...connections, tcp: [
-    {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
-    {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
-    {...c, src: '10.0.0.7:123', download_bytes: null},
-    {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
-  ], udp: []});
+  const rows = clientRows({
+    ...connections,
+    tcp: [
+      {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
+      {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
+      {...c, src: '10.0.0.7:123', download_bytes: null},
+      {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
+    ],
+    udp: []
+  });
   expect(rows).toEqual([
     {id: '[2001:db8::1]', ip: '[2001:db8::1]', active: 2, download: 9007199254741000n, outbounds: 'proxy、direct'},
     {id: '10.0.0.7', ip: '10.0.0.7', active: 1, download: null, outbounds: 'proxy'}
@@ -293,7 +347,7 @@ it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
 });
 
 it('gates explicit resource absence but accepts either DNS resource', async () => {
-  vi.stubGlobal('localStorage', {getItem: (key: string) => key === 'doona-mock-profile' ? 'base' : null});
+  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-profile' ? 'base' : null)});
   const base = await createMockApi().capabilities();
   expect(base.profiles).toEqual(['base']);
   expect(base.resources.runtime_outbounds.available).toBe(false);
