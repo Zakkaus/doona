@@ -54,20 +54,17 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 ];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
-type Colour = 'vivid' | 'mono';
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
-  const [colour, setColour] = useState<Colour>(() => { try { return (localStorage.getItem('doona-colour') as Colour) || 'vivid'; } catch { return 'vivid'; } });
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; d.colour = colour; }, [dark, palette, colour]);
+  useEffect(() => { const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset; d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; }, [dark, palette]);
   // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
   const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; setScheme(next); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
   const pickPalette = (p: PaletteId) => { setPalette(p); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
-  const pickColour = (c: Colour) => { setColour(c); try { localStorage.setItem('doona-colour', c); } catch { /* private mode */ } };
-  return {scheme, dark, toggle, palette, pickPalette, colour, pickColour};
+  return {scheme, dark, toggle, palette, pickPalette};
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
@@ -135,7 +132,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <Button quiet icon label={t('refresh')} onPress={() => toast('positive', t('refreshed'))}><Refresh /></Button>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES} extra={{title: t('colour'), value: ap.colour, onChange: k => ap.pickColour(k as Colour), items: [{id: 'vivid', label: t('colour.vivid'), desc: t('colour.vividDesc')}, {id: 'mono', label: t('colour.mono'), desc: t('colour.monoDesc')}]}}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={PALETTES}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>

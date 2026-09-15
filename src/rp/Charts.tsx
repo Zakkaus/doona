@@ -4,16 +4,16 @@ import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, Respo
 
 export type Series = {label: string, color: string, values: number[]};
 const VARS = ['base', 'surface', 'overlay', 'muted', 'subtle', 'text', 'love', 'gold', 'rose', 'pine', 'foam', 'iris', 'hl-low', 'hl-med', 'hl-high'] as const;
-export type Palette = Record<typeof VARS[number], string> & {vivid: boolean};
+export type Palette = Record<typeof VARS[number], string> & {cat: string[]};
 function read(): Palette {
   const cs = getComputedStyle(document.documentElement);
-  return {...Object.fromEntries(VARS.map(v => [v, cs.getPropertyValue('--rp-' + v).trim()])), vivid: document.documentElement.dataset.colour !== 'mono'} as Palette;
+  return {...Object.fromEntries(VARS.map(v => [v, cs.getPropertyValue('--rp-' + v).trim()])), cat: [1, 2, 3, 4, 5, 6, 7, 8].map(i => cs.getPropertyValue('--rp-c' + i).trim())} as Palette;
 }
 export function usePalette() {
   const [p, setP] = useState<Palette>(() => read());
   useEffect(() => {
     const mo = new MutationObserver(() => setP(read()));
-    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme', 'data-colour']});
+    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
     return () => mo.disconnect();
   }, []);
   return p;

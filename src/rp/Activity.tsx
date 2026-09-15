@@ -20,7 +20,6 @@ const TOP: Record<string, Top> = {
 };
 const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
 const latest = throughput[throughput.length - 1];
-const RANK_COLOURS = ['pine', 'foam', 'iris', 'gold', 'rose'] as const;
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT(); const p = usePalette();
@@ -32,8 +31,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   const [nodeName, setNodeName] = useState(NODES[0].name);
   const node = NODES.find(n => n.name === nodeName) ?? NODES[0];
   const sep = t('act.sep2');
-  const traffic = [{label: t('act.download'), color: p.pine, values: throughput.map(s => s.down)}, {label: t('act.upload'), color: p.rose, values: throughput.map(s => s.up)}];
-  const OUT = [{name: 'direct', value: 78, text: '1.1 GB', color: p.pine}, {name: 'proxy', value: 20, text: '312 MB', color: p.foam}, {name: 'resilient', value: 1, text: '96 KB', color: p.iris}, {name: 'gaming', value: 1, text: '12 KB', color: p.gold}, {name: 'block', value: 0, text: '0', color: p.love}];
+  const traffic = [{label: t('act.download'), color: p.cat[0], values: throughput.map(s => s.down)}, {label: t('act.upload'), color: p.cat[3], values: throughput.map(s => s.up)}];
+  const OUT = [{name: 'direct', value: 78, text: '1.1 GB', color: p.cat[0]}, {name: 'proxy', value: 20, text: '312 MB', color: p.cat[1]}, {name: 'resilient', value: 1, text: '96 KB', color: p.cat[2]}, {name: 'gaming', value: 1, text: '12 KB', color: p.cat[3]}, {name: 'block', value: 0, text: '0', color: p.love}];
   type Issue = {level: 'err' | 'warn' | 'info', text: string, page: string};
   const RANK = {err: 0, warn: 1, info: 2};
   const issues: Issue[] = [
@@ -45,16 +44,16 @@ export function Activity({go}: {go: (page: string) => void}) {
   return (
     <>
       <div className="rp-quick">
-        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-iris"><Shuffle />{t('act.mode')}</span><Segmented label={t('act.mode')} value={mode} onChange={k => { setMode(k as Mode); toast('positive', t('act.mode') + (t('lang') === 'Language' ? ': ' : '：') + t(`mode.${k}` as 'mode.rule')); }} items={[['rule', t('mode.rule')], ['global', t('mode.global')], ['direct', t('mode.direct')]]} /></div></div>
-        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-foam"><Filter />{t('act.global')}</span><MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>{target}</MenuButton></div></div>
+        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-c3"><Shuffle />{t('act.mode')}</span><Segmented label={t('act.mode')} value={mode} onChange={k => { setMode(k as Mode); toast('positive', t('act.mode') + (t('lang') === 'Language' ? ': ' : '：') + t(`mode.${k}` as 'mode.rule')); }} items={[['rule', t('mode.rule')], ['global', t('mode.global')], ['direct', t('mode.direct')]]} /></div></div>
+        <div className="rp-card"><div className="rp-row"><span className="rp-qlabel rp-tint-c2"><Filter />{t('act.global')}</span><MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>{target}</MenuButton></div></div>
         <div className="rp-card"><div className="rp-row"><Light tone="ok">{t('act.running')}</Light><Button quiet onPress={() => go('overview')}>{t('act.viewDetails')}</Button></div></div>
       </div>
 
       <div className="rp-strip">
-        <div className="rp-card"><span className="rp-tile-head rp-tint-pine"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.down)}</span><span className="rp-delta good">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.pine} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-rose"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.up)}</span><span className="rp-delta bad">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.rose} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-iris"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{conns.length}</span><span className="rp-delta good">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.iris} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-gold"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, desc: n.alive ? n.tcp + ' ms' : t('act.timeout')}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c1"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.down)}</span><span className="rp-delta good">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.cat[0]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c4"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.up)}</span><span className="rp-delta bad">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.cat[3]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c3"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{conns.length}</span><span className="rp-delta good">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.cat[2]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, desc: n.alive ? n.tcp + ' ms' : t('act.timeout')}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
       </div>
 
       <div className="rp-g21">
@@ -72,7 +71,7 @@ export function Activity({go}: {go: (page: string) => void}) {
       <div className="rp-g3">
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.topDevices')}</span><Segmented label={t('act.topDevices')} value={by} onChange={setBy} items={[['dev', t('act.devices')], ['host', t('act.domains')]]} /></div>
-          <div className="rp-list">{TOP[by].map(([k, v, tx, kind], i) => <div key={k} className="rp-dev">{kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}<Bar label={k} value={tx + sep + v + '%'} pct={v} color={p.vivid ? p[RANK_COLOURS[i % RANK_COLOURS.length]] : p.pine} /></div>)}</div>
+          <div className="rp-list">{TOP[by].map(([k, v, tx, kind], i) => <div key={k} className="rp-dev">{kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}<Bar label={k} value={tx + sep + v + '%'} pct={v} color={p.cat[i % p.cat.length]} /></div>)}</div>
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.probeLatency')}</span><Button quiet small onPress={() => go('policies')}>{t('act.viewAll')}</Button></div>

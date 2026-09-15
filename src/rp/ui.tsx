@@ -125,8 +125,17 @@ export function Badge({children, tone}: {children: ReactNode, tone?: 'warn'}) {
 export function Kv({items, inline}: {items: Array<[string, string]>, inline?: boolean}) {
   return <div className={cx('rp-kv', inline && 'inline')}>{items.map(([k, v]) => <div key={k}><span className="k">{k}</span><span className="v">{v}</span></div>)}</div>;
 }
-export function ToggleTile({selected, onPress, name, sub}: {selected: boolean, onPress: () => void, name: string, sub: string}) {
-  return <ToggleButton className="rp-btn xl" isSelected={selected} onChange={onPress}><span className="n">{name}</span><span className="s">{sub}</span></ToggleButton>;
+// Node tile: name and the TCP latency up front, coloured by health; UDP and IPv6 underneath.
+// With onPress it is a toggle (selector groups); without, a static member that may be the group's current pick.
+export type NodeTileProps = {name: string, tcp?: number, udp?: number, v6?: boolean, alive?: boolean, nested?: boolean, selected?: boolean, cur?: boolean, onPress?: () => void, labels: {timeout: string, nested: string, cur: string}};
+export const latencyTone = (ms: number) => ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err';
+export function NodeTile({name, tcp, udp, v6, alive = true, nested, selected, cur, onPress, labels}: NodeTileProps) {
+  const body = <>
+    <span className="top"><span className="n">{name}</span>{nested ? <span className="ms nested">{labels.nested}</span> : alive && tcp != null ? <span className={'ms ' + latencyTone(tcp)}>{tcp} ms</span> : <span className="ms err">{labels.timeout}</span>}</span>
+    <span className="s">{nested ? ' ' : alive ? ['UDP ' + udp + ' ms', v6 && 'IPv6'].filter(Boolean).join(' · ') : ' '}{cur && !onPress && <span className="cur">{labels.cur}</span>}</span>
+  </>;
+  if (onPress) { const [ref, style] = usePress(); return <ToggleButton ref={ref} style={style} className="rp-node" isSelected={selected} onChange={onPress}>{body}</ToggleButton>; }
+  return <div className={cx('rp-node', cur && 'cur')}>{body}</div>;
 }
 
 // Table: fixed height, scrolls, optional single selection.
