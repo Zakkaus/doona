@@ -3,9 +3,8 @@ import Delete from '@react-spectrum/s2/icons/Delete';
 import {useDnsControl} from '../../api/store';
 import {relativeStart} from '../../api/selectors';
 import {Badge, Button, DataTable, Kv, LabeledSelect, TextField, toast} from '../ui';
-import type {PageProps} from './types';
 
-export function Dns(_: PageProps) {
+export function Dns() {
   const [domain, setDomain] = useState('cdn.bilibili.com');
   const [type, setType] = useState('A');
   const dns = useDnsControl();

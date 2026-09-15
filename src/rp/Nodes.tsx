@@ -322,6 +322,7 @@ export function NodeMenu({
       <Popover className="rp-popover" placement="bottom start">
         {big ? (
           <Autocomplete filter={contains}>
+            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
             <SearchField aria-label={labels.filter} autoFocus className="rp-input rp-menu-search">
               <Search />
               <Input placeholder={labels.filter} />

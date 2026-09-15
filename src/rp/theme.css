@@ -2615,6 +2615,10 @@ button.rp-node[data-focus-visible] {
 }
 /* ---- Toast stack (after S2 ToastContainer): bottom centre, newest on top, older toasts peek out behind; expanded = list over an underlay. ---- */
 .rp-toast-underlay {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  text-align: inherit;
   position: fixed;
   inset: 0;
   background: var(--rp-underlay);

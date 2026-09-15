@@ -9,7 +9,6 @@ process.on('exit', () => {
     rmSync(UDD, {recursive: true, force: true});
   } catch {}
 });
-import {writeFileSync} from 'node:fs';
 import {PNG} from './png.mjs';
 const url = process.argv[2];
 const scale = 3;

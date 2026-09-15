@@ -3,9 +3,8 @@ import {clashLog} from '../../app/mock';
 import {useEventFeed} from '../../api/store';
 import {eventKinds, eventSummary} from '../../api/selectors';
 import {DataTable, Frame, LabeledSelect, Light, Line, LogLine, Tabs} from '../ui';
-import type {PageProps} from './types';
 
-export function Events(_: PageProps) {
+export function Events() {
   const [kind, setKind] = useState('all');
   const feed = useEventFeed();
   const shown = feed.events.filter(event => kind === 'all' || event.event === kind);

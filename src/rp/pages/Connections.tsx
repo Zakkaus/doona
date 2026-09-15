@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {SearchField, Input, Button as RButton} from 'react-aria-components';
 import Search from '@react-spectrum/s2/icons/Search';
 import Close from '@react-spectrum/s2/icons/Close';
@@ -17,12 +17,14 @@ export function Connections({go, query}: PageProps) {
   const [network, setNetwork] = useState('all');
   const [out, setOut] = useState('all');
   const [sel, setSel] = useState<string | null>(q.get('id') ?? '2');
-  useEffect(() => {
+  const [lastQuery, setLastQuery] = useState(query);
+  if (lastQuery !== query) {
+    setLastQuery(query);
     const text = q.get('q') ?? q.get('src');
     const id = q.get('id');
     if (text !== null) setText(text);
     if (id !== null) setSel(id);
-  }, [q]);
+  }
   const src = ipLiteral(text);
   const resource = useConnections(src);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);

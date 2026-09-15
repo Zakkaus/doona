@@ -2,9 +2,8 @@ import {useState} from 'react';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
 import {subs, geo} from '../../app/mock';
 import {Button, DataTable, Kv, Light, Switch, toast} from '../ui';
-import type {PageProps} from './types';
 
-export function Resources(_: PageProps) {
+export function Resources() {
   const [onlyBad, setOnlyBad] = useState(false);
   const shown = onlyBad ? subs.filter(s => !s.ready) : subs;
   const refreshable = subs.filter(s => s.refreshable);

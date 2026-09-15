@@ -471,9 +471,8 @@ export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, select
     </>
   );
   if (onPress) {
-    const [ref, style] = usePress();
     return (
-      <ToggleButton ref={ref} style={style} className="rp-node" isSelected={selected} onChange={onPress}>
+      <ToggleButton className="rp-node" isSelected={selected} onChange={onPress}>
         {body}
       </ToggleButton>
     );
@@ -728,15 +727,16 @@ export function Toasts({labels}: {labels: {close: string; showAll: string; colla
   const [items, setItems] = useState(queue);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
-    listeners.push(setItems);
+    const listener = (items: ToastItem[]) => {
+      setItems(items);
+      if (!items.some(t => !t.exiting)) setExpanded(false);
+    };
+    listeners.push(listener);
     return () => {
-      listeners = listeners.filter(l => l !== setItems);
+      listeners = listeners.filter(l => l !== listener);
     };
   }, []);
   const live = items.filter(t => !t.exiting);
-  useEffect(() => {
-    if (live.length === 0 && expanded) setExpanded(false);
-  }, [live.length, expanded]);
   useEffect(() => {
     setPaused(expanded);
   }, [expanded]);
@@ -753,7 +753,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: string; colla
   const ordered = [...items].reverse();
   return (
     <>
-      {expanded && <div className="rp-toast-underlay" onClick={() => setExpanded(false)} />}
+      {expanded && <button type="button" className="rp-toast-underlay" aria-label={labels.collapse} onClick={() => setExpanded(false)} />}
       <div
         className={cx('rp-toasts', expanded && 'expanded')}
         role="region"
@@ -773,6 +773,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: string; colla
             </RButton>
           </div>
         )}
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- mouse-only convenience; the keyboard path is the "show all" button */}
         <div
           className="rp-toast-list"
           onClick={e => {

@@ -2,9 +2,8 @@ import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOp
 import {datapathFields, formatDuration, localTime, memoryFields} from '../../api/selectors';
 import {useT} from '../../app/i18n';
 import {Button, DataTable, Kv, Light, toast} from '../ui';
-import type {PageProps} from './types';
 
-export function Overview(_: PageProps) {
+export function Overview() {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;

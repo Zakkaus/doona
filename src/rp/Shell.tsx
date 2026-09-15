@@ -274,6 +274,7 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
           <RButton className="rp-btn quiet icon close" onPress={onClose} aria-label={t('close')}>
             <Close />
           </RButton>
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
           <SearchField aria-label={t('search')} value={q} onChange={setQ} autoFocus className="rp-input lg">
             <Search />
             <Input placeholder={t('search')} />

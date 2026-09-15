@@ -1,5 +1,5 @@
 // Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
-import {useEffect, useId, useState} from 'react';
+import {useId, useSyncExternalStore} from 'react';
 import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 
 export type Series = {label: string; color: string; values: Array<number | null>};
@@ -12,15 +12,20 @@ function read(): Palette {
     cat: [1, 2, 3, 4, 5, 6, 7, 8].map(i => cs.getPropertyValue('--rp-c' + i).trim())
   } as Palette;
 }
+let palette: {key: string; value: Palette} | undefined;
+function getPalette() {
+  const {family, flavour, scheme} = document.documentElement.dataset;
+  const key = `${family}/${flavour}/${scheme}`;
+  if (palette?.key !== key) palette = {key, value: read()};
+  return palette.value;
+}
+function subscribePalette(onChange: () => void) {
+  const mo = new MutationObserver(onChange);
+  mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
+  return () => mo.disconnect();
+}
 export function usePalette() {
-  const [p, setP] = useState<Palette>(() => read());
-  useEffect(() => {
-    const mo = new MutationObserver(() => setP(read()));
-    setP(read()); // the shell stamps the palette attributes in a layout effect, before this observer exists
-    mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
-    return () => mo.disconnect();
-  }, []);
-  return p;
+  return useSyncExternalStore(subscribePalette, getPalette);
 }
 export const fmtRate = (kb: number | null | undefined) =>
   kb == null ? '—' : kb >= 1000 ? (kb / 1000).toFixed(kb >= 10000 || kb % 1000 === 0 ? 0 : 1) + ' MB/s' : Math.round(kb) + ' KB/s';

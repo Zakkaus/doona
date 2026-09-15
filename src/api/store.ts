@@ -1,13 +1,13 @@
-import {useCallback, useEffect, useRef, useState, type DependencyList} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
 import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
-import {clientRows, type ClientRow} from './selectors';
+import {clientRows} from './selectors';
 
 type Listener = (event: ApiEvent) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
-type Stream = {listeners: Set<Listener>; statuses: Set<(status: StreamStatus) => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
+type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
 const streams = new Map<Api, Stream>();
 const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
 export function useEvents(onEvent: Listener) {
@@ -16,60 +16,66 @@ export function useEvents(onEvent: Listener) {
   useEffect(() => {
     callback.current = onEvent;
   });
-  const [status, setStatus] = useState(initialStatus);
-  useEffect(() => {
-    const listener: Listener = event => callback.current(event);
-    let stream = streams.get(api);
-    if (!stream) {
-      stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus};
-      streams.set(api, stream);
-      const shared = stream;
-      const update = (change: Partial<StreamStatus>) => {
-        shared.status = {...shared.status, ...change};
-        shared.statuses.forEach(fn => fn(shared.status));
-      };
-      void api
-        .capabilities(shared.controller.signal)
-        .then(capabilities => {
-          if (shared.controller.signal.aborted) return;
-          update({available: capabilities.resources.events.available});
-          if (!capabilities.resources.events.available) return;
-          return api.subscribeEvents({
-            signal: shared.controller.signal,
-            onConnectionChange: connected => update({connected}),
-            onEvent: event => {
-              if (event.event === 'stream.ready') {
-                shared.ready = event;
-                update({cursor: event.id, error: null});
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const listener: Listener = event => callback.current(event);
+      let stream = streams.get(api);
+      if (!stream) {
+        stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus};
+        streams.set(api, stream);
+        const shared = stream;
+        const update = (change: Partial<StreamStatus>) => {
+          shared.status = {...shared.status, ...change};
+          shared.statuses.forEach(fn => fn());
+        };
+        void api
+          .capabilities(shared.controller.signal)
+          .then(capabilities => {
+            if (shared.controller.signal.aborted) return;
+            update({available: capabilities.resources.events.available});
+            if (!capabilities.resources.events.available) return;
+            return api.subscribeEvents({
+              signal: shared.controller.signal,
+              onConnectionChange: connected => update({connected}),
+              onEvent: event => {
+                if (event.event === 'stream.ready') {
+                  shared.ready = event;
+                  update({cursor: event.id, error: null});
+                }
+                shared.listeners.forEach(fn => fn(event));
               }
-              shared.listeners.forEach(fn => fn(event));
-            }
+            });
+          })
+          .catch(reason => {
+            if (!shared.controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
           });
-        })
-        .catch(reason => {
-          if (!shared.controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
-        });
-    }
-    stream.listeners.add(listener);
-    stream.statuses.add(setStatus);
-    setStatus(stream.status);
-    if (stream.ready) listener(stream.ready);
-    return () => {
-      stream.listeners.delete(listener);
-      stream.statuses.delete(setStatus);
-      if (!stream.listeners.size) {
-        stream.controller.abort();
-        streams.delete(api);
       }
-    };
-  }, [api]);
-  return status;
+      stream.listeners.add(listener);
+      stream.statuses.add(notify);
+      if (stream.ready) listener(stream.ready);
+      return () => {
+        stream.listeners.delete(listener);
+        stream.statuses.delete(notify);
+        if (!stream.listeners.size) {
+          stream.controller.abort();
+          streams.delete(api);
+        }
+      };
+    },
+    [api]
+  );
+  const getSnapshot = useCallback(() => streams.get(api)?.status ?? initialStatus, [api]);
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
 
 export function useEventFeed() {
   const api = getApi();
   const [events, setEvents] = useState<ApiEvent[]>([]);
-  useEffect(() => setEvents([]), [api]);
+  const [previousApi, setPreviousApi] = useState(api);
+  if (previousApi !== api) {
+    setPreviousApi(api);
+    setEvents([]);
+  }
   const status = useEvents(event => setEvents(previous => [event, ...previous.filter(item => item.id !== event.id)].slice(0, 200)));
   return {...status, events};
 }
@@ -78,7 +84,13 @@ export function useResource<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
   {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}
 ) {
+  const [key, setKey] = useState(() => ({every, enabled, deps}));
   const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
+  // Match React's dependency comparison without serializing API object identities.
+  if (!Object.is(key.every, every) || key.enabled !== enabled || key.deps.length !== deps.length || deps.some((dep, i) => !Object.is(dep, key.deps[i]))) {
+    setKey({every, enabled, deps});
+    setState({data: undefined, loading: enabled, error: null});
+  }
   const current = useRef(fetcher);
   useEffect(() => {
     current.current = fetcher;
@@ -86,15 +98,13 @@ export function useResource<T>(
   const refresh = useRef<() => void>(() => {});
   const refetch = useCallback(() => refresh.current(), []);
   useEffect(() => {
-    setState({data: undefined, loading: enabled, error: null});
-    if (!enabled) return;
+    if (!key.enabled) return;
     let controller: AbortController | undefined;
     let disposed = false;
     const load = () => {
       controller?.abort();
       const request = new AbortController();
       controller = request;
-      setState(previous => ({...previous, loading: true}));
       void current.current(request.signal).then(
         data => {
           if (!disposed && !request.signal.aborted) setState({data, loading: false, error: null});
@@ -105,16 +115,19 @@ export function useResource<T>(
         }
       );
     };
-    refresh.current = load;
+    refresh.current = () => {
+      setState(previous => ({...previous, loading: true}));
+      load();
+    };
     load();
-    const timer = every > 0 ? setInterval(load, every) : undefined;
+    const timer = key.every > 0 ? setInterval(refresh.current, key.every) : undefined;
     return () => {
       disposed = true;
       controller?.abort();
       clearInterval(timer);
       refresh.current = () => {};
     };
-  }, [every, enabled, ...deps]);
+  }, [key]);
   useEvents(event => {
     if (event.event === 'runtime.updated') refetch();
   });
@@ -170,15 +183,12 @@ export function useConfigRules() {
 const firstSeen = new Map<string, string>();
 export function useClients() {
   const connections = useConnections();
-  const [rows, setRows] = useState<Array<ClientRow & {firstSeen: string}>>([]);
-  useEffect(() => {
+  const rows = useMemo(() => {
     const now = new Date().toISOString();
-    setRows(
-      clientRows(connections.data).map(row => {
-        if (!firstSeen.has(row.ip)) firstSeen.set(row.ip, now);
-        return {...row, firstSeen: firstSeen.get(row.ip)!};
-      })
-    );
+    return clientRows(connections.data).map(row => {
+      if (!firstSeen.has(row.ip)) firstSeen.set(row.ip, now);
+      return {...row, firstSeen: firstSeen.get(row.ip)!};
+    });
   }, [connections.data]);
   return {...connections, rows};
 }
