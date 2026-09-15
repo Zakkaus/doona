@@ -33,6 +33,7 @@
   },
   "sizeBudget": {
     "js": 410000,
+    "shell": 290000,
     "css": 240000
   },
   "dependencies": {

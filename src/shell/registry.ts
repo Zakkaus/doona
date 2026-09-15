@@ -1,19 +1,8 @@
 import type {Key} from '../i18n/messages';
-import type {ComponentType} from 'react';
+import {lazy, type ComponentType} from 'react';
 import type {Capabilities} from '../api/model';
 import type {PageProps} from '../features/types';
 import {Activity} from '../features/activity/Activity';
-import {Overview} from '../features/overview/Overview';
-import {Connections} from '../features/connections/Connections';
-import {Flows} from '../features/flows/Flows';
-import {Clients} from '../features/clients/Clients';
-import {Policies} from '../features/policies/Policies';
-import {Rules} from '../features/rules/Rules';
-import {Dns} from '../features/dns/Dns';
-import {Events} from '../features/events/Events';
-import {Resources} from '../features/clash-compat/Resources';
-import {ConfigPage} from '../features/clash-compat/ConfigPage';
-import {Validate} from '../features/clash-compat/Validate';
 import SpeedFast from '../ui/icons/SpeedFast';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
@@ -28,6 +17,18 @@ import CheckmarkCircle from '../ui/icons/CheckmarkCircle';
 import {Settings} from '../features/settings/Settings';
 import type {BackendKind} from '../features/settings/settings';
 import SettingsIcon from '../ui/icons/Settings';
+
+const Overview = lazy(() => import('../features/overview/Overview').then(m => ({default: m.Overview})));
+const Connections = lazy(() => import('../features/connections/Connections').then(m => ({default: m.Connections})));
+const Flows = lazy(() => import('../features/flows/Flows').then(m => ({default: m.Flows})));
+const Clients = lazy(() => import('../features/clients/Clients').then(m => ({default: m.Clients})));
+const Policies = lazy(() => import('../features/policies/Policies').then(m => ({default: m.Policies})));
+const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
+const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
+const Events = lazy(() => import('../features/events/Events').then(m => ({default: m.Events})));
+const Resources = lazy(() => import('../features/clash-compat/Resources').then(m => ({default: m.Resources})));
+const ConfigPage = lazy(() => import('../features/clash-compat/ConfigPage').then(m => ({default: m.ConfigPage})));
+const Validate = lazy(() => import('../features/clash-compat/Validate').then(m => ({default: m.Validate})));
 
 type Feature = {
   id: string;

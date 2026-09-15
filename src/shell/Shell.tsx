@@ -1,5 +1,5 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
-import {useEffect, useLayoutEffect, useState} from 'react';
+import {Suspense, useEffect, useLayoutEffect, useState, type ReactNode} from 'react';
 import {
   I18nProvider,
   Button as RButton,
@@ -320,6 +320,15 @@ function ToastHost() {
   return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
 }
 
+function Delayed({children}: {children: ReactNode}) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+  return visible ? children : null;
+}
+
 function Frame({
   lang,
   pickLang,
@@ -488,7 +497,18 @@ function Frame({
             {feature.requires.backend && feature.requires.backend !== backend ? (
               <p className="rp-note">{t('shell.backendRequired')}</p>
             ) : (
-              <Page go={go} query={query} backend={backend} />
+              <Suspense
+                key={feature.id}
+                fallback={
+                  <Delayed>
+                    <div className="rp-empty" role="status">
+                      {t('ui.loading')}
+                    </div>
+                  </Delayed>
+                }
+              >
+                <Page go={go} query={query} backend={backend} />
+              </Suspense>
             )}
           </SettingsContext.Provider>
         </div>

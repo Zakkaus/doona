@@ -2,16 +2,55 @@ import {readdir, readFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 
 const {sizeBudget} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-const assets = new URL('../dist/assets/', import.meta.url);
-const files = await readdir(assets);
+const dist = new URL('../dist/', import.meta.url);
+const assets = new URL('assets/', dist);
+const files = (await readdir(assets)).sort();
+const sizes = new Map();
 
-for (const kind of ['js', 'css']) {
+function check(kind, bytes) {
   const budget = sizeBudget?.[kind];
   if (!Number.isSafeInteger(budget) || budget <= 0) throw new Error(`Invalid sizeBudget.${kind}`);
-  const chunks = files.filter(file => file.endsWith(`.${kind}`));
-  if (!chunks.length) throw new Error(`No ${kind} assets; run pnpm build first.`);
-  let bytes = 0;
-  for (const file of chunks) bytes += gzipSync(await readFile(new URL(file, assets))).length;
   console.log(`${kind}: ${bytes} bytes gzip / ${budget} bytes budget`);
   if (bytes > budget) process.exitCode = 1;
 }
+
+for (const kind of ['js', 'css']) {
+  const chunks = files.filter(file => file.endsWith(`.${kind}`));
+  if (!chunks.length) throw new Error(`No ${kind} assets; run pnpm build first.`);
+  let bytes = 0;
+  for (const file of chunks) {
+    const size = gzipSync(await readFile(new URL(file, assets))).length;
+    sizes.set(`assets/${file}`, size);
+    bytes += size;
+    console.log(`  assets/${file}: ${size} bytes gzip`);
+  }
+  console.log(`${kind} chunks: ${chunks.length}`);
+  check(kind, bytes);
+}
+
+const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+const entries = Object.keys(manifest).filter(key => manifest[key].isEntry);
+if (!entries.length) throw new Error('No entry chunks in Vite manifest.');
+const visited = new Set();
+const shell = new Set();
+function visit(key) {
+  if (visited.has(key)) return;
+  visited.add(key);
+  const chunk = manifest[key];
+  if (!chunk) throw new Error(`Missing manifest chunk: ${key}`);
+  if (chunk.file.endsWith('.js')) {
+    if (!sizes.has(chunk.file)) throw new Error(`Missing JS asset: ${chunk.file}`);
+    shell.add(chunk.file);
+  }
+  for (const dependency of chunk.imports ?? []) visit(dependency);
+}
+for (const key of entries) visit(key);
+console.log(`entry: ${entries.reduce((sum, key) => sum + sizes.get(manifest[key].file), 0)} bytes gzip`);
+console.log('shell (entry and static imports):');
+let shellBytes = 0;
+for (const file of [...shell].sort()) {
+  const size = sizes.get(file);
+  shellBytes += size;
+  console.log(`  ${file}: ${size} bytes gzip`);
+}
+check('shell', shellBytes);

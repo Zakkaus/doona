@@ -8,7 +8,7 @@ const KNOWN: Record<string, string> = {
 
 for (const route of routes) {
   // The compat pages show their demo content only for the Clash backend kind.
-  const storage = compatRoutes.includes(route) ? {'doona-backend': 'clash'} : {};
+  const storage: Record<string, string> = compatRoutes.includes(route) ? {'doona-backend': 'clash'} : {};
   test.describe(route, () => {
     test.use({storage});
     test(route, async ({page}, testInfo) => {

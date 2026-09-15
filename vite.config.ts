@@ -43,12 +43,21 @@ export default defineConfig({
     }
   ],
   build: {
+    manifest: true,
     target: ['es2022'],
     cssTarget: ['chrome120', 'safari17', 'firefox120', 'edge120'],
     cssMinify: 'lightningcss',
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('index.html', import.meta.url))
+      },
+      output: {
+        chunkFileNames: 'assets/[name]-[hash].js',
+        manualChunks(id) {
+          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
+          if (/\/node_modules\/(react-aria-components|@react-aria\/[^/]+|@react-stately\/[^/]+|@internationalized\/[^/]+)\//.test(id)) return 'vendor-aria';
+          if (/\/node_modules\/(recharts|d3-[^/]+|victory-vendor)\//.test(id)) return 'vendor-charts';
+        }
       }
     }
   }
