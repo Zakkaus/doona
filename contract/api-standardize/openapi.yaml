@@ -40,6 +40,8 @@ paths:
                       version: /api/v1/version
                       capabilities: /api/v1/capabilities
                       runtime: /api/v1/runtime
+                      runtime_outbounds: /api/v1/runtime/outbounds
+                      traffic_history: /api/v1/runtime/traffic/history
                       operations: /api/v1/operations/{id}
                   x-headers:
                     Content-Type: application/json
@@ -121,6 +123,12 @@ paths:
                           - cgroup.events.high
                           - cgroup.events.oom
                           - cgroup.events.oom_kill
+                      runtime_outbounds:
+                        available: true
+                      traffic_history:
+                        available: true
+                        max_window_seconds: 3600
+                        max_points: 360
                       datapath:
                         available: true
                         kinds:
@@ -285,6 +293,7 @@ paths:
                       scope: visible
                       observed_by: mixed
                       counter_since: '2026-08-15T08:00:00Z'
+                      sampled_at: '2026-08-15T10:00:00Z'
                       connections:
                         tcp: 42
                         udp: 128
@@ -351,6 +360,173 @@ paths:
                     kernel:
                       ebpf_bytes: null
                       sampled_at: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/runtime/outbounds:
+    get:
+      operationId: getRuntimeOutbounds
+      summary: Read per-outbound cumulative counters
+      description: |
+        Mirrors honk's Clash-surface /stats counters for visible traffic, not
+        a sum of live connections. All rows share counter_since; restart or
+        counter reset starts a new interval. Requires resources.runtime_outbounds.available.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Outbound counter snapshot
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeOutbounds'
+              examples:
+                snapshot:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    counter_since: '2026-08-15T08:00:00Z'
+                    outbounds:
+                      - name: direct
+                        kind: builtin
+                        active_connections: 12
+                        total_connections: '240'
+                        upload_bytes: '123456'
+                        download_bytes: '654321'
+                        errors: '0'
+                      - name: proxy
+                        kind: group
+                        active_connections: 158
+                        total_connections: '1200'
+                        upload_bytes: '123333333'
+                        download_bytes: '987000000'
+                        errors: '3'
+                      - name: block
+                        kind: builtin
+                        active_connections: 0
+                        total_connections: '0'
+                        upload_bytes: '0'
+                        download_bytes: '0'
+                        errors: '0'
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/runtime/traffic/history:
+    get:
+      operationId: getTrafficHistory
+      summary: Read bounded traffic history
+      description: |
+        Reads a bounded in-memory ring of visible traffic samples without
+        starting sampling on GET. This is the only traffic history the native
+        API serves; SSE does not replay it. Requires resources.traffic_history.available.
+        A query above either advertised limit returns 400 invalid_request,
+        never a silently clamped window or point limit.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: window_seconds
+          in: query
+          description: Look-back window ending at observed_at; defaults to resources.traffic_history.max_window_seconds.
+          schema:
+            $ref: '#/components/schemas/SafeUInt'
+            minimum: 1
+          example: 60
+        - name: max_points
+          in: query
+          description: Maximum returned samples; defaults to resources.traffic_history.max_points.
+          schema:
+            $ref: '#/components/schemas/SafeUInt'
+            minimum: 1
+          example: 3
+      responses:
+        '200':
+          description: Retained traffic samples, oldest first
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrafficHistory'
+              examples:
+                recent:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    window_seconds: 60
+                    sampled_every_seconds: 20
+                    samples:
+                      - sampled_at: '2026-08-15T09:59:20Z'
+                        upload_bytes_per_second: '2048'
+                        download_bytes_per_second: '16384'
+                        connections: 162
+                      - sampled_at: '2026-08-15T09:59:40Z'
+                        upload_bytes_per_second: null
+                        download_bytes_per_second: null
+                        connections: null
+                      - sampled_at: '2026-08-15T10:00:00Z'
+                        upload_bytes_per_second: '4096'
+                        download_bytes_per_second: '32768'
+                        connections: 170
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          description: Invalid query or window_seconds/max_points above the advertised limit
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                window_too_large:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: window_seconds exceeds the advertised limit.
+                    request_id: request-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                too_many_points:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: max_points exceeds the advertised limit.
+                    request_id: request-2
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -516,6 +692,7 @@ paths:
                   value:
                     - id: group-proxy
                       name: proxy
+                      config_revision: '17'
                       policy:
                         kind: urltest
                         native: min_moving_avg
@@ -901,7 +1078,34 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
-          $ref: '#/components/responses/Unavailable'
+          description: Probe queue is full
+          headers:
+            Retry-After:
+              description: Positive retry delay in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                queue_full:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: Probe queue is full.
+                    request_id: request-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                    Retry-After: 1
   /api/v1/connections:
     get:
       operationId: listConnections
@@ -920,6 +1124,12 @@ paths:
               - udp
               - all
             default: all
+        - name: src
+          in: query
+          description: Exact source IP literal, without a port; applied with type before limit. Totals and truncated describe only matching visible entries.
+          schema:
+            $ref: '#/components/schemas/IpAddress'
+          example: 192.168.1.100
         - $ref: '#/components/parameters/Limit1000'
         - $ref: '#/components/parameters/Detail'
       responses:
@@ -950,7 +1160,16 @@ paths:
                         dst: 1.2.3.4:443
                         domain: example.com
                         outbound: proxy
-                        started_at: '2026-08-13T12:00:00Z'
+                        chain:
+                          - group-proxy
+                          - node-hk-01
+                        chain_source: evaluation
+                        rule_id: null
+                        rule_expression: null
+                        rule_source: unknown
+                        ingress: wan
+                        domain_source: tls_sni
+                        started_at: '2026-08-15T09:59:50Z'
                         observed_by: userspace
                         upload_bytes: '20480'
                         download_bytes: '1048576'
@@ -965,14 +1184,21 @@ paths:
                         dst: 8.8.8.8:53
                         domain: null
                         outbound: direct
-                        started_at: '2026-08-13T12:00:05Z'
+                        chain: []
+                        chain_source: unknown
+                        rule_id: null
+                        rule_expression: null
+                        rule_source: unknown
+                        ingress: null
+                        domain_source: null
+                        started_at: '2026-08-15T09:59:55Z'
                         observed_by: ebpf
                         upload_bytes: null
                         download_bytes: null
                         upload_bytes_per_second: null
                         download_bytes_per_second: null
-                    total_tcp: 42
-                    total_udp: 128
+                    total_tcp: 1
+                    total_udp: 1
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -1010,6 +1236,13 @@ paths:
               - $ref: '#/components/schemas/ConnectionState'
               - const: all
             default: all
+        - name: connection_id
+          in: query
+          description: Exact opaque connection ID within the current adapter instance; never inferred from a tuple. Matches active and retained terminal flows.
+          schema:
+            type: string
+            minLength: 1
+          example: tcp-01HZX4K8W5
         - $ref: '#/components/parameters/Limit1000'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Detail'
@@ -1045,10 +1278,19 @@ paths:
                         network: tcp
                         state: active
                         pname: curl
-                        connection_id: tcp-23
+                        connection_id: tcp-01HZX4K8W5
                         outbound: proxy
+                        chain:
+                          - group-proxy
+                          - node-hk-01
+                        chain_source: evaluation
+                        rule_id: null
+                        rule_expression: null
+                        rule_source: unknown
+                        ingress: wan
+                        domain_source: tls_sni
                         observed_by: userspace
-                        started_at: '2026-09-14T09:59:59Z'
+                        started_at: '2026-08-15T09:59:50Z'
                         ended_at: null
                         trace_status: partial
                     next_cursor: null
@@ -1125,15 +1367,24 @@ paths:
                     network: tcp
                     state: active
                     pname: curl
-                    connection_id: tcp-23
+                    connection_id: tcp-01HZX4K8W5
                     outbound: proxy
+                    chain:
+                      - group-proxy
+                      - node-hk-01
+                    chain_source: evaluation
+                    rule_id: null
+                    rule_expression: null
+                    rule_source: unknown
+                    ingress: wan
+                    domain_source: tls_sni
                     observed_by: userspace
-                    started_at: '2026-09-14T09:59:59Z'
+                    started_at: '2026-08-15T09:59:50Z'
                     ended_at: null
                     trace_status: partial
                     input:
-                      src: 192.0.2.10:53000
-                      dst: 198.51.100.20:443
+                      src: 192.168.1.100:12345
+                      dst: 1.2.3.4:443
                       domain: example.com
                       domain_source: tls_sni
                       pid: null
@@ -1150,7 +1401,7 @@ paths:
                       steps:
                         - seq: 1
                           stage: route
-                          observed_at: '2026-09-14T09:59:59Z'
+                          observed_at: '2026-08-15T09:59:50Z'
                           elapsed_us: 0
                           generation_id: generation-42
                           evidence: observed
@@ -1167,7 +1418,7 @@ paths:
                             mark: 0
                         - seq: 2
                           stage: dial_mode
-                          observed_at: '2026-09-14T09:59:59Z'
+                          observed_at: '2026-08-15T09:59:50Z'
                           elapsed_us: 100
                           generation_id: generation-42
                           evidence: observed
@@ -1180,7 +1431,7 @@ paths:
                             reason: preserve_initial_route
                         - seq: 3
                           stage: reroute
-                          observed_at: '2026-09-14T09:59:59Z'
+                          observed_at: '2026-08-15T09:59:50Z'
                           elapsed_us: 120
                           generation_id: generation-42
                           evidence: observed
@@ -1191,7 +1442,7 @@ paths:
                             to_evaluation_id: null
                         - seq: 4
                           stage: outbound
-                          observed_at: '2026-09-14T09:59:59Z'
+                          observed_at: '2026-08-15T09:59:50Z'
                           elapsed_us: 150
                           generation_id: generation-42
                           evidence: observed
@@ -1207,10 +1458,12 @@ paths:
                             selection_path:
                               - group_id: group-proxy
                                 member_id: node-hk-01
+                                member_name: hk-01
                                 policy: selector
                                 reason: manual_selection
                                 selection: null
                             leaf_node_id: node-hk-01
+                            leaf_node_name: hk-01
                             target: example.com:443
                             target_kind: domain
                             dial_ip: null
@@ -1220,7 +1473,7 @@ paths:
                             error: null
                         - seq: 5
                           stage: connection
-                          observed_at: '2026-09-14T09:59:59Z'
+                          observed_at: '2026-08-15T09:59:50Z'
                           elapsed_us: 20000
                           generation_id: generation-42
                           evidence: observed
@@ -1242,14 +1495,22 @@ paths:
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
                   value:
-                    id: flow-23
+                    id: flow-24
                     instance_id: instance-7
                     revision: 8
                     network: tcp
                     state: active
                     pname: curl
-                    connection_id: tcp-23
+                    connection_id: tcp-24
                     outbound: proxy
+                    chain:
+                      - node-hk-01
+                    chain_source: evaluation
+                    rule_id: rule-traffic
+                    rule_expression: null
+                    rule_source: kernel
+                    ingress: wan
+                    domain_source: explicit
                     observed_by: userspace
                     started_at: '2026-09-14T09:59:59Z'
                     ended_at: null
@@ -1381,6 +1642,7 @@ paths:
                             mode_override: none
                             selection_path: []
                             leaf_node_id: node-hk-01
+                            leaf_node_name: hk-01
                             target: 203.0.113.53:53
                             target_kind: ip
                             dial_ip: 203.0.113.53
@@ -1460,6 +1722,7 @@ paths:
                             mode_override: none
                             selection_path: []
                             leaf_node_id: node-hk-01
+                            leaf_node_name: hk-01
                             target: example.com:443
                             target_kind: domain
                             dial_ip: null
@@ -2327,7 +2590,8 @@ components:
       scheme: bearer
       bearerFormat: opaque
       description: |
-        Bearer authentication is mandatory whenever a deployment secret is set.
+        Bearer authentication is mandatory on every request except CORS preflights
+        whenever a deployment secret is set.
         The anonymous security alternative is permitted only on an explicitly
         secretless loopback listener, never as a fallback for invalid credentials.
         Native permissions are expressed by x-permission; see API Configuration.
@@ -2373,6 +2637,13 @@ components:
     Cursor:
       name: cursor
       in: query
+      description: |
+        Opaque cursor bound to the resource, running adapter instance, filters,
+        and retained snapshot. Restart, changed filters, or snapshot expiry or
+        eviction invalidates it. GET /flows returns 410 snapshot_expired;
+        GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
+        that is unknown or no longer valid. Discard it and restart the page walk
+        without a cursor; never silently continue against a new snapshot.
       schema:
         type: string
         minLength: 1
@@ -2622,6 +2893,8 @@ components:
             - version
             - capabilities
             - runtime
+            - runtime_outbounds
+            - traffic_history
             - operations
           properties:
             version:
@@ -2633,6 +2906,12 @@ components:
             runtime:
               type: string
               const: /api/v1/runtime
+            runtime_outbounds:
+              type: string
+              const: /api/v1/runtime/outbounds
+            traffic_history:
+              type: string
+              const: /api/v1/runtime/traffic/history
             operations:
               type: string
               const: /api/v1/operations/{id}
@@ -2735,6 +3014,8 @@ components:
           required:
             - runtime
             - runtime_memory
+            - runtime_outbounds
+            - traffic_history
             - datapath
             - nodes
             - groups
@@ -2779,6 +3060,31 @@ components:
                       - cgroup.events.oom
                       - cgroup.events.oom_kill
                       - kernel.ebpf_bytes
+            runtime_outbounds:
+              $ref: '#/components/schemas/AvailableResource'
+            traffic_history:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - max_window_seconds
+                  - max_points
+              properties:
+                available:
+                  type: boolean
+                max_window_seconds:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum look-back window in seconds; not a guarantee against bounded-ring eviction.
+                max_points:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum returned samples per history request.
             datapath:
               type: object
               required:
@@ -3262,6 +3568,7 @@ components:
         - scope
         - observed_by
         - counter_since
+        - sampled_at
         - connections
         - bytes
         - rates
@@ -3273,6 +3580,9 @@ components:
           $ref: '#/components/schemas/ObservedBy'
         counter_since:
           $ref: '#/components/schemas/NullableTimestamp'
+        sampled_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: Traffic sample timestamp, or null when unavailable. Never substitute the HTTP snapshot timestamp.
         connections:
           type: object
           required:
@@ -3308,6 +3618,7 @@ components:
                 window_seconds:
                   type: number
                   exclusiveMinimum: 0
+                  description: Duration of the rate interval ending at sampled_at, in seconds.
                 upload_bytes_per_second:
                   $ref: '#/components/schemas/NullableUInt64'
                 download_bytes_per_second:
@@ -3368,6 +3679,106 @@ components:
                   $ref: '#/components/schemas/NullableUInt64'
                 sampled_at:
                   $ref: '#/components/schemas/NullableTimestamp'
+    RuntimeOutbounds:
+      type: object
+      required:
+        - observed_at
+        - counter_since
+        - outbounds
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        counter_since:
+          $ref: '#/components/schemas/Timestamp'
+          description: Shared cumulative counter reset boundary; changes on restart or reset. Never compute deltas across this boundary.
+        outbounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutboundCounters'
+    OutboundCounters:
+      type: object
+      required:
+        - name
+        - kind
+        - active_connections
+        - total_connections
+        - upload_bytes
+        - download_bytes
+        - errors
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Engine-visible outbound name, retained with its counters across reloads.
+        kind:
+          type: string
+          enum:
+            - group
+            - node
+            - builtin
+          description: Configured group, leaf node, or engine builtin such as direct/block.
+        active_connections:
+          $ref: '#/components/schemas/SafeUInt'
+          description: Currently active connections attributed to this outbound.
+        total_connections:
+          $ref: '#/components/schemas/UInt64'
+          description: Cumulative connections attributed to this outbound since counter_since.
+        upload_bytes:
+          $ref: '#/components/schemas/UInt64'
+        download_bytes:
+          $ref: '#/components/schemas/UInt64'
+        errors:
+          $ref: '#/components/schemas/UInt64'
+          description: Cumulative outbound failures since counter_since; policy blocks are not errors.
+    TrafficHistory:
+      type: object
+      required:
+        - observed_at
+        - window_seconds
+        - sampled_every_seconds
+        - samples
+      description: |
+        Samples lie in (observed_at - window_seconds, observed_at], oldest first.
+        Retention is bounded by age and capacity and is cleared on process restart.
+        Return fewer points for short retention, or an empty array before sampling.
+        If needed, select every Nth stored sample backwards from the newest to
+        fit max_points; preserve original timestamps and rates, without interpolation.
+        Choose the smallest positive N that fits the point limit. A cumulative
+        counter reset makes the spanning rate sample null, never a spike.
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        window_seconds:
+          $ref: '#/components/schemas/SafeUInt'
+          minimum: 1
+          description: Requested look-back window, not the age of the oldest retained sample.
+        sampled_every_seconds:
+          type: number
+          exclusiveMinimum: 0
+          description: Nominal interval between returned samples after thinning, or the recorder interval for an empty result; not the rate averaging interval.
+        samples:
+          type: array
+          description: At most max_points retained samples; missed intervals remain gaps, never fabricated zero traffic.
+          items:
+            $ref: '#/components/schemas/TrafficHistorySample'
+    TrafficHistorySample:
+      type: object
+      required:
+        - sampled_at
+        - upload_bytes_per_second
+        - download_bytes_per_second
+        - connections
+      properties:
+        sampled_at:
+          $ref: '#/components/schemas/Timestamp'
+          description: Original sample timestamp, never the HTTP snapshot time.
+        upload_bytes_per_second:
+          $ref: '#/components/schemas/NullableUInt64'
+        download_bytes_per_second:
+          $ref: '#/components/schemas/NullableUInt64'
+        connections:
+          $ref: '#/components/schemas/NullableSafeUInt'
+          description: Visible active TCP and UDP connections at sampled_at, or null when unavailable.
     DatapathKind:
       type: string
       enum:
@@ -3719,6 +4130,7 @@ components:
             minLength: 1
         health:
           type: array
+          description: Latest observations, unique by (transport, purpose, measurement, ip_version, warmth) within this node.
           items:
             $ref: '#/components/schemas/HealthObservation'
     NodeList:
@@ -4000,6 +4412,7 @@ components:
       required:
         - id
         - name
+        - config_revision
         - policy
         - member_count
         - selection
@@ -4010,6 +4423,10 @@ components:
         name:
           type: string
           minLength: 1
+        config_revision:
+          type: string
+          minLength: 1
+          description: Same opaque configuration revision as Group.config_revision; preserve without numeric parsing.
         policy:
           $ref: '#/components/schemas/GroupPolicy'
         member_count:
@@ -4572,6 +4989,13 @@ components:
         - pname
         - state
         - outbound
+        - chain
+        - chain_source
+        - rule_id
+        - rule_expression
+        - rule_source
+        - ingress
+        - domain_source
         - started_at
         - observed_by
         - upload_bytes
@@ -4606,6 +5030,47 @@ components:
           type:
             - string
             - 'null'
+        chain:
+          type: array
+          items:
+            type: string
+          description: Application outbound selection_path group IDs followed by the leaf node ID, in order; empty for direct/block or an unknown path.
+        chain_source:
+          type: string
+          enum:
+            - evaluation
+            - reconstructed
+            - unknown
+          description: Selection captured at evaluation, reconstructed from retained evidence, or unavailable; never a current group snapshot.
+        rule_id:
+          type:
+            - string
+            - 'null'
+          description: Generation-scoped traffic rule ID, or null when unavailable.
+        rule_expression:
+          type:
+            - string
+            - 'null'
+          description: Sanitized display expression for that rule, or null when unavailable.
+        rule_source:
+          type: string
+          enum:
+            - kernel
+            - recomputed
+            - unknown
+          description: Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+        ingress:
+          type:
+            - string
+            - 'null'
+          enum:
+            - lan
+            - wan
+            - null
+        domain_source:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DomainSource'
         started_at:
           $ref: '#/components/schemas/NullableTimestamp'
         observed_by:
@@ -4639,6 +5104,7 @@ components:
           $ref: '#/components/schemas/Visibility'
         truncated:
           type: boolean
+          description: Whether limit omitted visible entries matching type and src.
         tcp:
           type: array
           items:
@@ -4649,8 +5115,10 @@ components:
             $ref: '#/components/schemas/Connection'
         total_tcp:
           $ref: '#/components/schemas/SafeUInt'
+          description: Visible live TCP entries matching type and src before limit; zero when type excludes TCP.
         total_udp:
           $ref: '#/components/schemas/SafeUInt'
+          description: Visible live UDP entries matching type and src before limit; zero when type excludes UDP.
     FlowScope:
       type: string
       enum:
@@ -4874,6 +5342,13 @@ components:
         - pname
         - connection_id
         - outbound
+        - chain
+        - chain_source
+        - rule_id
+        - rule_expression
+        - rule_source
+        - ingress
+        - domain_source
         - observed_by
         - started_at
         - ended_at
@@ -4905,6 +5380,47 @@ components:
           type:
             - string
             - 'null'
+        chain:
+          type: array
+          items:
+            type: string
+          description: Application outbound selection_path group IDs followed by the leaf node ID, in order; empty for direct/block or an unknown path.
+        chain_source:
+          type: string
+          enum:
+            - evaluation
+            - reconstructed
+            - unknown
+          description: Selection captured at evaluation, reconstructed from retained evidence, or unavailable; never a current group snapshot.
+        rule_id:
+          type:
+            - string
+            - 'null'
+          description: Generation-scoped traffic rule ID, or null when unavailable.
+        rule_expression:
+          type:
+            - string
+            - 'null'
+          description: Sanitized display expression for that rule, or null when unavailable.
+        rule_source:
+          type: string
+          enum:
+            - kernel
+            - recomputed
+            - unknown
+          description: Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+        ingress:
+          type:
+            - string
+            - 'null'
+          enum:
+            - lan
+            - wan
+            - null
+        domain_source:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DomainSource'
         observed_by:
           $ref: '#/components/schemas/ObservedBy'
         started_at:
@@ -5179,6 +5695,7 @@ components:
           type:
             - object
             - 'null'
+          additionalProperties: true
           description: Immutable inputs consumed by this evaluation, typed by chain below; null means missing capture.
         dns_action:
           type:
@@ -5526,6 +6043,7 @@ components:
         - mode_override
         - selection_path
         - leaf_node_id
+        - leaf_node_name
         - target
         - target_kind
         - dial_ip
@@ -5581,6 +6099,11 @@ components:
           type:
             - string
             - 'null'
+        leaf_node_name:
+          type:
+            - string
+            - 'null'
+          description: Sanitized leaf name captured at decision time, or null when unavailable; leaf_node_id remains authoritative.
         target:
           type:
             - string
@@ -5636,6 +6159,7 @@ components:
       required:
         - group_id
         - member_id
+        - member_name
         - policy
         - reason
         - selection
@@ -5648,6 +6172,11 @@ components:
             - string
             - 'null'
           minLength: 1
+        member_name:
+          type:
+            - string
+            - 'null'
+          description: Sanitized member name captured at decision time, or null when unavailable; member_id remains authoritative.
         policy:
           type: string
           minLength: 1
@@ -5686,7 +6215,9 @@ components:
       type: object
       required:
         - member_id
+        - member_name
         - leaf_node_id
+        - leaf_node_name
         - eligible
         - sorting_latency_ms
         - score
@@ -5696,10 +6227,20 @@ components:
         member_id:
           type: string
           minLength: 1
+        member_name:
+          type:
+            - string
+            - 'null'
+          description: Sanitized member name captured at decision time, or null when unavailable; member_id remains authoritative.
         leaf_node_id:
           type:
             - string
             - 'null'
+        leaf_node_name:
+          type:
+            - string
+            - 'null'
+          description: Sanitized leaf name captured at decision time, or null when unavailable; leaf_node_id remains authoritative.
         eligible:
           type:
             - boolean
@@ -6618,6 +7159,7 @@ components:
           type:
             - object
             - 'null'
+          additionalProperties: true
         error:
           oneOf:
             - type: 'null'
