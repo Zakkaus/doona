@@ -20,6 +20,10 @@ import FileText from '@react-spectrum/s2/icons/FileText';
 import History from '@react-spectrum/s2/icons/History';
 import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
 import logo from '../logo.svg';
+import wpFjord from '../wallpapers/fjord.jpg';
+import wpHills from '../wallpapers/hills.jpg';
+import wpSnow from '../wallpapers/snow.jpg';
+import wpJelly from '../wallpapers/jellyfish.jpg';
 import GitHub from '../app/icons/GitHub';
 import {LangContext, LANGS, readLang, useT, type Lang} from '../app/i18n';
 import {conns, groups, rules} from '../app/mock';
@@ -60,6 +64,16 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
 type Wordmark = 'gradient' | 'plain';
+type Wallpaper = 'gradient' | 'fjord' | 'hills' | 'snow' | 'jellyfish' | 'custom';
+const WALLPAPERS: Record<Exclude<Wallpaper, 'gradient' | 'custom'>, string> = {fjord: wpFjord, hills: wpHills, snow: wpSnow, jellyfish: wpJelly};
+const CUSTOM_KEY = 'doona-wallpaper-custom';
+// The glass theme paints --rp-wallpaper on <html>; the gradient look leaves it unset and the CSS falls back to --rp-bg.
+function paintWallpaper(w: Wallpaper) {
+  const st = document.documentElement.style;
+  if (w === 'gradient') { st.removeProperty('--rp-wallpaper'); return; }
+  const url = w === 'custom' ? read(CUSTOM_KEY) : WALLPAPERS[w];
+  if (url) st.setProperty('--rp-wallpaper', `url("${url}")`); else st.removeProperty('--rp-wallpaper');
+}
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 // Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
 // paint the default palette and every control would then transition to the stored one (a visible flash on load).
@@ -69,11 +83,28 @@ export function stampAppearance() {
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset;
   d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; d.wordmark = (read('doona-wordmark') as Wordmark) || 'gradient';
+  paintWallpaper((read('doona-wallpaper') as Wallpaper) || 'gradient');
 }
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
   const [wordmark, setWordmark] = useState<Wordmark>(() => { try { return (localStorage.getItem('doona-wordmark') as Wordmark) || 'gradient'; } catch { return 'gradient'; } });
+  const [wallpaper, setWallpaper] = useState<Wallpaper>(() => (read('doona-wallpaper') as Wallpaper) || 'gradient');
+  const pickWallpaper = (w: Wallpaper) => {
+    if (w === 'custom') {
+      // A picture of your own: read as a data URL and keep it in localStorage (a few MB at most).
+      const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
+      input.onchange = () => {
+        const f = input.files?.[0]; if (!f) return;
+        if (f.size > 4 * 1024 * 1024) { toast('negative', '圖片請小於 4 MB'); return; }
+        const r = new FileReader(); r.onload = () => { try { localStorage.setItem(CUSTOM_KEY, String(r.result)); localStorage.setItem('doona-wallpaper', 'custom'); } catch { toast('negative', '瀏覽器儲存空間不足'); return; } setWallpaper('custom'); withCrossfade(() => paintWallpaper('custom')); };
+        r.readAsDataURL(f);
+      };
+      input.click(); return;
+    }
+    setWallpaper(w); try { localStorage.setItem('doona-wallpaper', w); } catch { /* private mode */ }
+    withCrossfade(() => paintWallpaper(w));
+  };
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => { const mq = window.matchMedia('(prefers-color-scheme: dark)'); const on = () => setSysDark(mq.matches); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
@@ -82,7 +113,7 @@ function useAppearance() {
   const toggle = () => { const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'; withCrossfade(() => setScheme(next)); try { localStorage.setItem('doona-scheme', next); } catch { /* private mode */ } };
   const pickPalette = (p: PaletteId) => { withCrossfade(() => setPalette(p)); try { localStorage.setItem('doona-palette', p); } catch { /* private mode */ } };
   const pickWordmark = (w: Wordmark) => { setWordmark(w); try { localStorage.setItem('doona-wordmark', w); } catch { /* private mode */ } };
-  return {scheme, dark, toggle, palette, pickPalette, wordmark, pickWordmark};
+  return {scheme, dark, toggle, palette, pickPalette, wordmark, pickWordmark, wallpaper, pickWallpaper};
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
@@ -154,7 +185,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <span className={spinning ? 'rp-spin' : undefined}><Button quiet icon label={t('refresh')} onPress={() => { setSpinning(true); setTimeout(() => setSpinning(false), 600); toast('positive', t('refreshed')); }}><Refresh /></Button></span>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))} extra={{title: t('wordmark'), value: ap.wordmark, onChange: k => ap.pickWordmark(k as Wordmark), items: [{id: 'gradient', label: t('wordmark.gradient')}, {id: 'plain', label: t('wordmark.plain')}]}}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))} extra={{title: t('wordmark'), value: ap.wordmark, onChange: k => ap.pickWordmark(k as Wordmark), items: [{id: 'gradient', label: t('wordmark.gradient')}, {id: 'plain', label: t('wordmark.plain')}]}} extra2={ap.palette === 'glass/glass' ? {title: t('wallpaper'), value: 'bg-' + ap.wallpaper, onChange: k => ap.pickWallpaper(k.replace('bg-', '') as Wallpaper), items: (['gradient', 'fjord', 'hills', 'snow', 'jellyfish', 'custom'] as const).map(w => ({id: 'bg-' + w, label: t(`wallpaper.${w}`), desc: w === 'custom' ? '…' : undefined}))} : undefined}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
