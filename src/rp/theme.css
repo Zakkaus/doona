@@ -198,6 +198,12 @@
    whatever the picture. The gradient look keeps the chrome bare. */
 :root[data-family='glass'][style*='--rp-wallpaper'] .rp-top, :root[data-family='glass'][style*='--rp-wallpaper'] .rp-side { background: var(--rp-glass-strong); backdrop-filter: blur(28px) saturate(1.8); }
 :root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: none; }
+:root[data-family='glass'][style*='--rp-wallpaper'] { --rp-glass: rgba(255, 255, 255, 0.5); --rp-glass-strong: rgba(255, 255, 255, 0.68); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] { --rp-glass: rgba(16, 16, 24, 0.58); --rp-glass-strong: rgba(16, 16, 24, 0.74); }
+/* The spread shadow fills the notch outside the content area's rounded corner with the chrome tint, so the corner reads
+   as an inset curve instead of a square of wallpaper. */
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-main { background: rgba(255, 255, 255, 0.22); box-shadow: 0 0 0 24px var(--rp-glass-strong); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-main { background: rgba(0, 0, 0, 0.4); }
 :root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35); border-bottom: 0; }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.18); border-color: rgba(255, 255, 255, 0.08); }
@@ -361,7 +367,7 @@ button, input { font: inherit; color: inherit; }
 .rp-seg .rp-btn[data-selected] { background: var(--rp-surface); color: var(--rp-pine); border-color: var(--rp-pine); }
 .rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 8px 2px 32px; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; box-sizing: border-box; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
 .rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
@@ -474,6 +480,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-nodegrid .rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
 .rp-menu-scroll { max-height: 360px; overflow: auto; scrollbar-width: thin; }
 .rp-menu-search { margin: 4px 4px 8px; width: 240px; }
+.rp-more { color: var(--rp-subtle); }
+.rp-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rp-hl-high); border-top-color: var(--rp-pine); animation: rp-spin 800ms linear infinite; }
 .rp-muted { color: var(--rp-muted); }
 .rp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .rp-switch .track { width: 32px; height: 16px; border-radius: 8px; background: var(--rp-hl-high); position: relative; transition: background 150ms; flex-shrink: 0; }

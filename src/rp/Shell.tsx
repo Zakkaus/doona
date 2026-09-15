@@ -66,13 +66,36 @@ const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 type Wordmark = 'gradient' | 'plain';
 type Wallpaper = 'gradient' | 'fjord' | 'hills' | 'snow' | 'jellyfish' | 'custom';
 const WALLPAPERS: Record<Exclude<Wallpaper, 'gradient' | 'custom'>, string> = {fjord: wpFjord, hills: wpHills, snow: wpSnow, jellyfish: wpJelly};
-const CUSTOM_KEY = 'doona-wallpaper-custom';
+// A picture of your own lives in IndexedDB as a JPEG blob (localStorage would choke on a data URL of a few MB).
+const DB = 'doona'; const STORE = 'wallpaper';
+function idb(mode: IDBTransactionMode, fn: (st: IDBObjectStore) => IDBRequest): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open(DB, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(STORE);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => { const tx = open.result.transaction(STORE, mode); const req = fn(tx.objectStore(STORE)); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); };
+  });
+}
+let customUrl: string | null = null;
+// Downscale to at most 2560px wide and re-encode, so the stored picture stays a few hundred KB.
+function shrink(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const src = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 2560 / img.width); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(src); c.toBlob(b => b ? resolve(b) : reject(new Error('encode')), 'image/jpeg', 0.86); };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('decode')); };
+    img.src = src;
+  });
+}
 // The glass theme paints --rp-wallpaper on <html>; the gradient look leaves it unset and the CSS falls back to --rp-bg.
 function paintWallpaper(w: Wallpaper) {
   const st = document.documentElement.style;
   if (w === 'gradient') { st.removeProperty('--rp-wallpaper'); return; }
-  const url = w === 'custom' ? read(CUSTOM_KEY) : WALLPAPERS[w];
-  if (url) st.setProperty('--rp-wallpaper', `url("${url}")`); else st.removeProperty('--rp-wallpaper');
+  if (w === 'custom') {
+    if (customUrl) { st.setProperty('--rp-wallpaper', `url("${customUrl}")`); return; }
+    idb('readonly', o => o.get('current')).then(b => { if (b instanceof Blob) { customUrl = URL.createObjectURL(b); st.setProperty('--rp-wallpaper', `url("${customUrl}")`); } }).catch(() => {});
+    return;
+  }
+  st.setProperty('--rp-wallpaper', `url("${WALLPAPERS[w]}")`);
 }
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 // Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
@@ -90,17 +113,22 @@ function useAppearance() {
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
   const [wordmark, setWordmark] = useState<Wordmark>(() => { try { return (localStorage.getItem('doona-wordmark') as Wordmark) || 'gradient'; } catch { return 'gradient'; } });
   const [wallpaper, setWallpaper] = useState<Wallpaper>(() => (read('doona-wallpaper') as Wallpaper) || 'gradient');
-  const pickWallpaper = (w: Wallpaper) => {
+  const pickWallpaper = (w: Wallpaper, failMsg = 'Could not use that picture') => {
     if (w === 'custom') {
       // A picture of your own: read as a data URL and keep it in localStorage (a few MB at most).
       const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
-      input.onchange = () => {
+      input.onchange = async () => {
         const f = input.files?.[0]; if (!f) return;
-        if (f.size > 4 * 1024 * 1024) { toast('negative', '圖片請小於 4 MB'); return; }
-        const r = new FileReader(); r.onload = () => { try { localStorage.setItem(CUSTOM_KEY, String(r.result)); localStorage.setItem('doona-wallpaper', 'custom'); } catch { toast('negative', '瀏覽器儲存空間不足'); return; } setWallpaper('custom'); withCrossfade(() => paintWallpaper('custom')); };
-        r.readAsDataURL(f);
+        try {
+          const blob = await shrink(f);
+          await idb('readwrite', o => o.put(blob, 'current'));
+          if (customUrl) URL.revokeObjectURL(customUrl); customUrl = URL.createObjectURL(blob);
+          try { localStorage.setItem('doona-wallpaper', 'custom'); } catch { /* private mode */ }
+          setWallpaper('custom'); withCrossfade(() => paintWallpaper('custom'));
+        } catch { toast('negative', failMsg); }
       };
-      input.click(); return;
+      // Opened on the next tick so the menu can close first; still inside the user gesture.
+      setTimeout(() => input.click(), 0); return;
     }
     setWallpaper(w); try { localStorage.setItem('doona-wallpaper', w); } catch { /* private mode */ }
     withCrossfade(() => paintWallpaper(w));
@@ -185,7 +213,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
           <span className={spinning ? 'rp-spin' : undefined}><Button quiet icon label={t('refresh')} onPress={() => { setSpinning(true); setTimeout(() => setSpinning(false), 600); toast('positive', t('refreshed')); }}><Refresh /></Button></span>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={LANGS.map(([k, l]) => ({id: k, label: l}))}><Translate /></MenuButton>
-          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))} extra={{title: t('wordmark'), value: ap.wordmark, onChange: k => ap.pickWordmark(k as Wordmark), items: [{id: 'gradient', label: t('wordmark.gradient')}, {id: 'plain', label: t('wordmark.plain')}]}} extra2={ap.palette === 'glass/glass' ? {title: t('wallpaper'), value: 'bg-' + ap.wallpaper, onChange: k => ap.pickWallpaper(k.replace('bg-', '') as Wallpaper), items: (['gradient', 'fjord', 'hills', 'snow', 'jellyfish', 'custom'] as const).map(w => ({id: 'bg-' + w, label: t(`wallpaper.${w}`), desc: w === 'custom' ? '…' : undefined}))} : undefined}><Color /></MenuButton>
+          <MenuButton quiet chevron={false} label={t('palette')} value={ap.palette} onChange={k => ap.pickPalette(k as PaletteId)} sections={palettes(t('palette.glass'))} extra={{title: t('wordmark'), value: ap.wordmark, onChange: k => ap.pickWordmark(k as Wordmark), items: [{id: 'gradient', label: t('wordmark.gradient')}, {id: 'plain', label: t('wordmark.plain')}]}} extra2={ap.palette === 'glass/glass' ? {title: t('wallpaper'), value: 'bg-' + ap.wallpaper, onChange: k => ap.pickWallpaper(k.replace('bg-', '') as Wallpaper, t('wallpaper.failed')), items: (['gradient', 'fjord', 'hills', 'snow', 'jellyfish', 'custom'] as const).map(w => ({id: 'bg-' + w, label: t(`wallpaper.${w}`), desc: w === 'custom' ? '…' : undefined}))} : undefined}><Color /></MenuButton>
           <Button quiet icon label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))} onPress={ap.toggle}><SchemeIcon dark={ap.dark} /></Button>
         </div>
       </header>
