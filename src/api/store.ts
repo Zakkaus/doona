@@ -4,8 +4,10 @@ import type {Api} from './api';
 import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import {clientRows} from './selectors';
+import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
+import {shouldRefetch, type ResourceName} from './invalidation';
 
-type Listener = (event: ApiEvent) => void;
+type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
 const streams = new Map<Api, Stream>();
@@ -18,7 +20,7 @@ export function useEvents(onEvent: Listener) {
   });
   const subscribe = useCallback(
     (notify: () => void) => {
-      const listener: Listener = event => callback.current(event);
+      const listener: Listener = (event, reconnected) => callback.current(event, reconnected);
       let stream = streams.get(api);
       if (!stream) {
         stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus};
@@ -28,9 +30,12 @@ export function useEvents(onEvent: Listener) {
           shared.status = {...shared.status, ...change};
           shared.statuses.forEach(fn => fn());
         };
-        void api
-          .capabilities(shared.controller.signal)
+        const request = inflight.acquire(api, normalizeResourceKey(['capabilities']), signal => api.capabilities(signal));
+        shared.controller.signal.addEventListener('abort', request.release, {once: true});
+        void request.promise
           .then(capabilities => {
+            request.release();
+            shared.controller.signal.removeEventListener('abort', request.release);
             if (shared.controller.signal.aborted) return;
             update({available: capabilities.resources.events.available});
             if (!capabilities.resources.events.available) return;
@@ -38,21 +43,24 @@ export function useEvents(onEvent: Listener) {
               signal: shared.controller.signal,
               onConnectionChange: connected => update({connected}),
               onEvent: event => {
+                const reconnected = event.event === 'stream.ready' && !!shared.ready;
                 if (event.event === 'stream.ready') {
                   shared.ready = event;
                   update({cursor: event.id, error: null});
                 }
-                shared.listeners.forEach(fn => fn(event));
+                shared.listeners.forEach(fn => fn(event, reconnected));
               }
             });
           })
           .catch(reason => {
+            request.release();
+            shared.controller.signal.removeEventListener('abort', request.release);
             if (!shared.controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
           });
       }
       stream.listeners.add(listener);
       stream.statuses.add(notify);
-      if (stream.ready) listener(stream.ready);
+      if (stream.ready) listener(stream.ready, false);
       return () => {
         stream.listeners.delete(listener);
         stream.statuses.delete(notify);
@@ -80,38 +88,57 @@ export function useEventFeed() {
   return {...status, events};
 }
 
+type Resource<T> = {
+  key: ResourceKey;
+  fetch: (signal: AbortSignal) => Promise<T>;
+  invalidateAs?: ResourceName;
+  acceptEvent?: (event: ApiEvent) => boolean;
+};
+
 export function useResource<T>(
-  fetcher: (signal: AbortSignal) => Promise<T>,
+  resource: Resource<T>,
   {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}
 ) {
-  const [key, setKey] = useState(() => ({every, enabled, deps}));
+  const api = getApi();
+  const name = normalizeResourceKey(resource.key);
+  const [key, setKey] = useState(() => ({api, name, every, enabled, deps}));
   const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
   // Match React's dependency comparison without serializing API object identities.
-  if (!Object.is(key.every, every) || key.enabled !== enabled || key.deps.length !== deps.length || deps.some((dep, i) => !Object.is(dep, key.deps[i]))) {
-    setKey({every, enabled, deps});
+  if (
+    key.api !== api ||
+    key.name !== name ||
+    !Object.is(key.every, every) ||
+    key.enabled !== enabled ||
+    key.deps.length !== deps.length ||
+    deps.some((dep, i) => !Object.is(dep, key.deps[i]))
+  ) {
+    setKey({api, name, every, enabled, deps});
     setState({data: undefined, loading: enabled, error: null});
   }
-  const current = useRef(fetcher);
+  const current = useRef(resource.fetch);
   useEffect(() => {
-    current.current = fetcher;
+    current.current = resource.fetch;
   });
   const refresh = useRef<() => void>(() => {});
   const refetch = useCallback(() => refresh.current(), []);
   useEffect(() => {
     if (!key.enabled) return;
-    let controller: AbortController | undefined;
+    let pending: RequestLease<T> | undefined;
     let disposed = false;
     const load = () => {
-      controller?.abort();
-      const request = new AbortController();
-      controller = request;
-      void current.current(request.signal).then(
+      if (pending) return;
+      const request = inflight.acquire(key.api, key.name, current.current);
+      pending = request;
+      void request.promise.then(
         data => {
-          if (!disposed && !request.signal.aborted) setState({data, loading: false, error: null});
+          pending = undefined;
+          request.release();
+          if (!disposed) setState({data, loading: false, error: null});
         },
         reason => {
-          if (!disposed && !request.signal.aborted)
-            setState(previous => ({...previous, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))}));
+          pending = undefined;
+          request.release();
+          if (!disposed) setState(previous => ({...previous, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))}));
         }
       );
     };
@@ -123,23 +150,23 @@ export function useResource<T>(
     const timer = key.every > 0 ? setInterval(refresh.current, key.every) : undefined;
     return () => {
       disposed = true;
-      controller?.abort();
+      pending?.release();
       clearInterval(timer);
       refresh.current = () => {};
     };
   }, [key]);
-  useEvents(event => {
-    if (event.event === 'runtime.updated') refetch();
+  useEvents((event, reconnected) => {
+    if (shouldRefetch(resource.invalidateAs ?? resource.key[0], event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
   });
   return {...state, refetch};
 }
 export function useRuntime(enabled = true) {
   const api = getApi();
-  return useResource(signal => api.runtime(signal), {deps: [api], enabled});
+  return useResource({key: ['runtime'], fetch: signal => api.runtime(signal)}, {deps: [api], enabled});
 }
 export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
-  return useResource(signal => api.runtimeOutbounds(signal), {deps: [api], enabled});
+  return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
 }
 const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
@@ -147,42 +174,56 @@ export function useTrafficHistory(range: string, capabilities: Capabilities | un
   const limits = capabilities?.resources.traffic_history;
   const window_seconds = Math.min(historyWindows[range] ?? 720, limits?.max_window_seconds ?? 720);
   const max_points = Math.min(360, limits?.max_points ?? 360);
-  return useResource(signal => api.trafficHistory({window_seconds, max_points}, signal), {
-    deps: [api, window_seconds, max_points],
-    enabled: limits?.available === true
-  });
+  return useResource(
+    {key: ['trafficHistory', {window_seconds, max_points}], fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
+    {
+      deps: [api, window_seconds, max_points],
+      enabled: limits?.available === true
+    }
+  );
 }
 export function useNodes() {
   const api = getApi();
   return useResource(
-    async signal => {
-      const nodes: Node[] = [];
-      let cursor: string | undefined;
-      do {
-        const result = await api.nodes({cursor, limit: 1000}, signal);
-        nodes.push(...result.nodes);
-        cursor = result.next_cursor ?? undefined;
-      } while (cursor);
-      return nodes;
+    {
+      key: ['nodes'],
+      fetch: async signal => {
+        const nodes: Node[] = [];
+        let cursor: string | undefined;
+        do {
+          const result = await api.nodes({cursor, limit: 1000}, signal);
+          nodes.push(...result.nodes);
+          cursor = result.next_cursor ?? undefined;
+        } while (cursor);
+        return nodes;
+      }
     },
     {deps: [api], every: 30000}
   );
 }
 export function useGroups() {
   const api = getApi();
-  return useResource(signal => api.groups(signal), {deps: [api], every: 30000});
+  return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000});
 }
 export function useConnections(src?: string) {
+  return useConnectionList(src, 'connections');
+}
+function useConnectionList(src: string | undefined, invalidateAs: 'connections' | 'clients') {
   const api = getApi();
-  return useResource(signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal), {deps: [api, src]});
+  return useResource(
+    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal), invalidateAs},
+    {deps: [api, src]}
+  );
 }
 export function useConfigRules() {
-  return getApi().configRules();
+  const api = getApi();
+  const resource = useResource({key: ['configRules'], fetch: async () => api.configRules()}, {deps: [api], every: 0});
+  return resource.data === undefined ? api.configRules() : resource.data;
 }
 
 const firstSeen = new Map<string, string>();
 export function useClients() {
-  const connections = useConnections();
+  const connections = useConnectionList(undefined, 'clients');
   const rows = useMemo(() => {
     const now = new Date().toISOString();
     return clientRows(connections.data).map(row => {
@@ -262,38 +303,40 @@ export function useRoutingTrace() {
 
 export function useFlows(connection_id?: string) {
   const api = getApi();
-  const resource = useResource(
-    async signal => {
-      let cursor: string | undefined;
-      let snapshot: FlowList | undefined;
-      do {
-        const result = await api.flows({network: 'all', state: 'all', connection_id, cursor, limit: 1000}, signal);
-        if (snapshot) snapshot.flows.push(...result.flows);
-        else snapshot = result;
-        cursor = result.next_cursor ?? undefined;
-      } while (cursor);
-      return snapshot;
+  return useResource(
+    {
+      key: ['flows', {connection_id}],
+      fetch: async signal => {
+        let cursor: string | undefined;
+        let snapshot: FlowList | undefined;
+        do {
+          const result = await api.flows({network: 'all', state: 'all', connection_id, cursor, limit: 1000}, signal);
+          if (snapshot) snapshot.flows.push(...result.flows);
+          else snapshot = result;
+          cursor = result.next_cursor ?? undefined;
+        } while (cursor);
+        return snapshot;
+      }
     },
     {deps: [api, connection_id]}
   );
-  useEvents(event => {
-    if (event.event === 'flow.updated' || event.event === 'flow.gap') resource.refetch();
-  });
-  return resource;
 }
 
 export function useFlow(id: string | null) {
   const api = getApi();
-  const resource = useResource(signal => (id ? api.flow(id, signal) : Promise.resolve(null)), {deps: [api, id]});
-  useEvents(event => {
-    if (event.event === 'flow.gap' || (event.event === 'flow.updated' && event.data.resource_id === id)) resource.refetch();
-  });
-  return resource;
+  return useResource(
+    {
+      key: ['flow', {id}],
+      fetch: signal => (id ? api.flow(id, signal) : Promise.resolve(null)),
+      acceptEvent: event => event.event !== 'flow.updated' || event.data.resource_id === id
+    },
+    {deps: [api, id]}
+  );
 }
 
 export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void) {
   const api = getApi();
-  const resource = useResource(signal => api.group(id, signal), {deps: [api, id], every: 30000});
+  const resource = useResource({key: ['group', {id}], fetch: signal => api.group(id, signal)}, {deps: [api, id], every: 30000});
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
   const [busy, setBusy] = useState<'selection' | 'probe' | 'config' | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -373,29 +416,32 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
 
 export function useCapabilities() {
   const api = getApi();
-  return useResource(signal => api.capabilities(signal), {deps: [api], every: 0});
+  return useResource({key: ['capabilities'], fetch: signal => api.capabilities(signal)}, {deps: [api], every: 0});
 }
 export function useDatapath(enabled = true) {
   const api = getApi();
-  return useResource(signal => api.datapath('full', signal), {deps: [api], enabled});
+  return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {deps: [api], enabled});
 }
 export function useRuntimeMemory(enabled = true) {
   const api = getApi();
-  return useResource(signal => api.runtimeMemory(signal), {deps: [api], enabled});
+  return useResource({key: ['runtimeMemory'], fetch: signal => api.runtimeMemory(signal)}, {deps: [api], enabled});
 }
 export function useDnsCache(enabled = true) {
   const api = getApi();
   return useResource(
-    async signal => {
-      let cursor: string | undefined;
-      let snapshot: DnsCacheList | undefined;
-      do {
-        const result = await api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal);
-        if (snapshot) snapshot.entries.push(...result.entries);
-        else snapshot = result;
-        cursor = result.next_cursor ?? undefined;
-      } while (cursor);
-      return snapshot!;
+    {
+      key: ['dnsCache'],
+      fetch: async signal => {
+        let cursor: string | undefined;
+        let snapshot: DnsCacheList | undefined;
+        do {
+          const result = await api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal);
+          if (snapshot) snapshot.entries.push(...result.entries);
+          else snapshot = result;
+          cursor = result.next_cursor ?? undefined;
+        } while (cursor);
+        return snapshot!;
+      }
     },
     {deps: [api], enabled}
   );

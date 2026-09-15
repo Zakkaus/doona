@@ -1,0 +1,34 @@
+import type {ApiEvent, EventKind} from './model';
+
+export type ResourceName =
+  | 'capabilities'
+  | 'runtime'
+  | 'runtimeOutbounds'
+  | 'trafficHistory'
+  | 'connections'
+  | 'clients'
+  | 'nodes'
+  | 'groups'
+  | 'group'
+  | 'flows'
+  | 'flow'
+  | 'datapath'
+  | 'runtimeMemory'
+  | 'dnsCache'
+  | 'configRules';
+
+// Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
+export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
+  'stream.ready': {now: 'all', poll: []},
+  'runtime.updated': {now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'connections'], poll: ['nodes', 'groups', 'group', 'clients']},
+  'flow.updated': {now: ['flows', 'flow', 'connections'], poll: []},
+  'flow.gap': {now: ['flows', 'flow'], poll: []},
+  'operation.updated': {now: ['runtime'], poll: []},
+  'generation.changed': {now: ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'configRules', 'flows', 'flow'], poll: ['dnsCache']}
+};
+
+export function shouldRefetch(resource: ResourceName, event: ApiEvent, reconnected = false): boolean {
+  if (!Object.hasOwn(invalidations, event.event) || (event.event === 'stream.ready' && !reconnected)) return false;
+  const {now} = invalidations[event.event];
+  return now === 'all' || now.includes(resource);
+}
