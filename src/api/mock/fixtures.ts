@@ -426,6 +426,33 @@ export const connections: ConnectionList = {
     connection('8', '10.0.0.1:53', '10.0.0.20', 'gaming', '12000', '1000', null, 'udp')
   ]
 };
+
+export function connectionFixtures() {
+  const templates = [
+    ...connections.tcp.map(connection => ({connection, network: 'tcp' as const})),
+    ...connections.udp.map(connection => ({connection, network: 'udp' as const}))
+  ].sort((a, b) => Number(a.connection.id) - Number(b.connection.id));
+  const snapshot: ConnectionList = {...connections, tcp: [], udp: [], total_tcp: 0, total_udp: 0};
+  const recorded: FlowDetail[] = [];
+  for (let i = 0; i < 1200; i++) {
+    const {connection, network} = templates[i % templates.length];
+    const suffix = String(i + 1).padStart(4, '0');
+    const row: Connection = {
+      ...connection,
+      id: 'c-' + suffix,
+      started_at: ago((i * 3600) / 1200),
+      flow_id: (i + 1) % 3 === 0 ? 'flow-c-' + suffix : null
+    };
+    snapshot[network].push(row);
+    if (row.flow_id) {
+      const flow = createFlow(row, network, observedAt, instanceId);
+      recorded.push({...flow, id: row.flow_id, connection_id: row.id});
+    }
+  }
+  snapshot.total_tcp = snapshot.tcp.length;
+  snapshot.total_udp = snapshot.udp.length;
+  return {connections: snapshot, flows: recorded};
+}
 export const dnsCache: DnsCacheList = {
   observed_at: observedAt,
   coverage: {positive: true, negative: true, persistent: false},

@@ -2894,3 +2894,33 @@ button.rp-node:hover {
 .rp-rule > .rp-provenance {
   flex-shrink: 0;
 }
+
+/* Virtualized table elements are divs; retain the native table's cell geometry. */
+.rp-connection-grid {
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+  outline: none;
+}
+.rp-connection-grid [role='row'],
+.rp-connection-grid [role='columnheader'] {
+  height: 100%;
+}
+.rp-connection-grid [role='columnheader'] {
+  position: static;
+}
+.rp-connection-grid [role='rowheader'],
+.rp-connection-grid [role='gridcell'] {
+  display: flex;
+  align-items: center;
+  max-width: none;
+}
+.rp-connection-cell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-connection-grid [role='rowgroup'] {
+  height: 100%;
+}

@@ -20,8 +20,10 @@ function found<T>(value: T | undefined, kind: string): T {
 
 export function createMockApi(): Api {
   let count = 100;
+  let big = false;
   try {
     const value = localStorage.getItem('doona-mock-big');
+    big = value !== null;
     if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
   } catch {}
   let capabilities = fixtures.capabilities;
@@ -29,8 +31,9 @@ export function createMockApi(): Api {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
-  const flows = structuredClone(fixtures.flows);
-  const connections = structuredClone(fixtures.connections);
+  const large = big ? fixtures.connectionFixtures() : undefined;
+  const flows = large?.flows ?? structuredClone(fixtures.flows);
+  const connections = large?.connections ?? structuredClone(fixtures.connections);
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   const dnsCache = structuredClone(fixtures.dnsCache);

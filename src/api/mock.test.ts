@@ -3,7 +3,7 @@ import {createMockApi} from './mock';
 import {chainLabel, clientRows, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
 import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
-import {connections, trafficHistory} from './mock/fixtures';
+import {connectionFixtures, connections, trafficHistory} from './mock/fixtures';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -68,6 +68,25 @@ it('filters exact source IPs and protocol before computing totals and limiting r
   expect(sourceIp('10.0.0.12:443')).toBe('10.0.0.12');
   for (const value of ['api.telegram.org', '256.0.0.1', '10.0.0.12:443', '1.2.3', '2001:::1']) expect(ipLiteral(value)).toBeUndefined();
   await expect(api.connections({src: 'host.invalid'})).rejects.toMatchObject({status: 400});
+});
+
+it('limits the large connection snapshot without losing totals or deterministic IDs', async () => {
+  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-big' ? '100' : null)});
+  const fixture = connectionFixtures().connections;
+  const generated = [...fixture.tcp, ...fixture.udp].sort((a, b) => a.id.localeCompare(b.id));
+  expect(generated.map(row => row.id)).toEqual(Array.from({length: 1200}, (_, i) => 'c-' + String(i + 1).padStart(4, '0')));
+  expect(connectionFixtures().connections).toEqual(fixture);
+  expect(generated.filter(row => row.flow_id).map(row => row.id)).toEqual(generated.filter((_, i) => (i + 1) % 3 === 0).map(row => row.id));
+  const ages = generated.map(row => Date.parse(fixture.observed_at) - Date.parse(row.started_at!));
+  expect(Math.min(...ages)).toBe(0);
+  expect(Math.max(...ages)).toBe(3597000);
+  const api = createMockApi();
+  const snapshot = await api.connections({limit: 1000});
+  expect(snapshot).toMatchObject({total_tcp: 900, total_udp: 300, truncated: true});
+  expect([...snapshot.tcp, ...snapshot.udp].map(row => row.id)).toEqual([...fixture.tcp, ...fixture.udp].slice(0, 1000).map(row => row.id));
+  expect(await api.connections({type: 'udp', limit: 1000})).toMatchObject({total_tcp: 0, total_udp: 300, truncated: false, tcp: [], udp: fixture.udp});
+  const linked = snapshot.tcp.find(row => row.flow_id)!;
+  expect(await api.flow(linked.flow_id!)).toMatchObject({connection_id: linked.id, started_at: linked.started_at, input: {dst: linked.dst}});
 });
 
 it('finds a retained flow by connection ID when the live row has no flow ID', async () => {
