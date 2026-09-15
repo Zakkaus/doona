@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible problem in doona.
+title: 'bug: '
+labels:
+  - bug
+body:
+  - type: input
+    id: version
+    attributes:
+      label: doona version or commit
+      description: Enter the released version or commit you tested.
+    validations:
+      required: true
+  - type: input
+    id: backend
+    attributes:
+      label: Backend and version
+      description: Enter the backend name and version, or enter "mock".
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Enter the browser name and version.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: console-errors
+    attributes:
+      label: Console errors
+      description: Paste console errors, or write None.
+    validations:
+      required: true
