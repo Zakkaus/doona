@@ -2956,3 +2956,10 @@ button.rp-node:hover {
   background: var(--rp-hl-low);
   border-color: var(--rp-hl-high);
 }
+.rp-quick-native {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rp-spin svg {
+  animation-iteration-count: infinite;
+}

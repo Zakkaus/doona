@@ -33,7 +33,7 @@ type Feature = {
   id: string;
   path: string;
   nav: {group: Key; titleKey: Key; Icon: typeof Home} | null;
-  Page: ComponentType<PageProps>;
+  Page: ComponentType<PageProps & {backend: BackendKind}>;
   requires: {resources?: Array<keyof Capabilities['resources']>; backend?: BackendKind};
   compat?: true;
 };

@@ -1,54 +1,20 @@
-// Activity page in the Rosé Pine skin: same content and data as the S2 page, controls from ./ui.
 import {useMemo, useState} from 'react';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Clock from '../../ui/icons/Clock';
-import Shuffle from '../../ui/icons/Shuffle';
-import Filter from '../../ui/icons/Filter';
-import DeviceDesktop from '../../ui/icons/DeviceDesktop';
-import DevicePhone from '../../ui/icons/DevicePhone';
-import {runtime, checks, events, probeEventKind, type Mode} from '../clash-compat/fixtures';
-import {useCapabilities, useGroups, useNodes, useRuntime, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {lifecycleStates, localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
-import {formatBytes, formatRate} from '../../api/u64';
-import {useT, useLang, LOCALE, formatList} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {Button, Segmented, MenuButton, Light, Bar, toast} from '../../ui/ui';
+import {useCapabilities, useConnections, useEventFeed, useGroups, useNodes, useRuntime, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
+import {clientRows, connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
+import {addU64, formatBytes, formatRate, pctU64} from '../../api/u64';
+import {useT, useLang, LOCALE} from '../../i18n';
+import {Button, Segmented, Light, Bar} from '../../ui/ui';
+import {ModeControls} from '../clash-compat/ModeControls';
+import type {BackendKind} from '../settings/settings';
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 
-type Top = Array<[string, number, string, 'desktop' | 'phone']>;
-const TOP: Record<string, Top> = {
-  dev: [
-    ['10.0.0.7', 84, '84 MB', 'desktop'],
-    ['10.0.0.31', 4, '3.6 MB', 'phone'],
-    ['10.0.0.12', 2, '1.3 MB', 'desktop'],
-    ['10.0.0.20', 1, '140 KB', 'phone'],
-    ['10.0.0.9', 1, '96 KB', 'desktop']
-  ],
-  host: [
-    ['cdn.bilibili.com', 83, '83 MB', 'desktop'],
-    ['discord.com', 4, '3.4 MB', 'desktop'],
-    ['api.telegram.org', 2, '1.2 MB', 'phone'],
-    ['52.84.19.3', 1, '312 KB', 'desktop'],
-    ['203.0.113.9', 1, '96 KB', 'phone']
-  ]
-};
-
-const checkLabels: Record<string, Key> = {
-  ebpf: 'check.ebpf',
-  route: 'check.route',
-  tproxy: 'check.tproxy',
-  nfqueue: 'check.nfqueue',
-  dns: 'check.dns',
-  api: 'check.api',
-  ui: 'check.ui'
-};
-const eventLabels: Record<string, Key> = {e1: 'ev.e1', e2: 'ev.e2', e3: 'ev.e3', e4: 'ev.e4', e5: 'ev.e5', e6: 'ev.e6'};
-const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
-export function Activity({go}: {go: (page: string) => void}) {
+export function Activity({go, backend}: {go: (page: string) => void; backend: BackendKind}) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -67,13 +33,28 @@ export function Activity({go}: {go: (page: string) => void}) {
       }),
     [nodesResource.data]
   );
-  const failing = checks.filter(c => !c.ready);
   const [by, setBy] = useState('dev');
+  const connections = useConnections();
+  const feed = useEventFeed();
+  const ranking = useMemo(() => {
+    let rows: Array<{name: string; download: bigint | null}>;
+    if (by === 'dev') rows = clientRows(connections.data).map(row => ({name: row.ip, download: row.download}));
+    else {
+      const totals = new Map<string, bigint | null>();
+      for (const row of connectionRows(connections.data)) {
+        const name = row.domain || row.dst;
+        if (!name) continue;
+        totals.set(name, addU64(totals.has(name) ? totals.get(name)! : 0n, row.download_bytes));
+      }
+      rows = [...totals].map(([name, download]) => ({name, download}));
+    }
+    const total = addU64(...rows.map(row => row.download));
+    rows.sort((a, b) => (a.download === b.download ? 0 : a.download === null ? 1 : b.download === null ? -1 : a.download > b.download ? -1 : 1));
+    return rows.slice(0, 5).map(row => ({...row, percent: pctU64(row.download, total)}));
+  }, [by, connections.data]);
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
-  const [mode, setMode] = useState<Mode>(runtime.mode);
-  const [chosenTarget, setTarget] = useState(runtime.globalTarget);
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
   const nodeName = node?.name ?? '';
@@ -86,8 +67,6 @@ export function Activity({go}: {go: (page: string) => void}) {
     );
   if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <div role="status">{t('act.loading')}</div>;
   const liveRuntime = runtimeResource.data;
-  const groups = groupsResource.data;
-  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -99,66 +78,11 @@ export function Activity({go}: {go: (page: string) => void}) {
     text: formatBytes(r.bytes),
     color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
-  type Issue = {level: 'err' | 'warn' | 'info'; text: string; page: string};
-  const RANK = {err: 0, warn: 1, info: 2};
-  const timedOut = NODES.filter(n => n.unavailable).map(n => n.name);
-  const timeoutIssues =
-    timedOut.length <= 3
-      ? timedOut.map(name => t('act.nodeTimeout', {name}))
-      : [t('act.nTimeouts', {n: timedOut.length, list: formatList(lang, timedOut.slice(0, 3)) + '…'})];
-  const issues: Issue[] = [
-    ...timeoutIssues.map(text => ({level: 'err' as const, text, page: 'policies'})),
-    ...failing.map(c => ({
-      level: 'warn' as const,
-      text: t('act.checkNotReady', {name: t(checkLabels[c.id])}),
-      page: 'overview'
-    })),
-    ...events
-      .filter(e => e.level !== 'error' && e.kind !== probeEventKind)
-      .map(e => ({
-        level: e.level === 'warn' ? ('warn' as const) : ('info' as const),
-        text: t(eventLabels[e.id]),
-        page: (e.ref ?? '#/events').replace('#/', '')
-      }))
-  ]
-    .sort((x, y) => RANK[x.level] - RANK[y.level])
-    .slice(0, 6);
-  const lvl = (l: Issue['level']) => (l === 'err' ? t('act.lvlErr') : l === 'warn' ? t('act.lvlWarn') : t('act.lvlInfo'));
+  const events = feed.events.slice(0, 6);
   return (
     <>
-      <div className="rp-quick">
-        <div className="rp-card">
-          <div className="rp-row">
-            <span className="rp-qlabel rp-tint-c3">
-              <Shuffle />
-              {t('act.mode')}
-            </span>
-            <Segmented
-              label={t('act.mode')}
-              value={mode}
-              onChange={k => {
-                setMode(k as Mode);
-                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
-              }}
-              items={[
-                ['rule', t('mode.rule')],
-                ['global', t('mode.global')],
-                ['direct', t('mode.direct')]
-              ]}
-            />
-          </div>
-        </div>
-        <div className="rp-card">
-          <div className="rp-row">
-            <span className="rp-qlabel rp-tint-c2">
-              <Filter />
-              {t('act.global')}
-            </span>
-            <MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>
-              {target}
-            </MenuButton>
-          </div>
-        </div>
+      <div className={backend === 'clash' ? 'rp-quick' : 'rp-quick rp-quick-native'}>
+        {backend === 'clash' && <ModeControls groups={groupsResource.data} />}
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
@@ -227,7 +151,6 @@ export function Activity({go}: {go: (page: string) => void}) {
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: node.tcp})) : '—'}</span>
-              {node?.alive && <span className="rp-delta good">↓ 12%</span>}
             </span>
             <Light small tone={node?.alive ? 'ok' : 'err'}>
               {node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}
@@ -301,14 +224,26 @@ export function Activity({go}: {go: (page: string) => void}) {
               ]}
             />
           </div>
-          <div className="rp-list">
-            {TOP[by].map(([k, v, tx, kind], i) => (
-              <div key={k} className="rp-dev">
-                {kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}
-                <Bar label={k} value={t('ui.share', {bytes: tx, percent: v})} pct={v} color={p.cat[i % p.cat.length]} />
-              </div>
-            ))}
-          </div>
+          <p className="rp-note">{t('act.rankingScope')}</p>
+          {connections.error && <p role="alert">{connections.error.message}</p>}
+          {connections.data?.truncated && <p className="rp-note">{t('act.rankingTruncated')}</p>}
+          {!connections.data ? (
+            <span role="status">{t('act.loading')}</span>
+          ) : ranking.length === 0 ? (
+            <span className="rp-label">{t('act.rankingEmpty')}</span>
+          ) : (
+            <div className="rp-list">
+              {ranking.map((row, i) => (
+                <Bar
+                  key={row.name}
+                  label={row.name}
+                  value={row.percent === null ? formatBytes(row.download) : t('ui.share', {bytes: formatBytes(row.download), percent: row.percent})}
+                  pct={row.percent ?? 0}
+                  color={p.cat[i % p.cat.length]}
+                />
+              ))}
+            </div>
+          )}
         </div>
         <div className="rp-card">
           <div className="rp-row">
@@ -333,35 +268,39 @@ export function Activity({go}: {go: (page: string) => void}) {
               ))}
           </div>
         </div>
-        <div className="rp-card">
+        <section className="rp-card" aria-label={t('act.issues')}>
           <div className="rp-row">
             <span className="rp-cluster">
               <span className="rp-title">{t('act.issues')}</span>
-              {issues.length > 0 && <span className="rp-label">{issues.length}</span>}
+              {events.length > 0 && <span className="rp-label">{events.length}</span>}
             </span>
-            <Button quiet small onPress={() => go('overview')}>
+            <Button quiet small onPress={() => go('events')}>
               {t('act.viewAll')}
             </Button>
           </div>
-          {issues.length === 0 ? (
-            <span className="rp-label">{t('act.noIssues')}</span>
+          {feed.error && <p role="alert">{feed.error.message}</p>}
+          {events.length === 0 ? (
+            <span className="rp-label">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
           ) : (
-            <div className="rp-issues">
-              {issues.map(i => (
-                <div key={i.text}>
-                  <div className="rp-issue">
+            <div className="rp-issues" role="list">
+              {events.map(event => {
+                const summary = eventSummary(event);
+                return (
+                  <div key={event.id} role="listitem" className="rp-issue">
                     <span className="lvl">
-                      <Light small tone={i.level}>
-                        {lvl(i.level)}
+                      <Light small tone={event.event === 'flow.gap' ? 'warn' : 'info'}>
+                        {t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice')}
                       </Light>
                     </span>
-                    <span className="txt">{i.text}</span>
+                    <span className="txt">
+                      {event.event} · {t(summary.key, summary.params)}
+                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </>
   );

@@ -51,6 +51,7 @@ test('retains overflow shares and exact loss counts, then replaces an empty snap
   await page.clock.install();
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules');
   const card = page.getByRole('region', {name: 'Rule distribution'});

@@ -6,7 +6,6 @@ import {useConnections} from '../../api/store';
 import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
 import {Button, Kv, LabeledSelect, Light, Segmented} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
-import {RuleDialog} from '../activity/RuleDialog';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
 
@@ -25,7 +24,12 @@ export function Connections({go, query}: PageProps) {
     const text = q.get('q') ?? q.get('src');
     const id = q.get('id');
     if (text !== null) setText(text);
-    if (id !== null) setSel(id);
+    if (id !== null) {
+      setSel(id);
+      if (text === null) setText('');
+      setNetwork('all');
+      setOut('all');
+    }
   }
   const src = ipLiteral(text);
   const resource = useConnections(src);
@@ -95,14 +99,6 @@ export function Connections({go, query}: PageProps) {
             <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
               {t('conn.viewFlow')}
             </Button>
-            <RuleDialog
-              trigger={<Button accent>{t('ui.addRule')}</Button>}
-              presets={[
-                ...(cur.domain ? [{label: t('ui.domainValue', {domain: cur.domain}), cond: 'domain(full: ' + cur.domain + ')'}] : []),
-                ...(cur.dst ? [{label: t('conn.dstIp'), cond: 'dip(' + cur.dst.replace(/:\d+$/, '').replace(/^\[|\]$/g, '') + ')'}] : []),
-                ...(cur.src ? [{label: t('ui.sourceValue', {source: cur.src}), cond: 'sip(' + cur.src + ')'}] : [])
-              ]}
-            />
           </div>
         ) : (
           <div className="rp-card">

@@ -11,11 +11,12 @@ export function Resources() {
   const refreshable = subs.filter(s => s.refreshable);
   return (
     <div className="rp-page">
+      <p className="rp-note">{t('compat.demoData')}</p>
       <div className="rp-between">
         <Switch isSelected={onlyBad} onChange={setOnlyBad}>
           {t('resource.onlyBad')}
         </Switch>
-        <Button accent onPress={() => toast('negative', t('resource.refreshFailed'))}>
+        <Button accent onPress={() => toast('neutral', t('compat.disconnected'))}>
           <Refresh />
           {t('resource.refreshAll', {n: refreshable.length})}
         </Button>
@@ -51,12 +52,7 @@ export function Resources() {
             small
             label={s.refreshable ? t('resource.refreshOne') : t('resource.local')}
             isDisabled={!s.refreshable}
-            onPress={() =>
-              toast(
-                s.ready ? 'positive' : 'negative',
-                s.ready ? t('resource.refreshed', {name: s.name, n: s.nodes ?? '—'}) : t('resource.failed', {name: s.name})
-              )
-            }
+            onPress={() => toast('neutral', t('compat.disconnected'))}
           >
             <Refresh />
           </Button>

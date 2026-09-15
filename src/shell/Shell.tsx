@@ -16,7 +16,6 @@ import {
   Separator
 } from 'react-aria-components';
 import Close from '../ui/icons/Close';
-import {toast} from '../ui/ui';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
@@ -25,12 +24,12 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
-import {conns, groups, rules} from '../features/clash-compat/fixtures';
 import {Button, MenuButton, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
-import {useCapabilities} from '../api/store';
+import {refetchAll, useCapabilities, useConnections, useGroups, useNodes, useVersion} from '../api/store';
+import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
 import {readSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
@@ -64,7 +63,6 @@ const palettes = (t: Translator): Array<{title: string; items: Array<{id: Palett
   {title: t('palette.glassName'), items: [{id: 'glass/glass', label: t('palette.glassName'), desc: t('palette.glass')}]}
 ];
 const navGroups = [...new Set(features.flatMap(feature => (feature.nav ? [feature.nav.group] : [])))];
-const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
 const read = (k: string) => {
   try {
@@ -164,26 +162,36 @@ function SchemeIcon({dark}: {dark: boolean}) {
   );
 }
 
-function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; go: (p: string) => void}) {
+function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProps['go']; backend: BackendKind}) {
   const t = useT();
   const [q, setQ] = useState('');
+  const connections = useConnections();
+  const nodes = useNodes();
+  const groups = useGroups();
+  const capabilities = useCapabilities();
   const needle = q.trim().toLowerCase();
-  const hits = needle
-    ? {
-        conns: conns.filter(c => (c.host || c.dst).toLowerCase().includes(needle)).slice(0, 8),
-        nodes: NODES.filter(n => n.toLowerCase().includes(needle)).slice(0, 8),
-        rules: rules.filter(r => r.cond.toLowerCase().includes(needle)).slice(0, 8)
-      }
-    : {conns: conns.slice(0, 5), nodes: NODES.slice(0, 5), rules: rules.slice(0, 5)};
+  const limit = needle ? 8 : 5;
+  const hits = {
+    conns: connectionRows(connections.data)
+      .filter(c => [c.domain, c.dst, c.src].some(value => value?.toLowerCase().includes(needle)))
+      .slice(0, limit),
+    nodes: (nodes.data ?? []).filter(n => n.name.toLowerCase().includes(needle)).slice(0, limit),
+    groups: (groups.data ?? []).filter(g => g.name.toLowerCase().includes(needle)).slice(0, limit),
+    pages: features
+      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data, backend) && t(feature.nav.titleKey).toLowerCase().includes(needle))
+      .slice(0, limit)
+  };
+  const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
   const pick = (k: string) => {
-    const [kind] = k.split(':');
-    go(kind === 'conn' ? 'connections' : kind === 'node' ? 'policies' : 'rules');
+    if (k.startsWith('conn:')) go('connections', 'id=' + encodeURIComponent(k.slice(5)));
+    else if (k.startsWith('page:')) go(k.slice(5));
+    else go('policies');
     onClose();
   };
   return (
     <ModalOverlay
       className="rp-underlay"
-      isOpen={open}
+      isOpen
       onOpenChange={o => {
         if (!o) onClose();
       }}
@@ -202,15 +210,16 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
               <Close />
             </RButton>
           </SearchField>
-          {hits.conns.length + hits.nodes.length + hits.rules.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
+          {error && <p role="alert">{error.message}</p>}
+          {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
           <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
             {hits.conns.length > 0 && (
               <ListBoxSection id="conns">
                 <Header className="rp-section-h">{t('nav.connections')}</Header>
                 {hits.conns.map(c => (
-                  <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.host || c.dst}>
-                    <span>{c.host || c.dst}</span>
-                    <span className="desc">{c.chain.join(' → ')}</span>
+                  <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
+                    <span>{c.domain || c.dst || c.src || c.id}</span>
+                    <span className="desc">{chainLabel(c)}</span>
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
@@ -219,19 +228,28 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
               <ListBoxSection id="nodes">
                 <Header className="rp-section-h">{t('search.nodes')}</Header>
                 {hits.nodes.map(n => (
-                  <ListBoxItem key={n} id={'node:' + n} className="rp-item plain" textValue={n}>
-                    {n}
+                  <ListBoxItem key={n.id} id={'node:' + n.id} className="rp-item plain" textValue={n.name}>
+                    {n.name}
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
             )}
-            {hits.rules.length > 0 && (
-              <ListBoxSection id="rules">
-                <Header className="rp-section-h">{t('nav.rules')}</Header>
-                {hits.rules.map(r => (
-                  <ListBoxItem key={r.id} id={'rule:' + r.id} className="rp-item" textValue={r.cond}>
-                    <span>{r.cond}</span>
-                    <span className="desc">{r.target}</span>
+            {hits.groups.length > 0 && (
+              <ListBoxSection id="groups">
+                <Header className="rp-section-h">{t('search.groups')}</Header>
+                {hits.groups.map(g => (
+                  <ListBoxItem key={g.id} id={'group:' + g.id} className="rp-item plain" textValue={g.name}>
+                    {g.name}
+                  </ListBoxItem>
+                ))}
+              </ListBoxSection>
+            )}
+            {hits.pages.length > 0 && (
+              <ListBoxSection id="pages">
+                <Header className="rp-section-h">{t('search.pages')}</Header>
+                {hits.pages.map(page => (
+                  <ListBoxItem key={page.path} id={'page:' + page.path} className="rp-item plain" textValue={t(page.nav!.titleKey)}>
+                    {t(page.nav!.titleKey)}
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
@@ -290,7 +308,7 @@ export function Shell() {
           openSearch={() => setSearchOpen(true)}
           mac={mac}
         />
-        <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
+        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} backend={settings.backend} />}
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
@@ -326,6 +344,7 @@ function Frame({
   const t = useT();
   const paletteSections = palettes(t);
   const capabilities = useCapabilities();
+  const version = useVersion();
   const nav = navGroups.map(
     group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data, backend))] as const
   );
@@ -359,10 +378,18 @@ function Frame({
               quiet
               icon
               label={t('refresh')}
-              onPress={() => {
+              isDisabled={spinning}
+              onPress={async () => {
                 setSpinning(true);
-                setTimeout(() => setSpinning(false), 600);
-                toast('positive', t('refreshed'));
+                let timer: number | undefined;
+                await Promise.race([
+                  refetchAll(),
+                  new Promise<void>(resolve => {
+                    timer = window.setTimeout(resolve, 2000);
+                  })
+                ]);
+                clearTimeout(timer);
+                setSpinning(false);
               }}
             >
               <Refresh />
@@ -428,7 +455,7 @@ function Frame({
         <div className="rp-side-grow" />
         <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}>
           <GitHub />
-          honk 0.9.3
+          {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
         </RButton>
       </nav>
       <main className="rp-main">
@@ -458,7 +485,11 @@ function Frame({
             </div>
           </div>
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            <Page go={go} query={query} />
+            {feature.requires.backend && feature.requires.backend !== backend ? (
+              <p className="rp-note">{t('shell.backendRequired')}</p>
+            ) : (
+              <Page go={go} query={query} backend={backend} />
+            )}
           </SettingsContext.Provider>
         </div>
       </main>

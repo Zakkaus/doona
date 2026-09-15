@@ -43,6 +43,7 @@ export function Validate({go}: PageProps) {
     );
   return (
     <div className="rp-page">
+      <p className="rp-note">{t('compat.demoData')}</p>
       <div className="rp-toolbar">
         <Light tone={errors ? 'err' : warns ? 'warn' : 'ok'}>
           {errors ? t('validate.failed', {errors, warnings: warns}) : warns ? t('validate.warnings', {n: warns}) : t('validate.passed')}
@@ -50,7 +51,7 @@ export function Validate({go}: PageProps) {
         <Badge>{t('ui.diskRevision', {n: runtime.diskRevision})}</Badge>
         <Badge>{t('ui.activeRevision', {n: runtime.activeRevision})}</Badge>
         <span className="rp-grow" />
-        <Button primary onPress={() => toast(errors ? 'negative' : 'positive', errors ? t('validate.doneErrors', {n: errors}) : t('validate.done'))}>
+        <Button primary onPress={() => toast('neutral', t('compat.disconnected'))}>
           <Refresh />
           {t('validate.again')}
         </Button>
