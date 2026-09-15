@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "package": "tools/package.sh",
     "preview": "vite preview",
     "test": "vitest run",
     "conformance": "node tools/conformance.mjs",
