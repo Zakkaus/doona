@@ -367,7 +367,9 @@ button, input { font: inherit; color: inherit; }
 .rp-seg .rp-btn[data-selected] { background: var(--rp-surface); color: var(--rp-pine); border-color: var(--rp-pine); }
 .rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 8px 2px 32px; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; box-sizing: border-box; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+/* A slim overlay-like scrollbar so a long menu keeps its 8px inset on both sides. */
+.rp-popover::-webkit-scrollbar { width: 6px; } .rp-popover::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--rp-hl-high); } .rp-popover::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
 .rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
