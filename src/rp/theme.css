@@ -192,9 +192,8 @@
 :root[data-family='glass'] { --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
 :root[data-family='glass'] body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--rp-grain); opacity: 0.14; mix-blend-mode: overlay; }
-/* The shell spans the whole window (a sidebar hugging the screen edge, as in every desktop app; only the content column is
-   capped), and the readability scrim is a fixed full-viewport layer, so nothing ends in a seam on wide screens. */
-:root[data-family='glass'] .rp-shell { position: relative; max-width: none; }
+/* The shell keeps the usual 1600px centring; the readability scrim is a fixed full-viewport layer so it ends in no seam. */
+:root[data-family='glass'] .rp-shell { position: relative; }
 :root[data-family='glass'] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%); }
 :root[data-family='glass'][data-scheme='dark'] body::after { background: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%); }
 :root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
