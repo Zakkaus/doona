@@ -1,6 +1,7 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
 import {useEffect, useLayoutEffect, useState} from 'react';
 import {
+  I18nProvider,
   Button as RButton,
   Dialog,
   Modal,
@@ -23,7 +24,7 @@ import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
-import {LangContext, LANGS, readLang, useT, type Lang} from '../i18n/i18n';
+import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
 import {conns, groups, rules} from '../features/clash-compat/fixtures';
 import {Button, MenuButton, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
 import Color from '../ui/icons/Color';
@@ -46,32 +47,32 @@ type PaletteId =
   | 'arco/arco'
   | 'semi/semi';
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
-const palettes = (glass: string): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
+const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
   {
-    title: 'Rosé Pine',
+    title: t('palette.rosePine'),
     items: [
-      {id: 'rose-pine/main', label: 'Rosé Pine', desc: 'Dawn / Main'},
-      {id: 'rose-pine/moon', label: 'Moon', desc: 'Dawn / Moon'}
+      {id: 'rose-pine/main', label: t('palette.rosePine'), desc: t('palette.dawnMain')},
+      {id: 'rose-pine/moon', label: t('palette.moon'), desc: t('palette.dawnMoon')}
     ]
   },
   {
-    title: 'Catppuccin',
+    title: t('palette.catppuccin'),
     items: [
-      {id: 'catppuccin/frappe', label: 'Frappé', desc: 'Latte / Frappé'},
-      {id: 'catppuccin/macchiato', label: 'Macchiato', desc: 'Latte / Macchiato'},
-      {id: 'catppuccin/mocha', label: 'Mocha', desc: 'Latte / Mocha'}
+      {id: 'catppuccin/frappe', label: t('palette.frappe'), desc: t('palette.latteFrappe')},
+      {id: 'catppuccin/macchiato', label: t('palette.macchiato'), desc: t('palette.latteMacchiato')},
+      {id: 'catppuccin/mocha', label: t('palette.mocha'), desc: t('palette.latteMocha')}
     ]
   },
-  {title: 'Nord', items: [{id: 'nord/nord', label: 'Nord', desc: 'Snow Storm / Polar Night'}]},
-  {title: 'Ant Design', items: [{id: 'antd/antd', label: 'Ant Design', desc: 'Default / Dark'}]},
+  {title: t('palette.nord'), items: [{id: 'nord/nord', label: t('palette.nord'), desc: t('palette.nordVariants')}]},
+  {title: t('palette.antd'), items: [{id: 'antd/antd', label: t('palette.antd'), desc: t('palette.defaultDark')}]},
   {
-    title: 'ByteDance',
+    title: t('palette.bytedance'),
     items: [
-      {id: 'arco/arco', label: 'Arco Design', desc: 'Light / Dark'},
-      {id: 'semi/semi', label: 'Semi Design', desc: 'Light / Dark'}
+      {id: 'arco/arco', label: t('palette.arco'), desc: t('palette.lightDark')},
+      {id: 'semi/semi', label: t('palette.semi'), desc: t('palette.lightDark')}
     ]
   },
-  {title: 'Glass', items: [{id: 'glass/glass', label: 'Glass', desc: glass}]}
+  {title: t('palette.glassName'), items: [{id: 'glass/glass', label: t('palette.glassName'), desc: t('palette.glass')}]}
 ];
 const navGroups = [...new Set(features.flatMap(feature => (feature.nav ? [feature.nav.group] : [])))];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
@@ -256,6 +257,9 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
 
 export function Shell() {
   const [lang, setLang] = useState<Lang>(readLang);
+  useLayoutEffect(() => {
+    document.documentElement.lang = LOCALE[lang];
+  }, [lang]);
   const ap = useAppearance();
   const {route, query, go} = useRoute();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -285,16 +289,18 @@ export function Shell() {
   }, []);
   return (
     <LangContext.Provider value={lang}>
-      <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
-      <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
-      <ToastHost />
+      <I18nProvider locale={LOCALE[lang]}>
+        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+        <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
+        <ToastHost />
+      </I18nProvider>
     </LangContext.Provider>
   );
 }
 
 function ToastHost() {
   const t = useT();
-  return <Toasts labels={{close: t('close'), showAll: t('toast.showAll'), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
+  return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
 }
 
 function Frame({
@@ -337,7 +343,7 @@ function Frame({
           <RButton className="rp-search" onPress={openSearch}>
             <Search />
             <span className="grow">{t('search')}</span>
-            <span className="rp-kbd">{mac ? '⌘K' : 'Ctrl K'}</span>
+            <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>
           </RButton>
         </div>
         <div className="rp-actions">
@@ -377,7 +383,7 @@ function Frame({
             label={t('palette')}
             value={ap.palette}
             onChange={k => ap.pickPalette(k as PaletteId)}
-            sections={palettes(t('palette.glass'))}
+            sections={palettes(t)}
             extra={{
               title: t('wordmark'),
               value: ap.wordmark,
@@ -393,7 +399,7 @@ function Frame({
           <Button
             quiet
             icon
-            label={t('theme') + '：' + (ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light'))}
+            label={t('shell.theme', {theme: ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light')})}
             onPress={ap.toggle}
           >
             <SchemeIcon dark={ap.dark} />
@@ -404,13 +410,13 @@ function Frame({
         {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
         {nav.map(([g, items]) => (
           <div key={g} data-group={g.replace('grp.', '')}>
-            <div className="rp-group">{t(g as 'grp.status')}</div>
+            <div className="rp-group">{t(g)}</div>
             {items.map(
               ({id, path, nav, compat}) =>
                 nav && (
                   <RLink key={id} className="rp-nav" href={'#/' + path} aria-current={route === path ? 'page' : undefined}>
                     <nav.Icon />
-                    {t(nav.titleKey as 'nav.activity')}
+                    {t(nav.titleKey)}
                     {compat && <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>}
                   </RLink>
                 )
@@ -426,7 +432,7 @@ function Frame({
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">
-            <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
+            <h1 className="rp-h1">{t(titleKey)}</h1>
             <div className="rp-mobile-nav">
               <LabeledSelect
                 label={t('page')}
@@ -439,7 +445,7 @@ function Frame({
                       ? [
                           {
                             id: path,
-                            label: t(nav.titleKey as 'nav.activity'),
+                            label: t(nav.titleKey),
                             icon: compat ? <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span> : undefined
                           }
                         ]

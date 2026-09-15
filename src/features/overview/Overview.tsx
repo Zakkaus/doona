@@ -1,10 +1,15 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations} from '../../api/store';
-import {datapathFields, formatDuration, localTime, memoryFields} from '../../api/selectors';
-import {useT} from '../../i18n/i18n';
+import {datapathFields, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
+import {useT, useLang, LOCALE} from '../../i18n';
 import {Button, DataTable, Kv, Light, toast} from '../../ui/ui';
+import type {Key} from '../../i18n/messages';
+
+const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
 
 export function Overview() {
   const t = useT();
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(!!resources?.runtime.available);
@@ -20,10 +25,14 @@ export function Overview() {
       if (result)
         toast(
           result.status === 'succeeded' ? 'positive' : 'negative',
-          t(`ov.${kind}`) + ' ' + t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed') + ' · ' + result.operation_id
+          t('ov.operationResult', {
+            action: t(operationLabels[kind]),
+            status: t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed'),
+            id: result.operation_id
+          })
         );
     } catch (error) {
-      toast('negative', t('ov.failed') + ' · ' + String(error));
+      toast('negative', t('ov.operationError', {error: String(error)}));
     }
   }
   return (
@@ -31,22 +40,22 @@ export function Overview() {
       {capabilities.error && <p role="alert">{capabilities.error.message}</p>}
       <div className="rp-between">
         <Light tone={state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn'}>
-          {state ? t(`lifecycle.${state}`) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}
+          {state ? t(lifecycleStates[state]) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}
         </Light>
         <Kv
           inline
           items={[
             [t('ov.generation'), runtime.data?.generation.active_id ?? '—'],
             [t('ov.revision'), runtime.data?.generation.config_revision ?? '—'],
-            [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, {d: t('unit.d'), h: t('unit.h'), m: t('unit.m'), s: t('unit.s')})],
+            [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)],
             [
               t('ov.lastReload'),
               reload
-                ? reload.operation_id +
-                  ' · ' +
-                  t(reload.status === 'succeeded' ? 'ov.succeeded' : reload.status === 'failed' ? 'ov.failed' : 'ov.running') +
-                  ' · ' +
-                  localTime(reload.finished_at)
+                ? t('ov.reloadResult', {
+                    id: reload.operation_id,
+                    status: t(reload.status === 'succeeded' ? 'ov.succeeded' : reload.status === 'failed' ? 'ov.failed' : 'ov.running'),
+                    time: localTime(reload.finished_at, locale)
+                  })
                 : '—'
             ]
           ]}
@@ -59,7 +68,7 @@ export function Overview() {
           {datapath.error && <p role="alert">{datapath.error.message}</p>}
           {datapath.data ? (
             <>
-              <Kv items={datapathFields(datapath.data, t('ov.unknown'), key => t(`ov.f.${key}` as 'ov.f.kind'))} />
+              <Kv items={datapathFields(datapath.data, t('ov.unknown'), t)} />
               {datapath.data.ebpf && (
                 <DataTable
                   label={t('ov.attachments')}
@@ -99,7 +108,7 @@ export function Overview() {
             <h3 className="rp-h3">{t('ov.memory')}</h3>
             {memory.error && <p role="alert">{memory.error.message}</p>}
             {memory.data ? (
-              <Kv items={memoryFields(memory.data, key => t(`ov.f.${key}` as 'ov.f.kind'))} />
+              <Kv items={memoryFields(memory.data, t)} />
             ) : (
               <span className="rp-label">
                 {capabilities.loading || memory.loading ? t('ov.loading') : resources?.runtime_memory.available ? '—' : t('ov.unavailable')}
@@ -111,8 +120,7 @@ export function Overview() {
             <div className="rp-cluster">
               {(['reload', 'suspend', 'resume'] as const).map(kind => (
                 <Button key={kind} primary isDisabled={!!operations.busy || !operations.canRun(kind)} onPress={() => void run(kind)}>
-                  {t(`ov.${kind}`)}
-                  {operations.busy === kind ? ' · ' + t('ov.running') : ''}
+                  {operations.busy === kind ? t('ov.operationBusy', {action: t(operationLabels[kind])}) : t(operationLabels[kind])}
                 </Button>
               ))}
             </div>

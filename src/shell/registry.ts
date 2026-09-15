@@ -1,3 +1,4 @@
+import type {Key} from '../i18n/messages';
 import type {ComponentType} from 'react';
 import type {Capabilities} from '../api/model';
 import type {PageProps} from '../features/types';
@@ -28,7 +29,7 @@ import CheckmarkCircle from '../ui/icons/CheckmarkCircle';
 type Feature = {
   id: string;
   path: string;
-  nav: {group: string; titleKey: string; Icon: typeof Home} | null;
+  nav: {group: Key; titleKey: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   requires: {resources?: Array<keyof Capabilities['resources']>; backend?: 'native' | 'clash'};
   compat?: true;

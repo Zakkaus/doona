@@ -1,3 +1,4 @@
+import {useT} from '../../i18n';
 // "Add rule" dialog shared by connections, clients and rules, on the Rosé Pine kit.
 import {useState, type ReactElement} from 'react';
 import {groups, runtime} from '../clash-compat/fixtures';
@@ -5,6 +6,7 @@ import {Button, LabeledSelect, ModalDialog, Switch, TextField, toast} from '../.
 
 export type Preset = {label: string; cond: string};
 export function RuleDialog({trigger, presets}: {trigger: ReactElement; presets: Preset[]}) {
+  const t = useT();
   const [i, setI] = useState('0');
   const [cond, setCond] = useState(presets[0].cond);
   const [target, setTarget] = useState('direct');
@@ -14,21 +16,21 @@ export function RuleDialog({trigger, presets}: {trigger: ReactElement; presets: 
   return (
     <ModalDialog
       trigger={trigger}
-      title="新增規則"
+      title={t('ui.addRule')}
       narrow
       footer={close => (
         <>
           <Button secondary onPress={close}>
-            取消
+            {t('ui.cancel')}
           </Button>
           <Button
             accent
             onPress={() => {
               close();
-              toast('positive', '已新增規則，reload 完成（r' + (runtime.diskRevision + 1) + '）');
+              toast('positive', t('ruleDialog.added', {revision: runtime.diskRevision + 1}));
             }}
           >
-            新增並 reload
+            {t('ruleDialog.addReload')}
           </Button>
         </>
       )}
@@ -36,7 +38,7 @@ export function RuleDialog({trigger, presets}: {trigger: ReactElement; presets: 
       <div className="rp-form">
         {presets.length > 1 && (
           <LabeledSelect
-            label="依據"
+            label={t('ruleDialog.basis')}
             value={i}
             onChange={k => {
               setI(k);
@@ -45,20 +47,20 @@ export function RuleDialog({trigger, presets}: {trigger: ReactElement; presets: 
             items={presets.map((p, j) => ({id: String(j), label: p.label}))}
           />
         )}
-        <TextField label="規則" value={cond} onChange={setCond} />
-        <LabeledSelect label="目標" value={target} onChange={setTarget} items={targets} />
+        <TextField label={t('ui.rule')} value={cond} onChange={setCond} />
+        <LabeledSelect label={t('ui.target')} value={target} onChange={setTarget} items={targets} />
         <LabeledSelect
-          label="位置"
+          label={t('ui.position')}
           value={pos}
           onChange={setPos}
           items={[
-            {id: 'before-fallback', label: 'fallback 之前（config.dae:44）'},
-            {id: 'before-hit', label: '命中的規則之前'},
-            {id: 'rules-end', label: 'rules.dae 結尾'}
+            {id: 'before-fallback', label: t('ruleDialog.beforeFallback')},
+            {id: 'before-hit', label: t('ruleDialog.beforeHit')},
+            {id: 'rules-end', label: t('ruleDialog.rulesEnd')}
           ]}
         />
         <Switch isSelected={must} onChange={setMust}>
-          must，全域與直連模式下仍然生效
+          {t('ruleDialog.must')}
         </Switch>
       </div>
     </ModalDialog>

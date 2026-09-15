@@ -26,6 +26,7 @@ import Checkmark from './icons/Checkmark';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
+import {useT} from '../i18n';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -449,6 +450,7 @@ export type NodeTileProps = {
 };
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
 export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, selected, cur, onPress, labels}: NodeTileProps) {
+  const t = useT();
   const body = (
     <>
       <span className="top">
@@ -459,13 +461,13 @@ export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, select
         {nested ? (
           <span className="ms nested">{labels.nested}</span>
         ) : alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{tcp} ms</span>
+          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: tcp})}</span>
         ) : (
           <span className="ms err">{labels.timeout}</span>
         )}
       </span>
       <span className="s">
-        {nested ? ' ' : alive ? ['UDP ' + udp + ' ms', v6 && 'IPv6'].filter(Boolean).join(' · ') : ' '}
+        {nested ? ' ' : alive ? [t('ui.udpLatency', {n: String(udp)}), v6 && t('ui.ipv6')].filter(Boolean).join(' · ') : ' '}
         {cur && !onPress && <span className="cur">{labels.cur}</span>}
       </span>
     </>
@@ -723,7 +725,7 @@ export const toast = (kind: ToastKind, msg: string) => {
   publish();
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
-export function Toasts({labels}: {labels: {close: string; showAll: string; collapse: string; clearAll: string}}) {
+export function Toasts({labels}: {labels: {close: string; showAll: (n: number) => string; collapse: string; clearAll: string}}) {
   const [items, setItems] = useState(queue);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
@@ -798,7 +800,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: string; colla
                   </span>
                   {!expanded && idx === 0 && live.length > 1 && (
                     <RButton className="rp-btn sm quiet more" onPress={() => setExpanded(true)}>
-                      {labels.showAll} ({live.length})
+                      {labels.showAll(live.length)}
                     </RButton>
                   )}
                 </div>

@@ -25,7 +25,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p .",
     "check:gen": "tools/check-gen.sh",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm check:gen"
+    "check:i18n": "node tools/check-i18n.mjs",
+    "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "dependencies": {
     "flag-icons": "^7.5.0",

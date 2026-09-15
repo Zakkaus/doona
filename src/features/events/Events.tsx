@@ -1,20 +1,23 @@
+import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {clashLog} from '../clash-compat/fixtures';
 import {useEventFeed} from '../../api/store';
-import {eventKinds, eventSummary} from '../../api/selectors';
+import {eventKinds, eventSummary, localTime} from '../../api/selectors';
 import {DataTable, Frame, LabeledSelect, Light, Line, LogLine, Tabs} from '../../ui/ui';
 
 export function Events() {
+  const t = useT();
+  const locale = LOCALE[useLang()];
   const [kind, setKind] = useState('all');
   const feed = useEventFeed();
   const shown = feed.events.filter(event => kind === 'all' || event.event === kind);
   return (
     <div className="rp-page">
       <Tabs
-        label="事件與日誌"
+        label={t('event.tabs')}
         tabs={[
-          ['events', '事件'],
-          ['clash', 'Clash 日誌']
+          ['events', t('nav.events')],
+          ['clash', t('event.clash')]
         ]}
       >
         {id =>
@@ -22,34 +25,37 @@ export function Events() {
             <div className="rp-page">
               <div className="rp-toolbar">
                 <LabeledSelect
-                  label="種類"
+                  label={t('event.kind')}
                   side
                   value={kind}
                   onChange={setKind}
-                  items={[{id: 'all', label: '所有種類'}, ...eventKinds.map(id => ({id, label: id}))]}
+                  items={[{id: 'all', label: t('event.allKinds')}, ...eventKinds.map(id => ({id, label: id}))]}
                 />
                 <Light small tone={feed.connected ? 'ok' : 'warn'}>
-                  {feed.available === false ? '不支援事件串流' : feed.connected ? '已連線' : '重新連線中'}
+                  {feed.available === false ? t('event.unavailable') : feed.connected ? t('event.connected') : t('event.reconnecting')}
                 </Light>
-                {feed.cursor && <span className="rp-code">續傳自 {feed.cursor}</span>}
-                <span className="rp-label">顯示最近 200 筆事件，新事件在前。</span>
+                {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
+                <span className="rp-label">{t('event.limit')}</span>
               </div>
               {feed.error && <p role="alert">{feed.error.message}</p>}
               <DataTable
-                label="事件"
+                label={t('nav.events')}
                 height={442}
                 rows={shown}
-                empty="沒有符合的事件"
+                empty={t('event.empty')}
                 cols={[
-                  {id: 't', label: '時間', width: 220},
-                  {id: 'k', label: '種類', width: 190},
-                  {id: 'm', label: '摘要', isRowHeader: true}
+                  {id: 't', label: t('ui.time'), width: 220},
+                  {id: 'k', label: t('event.kind'), width: 190},
+                  {id: 'm', label: t('event.summary'), isRowHeader: true}
                 ]}
-                render={event => [<span className="rp-code">{event.data.observed_at}</span>, event.event, eventSummary(event)]}
+                render={event => {
+                  const summary = eventSummary(event);
+                  return [<span className="rp-code">{localTime(event.data.observed_at, locale)}</span>, event.event, t(summary.key, summary.params)];
+                }}
               />
             </div>
           ) : (
-            <Frame title="Clash 日誌，最近 4 條" actions={<span>info 級，跟隨 global.log_level</span>}>
+            <Frame title={t('event.clashTitle')} actions={<span>{t('event.clashLevel')}</span>}>
               {clashLog.map((line, i) => (
                 <Line key={i} n={i + 1}>
                   <LogLine text={line} />

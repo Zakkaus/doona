@@ -1,3 +1,4 @@
+import type {Key} from '../i18n/messages';
 import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
@@ -259,13 +260,13 @@ export function useRoutingTrace() {
     [api]
   );
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
-  const invalid =
+  const invalid: Key | null =
     !form.domain.trim() && !form.dst_ip.trim()
-      ? '請提供域名或目的 IP。'
+      ? 'rule.invalidTarget'
       : !portValid(form.dst_port) || (form.src_port.trim() && !portValid(form.src_port))
-        ? '連接埠須為 1 至 65535 的整數。'
+        ? 'rule.invalidPort'
         : form.resolve === 'live' && (!form.domain.trim() || form.dst_ip.trim())
-          ? '即時解析須提供域名，且目的 IP 必須留空。'
+          ? 'rule.invalidLive'
           : null;
   const resource = capabilities.data?.resources.routing_trace;
   const modes = resource?.resolve_modes ?? ['none', 'live'];

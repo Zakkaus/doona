@@ -1,6 +1,7 @@
 // Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
-import {useId, useSyncExternalStore} from 'react';
+import {useId, useMemo, useSyncExternalStore} from 'react';
 import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {formatNumber, useT, type Translator} from '../i18n';
 
 export type Series = {label: string; color: string; values: Array<number | null>};
 const VARS = ['base', 'surface', 'overlay', 'muted', 'subtle', 'text', 'love', 'gold', 'rose', 'pine', 'foam', 'iris', 'hl-low', 'hl-med', 'hl-high'] as const;
@@ -27,15 +28,18 @@ function subscribePalette(onChange: () => void) {
 export function usePalette() {
   return useSyncExternalStore(subscribePalette, getPalette);
 }
-export const fmtRate = (kb: number | null | undefined) =>
-  kb == null ? '—' : kb >= 1000 ? (kb / 1000).toFixed(kb >= 10000 || kb % 1000 === 0 ? 0 : 1) + ' MB/s' : Math.round(kb) + ' KB/s';
+export const fmtRate = (kb: number | null | undefined, locale: string, t: Translator) =>
+  kb == null
+    ? '—'
+    : kb >= 1000
+      ? t('unit.mbps', {n: formatNumber(kb / 1000, locale, kb >= 10000 || kb % 1000 === 0 ? 0 : 1)})
+      : t('unit.kbps', {n: formatNumber(Math.round(kb), locale)});
 const niceMax = (v: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;
   const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10;
   return s * p;
 };
-const clock = (timestamp: number) => new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 const tip = (p: Palette) => ({backgroundColor: p.text, color: p.surface, border: 'none', borderRadius: 8, fontSize: 12, padding: '8px 12px'});
 
 export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null | undefined) => string}) {
@@ -50,9 +54,23 @@ export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null 
     </div>
   );
 }
-export function AreaChart({series, timestamps, fmt, height = 150}: {series: Series[]; timestamps: number[]; fmt: (v: number) => string; height?: number}) {
+export function AreaChart({
+  series,
+  timestamps,
+  fmt,
+  locale,
+  height = 150
+}: {
+  series: Series[];
+  timestamps: number[];
+  fmt: (v: number) => string;
+  locale: string;
+  height?: number;
+}) {
   const p = usePalette();
   const uid = useId();
+  const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit'}), [locale]);
+  const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
   if (!timestamps.length) return null;
   const last = timestamps.length - 1;
   const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
@@ -76,7 +94,7 @@ export function AreaChart({series, timestamps, fmt, height = 150}: {series: Seri
             type="number"
             domain={['dataMin', 'dataMax']}
             ticks={ticks}
-            tickFormatter={clock}
+            tickFormatter={value => clock.format(value)}
             tick={{fontSize: 11, fill: p.subtle}}
             axisLine={false}
             tickLine={false}
@@ -95,7 +113,7 @@ export function AreaChart({series, timestamps, fmt, height = 150}: {series: Seri
           <Tooltip
             contentStyle={tip(p)}
             itemStyle={{color: p.surface}}
-            labelFormatter={value => new Date(Number(value)).toLocaleString()}
+            labelFormatter={value => date.format(Number(value))}
             formatter={v => fmt(Number(v))}
             cursor={{stroke: p.subtle, strokeDasharray: '3 3'}}
           />
@@ -144,6 +162,7 @@ export function Spark({values, timestamps, color, height = 32}: {values: Array<n
 }
 export function Donut({rows, total}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
   const p = usePalette();
+  const t = useT();
   const data = rows.filter(r => r.value !== null && r.value > 0);
   return (
     <div className="rp-donut">
@@ -169,7 +188,11 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
             <Tooltip
               contentStyle={tip(p)}
               itemStyle={{color: p.surface}}
-              formatter={(v, name, item) => [((item as {payload?: {text?: string}}).payload?.text ?? '') + '，' + String(v) + '%', String(name)]}
+              formatter={(v, name, item) => {
+                const payload: unknown = item.payload;
+                const bytes = payload && typeof payload === 'object' && 'text' in payload && typeof payload.text === 'string' ? payload.text : '';
+                return [t('ui.share', {bytes, percent: String(v)}), String(name)];
+              }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -181,7 +204,7 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
             <i className="dot" style={{background: r.color}} />
             <span className="n">{r.name}</span>
             <span>{r.text}</span>
-            <span className="p">{r.value === null ? '—' : r.value + '%'}</span>
+            <span className="p">{r.value === null ? '—' : t('ui.percent', {n: r.value})}</span>
           </div>
         ))}
       </div>

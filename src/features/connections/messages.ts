@@ -1,0 +1,55 @@
+import {defineMessages} from '../../i18n';
+
+export const messages = defineMessages({
+  'zh-TW': {
+    'conn.loadFailed': '無法載入連線：{error}',
+    'conn.truncated': '連線清單已截斷，僅顯示部分記錄。',
+    'conn.filterHint': '域名、IP、來源、程序',
+    'conn.allOutbounds': '所有出站',
+    'conn.empty': '沒有符合的連線',
+    'conn.viewFlow': '查看流程',
+    'conn.pick': '選擇連線以查看詳細資料。',
+    'conn.dstIp': '目標 IP',
+    'conn.f.dst': '目標位址',
+    'conn.f.ingress': '入口',
+    'conn.f.domainSource': '域名來源',
+    'conn.f.observedBy': '觀測來源',
+    'conn.f.uploadRate': '上傳速率',
+    'conn.f.downloadRate': '下載速率',
+    'conn.f.started': '開始時間'
+  },
+  'zh-CN': {
+    'conn.loadFailed': '无法加载连接：{error}',
+    'conn.truncated': '连接列表已截断，仅显示部分记录。',
+    'conn.filterHint': '域名、IP、来源、进程',
+    'conn.allOutbounds': '所有出站',
+    'conn.empty': '没有匹配的连接',
+    'conn.viewFlow': '查看流程',
+    'conn.pick': '选择连接以查看详细信息。',
+    'conn.dstIp': '目标 IP',
+    'conn.f.dst': '目标地址',
+    'conn.f.ingress': '入口',
+    'conn.f.domainSource': '域名来源',
+    'conn.f.observedBy': '观测来源',
+    'conn.f.uploadRate': '上传速率',
+    'conn.f.downloadRate': '下载速率',
+    'conn.f.started': '开始时间'
+  },
+  en: {
+    'conn.loadFailed': 'Could not load connections: {error}',
+    'conn.truncated': 'The connection list is truncated; only some records are shown.',
+    'conn.filterHint': 'Domain, IP, source, process',
+    'conn.allOutbounds': 'All outbounds',
+    'conn.empty': 'No matching connections',
+    'conn.viewFlow': 'View flow',
+    'conn.pick': 'Select a connection to view details.',
+    'conn.dstIp': 'Target IP',
+    'conn.f.dst': 'Target address',
+    'conn.f.ingress': 'Ingress',
+    'conn.f.domainSource': 'Domain source',
+    'conn.f.observedBy': 'Observed by',
+    'conn.f.uploadRate': 'Upload rate',
+    'conn.f.downloadRate': 'Download rate',
+    'conn.f.started': 'Start time'
+  }
+});

@@ -453,6 +453,7 @@ type Ev = {
   msg: string;
   ref?: string;
 };
+export const probeEventKind: Ev['kind'] = '探測';
 export const events: Ev[] = [
   {id: 'e1', t: '14:02:11', kind: 'reload', level: 'info', msg: 'reload 完成，r40，45 個節點，8 條規則', ref: '#/config'},
   {id: 'e2', t: '14:02:10', kind: '訂閱', level: 'warn', msg: 'sub-b 刷新失敗，HTTP 503，沿用 r33', ref: '#/resources'},

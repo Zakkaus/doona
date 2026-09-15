@@ -8,11 +8,12 @@ import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 import DeviceDesktop from '../../ui/icons/DeviceDesktop';
 import DevicePhone from '../../ui/icons/DevicePhone';
-import {runtime, checks, events, type Mode} from '../clash-compat/fixtures';
+import {runtime, checks, events, probeEventKind, type Mode} from '../clash-compat/fixtures';
 import {useCapabilities, useGroups, useNodes, useRuntime, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
+import {lifecycleStates, localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
 import {formatBytes, formatRate} from '../../api/u64';
-import {useT} from '../../i18n/i18n';
+import {useT, useLang, LOCALE, formatList} from '../../i18n';
+import type {Key} from '../../i18n/messages';
 import {Button, Segmented, MenuButton, Light, Bar, toast} from '../../ui/ui';
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
@@ -36,13 +37,22 @@ const TOP: Record<string, Top> = {
   ]
 };
 
-// One row per timed-out node, or a single summary row once there are more than three.
-function timeoutIssues(names: string[], timeout: string, many: string, sep: string): string[] {
-  if (names.length <= 3) return names.map(n => n + ' ' + timeout);
-  return [many.replace('{n}', String(names.length)).replace('{list}', names.slice(0, 3).join(sep) + '…')];
-}
+const checkLabels: Record<string, Key> = {
+  ebpf: 'check.ebpf',
+  route: 'check.route',
+  tproxy: 'check.tproxy',
+  nfqueue: 'check.nfqueue',
+  dns: 'check.dns',
+  api: 'check.api',
+  ui: 'check.ui'
+};
+const eventLabels: Record<string, Key> = {e1: 'ev.e1', e2: 'ev.e2', e3: 'ev.e3', e4: 'ev.e4', e5: 'ev.e5', e6: 'ev.e6'};
+const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
+  const lang = useLang();
+  const locale = LOCALE[lang];
+  const chartRate = (value: number | null | undefined) => fmtRate(value, locale, t);
   const p = usePalette();
   const runtimeResource = useRuntime(),
     nodesResource = useNodes(),
@@ -79,7 +89,6 @@ export function Activity({go}: {go: (page: string) => void}) {
   const groups = groupsResource.data;
   const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
   const usage = outboundUsage(outbounds.data);
-  const sep = t('act.sep2');
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
     {label: t('act.upload'), color: p.cat[3], values: series.up}
@@ -92,23 +101,23 @@ export function Activity({go}: {go: (page: string) => void}) {
   }));
   type Issue = {level: 'err' | 'warn' | 'info'; text: string; page: string};
   const RANK = {err: 0, warn: 1, info: 2};
+  const timedOut = NODES.filter(n => n.unavailable).map(n => n.name);
+  const timeoutIssues =
+    timedOut.length <= 3
+      ? timedOut.map(name => t('act.nodeTimeout', {name}))
+      : [t('act.nTimeouts', {n: timedOut.length, list: formatList(lang, timedOut.slice(0, 3)) + '…'})];
   const issues: Issue[] = [
-    ...timeoutIssues(
-      NODES.filter(n => n.unavailable).map(n => n.name),
-      t('act.timeout'),
-      t('act.nTimeouts'),
-      t('act.sep')
-    ).map(text => ({level: 'err' as const, text, page: 'policies'})),
+    ...timeoutIssues.map(text => ({level: 'err' as const, text, page: 'policies'})),
     ...failing.map(c => ({
       level: 'warn' as const,
-      text: t(`check.${c.id}` as 'check.ebpf') + ' ' + t('act.notReady') + sep + t('act.needRestart'),
+      text: t('act.checkNotReady', {name: t(checkLabels[c.id])}),
       page: 'overview'
     })),
     ...events
-      .filter(e => e.level !== 'error' && e.kind !== '探測')
+      .filter(e => e.level !== 'error' && e.kind !== probeEventKind)
       .map(e => ({
         level: e.level === 'warn' ? ('warn' as const) : ('info' as const),
-        text: t(`ev.${e.id}` as 'ev.e1'),
+        text: t(eventLabels[e.id]),
         page: (e.ref ?? '#/events').replace('#/', '')
       }))
   ]
@@ -129,7 +138,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               value={mode}
               onChange={k => {
                 setMode(k as Mode);
-                toast('positive', t('act.mode') + (t('lang') === 'Language' ? ': ' : '：') + t(`mode.${k}` as 'mode.rule'));
+                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
               }}
               items={[
                 ['rule', t('mode.rule')],
@@ -152,9 +161,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
         <div className="rp-card">
           <div className="rp-row">
-            <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>
-              {t(`lifecycle.${liveRuntime.lifecycle.state}` as 'lifecycle.running')}
-            </Light>
+            <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
             <Button quiet onPress={() => go('overview')}>
               {t('act.viewDetails')}
             </Button>
@@ -219,7 +226,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : node.tcp + ' ms') : '—'}</span>
+              <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: node.tcp})) : '—'}</span>
               {node?.alive && <span className="rp-delta good">↓ 12%</span>}
             </span>
             <Light small tone={node?.alive ? 'ok' : 'err'}>
@@ -256,8 +263,8 @@ export function Activity({go}: {go: (page: string) => void}) {
             <span className="rp-label">{t('act.emptyHistory')}</span>
           ) : (
             <>
-              <Legend series={traffic} fmt={fmtRate} />
-              <AreaChart series={traffic} timestamps={series.timestamps} fmt={fmtRate} height={120} />
+              <Legend series={traffic} fmt={chartRate} />
+              <AreaChart series={traffic} timestamps={series.timestamps} fmt={chartRate} locale={locale} height={120} />
             </>
           )}
         </div>
@@ -265,7 +272,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           <div className="rp-row">
             <span className="rp-cluster">
               <span className="rp-title">{t('act.outUsage')}</span>
-              {outbounds.data && <span className="rp-label">{t('act.since').replace('{t}', localTime(outbounds.data.counter_since))}</span>}
+              {outbounds.data && <span className="rp-label">{t('act.since', {t: localTime(outbounds.data.counter_since, locale)})}</span>}
             </span>
           </div>
           {outbounds.error ? (
@@ -298,7 +305,7 @@ export function Activity({go}: {go: (page: string) => void}) {
             {TOP[by].map(([k, v, tx, kind], i) => (
               <div key={k} className="rp-dev">
                 {kind === 'phone' ? <DevicePhone /> : <DeviceDesktop />}
-                <Bar label={k} value={tx + sep + v + '%'} pct={v} color={p.cat[i % p.cat.length]} />
+                <Bar label={k} value={t('ui.share', {bytes: tx, percent: v})} pct={v} color={p.cat[i % p.cat.length]} />
               </div>
             ))}
           </div>
@@ -319,7 +326,7 @@ export function Activity({go}: {go: (page: string) => void}) {
                   key={n.name}
                   icon={<Flag name={n.name} />}
                   label={n.name}
-                  value={n.alive && n.tcp !== undefined ? n.tcp + ' ms' : n.unavailable ? t('act.timeout') : t('act.unknown')}
+                  value={n.alive && n.tcp !== undefined ? t('ui.latency', {n: n.tcp}) : n.unavailable ? t('act.timeout') : t('act.unknown')}
                   pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100}
                   color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love}
                 />

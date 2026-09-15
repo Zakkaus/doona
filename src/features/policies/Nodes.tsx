@@ -28,6 +28,7 @@ import {regionOf} from './geo';
 import {Flag} from './Flag';
 import {Badge, Check, InlineSelect, MenuButton, Switch, latencyTone, usePress} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
+import {useT} from '../../i18n';
 
 export type NodeInfo = {name: string; tcp?: number; udp?: number; v6?: boolean; alive?: boolean; nested?: boolean};
 export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
@@ -73,6 +74,7 @@ export function NodeGrid({
   labels: NodeLabels;
   isDisabled?: boolean;
 }) {
+  const t = useT();
   const [q, setQ] = useState('');
   const [region, setRegion] = useState('all');
   const [sort, setSort] = useState('latency');
@@ -117,7 +119,7 @@ export function NodeGrid({
         <SearchField aria-label={labels.filter} value={q} onChange={setQ} className="rp-input rp-filter">
           <Search />
           <Input placeholder={labels.filter} />
-          <RButton className="clear" aria-label="clear">
+          <RButton className="clear" aria-label={t('clear')}>
             <Close />
           </RButton>
         </SearchField>
@@ -182,6 +184,7 @@ export function NodeGrid({
   );
 }
 function NodeBody({n, labels, cur}: {n: MemberInfo; labels: NodeLabels; cur: boolean}) {
+  const t = useT();
   const health = n.health;
   return (
     <>
@@ -195,7 +198,7 @@ function NodeBody({n, labels, cur}: {n: MemberInfo; labels: NodeLabels; cur: boo
         {n.kind === 'group' ? (
           <Badge>{labels.nested}</Badge>
         ) : health?.state === 'healthy' && health.latency_ms !== null ? (
-          <span className={'ms ' + latencyTone(health.latency_ms)}>{health.latency_ms} ms</span>
+          <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: health.latency_ms})}</span>
         ) : (
           <span className={'ms' + (health?.state === 'unavailable' ? ' err' : '')}>{health?.state === 'unavailable' ? labels.timeout : '—'}</span>
         )}
@@ -222,6 +225,7 @@ export function NodeMenu({
   label: string;
   labels: {timeout: string; filter: string; loading: string};
 }) {
+  const t = useT();
   const [ref, style] = usePress();
   const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
@@ -262,7 +266,9 @@ export function NodeMenu({
         </span>
         <span>{n.name}</span>
       </span>
-      <span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>{n.alive !== false ? n.tcp + ' ms' : labels.timeout}</span>
+      <span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>
+        {n.alive !== false ? t('ui.latency', {n: String(n.tcp)}) : labels.timeout}
+      </span>
     </MenuItem>
   );
   const menu = (
@@ -326,7 +332,7 @@ export function NodeMenu({
             <SearchField aria-label={labels.filter} autoFocus className="rp-input rp-menu-search">
               <Search />
               <Input placeholder={labels.filter} />
-              <RButton className="clear" aria-label="clear">
+              <RButton className="clear" aria-label={t('clear')}>
                 <Close />
               </RButton>
             </SearchField>

@@ -1,3 +1,5 @@
+import {useT} from '../../i18n';
+import type {Key} from '../../i18n/messages';
 // Validation page: everything Config::validate collected about the on-disk revision, what the runtime does with each
 // finding, and what differs from the running revision. Editing lives on the config page.
 import {useState} from 'react';
@@ -6,10 +8,10 @@ import {diagnostics, pending, restartItems, runtime, sources, type Diag} from '.
 import {Badge, Button, DataTable, Light, Segmented, toast} from '../../ui/ui';
 import type {PageProps} from '../types';
 
-const LEVEL: Record<Diag['level'], {tone: 'err' | 'warn' | 'info'; label: string}> = {
-  error: {tone: 'err', label: '錯誤'},
-  warn: {tone: 'warn', label: '警告'},
-  info: {tone: 'info', label: '提示'}
+const LEVEL: Record<Diag['level'], {tone: 'err' | 'warn' | 'info'; label: Key}> = {
+  error: {tone: 'err', label: 'ui.error'},
+  warn: {tone: 'warn', label: 'ui.warning'},
+  info: {tone: 'info', label: 'ui.notice'}
 };
 const where = (d: Diag) =>
   (sources
@@ -20,6 +22,7 @@ const where = (d: Diag) =>
   d.line;
 
 export function Validate({go}: PageProps) {
+  const t = useT();
   const [filter, setFilter] = useState('all');
   const [sel, setSel] = useState<string | null>(null);
   const errors = diagnostics.filter(d => d.level === 'error').length;
@@ -42,50 +45,48 @@ export function Validate({go}: PageProps) {
     <div className="rp-page">
       <div className="rp-toolbar">
         <Light tone={errors ? 'err' : warns ? 'warn' : 'ok'}>
-          {errors ? `未通過：${errors} 個錯誤、${warns} 個警告` : warns ? `通過，${warns} 個警告` : '通過'}
+          {errors ? t('validate.failed', {errors, warnings: warns}) : warns ? t('validate.warnings', {n: warns}) : t('validate.passed')}
         </Light>
-        <Badge>磁碟 r{runtime.diskRevision}</Badge>
-        <Badge>執行中 r{runtime.activeRevision}</Badge>
+        <Badge>{t('ui.diskRevision', {n: runtime.diskRevision})}</Badge>
+        <Badge>{t('ui.activeRevision', {n: runtime.activeRevision})}</Badge>
         <span className="rp-grow" />
-        <Button primary onPress={() => toast(errors ? 'negative' : 'positive', errors ? `校驗完成，${errors} 個錯誤` : '校驗通過')}>
+        <Button primary onPress={() => toast(errors ? 'negative' : 'positive', errors ? t('validate.doneErrors', {n: errors}) : t('validate.done'))}>
           <Refresh />
-          重新校驗
+          {t('validate.again')}
         </Button>
       </div>
-      <p className="rp-note">
-        解析階段一律寬鬆並記下每個問題，由 validate 決定哪些致命：猜錯會改變流量去向或信任邊界的拒絕，其餘用預設或夾到邊界並留下痕跡。有錯誤時 reload 不會套用。
-      </p>
+      <p className="rp-note">{t('validate.note')}</p>
       <div className="rp-split">
         <div className="rp-col">
           <div className="rp-between">
             <Segmented
-              label="等級"
+              label={t('validate.level')}
               value={filter}
               onChange={setFilter}
               items={[
-                ['all', `全部 ${diagnostics.length}`],
-                ['error', `錯誤 ${errors}`],
-                ['warn', `警告 ${warns}`],
-                ['info', `提示 ${diagnostics.length - errors - warns}`]
+                ['all', t('ui.allCount', {n: diagnostics.length})],
+                ['error', t('validate.errors', {n: errors})],
+                ['warn', t('validate.warns', {n: warns})],
+                ['info', t('validate.infos', {n: diagnostics.length - errors - warns})]
               ]}
             />
           </div>
           <DataTable
-            label="校驗結果"
+            label={t('validate.results')}
             height={360}
             rows={rows}
             selected={sel}
             onSelect={setSel}
-            empty="沒有這個等級的項目"
+            empty={t('validate.empty')}
             cols={[
-              {id: 'level', label: '等級', width: 88},
-              {id: 'where', label: '位置', width: 140},
-              {id: 'msg', label: '訊息', isRowHeader: true},
-              {id: 'action', label: '處理', width: 96}
+              {id: 'level', label: t('validate.level'), width: 88},
+              {id: 'where', label: t('ui.position'), width: 140},
+              {id: 'msg', label: t('validate.message'), isRowHeader: true},
+              {id: 'action', label: t('validate.action'), width: 96}
             ]}
             render={d => [
               <Light small tone={LEVEL[d.level].tone}>
-                {LEVEL[d.level].label}
+                {t(LEVEL[d.level].label)}
               </Light>,
               <span className="rp-code">{where(d)}</span>,
               d.msg,
@@ -97,21 +98,19 @@ export function Validate({go}: PageProps) {
           {cur && (
             <div className="rp-card">
               <div className="rp-row">
-                <Light tone={LEVEL[cur.level].tone}>{LEVEL[cur.level].label}</Light>
+                <Light tone={LEVEL[cur.level].tone}>{t(LEVEL[cur.level].label)}</Light>
                 <span className="rp-code">{where(cur)}</span>
               </div>
               <p className="rp-p">{cur.msg}</p>
-              <span className="rp-label">
-                為什麼{cur.action}：{cur.why}。
-              </span>
+              <span className="rp-label">{t('validate.why', {action: cur.action, reason: cur.why})}</span>
               <Button secondary onPress={() => open(cur)}>
-                開啟來源
+                {t('ui.openSource')}
               </Button>
             </div>
           )}
           <div className="rp-card">
             <div className="rp-row">
-              <h3 className="rp-h3">與執行中的差異</h3>
+              <h3 className="rp-h3">{t('validate.diff')}</h3>
               <span className="rp-label">
                 r{runtime.activeRevision} → r{runtime.diskRevision}
               </span>
@@ -123,18 +122,16 @@ export function Validate({go}: PageProps) {
                   <span className="v">
                     {p.from} → {p.to}
                   </span>
-                  {p.restart && <Badge tone="warn">需重啟</Badge>}
+                  {p.restart && <Badge tone="warn">{t('ui.needRestart')}</Badge>}
                 </div>
               ))}
             </div>
             <span className="rp-label">
-              {needRestart.length
-                ? `${needRestart.length} 項要重啟才生效，reload 只會套用其餘 ${pending.length - needRestart.length} 項。`
-                : 'reload 可以全部套用。'}
+              {needRestart.length ? t('validate.restartSummary', {n: needRestart.length, other: pending.length - needRestart.length}) : t('validate.reloadAll')}
             </span>
           </div>
           <div className="rp-card">
-            <h3 className="rp-h3">需重啟的項</h3>
+            <h3 className="rp-h3">{t('validate.restartItems')}</h3>
             <div className="rp-list">
               {restartItems.map(k => (
                 <span key={k} className="rp-code">
@@ -142,7 +139,7 @@ export function Validate({go}: PageProps) {
                 </span>
               ))}
             </div>
-            <span className="rp-label">監聽器、NFQUEUE、TProxy、DNS 綁定在啟動期決定；修改這些項目後 reload 不會生效。</span>
+            <span className="rp-label">{t('validate.restartNote')}</span>
           </div>
         </div>
       </div>

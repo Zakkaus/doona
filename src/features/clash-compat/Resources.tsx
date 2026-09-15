@@ -1,9 +1,11 @@
+import {useT} from '../../i18n';
 import {useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {subs, geo} from './fixtures';
 import {Button, DataTable, Kv, Light, Switch, toast} from '../../ui/ui';
 
 export function Resources() {
+  const t = useT();
   const [onlyBad, setOnlyBad] = useState(false);
   const shown = onlyBad ? subs.filter(s => !s.ready) : subs;
   const refreshable = subs.filter(s => s.refreshable);
@@ -11,33 +13,33 @@ export function Resources() {
     <div className="rp-page">
       <div className="rp-between">
         <Switch isSelected={onlyBad} onChange={setOnlyBad}>
-          只看未就緒
+          {t('resource.onlyBad')}
         </Switch>
-        <Button accent onPress={() => toast('negative', '重新整理完成，sub-b 失敗（HTTP 503）')}>
+        <Button accent onPress={() => toast('negative', t('resource.refreshFailed'))}>
           <Refresh />
-          重新整理全部訂閱（{refreshable.length}）
+          {t('resource.refreshAll', {n: refreshable.length})}
         </Button>
       </div>
       <DataTable
-        label="訂閱"
+        label={t('resource.subscriptions')}
         height={192}
         rows={shown}
-        empty="全部就緒"
+        empty={t('resource.allReady')}
         cols={[
-          {id: 'n', label: '名稱', width: 120, isRowHeader: true},
-          {id: 'src', label: '來源'},
-          {id: 'st', label: '狀態', width: 130},
-          {id: 'try', label: '最後嘗試', width: 110},
-          {id: 'ok', label: '最後成功', width: 110},
-          {id: 'pub', label: '發布', width: 80},
-          {id: 'nodes', label: '節點', width: 72, align: 'end'},
-          {id: 'act', label: '重新整理', width: 96}
+          {id: 'n', label: t('ui.name'), width: 120, isRowHeader: true},
+          {id: 'src', label: t('ui.source')},
+          {id: 'st', label: t('ui.state'), width: 130},
+          {id: 'try', label: t('resource.lastTry'), width: 110},
+          {id: 'ok', label: t('resource.lastOk'), width: 110},
+          {id: 'pub', label: t('resource.published'), width: 80},
+          {id: 'nodes', label: t('resource.nodes'), width: 72, align: 'end'},
+          {id: 'act', label: t('resource.refresh'), width: 96}
         ]}
         render={s => [
           s.name,
           <span className="rp-code">{s.source}</span>,
           <Light small tone={s.ready ? 'ok' : 'err'}>
-            {s.ready ? '就緒' : s.error || '未就緒'}
+            {s.ready ? t('resource.ready') : s.error || t('resource.notReady')}
           </Light>,
           s.lastTry,
           s.lastOk,
@@ -47,10 +49,13 @@ export function Resources() {
             quiet
             icon
             small
-            label={s.refreshable ? '重新整理此訂閱' : '本機檔案，外部替換後請手動 reload'}
+            label={s.refreshable ? t('resource.refreshOne') : t('resource.local')}
             isDisabled={!s.refreshable}
             onPress={() =>
-              toast(s.ready ? 'positive' : 'negative', s.ready ? s.name + ' 已重新整理，' + s.nodes + ' 個節點' : s.name + ' 重新整理失敗（HTTP 503）')
+              toast(
+                s.ready ? 'positive' : 'negative',
+                s.ready ? t('resource.refreshed', {name: s.name, n: s.nodes ?? '—'}) : t('resource.failed', {name: s.name})
+              )
             }
           >
             <Refresh />
@@ -62,16 +67,16 @@ export function Resources() {
           <div key={g.name} className="rp-card">
             <div className="rp-between">
               <h3 className="rp-h3">{g.name}</h3>
-              <Light tone={g.ready ? 'ok' : 'err'}>就緒</Light>
+              <Light tone={g.ready ? 'ok' : 'err'}>{t('resource.ready')}</Light>
             </div>
-            <Kv items={[['路徑', g.path]]} />
+            <Kv items={[[t('resource.path'), g.path]]} />
             <Kv
               items={[
-                ['大小', g.size],
-                ['修改', g.mtime]
+                [t('resource.size'), g.size],
+                [t('resource.modified'), g.mtime]
               ]}
             />
-            <span className="rp-label">唯讀。外部替換檔案後請手動 reload；不提供配額與到期。</span>
+            <span className="rp-label">{t('resource.readonly')}</span>
           </div>
         ))}
       </div>
