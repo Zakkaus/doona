@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {sources, diagnostics, runtime} from '../../app/mock';
 import {Badge, Button, DaeLine, Frame, LabeledSelect, Line, Switch, TextArea, toast} from '../ui';
 import type {PageProps} from './types';
@@ -10,6 +10,13 @@ export function ConfigPage({query, go}: PageProps) {
   const [edit, setEdit] = useState(false);
   const [text, setText] = useState('');
   const [dirty, setDirty] = useState(false);
+  const lastQuery = useRef(query);
+  useEffect(() => {
+    if (lastQuery.current === query) return;
+    lastQuery.current = query;
+    if (dirty || !wanted) return;
+    setSrcId(wanted.id); setEdit(false);
+  }, [query, dirty, wanted]);
   const src = sources.find(s => s.id === srcId)!;
   const errs = diagnostics.filter(d => d.source === src.id && d.level === 'error');
   const startEdit = (on: boolean) => { setEdit(on); if (on) setText(src.lines.join('\n')); };

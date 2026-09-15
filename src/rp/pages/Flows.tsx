@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {useFlow, useFlows} from '../../api/store';
 import {chainLabel, connectionStates, flowStepFields, relativeStart} from '../../api/selectors';
 import {Badge, DataTable, Kv, LabeledSelect, Segmented} from '../ui';
@@ -11,13 +11,7 @@ export function Flows({go, query}: PageProps) {
   const t = useT();
   const [network, setNetwork] = useState('all');
   const [state, setState] = useState('all');
-  const [params, setParams] = useState(() => new URLSearchParams(query));
-  // The themed shell only subscribes to route changes, not query changes.
-  useEffect(() => {
-    const update = () => setParams(new URLSearchParams(location.hash.split('?')[1]));
-    addEventListener('hashchange', update);
-    return () => removeEventListener('hashchange', update);
-  }, []);
+  const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
   const id = params.get('id') ?? resource.data?.flows.find(f => !connectionId || f.connection_id === connectionId)?.id ?? null;

@@ -38,6 +38,7 @@ import {ConfigPage} from './pages/ConfigPage';
 import {Validate} from './pages/Validate';
 import {Events} from './pages/Events';
 import type {PageProps} from './pages/types';
+import {useRoute} from './route';
 import {useCapabilities} from '../api/store';
 import {compatRoutes, navAvailable} from '../api/selectors';
 const PAGES: Record<string, (p: PageProps) => ReactElement> = {overview: Overview, connections: Connections, flows: Flows, clients: Clients, policies: Policies, rules: Rules, dns: Dns, resources: Resources, config: ConfigPage, events: Events, validate: Validate};
@@ -121,18 +122,16 @@ function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, 
 export function Shell() {
   const [lang, setLang] = useState<Lang>(readLang);
   const ap = useAppearance();
-  const [route, setRoute] = useState(() => location.hash.replace(/^#\/?/, '').split('?')[0] || 'activity');
+  const {route, query, go} = useRoute();
   const [searchOpen, setSearchOpen] = useState(false);
-  useEffect(() => { const on = () => setRoute(location.hash.replace(/^#\/?/, '').split('?')[0] || 'activity'); addEventListener('hashchange', on); return () => removeEventListener('hashchange', on); }, []);
   useEffect(() => { const on = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(true); } }; addEventListener('keydown', on); return () => removeEventListener('keydown', on); }, []);
-  const go = (p: string, q?: string) => { location.hash = '#/' + p + (q ? '?' + q : ''); };
   const pickLang = (l: Lang) => { setLang(l); try { localStorage.setItem('doona-lang', l); } catch { /* private mode */ } };
   const mac = navigator.platform.startsWith('Mac');
   // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
   useEffect(() => { const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass'; for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px adobe-clean-han-traditional`, sample).catch(() => {}); }, []);
   return (
     <LangContext.Provider value={lang}>
-      <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+      <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
       <ToastHost />
     </LangContext.Provider>
@@ -141,7 +140,7 @@ export function Shell() {
 
 function ToastHost() { const t = useT(); return <Toasts labels={{close: t('close'), showAll: t('toast.showAll'), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />; }
 
-function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, go: (p: string) => void, openSearch: () => void, mac: boolean}) {
+function Frame({lang, pickLang, ap, route, query, go, openSearch, mac}: {lang: Lang, pickLang: (l: Lang) => void, ap: ReturnType<typeof useAppearance>, route: string, query: string, go: PageProps['go'], openSearch: () => void, mac: boolean}) {
   const t = useT();
   const capabilities = useCapabilities();
   const nav = NAV.map(([group, items]) => [group, items.filter(([key]) => navAvailable(key, capabilities.data))] as const);
@@ -180,7 +179,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
             <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
             <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={nav.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity'), icon: compatRoutes[k] ? <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span> : undefined}))} bare /></div>
           </div>
-          {Page ? <Page go={go} query={location.hash.split('?')[1] ?? ''} /> : <Activity go={go} />}
+          {Page ? <Page go={go} query={query} /> : <Activity go={go} />}
         </div>
       </main>
     </div>
