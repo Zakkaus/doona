@@ -17,7 +17,7 @@ export function Policies({go}: PageProps) {
         <Segmented label="出站模式" value={mode} onChange={k => { setMode(k); toast('positive', '出站模式：' + ({rule: '規則', global: '全域', direct: '直連'} as Record<string, string>)[k]); }} items={[['rule', '規則'], ['global', '全域'], ['direct', '直連']]} />
         {mode === 'global' && <LabeledSelect label="全域目標" side value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))} />}
         <span className="rp-grow" />
-        <Button quiet onPress={() => go('resources')}><Data />訂閱來源</Button>
+        <Button onPress={() => go('resources')}><Data />訂閱來源</Button>
       </div>
       <p className="rp-note">{mode === 'rule' ? '規則由上至下逐條比對，第一條命中者決定出站。' : 'must 與 block 規則在全域、直連模式下仍然生效。'}只有 selector 組可手動選擇，其他組由策略自動決定。</p>
       <div className="rp-list">
