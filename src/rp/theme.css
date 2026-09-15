@@ -77,8 +77,8 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-/* Glass: frosted panels over a colourful wallpaper. The chrome (top bar and sidebar) is one glass sheet; the content area is
-   transparent so every card blurs the wallpaper itself (a blurred parent would hide it from nested backdrop filters).
+/* Glass: frosted panels over a colourful wallpaper. Top bar, sidebar and content area are transparent so every card blurs
+   the wallpaper itself (a blurred parent would hide it from nested backdrop filters).
    Accents follow Apple's system colours. */
 :root[data-family='glass'] {
   --rp-base: rgba(255, 255, 255, 0.5); --rp-surface: rgba(255, 255, 255, 0.55); --rp-overlay: rgba(120, 120, 128, 0.14);
@@ -105,9 +105,9 @@
   --rp-bg: radial-gradient(900px 700px at 12% 8%, #2451c9 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #a3287e 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #b35c00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0e7a63 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #3b2a7a 0%, transparent 65%), #0c0d14;
 }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
-/* The chrome: one continuous sheet. */
-:root[data-family='glass'] .rp-top { background: var(--rp-glass); backdrop-filter: blur(30px) saturate(1.8); border-bottom: 1px solid var(--rp-glass-border); }
-:root[data-family='glass'] .rp-side { background: var(--rp-glass); backdrop-filter: blur(30px) saturate(1.8); border-right: 1px solid var(--rp-glass-border); }
+/* The chrome sits straight on the wallpaper; only panels are glass. */
+:root[data-family='glass'] .rp-top { background: transparent; }
+:root[data-family='glass'] .rp-side { background: transparent; }
 :root[data-family='glass'] .rp-main { background: transparent; border: 0; border-radius: 0; }
 :root[data-family='glass'] .rp-search { background: rgba(255, 255, 255, 0.35); border-color: var(--rp-glass-border); }
 :root[data-family='glass'][data-scheme='dark'] .rp-search { background: rgba(255, 255, 255, 0.08); }
@@ -127,7 +127,9 @@
 /* Controls in the iOS idiom: the selected segment is a lit pill, switches have a white knob, buttons are tinted glass. */
 :root[data-family='glass'] .rp-seg { background: var(--rp-overlay); }
 :root[data-family='glass'] .rp-slider { background: var(--rp-glass-strong); border-color: transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+:root[data-family='glass'] .rp-seg .rp-btn, :root[data-family='glass'] .rp-seg .rp-btn:hover { background: transparent; }
 :root[data-family='glass'] .rp-seg .rp-btn[data-selected] { color: var(--rp-text); }
+:root[data-family='glass'][data-scheme='dark'] .rp-slider { background: rgba(255, 255, 255, 0.16); }
 :root[data-family='glass'] .rp-switch .track::after { background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 :root[data-family='glass'] .rp-btn { background: var(--rp-overlay); }
 :root[data-family='glass'] .rp-btn:hover { background: var(--rp-hl-high); }
