@@ -12,6 +12,8 @@ import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Data from '@react-spectrum/s2/icons/Data';
 import {page, row, card, cardHead, label, list, note, h3, toast} from '../ui';
 import {groups, runtime, type Mode, type Node} from '../mock';
+import {flagOf} from '../geo';
+const flagStyle = style({marginEnd: 4, fontFamily: '["Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif]'});
 import type {PageProps} from '../Shell';
 
 const grid = style({display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8});
@@ -43,10 +45,10 @@ export function Policies({go}: PageProps) {
               {g.members.map(m => {
                 const n = g.nodes.find(x => x.name === m);
                 const sub = n ? health(n) : '巢狀組';
-                if (g.policy !== 'selector') return <div key={m} className={member({isSelected: g.leaf === m})}><span className={nodeName}>{m}</span><span className={nodeSub}>{sub}</span></div>;
+                if (g.policy !== 'selector') return <div key={m} className={member({isSelected: g.leaf === m})}><span className={nodeName}>{flagOf(m) && <span className={flagStyle}>{flagOf(m)}</span>}{m}</span><span className={nodeSub}>{sub}</span></div>;
                 return (
                   <ToggleButton key={m} size="XL" isEmphasized isSelected={sel[g.name] === m} onChange={() => { setSel({...sel, [g.name]: m}); toast('positive', g.name + ' 改選 ' + m + '，已持久化'); }} styles={style({width: 'full'})}>
-                    <Text><span className={nodeName}>{m}</span><span className={nodeSub}>{sub}</span></Text>
+                    <Text><span className={nodeName}>{flagOf(m) && <span className={flagStyle}>{flagOf(m)}</span>}{m}</span><span className={nodeSub}>{sub}</span></Text>
                   </ToggleButton>
                 );
               })}

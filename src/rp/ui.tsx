@@ -67,8 +67,10 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
     </ToggleButtonGroup>
   );
 }
-type Item = {id: string, label: string, desc?: string};
-const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</MenuItem>;
+type Item = {id: string, label: string, desc?: string, icon?: ReactNode, tone?: 'ok' | 'warn' | 'err'};
+// Label with an optional leading icon (a flag, a swatch); shared by menu items and the rendered value of a select.
+const ItemLabel = ({i}: {i: Item}) => <span className="rp-il">{i.icon && <span className="ic">{i.icon}</span>}<span>{i.label}</span></span>;
+const item = (i: Item) => <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</MenuItem>;
 type Picked = {value: string, onChange: (k: string) => void};
 const pick = (on: (k: string) => void) => (k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) on(String(v)); };
 // `extra` is a second section with its own selection (a setting beside the main choice).
@@ -87,12 +89,12 @@ export function MenuButton({children, items, sections, value, onChange, label, q
     </MenuTrigger>
   );
 }
-export function InlineSelect({items, value, onChange, label}: {items: Array<{id: string, label: string, desc?: string}>, value: string, onChange: (k: string) => void, label: string}) {
+export function InlineSelect({items, value, onChange, label}: {items: Item[], value: string, onChange: (k: string) => void, label: string}) {
   return (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }}>
-      <PressButton className="rp-select"><SelectValue>{({selectedItem}) => (selectedItem as {label?: string} | null)?.label ?? value}</SelectValue><ChevronDown /></PressButton>
+      <PressButton className="rp-select"><SelectValue>{({selectedItem}) => selectedItem ? <ItemLabel i={selectedItem as Item} /> : value}</SelectValue><ChevronDown /></PressButton>
       <Popover className="rp-popover" placement="bottom start">
-        <ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</ListBoxItem>}</ListBox>
+        <ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox>
       </Popover>
     </Select>
   );
@@ -100,8 +102,8 @@ export function InlineSelect({items, value, onChange, label}: {items: Array<{id:
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info', children: ReactNode, small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-export function Bar({label, value, pct, color}: {label: string, value: string, pct: number, color: string}) {
-  return <div className="rp-bar"><div className="top"><span className="l">{label}</span><span className="v">{value}</span></div><div className="track"><div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} /></div></div>;
+export function Bar({label, value, pct, color, icon}: {label: string, value: string, pct: number, color: string, icon?: ReactNode}) {
+  return <div className="rp-bar"><div className="top"><span className="l">{icon && <span className="ic">{icon}</span>}{label}</span><span className="v">{value}</span></div><div className="track"><div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} /></div></div>;
 }
 
 // ---- Additions for the remaining pages ----
@@ -120,8 +122,8 @@ export function TextArea({label, value, onChange}: {label: string, value: string
 export function LabeledSelect({label, items, value, onChange, isDisabled, side, bare}: {label: string, items: Item[], value: string, onChange: (k: string) => void, isDisabled?: boolean, side?: boolean, bare?: boolean}) {
   const sel = (
     <Select aria-label={label} selectedKey={value} onSelectionChange={(k: Key | null) => { if (k != null) onChange(String(k)); }} isDisabled={isDisabled}>
-      <PressButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => (selectedItem as Item | null)?.label ?? value}</SelectValue><ChevronDown /></PressButton>
-      <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><span>{i.label}</span>{i.desc && <span className="desc">{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
+      <PressButton className="rp-selectbtn"><SelectValue>{({selectedItem}) => selectedItem ? <ItemLabel i={selectedItem as Item} /> : value}</SelectValue><ChevronDown /></PressButton>
+      <Popover className="rp-popover" placement="bottom start"><ListBox items={items}>{i => <ListBoxItem id={i.id} className="rp-item" textValue={i.label}><ItemLabel i={i} />{i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}</ListBoxItem>}</ListBox></Popover>
     </Select>
   );
   if (bare) return sel;
@@ -136,11 +138,11 @@ export function Kv({items, inline}: {items: Array<[string, string]>, inline?: bo
 }
 // Node tile: name and the TCP latency up front, coloured by health; UDP and IPv6 underneath.
 // With onPress it is a toggle (selector groups); without, a static member that may be the group's current pick.
-export type NodeTileProps = {name: string, tcp?: number, udp?: number, v6?: boolean, alive?: boolean, nested?: boolean, selected?: boolean, cur?: boolean, onPress?: () => void, labels: {timeout: string, nested: string, cur: string}};
+export type NodeTileProps = {name: string, icon?: ReactNode, tcp?: number, udp?: number, v6?: boolean, alive?: boolean, nested?: boolean, selected?: boolean, cur?: boolean, onPress?: () => void, labels: {timeout: string, nested: string, cur: string}};
 export const latencyTone = (ms: number) => ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err';
-export function NodeTile({name, tcp, udp, v6, alive = true, nested, selected, cur, onPress, labels}: NodeTileProps) {
+export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, selected, cur, onPress, labels}: NodeTileProps) {
   const body = <>
-    <span className="top"><span className="n">{name}</span>{nested ? <span className="ms nested">{labels.nested}</span> : alive && tcp != null ? <span className={'ms ' + latencyTone(tcp)}>{tcp} ms</span> : <span className="ms err">{labels.timeout}</span>}</span>
+    <span className="top"><span className="n">{icon && <span className="ic">{icon}</span>}{name}</span>{nested ? <span className="ms nested">{labels.nested}</span> : alive && tcp != null ? <span className={'ms ' + latencyTone(tcp)}>{tcp} ms</span> : <span className="ms err">{labels.timeout}</span>}</span>
     <span className="s">{nested ? ' ' : alive ? ['UDP ' + udp + ' ms', v6 && 'IPv6'].filter(Boolean).join(' · ') : ' '}{cur && !onPress && <span className="cur">{labels.cur}</span>}</span>
   </>;
   if (onPress) { const [ref, style] = usePress(); return <ToggleButton ref={ref} style={style} className="rp-node" isSelected={selected} onChange={onPress}>{body}</ToggleButton>; }

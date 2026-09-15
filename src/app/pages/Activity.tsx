@@ -20,6 +20,9 @@ import DeviceDesktop from '@react-spectrum/s2/icons/DeviceDesktop';
 import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {page, card, label, list, toast} from '../ui';
 import {runtime, checks, conns, groups, events, throughput, connSeries, type Mode} from '../mock';
+import {flagOf} from '../geo';
+const valueRow = style({display: 'inline-flex', alignItems: 'center'});
+const flagStyle = style({marginEnd: 4, fontFamily: '["Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif]'});
 import {useT} from '../i18n';
 import {AreaChart, BarRow, Donut, Legend, Spark, fmtRate, latest, type SeriesColor} from '../TrafficChart';
 import type {PageProps} from '../Shell';
@@ -92,7 +95,7 @@ export function Activity({go}: PageProps) {
         <Panel><span className={tileHead}><Download styles={grayIcon} />{t('act.download')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.down)}</span><span className={delta}>↑ 12%</span></span><span className={tileSpark}><Spark values={traffic[0].values} color="accent" /></span></div></Panel>
         <Panel><span className={tileHead}><Upload styles={grayIcon} />{t('act.upload')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.up)}</span><span className={delta}>↓ 8%</span></span><span className={tileSpark}><Spark values={traffic[1].values} color="orange" /></span></div></Panel>
         <Panel><span className={tileHead}><LinkIcon styles={grayIcon} />{t('act.active')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{conns.length}</span><span className={delta}>↑ 2</span></span><span className={tileSpark}><Spark values={connSeries} color="orange" /></span></div></Panel>
-        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }}>{NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label">{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
+        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} items={NODES} renderValue={items => <span className={valueRow}>{flagOf(items[0].name) && <span className={flagStyle}>{flagOf(items[0].name)}</span>}{items[0].name}</span>}>{n => <PickerItem id={n.name} textValue={n.name}><Text slot="label">{flagOf(n.name) && <span className={flagStyle}>{flagOf(n.name)}</span>}{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
       </div>
 
       <div className={grid21}>
@@ -114,7 +117,7 @@ export function Activity({go}: PageProps) {
         </Panel>
         <Panel>
           <div className={row}><span className={title}>{t('act.probeLatency')}</span><More onPress={() => go('policies')}>{t('act.viewAll')}</More></div>
-          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <BarRow key={n.name} label={n.name} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
+          <div className={list}>{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <BarRow key={n.name} label={n.name} icon={flagOf(n.name)} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? 'green' : 'warn') : 'red'} />)}</div>
         </Panel>
         <Panel>
           <div className={row}><span className={cluster}><span className={title}>{t('act.issues')}</span>{issues.length > 0 && <span className={label}>{issues.length}</span>}</span><More onPress={() => go('overview')}>{t('act.viewAll')}</More></div>

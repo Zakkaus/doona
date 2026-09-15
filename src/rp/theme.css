@@ -255,7 +255,11 @@ button, input { font: inherit; color: inherit; }
 .rp-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 12px; border-radius: 6px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-selected] { font-weight: 600; }
-.rp-item .desc { color: var(--rp-subtle); font-size: 12px; }
+.rp-item .desc { color: var(--rp-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rp-item .desc.ok { color: var(--rp-foam); } .rp-item .desc.warn { color: var(--rp-gold); } .rp-item .desc.err { color: var(--rp-love); }
+.rp-il { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.ic { display: inline-block; font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; font-size: 14px; line-height: 1; margin-right: 6px; }
+.rp-il .ic { margin-right: 0; }
 .rp-tip { background: var(--rp-text); color: var(--rp-on-text); font-size: 12px; padding: 4px 8px; border-radius: 6px; }
 .rp-light { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .rp-light::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--rp-muted)); flex-shrink: 0; }
