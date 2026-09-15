@@ -2,6 +2,7 @@ import type {ApiEvent, EventKind} from './model';
 
 export type ResourceName =
   | 'capabilities'
+  | 'version'
   | 'runtime'
   | 'runtimeOutbounds'
   | 'trafficHistory'
@@ -27,7 +28,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll
   'generation.changed': {now: ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'configRules', 'flows', 'flow'], poll: ['dnsCache']}
 };
 
-export function shouldRefetch(resource: ResourceName, event: ApiEvent, reconnected = false): boolean {
+export function shouldRefetch(resource: ResourceName, event: Pick<ApiEvent, 'event'>, reconnected = false): boolean {
   if (!Object.hasOwn(invalidations, event.event) || (event.event === 'stream.ready' && !reconnected)) return false;
   const {now} = invalidations[event.event];
   return now === 'all' || now.includes(resource);

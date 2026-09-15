@@ -1,11 +1,10 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
 import {useState} from 'react';
-import {useConfigRules, useRoutingTrace} from '../../api/store';
-import {runtime} from '../clash-compat/fixtures';
-import {Button, DataTable, Kv, LabeledSelect, TextField, ModalDialog, toast} from '../../ui/ui';
-import {RuleDialog} from '../activity/RuleDialog';
+import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
+import {Button, DataTable, Kv, LabeledSelect, TextField} from '../../ui/ui';
 import type {PageProps} from '../types';
+import {RuleDistribution} from './RuleDistribution';
 
 export function Rules({go}: PageProps) {
   const t = useT();
@@ -13,6 +12,7 @@ export function Rules({go}: PageProps) {
   const trace = useRoutingTrace();
   const {form, setForm} = trace;
   const config = useConfigRules();
+  const capabilities = useCapabilities();
   const [sel, setSel] = useState<string | null>('r4');
   const cur = config?.rules.find(r => r.id === sel);
   return (
@@ -115,9 +115,13 @@ export function Rules({go}: PageProps) {
           ))}
         </section>
       )}
+      {capabilities.data?.resources.flows.available && <RuleDistribution />}
       {config && (
         <section className="rp-col">
-          <h2 className="rp-h3">{t('rule.configTitle')}</h2>
+          <h2 className="rp-h3">
+            {t('rule.configTitle')} <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>
+          </h2>
+          <p className="rp-note">{t('rule.configDemo')}</p>
           <div className="rp-split">
             <div className="rp-list">
               <DataTable
@@ -158,7 +162,7 @@ export function Rules({go}: PageProps) {
                   <Kv
                     items={[
                       [t('ui.source'), cur.generated ? t('rule.generatedPolicy') : cur.source],
-                      [t('ui.state'), cur.editable ? t('ui.editable') : t('ui.readonly')],
+                      [t('ui.state'), t('ui.readonly')],
                       [t('ui.generation'), config.generation_id]
                     ]}
                   />
@@ -171,41 +175,7 @@ export function Rules({go}: PageProps) {
                       >
                         {t('ui.openSource')}
                       </Button>
-                      <ModalDialog
-                        alert
-                        trigger={
-                          <Button negative isDisabled={!cur.editable}>
-                            {t('ui.delete')}
-                          </Button>
-                        }
-                        title={t('rule.deleteTitle', {n: cur.n})}
-                        narrow
-                        footer={close => (
-                          <>
-                            <Button secondary onPress={close}>
-                              {t('ui.cancel')}
-                            </Button>
-                            <Button
-                              negative
-                              onPress={() => {
-                                close();
-                                toast('positive', t('rule.deleted', {n: cur.n, revision: runtime.diskRevision + 1}));
-                              }}
-                            >
-                              {t('rule.deleteReload')}
-                            </Button>
-                          </>
-                        )}
-                      >
-                        <p className="rp-note">
-                          {t('rule.deleteNote', {source: cur.source, condition: cur.cond, target: cur.target, revision: runtime.diskRevision})}
-                        </p>
-                      </ModalDialog>
                     </div>
-                    <RuleDialog
-                      trigger={<Button accent>{t('ui.addRule')}</Button>}
-                      presets={[{label: t('rule.custom'), cond: 'domain(suffix: example.com)'}]}
-                    />
                   </div>
                 </>
               ) : (

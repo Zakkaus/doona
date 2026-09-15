@@ -3,10 +3,9 @@ import {SearchField, Input, Button as RButton} from 'react-aria-components';
 import Search from '../../ui/icons/Search';
 import Close from '../../ui/icons/Close';
 import {useConnections} from '../../api/store';
-import {chainLabel, connectionDetails, connectionRows, connectionStates, ipLiteral, relativeStart} from '../../api/selectors';
-import {formatBytes} from '../../api/u64';
-import {Button, DataTable, Kv, LabeledSelect, Light, Segmented} from '../../ui/ui';
-import {RuleDialog} from '../activity/RuleDialog';
+import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
+import {Button, Kv, LabeledSelect, Light, Segmented} from '../../ui/ui';
+import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
 
@@ -25,7 +24,12 @@ export function Connections({go, query}: PageProps) {
     const text = q.get('q') ?? q.get('src');
     const id = q.get('id');
     if (text !== null) setText(text);
-    if (id !== null) setSel(id);
+    if (id !== null) {
+      setSel(id);
+      if (text === null) setText('');
+      setNetwork('all');
+      setOut('all');
+    }
   }
   const src = ipLiteral(text);
   const resource = useConnections(src);
@@ -84,38 +88,7 @@ export function Connections({go, query}: PageProps) {
         </Button>
       </div>
       <div className="rp-page">
-        <DataTable
-          label={t('nav.connections')}
-          rows={shown}
-          selected={sel}
-          onSelect={setSel}
-          empty={t('conn.empty')}
-          cols={[
-            {id: 'dst', label: t('ui.target'), width: 200, isRowHeader: true},
-            {id: 'src', label: t('ui.source'), width: 136},
-            {id: 'chain', label: t('conn.chain'), width: 180},
-            {id: 'rule', label: t('conn.rule'), width: 220},
-            {id: 'state', label: t('ui.state'), width: 100},
-            {id: 'down', label: t('ui.download'), width: 88, align: 'end'},
-            {id: 'age', label: t('ui.started'), width: 104, align: 'end'}
-          ]}
-          render={c => [
-            c.domain || c.dst || '—',
-            <span className="rp-code">{c.src ?? '—'}</span>,
-            chainLabel(c),
-            <span className="rp-rule">
-              <span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>
-              {c.rule_source === 'recomputed' ? (
-                <small className="rp-provenance">{t('conn.recomputed')}</small>
-              ) : c.rule_source === 'unknown' ? (
-                <small className="rp-provenance">—</small>
-              ) : null}
-            </span>,
-            t(connectionStates[c.state]),
-            formatBytes(c.download_bytes),
-            relativeStart(c.started_at, locale)
-          ]}
-        />
+        <ConnectionTable rows={shown} selected={sel} onSelect={setSel} />
         {cur ? (
           <div className="rp-card">
             <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>
@@ -126,14 +99,6 @@ export function Connections({go, query}: PageProps) {
             <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
               {t('conn.viewFlow')}
             </Button>
-            <RuleDialog
-              trigger={<Button accent>{t('ui.addRule')}</Button>}
-              presets={[
-                ...(cur.domain ? [{label: t('ui.domainValue', {domain: cur.domain}), cond: 'domain(full: ' + cur.domain + ')'}] : []),
-                ...(cur.dst ? [{label: t('conn.dstIp'), cond: 'dip(' + cur.dst.replace(/:\d+$/, '').replace(/^\[|\]$/g, '') + ')'}] : []),
-                ...(cur.src ? [{label: t('ui.sourceValue', {source: cur.src}), cond: 'sip(' + cur.src + ')'}] : [])
-              ]}
-            />
           </div>
         ) : (
           <div className="rp-card">

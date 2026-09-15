@@ -3,7 +3,7 @@ import {createMockApi} from './mock';
 import {chainLabel, clientRows, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
 import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
-import {connections, trafficHistory} from './mock/fixtures';
+import {connectionFixtures, connections, trafficHistory} from './mock/fixtures';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -70,6 +70,25 @@ it('filters exact source IPs and protocol before computing totals and limiting r
   await expect(api.connections({src: 'host.invalid'})).rejects.toMatchObject({status: 400});
 });
 
+it('limits the large connection snapshot without losing totals or deterministic IDs', async () => {
+  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-big' ? '100' : null)});
+  const fixture = connectionFixtures().connections;
+  const generated = [...fixture.tcp, ...fixture.udp].sort((a, b) => a.id.localeCompare(b.id));
+  expect(generated.map(row => row.id)).toEqual(Array.from({length: 1200}, (_, i) => 'c-' + String(i + 1).padStart(4, '0')));
+  expect(connectionFixtures().connections).toEqual(fixture);
+  expect(generated.filter(row => row.flow_id).map(row => row.id)).toEqual(generated.filter((_, i) => (i + 1) % 3 === 0).map(row => row.id));
+  const ages = generated.map(row => Date.parse(fixture.observed_at) - Date.parse(row.started_at!));
+  expect(Math.min(...ages)).toBe(0);
+  expect(Math.max(...ages)).toBe(3597000);
+  const api = createMockApi();
+  const snapshot = await api.connections({limit: 1000});
+  expect(snapshot).toMatchObject({total_tcp: 900, total_udp: 300, truncated: true});
+  expect([...snapshot.tcp, ...snapshot.udp].map(row => row.id)).toEqual([...fixture.tcp, ...fixture.udp].slice(0, 1000).map(row => row.id));
+  expect(await api.connections({type: 'udp', limit: 1000})).toMatchObject({total_tcp: 0, total_udp: 300, truncated: false, tcp: [], udp: fixture.udp});
+  const linked = snapshot.tcp.find(row => row.flow_id)!;
+  expect(await api.flow(linked.flow_id!)).toMatchObject({connection_id: linked.id, started_at: linked.started_at, input: {dst: linked.dst}});
+});
+
 it('finds a retained flow by connection ID when the live row has no flow ID', async () => {
   const api = createMockApi();
   const c = (await api.connections()).tcp.find(c => c.id === '3')!;
@@ -80,6 +99,19 @@ it('finds a retained flow by connection ID when the live row has no flow ID', as
   expect((await api.flow(result.flows[0].id)).connection_id).toBe(c.id);
   expect((await api.flows({connection_id: c.id, network: 'udp'})).flows).toEqual([]);
   expect((await api.flows({connection_id: 'missing'})).flows).toEqual([]);
+});
+
+it('omits unavailable summary input without losing retained detail evidence', async () => {
+  const api = createMockApi();
+  const snapshot = await api.flows();
+  const summary = snapshot.flows.find(flow => flow.id === 'flow-unobserved')!;
+  expect(summary).not.toHaveProperty('input');
+  expect(summary).toMatchObject({rule_id: null, rule_expression: null, outbound: null, chain: [], chain_source: 'unknown'});
+  expect(BigInt(snapshot.dropped_records!)).toBeGreaterThan(0n);
+  const detail = await api.flow(summary.id);
+  expect(detail.input.src).toBe('10.0.0.12');
+  expect(detail.trace.status).toBe('partial');
+  expect((await api.flows()).flows.find(flow => flow.id === summary.id)).not.toHaveProperty('input');
 });
 
 it('keeps list decisions consistent with recorded traces rather than current selections', async () => {

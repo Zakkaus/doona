@@ -1,6 +1,7 @@
 // Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
-import {useId, useMemo, useSyncExternalStore} from 'react';
-import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {lazy, Suspense, useId, useMemo, useSyncExternalStore} from 'react';
+import type {ComponentProps} from 'react';
+import type {SankeyProps} from 'recharts';
 import {formatNumber, useT, type Translator} from '../i18n';
 
 export type Series = {label: string; color: string; values: Array<number | null>};
@@ -54,119 +55,167 @@ export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null 
     </div>
   );
 }
-export function AreaChart({
-  series,
-  timestamps,
-  fmt,
-  locale,
-  height = 150
-}: {
-  series: Series[];
-  timestamps: number[];
-  fmt: (v: number) => string;
-  locale: string;
-  height?: number;
-}) {
-  const p = usePalette();
-  const uid = useId();
-  const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit'}), [locale]);
-  const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
-  if (!timestamps.length) return null;
-  const last = timestamps.length - 1;
-  const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
-  const max = niceMax(Math.max(1, ...series.flatMap(s => s.values.filter((v): v is number => v !== null))) * 1.08);
-  const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last].map(i => timestamps[i]))];
+const LazyAreaChart = lazy(() =>
+  import('recharts').then(({AreaChart: RAreaChart, Area, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis}) => ({
+    default: function AreaChart({
+      series,
+      timestamps,
+      fmt,
+      locale,
+      height = 150
+    }: {
+      series: Series[];
+      timestamps: number[];
+      fmt: (v: number) => string;
+      locale: string;
+      height?: number;
+    }) {
+      const p = usePalette();
+      const uid = useId();
+      const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit'}), [locale]);
+      const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
+      if (!timestamps.length) return null;
+      const last = timestamps.length - 1;
+      const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
+      const max = niceMax(Math.max(1, ...series.flatMap(s => s.values.filter((v): v is number => v !== null))) * 1.08);
+      const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last].map(i => timestamps[i]))];
+      return (
+        <div style={{height, width: '100%'}}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RAreaChart data={data} margin={{top: 8, right: 0, bottom: 0, left: 20}}>
+              <defs>
+                {series.map((s, k) => (
+                  <linearGradient key={s.label} id={uid + k} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.color} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={s.color} stopOpacity={0.03} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid vertical={false} stroke={p['hl-med']} strokeDasharray="2 4" />
+              <XAxis
+                dataKey="t"
+                type="number"
+                domain={['dataMin', 'dataMax']}
+                ticks={ticks}
+                tickFormatter={value => clock.format(value)}
+                tick={{fontSize: 11, fill: p.subtle}}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
+              <YAxis
+                orientation="right"
+                ticks={[max / 2, max]}
+                domain={[0, max]}
+                tickFormatter={v => fmt(v)}
+                tick={{fontSize: 11, fill: p.subtle}}
+                axisLine={false}
+                tickLine={false}
+                width={64}
+              />
+              <Tooltip
+                contentStyle={tip(p)}
+                itemStyle={{color: p.surface}}
+                labelFormatter={value => date.format(Number(value))}
+                formatter={v => fmt(Number(v))}
+                cursor={{stroke: p.subtle, strokeDasharray: '3 3'}}
+              />
+              {series.map((s, k) => (
+                <Area
+                  key={s.label}
+                  type="monotone"
+                  dataKey={s.label}
+                  stroke={s.color}
+                  strokeWidth={2}
+                  fill={`url(#${uid + k})`}
+                  dot={false}
+                  activeDot={{r: 4, strokeWidth: 2}}
+                  isAnimationActive={false}
+                />
+              ))}
+            </RAreaChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+  }))
+);
+
+export function AreaChart(props: ComponentProps<typeof LazyAreaChart>) {
   return (
-    <div style={{height, width: '100%'}}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RAreaChart data={data} margin={{top: 8, right: 0, bottom: 0, left: 20}}>
-          <defs>
-            {series.map((s, k) => (
-              <linearGradient key={s.label} id={uid + k} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={s.color} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={s.color} stopOpacity={0.03} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid vertical={false} stroke={p['hl-med']} strokeDasharray="2 4" />
-          <XAxis
-            dataKey="t"
-            type="number"
-            domain={['dataMin', 'dataMax']}
-            ticks={ticks}
-            tickFormatter={value => clock.format(value)}
-            tick={{fontSize: 11, fill: p.subtle}}
-            axisLine={false}
-            tickLine={false}
-            interval={0}
-          />
-          <YAxis
-            orientation="right"
-            ticks={[max / 2, max]}
-            domain={[0, max]}
-            tickFormatter={v => fmt(v)}
-            tick={{fontSize: 11, fill: p.subtle}}
-            axisLine={false}
-            tickLine={false}
-            width={64}
-          />
-          <Tooltip
-            contentStyle={tip(p)}
-            itemStyle={{color: p.surface}}
-            labelFormatter={value => date.format(Number(value))}
-            formatter={v => fmt(Number(v))}
-            cursor={{stroke: p.subtle, strokeDasharray: '3 3'}}
-          />
-          {series.map((s, k) => (
-            <Area
-              key={s.label}
-              type="monotone"
-              dataKey={s.label}
-              stroke={s.color}
-              strokeWidth={2}
-              fill={`url(#${uid + k})`}
-              dot={false}
-              activeDot={{r: 4, strokeWidth: 2}}
-              isAnimationActive={false}
-            />
-          ))}
-        </RAreaChart>
-      </ResponsiveContainer>
-    </div>
+    <Suspense fallback={<div style={{height: props.height ?? 150, width: '100%'}} />}>
+      <LazyAreaChart {...props} />
+    </Suspense>
   );
 }
-export function Spark({values, timestamps, color, height = 32}: {values: Array<number | null>; timestamps: number[]; color: string; height?: number}) {
-  const uid = useId();
-  const known = values.filter((v): v is number => v !== null);
-  if (!known.length) return null;
-  const data = values.map((v, i) => ({t: timestamps[i], v}));
-  const lo = Math.min(...known) * 0.85,
-    hi = Math.max(...known) * 1.05 || 1;
+const LazySpark = lazy(() =>
+  import('recharts').then(({AreaChart: RAreaChart, Area, ResponsiveContainer, XAxis, YAxis}) => ({
+    default: function Spark({values, timestamps, color, height = 32}: {values: Array<number | null>; timestamps: number[]; color: string; height?: number}) {
+      const uid = useId();
+      const known = values.filter((v): v is number => v !== null);
+      if (!known.length) return null;
+      const data = values.map((v, i) => ({t: timestamps[i], v}));
+      const lo = Math.min(...known) * 0.85,
+        hi = Math.max(...known) * 1.05 || 1;
+      return (
+        <div style={{height, width: '100%'}}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RAreaChart data={data} margin={{top: 2, right: 0, bottom: 2, left: 0}}>
+              <defs>
+                <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <XAxis hide dataKey="t" type="number" domain={['dataMin', 'dataMax']} />
+              <YAxis hide domain={[lo, hi]} />
+              <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#${uid})`} dot={false} isAnimationActive={false} />
+            </RAreaChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+  }))
+);
+
+export function Spark(props: ComponentProps<typeof LazySpark>) {
   return (
-    <div style={{height, width: '100%'}}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RAreaChart data={data} margin={{top: 2, right: 0, bottom: 2, left: 0}}>
-          <defs>
-            <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={color} stopOpacity={0.03} />
-            </linearGradient>
-          </defs>
-          <XAxis hide dataKey="t" type="number" domain={['dataMin', 'dataMax']} />
-          <YAxis hide domain={[lo, hi]} />
-          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#${uid})`} dot={false} isAnimationActive={false} />
-        </RAreaChart>
-      </ResponsiveContainer>
-    </div>
+    <Suspense fallback={<div style={{height: props.height ?? 32, width: '100%'}} />}>
+      <LazySpark {...props} />
+    </Suspense>
   );
 }
 export function Donut({rows, total}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
-  const p = usePalette();
   const t = useT();
-  const data = rows.filter(r => r.value !== null && r.value > 0);
   return (
     <div className="rp-donut">
       <div className="box">
+        <Suspense fallback={null}>
+          <LazyDonut rows={rows} />
+        </Suspense>
+        <div className="center">{total}</div>
+      </div>
+      <div className="lst">
+        {rows.map(r => (
+          <div key={r.name} className="r">
+            <i className="dot" style={{background: r.color}} />
+            <span className="n">{r.name}</span>
+            <span>{r.text}</span>
+            <span className="p">{r.value === null ? '—' : t('ui.percent', {n: r.value})}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const LazyDonut = lazy(() =>
+  import('recharts').then(({PieChart, Pie, Cell, ResponsiveContainer, Tooltip}) => ({
+    default: function DonutPlot({rows}: Pick<ComponentProps<typeof Donut>, 'rows'>) {
+      const t = useT();
+      const p = usePalette();
+      const data = rows.filter(r => r.value !== null && r.value > 0);
+      return (
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{top: 0, right: 0, bottom: 0, left: 0}}>
             <Pie
@@ -196,18 +245,38 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="center">{total}</div>
-      </div>
-      <div className="lst">
-        {rows.map(r => (
-          <div key={r.name} className="r">
-            <i className="dot" style={{background: r.color}} />
-            <span className="n">{r.name}</span>
-            <span>{r.text}</span>
-            <span className="p">{r.value === null ? '—' : t('ui.percent', {n: r.value})}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+      );
+    }
+  }))
+);
+
+const LazySankey = lazy(() =>
+  import('recharts').then(({Sankey: RSankey, ResponsiveContainer, Tooltip}) => ({
+    default: function Sankey({
+      height = 280,
+      formatTooltip,
+      ...props
+    }: Omit<SankeyProps, 'height' | 'width'> & {height?: number; formatTooltip: (label: string, count: number) => string}) {
+      const p = usePalette();
+      return (
+        <ResponsiveContainer width="100%" height={height}>
+          <RSankey nodePadding={2} nodeWidth={4} align="left" {...props}>
+            <Tooltip
+              content={({active, payload}) =>
+                active && payload?.length ? <div style={tip(p)}>{formatTooltip(String(payload[0].name ?? ''), Number(payload[0].value))}</div> : null
+              }
+            />
+          </RSankey>
+        </ResponsiveContainer>
+      );
+    }
+  }))
+);
+
+export function Sankey(props: ComponentProps<typeof LazySankey>) {
+  return (
+    <Suspense fallback={<div style={{height: props.height ?? 280, width: '100%'}} />}>
+      <LazySankey {...props} />
+    </Suspense>
   );
 }

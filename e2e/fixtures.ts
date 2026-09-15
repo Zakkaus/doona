@@ -13,8 +13,10 @@ export const routes = [
   'resources',
   'config',
   'validate',
-  'events'
+  'events',
+  'settings'
 ] as const;
+export const compatRoutes: readonly string[] = ['resources', 'config', 'validate'];
 
 export const test = base.extend<{storage: Record<string, string>}>({
   storage: [{}, {option: true}],

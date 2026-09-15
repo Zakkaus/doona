@@ -88,6 +88,7 @@ export function createApi(base: string, token?: string): Api {
     }
   }
   return {
+    discovery: async signal => data(await client.GET('/api', {signal})),
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
     capabilities: async signal => data(await client.GET('/api/v1/capabilities', {signal})),
     runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),

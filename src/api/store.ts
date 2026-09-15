@@ -13,6 +13,11 @@ type StreamStatus = {connected: boolean; cursor: string | null; error: Error | n
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
 const streams = new Map<Api, Stream>();
 const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
+const refreshers = new WeakMap<Api, Set<() => Promise<void> | undefined>>();
+
+export async function refetchAll() {
+  await Promise.allSettled([...(refreshers.get(getApi()) ?? [])].map(refresh => refresh()));
+}
 export function useEvents(onEvent: Listener) {
   const api = getApi();
   const callback = useRef(onEvent);
@@ -102,6 +107,7 @@ export function useResource<T>(
 ) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
+  const invalidateAs = resource.invalidateAs ?? resource.key[0];
   const [key, setKey] = useState(() => ({api, name, every, enabled, deps}));
   const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
   // Match React's dependency comparison without serializing API object identities.
@@ -120,17 +126,18 @@ export function useResource<T>(
   useEffect(() => {
     current.current = resource.fetch;
   });
-  const refresh = useRef<() => void>(() => {});
+  const refresh = useRef<() => Promise<void> | undefined>(() => undefined);
   const refetch = useCallback(() => refresh.current(), []);
   useEffect(() => {
     if (!key.enabled) return;
     let pending: RequestLease<T> | undefined;
+    let settled: Promise<void> | undefined;
     let disposed = false;
     const load = () => {
-      if (pending) return;
+      if (pending) return settled;
       const request = inflight.acquire(key.api, key.name, current.current);
       pending = request;
-      void request.promise.then(
+      settled = request.promise.then(
         data => {
           pending = undefined;
           request.release();
@@ -142,24 +149,35 @@ export function useResource<T>(
           if (!disposed) setState(previous => ({...previous, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))}));
         }
       );
+      return settled;
     };
     refresh.current = () => {
       setState(previous => ({...previous, loading: true}));
-      load();
+      return load();
     };
+    let listeners = refreshers.get(key.api);
+    if (!listeners) refreshers.set(key.api, (listeners = new Set()));
+    // Reuse reconnect invalidation without publishing a synthetic server event.
+    const invalidate = () => (shouldRefetch(invalidateAs, {event: 'stream.ready'}, true) ? refresh.current() : undefined);
+    listeners.add(invalidate);
     load();
     const timer = key.every > 0 ? setInterval(refresh.current, key.every) : undefined;
     return () => {
       disposed = true;
+      listeners.delete(invalidate);
       pending?.release();
       clearInterval(timer);
-      refresh.current = () => {};
+      refresh.current = () => undefined;
     };
-  }, [key]);
+  }, [key, invalidateAs]);
   useEvents((event, reconnected) => {
     if (shouldRefetch(resource.invalidateAs ?? resource.key[0], event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
   });
   return {...state, refetch};
+}
+export function useVersion() {
+  const api = getApi();
+  return useResource({key: ['version'], fetch: signal => api.version(signal)}, {deps: [api], every: 0});
 }
 export function useRuntime(enabled = true) {
   const api = getApi();

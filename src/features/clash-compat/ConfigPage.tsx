@@ -28,6 +28,7 @@ export function ConfigPage({query, go}: PageProps) {
   };
   return (
     <div className="rp-page">
+      <p className="rp-note">{t('compat.demoData')}</p>
       <div className="rp-split">
         <div className="rp-col">
           <div className="rp-between">
@@ -52,15 +53,14 @@ export function ConfigPage({query, go}: PageProps) {
                 {t('config.validate')}
                 {errs.length > 0 && <span className="rp-count">{errs.length}</span>}
               </Button>
-              <Button primary onPress={() => toast('neutral', t('config.reloaded', {revision: runtime.diskRevision}))}>
+              <Button primary onPress={() => toast('neutral', t('compat.disconnected'))}>
                 {t('config.reload')}
               </Button>
               <Button
                 accent
                 isDisabled={!dirty}
                 onPress={() => {
-                  setDirty(false);
-                  toast('positive', t('config.applied', {revision: runtime.diskRevision + 1}));
+                  toast('neutral', t('compat.disconnected'));
                 }}
               >
                 {t('config.applyReload')}

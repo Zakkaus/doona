@@ -32,8 +32,10 @@ import type {
   EventOptions
 } from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
+import type {components} from './types';
 
 export interface Api {
+  discovery(signal?: AbortSignal): Promise<components['schemas']['Discovery']>;
   version(signal?: AbortSignal): Promise<Version>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   runtime(signal?: AbortSignal): Promise<Runtime>;

@@ -1,5 +1,5 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
-import {useEffect, useLayoutEffect, useState} from 'react';
+import {Suspense, useEffect, useLayoutEffect, useState, type ReactNode} from 'react';
 import {
   I18nProvider,
   Button as RButton,
@@ -16,7 +16,6 @@ import {
   Separator
 } from 'react-aria-components';
 import Close from '../ui/icons/Close';
-import {toast} from '../ui/ui';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
@@ -25,27 +24,16 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
-import {conns, groups, rules} from '../features/clash-compat/fixtures';
 import {Button, MenuButton, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
-import {useCapabilities} from '../api/store';
+import {refetchAll, useCapabilities, useConnections, useGroups, useNodes, useVersion} from '../api/store';
+import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable} from './registry';
+import {SettingsContext} from '../features/settings/Settings';
+import {readSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
 
-type Scheme = 'system' | 'light' | 'dark';
-// A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
-type PaletteId =
-  | 'rose-pine/main'
-  | 'rose-pine/moon'
-  | 'catppuccin/frappe'
-  | 'catppuccin/macchiato'
-  | 'catppuccin/mocha'
-  | 'nord/nord'
-  | 'glass/glass'
-  | 'antd/antd'
-  | 'arco/arco'
-  | 'semi/semi';
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
   {
@@ -75,9 +63,7 @@ const palettes = (t: Translator): Array<{title: string; items: Array<{id: Palett
   {title: t('palette.glassName'), items: [{id: 'glass/glass', label: t('palette.glassName'), desc: t('palette.glass')}]}
 ];
 const navGroups = [...new Set(features.flatMap(feature => (feature.nav ? [feature.nav.group] : [])))];
-const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
-type Wordmark = 'gradient' | 'plain';
 const read = (k: string) => {
   try {
     return localStorage.getItem(k);
@@ -176,26 +162,36 @@ function SchemeIcon({dark}: {dark: boolean}) {
   );
 }
 
-function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; go: (p: string) => void}) {
+function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProps['go']; backend: BackendKind}) {
   const t = useT();
   const [q, setQ] = useState('');
+  const connections = useConnections();
+  const nodes = useNodes();
+  const groups = useGroups();
+  const capabilities = useCapabilities();
   const needle = q.trim().toLowerCase();
-  const hits = needle
-    ? {
-        conns: conns.filter(c => (c.host || c.dst).toLowerCase().includes(needle)).slice(0, 8),
-        nodes: NODES.filter(n => n.toLowerCase().includes(needle)).slice(0, 8),
-        rules: rules.filter(r => r.cond.toLowerCase().includes(needle)).slice(0, 8)
-      }
-    : {conns: conns.slice(0, 5), nodes: NODES.slice(0, 5), rules: rules.slice(0, 5)};
+  const limit = needle ? 8 : 5;
+  const hits = {
+    conns: connectionRows(connections.data)
+      .filter(c => [c.domain, c.dst, c.src].some(value => value?.toLowerCase().includes(needle)))
+      .slice(0, limit),
+    nodes: (nodes.data ?? []).filter(n => n.name.toLowerCase().includes(needle)).slice(0, limit),
+    groups: (groups.data ?? []).filter(g => g.name.toLowerCase().includes(needle)).slice(0, limit),
+    pages: features
+      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data, backend) && t(feature.nav.titleKey).toLowerCase().includes(needle))
+      .slice(0, limit)
+  };
+  const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
   const pick = (k: string) => {
-    const [kind] = k.split(':');
-    go(kind === 'conn' ? 'connections' : kind === 'node' ? 'policies' : 'rules');
+    if (k.startsWith('conn:')) go('connections', 'id=' + encodeURIComponent(k.slice(5)));
+    else if (k.startsWith('page:')) go(k.slice(5));
+    else go('policies');
     onClose();
   };
   return (
     <ModalOverlay
       className="rp-underlay"
-      isOpen={open}
+      isOpen
       onOpenChange={o => {
         if (!o) onClose();
       }}
@@ -214,15 +210,16 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
               <Close />
             </RButton>
           </SearchField>
-          {hits.conns.length + hits.nodes.length + hits.rules.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
+          {error && <p role="alert">{error.message}</p>}
+          {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
           <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
             {hits.conns.length > 0 && (
               <ListBoxSection id="conns">
                 <Header className="rp-section-h">{t('nav.connections')}</Header>
                 {hits.conns.map(c => (
-                  <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.host || c.dst}>
-                    <span>{c.host || c.dst}</span>
-                    <span className="desc">{c.chain.join(' → ')}</span>
+                  <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
+                    <span>{c.domain || c.dst || c.src || c.id}</span>
+                    <span className="desc">{chainLabel(c)}</span>
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
@@ -231,19 +228,28 @@ function SearchDialog({open, onClose, go}: {open: boolean; onClose: () => void; 
               <ListBoxSection id="nodes">
                 <Header className="rp-section-h">{t('search.nodes')}</Header>
                 {hits.nodes.map(n => (
-                  <ListBoxItem key={n} id={'node:' + n} className="rp-item plain" textValue={n}>
-                    {n}
+                  <ListBoxItem key={n.id} id={'node:' + n.id} className="rp-item plain" textValue={n.name}>
+                    {n.name}
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
             )}
-            {hits.rules.length > 0 && (
-              <ListBoxSection id="rules">
-                <Header className="rp-section-h">{t('nav.rules')}</Header>
-                {hits.rules.map(r => (
-                  <ListBoxItem key={r.id} id={'rule:' + r.id} className="rp-item" textValue={r.cond}>
-                    <span>{r.cond}</span>
-                    <span className="desc">{r.target}</span>
+            {hits.groups.length > 0 && (
+              <ListBoxSection id="groups">
+                <Header className="rp-section-h">{t('search.groups')}</Header>
+                {hits.groups.map(g => (
+                  <ListBoxItem key={g.id} id={'group:' + g.id} className="rp-item plain" textValue={g.name}>
+                    {g.name}
+                  </ListBoxItem>
+                ))}
+              </ListBoxSection>
+            )}
+            {hits.pages.length > 0 && (
+              <ListBoxSection id="pages">
+                <Header className="rp-section-h">{t('search.pages')}</Header>
+                {hits.pages.map(page => (
+                  <ListBoxItem key={page.path} id={'page:' + page.path} className="rp-item plain" textValue={t(page.nav!.titleKey)}>
+                    {t(page.nav!.titleKey)}
                   </ListBoxItem>
                 ))}
               </ListBoxSection>
@@ -261,7 +267,8 @@ export function Shell() {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
   const ap = useAppearance();
-  const {route, query, go} = useRoute();
+  const [settings] = useState(readSettings);
+  const {route, query, go} = useRoute(settings.api);
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -285,13 +292,23 @@ export function Shell() {
   // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px adobe-clean-han-traditional`, sample).catch(() => {});
+    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px 'Noto Sans TC'`, sample).catch(() => {});
   }, []);
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
-        <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
+        <Frame
+          lang={lang}
+          pickLang={pickLang}
+          ap={ap}
+          backend={settings.backend}
+          route={route}
+          query={query}
+          go={go}
+          openSearch={() => setSearchOpen(true)}
+          mac={mac}
+        />
+        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} backend={settings.backend} />}
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
@@ -303,10 +320,20 @@ function ToastHost() {
   return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
 }
 
+function Delayed({children}: {children: ReactNode}) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+  return visible ? children : null;
+}
+
 function Frame({
   lang,
   pickLang,
   ap,
+  backend,
   route,
   query,
   go,
@@ -316,6 +343,7 @@ function Frame({
   lang: Lang;
   pickLang: (l: Lang) => void;
   ap: ReturnType<typeof useAppearance>;
+  backend: BackendKind;
   route: string;
   query: string;
   go: PageProps['go'];
@@ -323,9 +351,11 @@ function Frame({
   mac: boolean;
 }) {
   const t = useT();
+  const paletteSections = palettes(t);
   const capabilities = useCapabilities();
+  const version = useVersion();
   const nav = navGroups.map(
-    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
+    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data, backend))] as const
   );
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
@@ -357,10 +387,18 @@ function Frame({
               quiet
               icon
               label={t('refresh')}
-              onPress={() => {
+              isDisabled={spinning}
+              onPress={async () => {
                 setSpinning(true);
-                setTimeout(() => setSpinning(false), 600);
-                toast('positive', t('refreshed'));
+                let timer: number | undefined;
+                await Promise.race([
+                  refetchAll(),
+                  new Promise<void>(resolve => {
+                    timer = window.setTimeout(resolve, 2000);
+                  })
+                ]);
+                clearTimeout(timer);
+                setSpinning(false);
               }}
             >
               <Refresh />
@@ -383,7 +421,7 @@ function Frame({
             label={t('palette')}
             value={ap.palette}
             onChange={k => ap.pickPalette(k as PaletteId)}
-            sections={palettes(t)}
+            sections={paletteSections}
             extra={{
               title: t('wordmark'),
               value: ap.wordmark,
@@ -426,7 +464,7 @@ function Frame({
         <div className="rp-side-grow" />
         <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}>
           <GitHub />
-          honk 0.9.3
+          {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
         </RButton>
       </nav>
       <main className="rp-main">
@@ -455,7 +493,24 @@ function Frame({
               />
             </div>
           </div>
-          <Page go={go} query={query} />
+          <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
+            {feature.requires.backend && feature.requires.backend !== backend ? (
+              <p className="rp-note">{t('shell.backendRequired')}</p>
+            ) : (
+              <Suspense
+                key={feature.id}
+                fallback={
+                  <Delayed>
+                    <div className="rp-empty" role="status">
+                      {t('ui.loading')}
+                    </div>
+                  </Delayed>
+                }
+              >
+                <Page go={go} query={query} backend={backend} />
+              </Suspense>
+            )}
+          </SettingsContext.Provider>
         </div>
       </main>
     </div>

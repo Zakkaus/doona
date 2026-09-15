@@ -20,8 +20,10 @@ function found<T>(value: T | undefined, kind: string): T {
 
 export function createMockApi(): Api {
   let count = 100;
+  let big = false;
   try {
     const value = localStorage.getItem('doona-mock-big');
+    big = value !== null;
     if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
   } catch {}
   let capabilities = fixtures.capabilities;
@@ -29,8 +31,9 @@ export function createMockApi(): Api {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
-  const flows = structuredClone(fixtures.flows);
-  const connections = structuredClone(fixtures.connections);
+  const large = big ? fixtures.connectionFixtures() : undefined;
+  const flows = large?.flows ?? structuredClone(fixtures.flows);
+  const connections = large?.connections ?? structuredClone(fixtures.connections);
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   const dnsCache = structuredClone(fixtures.dnsCache);
@@ -126,6 +129,23 @@ export function createMockApi(): Api {
     });
   }
   return {
+    discovery: async signal => {
+      signal?.throwIfAborted();
+      return {
+        name: 'dae/honk-native',
+        status: 'draft',
+        api_major: 1,
+        base_path: '/api/v1',
+        links: {
+          version: '/api/v1/version',
+          capabilities: '/api/v1/capabilities',
+          runtime: '/api/v1/runtime',
+          runtime_outbounds: '/api/v1/runtime/outbounds',
+          traffic_history: '/api/v1/runtime/traffic/history',
+          operations: '/api/v1/operations/{id}'
+        }
+      };
+    },
     version: async signal => {
       signal?.throwIfAborted();
       return structuredClone(fixtures.version);
@@ -357,8 +377,8 @@ export function createMockApi(): Api {
           dns_intercept: 'partial',
           kernel_bypass: 'none'
         },
-        dropped_records: '0',
-        flows: structuredClone(result.items.map(({trace, ...summary}) => summary)),
+        dropped_records: big ? '0' : fixtures.flowDroppedRecords,
+        flows: structuredClone(result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input}))),
         next_cursor: result.next_cursor
       };
     },

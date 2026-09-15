@@ -1,11 +1,9 @@
 import {useT, useLang, LOCALE} from '../../i18n';
-import Add from '../../ui/icons/Add';
 import LinkIcon from '../../ui/icons/Link';
 import {useClients} from '../../api/store';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
 import {Button, DataTable} from '../../ui/ui';
-import {RuleDialog} from '../activity/RuleDialog';
 import type {PageProps} from '../types';
 
 export function Clients({go}: PageProps) {
@@ -42,15 +40,6 @@ export function Clients({go}: PageProps) {
               <LinkIcon />
               {t('nav.connections')}
             </Button>
-            <RuleDialog
-              trigger={
-                <Button small>
-                  <Add />
-                  {t('ui.addRule')}
-                </Button>
-              }
-              presets={[{label: t('ui.sourceValue', {source: c.ip}), cond: 'sip(' + c.ip.replace(/^\[|\]$/g, '') + ')'}]}
-            />
           </span>
         ]}
       />

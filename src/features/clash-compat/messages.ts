@@ -2,8 +2,9 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'compat.demoData': '示範資料，未連接 Clash 後端。',
+    'compat.disconnected': '示範：未連接 Clash 後端',
     'resource.onlyBad': '只看未就緒',
-    'resource.refreshFailed': '重新整理完成，sub-b 失敗（HTTP 503）',
     'resource.refreshAll': '重新整理全部訂閱（{n}）',
     'resource.subscriptions': '訂閱',
     'resource.allReady': '全部就緒',
@@ -16,8 +17,6 @@ export const messages = defineMessages({
     'resource.notReady': '未就緒',
     'resource.refreshOne': '重新整理此訂閱',
     'resource.local': '本機檔案，外部替換後請手動重新載入',
-    'resource.refreshed': '{name} 已重新整理，{n} 個節點',
-    'resource.failed': '{name} 重新整理失敗（HTTP 503）',
     'resource.path': '路徑',
     'resource.size': '大小',
     'resource.modified': '修改',
@@ -25,8 +24,6 @@ export const messages = defineMessages({
     'config.unsaved': '未儲存',
     'config.validate': '校驗',
     'config.reload': '重新載入',
-    'config.reloaded': '重新載入完成（r{revision}）',
-    'config.applied': '已套用並重新載入（r{revision}）',
     'config.applyReload': '套用並重新載入',
     'config.lineError': '第 {n} 行：{error}',
     'config.editableLines': '{n} 行，可編輯',
@@ -38,8 +35,6 @@ export const messages = defineMessages({
     'validate.failed': '未通過：{errors} 個錯誤、{warnings} 個警告',
     'validate.warnings': '通過，{n} 個警告',
     'validate.passed': '通過',
-    'validate.doneErrors': '校驗完成，{n} 個錯誤',
-    'validate.done': '校驗通過',
     'validate.again': '重新校驗',
     'validate.note':
       '解析階段會記錄所有問題，由校驗判定是否拒絕配置。可能改變流量去向或信任邊界的錯誤會被拒絕；其餘問題使用預設值或限制在有效範圍，並保留記錄。有錯誤時不會套用重新載入。',
@@ -59,8 +54,9 @@ export const messages = defineMessages({
     'validate.restartNote': '監聽器、NFQUEUE、TProxy、DNS 綁定在啟動時決定；修改這些項目後，重新載入不會生效。'
   },
   'zh-CN': {
+    'compat.demoData': '演示数据，未连接 Clash 后端。',
+    'compat.disconnected': '演示：未连接 Clash 后端',
     'resource.onlyBad': '仅显示未就绪项',
-    'resource.refreshFailed': '刷新完成，sub-b 失败（HTTP 503）',
     'resource.refreshAll': '刷新全部订阅（{n}）',
     'resource.subscriptions': '订阅',
     'resource.allReady': '全部就绪',
@@ -73,8 +69,6 @@ export const messages = defineMessages({
     'resource.notReady': '未就绪',
     'resource.refreshOne': '刷新此订阅',
     'resource.local': '本地文件，外部替换后请手动重新加载',
-    'resource.refreshed': '{name} 已刷新，{n} 个节点',
-    'resource.failed': '{name} 刷新失败（HTTP 503）',
     'resource.path': '路径',
     'resource.size': '大小',
     'resource.modified': '修改',
@@ -82,8 +76,6 @@ export const messages = defineMessages({
     'config.unsaved': '未保存',
     'config.validate': '校验',
     'config.reload': '重新加载',
-    'config.reloaded': '重新加载完成（r{revision}）',
-    'config.applied': '已应用并重新加载（r{revision}）',
     'config.applyReload': '应用并重新加载',
     'config.lineError': '第 {n} 行：{error}',
     'config.editableLines': '{n} 行，可编辑',
@@ -95,8 +87,6 @@ export const messages = defineMessages({
     'validate.failed': '未通过：{errors} 个错误、{warnings} 个警告',
     'validate.warnings': '通过，{n} 个警告',
     'validate.passed': '通过',
-    'validate.doneErrors': '校验完成，{n} 个错误',
-    'validate.done': '校验通过',
     'validate.again': '重新校验',
     'validate.note':
       '解析阶段会记录所有问题，由校验判定是否拒绝配置。可能改变流量去向或信任边界的错误会被拒绝；其余问题使用默认值或限制在有效范围，并保留记录。有错误时不会应用重新加载。',
@@ -116,8 +106,9 @@ export const messages = defineMessages({
     'validate.restartNote': '监听器、NFQUEUE、TProxy、DNS 绑定在启动时确定；修改这些项目后，重新加载不会生效。'
   },
   en: {
+    'compat.demoData': 'Demo data. No Clash backend is connected.',
+    'compat.disconnected': 'Demo: no Clash backend is connected',
     'resource.onlyBad': 'Not ready only',
-    'resource.refreshFailed': 'Refresh finished; sub-b failed (HTTP 503)',
     'resource.refreshAll': 'Refresh all subscriptions ({n})',
     'resource.subscriptions': 'Subscriptions',
     'resource.allReady': 'All ready',
@@ -130,8 +121,6 @@ export const messages = defineMessages({
     'resource.notReady': 'Not ready',
     'resource.refreshOne': 'Refresh this subscription',
     'resource.local': 'Local file; reload manually after external replacement',
-    'resource.refreshed': 'Refreshed {name}, {n} nodes',
-    'resource.failed': 'Refresh failed for {name} (HTTP 503)',
     'resource.path': 'Path',
     'resource.size': 'Size',
     'resource.modified': 'Modified',
@@ -139,8 +128,6 @@ export const messages = defineMessages({
     'config.unsaved': 'Unsaved',
     'config.validate': 'Validate',
     'config.reload': 'Reload',
-    'config.reloaded': 'Reloaded (r{revision})',
-    'config.applied': 'Applied and reloaded (r{revision})',
     'config.applyReload': 'Apply and reload',
     'config.lineError': 'Line {n}: {error}',
     'config.editableLines': '{n} lines, editable',
@@ -153,8 +140,6 @@ export const messages = defineMessages({
     'validate.failed': 'Failed: {errors} errors, {warnings} warnings',
     'validate.warnings': 'Passed with {n} warnings',
     'validate.passed': 'Passed',
-    'validate.doneErrors': 'Validation finished with {n} errors',
-    'validate.done': 'Validation passed',
     'validate.again': 'Validate again',
     'validate.note':
       'Parsing records every issue. Validation rejects errors that could change traffic destinations or trust boundaries. Other issues use defaults or are clamped to valid ranges and recorded. Reload is not applied when errors remain.',

@@ -165,6 +165,7 @@ it('limits flow notifications to flows and connection milestones, never capabili
 it('refreshes every resource on reconnect, not on initial or replayed readiness', () => {
   const resources: ResourceName[] = [
     'capabilities',
+    'version',
     'runtime',
     'runtimeOutbounds',
     'trafficHistory',
