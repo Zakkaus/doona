@@ -156,14 +156,13 @@
   --rp-ctl: rgba(255, 255, 255, 0.38); --rp-ctl-border: rgba(255, 255, 255, 0.55); --rp-track: rgba(60, 60, 67, 0.1);
   --rp-grain-opacity: 0.25; --rp-underlay: rgba(20, 20, 30, 0.3);
   --rp-bg:
-    radial-gradient(circle 260px at 22% 24%, #7fb0ff 0 62%, transparent 63%),
-    radial-gradient(circle 210px at 71% 16%, #ff8fc3 0 60%, transparent 61%),
-    radial-gradient(circle 300px at 80% 78%, #ffcf7a 0 58%, transparent 59%),
-    radial-gradient(circle 230px at 18% 84%, #7fe3c9 0 60%, transparent 61%),
-    radial-gradient(circle 180px at 50% 56%, #b79cff 0 58%, transparent 59%),
-    linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.6) 50%, transparent 58%),
-    radial-gradient(900px 700px at 12% 8%, #c9dfff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffd6ea 0%, transparent 60%),
-    radial-gradient(900px 700px at 78% 88%, #ffe7c2 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #d0f5e8 0%, transparent 60%), #eef0f7;
+    radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(255, 196, 110, 0.8) 0 22%, rgba(255, 196, 110, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(110, 220, 190, 0.8) 0 20%, rgba(110, 220, 190, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(180, 150, 255, 0.7) 0 20%, rgba(180, 150, 255, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.55) 46%, rgba(255, 255, 255, 0.55) 49%, transparent 61%),
+    linear-gradient(135deg, #dfeeff 0%, #f3ddff 32%, #ffe6d6 64%, #dcf6ec 100%);
 }
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.05); --rp-surface: rgba(24, 24, 32, 0.45); --rp-overlay: rgba(255, 255, 255, 0.1);
@@ -180,14 +179,13 @@
   --rp-ctl: rgba(255, 255, 255, 0.1); --rp-ctl-border: rgba(255, 255, 255, 0.12); --rp-track: rgba(0, 0, 0, 0.28);
   --rp-grain-opacity: 0.35; --rp-underlay: rgba(0, 0, 0, 0.45);
   --rp-bg:
-    radial-gradient(circle 260px at 22% 24%, #2b56ff 0 62%, transparent 63%),
-    radial-gradient(circle 210px at 71% 16%, #c23a97 0 60%, transparent 61%),
-    radial-gradient(circle 300px at 80% 78%, #ff8a2a 0 58%, transparent 59%),
-    radial-gradient(circle 230px at 18% 84%, #14b58c 0 60%, transparent 61%),
-    radial-gradient(circle 180px at 50% 56%, #6a4cff 0 58%, transparent 59%),
-    linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.08) 50%, transparent 58%),
-    radial-gradient(900px 700px at 12% 8%, #1a3282 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #6e1c58 0%, transparent 60%),
-    radial-gradient(900px 700px at 78% 88%, #7a3f00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0b5546 0%, transparent 60%), #0b0c14;
+    radial-gradient(circle 320px at 24% 26%, rgba(52, 96, 255, 0.85) 0 22%, rgba(52, 96, 255, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(200, 60, 150, 0.8) 0 20%, rgba(200, 60, 150, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(255, 140, 50, 0.75) 0 22%, rgba(255, 140, 50, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(20, 180, 140, 0.8) 0 20%, rgba(20, 180, 140, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(120, 80, 255, 0.7) 0 20%, rgba(120, 80, 255, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.09) 46%, rgba(255, 255, 255, 0.09) 49%, transparent 61%),
+    linear-gradient(135deg, #0b1230 0%, #2a1247 32%, #3a1a0a 64%, #06231c 100%);
 }
 :root[data-family='glass'] { --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
