@@ -106,11 +106,10 @@
 }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
 /* The chrome sits straight on the wallpaper; only panels are glass. */
-/* Top bar and sidebar stay on the wallpaper, with a soft scrim so labels read over a colour blob. */
-:root[data-family='glass'] .rp-top { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0)); }
-:root[data-family='glass'] .rp-side { background: linear-gradient(to right, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0)); }
-:root[data-family='glass'][data-scheme='dark'] .rp-top { background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)); }
-:root[data-family='glass'][data-scheme='dark'] .rp-side { background: linear-gradient(to right, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)); }
+/* Top bar and sidebar stay on the wallpaper; one diagonal scrim over the whole shell keeps their labels readable without a seam. */
+:root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
+:root[data-family='glass'] .rp-shell { background: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%); }
+:root[data-family='glass'][data-scheme='dark'] .rp-shell { background: linear-gradient(160deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 55%); }
 :root[data-family='glass'][data-scheme='dark'] { --rp-subtle: #d0d0d6; }
 /* The content area keeps its edge as a faint tinted sheet (no blur of its own, so the cards inside still blur the wallpaper). */
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.28); border: 1px solid var(--rp-glass-border); border-bottom: 0; box-shadow: inset 0 1px 0 var(--rp-glass-edge); }
