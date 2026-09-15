@@ -17,15 +17,11 @@ export function withCrossfade(fn: () => void) {
   d.startViewTransition(() => flushSync(fn));
 }
 
-// Spectrum's press effect: while pressed the control sinks 2px away from the viewer, which reads as a slight shrink.
+// Press feedback is pure CSS (a small scale on [data-pressed], see theme.css): a JS-computed perspective transform
+// on every press promoted the button to its own layer mid-gesture and felt abrupt. The hook stays for the ref.
 export function usePress(): [RefObject<HTMLButtonElement | null>, (rp: {isPressed: boolean}) => CSSProperties] {
   const ref = useRef<HTMLButtonElement>(null);
-  return [ref, ({isPressed}) => {
-    // No will-change while idle: a permanent compositor layer re-rasterises the label on every hover.
-    if (!isPressed || !ref.current) return {};
-    const {width, height} = ref.current.getBoundingClientRect();
-    return {transform: `perspective(${Math.max(height, width / 3, 24)}px) translate3d(0, 0, -2px)`};
-  }];
+  return [ref, () => ({})];
 }
 function PressButton(props: Parameters<typeof RButton>[0]) {
   const [ref, style] = usePress();

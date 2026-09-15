@@ -254,6 +254,8 @@ button, input { font: inherit; color: inherit; }
 .rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 4px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
 .rp-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 12px; border-radius: 6px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
+.rp-item[data-pressed] { background: var(--rp-hl-med); scale: 0.98; transition-duration: 100ms; }
+.rp-item[data-selected] { background: color-mix(in srgb, var(--rp-pine) 10%, transparent); }
 .rp-item[data-selected] { font-weight: 600; }
 .rp-item .desc { color: var(--rp-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
 .rp-item .desc.ok { color: var(--rp-foam); } .rp-item .desc.warn { color: var(--rp-gold); } .rp-item .desc.err { color: var(--rp-love); }
@@ -418,9 +420,14 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
 :root { --rp-on-accent: var(--rp-surface); --rp-on-text: var(--rp-surface); --rp-line: var(--rp-hl-low); --rp-ease: cubic-bezier(0.45, 0, 0.4, 1); --rp-ease-in: cubic-bezier(0.5, 0, 1, 1); --rp-ease-out: cubic-bezier(0, 0, 0.4, 1); }
 .rp-btn, .rp-nav, .rp-item, .rp-select, .rp-selectbtn, .rp-search, .rp-tab, .rp-input, .rp-version, .rp-brand, .rp-input .clear, .rp-table [role='row'], .rp-switch, .rp-check, .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter, outline-color;
+  transition-property: color, background-color, border-color, opacity, box-shadow, filter, outline-color, scale;
   transition-duration: 150ms; transition-timing-function: var(--rp-ease);
 }
+/* Press: a quick, small settle (100ms in, 200ms back). Icon buttons shrink a touch more since they are all glyph. */
+.rp-btn, .rp-select, .rp-selectbtn, .rp-node, .rp-nav { transition-duration: 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 200ms; }
+.rp-btn[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed] { scale: 0.97; transition-duration: 100ms; transition-timing-function: var(--rp-ease-out); }
+.rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed] { scale: 0.92; }
+.rp-nav[data-pressed] { scale: 0.98; }
 .rp-bar .fill { transition: width 200ms var(--rp-ease-out); }
 /* Segmented control and tabs: the selection slides between items (200ms, ease-out). */
 .rp-seg, .rp-tabhead { position: relative; }
@@ -492,8 +499,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 300ms; }
 .rp-spin svg { animation: rp-spin 600ms var(--rp-ease); }
 @keyframes rp-spin { to { rotate: 360deg; } }
-.rp-btn > svg, .rp-nav > svg { transition: scale 150ms var(--rp-ease); }
-.rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: 1.12; }
+.rp-btn > svg, .rp-nav > svg { transition: scale 200ms var(--rp-ease-out); }
+.rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: 1.08; }
 .rp-node, .rp-card { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease), box-shadow 150ms var(--rp-ease), translate 150ms var(--rp-ease); }
 button.rp-node:hover { translate: 0 -1px; box-shadow: var(--rp-shadow); }
-@media (prefers-reduced-motion: reduce) { .rp-content, .rp-tabs [role='tabpanel'] { animation: rp-fade-in 200ms var(--rp-ease); } .rp-nav-slider { transition: none; } .rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: none; } }
+@media (prefers-reduced-motion: reduce) { .rp-content, .rp-tabs [role='tabpanel'] { animation: rp-fade-in 200ms var(--rp-ease); } .rp-nav-slider { transition: none; } .rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: none; } .rp-btn[data-pressed], .rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed], .rp-nav[data-pressed] { scale: none; } }
