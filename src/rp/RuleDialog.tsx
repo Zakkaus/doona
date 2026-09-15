@@ -12,7 +12,7 @@ export function RuleDialog({trigger, presets}: {trigger: ReactElement, presets: 
   const [must, setMust] = useState(false);
   const targets = ['direct', 'block', ...groups.map(g => g.name)].map(t => ({id: t, label: t}));
   return (
-    <ModalDialog trigger={trigger} title="新增規則" narrow footer={close => <><Button onPress={close}>取消</Button><Button accent onPress={() => { close(); toast('positive', '已新增規則，reload 完成（r' + (runtime.diskRevision + 1) + '）'); }}>新增並 reload</Button></>}>
+    <ModalDialog trigger={trigger} title="新增規則" narrow footer={close => <><Button secondary onPress={close}>取消</Button><Button accent onPress={() => { close(); toast('positive', '已新增規則，reload 完成（r' + (runtime.diskRevision + 1) + '）'); }}>新增並 reload</Button></>}>
       <div className="rp-form">
         {presets.length > 1 && <LabeledSelect label="依據" value={i} onChange={k => { setI(k); setCond(presets[Number(k)].cond); }} items={presets.map((p, j) => ({id: String(j), label: p.label}))} />}
         <TextField label="規則" value={cond} onChange={setCond} />

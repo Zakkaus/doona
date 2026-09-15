@@ -88,9 +88,10 @@
   --rp-hl-low: rgba(120, 120, 128, 0.1); --rp-hl-med: rgba(120, 120, 128, 0.2); --rp-hl-high: rgba(120, 120, 128, 0.32);
   --rp-on-accent: #ffffff; --rp-on-text: #ffffff; --rp-line: rgba(60, 60, 67, 0.14);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(31, 38, 80, 0.1); --rp-shadow-lg: 0 24px 64px rgba(31, 38, 80, 0.25);
-  --rp-glass: rgba(255, 255, 255, 0.55); --rp-glass-strong: rgba(255, 255, 255, 0.72); --rp-glass-border: rgba(60, 60, 67, 0.12); --rp-glass-edge: transparent;
+  --rp-glass: rgba(255, 255, 255, 0.5); --rp-glass-hi: rgba(255, 255, 255, 0.72); --rp-glass-lo: rgba(255, 255, 255, 0.4); --rp-glass-strong: rgba(255, 255, 255, 0.7); --rp-glass-strong-hi: rgba(255, 255, 255, 0.86);
+  --rp-glass-border: rgba(255, 255, 255, 0.55); --rp-glass-edge: rgba(255, 255, 255, 0.8); --rp-glass-shade: rgba(60, 60, 90, 0.08); --rp-grain-opacity: 0.35;
   --rp-underlay: rgba(20, 20, 30, 0.3);
-  --rp-bg: radial-gradient(900px 700px at 12% 8%, #8ec5ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffb3d9 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffd9a1 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #a5f0d6 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #d9c8ff 0%, transparent 65%), #e9ecf5;
+  --rp-bg: radial-gradient(300px 220px at 30% 30%, #ffffff 0%, transparent 70%), radial-gradient(420px 300px at 62% 18%, #ffd1e8 0%, transparent 70%), radial-gradient(360px 260px at 40% 72%, #bfe3ff 0%, transparent 70%), linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%), radial-gradient(900px 700px at 12% 8%, #b7d8ff 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #ffc9e4 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #ffe3b8 0%, transparent 60%), radial-gradient(800px 700px at 18% 92%, #c2f3e1 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #e2d6ff 0%, transparent 65%), #eceef6;
 }
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.06); --rp-surface: rgba(30, 30, 34, 0.55); --rp-overlay: rgba(255, 255, 255, 0.1);
@@ -100,30 +101,43 @@
   --rp-hl-low: rgba(255, 255, 255, 0.07); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
   --rp-on-accent: #ffffff; --rp-on-text: #1c1c1e; --rp-line: rgba(255, 255, 255, 0.12);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35); --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
-  --rp-glass: rgba(28, 28, 32, 0.5); --rp-glass-strong: rgba(36, 36, 40, 0.78); --rp-glass-border: rgba(255, 255, 255, 0.14); --rp-glass-edge: rgba(255, 255, 255, 0.22);
+  --rp-glass: rgba(40, 40, 50, 0.42); --rp-glass-hi: rgba(80, 80, 100, 0.42); --rp-glass-lo: rgba(20, 20, 30, 0.45); --rp-glass-strong: rgba(40, 40, 50, 0.62); --rp-glass-strong-hi: rgba(80, 80, 100, 0.6);
+  --rp-glass-border: rgba(255, 255, 255, 0.16); --rp-glass-edge: rgba(255, 255, 255, 0.28); --rp-glass-shade: rgba(0, 0, 0, 0.35); --rp-grain-opacity: 0.5;
   --rp-underlay: rgba(0, 0, 0, 0.45);
-  --rp-bg: radial-gradient(900px 700px at 12% 8%, #2451c9 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #a3287e 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #b35c00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0e7a63 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #3b2a7a 0%, transparent 65%), #0c0d14;
+  --rp-bg: radial-gradient(300px 220px at 30% 30%, #4d6ad9 0%, transparent 70%), radial-gradient(420px 300px at 62% 18%, #b03a92 0%, transparent 70%), radial-gradient(360px 260px at 40% 72%, #1f8f7a 0%, transparent 70%), linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%), radial-gradient(900px 700px at 12% 8%, #1a3282 0%, transparent 62%), radial-gradient(800px 600px at 88% 12%, #6e1c58 0%, transparent 60%), radial-gradient(900px 700px at 78% 88%, #7a3f00 0%, transparent 62%), radial-gradient(800px 700px at 18% 92%, #0b5546 0%, transparent 60%), radial-gradient(700px 500px at 50% 50%, #2b1f5c 0%, transparent 65%), #0c0d14;
 }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
+:root[data-family='glass'] body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--rp-grain); opacity: 0.18; mix-blend-mode: overlay; }
+:root[data-family='glass'] .rp-shell { position: relative; }
 /* The chrome sits straight on the wallpaper; only panels are glass. */
-:root[data-family='glass'] .rp-top { background: transparent; }
-:root[data-family='glass'] .rp-side { background: transparent; }
+/* Top bar and sidebar stay on the wallpaper; one diagonal scrim over the whole shell keeps their labels readable without a seam. */
+:root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
+:root[data-family='glass'] .rp-shell { background: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%); }
+:root[data-family='glass'][data-scheme='dark'] .rp-shell { background: linear-gradient(160deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 55%); }
+:root[data-family='glass'][data-scheme='dark'] { --rp-subtle: #d0d0d6; }
 /* The content area keeps its edge as a faint tinted sheet (no blur of its own, so the cards inside still blur the wallpaper). */
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.28); border: 1px solid var(--rp-glass-border); border-bottom: 0; box-shadow: inset 0 1px 0 var(--rp-glass-edge); }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.22); }
 :root[data-family='glass'] .rp-search { background: rgba(255, 255, 255, 0.35); border-color: var(--rp-glass-border); }
 :root[data-family='glass'][data-scheme='dark'] .rp-search { background: rgba(255, 255, 255, 0.08); }
 :root[data-family='glass'] .rp-vrule { background: var(--rp-glass-border); }
-/* Panels: blur the wallpaper, a lit top edge, a soft drop shadow. */
-:root[data-family='glass'] .rp-card, :root[data-family='glass'] .rp-table, :root[data-family='glass'] .rp-frame {
-  background: var(--rp-glass); backdrop-filter: blur(30px) saturate(1.8);
-  border: 1px solid var(--rp-glass-border); box-shadow: inset 0 1px 0 var(--rp-glass-edge), var(--rp-shadow);
+/* One glass recipe for every floating surface: a diagonal tint (lighter top-left), blur with a little extra saturation,
+   a bright rim on the lit side and a shaded rim on the far side, a faint grain, and a soft drop shadow. Popovers,
+   dialogs and toasts use the same recipe with a slightly denser tint so their text keeps contrast. */
+:root[data-family='glass'] { --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+:root[data-family='glass'] .rp-card, :root[data-family='glass'] .rp-table, :root[data-family='glass'] .rp-frame, :root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog, :root[data-family='glass'] .rp-toast {
+  position: relative; isolation: isolate;
+  background: linear-gradient(135deg, var(--rp-glass-hi) 0%, var(--rp-glass) 60%, var(--rp-glass-lo) 100%);
+  backdrop-filter: blur(24px) saturate(1.7);
+  border: 1px solid var(--rp-glass-border);
+  box-shadow: inset 1px 1px 0 var(--rp-glass-edge), inset -1px -1px 0 var(--rp-glass-shade), var(--rp-shadow);
+}
+:root[data-family='glass'] .rp-card::before, :root[data-family='glass'] .rp-popover::before, :root[data-family='glass'] .rp-dialog::before, :root[data-family='glass'] .rp-table::before, :root[data-family='glass'] .rp-frame::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+  background: var(--rp-grain); opacity: var(--rp-grain-opacity); mix-blend-mode: overlay;
 }
 :root[data-family='glass'] .rp-card { border-radius: 18px; }
-:root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog {
-  background: var(--rp-glass-strong); backdrop-filter: blur(40px) saturate(1.8);
-  border: 1px solid var(--rp-glass-border); box-shadow: inset 0 1px 0 var(--rp-glass-edge), var(--rp-shadow-lg);
-}
+:root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog { --rp-glass: var(--rp-glass-strong); --rp-glass-hi: var(--rp-glass-strong-hi); --rp-glass-lo: var(--rp-glass-strong); box-shadow: inset 1px 1px 0 var(--rp-glass-edge), inset -1px -1px 0 var(--rp-glass-shade), var(--rp-shadow-lg); }
 :root[data-family='glass'] .rp-table [role='columnheader'] { background: transparent; }
 :root[data-family='glass'] .rp-frame .head { background: transparent; }
 /* Controls in the iOS idiom: the selected segment is a lit pill, switches have a white knob, buttons are tinted glass. */
@@ -137,11 +151,13 @@
 :root[data-family='glass'] .rp-btn:hover { background: var(--rp-hl-high); }
 :root[data-family='glass'] .rp-btn.quiet { background: transparent; }
 :root[data-family='glass'] .rp-btn.quiet:hover { background: var(--rp-hl-med); }
+:root[data-family='glass'] .rp-btn.accent:hover, :root[data-family='glass'] .rp-btn.primary:hover, :root[data-family='glass'] .rp-btn.accent[data-pressed], :root[data-family='glass'] .rp-btn.primary[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 :root[data-family='glass'] .rp-btn.accent, :root[data-family='glass'] .rp-btn.primary { background: var(--rp-pine); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 8px rgba(0, 122, 255, 0.35); }
 :root[data-family='glass'] .rp-node { background: var(--rp-overlay); }
 :root[data-family='glass'] .rp-input { background: rgba(255, 255, 255, 0.4); border-color: var(--rp-glass-border); }
 :root[data-family='glass'][data-scheme='dark'] .rp-input { background: rgba(255, 255, 255, 0.08); }
-:root[data-family='glass'] .rp-toast { backdrop-filter: blur(30px) saturate(1.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--rp-shadow-lg); }
+:root[data-family='glass'] .rp-toast { background: color-mix(in srgb, var(--rp-text) 88%, transparent); box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3), var(--rp-shadow-lg); }
+:root[data-family='glass'] .rp-toast.positive { background: color-mix(in srgb, var(--rp-pine) 88%, transparent); } :root[data-family='glass'] .rp-toast.negative { background: color-mix(in srgb, var(--rp-love) 88%, transparent); } :root[data-family='glass'] .rp-toast.info { background: color-mix(in srgb, var(--rp-foam) 88%, transparent); }
 /* The S2 pages that are not re-skinned yet sit on their own surface inside the frame. */
 .rp-s2host { border-radius: 12px; overflow-x: auto; scrollbar-width: thin; }
 .rp-icon-stack { position: relative; width: 20px; height: 20px; display: block; }
@@ -239,24 +255,28 @@ button, input { font: inherit; color: inherit; }
 .rp-btn.quiet:hover { background: var(--rp-hl-low); }
 .rp-btn.sm { height: 24px; padding: 0 8px; font-size: 12px; line-height: 16px; border-radius: 7px; }
 .rp-btn.sm.icon { width: 24px; }
-.rp-btn.accent, .rp-btn.primary, .rp-btn.negative { border-radius: 999px; padding: 0 14px; }
-.rp-btn.sm.accent, .rp-btn.sm.primary, .rp-btn.sm.negative { padding: 0 10px; }
+.rp-btn.accent, .rp-btn.primary, .rp-btn.negative, .rp-btn.secondary { border-radius: 999px; padding: 0 14px; }
+.rp-btn.secondary { background: transparent; border-color: var(--rp-hl-high); color: var(--rp-text); }
+.rp-btn.secondary:hover, .rp-btn.secondary[data-pressed] { background: var(--rp-hl-low); }
+.rp-btn.sm.accent, .rp-btn.sm.primary, .rp-btn.sm.negative, .rp-btn.sm.secondary { padding: 0 10px; }
 .rp-btn.icon { width: 32px; padding: 0; justify-content: center; }
 .rp-btn.accent { background: var(--rp-pine); color: var(--rp-on-accent); }
-.rp-btn.accent:hover { filter: brightness(1.08); }
+.rp-btn.accent:hover, .rp-btn.accent[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 .rp-seg { display: inline-flex; gap: 4px; max-width: 100%; background: var(--rp-overlay); border-radius: 10px; padding: 2px; }
 .rp-seg .rp-btn { flex: 0 1 auto; min-width: 0; padding: 0 10px; }
 .rp-seg .rp-btn { height: 28px; background: transparent; color: var(--rp-subtle); border-radius: 8px; border: 2px solid transparent; }
 .rp-seg .rp-btn:hover { color: var(--rp-text); }
 .rp-seg .rp-btn[data-selected] { background: var(--rp-surface); color: var(--rp-pine); border-color: var(--rp-pine); }
-.rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 12px 2px; }
+.rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 8px 2px 32px; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 4px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
-.rp-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 12px; border-radius: 6px; cursor: default; outline: none; color: var(--rp-text); }
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+.rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
-.rp-item[data-pressed] { background: var(--rp-hl-med); scale: 0.98; transition-duration: 100ms; }
-.rp-item[data-selected] { background: color-mix(in srgb, var(--rp-pine) 10%, transparent); }
+.rp-item[data-pressed] { background: var(--rp-hl-med); }
 .rp-item[data-selected] { font-weight: 600; }
+.rp-item .rp-check-mark { width: 16px; height: 16px; visibility: hidden; color: var(--rp-text); }
+.rp-item[data-selected] .rp-check-mark { visibility: visible; }
+.rp-item.plain { grid-template-columns: minmax(0, 1fr) auto; padding-left: 12px; }
 .rp-item .desc { color: var(--rp-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
 .rp-item .desc.ok { color: var(--rp-foam); } .rp-item .desc.warn { color: var(--rp-gold); } .rp-item .desc.err { color: var(--rp-love); }
 .rp-il { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
@@ -330,13 +350,13 @@ button, input { font: inherit; color: inherit; }
 .rp-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; font-size: 12px; line-height: 16px; font-weight: 500; border: 1px solid var(--rp-hl-high); color: var(--rp-subtle); }
 .rp-badge.warn { border-color: transparent; background: var(--rp-gold); color: var(--rp-on-accent); }
 .rp-btn.negative { background: transparent; border-color: var(--rp-love); color: var(--rp-love); }
-.rp-btn.negative:hover { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
+.rp-btn.negative:hover, .rp-btn.negative[data-pressed] { background: color-mix(in srgb, var(--rp-love) 12%, transparent); }
 .rp-btn.primary { background: var(--rp-pine); color: var(--rp-on-accent); }
-.rp-btn.primary:hover { filter: brightness(1.08); }
+.rp-btn.primary:hover, .rp-btn.primary[data-pressed] { background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix)); }
 .rp-btn[data-disabled] { cursor: default; pointer-events: none; color: var(--rp-muted); background: var(--rp-hl-low); border-color: transparent; }
 .rp-btn.quiet[data-disabled] { background: transparent; }
 .rp-btn.negative[data-disabled] { background: transparent; border-color: var(--rp-hl-med); }
-.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); filter: none; }
+.rp-btn.accent[data-disabled], .rp-btn.primary[data-disabled] { background: var(--rp-hl-med); color: var(--rp-muted); }
 .rp-btn[data-disabled] > svg { opacity: 0.6; }
 .rp-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
 .rp-grow { flex: 1; }
@@ -420,14 +440,11 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
 :root { --rp-on-accent: var(--rp-surface); --rp-on-text: var(--rp-surface); --rp-line: var(--rp-hl-low); --rp-ease: cubic-bezier(0.45, 0, 0.4, 1); --rp-ease-in: cubic-bezier(0.5, 0, 1, 1); --rp-ease-out: cubic-bezier(0, 0, 0.4, 1); }
 .rp-btn, .rp-nav, .rp-item, .rp-select, .rp-selectbtn, .rp-search, .rp-tab, .rp-input, .rp-version, .rp-brand, .rp-input .clear, .rp-table [role='row'], .rp-switch, .rp-check, .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, filter, outline-color, scale;
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
   transition-duration: 150ms; transition-timing-function: var(--rp-ease);
 }
-/* Press: a quick, small settle (100ms in, 200ms back). Icon buttons shrink a touch more since they are all glyph. */
-.rp-btn, .rp-select, .rp-selectbtn, .rp-node, .rp-nav { transition-duration: 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 200ms; }
-.rp-btn[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed] { scale: 0.97; transition-duration: 100ms; transition-timing-function: var(--rp-ease-out); }
-.rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed] { scale: 0.92; }
-.rp-nav[data-pressed] { scale: 0.98; }
+/* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
+:root { --rp-ink-mix: #000; } :root[data-scheme='dark'] { --rp-ink-mix: #fff; }
 .rp-bar .fill { transition: width 200ms var(--rp-ease-out); }
 /* Segmented control and tabs: the selection slides between items (200ms, ease-out). */
 .rp-seg, .rp-tabhead { position: relative; }
@@ -493,14 +510,10 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
   .rp-toast:not(.background):not(.exiting) { animation: rp-fade-in 200ms var(--rp-ease); }
   .rp-toast.exiting { animation: rp-fade-out 130ms var(--rp-ease) forwards; }
 }
-/* Page and tab panels rise in; the sidebar marker slides to the active page; palette and scheme changes crossfade (view transitions). */
-.rp-content, .rp-tabs [role='tabpanel'] { animation: rp-page-in 250ms var(--rp-ease-out); }
-@keyframes rp-page-in { from { opacity: 0; translate: 0 8px; } }
+/* The sidebar marker slides to the active page; palette and scheme changes crossfade (view transitions). Page changes themselves are instant, as in S2. */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 300ms; }
 .rp-spin svg { animation: rp-spin 600ms var(--rp-ease); }
 @keyframes rp-spin { to { rotate: 360deg; } }
-.rp-btn > svg, .rp-nav > svg { transition: scale 200ms var(--rp-ease-out); }
-.rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: 1.08; }
-.rp-node, .rp-card { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease), box-shadow 150ms var(--rp-ease), translate 150ms var(--rp-ease); }
-button.rp-node:hover { translate: 0 -1px; box-shadow: var(--rp-shadow); }
-@media (prefers-reduced-motion: reduce) { .rp-content, .rp-tabs [role='tabpanel'] { animation: rp-fade-in 200ms var(--rp-ease); } .rp-nav-slider { transition: none; } .rp-btn.icon:hover > svg, .rp-nav:hover > svg { scale: none; } .rp-btn[data-pressed], .rp-btn.icon[data-pressed], .rp-btn.sm[data-pressed], .rp-select[data-pressed], .rp-selectbtn[data-pressed], button.rp-node[data-pressed], .rp-nav[data-pressed] { scale: none; } }
+.rp-node { transition: background-color 150ms var(--rp-ease), border-color 150ms var(--rp-ease); }
+button.rp-node:hover { background: var(--rp-hl-med); }
+@media (prefers-reduced-motion: reduce) { .rp-nav-slider { transition: none; } }

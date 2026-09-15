@@ -25,7 +25,7 @@ export function ConfigPage({query}: PageProps) {
               {dirty && <Badge tone="warn">未儲存</Badge>}
             </div>
             <div className="rp-group-btns">
-              <Button onPress={() => toast(errs.length ? 'negative' : 'positive', errs.length ? '校驗失敗，第 ' + errs[0].line + ' 行' : '校驗通過')}>校驗</Button>
+              <Button secondary onPress={() => toast(errs.length ? 'negative' : 'positive', errs.length ? '校驗失敗，第 ' + errs[0].line + ' 行' : '校驗通過')}>校驗</Button>
               <Button primary onPress={() => toast('neutral', 'reload 完成（r' + runtime.diskRevision + '）')}>reload</Button>
               <Button accent isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </div>

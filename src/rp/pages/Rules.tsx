@@ -24,8 +24,8 @@ export function Rules({go}: PageProps) {
               <Kv items={[['來源', cur.generated ? '生成，subscription policy' : cur.source], ['狀態', cur.editable ? '可編輯' : '唯讀'], ['修訂', 'r' + runtime.diskRevision]]} />
               <div className="rp-col">
                 <div className="rp-group-btns">
-                  <Button onPress={() => go('config', 'src=' + cur.source.split(':')[0] + '&line=' + cur.source.split(':')[1])} isDisabled={!cur.editable}>開啟來源</Button>
-                  <ModalDialog alert trigger={<Button negative isDisabled={!cur.editable}>刪除</Button>} title={'刪除規則 #' + cur.n} narrow footer={close => <><Button onPress={close}>取消</Button><Button negative onPress={() => { close(); toast('positive', '已刪除 #' + cur.n + '，reload 完成（r' + (runtime.diskRevision + 1) + '）'); }}>刪除並 reload</Button></>}>
+                  <Button onPress={() => go('config', 'src=' + cur.source.split(':')[0] + '&line=' + cur.source.split(':')[1])} isDisabled={!cur.editable} secondary>開啟來源</Button>
+                  <ModalDialog alert trigger={<Button negative isDisabled={!cur.editable}>刪除</Button>} title={'刪除規則 #' + cur.n} narrow footer={close => <><Button secondary onPress={close}>取消</Button><Button negative onPress={() => { close(); toast('positive', '已刪除 #' + cur.n + '，reload 完成（r' + (runtime.diskRevision + 1) + '）'); }}>刪除並 reload</Button></>}>
                     <p className="rp-note">從 {cur.source} 刪除「{cur.cond} -&gt; {cur.target}」，以 If-Match r{runtime.diskRevision} 寫入，校驗通過後 reload。注釋與其他行原樣保留。</p>
                   </ModalDialog>
                 </div>

@@ -56,6 +56,16 @@ const NAV: Array<[string, Array<[string, string, typeof Home]>]> = [
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
 type Wordmark = 'gradient' | 'plain';
+const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+// Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
+// paint the default palette and every control would then transition to the stored one (a visible flash on load).
+export function stampAppearance() {
+  const scheme = (read('doona-scheme') as Scheme) || 'system';
+  const paletteRaw = read('doona-palette'); const palette = paletteRaw && paletteRaw.includes('/') ? paletteRaw : 'rose-pine/moon';
+  const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [family, flavour] = palette.split('/'); const d = document.documentElement.dataset;
+  d.scheme = dark ? 'dark' : 'light'; d.family = family; d.flavour = flavour; d.wordmark = (read('doona-wordmark') as Wordmark) || 'gradient';
+}
 function useAppearance() {
   const [scheme, setScheme] = useState<Scheme>(() => { try { return (localStorage.getItem('doona-scheme') as Scheme) || 'system'; } catch { return 'system'; } });
   const [palette, setPalette] = useState<PaletteId>(() => { try { const v = localStorage.getItem('doona-palette') as PaletteId | null; return v && v.includes('/') ? v : 'rose-pine/moon'; } catch { return 'rose-pine/moon'; } });
@@ -92,8 +102,8 @@ function SearchDialog({open, onClose, go}: {open: boolean, onClose: () => void, 
         <SearchField aria-label={t('search')} value={q} onChange={setQ} autoFocus className="rp-input lg"><Search /><Input placeholder={t('search')} /><RButton className="clear" aria-label={t('clear')}><Close /></RButton></SearchField>
         {hits.conns.length + hits.nodes.length + hits.rules.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
         <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
-          {hits.conns.length > 0 && <ListBoxSection id="conns"><Header className="rp-section-h">{t('nav.connections')}</Header>{hits.conns.map(c => <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item" textValue={c.host || c.dst}><span>{c.host || c.dst}</span><span className="desc">{c.chain.join(' → ')}</span></ListBoxItem>)}</ListBoxSection>}
-          {hits.nodes.length > 0 && <ListBoxSection id="nodes"><Header className="rp-section-h">{t('search.nodes')}</Header>{hits.nodes.map(n => <ListBoxItem key={n} id={'node:' + n} className="rp-item" textValue={n}>{n}</ListBoxItem>)}</ListBoxSection>}
+          {hits.conns.length > 0 && <ListBoxSection id="conns"><Header className="rp-section-h">{t('nav.connections')}</Header>{hits.conns.map(c => <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.host || c.dst}><span>{c.host || c.dst}</span><span className="desc">{c.chain.join(' → ')}</span></ListBoxItem>)}</ListBoxSection>}
+          {hits.nodes.length > 0 && <ListBoxSection id="nodes"><Header className="rp-section-h">{t('search.nodes')}</Header>{hits.nodes.map(n => <ListBoxItem key={n} id={'node:' + n} className="rp-item plain" textValue={n}>{n}</ListBoxItem>)}</ListBoxSection>}
           {hits.rules.length > 0 && <ListBoxSection id="rules"><Header className="rp-section-h">{t('nav.rules')}</Header>{hits.rules.map(r => <ListBoxItem key={r.id} id={'rule:' + r.id} className="rp-item" textValue={r.cond}><span>{r.cond}</span><span className="desc">{r.target}</span></ListBoxItem>)}</ListBoxSection>}
         </ListBox>
       </Dialog></Modal>
@@ -156,7 +166,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}><GitHub />honk 0.9.3</RButton>
       </nav>
       <main className="rp-main">
-        <div className="rp-content" key={route}>
+        <div className="rp-content">
           <div className="rp-head">
             <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
             <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={NAV.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity')}))} bare /></div>

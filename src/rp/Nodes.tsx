@@ -7,7 +7,7 @@ import Close from '@react-spectrum/s2/icons/Close';
 import Search from '@react-spectrum/s2/icons/Search';
 import {regionOf} from '../app/geo';
 import {Flag} from '../app/Flag';
-import {InlineSelect, MenuButton, NodeTile, Switch, latencyTone, usePress} from './ui';
+import {Check, InlineSelect, MenuButton, NodeTile, Switch, latencyTone, usePress} from './ui';
 
 export type NodeInfo = {name: string, tcp?: number, udp?: number, v6?: boolean, alive?: boolean, nested?: boolean};
 export type NodeLabels = {timeout: string, nested: string, cur: string, filter: string, region: string, allRegions: string, sort: string, byLatency: string, byName: string, aliveOnly: string, count: (n: number, down: number) => string, none: string};
@@ -78,7 +78,7 @@ export function NodeMenu({nodes, value, onChange, label, labels}: {nodes: NodeIn
     for (const n of [...nodes].sort(byLatency)) { const r = regionOf(n.name) ?? '—'; if (!m.has(r)) m.set(r, []); m.get(r)!.push(n); }
     return [...m];
   }, [nodes]);
-  const item = (n: NodeInfo) => <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}><span className="rp-il"><span className="ic"><Flag name={n.name} /></span><span>{n.name}</span></span><span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>{n.alive !== false ? n.tcp + ' ms' : labels.timeout}</span></MenuItem>;
+  const item = (n: NodeInfo) => <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}><Check /><span className="rp-il"><span className="ic"><Flag name={n.name} /></span><span>{n.name}</span></span><span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>{n.alive !== false ? n.tcp + ' ms' : labels.timeout}</span></MenuItem>;
   const menu = (
     <Menu className="rp-menu-scroll" aria-label={label} selectionMode="single" selectedKeys={[value]} onSelectionChange={(k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }}>
       {big ? sections.map(([r, list]) => <MenuSection key={r} id={r}><Header className="rp-sec-h"><span className="rp-il">{r !== '—' && <span className="ic"><Flag name={r} /></span>}{r}<span className="rp-muted"> · {list.length}</span></span></Header>{list.map(item)}</MenuSection>) : nodes.map(item)}
