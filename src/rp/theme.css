@@ -350,6 +350,16 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-node .ms.ok { color: var(--rp-foam); } .rp-node .ms.warn { color: var(--rp-gold); } .rp-node .ms.err { color: var(--rp-love); } .rp-node .ms.nested { color: var(--rp-subtle); font-weight: 500; }
 .rp-node .s { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 16px; color: var(--rp-subtle); white-space: pre; overflow: hidden; text-overflow: ellipsis; }
 .rp-node .cur { color: var(--rp-pine); font-weight: 600; }
+/* Large groups: filter row plus a virtualised grid that scrolls inside the card. */
+.rp-nodeset { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rp-filter { width: 240px; }
+.rp-nodegrid { height: 376px; overflow: auto; outline: none; scrollbar-width: thin; border-radius: 10px; }
+.rp-nodegrid .rp-node { cursor: pointer; outline: none; }
+.rp-nodegrid .rp-node[data-hovered] { background: var(--rp-hl-med); }
+.rp-nodegrid .rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
+.rp-menu-scroll { max-height: 360px; overflow: auto; scrollbar-width: thin; }
+.rp-menu-search { margin: 4px 4px 8px; width: 240px; }
+.rp-muted { color: var(--rp-muted); }
 .rp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .rp-switch .track { width: 32px; height: 16px; border-radius: 8px; background: var(--rp-hl-high); position: relative; transition: background 150ms; flex-shrink: 0; }
 .rp-switch .track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--rp-surface); transition: transform 150ms; }

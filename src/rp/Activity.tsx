@@ -10,7 +10,8 @@ import DeviceDesktop from '@react-spectrum/s2/icons/DeviceDesktop';
 import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {runtime, checks, conns, groups, events, throughput, connSeries, type Mode} from '../app/mock';
 import {useT} from '../app/i18n';
-import {Button, Segmented, MenuButton, InlineSelect, Light, Bar, toast, latencyTone} from './ui';
+import {Button, Segmented, MenuButton, Light, Bar, toast} from './ui';
+import {NodeMenu} from './Nodes';
 import {Flag} from '../app/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from './Charts';
 
@@ -22,6 +23,11 @@ const TOP: Record<string, Top> = {
 const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
 const latest = throughput[throughput.length - 1];
 
+// One row per timed-out node, or a single summary row once there are more than three.
+function timeoutIssues(names: string[], timeout: string, many: string, sep: string): string[] {
+  if (names.length <= 3) return names.map(n => n + ' ' + timeout);
+  return [many.replace('{n}', String(names.length)).replace('{list}', names.slice(0, 3).join(sep) + '…')];
+}
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT(); const p = usePalette();
   const failing = checks.filter(c => !c.ready);
@@ -37,7 +43,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   type Issue = {level: 'err' | 'warn' | 'info', text: string, page: string};
   const RANK = {err: 0, warn: 1, info: 2};
   const issues: Issue[] = [
-    ...[...new Set(groups.flatMap(g => g.nodes.filter(n => !n.alive).map(n => n.name)))].map(n => ({level: 'err' as const, text: n + ' ' + t('act.timeout'), page: 'policies'})),
+    ...timeoutIssues([...new Set(groups.flatMap(g => g.nodes.filter(n => !n.alive).map(n => n.name)))], t('act.timeout'), t('act.nTimeouts'), t('act.sep')).map(text => ({level: 'err' as const, text, page: 'policies'})),
     ...failing.map(c => ({level: 'warn' as const, text: t(`check.${c.id}` as 'check.ebpf') + ' ' + t('act.notReady') + sep + t('act.needRestart'), page: 'overview'})),
     ...events.filter(e => e.level !== 'error' && e.kind !== '探測').map(e => ({level: e.level === 'warn' ? 'warn' as const : 'info' as const, text: t(`ev.${e.id}` as 'ev.e1'), page: (e.ref ?? '#/events').replace('#/', '')}))
   ].sort((x, y) => RANK[x.level] - RANK[y.level]).slice(0, 6);
@@ -54,7 +60,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         <div className="rp-card"><span className="rp-tile-head rp-tint-c1"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.down)}</span><span className="rp-delta good">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.cat[0]} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head rp-tint-c4"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.up)}</span><span className="rp-delta bad">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.cat[3]} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head rp-tint-c3"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{conns.length}</span><span className="rp-delta good">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.cat[2]} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, icon: <Flag name={n.name} />, desc: n.alive ? n.tcp + ' ms' : t('act.timeout'), tone: n.alive ? latencyTone(n.tcp ?? 0) : 'err' as const}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<NodeMenu label={t('act.node')} value={nodeName} onChange={setNodeName} nodes={NODES} labels={{timeout: t('act.timeout'), filter: t('act.filterNodes')}} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
       </div>
 
       <div className="rp-g21">

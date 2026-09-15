@@ -6,6 +6,9 @@ import {ActionButton} from '@react-spectrum/s2/ActionButton';
 import {ActionButtonGroup} from '@react-spectrum/s2/ActionButtonGroup';
 import {StatusLight} from '@react-spectrum/s2/StatusLight';
 import {Text} from '@react-spectrum/s2/Text';
+import {SearchField} from '@react-spectrum/s2/SearchField';
+import {Switch} from '@react-spectrum/s2/Switch';
+import {regionOf} from '../geo';
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 import type {Key} from '@react-spectrum/s2';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
@@ -22,6 +25,35 @@ const nodeSub = style({display: 'block', fontSize: 'ui-sm', fontWeight: 'normal'
 const member = style({display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 56, paddingX: 16, borderRadius: 'default', backgroundColor: {default: 'gray-100', isSelected: 'blue-100'}, font: 'ui', color: {default: 'neutral', isSelected: 'blue-1000'}, textAlign: 'center', boxSizing: 'border-box'});
 const head = style({display: 'flex', alignItems: 'baseline', gap: 12});
 const health = (n: Node) => n.alive ? 'TCP ' + n.tcp + ' ms，UDP ' + n.udp + ' ms' + (n.v6 ? '，v6' : '') : '逾時';
+const PAGE = 36;
+// Large groups get a filter row and page in 36 tiles at a time; the S2 version keeps plain tiles.
+function GroupNodes({g, sel, pick}: {g: typeof groups[number], sel: Record<string, string>, pick: (m: string) => void}) {
+  const [q, setQ] = useState('');
+  const [aliveOnly, setAliveOnly] = useState(false);
+  const [shown, setShown] = useState(PAGE);
+  const big = g.members.length > 12;
+  const needle = q.trim().toLowerCase();
+  const members = big ? g.members.filter(m => { const n = g.nodes.find(x => x.name === m); return (!needle || m.toLowerCase().includes(needle) || (regionOf(m) ?? '').toLowerCase() === needle) && (!aliveOnly || n?.alive !== false); }) : g.members;
+  const down = g.nodes.filter(n => !n.alive).length;
+  return (
+    <>
+      {big && <div className={row}><SearchField aria-label="篩選節點" value={q} onChange={v => { setQ(v); setShown(PAGE); }} size="S" /><Switch isSelected={aliveOnly} onChange={setAliveOnly} size="S">只看可用</Switch><span className={label}>{members.length} 個節點{down ? '，' + down + ' 個逾時' : ''}</span></div>}
+      <div className={grid}>
+        {members.slice(0, big ? shown : undefined).map(m => {
+          const n = g.nodes.find(x => x.name === m);
+          const sub = n ? health(n) : '巢狀組';
+          if (g.policy !== 'selector') return <div key={m} className={member({isSelected: g.leaf === m})}><span className={nodeName}><Flag name={m} />{m}</span><span className={nodeSub}>{sub}</span></div>;
+          return (
+            <ToggleButton key={m} size="XL" isEmphasized isSelected={(sel[g.name] || g.selected) === m} onChange={() => pick(m)} styles={style({width: 'full'})}>
+              <Text><span className={nodeName}><Flag name={m} />{m}</span><span className={nodeSub}>{sub}</span></Text>
+            </ToggleButton>
+          );
+        })}
+      </div>
+      {big && members.length > shown && <div className={row}><ActionButton size="S" onPress={() => setShown(shown + PAGE)}><Text>顯示更多（還有 {members.length - shown} 個）</Text></ActionButton></div>}
+    </>
+  );
+}
 export function Policies({go}: PageProps) {
   const [mode, setMode] = useState<Key>(runtime.mode);
   const [sel, setSel] = useState<Record<string, string>>({proxy: 'hk-01'});
@@ -40,18 +72,7 @@ export function Policies({go}: PageProps) {
               <div className={head}><h3 className={h3}>{g.name}</h3><span className={label}>{g.policy}</span><StatusLight variant="positive" size="S"><Text>解析到 {g.policy === 'selector' ? sel[g.name] || g.leaf : g.leaf}</Text></StatusLight></div>
               <ActionButtonGroup size="S"><ActionButton onPress={() => toast('positive', g.name + ' 測試完成，' + g.nodes.filter(n => !n.alive).map(n => n.name + ' 逾時').join('，'))}><Refresh /><Text>測試全部</Text></ActionButton></ActionButtonGroup>
             </div>
-            <div className={grid}>
-              {g.members.map(m => {
-                const n = g.nodes.find(x => x.name === m);
-                const sub = n ? health(n) : '巢狀組';
-                if (g.policy !== 'selector') return <div key={m} className={member({isSelected: g.leaf === m})}><span className={nodeName}><Flag name={m} />{m}</span><span className={nodeSub}>{sub}</span></div>;
-                return (
-                  <ToggleButton key={m} size="XL" isEmphasized isSelected={sel[g.name] === m} onChange={() => { setSel({...sel, [g.name]: m}); toast('positive', g.name + ' 改選 ' + m + '，已持久化'); }} styles={style({width: 'full'})}>
-                    <Text><span className={nodeName}><Flag name={m} />{m}</span><span className={nodeSub}>{sub}</span></Text>
-                  </ToggleButton>
-                );
-              })}
-            </div>
+            <GroupNodes g={g} sel={sel} pick={m => { setSel({...sel, [g.name]: m}); toast('positive', g.name + ' 改選 ' + m + '，已持久化'); }} />
           </div>
         ))}
       </div>

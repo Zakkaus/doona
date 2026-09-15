@@ -5,7 +5,9 @@ import {StatusLight} from '@react-spectrum/s2/StatusLight';
 import {Divider} from '@react-spectrum/s2/Divider';
 import {ActionButton} from '@react-spectrum/s2/ActionButton';
 import {Menu, MenuTrigger, MenuItem} from '@react-spectrum/s2/Menu';
-import {Picker, PickerItem} from '@react-spectrum/s2/Picker';
+import {Picker, PickerItem, PickerSection} from '@react-spectrum/s2/Picker';
+import {Header, Heading} from '@react-spectrum/s2';
+import {regionOf} from '../geo';
 import {SegmentedControl, SegmentedControlItem} from '@react-spectrum/s2/SegmentedControl';
 import {style, iconStyle} from '@react-spectrum/s2/style' with {type: 'macro'};
 import type {Key} from '@react-spectrum/s2';
@@ -33,6 +35,8 @@ const TOP: Record<string, Top> = {
 };
 const OUT: Array<{name: string, value: number, text: string, color: SeriesColor}> = [{name: 'direct', value: 78, text: '1.1 GB', color: 'accent'}, {name: 'proxy', value: 20, text: '312 MB', color: 'accent2'}, {name: 'resilient', value: 1, text: '96 KB', color: 'muted'}, {name: 'gaming', value: 1, text: '12 KB', color: 'muted2'}, {name: 'block', value: 0, text: '0', color: 'red'}];
 const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
+// Sections by region once the list is long; sorted by latency inside each section.
+const NODE_SECTIONS: Array<[string, typeof NODES]> = NODES.length > 12 ? [...NODES].sort((a, b) => (a.alive ? a.tcp ?? 0 : 1e9) - (b.alive ? b.tcp ?? 0 : 1e9)).reduce((acc, n) => { const r = regionOf(n.name) ?? '—'; const hit = acc.find(([k]) => k === r); if (hit) hit[1].push(n); else acc.push([r, [n]]); return acc; }, [] as Array<[string, typeof NODES]>) : [];
 
 const quick = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], sm: ['repeat(2, minmax(0, 1fr))'], xl: ['minmax(0, 1.5fr)', 'repeat(2, minmax(0, 1fr))']}, gap: 12});
 const strip = style({display: 'grid', gridTemplateColumns: {default: ['repeat(2, minmax(0, 1fr))'], lg: ['repeat(4, minmax(0, 1fr))']}, gap: 12});
@@ -62,6 +66,11 @@ function More({onPress, children}: {onPress: () => void, children: string}) {
   return <ActionButton isQuiet size="S" onPress={onPress}><Text>{children}</Text></ActionButton>;
 }
 
+// One row per timed-out node, or a single summary row once there are more than three.
+function timeoutIssues(names: string[], timeout: string, many: string, sep: string): string[] {
+  if (names.length <= 3) return names.map(n => n + ' ' + timeout);
+  return [many.replace('{n}', String(names.length)).replace('{list}', names.slice(0, 3).join(sep) + '…')];
+}
 export function Activity({go}: PageProps) {
   const t = useT();
   const failing = checks.filter(c => !c.ready);
@@ -78,7 +87,7 @@ export function Activity({go}: PageProps) {
   const RANK = {negative: 0, notice: 1, informative: 2};
   // Errors first, then warnings, then plain notices from the event log; capped so the panel stays one screen.
   const issues: Issue[] = [
-    ...[...new Set(groups.flatMap(g => g.nodes.filter(n => !n.alive).map(n => n.name)))].map(n => ({level: 'negative' as const, text: n + ' ' + t('act.timeout'), page: 'policies'})),
+    ...timeoutIssues([...new Set(groups.flatMap(g => g.nodes.filter(n => !n.alive).map(n => n.name)))], t('act.timeout'), t('act.nTimeouts'), t('act.sep')).map(text => ({level: 'negative' as const, text, page: 'policies'})),
     ...failing.map(c => ({level: 'notice' as const, text: t(`check.${c.id}` as 'check.ebpf') + ' ' + t('act.notReady') + sep + t('act.needRestart'), page: 'overview'})),
     ...events.filter(e => e.level !== 'error' && e.kind !== '探測').map(e => ({level: e.level === 'warn' ? 'notice' as const : 'informative' as const, text: t(`ev.${e.id}` as 'ev.e1'), page: (e.ref ?? '#/events').replace('#/', '')}))
   ].sort((x, y) => RANK[x.level] - RANK[y.level]).slice(0, 6);
@@ -94,7 +103,7 @@ export function Activity({go}: PageProps) {
         <Panel><span className={tileHead}><Download styles={grayIcon} />{t('act.download')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.down)}</span><span className={delta}>↑ 12%</span></span><span className={tileSpark}><Spark values={traffic[0].values} color="accent" /></span></div></Panel>
         <Panel><span className={tileHead}><Upload styles={grayIcon} />{t('act.upload')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.up)}</span><span className={delta}>↓ 8%</span></span><span className={tileSpark}><Spark values={traffic[1].values} color="orange" /></span></div></Panel>
         <Panel><span className={tileHead}><LinkIcon styles={grayIcon} />{t('act.active')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{conns.length}</span><span className={delta}>↑ 2</span></span><span className={tileSpark}><Spark values={connSeries} color="orange" /></span></div></Panel>
-        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} items={NODES} renderValue={items => <span className={valueRow}><Flag name={items[0].name} />{items[0].name}</span>}>{n => <PickerItem id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
+        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} renderValue={items => { const name = (items[0] as typeof NODES[number] | undefined)?.name ?? nodeName; return <span className={valueRow}><Flag name={name} />{name}</span>; }}>{NODE_SECTIONS.length > 1 ? NODE_SECTIONS.map(([r, list]) => <PickerSection key={r} id={r}><Header><Heading>{r}</Heading></Header>{list.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</PickerSection>) : NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
       </div>
 
       <div className={grid21}>
