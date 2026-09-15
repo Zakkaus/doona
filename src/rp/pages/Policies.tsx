@@ -2,7 +2,7 @@ import {useState} from 'react';
 import Refresh from '@react-spectrum/s2/icons/Refresh';
 import Data from '@react-spectrum/s2/icons/Data';
 import {groups, runtime} from '../../app/mock';
-import {flagOf} from '../../app/geo';
+import {Flag} from '../../app/Flag';
 import {Badge, Button, LabeledSelect, Light, NodeTile, Segmented, toast} from '../ui';
 import type {PageProps} from './types';
 
@@ -30,7 +30,7 @@ export function Policies({go}: PageProps) {
             <div className="rp-nodes">
               {g.members.map(m => {
                 const n = g.nodes.find(x => x.name === m);
-                const common = {name: m, icon: flagOf(m), tcp: n?.tcp, udp: n?.udp, v6: n?.v6, alive: n?.alive, nested: !n, labels: LABELS};
+                const common = {name: m, icon: <Flag name={m} />, tcp: n?.tcp, udp: n?.udp, v6: n?.v6, alive: n?.alive, nested: !n, labels: LABELS};
                 if (g.policy !== 'selector') return <NodeTile key={m} {...common} cur={g.leaf === m} />;
                 return <NodeTile key={m} {...common} selected={sel[g.name] === m} onPress={() => { setSel({...sel, [g.name]: m}); toast('positive', g.name + ' 改選 ' + m + '，已持久化'); }} />;
               })}

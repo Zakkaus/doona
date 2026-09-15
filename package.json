@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-spectrum/s2": "^1.7.1",
+    "flag-icons": "^7.5.0",
     "react": "^19.1.0",
     "react-aria-components": "1.21.1",
     "react-dom": "^19.1.0",

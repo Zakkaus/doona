@@ -9,7 +9,7 @@ import {Button as RButton} from 'react-aria-components';
 import Close from '@react-spectrum/s2/icons/Close';
 import {RuleDialog} from '../RuleDialog';
 import type {PageProps} from './types';
-import {flagOf} from '../../app/geo';
+import {Flag} from '../../app/Flag';
 
 export function Connections({go, query}: PageProps) {
   const q = new URLSearchParams(query);
@@ -47,7 +47,7 @@ export function Connections({go, query}: PageProps) {
                 {label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '') + ')'},
                 {label: '來源 ' + cur.src, cond: 'sip(' + cur.src + ')'},
                 ...(cur.mac ? [{label: 'MAC ' + cur.mac, cond: 'mac(' + cur.mac + ')'}] : [])]} />
-              {cur.chain[0] === proxy.name && <LabeledSelect label={proxy.name + ' 的選擇（只影響後續撥號）'} value={proxy.selected ?? proxy.members[0]} onChange={k => toast('positive', proxy.name + ' 已切換至 ' + k + '，已儲存')} items={proxy.members.map(m => ({id: m, label: m, icon: flagOf(m)}))} />}
+              {cur.chain[0] === proxy.name && <LabeledSelect label={proxy.name + ' 的選擇（只影響後續撥號）'} value={proxy.selected ?? proxy.members[0]} onChange={k => toast('positive', proxy.name + ' 已切換至 ' + k + '，已儲存')} items={proxy.members.map(m => ({id: m, label: m, icon: <Flag name={m} />}))} />}
               {cur.canTerminate ? <ModalDialog alert narrow trigger={<Button negative>中止這條連線</Button>} title="中止連線" footer={close => <><Button onPress={close}>取消</Button><Button negative onPress={() => { close(); toast('positive', '已中止 ' + (cur.host || cur.dst)); }}>中止</Button></>}><p className="rp-note">中止 {cur.host || cur.dst} 的這條連線；用戶端會收到連線重設。</p></ModalDialog> : <Button negative isDisabled tip={cur.plane === '拒絕' ? '沒有連線可中止' : '此連線由內核轉發，honk 無法中止'}>中止這條連線</Button>}
             </div>
           </div>

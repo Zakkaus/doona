@@ -33,6 +33,7 @@ const TABLE: Array<[string, string[]]> = [
   ['MO', ['mo', 'mac', 'macau', 'macao', '澳門', '澳门']],
   ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
 ];
+// flagOf is kept for text-only places (toasts, logs); the panels draw SVG flags from Flag.tsx.
 const ASCII = /[a-z0-9]+/g;
 const flag = (iso: string) => String.fromCodePoint(...[...iso].map(c => 0x1f1e6 + c.charCodeAt(0) - 65));
 

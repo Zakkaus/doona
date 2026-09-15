@@ -11,7 +11,7 @@ import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {runtime, checks, conns, groups, events, throughput, connSeries, type Mode} from '../app/mock';
 import {useT} from '../app/i18n';
 import {Button, Segmented, MenuButton, InlineSelect, Light, Bar, toast, latencyTone} from './ui';
-import {flagOf} from '../app/geo';
+import {Flag} from '../app/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from './Charts';
 
 type Top = Array<[string, number, string, 'desktop' | 'phone']>;
@@ -54,7 +54,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         <div className="rp-card"><span className="rp-tile-head rp-tint-c1"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.down)}</span><span className="rp-delta good">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.cat[0]} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head rp-tint-c4"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{fmtRate(latest.up)}</span><span className="rp-delta bad">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.cat[3]} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head rp-tint-c3"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{conns.length}</span><span className="rp-delta good">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.cat[2]} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, icon: flagOf(n.name), desc: n.alive ? n.tcp + ' ms' : t('act.timeout'), tone: n.alive ? latencyTone(n.tcp ?? 0) : 'err' as const}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<InlineSelect label={t('act.node')} value={nodeName} onChange={setNodeName} items={NODES.map(n => ({id: n.name, label: n.name, icon: <Flag name={n.name} />, desc: n.alive ? n.tcp + ' ms' : t('act.timeout'), tone: n.alive ? latencyTone(n.tcp ?? 0) : 'err' as const}))} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node.alive ? node.tcp + ' ms' : t('act.timeout')}</span>{node.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node.alive ? 'ok' : 'err'}>{node.alive ? t('act.good') : t('act.timeout')}</Light></div></div>
       </div>
 
       <div className="rp-g21">
@@ -76,7 +76,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-title">{t('act.probeLatency')}</span><Button quiet small onPress={() => go('policies')}>{t('act.viewAll')}</Button></div>
-          <div className="rp-list">{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <Bar key={n.name} icon={flagOf(n.name)} label={n.name} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love} />)}</div>
+          <div className="rp-list">{[...NODES].sort((x, y) => (x.alive ? x.tcp ?? 0 : 1e9) - (y.alive ? y.tcp ?? 0 : 1e9)).map(n => <Bar key={n.name} icon={<Flag name={n.name} />} label={n.name} value={n.alive ? (n.tcp ?? 0) + ' ms' : t('act.timeout')} pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100} color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love} />)}</div>
         </div>
         <div className="rp-card">
           <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.issues')}</span>{issues.length > 0 && <span className="rp-label">{issues.length}</span>}</span><Button quiet small onPress={() => go('overview')}>{t('act.viewAll')}</Button></div>

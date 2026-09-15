@@ -1,9 +1,9 @@
 // Charts for the activity page, drawn with Recharts and coloured with Spectrum 2 values (accent blue, orange-700, green-800).
 import {useEffect, useId, useRef, useState} from 'react';
 import {AreaChart as RAreaChart, Area, PieChart, Pie, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import type {ReactNode} from 'react';
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 import {throughput} from './mock';
-const flagStyle = style({marginEnd: 4, fontFamily: '["Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif]'});
 
 export type SeriesColor = 'accent' | 'accent2' | 'orange' | 'green' | 'purple' | 'red' | 'warn' | 'dark' | 'muted' | 'muted2';
 export type Series = {label: string, color: SeriesColor, values: number[]};
@@ -130,6 +130,6 @@ const barLabel = style({minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis
 const barVal = style({flexShrink: 0, color: 'gray-700'});
 const track = style({height: 4, borderRadius: 'full', backgroundColor: 'gray-300', overflow: 'hidden'});
 const fill = style({height: 'full', borderRadius: 'full', backgroundColor: {color: {accent: 'yellow-600', accent2: 'yellow-400', orange: 'gray-700', green: 'seafoam-600', purple: 'indigo-700', red: 'red-700', warn: 'orange-600', dark: 'gray-800', muted: 'gray-500', muted2: 'gray-400'}}});
-export function BarRow({label, value, pct, color, icon}: {label: string, value: string, pct: number, color: SeriesColor, icon?: string | null}) {
-  return <div className={barRow}><div className={barTop}><span className={barLabel}>{icon && <span className={flagStyle}>{icon}</span>}{label}</span><span className={barVal}>{value}</span></div><div className={track}><div className={fill({color})} style={{width: `${Math.max(0, Math.min(100, pct))}%`}} /></div></div>;
+export function BarRow({label, value, pct, color, icon}: {label: string, value: string, pct: number, color: SeriesColor, icon?: ReactNode}) {
+  return <div className={barRow}><div className={barTop}><span className={barLabel}>{icon}{label}</span><span className={barVal}>{value}</span></div><div className={track}><div className={fill({color})} style={{width: `${Math.max(0, Math.min(100, pct))}%`}} /></div></div>;
 }
