@@ -377,8 +377,8 @@ export function createMockApi(): Api {
           dns_intercept: 'partial',
           kernel_bypass: 'none'
         },
-        dropped_records: '0',
-        flows: structuredClone(result.items.map(({trace, ...summary}) => summary)),
+        dropped_records: big ? '0' : fixtures.flowDroppedRecords,
+        flows: structuredClone(result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input}))),
         next_cursor: result.next_cursor
       };
     },

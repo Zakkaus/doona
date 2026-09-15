@@ -427,6 +427,28 @@ export const connections: ConnectionList = {
   ]
 };
 
+export const flowDroppedRecords = '3';
+export const flowSummaryOmitsInput: Record<string, true> = {'flow-unobserved': true};
+const unobservedFlow: FlowDetail = {
+  ...flows[0],
+  id: 'flow-unobserved',
+  connection_id: null,
+  state: 'observed',
+  outbound: null,
+  chain: [],
+  chain_source: 'unknown',
+  rule_id: null,
+  rule_expression: null,
+  rule_source: 'unknown',
+  trace_status: 'partial',
+  trace: {status: 'partial', missing: ['not_instrumented'], steps: []}
+};
+flows.push(unobservedFlow, {
+  ...unobservedFlow,
+  id: 'flow-ipv6',
+  input: {...unobservedFlow.input, src: '[2001:db8::12]:5000'}
+});
+
 export function connectionFixtures() {
   const templates = [
     ...connections.tcp.map(connection => ({connection, network: 'tcp' as const})),

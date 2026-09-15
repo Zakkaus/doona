@@ -101,6 +101,19 @@ it('finds a retained flow by connection ID when the live row has no flow ID', as
   expect((await api.flows({connection_id: 'missing'})).flows).toEqual([]);
 });
 
+it('omits unavailable summary input without losing retained detail evidence', async () => {
+  const api = createMockApi();
+  const snapshot = await api.flows();
+  const summary = snapshot.flows.find(flow => flow.id === 'flow-unobserved')!;
+  expect(summary).not.toHaveProperty('input');
+  expect(summary).toMatchObject({rule_id: null, rule_expression: null, outbound: null, chain: [], chain_source: 'unknown'});
+  expect(BigInt(snapshot.dropped_records!)).toBeGreaterThan(0n);
+  const detail = await api.flow(summary.id);
+  expect(detail.input.src).toBe('10.0.0.12');
+  expect(detail.trace.status).toBe('partial');
+  expect((await api.flows()).flows.find(flow => flow.id === summary.id)).not.toHaveProperty('input');
+});
+
 it('keeps list decisions consistent with recorded traces rather than current selections', async () => {
   const api = createMockApi();
   await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});

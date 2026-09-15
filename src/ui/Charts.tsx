@@ -211,3 +211,24 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
     </div>
   );
 }
+
+import {Sankey as RSankey, type SankeyProps} from 'recharts';
+
+export function Sankey({
+  height = 280,
+  formatTooltip,
+  ...props
+}: Omit<SankeyProps, 'height' | 'width'> & {height?: number; formatTooltip: (label: string, count: number) => string}) {
+  const p = usePalette();
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RSankey nodePadding={2} nodeWidth={4} align="left" {...props}>
+        <Tooltip
+          content={({active, payload}) =>
+            active && payload?.length ? <div style={tip(p)}>{formatTooltip(String(payload[0].name ?? ''), Number(payload[0].value))}</div> : null
+          }
+        />
+      </RSankey>
+    </ResponsiveContainer>
+  );
+}

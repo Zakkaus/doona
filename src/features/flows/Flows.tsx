@@ -1,10 +1,14 @@
 import {useMemo, useState} from 'react';
-import {useFlow, useFlows} from '../../api/store';
+import {useCapabilities, useFlow, useFlows} from '../../api/store';
 import {chainLabel, connectionStates, flowStepFields, localTime, relativeStart} from '../../api/selectors';
-import {Badge, DataTable, Kv, LabeledSelect, Segmented} from '../../ui/ui';
+import {Badge, Button, DataTable, Kv, LabeledSelect, Segmented} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
+import type {FlowList} from '../../api/model';
+import Close from '../../ui/icons/Close';
+import {FlowGraph, graphLabel, graphStageLabels} from './FlowGraph';
+import {flowGraph, flowNodeLabel, type GraphNode} from './graph';
 
 const coverageLabels: Record<string, Key> = {
   userspace_tcp: 'flow.userspaceTcp',
@@ -26,19 +30,43 @@ const stages: Record<string, Key> = {
   reroute: 'flow.stage.reroute'
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
+
+function Coverage({data}: {data: FlowList}) {
+  const t = useT();
+  return (
+    <div className="rp-toolbar" role="group" aria-label={t('flow.coverage')}>
+      {Object.entries(data.coverage).map(([scope, value]) => (
+        <Badge key={scope} tone={value === 'full' ? undefined : 'warn'}>
+          {t('ui.valuePair', {label: coverageLabels[scope] ? t(coverageLabels[scope]) : scope, value: t(visibility[value])})}
+        </Badge>
+      ))}
+      {data.dropped_records !== null && BigInt(data.dropped_records) > 0n && <Badge tone="warn">{t('flow.dropped', {n: data.dropped_records})}</Badge>}
+    </div>
+  );
+}
+
 export function Flows({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
   const [network, setNetwork] = useState('all');
   const [state, setState] = useState('all');
+  const [graphFilter, setGraphFilter] = useState<GraphNode | null>(null);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
+  const available = useCapabilities().data?.resources.flows.available;
   const id = params.get('id') ?? resource.data?.flows.find(f => !connectionId || f.connection_id === connectionId)?.id ?? null;
   const detail = useFlow(id);
   const flow = detail.data;
-  const shown = (resource.data?.flows ?? []).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
+  const graph = useMemo(() => flowGraph(available ? (resource.data?.flows ?? []) : []), [available, resource.data?.flows]);
+  const shown = (resource.data?.flows ?? []).filter(
+    f =>
+      (network === 'all' || f.network === network) &&
+      (state === 'all' || f.state === state) &&
+      (!graphFilter || flowNodeLabel(f, graphFilter.stage) === graphFilter.label)
+  );
+  const filterLabels = graphFilter ? {stage: t(graphStageLabels[graphFilter.stage]), label: graphLabel(graphFilter, t)} : null;
   return (
     <div className="rp-page">
       {resource.error && (
@@ -47,6 +75,17 @@ export function Flows({go, query}: PageProps) {
         </p>
       )}
       {resource.loading && !resource.data && <p role="status">{t('ui.loading')}</p>}
+      {resource.data &&
+        (graph.nodes.length ? (
+          <FlowGraph
+            graph={graph}
+            selected={graphFilter?.id ?? null}
+            onSelect={node => setGraphFilter(current => (current?.id === node.id ? null : node))}
+            caption={<Coverage data={resource.data} />}
+          />
+        ) : (
+          <Coverage data={resource.data} />
+        ))}
       <div className="rp-toolbar">
         <Segmented
           label={t('ui.network')}
@@ -65,14 +104,14 @@ export function Flows({go, query}: PageProps) {
           onChange={setState}
           items={[{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]}
         />
-      </div>
-      <div className="rp-toolbar" aria-label={t('flow.coverage')}>
-        {resource.data &&
-          Object.entries(resource.data.coverage).map(([scope, value]) => (
-            <Badge key={scope} tone={value === 'full' ? undefined : 'warn'}>
-              {t('ui.valuePair', {label: coverageLabels[scope] ? t(coverageLabels[scope]) : scope, value: t(visibility[value])})}
-            </Badge>
-          ))}
+        {filterLabels && (
+          <span className="rp-flow-filter">
+            <Button small label={t('flow.graphClearFilter', filterLabels)} onPress={() => setGraphFilter(null)}>
+              {t('flow.graphFilter', filterLabels)}
+              <Close />
+            </Button>
+          </span>
+        )}
       </div>
       <DataTable
         label={t('nav.flows')}

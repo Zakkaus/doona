@@ -2936,3 +2936,23 @@ button.rp-node:hover {
 .rp-settings-secret input {
   min-width: 0;
 }
+
+.rp-sankey-node {
+  cursor: pointer;
+  outline: none;
+}
+.rp-sankey-node:is(:focus-visible, [aria-pressed='true']) > rect {
+  stroke: var(--rp-text);
+  stroke-width: 2;
+}
+.rp-sankey-label {
+  color: var(--rp-text);
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-flow-filter .rp-btn {
+  background: var(--rp-hl-low);
+  border-color: var(--rp-hl-high);
+}
