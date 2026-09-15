@@ -1,7 +1,7 @@
 /* Palettes: Rosé Pine (Dawn/Moon), Catppuccin (Latte/Mocha), Nord (light/dark). data-palette picks the family,
    data-scheme picks light or dark; every component reads the same --rp-* roles. */
-:root { --iconPrimary: currentColor; color-scheme: light; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12); --rp-underlay: rgba(0, 0, 0, 0.32); }
-:root[data-scheme='dark'] { color-scheme: dark; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45); --rp-underlay: rgba(0, 0, 0, 0.55); }
+:root { --iconPrimary: currentColor; color-scheme: light; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12); --rp-underlay: rgba(0, 0, 0, 0.32); --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12); --rp-popover-border: transparent; }
+:root[data-scheme='dark'] { color-scheme: dark; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45); --rp-underlay: rgba(0, 0, 0, 0.55); --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36); --rp-popover-border: var(--rp-hl-med); }
 
 :root, :root[data-family='rose-pine'] {
   --rp-base: #faf4ed; --rp-surface: #fffaf3; --rp-overlay: #f2e9e1;
@@ -196,14 +196,14 @@
 :root[data-family='glass'][data-scheme='dark'] body::after { background: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%); }
 /* Over a photo the chrome becomes a vibrancy sheet (as macOS sidebars do): frosted, no border, so labels stay readable
    whatever the picture. The gradient look keeps the chrome bare. */
-:root[data-family='glass'][style*='--rp-wallpaper'] .rp-top, :root[data-family='glass'][style*='--rp-wallpaper'] .rp-side { background: var(--rp-glass-strong); backdrop-filter: blur(28px) saturate(1.8); }
-:root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: none; }
+/* Over a photo the whole window is lightly frosted, edge to edge (one even layer, no sheets, no cut-outs), so labels
+   read over any picture and nothing ends in a seam; the picture stays visible as a soft wash. */
+:root[data-family='glass'][style*='--rp-wallpaper'] body::after { background: rgba(255, 255, 255, 0.28); backdrop-filter: blur(14px) saturate(1.4); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] body::after { background: rgba(0, 0, 0, 0.38); }
 :root[data-family='glass'][style*='--rp-wallpaper'] { --rp-glass: rgba(255, 255, 255, 0.5); --rp-glass-strong: rgba(255, 255, 255, 0.68); }
 :root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] { --rp-glass: rgba(16, 16, 24, 0.58); --rp-glass-strong: rgba(16, 16, 24, 0.74); }
-/* The spread shadow fills the notch outside the content area's rounded corner with the chrome tint, so the corner reads
-   as an inset curve instead of a square of wallpaper. */
-:root[data-family='glass'][style*='--rp-wallpaper'] .rp-main { background: rgba(255, 255, 255, 0.22); box-shadow: 0 0 0 24px var(--rp-glass-strong); }
-:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-main { background: rgba(0, 0, 0, 0.4); }
+:root[data-family='glass'][style*='--rp-wallpaper'] .rp-main { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); }
+:root[data-family='glass'][data-scheme='dark'][style*='--rp-wallpaper'] .rp-main { background: rgba(0, 0, 0, 0.3); border-color: rgba(255, 255, 255, 0.1); }
 :root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35); border-bottom: 0; }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.18); border-color: rgba(255, 255, 255, 0.08); }
@@ -369,7 +369,8 @@ button, input { font: inherit; color: inherit; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
 /* A slim overlay-like scrollbar so a long menu keeps its 8px inset on both sides. */
 .rp-popover::-webkit-scrollbar { width: 6px; } .rp-popover::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--rp-hl-high); } .rp-popover::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+/* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-popover-border); border-radius: 10px; padding: 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-elevated); min-width: 160px; }
 .rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
