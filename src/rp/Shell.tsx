@@ -156,7 +156,7 @@ function Frame({lang, pickLang, ap, route, go, openSearch, mac}: {lang: Lang, pi
         <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}><GitHub />honk 0.9.3</RButton>
       </nav>
       <main className="rp-main">
-        <div className="rp-content" key={route}>
+        <div className="rp-content">
           <div className="rp-head">
             <h1 className="rp-h1">{t(titleKey as 'nav.activity')}</h1>
             <div className="rp-mobile-nav"><LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={NAV.flatMap(([, items]) => items).map(([k, label]) => ({id: k, label: t(label as 'nav.activity')}))} bare /></div>
