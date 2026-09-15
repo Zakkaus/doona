@@ -224,7 +224,7 @@ button, input { font: inherit; color: inherit; }
 .rp-nav[aria-current='page'] { color: var(--rp-group, var(--rp-pine)); }
 .rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider { --rp-group: var(--rp-c1); } .rp-side:has([data-group='network'] [aria-current='page']) .rp-nav-slider { --rp-group: var(--rp-c2); } .rp-side:has([data-group='proxy'] [aria-current='page']) .rp-nav-slider { --rp-group: var(--rp-c3); } .rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider { --rp-group: var(--rp-c4); }
 .rp-nav:hover { color: var(--rp-text); }
-.rp-brand span { background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+:root:not([data-wordmark='plain']) .rp-brand span { background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .rp-h1 { color: var(--rp-text); }
 .rp-table [role='columnheader'] { color: var(--rp-pine); }
 .rp-light.info::before { background: var(--rp-foam); }
