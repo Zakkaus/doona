@@ -6,6 +6,13 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
 <title>doona</title>
 <link rel="icon" href="/logo.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<!-- --rp-base in src/ui/theme.css: Rose Pine Dawn (light), Moon (dark). -->
+<meta name="theme-color" content="#faf4ed" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#232136" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="doona">
 </head>
 <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>

@@ -10,3 +10,9 @@ createRoot(document.getElementById('root')!).render(
     <Shell />
   </StrictMode>
 );
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./sw.js').catch(error => {
+    console.error('Service worker registration failed:', error);
+  });
+}
