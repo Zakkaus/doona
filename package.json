@@ -23,10 +23,17 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit -p .",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p e2e",
     "check:gen": "tools/check-gen.sh",
     "check:i18n": "node tools/check-i18n.mjs",
+    "check:size": "node tools/check-size.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium",
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
+  },
+  "sizeBudget": {
+    "js": 410000,
+    "css": 240000
   },
   "dependencies": {
     "flag-icons": "^7.5.0",
@@ -36,6 +43,8 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@react-aria/optimize-locales-plugin": "^1.1.4",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",

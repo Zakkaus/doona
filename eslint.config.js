@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'artifact/**', 'vendor/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'node_modules/**', 'reference/**']
+    ignores: ['dist/**', 'artifact/**', 'vendor/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'node_modules/**', 'reference/**', 'test-results/**']
   },
   ...tseslint.configs.recommended,
   {
@@ -19,7 +19,7 @@ export default [
     languageOptions: {globals: globals.browser}
   },
   {
-    files: ['tools/*.mjs', '*.config.{ts,js}'],
+    files: ['tools/*.mjs', '*.config.{ts,js}', 'e2e/**/*.ts'],
     languageOptions: {globals: globals.node}
   },
   {

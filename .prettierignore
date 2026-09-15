@@ -1,6 +1,7 @@
 src/fonts.css
 src/api/types.ts
 dist
+test-results
 artifact
 vendor
 contract
