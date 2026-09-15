@@ -1329,7 +1329,7 @@ input {
   padding: 0 8px;
   font-size: 12px;
   line-height: 16px;
-  border-radius: 7px;
+  border-radius: 8px;
 }
 .rp-btn.sm.icon {
   width: 24px;
@@ -1714,7 +1714,7 @@ input {
   gap: 4px;
   height: 24px;
   padding: 0 6px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   border: 0;
   color: var(--rp-text);
@@ -1983,7 +1983,8 @@ button.rp-node {
 button.rp-node:hover {
   background: var(--rp-hl-med);
 }
-button.rp-node[data-focus-visible] {
+button.rp-node[data-focus-visible],
+.rp-frame:has(> .body:focus-visible) {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
 }

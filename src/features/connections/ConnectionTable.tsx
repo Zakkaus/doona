@@ -32,7 +32,7 @@ export function ConnectionTable({rows, selected, onSelect}: {rows: Connection[];
     {id: 'rule', label: t('conn.rule'), width: 220},
     {id: 'state', label: t('ui.state'), width: 100},
     {id: 'down', label: t('ui.download'), width: 88, align: 'end'},
-    {id: 'age', label: t('ui.started'), width: 104, align: 'end'}
+    {id: 'age', label: t('ui.started'), width: 136, align: 'end'}
   ];
   return (
     <div

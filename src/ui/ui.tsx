@@ -609,7 +609,10 @@ export function Frame({title, actions, children}: {title: ReactNode; actions?: R
         <span>{title}</span>
         {actions}
       </div>
-      <div className="body">{children}</div>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll the code pane */}
+      <div className="body" tabIndex={0}>
+        {children}
+      </div>
     </div>
   );
 }

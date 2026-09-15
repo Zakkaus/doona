@@ -139,18 +139,20 @@ export function Settings() {
           <div className="rp-field">
             <span className="lbl">{t('settings.kind')}</span>
             <input type="hidden" name="backend" value={backend} />
-            <Segmented
-              label={t('settings.kind')}
-              value={backend}
-              items={[
-                ['native', t('settings.native')],
-                ['clash', t('settings.clash')]
-              ]}
-              onChange={value => {
-                setBackend(value as BackendKind);
-                resetProbe();
-              }}
-            />
+            <div className="rp-toolbar">
+              <Segmented
+                label={t('settings.kind')}
+                value={backend}
+                items={[
+                  ['native', t('settings.native')],
+                  ['clash', t('settings.clash')]
+                ]}
+                onChange={value => {
+                  setBackend(value as BackendKind);
+                  resetProbe();
+                }}
+              />
+            </div>
           </div>
           <TextField
             className="rp-field"

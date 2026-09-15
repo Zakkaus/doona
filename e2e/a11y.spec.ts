@@ -1,11 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import {compatRoutes, expect, routes, test} from './fixtures';
 
-// Observed with axe 4.13.0. Source fixes are outside this gate change.
+// Dawn contrast remains a palette decision; other violations must fail this gate.
 const KNOWN: Record<string, string> = {
-  'color-contrast': 'Dawn muted, subtle and accent text fall below WCAG AA contrast; adjust palette tokens in src/ui/theme.css:21-32.',
-  'scrollable-region-focusable':
-    'Config code pane has no keyboard focus target; add focusability to Frame in src/ui/ui.tsx:610 (used by src/features/clash-compat/ConfigPage.tsx:88).'
+  'color-contrast': 'Dawn muted, subtle and accent text fall below WCAG AA contrast; adjust palette tokens in src/ui/theme.css:21-32.'
 };
 
 for (const route of routes) {
@@ -35,5 +33,16 @@ for (const route of routes) {
       violations.map(rule => rule.id),
       'Unexpected rules; see axe.json for affected nodes'
     ).toHaveLength(0);
+    if (route === 'config') {
+      const pane = page.locator('.rp-frame .body');
+      await pane.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(pane).toBeFocused();
+      await expect(page.locator('.rp-frame')).toHaveCSS('outline-style', 'solid');
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => pane.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+      await testInfo.attach('config-keyboard-focus.png', {body: await page.screenshot(), contentType: 'image/png'});
+    }
   });
 }
