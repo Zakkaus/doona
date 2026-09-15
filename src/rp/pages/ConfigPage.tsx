@@ -30,7 +30,7 @@ export function ConfigPage({query, go}: PageProps) {
               <Button accent isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </div>
           </div>
-          {errs.map(e => <div key={e.line} className="rp-alert"><span className="h">第 {e.line} 行：{e.msg.split('；')[0]}</span><span className="b">{e.msg.split('；')[1]}</span></div>)}
+          {errs.map(e => { const [h, b] = e.msg.split('；'); return <div key={e.line} className="rp-alert"><span className="h">第 {e.line} 行：{h}</span><span className="b">{b ?? e.why}</span></div>; })}
           {edit
             ? <TextArea label="來源" value={text} onChange={v => { setText(v); setDirty(true); }} />
             : <Frame title={src.path} actions={<span>{src.lines.length} 行，{src.editable ? '可編輯' : '唯讀'}</span>}>{src.lines.map((l, i) => <Line key={i} n={i + 1} err={errs.some(e => e.line === i + 1)}><DaeLine text={l} /></Line>)}</Frame>}

@@ -42,7 +42,7 @@ export function ConfigPage({query, go}: PageProps) {
               <Button variant="accent" isDisabled={!dirty} onPress={() => { setDirty(false); toast('positive', '已應用並 reload（r' + (runtime.diskRevision + 1) + '）'); }}>應用並 reload</Button>
             </ButtonGroup>
           </div>
-          {errs.map(e => <InlineAlert key={e.line} variant="negative" fillStyle="border"><Heading>第 {e.line} 行：{e.msg.split('；')[0]}</Heading><Content>{e.msg.split('；')[1]}</Content></InlineAlert>)}
+          {errs.map(e => { const [h, b] = e.msg.split('；'); return <InlineAlert key={e.line} variant="negative" fillStyle="border"><Heading>第 {e.line} 行：{h}</Heading>{b ? <Content>{b}</Content> : <Content>{e.why}</Content>}</InlineAlert>; })}
           {edit
             ? <TextArea aria-label="來源" value={text} onChange={v => { setText(v); setDirty(true); }} styles={style({width: 'full'})} />
             : <Frame title={src.path} actions={<span className={label}>{src.lines.length} 行，{src.editable ? '可編輯' : '唯讀'}</span>}>{src.lines.map((l, i) => <Line key={i} n={i + 1} err={errs.some(e => e.line === i + 1)}><DaeLine text={l} /></Line>)}</Frame>}
