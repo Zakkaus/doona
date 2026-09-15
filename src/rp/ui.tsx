@@ -82,7 +82,7 @@ export function MenuButton({children, items, sections, value, onChange, label, q
         {sections
           ? <Menu aria-label={label}>
               {sections.map(sec => <MenuSection key={sec.title} id={sec.title} selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)}><Header className="rp-sec-h">{sec.title}</Header>{sec.items.map(item)}</MenuSection>)}
-              {extra && <MenuSection id={extra.title} selectionMode="single" selectedKeys={[extra.value]} onSelectionChange={pick(extra.onChange)}><Header className="rp-sec-h">{extra.title}</Header>{extra.items.map(item)}</MenuSection>}
+              {[extra].map(x => x && <MenuSection key={x.title} id={x.title} selectionMode="single" selectedKeys={[x.value]} onSelectionChange={pick(x.onChange)}><Header className="rp-sec-h">{x.title}</Header>{x.items.map(item)}</MenuSection>)}
             </Menu>
           : <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)} aria-label={label}>{(items ?? []).map(item)}</Menu>}
       </Popover>

@@ -1,5 +1,5 @@
 // Activity: overview dashboard on static gray panels. Quick switches, stat strip with sparklines, traffic and outbound usage, breakdowns, notifications.
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Text} from '@react-spectrum/s2/Text';
 import {StatusLight} from '@react-spectrum/s2/StatusLight';
 import {Divider} from '@react-spectrum/s2/Divider';
@@ -37,6 +37,16 @@ const OUT: Array<{name: string, value: number, text: string, color: SeriesColor}
 const NODES = [...new Map(groups.flatMap(g => g.nodes).map(n => [n.name, n])).values()];
 // Sections by region once the list is long; sorted by latency inside each section.
 const NODE_SECTIONS: Array<[string, typeof NODES]> = NODES.length > 12 ? [...NODES].sort((a, b) => (a.alive ? a.tcp ?? 0 : 1e9) - (b.alive ? b.tcp ?? 0 : 1e9)).reduce((acc, n) => { const r = regionOf(n.name) ?? '—'; const hit = acc.find(([k]) => k === r); if (hit) hit[1].push(n); else acc.push([r, [n]]); return acc; }, [] as Array<[string, typeof NODES]>) : [];
+// Sections arrive as pages, the way a real backend would hand them over: the first page shows a spinner in the trigger
+// ('loading'), scrolling to the end of the list asks for the next one ('loadingMore').
+function useNodeSections() {
+  const [pages, setPages] = useState(0);
+  const [state, setState] = useState<'loading' | 'loadingMore' | 'idle'>(NODE_SECTIONS.length ? 'loading' : 'idle');
+  useEffect(() => { if (state === 'idle') return; const id = setTimeout(() => { setPages(p => p + 1); setState('idle'); }, state === 'loading' ? 500 : 350); return () => clearTimeout(id); }, [state]);
+  const shown = NODE_SECTIONS.slice(0, pages * 3);
+  const loadMore = () => { if (state === 'idle' && shown.length < NODE_SECTIONS.length) setState('loadingMore'); };
+  return {sections: shown, loadingState: state, loadMore, done: shown.length >= NODE_SECTIONS.length};
+}
 
 const quick = style({display: 'grid', gridTemplateColumns: {default: ['1fr'], sm: ['repeat(2, minmax(0, 1fr))'], xl: ['minmax(0, 1.5fr)', 'repeat(2, minmax(0, 1fr))']}, gap: 12});
 const strip = style({display: 'grid', gridTemplateColumns: {default: ['repeat(2, minmax(0, 1fr))'], lg: ['repeat(4, minmax(0, 1fr))']}, gap: 12});
@@ -79,6 +89,7 @@ export function Activity({go}: PageProps) {
   const [mode, setMode] = useState<Mode>(runtime.mode);
   const [target, setTarget] = useState(runtime.globalTarget);
   const [nodeName, setNodeName] = useState(NODES[0].name);
+  const sec = useNodeSections();
   const node = NODES.find(n => n.name === nodeName) ?? NODES[0];
   const sep = t('act.sep2');
   const sep2 = t('lang') === 'Language' ? ': ' : '：';
@@ -103,7 +114,7 @@ export function Activity({go}: PageProps) {
         <Panel><span className={tileHead}><Download styles={grayIcon} />{t('act.download')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.down)}</span><span className={delta}>↑ 12%</span></span><span className={tileSpark}><Spark values={traffic[0].values} color="accent" /></span></div></Panel>
         <Panel><span className={tileHead}><Upload styles={grayIcon} />{t('act.upload')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{fmtRate(latest.up)}</span><span className={delta}>↓ 8%</span></span><span className={tileSpark}><Spark values={traffic[1].values} color="orange" /></span></div></Panel>
         <Panel><span className={tileHead}><LinkIcon styles={grayIcon} />{t('act.active')}</span><div className={tileBody}><span className={tileVal}><span className={big}>{conns.length}</span><span className={delta}>↑ 2</span></span><span className={tileSpark}><Spark values={connSeries} color="orange" /></span></div></Panel>
-        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} renderValue={items => { const name = (items[0] as typeof NODES[number] | undefined)?.name ?? nodeName; return <span className={valueRow}><Flag name={name} />{name}</span>; }}>{NODE_SECTIONS.length > 1 ? NODE_SECTIONS.map(([r, list]) => <PickerSection key={r} id={r}><Header><Heading>{r}</Heading></Header>{list.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</PickerSection>) : NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
+        <Panel><span className={tileHead}><Clock styles={grayIcon} />{t('act.latency')}<Picker aria-label={t('act.node')} isQuiet size="S" selectedKey={nodeName} onSelectionChange={k => { if (k != null) setNodeName(String(k)); }} loadingState={sec.loadingState} onLoadMore={sec.loadMore} renderValue={items => { const name = (items[0] as typeof NODES[number] | undefined)?.name ?? nodeName; return <span className={valueRow}><Flag name={name} />{name}</span>; }}>{NODE_SECTIONS.length > 1 ? sec.sections.map(([r, list]) => <PickerSection key={r} id={r}><Header><Heading>{r}</Heading></Header>{list.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</PickerSection>) : NODES.map(n => <PickerItem key={n.name} id={n.name} textValue={n.name}><Text slot="label"><Flag name={n.name} />{n.name}</Text><Text slot="description">{n.alive ? n.tcp + ' ms' : t('act.timeout')}</Text></PickerItem>)}</Picker></span><div className={tileBody}><span className={tileVal}><span className={big}>{node.alive ? node.tcp + ' ms' : '—'}</span>{node.alive && <span className={delta}>↓ 12%</span>}</span><StatusLight variant={node.alive ? 'positive' : 'negative'} size="S"><Text>{node.alive ? t('act.good') : t('act.timeout')}</Text></StatusLight></div></Panel>
       </div>
 
       <div className={grid21}>

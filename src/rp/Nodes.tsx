@@ -1,6 +1,6 @@
 // Node collections that stay usable at airport scale (hundreds of nodes): a filterable, virtualised grid for policy
 // groups and a searchable, region-sectioned menu for pickers. Small collections fall back to the plain tiles.
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Autocomplete, Button as RButton, GridLayout, GridList, GridListItem, Input, Menu, MenuItem, MenuSection, MenuTrigger, Popover, SearchField, Header, Size, Virtualizer, useFilter, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import Close from '@react-spectrum/s2/icons/Close';
@@ -69,19 +69,28 @@ function NodeBody({n, labels, cur}: {n: NodeInfo, labels: NodeLabels, cur: boole
 }
 
 // Picker for one node out of many: the trigger shows flag and name; the menu is searchable and grouped by region.
-export function NodeMenu({nodes, value, onChange, label, labels}: {nodes: NodeInfo[], value: string, onChange: (name: string) => void, label: string, labels: {timeout: string, filter: string}}) {
+export function NodeMenu({nodes, value, onChange, label, labels}: {nodes: NodeInfo[], value: string, onChange: (name: string) => void, label: string, labels: {timeout: string, filter: string, loading: string}}) {
   const [ref, style] = usePress();
   const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
-  const sections = useMemo(() => {
+  const all = useMemo(() => {
     const m = new Map<string, NodeInfo[]>();
     for (const n of [...nodes].sort(byLatency)) { const r = regionOf(n.name) ?? '—'; if (!m.has(r)) m.set(r, []); m.get(r)!.push(n); }
     return [...m];
   }, [nodes]);
+  // Sections arrive in pages of three, as from a backend; reaching the end of the list asks for the next page.
+  const [pages, setPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const sections = all.slice(0, pages * 3);
+  const done = sections.length >= all.length;
+  useEffect(() => { if (!loading) return; const id = setTimeout(() => { setPages(p => p + 1); setLoading(false); }, 350); return () => clearTimeout(id); }, [loading]);
+  const listRef = useRef<HTMLDivElement>(null);
+  const onScroll = () => { const el = listRef.current; if (!el || loading || done) return; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) setLoading(true); };
   const item = (n: NodeInfo) => <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}><Check /><span className="rp-il"><span className="ic"><Flag name={n.name} /></span><span>{n.name}</span></span><span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>{n.alive !== false ? n.tcp + ' ms' : labels.timeout}</span></MenuItem>;
   const menu = (
-    <Menu className="rp-menu-scroll" aria-label={label} selectionMode="single" selectedKeys={[value]} onSelectionChange={(k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }}>
+    <Menu ref={listRef} onScroll={onScroll} className="rp-menu-scroll" aria-label={label} selectionMode="single" selectedKeys={[value]} onSelectionChange={(k: 'all' | Set<Key>) => { if (k === 'all') return; const v = [...k][0]; if (v != null) onChange(String(v)); }}>
       {big ? sections.map(([r, list]) => <MenuSection key={r} id={r}><Header className="rp-sec-h"><span className="rp-il">{r !== '—' && <span className="ic"><Flag name={r} /></span>}{r}<span className="rp-muted"> · {list.length}</span></span></Header>{list.map(item)}</MenuSection>) : nodes.map(item)}
+      {big && !done && <MenuItem id="__more" isDisabled className="rp-item rp-more" textValue={labels.loading}><span /><span className="rp-il"><span className="rp-spinner" />{labels.loading}</span></MenuItem>}
     </Menu>
   );
   return (

@@ -1,7 +1,7 @@
 /* Palettes: Rosé Pine (Dawn/Moon), Catppuccin (Latte/Mocha), Nord (light/dark). data-palette picks the family,
    data-scheme picks light or dark; every component reads the same --rp-* roles. */
-:root { --iconPrimary: currentColor; color-scheme: light; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12); --rp-underlay: rgba(0, 0, 0, 0.32); }
-:root[data-scheme='dark'] { color-scheme: dark; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45); --rp-underlay: rgba(0, 0, 0, 0.55); }
+:root { --iconPrimary: currentColor; color-scheme: light; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12); --rp-underlay: rgba(0, 0, 0, 0.32); --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12); --rp-popover-border: transparent; }
+:root[data-scheme='dark'] { color-scheme: dark; --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45); --rp-underlay: rgba(0, 0, 0, 0.55); --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36); --rp-popover-border: var(--rp-hl-med); }
 
 :root, :root[data-family='rose-pine'] {
   --rp-base: #faf4ed; --rp-surface: #fffaf3; --rp-overlay: #f2e9e1;
@@ -172,20 +172,20 @@
   --rp-hl-low: rgba(255, 255, 255, 0.07); --rp-hl-med: rgba(255, 255, 255, 0.14); --rp-hl-high: rgba(255, 255, 255, 0.24);
   --rp-on-accent: #ffffff; --rp-on-text: #1c1c1e; --rp-line: rgba(255, 255, 255, 0.12);
   --rp-shadow: 0 8px 32px rgba(0, 0, 0, 0.45); --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
-  --rp-glass: rgba(18, 18, 26, 0.36); --rp-glass-strong: rgba(24, 24, 32, 0.62);
-  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.22) 100%);
-  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 38%, rgba(255, 255, 255, 0) 60%);
-  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 28px rgba(255, 255, 255, 0.05);
-  --rp-ctl: rgba(255, 255, 255, 0.1); --rp-ctl-border: rgba(255, 255, 255, 0.12); --rp-track: rgba(0, 0, 0, 0.28);
+  --rp-glass: rgba(18, 20, 30, 0.56); --rp-glass-strong: rgba(22, 24, 34, 0.74);
+  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.09) 40%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.16) 100%);
+  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0) 60%);
+  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 28px rgba(255, 255, 255, 0.03);
+  --rp-ctl: rgba(255, 255, 255, 0.09); --rp-ctl-border: rgba(255, 255, 255, 0.1); --rp-track: rgba(0, 0, 0, 0.32);
   --rp-grain-opacity: 0.35; --rp-underlay: rgba(0, 0, 0, 0.45);
   --rp-bg:
-    radial-gradient(circle 320px at 24% 26%, rgba(52, 96, 255, 0.85) 0 22%, rgba(52, 96, 255, 0) 70%),
-    radial-gradient(circle 280px at 74% 18%, rgba(200, 60, 150, 0.8) 0 20%, rgba(200, 60, 150, 0) 70%),
-    radial-gradient(circle 360px at 82% 80%, rgba(255, 140, 50, 0.75) 0 22%, rgba(255, 140, 50, 0) 70%),
-    radial-gradient(circle 300px at 16% 86%, rgba(20, 180, 140, 0.8) 0 20%, rgba(20, 180, 140, 0) 70%),
-    radial-gradient(circle 220px at 52% 58%, rgba(120, 80, 255, 0.7) 0 20%, rgba(120, 80, 255, 0) 70%),
-    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.09) 46%, rgba(255, 255, 255, 0.09) 49%, transparent 61%),
-    linear-gradient(135deg, #0b1230 0%, #2a1247 32%, #3a1a0a 64%, #06231c 100%);
+    radial-gradient(circle 320px at 24% 26%, rgba(46, 84, 230, 0.7) 0 22%, rgba(46, 84, 230, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(150, 50, 140, 0.6) 0 20%, rgba(150, 50, 140, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(190, 96, 40, 0.42) 0 22%, rgba(190, 96, 40, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(16, 140, 120, 0.6) 0 20%, rgba(16, 140, 120, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(100, 70, 220, 0.55) 0 20%, rgba(100, 70, 220, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.06) 46%, rgba(255, 255, 255, 0.06) 49%, transparent 61%),
+    linear-gradient(135deg, #090d24 0%, #1c0f38 32%, #1b1230 64%, #05201c 100%);
 }
 :root[data-family='glass'] { --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 :root[data-family='glass'] body { background: var(--rp-bg); background-attachment: fixed; }
@@ -194,6 +194,8 @@
 :root[data-family='glass'] .rp-shell { position: relative; }
 :root[data-family='glass'] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%); }
 :root[data-family='glass'][data-scheme='dark'] body::after { background: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%); }
+/* Over a photo the chrome becomes a vibrancy sheet (as macOS sidebars do): frosted, no border, so labels stay readable
+   whatever the picture. The gradient look keeps the chrome bare. */
 :root[data-family='glass'] .rp-top, :root[data-family='glass'] .rp-side { background: transparent; }
 :root[data-family='glass'] .rp-main { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35); border-bottom: 0; }
 :root[data-family='glass'][data-scheme='dark'] .rp-main { background: rgba(0, 0, 0, 0.18); border-color: rgba(255, 255, 255, 0.08); }
@@ -217,6 +219,7 @@
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
 :root[data-family='glass'] .rp-card { border-radius: 20px; }
+:root[data-family='glass'] .rp-popover::after { inset: 0; }
 :root[data-family='glass'] .rp-popover, :root[data-family='glass'] .rp-dialog { background: var(--rp-sheen), var(--rp-glass-strong); backdrop-filter: blur(40px) saturate(1.8); box-shadow: var(--rp-glow), var(--rp-shadow-lg); }
 :root[data-family='glass'] .rp-table [role='columnheader'] { background: transparent; }
 :root[data-family='glass'] .rp-frame .head { background: transparent; }
@@ -235,7 +238,7 @@
 :root[data-family='glass'] .rp-seg .rp-btn, :root[data-family='glass'] .rp-seg .rp-btn:hover { background: transparent; border-color: transparent; box-shadow: none; }
 :root[data-family='glass'] .rp-seg .rp-btn[data-selected] { color: var(--rp-text); }
 :root[data-family='glass'] .rp-slider { background: rgba(255, 255, 255, 0.85); border-color: transparent; box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18); }
-:root[data-family='glass'][data-scheme='dark'] .rp-slider { background: rgba(255, 255, 255, 0.2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.4); }
+:root[data-family='glass'][data-scheme='dark'] .rp-slider { background: rgba(120, 120, 128, 0.62); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.45); }
 :root[data-family='glass'] .rp-switch .track { background: var(--rp-track); }
 :root[data-family='glass'] .rp-switch[data-selected] .track { background: var(--rp-pine); }
 :root[data-family='glass'] .rp-switch .track::after { background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
@@ -357,7 +360,10 @@ button, input { font: inherit; color: inherit; }
 .rp-seg .rp-btn[data-selected] { background: var(--rp-surface); color: var(--rp-pine); border-color: var(--rp-pine); }
 .rp-sec-h { font-size: 12px; line-height: 16px; color: var(--rp-muted); padding: 8px 8px 2px 32px; }
 .rp-popover [role='menu'], .rp-popover [role='listbox'], .rp-popover [role='dialog'] { outline: none; }
-.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-hl-med); border-radius: 10px; padding: 8px; box-shadow: var(--rp-shadow-lg); min-width: 160px; }
+/* A slim overlay-like scrollbar so a long menu keeps its 8px inset on both sides. */
+.rp-popover::-webkit-scrollbar { width: 6px; } .rp-popover::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--rp-hl-high); } .rp-popover::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+/* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
+.rp-popover { background: var(--rp-surface); border: 1px solid var(--rp-popover-border); border-radius: 10px; padding: 8px; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: var(--rp-hl-high) transparent; box-sizing: border-box; box-shadow: var(--rp-elevated); min-width: 160px; }
 .rp-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-height: 32px; padding: 0 8px 0 8px; border-radius: 8px; cursor: default; outline: none; color: var(--rp-text); }
 .rp-item[data-focused], .rp-item[data-hovered] { background: var(--rp-hl-low); }
 .rp-item[data-pressed] { background: var(--rp-hl-med); }
@@ -470,6 +476,8 @@ button.rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-
 .rp-nodegrid .rp-node[data-focus-visible] { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
 .rp-menu-scroll { max-height: 360px; overflow: auto; scrollbar-width: thin; }
 .rp-menu-search { margin: 4px 4px 8px; width: 240px; }
+.rp-more { color: var(--rp-subtle); }
+.rp-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rp-hl-high); border-top-color: var(--rp-pine); animation: rp-spin 800ms linear infinite; }
 .rp-muted { color: var(--rp-muted); }
 .rp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .rp-switch .track { width: 32px; height: 16px; border-radius: 8px; background: var(--rp-hl-high); position: relative; transition: background 150ms; flex-shrink: 0; }
