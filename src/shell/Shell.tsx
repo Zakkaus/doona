@@ -32,20 +32,9 @@ import type {PageProps} from '../features/types';
 import {useRoute} from './route';
 import {useCapabilities} from '../api/store';
 import {features, navAvailable} from './registry';
+import {SettingsContext} from '../features/settings/Settings';
+import {readSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
 
-type Scheme = 'system' | 'light' | 'dark';
-// A palette is a family plus its dark flavour; the light flavour is fixed per family (Dawn, Latte, Nord light).
-type PaletteId =
-  | 'rose-pine/main'
-  | 'rose-pine/moon'
-  | 'catppuccin/frappe'
-  | 'catppuccin/macchiato'
-  | 'catppuccin/mocha'
-  | 'nord/nord'
-  | 'glass/glass'
-  | 'antd/antd'
-  | 'arco/arco'
-  | 'semi/semi';
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
   {
@@ -77,7 +66,6 @@ const palettes = (t: Translator): Array<{title: string; items: Array<{id: Palett
 const navGroups = [...new Set(features.flatMap(feature => (feature.nav ? [feature.nav.group] : [])))];
 const NODES = [...new Set(groups.flatMap(g => g.nodes.map(n => n.name)))];
 
-type Wordmark = 'gradient' | 'plain';
 const read = (k: string) => {
   try {
     return localStorage.getItem(k);
@@ -261,7 +249,8 @@ export function Shell() {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
   const ap = useAppearance();
-  const {route, query, go} = useRoute();
+  const [settings] = useState(readSettings);
+  const {route, query, go} = useRoute(settings.api);
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -290,7 +279,17 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+        <Frame
+          lang={lang}
+          pickLang={pickLang}
+          ap={ap}
+          backend={settings.backend}
+          route={route}
+          query={query}
+          go={go}
+          openSearch={() => setSearchOpen(true)}
+          mac={mac}
+        />
         <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} go={go} />
         <ToastHost />
       </I18nProvider>
@@ -307,6 +306,7 @@ function Frame({
   lang,
   pickLang,
   ap,
+  backend,
   route,
   query,
   go,
@@ -316,6 +316,7 @@ function Frame({
   lang: Lang;
   pickLang: (l: Lang) => void;
   ap: ReturnType<typeof useAppearance>;
+  backend: BackendKind;
   route: string;
   query: string;
   go: PageProps['go'];
@@ -323,9 +324,10 @@ function Frame({
   mac: boolean;
 }) {
   const t = useT();
+  const paletteSections = palettes(t);
   const capabilities = useCapabilities();
   const nav = navGroups.map(
-    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
+    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data, backend))] as const
   );
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
@@ -383,7 +385,7 @@ function Frame({
             label={t('palette')}
             value={ap.palette}
             onChange={k => ap.pickPalette(k as PaletteId)}
-            sections={palettes(t)}
+            sections={paletteSections}
             extra={{
               title: t('wordmark'),
               value: ap.wordmark,
@@ -455,7 +457,9 @@ function Frame({
               />
             </div>
           </div>
-          <Page go={go} query={query} />
+          <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
+            <Page go={go} query={query} />
+          </SettingsContext.Provider>
         </div>
       </main>
     </div>

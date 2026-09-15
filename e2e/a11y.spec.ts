@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, routes, test} from './fixtures';
+import {compatRoutes, expect, routes, test} from './fixtures';
 
 // Observed with axe 4.13.0. Source fixes are outside this gate change.
 const KNOWN: Record<string, string> = {
@@ -12,7 +12,9 @@ for (const route of routes) {
   test(route, async ({page}, testInfo) => {
     await page.goto(`/#/${route}`);
     await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
+    const nav = page.locator(`.rp-nav[href="#/${route}"]`);
+    if (compatRoutes.includes(route)) await expect(nav).toHaveCount(0);
+    else await expect(nav).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     const results = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa']).analyze();

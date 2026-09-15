@@ -129,6 +129,23 @@ export function createMockApi(): Api {
     });
   }
   return {
+    discovery: async signal => {
+      signal?.throwIfAborted();
+      return {
+        name: 'dae/honk-native',
+        status: 'draft',
+        api_major: 1,
+        base_path: '/api/v1',
+        links: {
+          version: '/api/v1/version',
+          capabilities: '/api/v1/capabilities',
+          runtime: '/api/v1/runtime',
+          runtime_outbounds: '/api/v1/runtime/outbounds',
+          traffic_history: '/api/v1/runtime/traffic/history',
+          operations: '/api/v1/operations/{id}'
+        }
+      };
+    },
     version: async signal => {
       signal?.throwIfAborted();
       return structuredClone(fixtures.version);

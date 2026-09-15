@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {Go} from '../features/types';
+import {shouldOpenSettings} from '../features/settings/settings';
 
 type Route = {route: string; query: string};
 
@@ -22,13 +23,21 @@ const go: Go = (route, query) => {
   location.hash = buildHash(route, query);
 };
 
-export function useRoute() {
-  const [loc, setLoc] = useState(() => parseHash(location.hash));
+function currentHash(api: string | null): string {
+  if (shouldOpenSettings(api, location.hash)) history.replaceState(null, '', buildHash('settings'));
+  return location.hash;
+}
+
+export function useRoute(api: string | null) {
+  const [loc, setLoc] = useState(() => parseHash(currentHash(api)));
   useEffect(() => {
-    const on = () => setLoc(current => updateRoute(current, location.hash));
+    const on = () => {
+      const hash = currentHash(api);
+      setLoc(current => updateRoute(current, hash));
+    };
     addEventListener('hashchange', on);
     return () => removeEventListener('hashchange', on);
-  }, []);
+  }, [api]);
   const params = useMemo(() => new URLSearchParams(loc.query), [loc.query]);
   return {...loc, params, go};
 }

@@ -2924,3 +2924,15 @@ button.rp-node:hover {
 .rp-connection-grid [role='rowgroup'] {
   height: 100%;
 }
+.rp-settings-secret {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rp-settings-secret > .rp-input {
+  flex: 1;
+  min-width: 0;
+}
+.rp-settings-secret input {
+  min-width: 0;
+}

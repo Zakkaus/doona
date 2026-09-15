@@ -2,11 +2,18 @@ import {defineConfig} from 'vite';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {version} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
 
 export default defineConfig({
   base: './',
+  define: {
+    'import.meta.env.VITE_DOONA_VERSION': JSON.stringify(version),
+    'import.meta.env.VITE_DOONA_CONTRACT_COMMIT': JSON.stringify(
+      readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/\bcommit ([0-9a-f]{7,40})\b/)![1]
+    )
+  },
   plugins: [
     react(),
     {

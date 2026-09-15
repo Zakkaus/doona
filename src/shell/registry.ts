@@ -25,13 +25,16 @@ import Data from '../ui/icons/Data';
 import FileText from '../ui/icons/FileText';
 import History from '../ui/icons/History';
 import CheckmarkCircle from '../ui/icons/CheckmarkCircle';
+import {Settings} from '../features/settings/Settings';
+import type {BackendKind} from '../features/settings/settings';
+import SettingsIcon from '../ui/icons/Settings';
 
 type Feature = {
   id: string;
   path: string;
   nav: {group: Key; titleKey: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
-  requires: {resources?: Array<keyof Capabilities['resources']>; backend?: 'native' | 'clash'};
+  requires: {resources?: Array<keyof Capabilities['resources']>; backend?: BackendKind};
   compat?: true;
 };
 
@@ -80,11 +83,13 @@ export const features: Feature[] = [
     requires: {backend: 'clash'},
     compat: true
   },
-  {id: 'events', path: 'events', nav: {group: 'grp.system', titleKey: 'nav.events', Icon: History}, Page: Events, requires: {resources: ['events']}}
+  {id: 'events', path: 'events', nav: {group: 'grp.system', titleKey: 'nav.events', Icon: History}, Page: Events, requires: {resources: ['events']}},
+  {id: 'settings', path: 'settings', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ];
 
-export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
-  const resources = features.find(feature => feature.path === path)?.requires.resources;
-  // Backend selection is deferred; only resource availability gates navigation.
+export function navAvailable(path: string, capabilities: Capabilities | undefined, backend: BackendKind): boolean {
+  const requires = features.find(feature => feature.path === path)?.requires;
+  if (requires?.backend && requires.backend !== backend) return false;
+  const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
