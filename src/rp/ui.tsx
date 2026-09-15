@@ -1,5 +1,6 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject} from 'react';
+import {flushSync} from 'react-dom';
 import {Button as RButton, ToggleButton, ToggleButtonGroup, Menu, MenuItem, MenuTrigger, MenuSection, Header, Popover, Select, SelectValue, ListBox, ListBoxItem, Tooltip, TooltipTrigger, OverlayArrow, type Key} from 'react-aria-components';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import Close from '@react-spectrum/s2/icons/Close';
@@ -8,6 +9,13 @@ import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle';
 import InfoCircle from '@react-spectrum/s2/icons/InfoCircle';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
+
+// Wrap a state change in a view transition (a page-wide crossfade) where the browser supports it.
+export function withCrossfade(fn: () => void) {
+  const d = document as Document & {startViewTransition?: (cb: () => void) => void};
+  if (!d.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return fn();
+  d.startViewTransition(() => flushSync(fn));
+}
 
 // Spectrum's press effect: while pressed the control sinks 2px away from the viewer, which reads as a slight shrink.
 export function usePress(): [RefObject<HTMLButtonElement | null>, (rp: {isPressed: boolean}) => CSSProperties] {
@@ -28,16 +36,16 @@ function PressToggle(props: Parameters<typeof ToggleButton>[0]) {
 }
 
 // A selection indicator that slides between items, as in S2's SegmentedControl and Tabs.
-function useSlider(value: string) {
+export function useSlider(value: string, selector = '[data-selected]') {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{x: number, w: number} | null>(null);
+  const [pos, setPos] = useState<{x: number, y: number, w: number, h: number} | null>(null);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
-    const measure = () => { const sel = el.querySelector<HTMLElement>('[data-selected]'); if (!sel) return setPos(null); setPos({x: sel.offsetLeft, w: sel.offsetWidth}); };
+    const measure = () => { const sel = el.querySelector<HTMLElement>(selector); if (!sel) return setPos(null); setPos({x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight}); };
     measure();
     const ro = new ResizeObserver(measure); ro.observe(el);
     return () => ro.disconnect();
-  }, [value]);
+  }, [value, selector]);
   return [ref, pos] as const;
 }
 
