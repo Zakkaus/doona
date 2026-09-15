@@ -6,20 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: [
-      'dist/**',
-      'artifact/**',
-      'vendor/**',
-      'contract/**',
-      'src/api/types.ts',
-      'src/fonts.css',
-      'node_modules/**',
-      // S2 reference panels, pending archive (release plan 二.1)
-      'src/app/**',
-      'src/App.tsx',
-      'src/DesignPage.tsx',
-      'src/main.tsx'
-    ]
+    ignores: ['dist/**', 'artifact/**', 'vendor/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'node_modules/**', 'reference/**', 'test-results/**']
   },
   ...tseslint.configs.recommended,
   {
@@ -32,7 +19,7 @@ export default [
     languageOptions: {globals: globals.browser}
   },
   {
-    files: ['tools/*.mjs', '*.config.{ts,js}'],
+    files: ['tools/*.mjs', '*.config.{ts,js}', 'e2e/**/*.ts'],
     languageOptions: {globals: globals.node}
   },
   {

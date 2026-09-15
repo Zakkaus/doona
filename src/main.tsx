@@ -1,12 +1,12 @@
 import {createRoot} from 'react-dom/client';
 import {StrictMode} from 'react';
-import '@react-spectrum/s2/page.css';
 import './fonts.css';
-import './base.css';
-import {App} from './App';
+import './ui/theme.css';
+import {Shell, stampAppearance} from './shell/Shell';
 
+stampAppearance();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Shell />
   </StrictMode>
 );

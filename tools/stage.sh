@@ -7,7 +7,6 @@ mk() { # $1 = dist html, $2 = artifact html, $3 = title
   { echo "<title>$3</title>"
     grep -oE '<link rel="stylesheet"[^>]*>|<link rel="modulepreload"[^>]*>|<script type="module"[^>]*></script>' "$B/$1" | sed 's|\./assets/|assets/|g'
     echo '<div id="root" lang="zh-Hant"></div>'; } > "$R/artifact/$2"; }
-mk design.html doona.html doona
 mk index.html panel.html "doona 面板"
 cd "$R"; python3 - <<'PY'
 import json, os

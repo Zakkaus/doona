@@ -2,6 +2,14 @@
   "name": "doona",
   "private": true,
   "version": "0.0.0",
+  "description": "A web interface for the honk transparent proxy.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zakkaus/doona.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@11.15.1",
@@ -10,16 +18,24 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "conformance": "node tools/conformance.mjs",
     "gen:api": "openapi-typescript contract/api-standardize/openapi.yaml -o \"${OPENAPI_OUTPUT:-src/api/types.ts}\"",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit -p .",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p e2e",
     "check:gen": "tools/check-gen.sh",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm check:gen"
+    "check:i18n": "node tools/check-i18n.mjs",
+    "check:size": "node tools/check-size.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium",
+    "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
+  },
+  "sizeBudget": {
+    "js": 410000,
+    "css": 240000
   },
   "dependencies": {
-    "@react-spectrum/s2": "^1.7.1",
     "flag-icons": "^7.5.0",
     "react": "^19.1.0",
     "react-aria-components": "1.21.1",
@@ -27,10 +43,14 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@react-aria/optimize-locales-plugin": "^1.1.4",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -42,8 +62,8 @@
     "prettier": "^3.9.6",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.70.0",
-    "unplugin-parcel-macros": "^0.2.0",
     "vite": "^6.3.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "yaml": "^2.9.1"
   }
 }
