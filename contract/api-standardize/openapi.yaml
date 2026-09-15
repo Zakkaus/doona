@@ -1,0 +1,6635 @@
+openapi: 3.1.0
+info:
+  title: dae/honk Native API
+  version: 0.1.0-draft
+  description: |
+    Normative wire contract for the native control-plane API. Unknown response
+    extension fields are permitted. Request objects reject unknown fields.
+    Published as a generated bundle at source/openapi.yaml; edit the api/ sources,
+    not the published file.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: http://localhost:9527
+security: []
+paths:
+  /api:
+    get:
+      operationId: getDiscovery
+      summary: Discover the native API
+      security: []
+      responses:
+        '200':
+          description: Native API discovery
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discovery'
+              examples:
+                draft:
+                  value:
+                    name: dae/honk-native
+                    status: draft
+                    api_major: 1
+                    base_path: /api/v1
+                    links:
+                      version: /api/v1/version
+                      capabilities: /api/v1/capabilities
+                      runtime: /api/v1/runtime
+                      operations: /api/v1/operations/{id}
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/version:
+    get:
+      operationId: getVersion
+      summary: Read native and engine version identity
+      security: []
+      responses:
+        '200':
+          description: Version identity
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+              examples:
+                build:
+                  value:
+                    api:
+                      name: dae/honk-native
+                      major: 1
+                      status: draft
+                    engine:
+                      name: honk
+                      version: 0.0.1-alpha
+                    build:
+                      revision: abc1234
+                      target: x86_64-unknown-linux-gnu
+                      built_at: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+  /api/v1/capabilities:
+    get:
+      operationId: getCapabilities
+      summary: Negotiate resources, visibility, and limits
+      security: []
+      responses:
+        '200':
+          description: Adapter capabilities
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Capabilities'
+              examples:
+                available:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    profiles:
+                      - base
+                    limits:
+                      max_request_target_bytes: 4096
+                      max_header_bytes: 16384
+                      max_json_body_bytes: 65536
+                    resources:
+                      runtime:
+                        available: true
+                      runtime_memory:
+                        available: true
+                        metrics:
+                          - process.rss_bytes
+                          - cgroup.current_bytes
+                          - cgroup.limit_bytes
+                          - cgroup.events.high
+                          - cgroup.events.oom
+                          - cgroup.events.oom_kill
+                      datapath:
+                        available: true
+                        kinds:
+                          - ebpf
+                        details:
+                          - attachments
+                          - maps
+                      nodes:
+                        available: true
+                      groups:
+                        available: true
+                        config_patch: true
+                        selection: true
+                        max_patch_operations: 32
+                      probes:
+                        available: true
+                        targets:
+                          - node
+                          - group
+                        kinds:
+                          - tcp_connect
+                          - http
+                          - dns
+                        purposes:
+                          - data
+                          - dns
+                        transports:
+                          - tcp
+                          - udp
+                        ip_versions:
+                          - ipv4
+                          - ipv6
+                        limits:
+                          max_members_per_job: 128
+                          max_results_per_job: 512
+                          max_active_jobs: 4
+                          max_queued_jobs: 16
+                          max_concurrent_per_target: 2
+                          job_timeout_ms: 30000
+                          per_principal_requests_per_minute: 60
+                          global_requests_per_minute: 240
+                      connections:
+                        available: true
+                      flows:
+                        available: true
+                        recording: 'on'
+                        scopes:
+                          - userspace_tcp
+                          - userspace_udp
+                        max_flows: 10000
+                        max_steps_per_flow: 256
+                        retention_seconds: 300
+                        snapshot_ttl_seconds: 30
+                        max_page_size: 1000
+                      routing_trace:
+                        available: true
+                        resolve_modes:
+                          - none
+                        max_addresses: 16
+                        max_rule_steps: 4096
+                        timeout_ms: 5000
+                        per_principal_requests_per_minute: 30
+                        global_requests_per_minute: 120
+                      events:
+                        available: true
+                        kinds:
+                          - stream.ready
+                          - runtime.updated
+                          - flow.updated
+                          - flow.gap
+                          - operation.updated
+                          - generation.changed
+                        retention_seconds: 60
+                        max_buffered_events: 4096
+                        max_clients: 16
+                        heartbeat_seconds: 15
+                      dns_query:
+                        available: true
+                        record_types:
+                          - A
+                          - AAAA
+                          - HTTPS
+                        limits:
+                          max_types_per_request: 8
+                          query_timeout_ms: 5000
+                          max_response_bytes: 65536
+                          per_principal_requests_per_minute: 120
+                          global_requests_per_minute: 480
+                      dns_cache:
+                        available: true
+                        read: true
+                        delete_entry: true
+                        delete_name: true
+                        flush: true
+                        entry_kinds:
+                          - positive
+                          - negative
+                      operations:
+                        available: true
+                        retention_seconds: 300
+                      reload:
+                        available: true
+                      suspend:
+                        available: false
+                      resume:
+                        available: false
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+  /api/v1/runtime:
+    get:
+      operationId: getRuntime
+      summary: Read coherent runtime summary
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: Runtime snapshot
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Runtime'
+              examples:
+                snapshot:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    instance_id: instance-7
+                    lifecycle:
+                      state: running
+                      started_at: '2026-08-15T08:00:00Z'
+                      uptime_seconds: '7200'
+                    generation:
+                      active_id: generation-42
+                      config_revision: '17'
+                      state: active
+                      activated_at: '2026-08-15T09:30:00Z'
+                    datapath:
+                      kind: ebpf
+                      state: active
+                      visibility: partial
+                      ebpf:
+                        backend: real
+                        programs: loaded
+                        hooks: attached
+                        routing:
+                          state: published
+                          generation_id: generation-42
+                        health: healthy
+                        last_error: null
+                        checked_at: '2026-08-15T10:00:00Z'
+                    traffic:
+                      scope: visible
+                      observed_by: mixed
+                      counter_since: '2026-08-15T08:00:00Z'
+                      connections:
+                        tcp: 42
+                        udp: 128
+                        total: 170
+                      bytes:
+                        upload: '123456789'
+                        download: '987654321'
+                      rates:
+                        window_seconds: 1
+                        upload_bytes_per_second: '4096'
+                        download_bytes_per_second: '32768'
+                    process:
+                      pid: 1234
+                      cpu_percent: null
+                    last_reload:
+                      operation_id: op-01HZX4K8W7
+                      status: succeeded
+                      finished_at: '2026-08-15T09:30:00Z'
+                      error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/runtime/memory:
+    get:
+      operationId: getRuntimeMemory
+      summary: Read lightweight process, cgroup, and eBPF memory
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Memory snapshot
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeMemory'
+              examples:
+                snapshot:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    process:
+                      rss_bytes: '67108864'
+                    cgroup:
+                      scope: service
+                      current_bytes: '83886080'
+                      limit_bytes: '536870912'
+                      events:
+                        high: '0'
+                        oom: '0'
+                        oom_kill: '0'
+                    kernel:
+                      ebpf_bytes: null
+                      sampled_at: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/datapath:
+    get:
+      operationId: getDatapath
+      summary: Read detailed datapath state
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: Datapath snapshot
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datapath'
+              examples:
+                active:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    kind: ebpf
+                    state: active
+                    visibility: partial
+                    ebpf:
+                      backend: real
+                      programs: loaded
+                      hooks: attached
+                      routing:
+                        state: published
+                        generation_id: generation-42
+                        epoch: '3'
+                      attachments:
+                        - name: wan_ingress
+                          interface: eth0
+                          direction: ingress
+                          state: attached
+                      maps:
+                        state: ready
+                        conn_state:
+                          occupancy: 1200
+                          capacity: 524288
+                          occupancy_known: true
+                      health: healthy
+                      last_error: null
+                      checked_at: '2026-08-15T10:00:00Z'
+                    errors: []
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/nodes:
+    get:
+      operationId: listNodes
+      summary: List nodes and latest typed health samples
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: group_id
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          example: group-proxy
+        - $ref: '#/components/parameters/Limit1000'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Node page
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeList'
+              examples:
+                nodes:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    nodes:
+                      - id: node-hk-01
+                        name: hk-01
+                        protocol: vless
+                        subscription_tag: provider-a
+                        group_ids:
+                          - group-proxy
+                        health:
+                          - transport: tcp
+                            purpose: shared
+                            ip_version: ipv4
+                            warmth: cold
+                            measurement: http_round_trip
+                            sample_source: probe
+                            state: healthy
+                            latency_ms: 45
+                            moving_avg_ms: 47.5
+                            avg10_ms: null
+                            observed_at: '2026-08-15T10:00:00Z'
+                            error: null
+                    next_cursor: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/groups:
+    get:
+      operationId: listGroups
+      summary: List group summaries
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Group summaries
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupList'
+              examples:
+                groups:
+                  value:
+                    - id: group-proxy
+                      name: proxy
+                      policy:
+                        kind: urltest
+                        native: min_moving_avg
+                      member_count: 2
+                      selection:
+                        tcp_member_id: node-hk-01
+                        udp_member_id: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/groups/{groupId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      operationId: getGroup
+      summary: Read a complete group resource
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Current group
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+              examples:
+                current:
+                  value:
+                    id: group-proxy
+                    name: proxy
+                    config_revision: '17'
+                    policy:
+                      kind: urltest
+                      native: min_moving_avg
+                    members:
+                      - id: node-hk-01
+                        name: hk-01
+                        kind: node
+                      - id: group-jp
+                        name: jp
+                        kind: group
+                    config:
+                      default_member_id: null
+                      final_outbound: direct
+                      check_url: null
+                      check_interval: 30
+                      tolerance: 50
+                      idle_timeout: null
+                      interrupt_connections: false
+                    runtime:
+                      selection:
+                        tcp:
+                          member_id: node-hk-01
+                          resolved_leaf_node_id: node-hk-01
+                          source: health
+                        udp: null
+                      health:
+                        - member_id: node-hk-01
+                          resolved_leaf_node_id: node-hk-01
+                          transport: tcp
+                          purpose: shared
+                          ip_version: ipv4
+                          warmth: unknown
+                          measurement: http_round_trip
+                          sample_source: probe
+                          state: healthy
+                          latency_ms: 45
+                          moving_avg_ms: 47.5
+                          avg10_ms: null
+                          sorting_latency_ms: 72.5
+                          ranking:
+                            metric: moving_avg_ms
+                            recovery_penalty_ms: 10
+                            group_offset_ms: 15
+                            score: null
+                            reason: minimum_with_hysteresis
+                          observed_at: '2026-08-15T10:00:00Z'
+                          error: null
+                    capabilities:
+                      can_select: false
+                      supports_nested_groups: true
+                      mutable_config:
+                        - policy
+                        - default_member_id
+                        - final_outbound
+                        - check_url
+                        - check_interval
+                        - tolerance
+                        - idle_timeout
+                        - interrupt_connections
+                      probe_transports:
+                        - tcp
+                        - udp
+                  x-headers:
+                    Content-Type: application/json
+                    ETag: '"17"'
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: patchGroup
+      summary: Patch mutable group configuration
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/JsonPatch'
+            examples:
+              tolerance:
+                value:
+                  - op: replace
+                    path: /config/tolerance
+                    value: 100
+                  - op: replace
+                    path: /config/interrupt_connections
+                    value: true
+      responses:
+        '200':
+          description: Updated group
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '202':
+          description: Operation accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-01HZX4K8WA
+                    kind: group_update
+                    status: queued
+                    href: /api/v1/operations/op-01HZX4K8WA
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-01HZX4K8WA
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          description: If-Match does not equal the current configuration revision
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                stale_revision:
+                  value:
+                    error:
+                      code: stale_revision
+                      message: The resource changed; fetch it again before retrying.
+                      details:
+                        field: null
+                    request_id: request-01HZX4K8W5
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/groups/{groupId}/selection:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    put:
+      operationId: selectGroupMember
+      summary: Replace a supported runtime group selection
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupSelectionRequest'
+            examples:
+              tcp_udp:
+                value:
+                  member_id: node-hk-01
+                  network: both
+      responses:
+        '200':
+          description: Applied runtime selection
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupSelectionResult'
+              examples:
+                selected:
+                  value:
+                    group_id: group-proxy
+                    member_id: node-hk-01
+                    resolved_leaf_node_id: node-hk-01
+                    network: both
+                    source: runtime
+                    selection_revision: '8'
+                    connections_interrupted: false
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /api/v1/probes:
+    post:
+      operationId: createProbe
+      summary: Start a bounded typed probe operation
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbeRequest'
+            examples:
+              dns_udp:
+                value:
+                  target:
+                    type: group
+                    group_id: group-proxy
+                  kind: dns
+                  purpose: dns
+                  transport:
+                    - udp
+                  ip_version: ipv4
+                  members:
+                    - node-hk-01
+                    - group-jp
+                  warmth: cold
+      responses:
+        '202':
+          description: Operation accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-01HZX4K8W9
+                    kind: probe
+                    status: queued
+                    href: /api/v1/operations/op-01HZX4K8W9
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-01HZX4K8W9
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/connections:
+    get:
+      operationId: listConnections
+      summary: Read a scope-labelled live connection snapshot
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - tcp
+              - udp
+              - all
+            default: all
+        - $ref: '#/components/parameters/Limit1000'
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: Connection snapshot
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionList'
+              examples:
+                visible:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    instance_id: instance-7
+                    visibility: partial
+                    truncated: false
+                    tcp:
+                      - id: tcp-01HZX4K8W5
+                        flow_id: flow-23
+                        pname: curl
+                        state: active
+                        src: 192.168.1.100:12345
+                        dst: 1.2.3.4:443
+                        domain: example.com
+                        outbound: proxy
+                        started_at: '2026-08-13T12:00:00Z'
+                        observed_by: userspace
+                        upload_bytes: '20480'
+                        download_bytes: '1048576'
+                        upload_bytes_per_second: '4096'
+                        download_bytes_per_second: '32768'
+                    udp:
+                      - id: udp-01HZX4K8W6
+                        flow_id: null
+                        pname: null
+                        state: unknown
+                        src: 192.168.1.100:5353
+                        dst: 8.8.8.8:53
+                        domain: null
+                        outbound: direct
+                        started_at: '2026-08-13T12:00:05Z'
+                        observed_by: ebpf
+                        upload_bytes: null
+                        download_bytes: null
+                        upload_bytes_per_second: null
+                        download_bytes_per_second: null
+                    total_tcp: 42
+                    total_udp: 128
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/flows:
+    get:
+      operationId: listFlows
+      summary: List active and retained terminal flow decisions
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: network
+          in: query
+          schema:
+            type: string
+            enum:
+              - tcp
+              - udp
+              - all
+            default: all
+        - name: state
+          in: query
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/ConnectionState'
+              - const: all
+            default: all
+        - $ref: '#/components/parameters/Limit1000'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: Point-in-time flow page
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowList'
+              examples:
+                visible:
+                  value:
+                    instance_id: instance-7
+                    observed_at: '2026-09-14T10:00:00Z'
+                    coverage:
+                      userspace_tcp: full
+                      userspace_udp: partial
+                      kernel_direct: none
+                      kernel_block: none
+                      dns_intercept: partial
+                      kernel_bypass: none
+                    dropped_records: '3'
+                    flows:
+                      - id: flow-23
+                        instance_id: instance-7
+                        revision: 8
+                        network: tcp
+                        state: active
+                        pname: curl
+                        connection_id: tcp-23
+                        outbound: proxy
+                        observed_by: userspace
+                        started_at: '2026-09-14T09:59:59Z'
+                        ended_at: null
+                        trace_status: partial
+                    next_cursor: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '503':
+          description: Bounded recorder memory cannot admit a snapshot
+          headers:
+            Retry-After:
+              description: Retry delay in seconds when retryable.
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                snapshot_full:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: Flow snapshot capacity is full.
+                    request_id: request-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                    Retry-After: 1
+  /api/v1/flows/{flow_id}:
+    get:
+      operationId: getFlow
+      summary: Read one recorded causal flow trace
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/FlowId'
+      responses:
+        '200':
+          description: Recorded flow detail
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowDetail'
+              examples:
+                partial_handoff:
+                  value:
+                    id: flow-23
+                    instance_id: instance-7
+                    revision: 8
+                    network: tcp
+                    state: active
+                    pname: curl
+                    connection_id: tcp-23
+                    outbound: proxy
+                    observed_by: userspace
+                    started_at: '2026-09-14T09:59:59Z'
+                    ended_at: null
+                    trace_status: partial
+                    input:
+                      src: 192.0.2.10:53000
+                      dst: 198.51.100.20:443
+                      domain: example.com
+                      domain_source: tls_sni
+                      pid: null
+                      process_path: null
+                      src_mac: null
+                      ingress: wan
+                      domain_rule_ids: null
+                      dscp: 0
+                      mark: 0
+                    trace:
+                      status: partial
+                      missing:
+                        - not_instrumented
+                      steps:
+                        - seq: 1
+                          stage: route
+                          observed_at: '2026-09-14T09:59:59Z'
+                          elapsed_us: 0
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            evaluation_id: eval-1
+                            chain: traffic
+                            plane: kernel
+                            input: null
+                            dns_action: null
+                            rule_id: null
+                            rules: []
+                            outbound: proxy
+                            must: false
+                            mark: 0
+                        - seq: 2
+                          stage: dial_mode
+                          observed_at: '2026-09-14T09:59:59Z'
+                          elapsed_us: 100
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            configured: domain+
+                            effective_target: domain
+                            domain: example.com
+                            domain_source: tls_sni
+                            verification: not_required
+                            reason: preserve_initial_route
+                        - seq: 3
+                          stage: reroute
+                          observed_at: '2026-09-14T09:59:59Z'
+                          elapsed_us: 120
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            performed: false
+                            reason: dial_mode_preserves_route
+                            from_evaluation_id: eval-1
+                            to_evaluation_id: null
+                        - seq: 4
+                          stage: outbound
+                          observed_at: '2026-09-14T09:59:59Z'
+                          elapsed_us: 150
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            attempt_id: attempt-1
+                            parent_attempt_id: null
+                            kind: leaf
+                            evaluation_id: eval-1
+                            routing_source: evaluation
+                            routed_outbound: proxy
+                            effective_outbound: proxy
+                            mode_override: none
+                            selection_path:
+                              - group_id: group-proxy
+                                member_id: node-hk-01
+                                policy: selector
+                                reason: manual_selection
+                                selection: null
+                            leaf_node_id: node-hk-01
+                            target: example.com:443
+                            target_kind: domain
+                            dial_ip: null
+                            server_addr: 203.0.113.7:443
+                            resolution_location: outbound_remote
+                            status: succeeded
+                            error: null
+                        - seq: 5
+                          stage: connection
+                          observed_at: '2026-09-14T09:59:59Z'
+                          elapsed_us: 20000
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            state: active
+                            reason: transport_ready
+                            milestone: transport_ready
+                            attempt_id: attempt-1
+                            reply_received: null
+                            error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                interleaved_dns:
+                  summary: Evaluation-owned DNS inputs and explicit non-adjacent references
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                  value:
+                    id: flow-23
+                    instance_id: instance-7
+                    revision: 8
+                    network: tcp
+                    state: active
+                    pname: curl
+                    connection_id: tcp-23
+                    outbound: proxy
+                    observed_by: userspace
+                    started_at: '2026-09-14T09:59:59Z'
+                    ended_at: null
+                    trace_status: complete
+                    input:
+                      src: 192.0.2.10:53000
+                      dst: 198.51.100.20:443
+                      domain: example.com
+                      domain_source: explicit
+                      pid: null
+                      process_path: null
+                      src_mac: null
+                      ingress: wan
+                      domain_rule_ids: null
+                      dscp: 0
+                      mark: 0
+                    trace:
+                      status: complete
+                      missing: []
+                      steps:
+                        - seq: 1
+                          stage: route
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 10
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            evaluation_id: eval-traffic
+                            chain: traffic
+                            plane: kernel
+                            rule_id: rule-traffic
+                            rules:
+                              - rule_id: rule-traffic
+                                expression: null
+                                result: matched
+                                missing_inputs: []
+                                conditions: []
+                            outbound: proxy
+                            must: false
+                            mark: 0
+                            input:
+                              network: tcp
+                              src_ip: 192.0.2.10
+                              src_port: 53000
+                              dst_ip: 198.51.100.20
+                              dst_port: 443
+                              domain: example.com
+                              pname: curl
+                              src_mac: null
+                              dscp: 0
+                              mark: 0
+                              ingress: wan
+                              domain_rule_ids: null
+                            dns_action: null
+                        - seq: 2
+                          stage: route
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 20
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            evaluation_id: eval-dns-request
+                            chain: dns_request
+                            plane: userspace
+                            rule_id: rule-dns_request
+                            rules:
+                              - rule_id: rule-dns_request
+                                expression: null
+                                result: matched
+                                missing_inputs: []
+                                conditions: []
+                            outbound: dns-primary
+                            must: null
+                            mark: null
+                            input:
+                              name: example.com
+                              qtype: A
+                              source_ip: 192.0.2.10
+                              original_dst: null
+                            dns_action: upstream
+                        - seq: 3
+                          stage: route
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 30
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            evaluation_id: eval-dns-upstream
+                            chain: dns_upstream
+                            plane: userspace
+                            rule_id: rule-dns_upstream
+                            rules:
+                              - rule_id: rule-dns_upstream
+                                expression: null
+                                result: matched
+                                missing_inputs: []
+                                conditions: []
+                            outbound: proxy
+                            must: null
+                            mark: null
+                            input:
+                              network: udp
+                              src_ip: 0.0.0.0
+                              src_port: 0
+                              dst_ip: 203.0.113.53
+                              dst_port: 53
+                              domain: resolver.example
+                              pname: null
+                              src_mac: null
+                              dscp: null
+                              mark: null
+                              ingress: null
+                              domain_rule_ids: null
+                            dns_action: null
+                        - seq: 4
+                          stage: outbound
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 40
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            attempt_id: attempt-dns
+                            parent_attempt_id: null
+                            kind: leaf
+                            evaluation_id: eval-dns-upstream
+                            routing_source: evaluation
+                            routed_outbound: proxy
+                            effective_outbound: proxy
+                            mode_override: none
+                            selection_path: []
+                            leaf_node_id: node-hk-01
+                            target: 203.0.113.53:53
+                            target_kind: ip
+                            dial_ip: 203.0.113.53
+                            server_addr: 203.0.113.7:443
+                            resolution_location: original_ip
+                            status: succeeded
+                            error: null
+                        - seq: 5
+                          stage: dns
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 50
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            lookup_id: lookup-1
+                            parent_lookup_id: null
+                            attempt_id: attempt-dns
+                            purpose: domain_verification
+                            name: example.com
+                            qtype: A
+                            source: upstream
+                            upstream_transport: udp
+                            carrier_transport: tcp
+                            cache: miss
+                            cache_entry_id: null
+                            upstream: dns-primary
+                            route_evaluation_ids:
+                              - eval-dns-request
+                              - eval-dns-upstream
+                              - eval-dns-response
+                            status: NOERROR
+                            addresses:
+                              - 198.51.100.20
+                            selected_ip: 198.51.100.20
+                            error: null
+                        - seq: 6
+                          stage: route
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 60
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            evaluation_id: eval-dns-response
+                            chain: dns_response
+                            plane: userspace
+                            rule_id: rule-dns_response
+                            rules:
+                              - rule_id: rule-dns_response
+                                expression: null
+                                result: matched
+                                missing_inputs: []
+                                conditions: []
+                            outbound: null
+                            must: null
+                            mark: null
+                            input:
+                              name: example.com
+                              qtype: A
+                              answer_ips:
+                                - 198.51.100.20
+                              from_upstream: dns-primary
+                            dns_action: accept
+                        - seq: 7
+                          stage: outbound
+                          observed_at: '2026-09-14T10:00:00Z'
+                          elapsed_us: 70
+                          generation_id: generation-42
+                          evidence: observed
+                          data:
+                            attempt_id: attempt-app
+                            parent_attempt_id: null
+                            kind: leaf
+                            evaluation_id: eval-traffic
+                            routing_source: evaluation
+                            routed_outbound: proxy
+                            effective_outbound: proxy
+                            mode_override: none
+                            selection_path: []
+                            leaf_node_id: node-hk-01
+                            target: example.com:443
+                            target_kind: domain
+                            dial_ip: null
+                            server_addr: 203.0.113.7:443
+                            resolution_location: outbound_remote
+                            status: succeeded
+                            error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+  /api/v1/routing/trace:
+    post:
+      operationId: traceRouting
+      summary: Simulate bounded routing evaluation
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoutingTraceRequest'
+            examples:
+              hypothetical:
+                value:
+                  input:
+                    network: tcp
+                    domain: example.com
+                    dst_ip: 198.51.100.20
+                    dst_port: 443
+                    src_ip: 192.0.2.10
+                    src_port: 53000
+                    pname: null
+                    dscp: 0
+                    mark: 0
+                  resolve: none
+      responses:
+        '200':
+          description: Hypothetical routing evaluation; never a recorded flow
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutingTraceResponse'
+              examples:
+                indeterminate:
+                  value:
+                    mode: simulation
+                    instance_id: instance-7
+                    generation_id: generation-42
+                    observed_at: '2026-09-14T10:00:00Z'
+                    evaluations:
+                      - dst_ip: 198.51.100.20
+                        decision: indeterminate
+                        outbound: null
+                        missing_inputs:
+                          - pname
+                        rules:
+                          - rule_id: traffic:0
+                            expression: pname(curl) -> direct
+                            result: indeterminate
+                            missing_inputs:
+                              - pname
+                            conditions:
+                              - id: traffic:0/pname
+                                expression: pname(curl)
+                                result: indeterminate
+                                missing_inputs:
+                                  - pname
+                          - rule_id: traffic:1
+                            expression: dip(198.51.100.0/24) -> proxy
+                            result: matched
+                            missing_inputs: []
+                            conditions:
+                              - id: traffic:1/dip
+                                expression: dip(198.51.100.0/24)
+                                result: matched
+                                missing_inputs: []
+                          - rule_id: traffic:2
+                            expression: 'fallback: block'
+                            result: skipped
+                            missing_inputs: []
+                            conditions: []
+                    dns: []
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/events:
+    get:
+      operationId: streamEvents
+      summary: Follow bounded resumable invalidation events
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: kinds
+          in: query
+          description: Comma-separated advertised event kinds.
+          schema:
+            type: string
+            minLength: 1
+          example: flow.updated,flow.gap
+        - name: flow_id
+          in: query
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/LastEventId'
+      responses:
+        '200':
+          description: Server-sent events; validate data using the schema selected by the event name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              x-event-data-schemas:
+                stream.ready: '#/components/schemas/StreamReadyEvent'
+                runtime.updated: '#/components/schemas/RuntimeUpdatedEvent'
+                flow.updated: '#/components/schemas/FlowUpdatedEvent'
+                flow.gap: '#/components/schemas/FlowGapEvent'
+                operation.updated: '#/components/schemas/OperationUpdatedEvent'
+                generation.changed: '#/components/schemas/GenerationChangedEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/dns/query:
+    get:
+      operationId: queryDns
+      summary: Execute a routed diagnostic DNS query
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          description: DNS name within the 255-wire-octet and 63-octet-label limits.
+          schema:
+            type: string
+            minLength: 1
+          example: example.com
+        - name: type
+          in: query
+          description: Unique record types; repeated query parameter.
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            uniqueItems: true
+            items:
+              $ref: '#/components/schemas/DnsRecordType'
+            default:
+              - A
+          example:
+            - A
+            - AAAA
+        - name: upstream
+          in: query
+          schema:
+            type: string
+            minLength: 1
+        - name: cache_mode
+          in: query
+          schema:
+            type: string
+            enum:
+              - normal
+              - bypass
+            default: normal
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: Per-record-type DNS results, including DNS failures
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsQueryResponse'
+              examples:
+                dual_stack:
+                  value:
+                    domain: example.com
+                    cache_mode: normal
+                    query_time: '2026-08-14T00:00:00Z'
+                    results:
+                      - type: A
+                        cached: false
+                        cache_entry_id: dns-entry-01HZX4K8W5
+                        upstream: alidns
+                        route:
+                          source: dns.routing
+                          rule: domain(example.com)
+                        status: NOERROR
+                        elapsed_ms: 12
+                        question:
+                          name: example.com.
+                          type: A
+                        answers:
+                          - name: example.com.
+                            type: A
+                            class: IN
+                            ttl: 600
+                            data: 93.184.216.34
+                      - type: AAAA
+                        cached: false
+                        cache_entry_id: null
+                        upstream: alidns
+                        route:
+                          source: dns.routing
+                          rule: domain(example.com)
+                        status: NODATA
+                        elapsed_ms: 11
+                        question:
+                          name: example.com.
+                          type: AAAA
+                        answers: []
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/dns/cache:
+    get:
+      operationId: listDnsCache
+      summary: Read a paginated DNS cache snapshot
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+            minLength: 1
+        - name: domain
+          in: query
+          schema:
+            type: string
+            minLength: 1
+        - name: type
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              $ref: '#/components/schemas/DnsRecordType'
+        - name: include_expired
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/Limit1000'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Detail'
+      responses:
+        '200':
+          description: DNS cache page
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsCacheList'
+              examples:
+                entries:
+                  value:
+                    observed_at: '2026-08-15T12:00:00Z'
+                    coverage:
+                      positive: true
+                      negative: true
+                      persistent: false
+                    entries:
+                      - entry_id: dns-entry-01HZX4K8W5
+                        domain: example.com.
+                        type: A
+                        class: IN
+                        status: NOERROR
+                        answers:
+                          - name: example.com.
+                            type: A
+                            class: IN
+                            data: 93.184.216.34
+                            ttl: 3600
+                        expires_at: '2026-08-15T13:00:00Z'
+                        stale_until: null
+                      - entry_id: dns-entry-01HZX4K8W6
+                        domain: missing.example.com.
+                        type: A
+                        class: IN
+                        status: NXDOMAIN
+                        answers: []
+                        expires_at: '2026-08-15T12:05:00Z'
+                        stale_until: '2026-08-15T12:06:00Z'
+                    total: 1024
+                    next_cursor: eyJvZmZzZXQiOjEwMH0
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: deleteDnsCacheByName
+      summary: Delete cache entries for one exact name
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Exact canonicalizable DNS name; required to prevent an accidental flush.
+          schema:
+            type: string
+            minLength: 1
+          example: example.com.
+        - name: type
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              $ref: '#/components/schemas/DnsRecordType'
+          example:
+            - A
+            - AAAA
+      responses:
+        '200':
+          description: Idempotent matching deletion result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMatchingCount'
+              examples:
+                deleted:
+                  value:
+                    matched: 2
+                    deleted: 2
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/dns/cache/{entry_id}:
+    delete:
+      operationId: deleteDnsCacheEntry
+      summary: Delete one opaque DNS cache entry
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/DnsEntryId'
+      responses:
+        '200':
+          description: Idempotent deletion result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteCount'
+              examples:
+                deleted:
+                  value:
+                    deleted: 1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/dns/cache/flush:
+    post:
+      operationId: flushDnsCache
+      summary: Flush the complete runtime DNS cache
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyObject'
+      responses:
+        '200':
+          description: Cache invalidation barrier result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMatchingCount'
+              examples:
+                flushed:
+                  value:
+                    matched: 1024
+                    deleted: 1024
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/operations/reload:
+    post:
+      operationId: startReload
+      summary: Start an asynchronous reload
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyObject'
+            examples:
+              empty:
+                value: {}
+      responses:
+        '202':
+          description: Operation accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-01HZX4K8W7
+                    kind: reload
+                    status: queued
+                    href: /api/v1/operations/op-01HZX4K8W7
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-01HZX4K8W7
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/operations/suspend:
+    post:
+      operationId: startSuspend
+      summary: Start an asynchronous suspend transition
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyObject'
+            examples:
+              empty:
+                value: {}
+      responses:
+        '202':
+          description: Operation accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-01HZX4K8W8
+                    kind: suspend
+                    status: queued
+                    href: /api/v1/operations/op-01HZX4K8W8
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-01HZX4K8W8
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/operations/resume:
+    post:
+      operationId: startResume
+      summary: Start an asynchronous resume transition
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyObject'
+            examples:
+              empty:
+                value: {}
+      responses:
+        '202':
+          $ref: '#/components/responses/OperationAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/operations/{id}:
+    get:
+      operationId: getOperation
+      summary: Read an asynchronous operation
+      x-permission: observe-owner-or-control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/OperationId'
+      responses:
+        '200':
+          description: Current or terminal operation state
+          headers:
+            Retry-After:
+              description: Positive polling floor in seconds; present while nonterminal.
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+              examples:
+                probe_complete:
+                  value:
+                    operation_id: op-01HZX4K8W9
+                    kind: probe
+                    status: succeeded
+                    created_at: '2026-08-15T09:59:59Z'
+                    started_at: '2026-08-15T10:00:00Z'
+                    finished_at: '2026-08-15T10:00:01Z'
+                    result:
+                      target:
+                        type: group
+                        group_id: group-proxy
+                      selection_changed:
+                        tcp: false
+                        udp: false
+                      selection_before:
+                        tcp: node-hk-01
+                        udp: null
+                      selection_after:
+                        tcp: node-hk-01
+                        udp: null
+                      results:
+                        - member_id: node-hk-01
+                          resolved_leaf_node_id: node-hk-01
+                          kind: dns
+                          purpose: dns
+                          transport: udp
+                          ip_version: ipv4
+                          warmth: cold
+                          state: healthy
+                          latency_ms: 45
+                          health_updated: true
+                          error: null
+                          observed_at: '2026-08-15T10:00:00Z'
+                        - member_id: group-jp
+                          resolved_leaf_node_id: node-jp-01
+                          kind: dns
+                          purpose: dns
+                          transport: udp
+                          ip_version: ipv4
+                          warmth: cold
+                          state: unavailable
+                          latency_ms: null
+                          health_updated: true
+                          error: udp_probe_timeout
+                          observed_at: '2026-08-15T10:00:00Z'
+                    error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                reload_running:
+                  value:
+                    operation_id: op-01HZX4K8W7
+                    kind: reload
+                    status: running
+                    created_at: '2026-08-15T09:29:59Z'
+                    started_at: '2026-08-15T09:30:00Z'
+                    finished_at: null
+                    result: null
+                    error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                reload_complete:
+                  value:
+                    operation_id: op-01HZX4K8W7
+                    kind: reload
+                    status: succeeded
+                    created_at: '2026-08-15T09:29:59Z'
+                    started_at: '2026-08-15T09:30:00Z'
+                    finished_at: '2026-08-15T09:30:01Z'
+                    result:
+                      active_generation_id: generation-42
+                      datapath_generation_id: generation-42
+                    error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                reload_complete_reload:
+                  value:
+                    operation_id: op-01HZX4K8W7
+                    kind: reload
+                    status: succeeded
+                    created_at: '2026-08-15T09:29:59Z'
+                    started_at: '2026-08-15T09:30:00Z'
+                    finished_at: '2026-08-15T09:30:00Z'
+                    result:
+                      active_generation_id: generation-42
+                      datapath_generation_id: generation-42
+                    error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                suspend_complete:
+                  value:
+                    operation_id: op-01HZX4K8W8
+                    kind: suspend
+                    status: succeeded
+                    created_at: '2026-08-15T10:00:59Z'
+                    started_at: '2026-08-15T10:01:00Z'
+                    finished_at: '2026-08-15T10:01:00Z'
+                    result:
+                      runtime_state: suspended
+                    error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        Bearer authentication is mandatory whenever a deployment secret is set.
+        The anonymous security alternative is permitted only on an explicitly
+        secretless loopback listener, never as a fallback for invalid credentials.
+        Native permissions are expressed by x-permission; see API Configuration.
+  headers:
+    NoStore:
+      description: Native responses are not cacheable.
+      required: true
+      schema:
+        type: string
+        const: no-store
+    NoSniff:
+      description: Prevent MIME-type sniffing.
+      required: true
+      schema:
+        type: string
+        const: nosniff
+    ETag:
+      description: Quoted group configuration revision.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  parameters:
+    Detail:
+      name: detail
+      in: query
+      schema:
+        type: string
+        enum:
+          - summary
+          - full
+        default: summary
+      example: full
+    Limit1000:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+      example: 100
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        minLength: 1
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: group-proxy
+    FlowId:
+      name: flow_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: flow-23
+    DnsEntryId:
+      name: entry_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: dns-entry-01HZX4K8W5
+    OperationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: op-01HZX4K8W7
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: '"17"'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    LastEventId:
+      name: Last-Event-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+      example: instance-7:123
+  responses:
+    OperationAccepted:
+      description: Operation accepted
+      headers:
+        Location:
+          description: Operation status URL; equal to body href.
+          required: true
+          schema:
+            type: string
+            pattern: ^/api/v1/operations/[^/]+$
+        Retry-After:
+          description: Positive polling floor in seconds.
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OperationAccepted'
+    BadRequest:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Malformed parameters or request shape
+    Unauthorized:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Credentials are missing or invalid
+    Forbidden:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Authenticated caller lacks the required permission
+    NotFound:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Resource/action unavailable, absent, expired, or concealed
+    Conflict:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: State, idempotency, cursor, or coherent-snapshot conflict
+    Gone:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Flow or paginated snapshot retention expired
+    PreconditionFailed:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: If-Match does not equal the current configuration revision
+    TooLarge:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Request size or advertised fan-out limit exceeded
+    UnsupportedMediaType:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Unsupported request Content-Type
+    Unprocessable:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Syntactically valid but unsupported field, value, or transition
+    PreconditionRequired:
+      $ref: '#/components/responses/ErrorResponseCommon'
+      description: Required If-Match is absent
+    RateLimited:
+      description: Advertised request or operation rate exceeded
+      headers:
+        Retry-After:
+          description: Retry delay in seconds.
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: Bounded queue or required runtime component unavailable
+      headers:
+        Retry-After:
+          description: Retry delay in seconds when retryable.
+          schema:
+            type: integer
+            minimum: 1
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ErrorResponseCommon:
+      description: Native API error
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    EmptyObject:
+      type: object
+      additionalProperties: false
+      maxProperties: 0
+    SafeUInt:
+      type: integer
+      minimum: 0
+      maximum: 9007199254740991
+    NullableSafeUInt:
+      type:
+        - integer
+        - 'null'
+      minimum: 0
+      maximum: 9007199254740991
+    UInt64:
+      type: string
+      maxLength: 20
+      not:
+        pattern: '[^0-9]'
+      pattern: ^(?:0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$
+      description: Canonical unsigned 64-bit decimal string, 0 through 18446744073709551615. Never a JSON number.
+    NullableUInt64:
+      oneOf:
+        - type: 'null'
+        - $ref: '#/components/schemas/UInt64'
+    Timestamp:
+      type: string
+      format: date-time
+    NullableTimestamp:
+      type:
+        - string
+        - 'null'
+      format: date-time
+    SafeError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type:
+            - object
+            - 'null'
+      description: Safe structured error; never raw engine output.
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - request_id
+      properties:
+        error:
+          $ref: '#/components/schemas/SafeError'
+        request_id:
+          type:
+            - string
+            - 'null'
+    Discovery:
+      type: object
+      required:
+        - name
+        - status
+        - api_major
+        - base_path
+        - links
+      properties:
+        name:
+          type: string
+          const: dae/honk-native
+        status:
+          type: string
+          const: draft
+        api_major:
+          type: integer
+          const: 1
+        base_path:
+          type: string
+          const: /api/v1
+        links:
+          type: object
+          required:
+            - version
+            - capabilities
+            - runtime
+            - operations
+          properties:
+            version:
+              type: string
+              const: /api/v1/version
+            capabilities:
+              type: string
+              const: /api/v1/capabilities
+            runtime:
+              type: string
+              const: /api/v1/runtime
+            operations:
+              type: string
+              const: /api/v1/operations/{id}
+    Version:
+      type: object
+      required:
+        - api
+        - engine
+      properties:
+        api:
+          type: object
+          required:
+            - name
+            - major
+            - status
+          properties:
+            name:
+              type: string
+              const: dae/honk-native
+            major:
+              type: integer
+              const: 1
+            status:
+              type: string
+              const: draft
+        engine:
+          type: object
+          required:
+            - name
+            - version
+          properties:
+            name:
+              type: string
+              minLength: 1
+            version:
+              type: string
+              minLength: 1
+        build:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required:
+                - revision
+                - target
+                - built_at
+              properties:
+                revision:
+                  type:
+                    - string
+                    - 'null'
+                target:
+                  type:
+                    - string
+                    - 'null'
+                built_at:
+                  $ref: '#/components/schemas/NullableTimestamp'
+    AvailableResource:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+    Capabilities:
+      type: object
+      required:
+        - observed_at
+        - profiles
+        - limits
+        - resources
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        profiles:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - base
+              - full_transparency
+        limits:
+          type: object
+          required:
+            - max_request_target_bytes
+            - max_header_bytes
+            - max_json_body_bytes
+          properties:
+            max_request_target_bytes:
+              type: integer
+              minimum: 1
+            max_header_bytes:
+              type: integer
+              minimum: 1
+            max_json_body_bytes:
+              type: integer
+              minimum: 1
+        resources:
+          type: object
+          required:
+            - runtime
+            - runtime_memory
+            - datapath
+            - nodes
+            - groups
+            - probes
+            - connections
+            - flows
+            - routing_trace
+            - events
+            - dns_query
+            - dns_cache
+            - operations
+            - reload
+            - suspend
+            - resume
+          properties:
+            runtime:
+              $ref: '#/components/schemas/AvailableResource'
+            runtime_memory:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - metrics
+              properties:
+                available:
+                  type: boolean
+                metrics:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - process.rss_bytes
+                      - cgroup.current_bytes
+                      - cgroup.limit_bytes
+                      - cgroup.events.high
+                      - cgroup.events.oom
+                      - cgroup.events.oom_kill
+                      - kernel.ebpf_bytes
+            datapath:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - kinds
+                  - details
+              properties:
+                available:
+                  type: boolean
+                kinds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/DatapathKind'
+                details:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - attachments
+                      - maps
+            nodes:
+              $ref: '#/components/schemas/AvailableResource'
+            groups:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - config_patch
+                  - selection
+                  - max_patch_operations
+              properties:
+                available:
+                  type: boolean
+                config_patch:
+                  type: boolean
+                selection:
+                  type: boolean
+                max_patch_operations:
+                  type: integer
+                  minimum: 1
+            probes:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - targets
+                  - kinds
+                  - purposes
+                  - transports
+                  - ip_versions
+                  - limits
+              properties:
+                available:
+                  type: boolean
+                targets:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - node
+                      - group
+                kinds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/ProbeKind'
+                purposes:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - data
+                      - dns
+                transports:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/Transport'
+                ip_versions:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/IpVersion'
+                limits:
+                  $ref: '#/components/schemas/ProbeLimits'
+            connections:
+              $ref: '#/components/schemas/AvailableResource'
+            flows:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - recording
+                  - scopes
+                  - max_flows
+                  - max_steps_per_flow
+                  - retention_seconds
+                  - snapshot_ttl_seconds
+                  - max_page_size
+              properties:
+                available:
+                  type: boolean
+                recording:
+                  type: string
+                  enum:
+                    - 'off'
+                    - 'on'
+                    - sampled
+                scopes:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/FlowScope'
+                max_flows:
+                  type: integer
+                  minimum: 1
+                max_steps_per_flow:
+                  type: integer
+                  minimum: 1
+                retention_seconds:
+                  type: integer
+                  minimum: 0
+                snapshot_ttl_seconds:
+                  type: integer
+                  minimum: 1
+                max_page_size:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000
+            routing_trace:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - resolve_modes
+                  - max_addresses
+                  - max_rule_steps
+                  - timeout_ms
+                  - per_principal_requests_per_minute
+                  - global_requests_per_minute
+              properties:
+                available:
+                  type: boolean
+                resolve_modes:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - none
+                      - live
+                max_addresses:
+                  type: integer
+                  minimum: 1
+                max_rule_steps:
+                  type: integer
+                  minimum: 1
+                timeout_ms:
+                  type: integer
+                  minimum: 1
+                per_principal_requests_per_minute:
+                  type: integer
+                  minimum: 1
+                global_requests_per_minute:
+                  type: integer
+                  minimum: 1
+            events:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - kinds
+                  - retention_seconds
+                  - max_buffered_events
+                  - max_clients
+                  - heartbeat_seconds
+              properties:
+                available:
+                  type: boolean
+                kinds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/EventKind'
+                retention_seconds:
+                  type: integer
+                  minimum: 0
+                max_buffered_events:
+                  type: integer
+                  minimum: 1
+                max_clients:
+                  type: integer
+                  minimum: 1
+                heartbeat_seconds:
+                  type: integer
+                  minimum: 1
+                  maximum: 15
+            dns_query:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - record_types
+                  - limits
+              properties:
+                available:
+                  type: boolean
+                record_types:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/DnsRecordType'
+                limits:
+                  $ref: '#/components/schemas/DnsQueryLimits'
+            dns_cache:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - read
+                  - delete_entry
+                  - delete_name
+                  - flush
+                  - entry_kinds
+              properties:
+                available:
+                  type: boolean
+                read:
+                  type: boolean
+                delete_entry:
+                  type: boolean
+                delete_name:
+                  type: boolean
+                flush:
+                  type: boolean
+                entry_kinds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum:
+                      - positive
+                      - negative
+            operations:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - retention_seconds
+              properties:
+                available:
+                  type: boolean
+                retention_seconds:
+                  type: integer
+                  minimum: 0
+            reload:
+              $ref: '#/components/schemas/AvailableResource'
+            suspend:
+              $ref: '#/components/schemas/AvailableResource'
+            resume:
+              $ref: '#/components/schemas/AvailableResource'
+    ProbeLimits:
+      type: object
+      required:
+        - max_members_per_job
+        - max_results_per_job
+        - max_active_jobs
+        - max_queued_jobs
+        - max_concurrent_per_target
+        - job_timeout_ms
+        - per_principal_requests_per_minute
+        - global_requests_per_minute
+      properties:
+        max_members_per_job:
+          type: integer
+          minimum: 1
+        max_results_per_job:
+          type: integer
+          minimum: 1
+        max_active_jobs:
+          type: integer
+          minimum: 1
+        max_queued_jobs:
+          type: integer
+          minimum: 0
+        max_concurrent_per_target:
+          type: integer
+          minimum: 1
+        job_timeout_ms:
+          type: integer
+          minimum: 1
+        per_principal_requests_per_minute:
+          type: integer
+          minimum: 1
+        global_requests_per_minute:
+          type: integer
+          minimum: 1
+    DnsQueryLimits:
+      type: object
+      required:
+        - max_types_per_request
+        - query_timeout_ms
+        - max_response_bytes
+        - per_principal_requests_per_minute
+        - global_requests_per_minute
+      properties:
+        max_types_per_request:
+          type: integer
+          minimum: 1
+        query_timeout_ms:
+          type: integer
+          minimum: 1
+        max_response_bytes:
+          type: integer
+          minimum: 1
+        per_principal_requests_per_minute:
+          type: integer
+          minimum: 1
+        global_requests_per_minute:
+          type: integer
+          minimum: 1
+    Runtime:
+      type: object
+      required:
+        - observed_at
+        - instance_id
+        - lifecycle
+        - generation
+        - datapath
+        - traffic
+        - process
+        - last_reload
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        instance_id:
+          type: string
+          minLength: 1
+        lifecycle:
+          type: object
+          required:
+            - state
+            - started_at
+            - uptime_seconds
+          properties:
+            state:
+              type: string
+              enum:
+                - starting
+                - running
+                - reloading
+                - suspended
+                - draining
+                - degraded
+                - failed
+            started_at:
+              $ref: '#/components/schemas/NullableTimestamp'
+            uptime_seconds:
+              $ref: '#/components/schemas/NullableUInt64'
+        generation:
+          type: object
+          required:
+            - active_id
+            - config_revision
+            - state
+            - activated_at
+          properties:
+            active_id:
+              type: string
+              minLength: 1
+            config_revision:
+              type:
+                - string
+                - 'null'
+            state:
+              type: string
+              enum:
+                - active
+                - reloading
+            activated_at:
+              $ref: '#/components/schemas/NullableTimestamp'
+        datapath:
+          $ref: '#/components/schemas/DatapathSummary'
+        traffic:
+          $ref: '#/components/schemas/TrafficSummary'
+        process:
+          type: object
+          required:
+            - cpu_percent
+          properties:
+            pid:
+              type:
+                - integer
+                - 'null'
+              minimum: 0
+              maximum: 4294967295
+            cpu_percent:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+        last_reload:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/LastReload'
+    LastReload:
+      type: object
+      required:
+        - operation_id
+        - status
+        - finished_at
+        - error
+      properties:
+        operation_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum:
+            - succeeded
+            - failed
+        finished_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        error:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeError'
+    TrafficSummary:
+      type: object
+      required:
+        - scope
+        - observed_by
+        - counter_since
+        - connections
+        - bytes
+        - rates
+      properties:
+        scope:
+          type: string
+          const: visible
+        observed_by:
+          $ref: '#/components/schemas/ObservedBy'
+        counter_since:
+          $ref: '#/components/schemas/NullableTimestamp'
+        connections:
+          type: object
+          required:
+            - tcp
+            - udp
+            - total
+          properties:
+            tcp:
+              $ref: '#/components/schemas/NullableSafeUInt'
+            udp:
+              $ref: '#/components/schemas/NullableSafeUInt'
+            total:
+              $ref: '#/components/schemas/NullableSafeUInt'
+        bytes:
+          type: object
+          required:
+            - upload
+            - download
+          properties:
+            upload:
+              $ref: '#/components/schemas/NullableUInt64'
+            download:
+              $ref: '#/components/schemas/NullableUInt64'
+        rates:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required:
+                - window_seconds
+                - upload_bytes_per_second
+                - download_bytes_per_second
+              properties:
+                window_seconds:
+                  type: number
+                  exclusiveMinimum: 0
+                upload_bytes_per_second:
+                  $ref: '#/components/schemas/NullableUInt64'
+                download_bytes_per_second:
+                  $ref: '#/components/schemas/NullableUInt64'
+    RuntimeMemory:
+      type: object
+      required:
+        - observed_at
+        - process
+        - cgroup
+        - kernel
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        process:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                rss_bytes:
+                  $ref: '#/components/schemas/NullableUInt64'
+        cgroup:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required:
+                - scope
+              properties:
+                scope:
+                  type: string
+                  enum:
+                    - service
+                    - shared
+                    - unknown
+                current_bytes:
+                  $ref: '#/components/schemas/NullableUInt64'
+                limit_bytes:
+                  $ref: '#/components/schemas/NullableUInt64'
+                events:
+                  oneOf:
+                    - type: 'null'
+                    - type: object
+                      properties:
+                        high:
+                          $ref: '#/components/schemas/NullableUInt64'
+                        oom:
+                          $ref: '#/components/schemas/NullableUInt64'
+                        oom_kill:
+                          $ref: '#/components/schemas/NullableUInt64'
+        kernel:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required:
+                - sampled_at
+              properties:
+                ebpf_bytes:
+                  $ref: '#/components/schemas/NullableUInt64'
+                sampled_at:
+                  $ref: '#/components/schemas/NullableTimestamp'
+    DatapathKind:
+      type: string
+      enum:
+        - ebpf
+        - userspace
+        - mock
+        - unknown
+    DatapathState:
+      type: string
+      enum:
+        - active
+        - degraded
+        - detached
+        - failed
+        - disabled
+        - unknown
+    Visibility:
+      type: string
+      enum:
+        - full
+        - partial
+        - none
+    ObservedBy:
+      type: string
+      enum:
+        - userspace
+        - ebpf
+        - mixed
+    EbpfRoutingSummary:
+      type: object
+      required:
+        - state
+        - generation_id
+      properties:
+        state:
+          type: string
+          enum:
+            - published
+            - not_published
+            - error
+            - unknown
+        generation_id:
+          type:
+            - string
+            - 'null'
+        epoch:
+          type:
+            - string
+            - 'null'
+    EbpfSummary:
+      type: object
+      required:
+        - backend
+        - programs
+        - hooks
+        - routing
+        - health
+        - last_error
+        - checked_at
+      properties:
+        backend:
+          type: string
+          enum:
+            - real
+            - mock
+            - unknown
+        programs:
+          type: string
+          enum:
+            - loaded
+            - not_loaded
+            - error
+            - unknown
+        hooks:
+          type: string
+          enum:
+            - attached
+            - partially_attached
+            - detached
+            - unknown
+        routing:
+          $ref: '#/components/schemas/EbpfRoutingSummary'
+        health:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - failed
+            - unknown
+        last_error:
+          type:
+            - string
+            - 'null'
+        checked_at:
+          $ref: '#/components/schemas/Timestamp'
+    DatapathSummary:
+      type: object
+      required:
+        - kind
+        - state
+        - visibility
+        - ebpf
+      properties:
+        kind:
+          $ref: '#/components/schemas/DatapathKind'
+        state:
+          $ref: '#/components/schemas/DatapathState'
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        ebpf:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/EbpfSummary'
+    Datapath:
+      type: object
+      required:
+        - observed_at
+        - kind
+        - state
+        - visibility
+        - ebpf
+        - errors
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        kind:
+          $ref: '#/components/schemas/DatapathKind'
+        state:
+          $ref: '#/components/schemas/DatapathState'
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        ebpf:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/EbpfDetail'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SafeError'
+    EbpfDetail:
+      allOf:
+        - $ref: '#/components/schemas/EbpfSummary'
+        - type: object
+          required: []
+          properties:
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/EbpfAttachment'
+            maps:
+              $ref: '#/components/schemas/EbpfMaps'
+    EbpfAttachment:
+      type: object
+      required:
+        - name
+        - interface
+        - direction
+        - state
+      properties:
+        name:
+          type: string
+          minLength: 1
+        interface:
+          type: string
+          minLength: 1
+        direction:
+          type: string
+          enum:
+            - ingress
+            - egress
+        state:
+          type: string
+          enum:
+            - attached
+            - detached
+            - error
+            - unknown
+    EbpfMaps:
+      type: object
+      required:
+        - state
+        - conn_state
+      properties:
+        state:
+          type: string
+          enum:
+            - ready
+            - partial
+            - error
+            - unknown
+        conn_state:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/MapOccupancy'
+    MapOccupancy:
+      type: object
+      required:
+        - occupancy
+        - capacity
+        - occupancy_known
+      properties:
+        occupancy:
+          $ref: '#/components/schemas/NullableSafeUInt'
+        capacity:
+          $ref: '#/components/schemas/SafeUInt'
+        occupancy_known:
+          type: boolean
+      if:
+        properties:
+          occupancy_known:
+            const: true
+      then:
+        properties:
+          occupancy:
+            $ref: '#/components/schemas/SafeUInt'
+      else:
+        properties:
+          occupancy:
+            type: 'null'
+    Transport:
+      type: string
+      enum:
+        - tcp
+        - udp
+    IpVersion:
+      type: string
+      enum:
+        - ipv4
+        - ipv6
+    HealthObservation:
+      type: object
+      required:
+        - transport
+        - purpose
+        - ip_version
+        - warmth
+        - measurement
+        - sample_source
+        - state
+        - latency_ms
+        - moving_avg_ms
+        - avg10_ms
+        - observed_at
+        - error
+      properties:
+        transport:
+          $ref: '#/components/schemas/Transport'
+        purpose:
+          type: string
+          enum:
+            - data
+            - dns
+            - shared
+        ip_version:
+          $ref: '#/components/schemas/IpVersion'
+        warmth:
+          type: string
+          enum:
+            - cold
+            - warm
+            - mixed
+            - unknown
+        measurement:
+          type: string
+          enum:
+            - tcp_connect
+            - http_headers
+            - http_round_trip
+            - dns_round_trip
+            - quic_handshake
+            - mixed
+            - unknown
+        sample_source:
+          type: string
+          enum:
+            - probe
+            - traffic
+            - restored
+            - derived
+            - mixed
+            - unknown
+        state:
+          type: string
+          enum:
+            - healthy
+            - unavailable
+            - unknown
+        latency_ms:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+        moving_avg_ms:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+        avg10_ms:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        error:
+          type:
+            - string
+            - 'null'
+      allOf:
+        - if:
+            properties:
+              state:
+                enum:
+                  - unavailable
+                  - unknown
+          then:
+            properties:
+              latency_ms:
+                type: 'null'
+    Node:
+      type: object
+      required:
+        - id
+        - name
+        - protocol
+        - subscription_tag
+        - group_ids
+        - health
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        protocol:
+          type:
+            - string
+            - 'null'
+        subscription_tag:
+          type:
+            - string
+            - 'null'
+        group_ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        health:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthObservation'
+    NodeList:
+      type: object
+      required:
+        - observed_at
+        - nodes
+        - next_cursor
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+    GroupPolicy:
+      type: object
+      required:
+        - kind
+        - native
+      properties:
+        kind:
+          type: string
+          enum:
+            - selector
+            - urltest
+            - loadbalance
+            - fallback
+            - random
+            - score
+        native:
+          type: string
+          minLength: 1
+    GroupPolicyRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - native
+      properties:
+        kind:
+          type: string
+          enum:
+            - selector
+            - urltest
+            - loadbalance
+            - fallback
+            - random
+            - score
+        native:
+          type: string
+          minLength: 1
+    GroupMember:
+      type: object
+      required:
+        - id
+        - name
+        - kind
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        kind:
+          type: string
+          enum:
+            - node
+            - group
+    GroupConfig:
+      type: object
+      required:
+        - default_member_id
+        - final_outbound
+        - check_url
+        - check_interval
+        - tolerance
+        - idle_timeout
+        - interrupt_connections
+      properties:
+        default_member_id:
+          type:
+            - string
+            - 'null'
+        final_outbound:
+          type:
+            - string
+            - 'null'
+        check_url:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeHttpUrl'
+        check_interval:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+        tolerance:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+        idle_timeout:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+        interrupt_connections:
+          type: boolean
+    SafeHttpUrl:
+      type: string
+      format: uri
+      pattern: ^https?://(?![^/?#]*@)
+      description: Absolute HTTP(S) URL without userinfo; server also enforces administrator SSRF policy.
+    GroupSelection:
+      type: object
+      required:
+        - member_id
+        - source
+      properties:
+        member_id:
+          type: string
+          minLength: 1
+        resolved_leaf_node_id:
+          type:
+            - string
+            - 'null'
+        source:
+          type: string
+          minLength: 1
+    GroupRanking:
+      type: object
+      required:
+        - metric
+        - recovery_penalty_ms
+        - group_offset_ms
+        - score
+        - reason
+      properties:
+        metric:
+          type:
+            - string
+            - 'null'
+        recovery_penalty_ms:
+          type:
+            - number
+            - 'null'
+        group_offset_ms:
+          type:
+            - number
+            - 'null'
+        score:
+          type:
+            - number
+            - 'null'
+        reason:
+          type:
+            - string
+            - 'null'
+    GroupHealthObservation:
+      allOf:
+        - $ref: '#/components/schemas/HealthObservation'
+        - type: object
+          required:
+            - member_id
+            - sorting_latency_ms
+            - ranking
+          properties:
+            member_id:
+              type: string
+              minLength: 1
+            resolved_leaf_node_id:
+              type:
+                - string
+                - 'null'
+            sorting_latency_ms:
+              type:
+                - number
+                - 'null'
+            ranking:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/GroupRanking'
+    GroupRuntime:
+      type: object
+      required:
+        - selection
+        - health
+      properties:
+        selection:
+          type: object
+          required:
+            - tcp
+            - udp
+          properties:
+            tcp:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/GroupSelection'
+            udp:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/GroupSelection'
+        health:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupHealthObservation'
+    GroupCapabilities:
+      type: object
+      required:
+        - can_select
+        - supports_nested_groups
+        - mutable_config
+        - probe_transports
+      properties:
+        can_select:
+          type: boolean
+        supports_nested_groups:
+          type: boolean
+        mutable_config:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - policy
+              - default_member_id
+              - final_outbound
+              - check_url
+              - check_interval
+              - tolerance
+              - idle_timeout
+              - interrupt_connections
+        probe_transports:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Transport'
+    Group:
+      type: object
+      required:
+        - id
+        - name
+        - config_revision
+        - policy
+        - members
+        - config
+        - runtime
+        - capabilities
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        config_revision:
+          type: string
+          minLength: 1
+        policy:
+          $ref: '#/components/schemas/GroupPolicy'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+        config:
+          $ref: '#/components/schemas/GroupConfig'
+        runtime:
+          $ref: '#/components/schemas/GroupRuntime'
+        capabilities:
+          $ref: '#/components/schemas/GroupCapabilities'
+    GroupSummary:
+      type: object
+      required:
+        - id
+        - name
+        - policy
+        - member_count
+        - selection
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        policy:
+          $ref: '#/components/schemas/GroupPolicy'
+        member_count:
+          type: integer
+          minimum: 0
+        selection:
+          type: object
+          required:
+            - tcp_member_id
+            - udp_member_id
+          properties:
+            tcp_member_id:
+              type:
+                - string
+                - 'null'
+            udp_member_id:
+              type:
+                - string
+                - 'null'
+    GroupList:
+      type: array
+      items:
+        $ref: '#/components/schemas/GroupSummary'
+    JsonPatch:
+      type: array
+      minItems: 1
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/PolicyPatch'
+          - $ref: '#/components/schemas/MemberIdPatch'
+          - $ref: '#/components/schemas/OutboundPatch'
+          - $ref: '#/components/schemas/CheckUrlPatch'
+          - $ref: '#/components/schemas/PositiveIntegerPatch'
+          - $ref: '#/components/schemas/TolerancePatch'
+          - $ref: '#/components/schemas/IdleTimeoutPatch'
+          - $ref: '#/components/schemas/InterruptPatch'
+          - $ref: '#/components/schemas/RemovePatch'
+          - $ref: '#/components/schemas/CopyMovePatch'
+      description: Bounded by resources.groups.max_patch_operations.
+    PolicyPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /policy
+        value:
+          $ref: '#/components/schemas/GroupPolicyRequest'
+    MemberIdPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/default_member_id
+        value:
+          type:
+            - string
+            - 'null'
+    OutboundPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/final_outbound
+        value:
+          type:
+            - string
+            - 'null'
+    CheckUrlPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/check_url
+        value:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeHttpUrl'
+    PositiveIntegerPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          enum:
+            - /config/check_interval
+        value:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+    TolerancePatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/tolerance
+        value:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+    IdleTimeoutPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/idle_timeout
+        value:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+    InterruptPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - value
+      properties:
+        op:
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+        path:
+          type: string
+          const: /config/interrupt_connections
+        value:
+          type: boolean
+    MutableGroupPath:
+      type: string
+      enum:
+        - /policy
+        - /config/default_member_id
+        - /config/final_outbound
+        - /config/check_url
+        - /config/check_interval
+        - /config/tolerance
+        - /config/idle_timeout
+        - /config/interrupt_connections
+    RemovePatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+      properties:
+        op:
+          const: remove
+        path:
+          $ref: '#/components/schemas/MutableGroupPath'
+    CopyMovePatch:
+      type: object
+      additionalProperties: false
+      required:
+        - op
+        - path
+        - from
+      properties:
+        op:
+          enum:
+            - copy
+            - move
+        path:
+          $ref: '#/components/schemas/MutableGroupPath'
+        from:
+          $ref: '#/components/schemas/MutableGroupPath'
+    GroupSelectionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - member_id
+        - network
+      properties:
+        member_id:
+          type: string
+          minLength: 1
+        network:
+          type: string
+          enum:
+            - tcp
+            - udp
+            - both
+    GroupSelectionResult:
+      type: object
+      required:
+        - group_id
+        - member_id
+        - network
+        - source
+        - selection_revision
+        - connections_interrupted
+      properties:
+        group_id:
+          type: string
+          minLength: 1
+        member_id:
+          type: string
+          minLength: 1
+        resolved_leaf_node_id:
+          type:
+            - string
+            - 'null'
+        network:
+          type: string
+          enum:
+            - tcp
+            - udp
+            - both
+        source:
+          type: string
+          const: runtime
+        selection_revision:
+          type: string
+          minLength: 1
+        connections_interrupted:
+          type: boolean
+    ProbeKind:
+      type: string
+      enum:
+        - tcp_connect
+        - http
+        - dns
+    ProbeTarget:
+      unevaluatedProperties: false
+      oneOf:
+        - $ref: '#/components/schemas/NodeProbeTarget'
+        - $ref: '#/components/schemas/GroupProbeTarget'
+    NodeProbeTarget:
+      type: object
+      required:
+        - type
+        - node_id
+      properties:
+        type:
+          type: string
+          const: node
+        node_id:
+          type: string
+          minLength: 1
+    GroupProbeTarget:
+      type: object
+      required:
+        - type
+        - group_id
+      properties:
+        type:
+          type: string
+          const: group
+        group_id:
+          type: string
+          minLength: 1
+    ProbeTargetResponse:
+      oneOf:
+        - $ref: '#/components/schemas/NodeProbeTarget'
+        - $ref: '#/components/schemas/GroupProbeTarget'
+    ProbeMembers:
+      oneOf:
+        - type: string
+          enum:
+            - direct
+            - leaves
+        - type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    ProbeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - target
+        - kind
+        - purpose
+        - transport
+        - ip_version
+        - warmth
+      properties:
+        target:
+          $ref: '#/components/schemas/ProbeTarget'
+        kind:
+          $ref: '#/components/schemas/ProbeKind'
+        purpose:
+          type: string
+          enum:
+            - data
+            - dns
+        transport:
+          type: array
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Transport'
+        ip_version:
+          type: string
+          enum:
+            - ipv4
+            - ipv6
+            - any
+        members:
+          $ref: '#/components/schemas/ProbeMembers'
+          default: direct
+        warmth:
+          type: string
+          enum:
+            - cold
+            - warm
+      allOf:
+        - if:
+            properties:
+              target:
+                properties:
+                  type:
+                    const: node
+                required:
+                  - type
+          then:
+            not:
+              required:
+                - members
+        - oneOf:
+            - properties:
+                kind:
+                  const: tcp_connect
+                purpose:
+                  const: data
+                transport:
+                  type: array
+                  minItems: 1
+                  maxItems: 1
+                  items:
+                    const: tcp
+            - properties:
+                kind:
+                  const: http
+                purpose:
+                  const: data
+                transport:
+                  type: array
+                  minItems: 1
+                  maxItems: 1
+                  items:
+                    const: tcp
+            - properties:
+                kind:
+                  const: dns
+                purpose:
+                  const: dns
+    ProbeResultItem:
+      type: object
+      required:
+        - member_id
+        - resolved_leaf_node_id
+        - kind
+        - purpose
+        - transport
+        - ip_version
+        - warmth
+        - state
+        - latency_ms
+        - health_updated
+        - error
+        - observed_at
+      properties:
+        member_id:
+          type: string
+          minLength: 1
+        resolved_leaf_node_id:
+          type:
+            - string
+            - 'null'
+        kind:
+          $ref: '#/components/schemas/ProbeKind'
+        purpose:
+          type: string
+          enum:
+            - data
+            - dns
+        transport:
+          $ref: '#/components/schemas/Transport'
+        ip_version:
+          $ref: '#/components/schemas/IpVersion'
+        warmth:
+          type: string
+          enum:
+            - cold
+            - warm
+            - unknown
+        state:
+          type: string
+          enum:
+            - healthy
+            - unavailable
+            - unknown
+        latency_ms:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+        health_updated:
+          type: boolean
+        error:
+          type:
+            - string
+            - 'null'
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+      allOf:
+        - if:
+            properties:
+              state:
+                enum:
+                  - unavailable
+                  - unknown
+          then:
+            properties:
+              latency_ms:
+                type: 'null'
+    ProbeResult:
+      type: object
+      required:
+        - target
+        - selection_changed
+        - selection_before
+        - selection_after
+        - results
+      properties:
+        target:
+          $ref: '#/components/schemas/ProbeTargetResponse'
+        selection_changed:
+          $ref: '#/components/schemas/TransportBooleanMap'
+        selection_before:
+          $ref: '#/components/schemas/TransportSelectionMap'
+        selection_after:
+          $ref: '#/components/schemas/TransportSelectionMap'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeResultItem'
+    TransportBooleanMap:
+      type: object
+      required:
+        - tcp
+        - udp
+      properties:
+        tcp:
+          type: boolean
+        udp:
+          type: boolean
+    TransportSelectionMap:
+      type: object
+      required:
+        - tcp
+        - udp
+      properties:
+        tcp:
+          type:
+            - string
+            - 'null'
+        udp:
+          type:
+            - string
+            - 'null'
+    ConnectionState:
+      type: string
+      enum:
+        - observed
+        - routing
+        - dialing
+        - active
+        - closed
+        - blocked
+        - failed
+        - unknown
+    Connection:
+      type: object
+      required:
+        - id
+        - flow_id
+        - pname
+        - state
+        - outbound
+        - started_at
+        - observed_by
+        - upload_bytes
+        - download_bytes
+        - upload_bytes_per_second
+        - download_bytes_per_second
+      properties:
+        id:
+          type: string
+          minLength: 1
+        flow_id:
+          type:
+            - string
+            - 'null'
+        pname:
+          type:
+            - string
+            - 'null'
+        state:
+          $ref: '#/components/schemas/ConnectionState'
+        src:
+          type: string
+          minLength: 1
+        dst:
+          type: string
+          minLength: 1
+        domain:
+          type:
+            - string
+            - 'null'
+        outbound:
+          type:
+            - string
+            - 'null'
+        started_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        observed_by:
+          $ref: '#/components/schemas/ObservedBy'
+        upload_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+        download_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+        upload_bytes_per_second:
+          $ref: '#/components/schemas/NullableUInt64'
+        download_bytes_per_second:
+          $ref: '#/components/schemas/NullableUInt64'
+    ConnectionList:
+      type: object
+      required:
+        - observed_at
+        - instance_id
+        - visibility
+        - truncated
+        - tcp
+        - udp
+        - total_tcp
+        - total_udp
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        instance_id:
+          type: string
+          minLength: 1
+        visibility:
+          $ref: '#/components/schemas/Visibility'
+        truncated:
+          type: boolean
+        tcp:
+          type: array
+          items:
+            $ref: '#/components/schemas/Connection'
+        udp:
+          type: array
+          items:
+            $ref: '#/components/schemas/Connection'
+        total_tcp:
+          $ref: '#/components/schemas/SafeUInt'
+        total_udp:
+          $ref: '#/components/schemas/SafeUInt'
+    FlowScope:
+      type: string
+      enum:
+        - userspace_tcp
+        - userspace_udp
+        - kernel_direct
+        - kernel_block
+        - dns_intercept
+        - kernel_bypass
+    TraceStatus:
+      type: string
+      enum:
+        - complete
+        - partial
+        - disabled
+    FlowInput:
+      type: object
+      required:
+        - src
+        - dst
+        - domain
+        - domain_source
+        - pid
+        - process_path
+        - src_mac
+        - ingress
+        - domain_rule_ids
+        - dscp
+        - mark
+      properties:
+        src:
+          type:
+            - string
+            - 'null'
+        dst:
+          type:
+            - string
+            - 'null'
+        domain:
+          type:
+            - string
+            - 'null'
+        domain_source:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DomainSource'
+        pid:
+          $ref: '#/components/schemas/NullableSafeUInt'
+        process_path:
+          type:
+            - string
+            - 'null'
+        src_mac:
+          type:
+            - string
+            - 'null'
+        ingress:
+          type:
+            - string
+            - 'null'
+          enum:
+            - lan
+            - wan
+            - null
+        domain_rule_ids:
+          oneOf:
+            - type: 'null'
+            - type: array
+              uniqueItems: true
+              items:
+                type: string
+                minLength: 1
+        dscp:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 63
+        mark:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 4294967295
+    TrafficRoutingInput:
+      type: object
+      required:
+        - network
+        - src_ip
+        - src_port
+        - dst_ip
+        - dst_port
+        - domain
+        - pname
+        - src_mac
+        - dscp
+        - mark
+        - ingress
+        - domain_rule_ids
+      properties:
+        network:
+          $ref: '#/components/schemas/Transport'
+        src_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        src_port:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 65535
+        dst_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        dst_port:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 65535
+        domain:
+          type:
+            - string
+            - 'null'
+        pname:
+          type:
+            - string
+            - 'null'
+        src_mac:
+          type:
+            - string
+            - 'null'
+        dscp:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 63
+        mark:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 4294967295
+        ingress:
+          type:
+            - string
+            - 'null'
+          enum:
+            - lan
+            - wan
+            - null
+        domain_rule_ids:
+          oneOf:
+            - type: 'null'
+            - type: array
+              items:
+                type: string
+                minLength: 1
+              uniqueItems: true
+    DnsRequestRoutingInput:
+      type: object
+      required:
+        - name
+        - qtype
+        - source_ip
+        - original_dst
+      properties:
+        name:
+          type: string
+          minLength: 1
+        qtype:
+          $ref: '#/components/schemas/DnsRecordType'
+        source_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        original_dst:
+          type:
+            - string
+            - 'null'
+    DnsResponseRoutingInput:
+      type: object
+      required:
+        - name
+        - qtype
+        - answer_ips
+        - from_upstream
+      properties:
+        name:
+          type: string
+          minLength: 1
+        qtype:
+          $ref: '#/components/schemas/DnsRecordType'
+        answer_ips:
+          type: array
+          items:
+            $ref: '#/components/schemas/IpAddress'
+        from_upstream:
+          type: string
+          minLength: 1
+    DomainSource:
+      type: string
+      enum:
+        - tls_sni
+        - http_host
+        - quic_sni
+        - dns_mapping
+        - explicit
+        - unknown
+    FlowSummary:
+      type: object
+      required:
+        - id
+        - instance_id
+        - revision
+        - network
+        - state
+        - pname
+        - connection_id
+        - outbound
+        - observed_by
+        - started_at
+        - ended_at
+        - trace_status
+      properties:
+        id:
+          type: string
+          minLength: 1
+        instance_id:
+          type: string
+          minLength: 1
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        network:
+          $ref: '#/components/schemas/Transport'
+        state:
+          $ref: '#/components/schemas/ConnectionState'
+        pname:
+          type:
+            - string
+            - 'null'
+        connection_id:
+          type:
+            - string
+            - 'null'
+        outbound:
+          type:
+            - string
+            - 'null'
+        observed_by:
+          $ref: '#/components/schemas/ObservedBy'
+        started_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        ended_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        trace_status:
+          $ref: '#/components/schemas/TraceStatus'
+        input:
+          $ref: '#/components/schemas/FlowInput'
+    FlowCoverage:
+      type: object
+      required:
+        - userspace_tcp
+        - userspace_udp
+        - kernel_direct
+        - kernel_block
+        - dns_intercept
+        - kernel_bypass
+      properties:
+        userspace_tcp:
+          $ref: '#/components/schemas/Visibility'
+        userspace_udp:
+          $ref: '#/components/schemas/Visibility'
+        kernel_direct:
+          $ref: '#/components/schemas/Visibility'
+        kernel_block:
+          $ref: '#/components/schemas/Visibility'
+        dns_intercept:
+          $ref: '#/components/schemas/Visibility'
+        kernel_bypass:
+          $ref: '#/components/schemas/Visibility'
+    FlowList:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - coverage
+        - dropped_records
+        - flows
+        - next_cursor
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        coverage:
+          $ref: '#/components/schemas/FlowCoverage'
+        dropped_records:
+          $ref: '#/components/schemas/NullableUInt64'
+        flows:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowSummary'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+    FlowDetail:
+      allOf:
+        - $ref: '#/components/schemas/FlowSummary'
+        - type: object
+          required:
+            - input
+            - trace
+          properties:
+            input:
+              $ref: '#/components/schemas/FlowInput'
+            trace:
+              $ref: '#/components/schemas/FlowTrace'
+          not:
+            required:
+              - mode
+        - oneOf:
+            - properties:
+                trace_status:
+                  const: complete
+                trace:
+                  properties:
+                    status:
+                      const: complete
+            - properties:
+                trace_status:
+                  const: partial
+                trace:
+                  properties:
+                    status:
+                      const: partial
+            - properties:
+                trace_status:
+                  const: disabled
+                trace:
+                  properties:
+                    status:
+                      const: disabled
+      description: Recorded evidence identified by id and instance_id; never a simulation.
+    FlowTrace:
+      type: object
+      required:
+        - status
+        - missing
+        - steps
+      properties:
+        status:
+          $ref: '#/components/schemas/TraceStatus'
+        missing:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - not_instrumented
+              - started_late
+              - buffer_overflow
+              - sampled
+              - redacted
+              - evicted
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowStep'
+      if:
+        properties:
+          status:
+            const: complete
+      then:
+        properties:
+          missing:
+            maxItems: 0
+          steps:
+            items:
+              properties:
+                evidence:
+                  const: observed
+              if:
+                properties:
+                  stage:
+                    const: route
+              then:
+                properties:
+                  data:
+                    properties:
+                      input:
+                        type: object
+      else:
+        properties:
+          missing:
+            minItems: 1
+    FlowStep:
+      oneOf:
+        - $ref: '#/components/schemas/InputStep'
+        - $ref: '#/components/schemas/RouteStep'
+        - $ref: '#/components/schemas/DatapathStep'
+        - $ref: '#/components/schemas/DialModeStep'
+        - $ref: '#/components/schemas/DnsStep'
+        - $ref: '#/components/schemas/RerouteStep'
+        - $ref: '#/components/schemas/OutboundStep'
+        - $ref: '#/components/schemas/ConnectionStep'
+      discriminator:
+        propertyName: stage
+        mapping:
+          input: '#/components/schemas/InputStep'
+          route: '#/components/schemas/RouteStep'
+          datapath: '#/components/schemas/DatapathStep'
+          dial_mode: '#/components/schemas/DialModeStep'
+          dns: '#/components/schemas/DnsStep'
+          reroute: '#/components/schemas/RerouteStep'
+          outbound: '#/components/schemas/OutboundStep'
+          connection: '#/components/schemas/ConnectionStep'
+    InputStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: input
+            data:
+              $ref: '#/components/schemas/InputStepData'
+    InputStepData:
+      type: object
+      required:
+        - values
+        - source
+      properties:
+        values:
+          allOf:
+            - $ref: '#/components/schemas/FlowInput'
+            - type: object
+              required:
+                - pname
+              properties:
+                pname:
+                  type:
+                    - string
+                    - 'null'
+        source:
+          type: string
+          enum:
+            - kernel
+            - socket
+            - sniffer
+            - dns_mapping
+    RouteStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: route
+            data:
+              $ref: '#/components/schemas/RouteStepData'
+    RouteStepData:
+      type: object
+      required:
+        - evaluation_id
+        - chain
+        - plane
+        - rule_id
+        - rules
+        - outbound
+        - must
+        - mark
+        - input
+        - dns_action
+      properties:
+        evaluation_id:
+          type: string
+          minLength: 1
+        chain:
+          type: string
+          enum:
+            - traffic
+            - dns_request
+            - dns_response
+            - dns_upstream
+        plane:
+          type: string
+          enum:
+            - kernel
+            - userspace
+        rule_id:
+          type:
+            - string
+            - 'null'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleEvaluation'
+        outbound:
+          type:
+            - string
+            - 'null'
+          description: Traffic outbound, or DNS upstream tag for upstream/requery; null for other DNS actions.
+        must:
+          type:
+            - boolean
+            - 'null'
+        mark:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 4294967295
+        input:
+          type:
+            - object
+            - 'null'
+          description: Immutable inputs consumed by this evaluation, typed by chain below; null means missing capture.
+        dns_action:
+          type:
+            - string
+            - 'null'
+          enum:
+            - upstream
+            - asis
+            - accept
+            - reject
+            - requery
+            - null
+      allOf:
+        - oneOf:
+            - properties:
+                chain:
+                  enum:
+                    - traffic
+                    - dns_upstream
+                input:
+                  oneOf:
+                    - type: 'null'
+                    - $ref: '#/components/schemas/TrafficRoutingInput'
+                dns_action:
+                  type: 'null'
+            - properties:
+                chain:
+                  const: dns_request
+                input:
+                  oneOf:
+                    - type: 'null'
+                    - $ref: '#/components/schemas/DnsRequestRoutingInput'
+                dns_action:
+                  enum:
+                    - upstream
+                    - asis
+                    - reject
+                    - null
+                must:
+                  type: 'null'
+                mark:
+                  type: 'null'
+            - properties:
+                chain:
+                  const: dns_response
+                input:
+                  oneOf:
+                    - type: 'null'
+                    - $ref: '#/components/schemas/DnsResponseRoutingInput'
+                dns_action:
+                  enum:
+                    - accept
+                    - reject
+                    - requery
+                    - null
+                must:
+                  type: 'null'
+                mark:
+                  type: 'null'
+        - if:
+            properties:
+              dns_action:
+                enum:
+                  - asis
+                  - accept
+                  - reject
+          then:
+            properties:
+              outbound:
+                type: 'null'
+    DatapathStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: datapath
+            data:
+              $ref: '#/components/schemas/DatapathStepData'
+    DatapathStepData:
+      type: object
+      required:
+        - plane
+        - action
+        - reason
+        - error
+      properties:
+        plane:
+          type: string
+          enum:
+            - kernel
+            - userspace
+        action:
+          type: string
+          enum:
+            - pass
+            - redirect
+            - hold
+            - arm_direct
+            - activate_direct
+            - activate_proxy
+            - drop
+        reason:
+          type: string
+          minLength: 1
+        error:
+          type:
+            - string
+            - 'null'
+    DialModeStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: dial_mode
+            data:
+              $ref: '#/components/schemas/DialModeStepData'
+    DialModeStepData:
+      type: object
+      required:
+        - configured
+        - effective_target
+        - domain
+        - domain_source
+        - verification
+        - reason
+      properties:
+        configured:
+          type: string
+          minLength: 1
+        effective_target:
+          type: string
+          enum:
+            - ip
+            - domain
+            - none
+            - unknown
+        domain:
+          type:
+            - string
+            - 'null'
+        domain_source:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DomainSource'
+        verification:
+          type: string
+          enum:
+            - matched
+            - other_family_trusted
+            - failed
+            - not_required
+            - unavailable
+        reason:
+          type: string
+          minLength: 1
+    DnsStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: dns
+            data:
+              $ref: '#/components/schemas/DnsStepData'
+    DnsStepData:
+      type: object
+      required:
+        - lookup_id
+        - parent_lookup_id
+        - attempt_id
+        - purpose
+        - name
+        - qtype
+        - source
+        - upstream_transport
+        - carrier_transport
+        - cache
+        - cache_entry_id
+        - upstream
+        - route_evaluation_ids
+        - status
+        - addresses
+        - selected_ip
+        - error
+      properties:
+        lookup_id:
+          type: string
+          minLength: 1
+        parent_lookup_id:
+          type:
+            - string
+            - 'null'
+        attempt_id:
+          type:
+            - string
+            - 'null'
+        purpose:
+          type: string
+          enum:
+            - domain_verification
+            - dial_target
+            - proxy_server
+            - intercepted_query
+            - family_preference
+            - refresh
+        name:
+          type: string
+          minLength: 1
+        qtype:
+          $ref: '#/components/schemas/DnsRecordType'
+        source:
+          type: string
+          enum:
+            - hosts
+            - cache
+            - upstream
+            - coalesced
+            - unknown
+        upstream_transport:
+          type:
+            - string
+            - 'null'
+          enum:
+            - udp
+            - tcp
+            - dot
+            - doh
+            - doq
+            - doh3
+            - null
+        carrier_transport:
+          type:
+            - string
+            - 'null'
+          enum:
+            - tcp
+            - udp
+            - null
+        cache:
+          type: string
+          enum:
+            - hit
+            - miss
+            - stale
+            - bypass
+            - unknown
+        cache_entry_id:
+          type:
+            - string
+            - 'null'
+        upstream:
+          type:
+            - string
+            - 'null'
+        route_evaluation_ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        status:
+          type: string
+          minLength: 1
+        addresses:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/IpAddress'
+        selected_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        error:
+          type:
+            - string
+            - 'null'
+    RerouteStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: reroute
+            data:
+              $ref: '#/components/schemas/RerouteStepData'
+    RerouteStepData:
+      type: object
+      required:
+        - performed
+        - reason
+        - from_evaluation_id
+        - to_evaluation_id
+      properties:
+        performed:
+          type:
+            - boolean
+            - 'null'
+        reason:
+          type: string
+          minLength: 1
+        from_evaluation_id:
+          type:
+            - string
+            - 'null'
+        to_evaluation_id:
+          type:
+            - string
+            - 'null'
+    OutboundStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: outbound
+            data:
+              $ref: '#/components/schemas/OutboundStepData'
+    OutboundStepData:
+      type: object
+      required:
+        - attempt_id
+        - parent_attempt_id
+        - kind
+        - evaluation_id
+        - routing_source
+        - routed_outbound
+        - effective_outbound
+        - mode_override
+        - selection_path
+        - leaf_node_id
+        - target
+        - target_kind
+        - dial_ip
+        - server_addr
+        - resolution_location
+        - status
+        - error
+      properties:
+        attempt_id:
+          type: string
+          minLength: 1
+        parent_attempt_id:
+          type:
+            - string
+            - 'null'
+        kind:
+          type: string
+          enum:
+            - leaf
+            - transport
+        evaluation_id:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        routing_source:
+          type: string
+          enum:
+            - evaluation
+            - forced
+            - builtin
+            - unknown
+        routed_outbound:
+          type:
+            - string
+            - 'null'
+        effective_outbound:
+          type:
+            - string
+            - 'null'
+        mode_override:
+          type: string
+          enum:
+            - none
+            - direct
+            - global
+            - unknown
+        selection_path:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectionPathItem'
+        leaf_node_id:
+          type:
+            - string
+            - 'null'
+        target:
+          type:
+            - string
+            - 'null'
+        target_kind:
+          type: string
+          enum:
+            - ip
+            - domain
+            - none
+            - unknown
+        dial_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        server_addr:
+          type:
+            - string
+            - 'null'
+        resolution_location:
+          type: string
+          enum:
+            - original_ip
+            - local_dns
+            - outbound_remote
+            - not_applicable
+            - unknown
+        status:
+          type: string
+          enum:
+            - started
+            - succeeded
+            - failed
+            - cancelled
+        error:
+          type:
+            - string
+            - 'null'
+      if:
+        properties:
+          routing_source:
+            const: evaluation
+      then:
+        properties:
+          evaluation_id:
+            type: string
+      else:
+        properties:
+          evaluation_id:
+            type: 'null'
+    SelectionPathItem:
+      type: object
+      required:
+        - group_id
+        - member_id
+        - policy
+        - reason
+        - selection
+      properties:
+        group_id:
+          type: string
+          minLength: 1
+        member_id:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        policy:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 1
+        selection:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SelectionDecision'
+    SelectionDecision:
+      type: object
+      required:
+        - previous_member_id
+        - metric
+        - tolerance_ms
+        - candidates
+      properties:
+        previous_member_id:
+          type:
+            - string
+            - 'null'
+        metric:
+          type:
+            - string
+            - 'null'
+        tolerance_ms:
+          type:
+            - number
+            - 'null'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectionCandidate'
+    SelectionCandidate:
+      type: object
+      required:
+        - member_id
+        - leaf_node_id
+        - eligible
+        - sorting_latency_ms
+        - score
+        - selected
+        - reason
+      properties:
+        member_id:
+          type: string
+          minLength: 1
+        leaf_node_id:
+          type:
+            - string
+            - 'null'
+        eligible:
+          type:
+            - boolean
+            - 'null'
+        sorting_latency_ms:
+          type:
+            - number
+            - 'null'
+        score:
+          type:
+            - number
+            - 'null'
+        selected:
+          type: boolean
+        reason:
+          type: string
+          minLength: 1
+    ConnectionStep:
+      allOf:
+        - $ref: '#/components/schemas/StepCommon'
+        - type: object
+          required:
+            - stage
+            - data
+          properties:
+            stage:
+              const: connection
+            data:
+              $ref: '#/components/schemas/ConnectionStepData'
+    ConnectionStepData:
+      type: object
+      required:
+        - state
+        - reason
+        - milestone
+        - attempt_id
+        - reply_received
+        - error
+      properties:
+        state:
+          $ref: '#/components/schemas/ConnectionState'
+        reason:
+          type: string
+          minLength: 1
+        milestone:
+          type: string
+          enum:
+            - transport_ready
+            - target_request_sent
+            - target_confirmed
+            - first_reply
+            - terminal
+            - unknown
+        attempt_id:
+          type:
+            - string
+            - 'null'
+        reply_received:
+          type:
+            - boolean
+            - 'null'
+        error:
+          type:
+            - string
+            - 'null'
+    RuleResult:
+      type: string
+      enum:
+        - matched
+        - not_matched
+        - skipped
+        - indeterminate
+    RuleCondition:
+      type: object
+      required:
+        - id
+        - expression
+        - result
+        - missing_inputs
+      properties:
+        id:
+          type: string
+          minLength: 1
+        expression:
+          type:
+            - string
+            - 'null'
+        result:
+          $ref: '#/components/schemas/RuleResult'
+        missing_inputs:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    RuleEvaluation:
+      type: object
+      required:
+        - rule_id
+        - expression
+        - result
+        - missing_inputs
+        - conditions
+      properties:
+        rule_id:
+          type: string
+          minLength: 1
+        expression:
+          type:
+            - string
+            - 'null'
+        result:
+          $ref: '#/components/schemas/RuleResult'
+        missing_inputs:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleCondition'
+    IpAddress:
+      oneOf:
+        - type: string
+          format: ipv4
+        - type: string
+          format: ipv6
+    RoutingTraceInput:
+      type: object
+      additionalProperties: false
+      required:
+        - network
+        - dst_port
+      properties:
+        network:
+          $ref: '#/components/schemas/Transport'
+        domain:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        dst_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        dst_port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        src_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        src_port:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          maximum: 65535
+        pname:
+          type:
+            - string
+            - 'null'
+        dscp:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 63
+        mark:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          maximum: 4294967295
+      anyOf:
+        - required:
+            - domain
+          properties:
+            domain:
+              type: string
+              minLength: 1
+        - required:
+            - dst_ip
+          properties:
+            dst_ip:
+              $ref: '#/components/schemas/IpAddress'
+    RoutingTraceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - input
+      properties:
+        input:
+          $ref: '#/components/schemas/RoutingTraceInput'
+        resolve:
+          type: string
+          enum:
+            - none
+            - live
+          default: none
+      allOf:
+        - if:
+            required:
+              - resolve
+            properties:
+              resolve:
+                const: live
+          then:
+            properties:
+              input:
+                allOf:
+                  - required:
+                      - domain
+                    properties:
+                      domain:
+                        type: string
+                        minLength: 1
+                  - properties:
+                      dst_ip:
+                        type: 'null'
+    RoutingEvaluation:
+      type: object
+      required:
+        - dst_ip
+        - decision
+        - outbound
+        - missing_inputs
+        - rules
+      properties:
+        dst_ip:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/IpAddress'
+        decision:
+          type: string
+          enum:
+            - determinate
+            - indeterminate
+        outbound:
+          type:
+            - string
+            - 'null'
+        missing_inputs:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleEvaluation'
+    SimulationDnsData:
+      allOf:
+        - $ref: '#/components/schemas/DnsStepData'
+        - type: object
+          properties:
+            lookup_id:
+              type: string
+              minLength: 1
+              description: Simulation-local lookup ID; never a recorded-flow identity.
+            purpose:
+              const: dial_target
+            attempt_id:
+              type: 'null'
+              description: Simulations never create outbound attempts.
+    RoutingTraceResponse:
+      type: object
+      required:
+        - mode
+        - instance_id
+        - generation_id
+        - observed_at
+        - evaluations
+        - dns
+      properties:
+        mode:
+          type: string
+          const: simulation
+        instance_id:
+          type: string
+          minLength: 1
+        generation_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        evaluations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutingEvaluation'
+        dns:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimulationDnsData'
+      not:
+        anyOf:
+          - required:
+              - id
+          - required:
+              - flow_id
+          - required:
+              - connection_id
+      description: Hypothetical output. It never identifies or claims history for a live flow.
+    DnsRecordType:
+      type: string
+      pattern: ^(?:[A-Z][A-Z0-9-]*|TYPE[0-9]{1,5}|[0-9]{1,5})$
+    DnsAnswer:
+      type: object
+      required:
+        - name
+        - type
+        - class
+        - ttl
+        - data
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          $ref: '#/components/schemas/DnsRecordType'
+        class:
+          type: string
+          minLength: 1
+        ttl:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+        data:
+          type: string
+    DnsQuestion:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          $ref: '#/components/schemas/DnsRecordType'
+    DnsRoute:
+      type: object
+      required:
+        - source
+        - rule
+      properties:
+        source:
+          type: string
+          enum:
+            - forced
+            - dns.routing
+            - default
+        rule:
+          type:
+            - string
+            - 'null'
+    DnsQueryResult:
+      type: object
+      required:
+        - type
+        - cached
+        - cache_entry_id
+        - upstream
+        - route
+        - status
+        - elapsed_ms
+        - question
+      properties:
+        type:
+          $ref: '#/components/schemas/DnsRecordType'
+        cached:
+          type: boolean
+        cache_entry_id:
+          type:
+            - string
+            - 'null'
+        upstream:
+          type:
+            - string
+            - 'null'
+        route:
+          $ref: '#/components/schemas/DnsRoute'
+        status:
+          type: string
+          minLength: 1
+        elapsed_ms:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        question:
+          $ref: '#/components/schemas/DnsQuestion'
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsAnswer'
+    DnsQueryResponse:
+      type: object
+      required:
+        - domain
+        - cache_mode
+        - query_time
+        - results
+      properties:
+        domain:
+          type: string
+          minLength: 1
+        cache_mode:
+          type: string
+          enum:
+            - normal
+            - bypass
+        query_time:
+          $ref: '#/components/schemas/Timestamp'
+        results:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/DnsQueryResult'
+    DnsCacheCoverage:
+      type: object
+      required:
+        - positive
+        - negative
+        - persistent
+      properties:
+        positive:
+          type: boolean
+        negative:
+          type: boolean
+        persistent:
+          type: boolean
+    DnsCacheEntry:
+      type: object
+      required:
+        - entry_id
+        - domain
+        - type
+        - class
+        - status
+        - expires_at
+        - stale_until
+      properties:
+        entry_id:
+          type: string
+          minLength: 1
+        domain:
+          type: string
+          minLength: 2
+          pattern: \.$
+        type:
+          $ref: '#/components/schemas/DnsRecordType'
+        class:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsAnswer'
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
+        stale_until:
+          $ref: '#/components/schemas/NullableTimestamp'
+    DnsCacheList:
+      type: object
+      required:
+        - observed_at
+        - coverage
+        - entries
+        - total
+        - next_cursor
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        coverage:
+          $ref: '#/components/schemas/DnsCacheCoverage'
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsCacheEntry'
+        total:
+          $ref: '#/components/schemas/SafeUInt'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+    DeleteCount:
+      type: object
+      required:
+        - deleted
+      properties:
+        deleted:
+          type: integer
+          minimum: 0
+    DeleteMatchingCount:
+      type: object
+      required:
+        - matched
+        - deleted
+      properties:
+        matched:
+          type: integer
+          minimum: 0
+        deleted:
+          type: integer
+          minimum: 0
+    OperationKind:
+      type: string
+      enum:
+        - probe
+        - reload
+        - suspend
+        - resume
+        - group_update
+    OperationAccepted:
+      type: object
+      required:
+        - operation_id
+        - kind
+        - status
+        - href
+      properties:
+        operation_id:
+          type: string
+          minLength: 1
+        kind:
+          $ref: '#/components/schemas/OperationKind'
+        status:
+          type: string
+          const: queued
+        href:
+          type: string
+          pattern: ^/api/v1/operations/[^/]+$
+    Operation:
+      oneOf:
+        - $ref: '#/components/schemas/QueuedOperation'
+        - $ref: '#/components/schemas/RunningOperation'
+        - $ref: '#/components/schemas/FailedOperation'
+        - $ref: '#/components/schemas/ProbeSucceededOperation'
+        - $ref: '#/components/schemas/ReloadSucceededOperation'
+        - $ref: '#/components/schemas/SuspendSucceededOperation'
+        - $ref: '#/components/schemas/ResumeSucceededOperation'
+        - $ref: '#/components/schemas/GroupUpdateSucceededOperation'
+    QueuedOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            status:
+              const: queued
+            started_at:
+              type: 'null'
+            finished_at:
+              type: 'null'
+            result:
+              type: 'null'
+            error:
+              type: 'null'
+    RunningOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            status:
+              const: running
+            finished_at:
+              type: 'null'
+            result:
+              type: 'null'
+            error:
+              type: 'null'
+    FailedOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            status:
+              const: failed
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              type: 'null'
+            error:
+              $ref: '#/components/schemas/SafeError'
+    ProbeSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: probe
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              $ref: '#/components/schemas/ProbeResult'
+            error:
+              type: 'null'
+    ReloadSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: reload
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              $ref: '#/components/schemas/ReloadResult'
+            error:
+              type: 'null'
+    ReloadResult:
+      type: object
+      required:
+        - active_generation_id
+        - datapath_generation_id
+      properties:
+        active_generation_id:
+          type:
+            - string
+            - 'null'
+        datapath_generation_id:
+          type:
+            - string
+            - 'null'
+    SuspendSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: suspend
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              type: object
+              required:
+                - runtime_state
+              properties:
+                runtime_state:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - suspended
+                    - null
+            error:
+              type: 'null'
+    ResumeSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: resume
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              type: object
+              required:
+                - runtime_state
+              properties:
+                runtime_state:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - running
+                    - null
+            error:
+              type: 'null'
+    GroupUpdateSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: group_update
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              $ref: '#/components/schemas/GroupUpdateResult'
+            error:
+              type: 'null'
+    GroupUpdateResult:
+      type: object
+      required:
+        - group_id
+        - config_revision
+      properties:
+        group_id:
+          type: string
+          minLength: 1
+        config_revision:
+          type: string
+          minLength: 1
+    EventKind:
+      type: string
+      enum:
+        - stream.ready
+        - runtime.updated
+        - flow.updated
+        - flow.gap
+        - operation.updated
+        - generation.changed
+    StreamReadyEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+      not:
+        anyOf:
+          - required:
+              - href
+          - required:
+              - resource_id
+          - required:
+              - revision
+          - required:
+              - status
+          - required:
+              - reason
+          - required:
+              - previous_generation_id
+          - required:
+              - generation_id
+    RuntimeUpdatedEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - href
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        href:
+          const: /api/v1/runtime
+    FlowUpdatedEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - resource_id
+        - revision
+        - href
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        resource_id:
+          type: string
+          minLength: 1
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        href:
+          type: string
+          pattern: ^/api/v1/flows/[^/]+$
+    FlowGapEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - resource_id
+        - reason
+        - dropped_records
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        resource_id:
+          type:
+            - string
+            - 'null'
+        reason:
+          type: string
+          enum:
+            - buffer_overflow
+            - sampled
+            - evicted
+            - recording_changed
+        dropped_records:
+          $ref: '#/components/schemas/NullableUInt64'
+    OperationUpdatedEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - resource_id
+        - status
+        - href
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        resource_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+        href:
+          type: string
+          pattern: ^/api/v1/operations/[^/]+$
+    GenerationChangedEvent:
+      type: object
+      required:
+        - instance_id
+        - observed_at
+        - previous_generation_id
+        - generation_id
+      properties:
+        instance_id:
+          type: string
+          minLength: 1
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        previous_generation_id:
+          type: string
+          minLength: 1
+        generation_id:
+          type: string
+          minLength: 1
+    StepCommon:
+      type: object
+      required:
+        - seq
+        - observed_at
+        - elapsed_us
+        - generation_id
+        - evidence
+      properties:
+        seq:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        observed_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        elapsed_us:
+          $ref: '#/components/schemas/NullableSafeUInt'
+        generation_id:
+          type:
+            - string
+            - 'null'
+        evidence:
+          type: string
+          enum:
+            - observed
+            - reconstructed
+    OperationCommon:
+      type: object
+      required:
+        - operation_id
+        - kind
+        - status
+        - created_at
+        - started_at
+        - finished_at
+        - result
+        - error
+      properties:
+        operation_id:
+          type: string
+          minLength: 1
+        kind:
+          $ref: '#/components/schemas/OperationKind'
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        started_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        finished_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+        result:
+          type:
+            - object
+            - 'null'
+        error:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeError'
+  examples:
+    FlowUpdated:
+      summary: Flow revision notification
+      x-event: flow.updated
+      x-event-id: instance-7:124
+      value:
+        instance_id: instance-7
+        observed_at: '2026-09-14T10:00:00Z'
+        resource_id: flow-23
+        revision: 8
+        href: /api/v1/flows/flow-23
