@@ -9,8 +9,8 @@ import Filter from '@react-spectrum/s2/icons/Filter';
 import DeviceDesktop from '@react-spectrum/s2/icons/DeviceDesktop';
 import DevicePhone from '@react-spectrum/s2/icons/DevicePhone';
 import {runtime, checks, events, type Mode} from '../app/mock';
-import {useConnections, useGroups, useMockHistory, useNodes, useRuntime} from '../api/store';
-import {outboundUsage, preferredHealth} from '../api/selectors';
+import {useCapabilities, useGroups, useNodes, useRuntime, useRuntimeOutbounds, useTrafficHistory} from '../api/store';
+import {localTime, outboundUsage, preferredHealth, trafficSeries} from '../api/selectors';
 import {formatBytes, formatRate} from '../api/u64';
 import {useT} from '../app/i18n';
 import {Button, Segmented, MenuButton, Light, Bar, toast} from './ui';
@@ -31,8 +31,8 @@ function timeoutIssues(names: string[], timeout: string, many: string, sep: stri
 }
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT(); const p = usePalette();
-  const runtimeResource = useRuntime(), nodesResource = useNodes(), groupsResource = useGroups(), connectionsResource = useConnections();
-  const history = useMockHistory();
+  const runtimeResource = useRuntime(), nodesResource = useNodes(), groupsResource = useGroups(), capabilities = useCapabilities();
+  const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
   const NODES = useMemo(() => (nodesResource.data ?? []).map(n => {
     const health = preferredHealth(n);
     return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive: health?.state === 'healthy', unavailable: health?.state === 'unavailable'};
@@ -40,21 +40,22 @@ export function Activity({go}: {go: (page: string) => void}) {
   const failing = checks.filter(c => !c.ready);
   const [by, setBy] = useState('dev');
   const [range, setRange] = useState('live');
+  const history = useTrafficHistory(range, capabilities.data);
+  const series = useMemo(() => trafficSeries(history.data), [history.data]);
   const [mode, setMode] = useState<Mode>(runtime.mode);
   const [chosenTarget, setTarget] = useState(runtime.globalTarget);
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
   const nodeName = node?.name ?? '';
-  const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? connectionsResource.error;
+  const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? capabilities.error;
   if (error) return <div role="alert">{t('act.loadFailed')} {error.message}</div>;
-  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data || !connectionsResource.data) return <div role="status">{t('act.loading')}</div>;
+  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <div role="status">{t('act.loading')}</div>;
   const liveRuntime = runtimeResource.data;
   const groups = groupsResource.data;
   const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : groups[0]?.name ?? '—';
-  const {throughput = [], connSeries = []} = history ?? {};
-  const usage = outboundUsage(connectionsResource.data);
+  const usage = outboundUsage(outbounds.data);
   const sep = t('act.sep2');
-  const traffic = [{label: t('act.download'), color: p.cat[0], values: throughput.map(s => s.down)}, {label: t('act.upload'), color: p.cat[3], values: throughput.map(s => s.up)}];
+  const traffic = [{label: t('act.download'), color: p.cat[0], values: series.down}, {label: t('act.upload'), color: p.cat[3], values: series.up}];
   const OUT = usage.rows.map((r, i) => ({name: r.name, value: r.percent === null ? null : Math.round(r.percent), text: formatBytes(r.bytes), color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]}));
   type Issue = {level: 'err' | 'warn' | 'info', text: string, page: string};
   const RANK = {err: 0, warn: 1, info: 2};
@@ -73,21 +74,20 @@ export function Activity({go}: {go: (page: string) => void}) {
       </div>
 
       <div className="rp-strip">
-        <div className="rp-card"><span className="rp-tile-head rp-tint-c1"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span><span className="rp-delta good">↑ 12%</span></span><span className="rp-spark"><Spark values={traffic[0].values} color={p.cat[0]} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-c4"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span><span className="rp-delta bad">↓ 8%</span></span><span className="rp-spark"><Spark values={traffic[1].values} color={p.cat[3]} /></span></div></div>
-        <div className="rp-card"><span className="rp-tile-head rp-tint-c3"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{liveRuntime.traffic.connections.total ?? '—'}</span><span className="rp-delta good">↑ 2</span></span><span className="rp-spark"><Spark values={connSeries} color={p.cat[2]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c1"><Download />{t('act.download')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span></span><span className="rp-spark"><Spark values={series.down} timestamps={series.timestamps} color={p.cat[0]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c4"><Upload />{t('act.upload')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span></span><span className="rp-spark"><Spark values={series.up} timestamps={series.timestamps} color={p.cat[3]} /></span></div></div>
+        <div className="rp-card"><span className="rp-tile-head rp-tint-c3"><LinkIcon />{t('act.active')}</span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{liveRuntime.traffic.connections.total ?? '—'}</span></span><span className="rp-spark"><Spark values={series.connections} timestamps={series.timestamps} color={p.cat[2]} /></span></div></div>
         <div className="rp-card"><span className="rp-tile-head rp-tint-c5"><Clock />{t('act.latency')}<NodeMenu label={t('act.node')} value={nodeName} onChange={setNodeName} nodes={NODES} labels={{timeout: t('act.timeout'), filter: t('act.filterNodes'), loading: t('act.loading')}} /></span><div className="rp-tile-body"><span className="rp-tile-val"><span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : node.tcp + ' ms') : '—'}</span>{node?.alive && <span className="rp-delta good">↓ 12%</span>}</span><Light small tone={node?.alive ? 'ok' : 'err'}>{node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}</Light></div></div>
       </div>
 
       <div className="rp-g21">
         <div className="rp-card">
-          <div className="rp-row"><span className="rp-title">{t('act.traffic')}</span><Segmented label={t('act.window')} value={range} onChange={setRange} items={[['live', t('act.live')], ['h1', t('act.h1')], ['h6', t('act.h6')], ['h24', t('act.h24')], ['d7', t('act.d7')]]} /></div>
-          {history && <Legend series={traffic} fmt={fmtRate} />}
-          {history ? <AreaChart series={traffic} fmt={fmtRate} height={120} /> : <span className="rp-label">{t('act.noHistory')}</span>}
+          <div className="rp-row"><span className="rp-title">{t('act.traffic')}</span><Segmented label={t('act.historyRange')} value={range} onChange={setRange} items={[['live', t('act.live')], ['h1', t('act.h1')], ['h6', t('act.h6')], ['h24', t('act.h24')], ['d7', t('act.d7')]]} /></div>
+          {history.error ? <p role="alert">{history.error.message}</p> : capabilities.data?.resources.traffic_history.available === false ? <span className="rp-label">{t('act.noHistory')}</span> : !history.data ? <span role="status">{t('act.loading')}</span> : !history.data.samples.length ? <span className="rp-label">{t('act.emptyHistory')}</span> : <><Legend series={traffic} fmt={fmtRate} /><AreaChart series={traffic} timestamps={series.timestamps} fmt={fmtRate} height={120} /></>}
         </div>
         <div className="rp-card">
-          <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.outUsage')}</span><span className="rp-label">{t('act.lastHour')}</span></span></div>
-          <Donut rows={OUT} total={formatBytes(usage.total)} />
+          <div className="rp-row"><span className="rp-cluster"><span className="rp-title">{t('act.outUsage')}</span>{outbounds.data && <span className="rp-label">{t('act.since').replace('{t}', localTime(outbounds.data.counter_since))}</span>}</span></div>
+          {outbounds.error ? <p role="alert">{outbounds.error.message}</p> : capabilities.data?.resources.runtime_outbounds.available === false ? <span className="rp-label">{t('act.noOutbounds')}</span> : !outbounds.data ? <span role="status">{t('act.loading')}</span> : <Donut rows={OUT} total={formatBytes(usage.total)} />}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import type {ReactNode} from 'react';
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 
 export type SeriesColor = 'accent' | 'accent2' | 'orange' | 'green' | 'purple' | 'red' | 'warn' | 'dark' | 'muted' | 'muted2';
-export type Series = {label: string, color: SeriesColor, values: number[]};
+export type Series = {label: string, color: SeriesColor, values: Array<number | null>};
 type Palette = Record<SeriesColor, string> & {grid: string, text: string, tip: string, tipText: string};
 // Yellow leads (yellow-600 for contrast on the light surface, yellow-400 as its lighter step), gray-700 is the second traffic series (a neutral, so yellow stays the only accent), grays for the rest; warn is orange-600 for slow nodes, red-700 for block, dark (gray-800) for timeouts.
 const LIGHT: Palette = {accent: '#D29500', accent2: '#F5C700', orange: '#505050', green: '#0DB595', purple: '#8480FE', red: '#FF513D', warn: '#FC7D00', dark: '#292929', muted: '#8F8F8F', muted2: '#C6C6C6', grid: '#E1E1E1', text: '#6D6D6D', tip: '#FFFFFF', tipText: '#222222'};
@@ -17,10 +17,10 @@ const legendItem = style({display: 'flex', alignItems: 'center', gap: 8});
 const swatch = style({display: 'inline-block', width: 8, height: 8, borderRadius: 'full', flexShrink: 0});
 const legendVal = style({fontWeight: 'bold', color: 'neutral'});
 
-export const fmtRate = (kb: number) => kb >= 1000 ? (kb / 1000).toFixed(kb >= 10000 || kb % 1000 === 0 ? 0 : 1) + ' MB/s' : Math.round(kb) + ' KB/s';
+export const fmtRate = (kb: number | null | undefined) => kb == null ? '—' : kb >= 1000 ? (kb / 1000).toFixed(kb >= 10000 || kb % 1000 === 0 ? 0 : 1) + ' MB/s' : Math.round(kb) + ' KB/s';
 export const fmtCount = (n: number) => String(Math.round(n));
 const niceMax = (v: number) => { const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10; return s * p; };
-const clock = (msAgo: number) => { const d = new Date(Date.now() - msAgo); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const clock = (timestamp: number) => new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
 // Follows the colour scheme of the surrounding S2 Provider (the CSS color-scheme property inherits down to the chart host).
 export function usePalette<T extends HTMLElement>() {
@@ -38,7 +38,7 @@ export function usePalette<T extends HTMLElement>() {
 }
 
 // Legend with the current value of each series, for the panel head next to the title.
-export function Legend({series, fmt}: {series: Series[], fmt: (v: number) => string}) {
+export function Legend({series, fmt}: {series: Series[], fmt: (v: number | null | undefined) => string}) {
   return (
     <div className={legendRow}>
       {series.map(s => <span key={s.label} className={legendItem}><i className={swatch + ' ' + swatchClass[s.color]} />{s.label} <span className={legendVal}>{fmt(s.values[s.values.length - 1])}</span></span>)}
@@ -48,22 +48,23 @@ export function Legend({series, fmt}: {series: Series[], fmt: (v: number) => str
 
 const tipStyle = (p: Palette) => ({backgroundColor: p.tip, color: p.tipText, border: 'none', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.18)', fontSize: 12, padding: '8px 12px'});
 
-export function AreaChart({series, fmt, height = 150, step = 10_000}: {series: Series[], fmt: (v: number) => string, height?: number, step?: number}) {
+export function AreaChart({series, timestamps, fmt, height = 150}: {series: Series[], timestamps: number[], fmt: (v: number) => string, height?: number}) {
   const [p, ref] = usePalette<HTMLDivElement>();
   const uid = useId();
-  const n = series[0].values.length, last = n - 1;
-  const data = Array.from({length: n}, (_, i) => Object.fromEntries([['t', clock((last - i) * step)], ...series.map(s => [s.label, s.values[i]])]));
-  const max = niceMax(Math.max(...series.flatMap(s => s.values)) * 1.08);
-  const ticks = [0, Math.round(last / 3), Math.round((2 * last) / 3), last].map(i => data[i].t as string);
+  if (!timestamps.length) return null;
+  const last = timestamps.length - 1;
+  const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
+  const max = niceMax(Math.max(1, ...series.flatMap(s => s.values.filter((v): v is number => v !== null))) * 1.08);
+  const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last].map(i => timestamps[i]))];
   return (
     <div ref={ref} className={box} style={{height}}>
       <ResponsiveContainer width="100%" height="100%">
         <RAreaChart data={data} margin={{top: 8, right: 0, bottom: 0, left: 20}}>
           <defs>{series.map((s, k) => <linearGradient key={s.label} id={uid + k} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={p[s.color]} stopOpacity={0.4} /><stop offset="100%" stopColor={p[s.color]} stopOpacity={0.04} /></linearGradient>)}</defs>
           <CartesianGrid vertical={false} stroke={p.grid} strokeDasharray="2 4" />
-          <XAxis dataKey="t" ticks={ticks} tick={{fontSize: 11, fill: p.text}} axisLine={false} tickLine={false} interval={0} />
+          <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} ticks={ticks} tickFormatter={clock} tick={{fontSize: 11, fill: p.text}} axisLine={false} tickLine={false} interval={0} />
           <YAxis orientation="right" ticks={[max / 2, max]} domain={[0, max]} tickFormatter={v => fmt(v)} tick={{fontSize: 11, fill: p.text}} axisLine={false} tickLine={false} width={64} mirror={false} />
-          <Tooltip contentStyle={tipStyle(p)} itemStyle={{color: p.tipText}} formatter={v => fmt(Number(v))} cursor={{stroke: p.text, strokeDasharray: '3 3'}} />
+          <Tooltip contentStyle={tipStyle(p)} itemStyle={{color: p.tipText}} labelFormatter={value => new Date(Number(value)).toLocaleString()} formatter={v => fmt(Number(v))} cursor={{stroke: p.text, strokeDasharray: '3 3'}} />
           {series.map((s, k) => <Area key={s.label} type="monotone" dataKey={s.label} stroke={p[s.color]} strokeWidth={2} fill={`url(#${uid + k})`} dot={false} activeDot={{r: 4, strokeWidth: 2}} isAnimationActive={false} />)}
         </RAreaChart>
       </ResponsiveContainer>
@@ -72,17 +73,19 @@ export function AreaChart({series, fmt, height = 150, step = 10_000}: {series: S
 }
 
 // Bare sparkline for a stat tile: the series shape only, floor just under the minimum.
-export function Spark({values, color, height = 32}: {values: number[], color: SeriesColor, height?: number}) {
+export function Spark({values, timestamps, color, height = 32}: {values: Array<number | null>, timestamps: number[], color: SeriesColor, height?: number}) {
   const [p, ref] = usePalette<HTMLDivElement>();
   const uid = useId();
-  if (!values.length) return null;
-  const data = values.map((v, i) => ({i, v}));
-  const lo = Math.min(...values) * 0.85, hi = Math.max(...values) * 1.05 || 1;
+  const known = values.filter((v): v is number => v !== null);
+  if (!known.length) return null;
+  const data = values.map((v, i) => ({t: timestamps[i], v}));
+  const lo = Math.min(...known) * 0.85, hi = Math.max(...known) * 1.05 || 1;
   return (
     <div ref={ref} className={box} style={{height}}>
       <ResponsiveContainer width="100%" height="100%">
         <RAreaChart data={data} margin={{top: 2, right: 0, bottom: 2, left: 0}}>
           <defs><linearGradient id={uid} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={p[color]} stopOpacity={0.22} /><stop offset="100%" stopColor={p[color]} stopOpacity={0.02} /></linearGradient></defs>
+          <XAxis hide dataKey="t" type="number" domain={['dataMin', 'dataMax']} />
           <YAxis hide domain={[lo, hi]} />
           <Area type="monotone" dataKey="v" stroke={p[color]} strokeWidth={1.5} fill={`url(#${uid})`} dot={false} isAnimationActive={false} />
         </RAreaChart>

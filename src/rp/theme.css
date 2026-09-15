@@ -629,3 +629,8 @@ button.rp-node:hover { background: var(--rp-hl-med); }
 .rp-trace-result.indeterminate { --dot: var(--rp-gold); }
 .rp-nav-compat { margin-inline-start: auto; }
 .rp-il .ic:has(> .rp-nav-compat) { order: 1; }
+
+.rp-provenance { margin-inline-start: 4px; padding: 1px 4px; border-radius: 4px; background: var(--rp-hl-med); color: var(--rp-subtle); font-size: 11px; white-space: nowrap; }
+.rp-rule { display: flex; align-items: center; min-width: 0; }
+.rp-rule > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-rule > .rp-provenance { flex-shrink: 0; }

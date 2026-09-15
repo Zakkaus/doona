@@ -4,6 +4,9 @@ type Schema = components['schemas'];
 export type Version = Schema['Version'];
 export type Capabilities = Schema['Capabilities'];
 export type Runtime = Schema['Runtime'];
+export type RuntimeOutbounds = Schema['RuntimeOutbounds'];
+export type TrafficHistory = Schema['TrafficHistory'];
+export type TrafficHistoryQuery = operations['getTrafficHistory']['parameters']['query'];
 export type Datapath = Schema['Datapath'];
 export type DatapathDetail = components['parameters']['Detail'];
 export type RuntimeMemory = Schema['RuntimeMemory'];
@@ -60,4 +63,3 @@ type EventData = {
 };
 export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
 export type EventOptions = {kinds?: EventKind[]; lastEventId?: string; signal?: AbortSignal; onEvent: (event: ApiEvent) => void; onConnectionChange?: (connected: boolean) => void};
-export type MockHistory = {throughput: Array<{t: number; up: number; down: number}>; connSeries: number[]};

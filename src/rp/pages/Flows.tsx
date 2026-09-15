@@ -1,23 +1,26 @@
 import {useEffect, useState} from 'react';
 import {useFlow, useFlows} from '../../api/store';
-import {connectionStates, flowStepFields, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, flowStepFields, relativeStart} from '../../api/selectors';
 import {Badge, DataTable, Kv, LabeledSelect, Segmented} from '../ui';
 import type {PageProps} from './types';
+import {useT} from '../../app/i18n';
 
 const coverageLabels: Record<string, string> = {userspace_tcp: '使用者空間 TCP', userspace_udp: '使用者空間 UDP', kernel_direct: '核心直連', kernel_block: '核心封鎖', dns_intercept: 'DNS 攔截', kernel_bypass: '核心旁路'};
 const visibility: Record<string, string> = {full: '完整', partial: '部分', none: '無', unknown: '未知'};
 export function Flows({go, query}: PageProps) {
+  const t = useT();
   const [network, setNetwork] = useState('all');
   const [state, setState] = useState('all');
-  const [requestedId, setRequestedId] = useState(() => new URLSearchParams(query).get('id'));
+  const [params, setParams] = useState(() => new URLSearchParams(query));
   // The themed shell only subscribes to route changes, not query changes.
   useEffect(() => {
-    const update = () => setRequestedId(new URLSearchParams(location.hash.split('?')[1]).get('id'));
+    const update = () => setParams(new URLSearchParams(location.hash.split('?')[1]));
     addEventListener('hashchange', update);
     return () => removeEventListener('hashchange', update);
   }, []);
-  const resource = useFlows();
-  const id = requestedId ?? resource.data?.flows[0]?.id ?? null;
+  const connectionId = params.get('connection_id') ?? undefined;
+  const resource = useFlows(connectionId);
+  const id = params.get('id') ?? resource.data?.flows.find(f => !connectionId || f.connection_id === connectionId)?.id ?? null;
   const detail = useFlow(id);
   const flow = detail.data;
   const shown = (resource.data?.flows ?? []).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
@@ -30,8 +33,8 @@ export function Flows({go, query}: PageProps) {
     </div>
     <div className="rp-toolbar" aria-label="觀測涵蓋範圍">{resource.data && Object.entries(resource.data.coverage).map(([scope, value]) => <Badge key={scope} tone={value === 'full' ? undefined : 'warn'}>{coverageLabels[scope] ?? scope}：{visibility[value] ?? value}</Badge>)}</div>
     <DataTable label="流程" rows={shown} height={250} selected={id} onSelect={value => value && go('flows', 'id=' + encodeURIComponent(value))} empty="沒有符合的流程"
-      cols={[{id: 'id', label: '流程', isRowHeader: true}, {id: 'target', label: '目標'}, {id: 'network', label: '協定', width: 80}, {id: 'state', label: '狀態', width: 100}, {id: 'started', label: '開始', width: 100}]}
-      render={f => [f.id, f.input?.domain || f.input?.dst || '—', f.network.toUpperCase(), connectionStates[f.state] ?? f.state, relativeStart(f.started_at)]} />
+      cols={[{id: 'id', label: '流程', width: 140, isRowHeader: true}, {id: 'target', label: '目標', width: 180}, {id: 'chain', label: t('conn.chain'), width: 180}, {id: 'rule', label: t('conn.rule'), width: 220}, {id: 'network', label: '協定', width: 80}, {id: 'state', label: '狀態', width: 100}, {id: 'started', label: '開始', width: 104}]}
+      render={f => [f.id, f.input?.domain || f.input?.dst || '—', chainLabel(f), <span className="rp-rule"><span title={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</span>{f.rule_source === 'recomputed' ? <small className="rp-provenance">{t('conn.recomputed')}</small> : f.rule_source === 'unknown' ? <small className="rp-provenance">—</small> : null}</span>, f.network.toUpperCase(), connectionStates[f.state] ?? f.state, relativeStart(f.started_at)]} />
     {detail.error && <p role="alert" className="rp-note">無法載入流程記錄：{detail.error.message}</p>}
     {detail.loading && !flow && id && <p role="status">流程記錄載入中…</p>}
     {flow && <section className="rp-card" aria-label="流程記錄">

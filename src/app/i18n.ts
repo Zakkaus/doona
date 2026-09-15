@@ -6,13 +6,15 @@ export const LANGS: Array<[Lang, string]> = [['zh-TW', '繁體中文'], ['zh-CN'
 export const S2_LOCALE: Record<Lang, string> = {'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US'};
 
 const zhTW = {
+  'conn.chain': '鏈', 'conn.rule': '規則', 'conn.recomputed': '重算',
+  'act.noOutbounds': '此後端不提供出站統計', 'act.emptyHistory': '尚無歷史樣本', 'act.historyRange': '歷史範圍',
   'nav.routingTrace': '路由追蹤', 'nav.compat': '相容',
   'unit.d': ' 天', 'unit.h': ' 小時', 'unit.m': ' 分鐘', 'unit.s': ' 秒', 'ov.f.kind': '類型', 'ov.f.state': '狀態', 'ov.f.visibility': '可見度', 'ov.f.backend': '後端', 'ov.f.programs': '程式', 'ov.f.hooks': '掛鉤', 'ov.f.routing': '路由發布', 'ov.f.health': '健康', 'ov.f.lastError': '最近錯誤', 'ov.f.maps': '映射表', 'ov.f.connState': '連線表佔用', 'ov.f.rss': '常駐記憶體', 'ov.f.cgroupCurrent': 'cgroup 目前', 'ov.f.cgroupLimit': 'cgroup 上限', 'ov.f.cgroupPercent': 'cgroup 使用率', 'ov.f.oomHigh': '超過 high 次數', 'ov.f.oom': 'OOM 次數', 'ov.f.oomKill': 'OOM kill 次數', 'ov.f.ebpfBytes': 'eBPF 核心記憶體', 'ov.generation': '世代 ID', 'ov.revision': '配置修訂', 'ov.uptime': '運行時間', 'ov.lastReload': '上次重載',
   'ov.datapath': '資料路徑', 'ov.memory': '記憶體', 'ov.operations': '操作', 'ov.attachments': '掛載點',
   'ov.name': '名稱', 'ov.interface': '介面', 'ov.direction': '方向', 'ov.state': '狀態', 'ov.errors': '錯誤',
   'ov.reload': '重載', 'ov.suspend': '暫停', 'ov.resume': '恢復', 'ov.running': '執行中',
   'ov.succeeded': '已完成', 'ov.failed': '失敗', 'ov.loading': '載入中', 'ov.unavailable': '不支援此資源', 'ov.unknown': '未知',
-  'act.loadFailed': '無法載入活動資料。', 'lifecycle.starting': '啟動中', 'lifecycle.running': '運行中', 'lifecycle.reloading': '重載中', 'lifecycle.suspended': '已暫停', 'lifecycle.draining': '排空中', 'lifecycle.degraded': '降級', 'lifecycle.failed': '失敗', 'act.noHistory': '原生 API 不提供歷史資料', 'act.unknown': '未知',
+  'act.loadFailed': '無法載入活動資料。', 'lifecycle.starting': '啟動中', 'lifecycle.running': '運行中', 'lifecycle.reloading': '重載中', 'lifecycle.suspended': '已暫停', 'lifecycle.draining': '排空中', 'lifecycle.degraded': '降級', 'lifecycle.failed': '失敗', 'act.noHistory': '此後端不提供歷史', 'act.unknown': '未知',
   'nav.activity': '活動', 'nav.overview': '概覽', 'nav.connections': '連線', 'nav.clients': '客戶端', 'nav.policies': '策略', 'nav.rules': '規則', 'nav.dns': 'DNS', 'nav.resources': '資源', 'nav.config': '配置', 'nav.validate': '校驗', 'nav.events': '事件',
   'nav.flows': '流程',
   'grp.status': '狀態', 'grp.network': '網路', 'grp.proxy': '代理', 'grp.system': '系統',
@@ -30,13 +32,15 @@ const zhTW = {
 };
 type Key = keyof typeof zhTW;
 const zhCN: Record<Key, string> = {
+  'conn.chain': '链', 'conn.rule': '规则', 'conn.recomputed': '重算',
+  'act.noOutbounds': '此后端不提供出站统计', 'act.emptyHistory': '尚无历史样本', 'act.historyRange': '历史范围',
   'nav.routingTrace': '路由追踪', 'nav.compat': '兼容',
   'unit.d': ' 天', 'unit.h': ' 小时', 'unit.m': ' 分钟', 'unit.s': ' 秒', 'ov.f.kind': '类型', 'ov.f.state': '状态', 'ov.f.visibility': '可见度', 'ov.f.backend': '后端', 'ov.f.programs': '程序', 'ov.f.hooks': '挂钩', 'ov.f.routing': '路由发布', 'ov.f.health': '健康', 'ov.f.lastError': '最近错误', 'ov.f.maps': '映射表', 'ov.f.connState': '连接表占用', 'ov.f.rss': '常驻内存', 'ov.f.cgroupCurrent': 'cgroup 当前', 'ov.f.cgroupLimit': 'cgroup 上限', 'ov.f.cgroupPercent': 'cgroup 使用率', 'ov.f.oomHigh': '超过 high 次数', 'ov.f.oom': 'OOM 次数', 'ov.f.oomKill': 'OOM kill 次数', 'ov.f.ebpfBytes': 'eBPF 内核内存', 'ov.generation': '世代 ID', 'ov.revision': '配置修订', 'ov.uptime': '运行时间', 'ov.lastReload': '上次重载',
   'ov.datapath': '数据路径', 'ov.memory': '内存', 'ov.operations': '操作', 'ov.attachments': '挂载点',
   'ov.name': '名称', 'ov.interface': '接口', 'ov.direction': '方向', 'ov.state': '状态', 'ov.errors': '错误',
   'ov.reload': '重载', 'ov.suspend': '暂停', 'ov.resume': '恢复', 'ov.running': '执行中',
   'ov.succeeded': '已完成', 'ov.failed': '失败', 'ov.loading': '加载中', 'ov.unavailable': '不支持此资源', 'ov.unknown': '未知',
-  'act.loadFailed': '无法加载活动数据。', 'lifecycle.starting': '启动中', 'lifecycle.running': '运行中', 'lifecycle.reloading': '重载中', 'lifecycle.suspended': '已暂停', 'lifecycle.draining': '排空中', 'lifecycle.degraded': '降级', 'lifecycle.failed': '失败', 'act.noHistory': '原生 API 不提供历史数据', 'act.unknown': '未知',
+  'act.loadFailed': '无法加载活动数据。', 'lifecycle.starting': '启动中', 'lifecycle.running': '运行中', 'lifecycle.reloading': '重载中', 'lifecycle.suspended': '已暂停', 'lifecycle.draining': '排空中', 'lifecycle.degraded': '降级', 'lifecycle.failed': '失败', 'act.noHistory': '此后端不提供历史', 'act.unknown': '未知',
   'nav.activity': '活动', 'nav.overview': '概览', 'nav.connections': '连接', 'nav.clients': '客户端', 'nav.policies': '策略', 'nav.rules': '规则', 'nav.dns': 'DNS', 'nav.resources': '资源', 'nav.config': '配置', 'nav.validate': '校驗', 'nav.events': '事件',
   'nav.flows': '流程',
   'grp.status': '状态', 'grp.network': '网络', 'grp.proxy': '代理', 'grp.system': '系统',
@@ -53,13 +57,15 @@ const zhCN: Record<Key, string> = {
   'act.traffic': '流量', 'act.window': '最近 12 分钟', 'act.upTotal': '上传总计', 'act.downTotal': '下载总计', 'act.connCount': '连接数', 'act.outDist': '出站分布', 'act.probeLatency': '节点延迟', 'act.memory': '内存', 'act.subtitle': '网络、代理与系统状态一览', 'act.viewDetails': '查看详情', 'act.viewAll': '查看全部', 'act.viewMore': '查看更多', 'act.since': '自 {t} 起', 'act.good': '良好', 'act.live': '实时', 'act.h1': '1 小时', 'act.h6': '6 小时', 'act.h24': '24 小时', 'act.outUsage': '出站用量', 'act.lastHour': '最近 1 小时', 'act.topDevices': '设备排行', 'act.devices': '设备', 'act.domains': '域名', 'act.node': '节点', 'act.online': '在线', 'act.changeNode': '更换节点', 'act.lastChecked': '上次检测', 'act.ifaces': '网络接口', 'act.ifUp': '正常', 'act.src': '来源', 'act.dst': '目的', 'act.rule': '规则', 'act.out': '出站', 'act.time': '时间', 'act.nConns': '{n} 条连接', 'act.notReadyDesc': 'NFQUEUE 运行中，但内嵌 UI 尚未就绪，不影响代理。', 'act.running': '代理运行中', 'act.issues': '通知与问题', 'act.level': '级别', 'act.content': '内容', 'act.lvlWarn': '警告', 'act.lvlErr': '错误', 'act.lvlInfo': '通知', 'ev.e1': 'reload 完成，r40，45 个节点，8 条规则', 'ev.e2': 'sub-b 刷新失败，HTTP 503，沿用 r33', 'ev.e3': 'proxy，5 个成员测完，jp-01 超时', 'ev.e4': 'NFQUEUE 未就绪，nfnetlink_queue 未加载', 'ev.e5': 'diagnose op-1183 完成，7 项检查，2 项失败', 'ev.e6': '启动，honk 0.9.3，eBPF datapath 已挂 wan0、lan0', 'act.recentEvents': '最近事件', 'act.ruleHits': '规则命中', 'act.hits': '{n} 次', 'act.dnsCache': 'DNS 缓存', 'act.entries': '条目', 'act.posCache': '正缓存', 'act.negCache': '负缓存', 'act.upstreams': '上游', 'act.noIssues': '没有待处理的问题', 'act.timeout': '超时', 'act.filterNodes': '筛选节点', 'act.loading': '加载中…', 'act.nTimeouts': '{n} 个节点超时：{list}', 'act.needRestart': '需重启', 'act.view': '查看', 'act.coreOk': '核心服务正常', 'act.reloadConfig': '重新加载配置', 'act.flushDns': '清除 DNS 缓存', 'act.events': '事件', 'act.d7': '7 天', 'act.vsPrev': '较前一段', 'act.bySrc': '来源 IP', 'act.byHost': '域名', 'act.byOut': '出站', 'act.trafficNote': '只计可见流，本次浏览器会话内的采样，不持久。'
 };
 const en: Record<Key, string> = {
+  'conn.chain': 'Chain', 'conn.rule': 'Rule', 'conn.recomputed': 'Recomputed',
+  'act.noOutbounds': 'This backend does not provide outbound counters', 'act.emptyHistory': 'No history samples yet', 'act.historyRange': 'History range',
   'nav.routingTrace': 'Routing trace', 'nav.compat': 'Compat',
   'unit.d': 'd', 'unit.h': 'h', 'unit.m': 'm', 'unit.s': 's', 'ov.f.kind': 'Kind', 'ov.f.state': 'State', 'ov.f.visibility': 'Visibility', 'ov.f.backend': 'Backend', 'ov.f.programs': 'Programs', 'ov.f.hooks': 'Hooks', 'ov.f.routing': 'Routing publication', 'ov.f.health': 'Health', 'ov.f.lastError': 'Last error', 'ov.f.maps': 'Maps', 'ov.f.connState': 'Connection map occupancy', 'ov.f.rss': 'Resident memory', 'ov.f.cgroupCurrent': 'cgroup current', 'ov.f.cgroupLimit': 'cgroup limit', 'ov.f.cgroupPercent': 'cgroup usage', 'ov.f.oomHigh': 'high events', 'ov.f.oom': 'OOM events', 'ov.f.oomKill': 'OOM kills', 'ov.f.ebpfBytes': 'eBPF kernel memory', 'ov.generation': 'Generation ID', 'ov.revision': 'Config revision', 'ov.uptime': 'Uptime', 'ov.lastReload': 'Last reload',
   'ov.datapath': 'Datapath', 'ov.memory': 'Memory', 'ov.operations': 'Operations', 'ov.attachments': 'Attachments',
   'ov.name': 'Name', 'ov.interface': 'Interface', 'ov.direction': 'Direction', 'ov.state': 'State', 'ov.errors': 'Errors',
   'ov.reload': 'Reload', 'ov.suspend': 'Suspend', 'ov.resume': 'Resume', 'ov.running': 'Running',
   'ov.succeeded': 'Completed', 'ov.failed': 'Failed', 'ov.loading': 'Loading', 'ov.unavailable': 'Resource unavailable', 'ov.unknown': 'Unknown',
-  'act.loadFailed': 'Could not load activity data.', 'lifecycle.starting': 'Starting', 'lifecycle.running': 'Running', 'lifecycle.reloading': 'Reloading', 'lifecycle.suspended': 'Suspended', 'lifecycle.draining': 'Draining', 'lifecycle.degraded': 'Degraded', 'lifecycle.failed': 'Failed', 'act.noHistory': 'The native API does not provide history', 'act.unknown': 'Unknown',
+  'act.loadFailed': 'Could not load activity data.', 'lifecycle.starting': 'Starting', 'lifecycle.running': 'Running', 'lifecycle.reloading': 'Reloading', 'lifecycle.suspended': 'Suspended', 'lifecycle.draining': 'Draining', 'lifecycle.degraded': 'Degraded', 'lifecycle.failed': 'Failed', 'act.noHistory': 'This backend does not provide history', 'act.unknown': 'Unknown',
   'nav.activity': 'Activity', 'nav.overview': 'Overview', 'nav.connections': 'Connections', 'nav.clients': 'Clients', 'nav.policies': 'Policies', 'nav.rules': 'Rules', 'nav.dns': 'DNS', 'nav.resources': 'Resources', 'nav.config': 'Config', 'nav.validate': 'Validate', 'nav.events': 'Events',
   'nav.flows': 'Flows',
   'grp.status': 'Status', 'grp.network': 'Network', 'grp.proxy': 'Proxy', 'grp.system': 'System',

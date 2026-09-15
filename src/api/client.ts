@@ -82,6 +82,8 @@ export function createApi(base: string, token?: string): Api {
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
     capabilities: async signal => data(await client.GET('/api/v1/capabilities', {signal})),
     runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),
+    runtimeOutbounds: async signal => data(await client.GET('/api/v1/runtime/outbounds', {signal})),
+    trafficHistory: async (query, signal) => data(await client.GET('/api/v1/runtime/traffic/history', {params: {query}, signal})),
     datapath: async (detail, signal) => data(await client.GET('/api/v1/datapath', {params: {query: {detail}}, signal})),
     runtimeMemory: async signal => data(await client.GET('/api/v1/runtime/memory', {signal})),
     nodes: async (query, signal) => data(await client.GET('/api/v1/nodes', {params: {query}, signal})),
@@ -112,6 +114,6 @@ export function createApi(base: string, token?: string): Api {
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
     pollOperation, subscribeEvents,
-    history: () => null, configRules: () => null
+    configRules: () => null
   };
 }

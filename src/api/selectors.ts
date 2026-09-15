@@ -1,6 +1,6 @@
 import type {ApiEvent, Connection, ConnectionList, Datapath, EventKind, FlowStep, Group, HealthObservation, Node, ProbeResult, RuntimeMemory} from './model';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
-import type {Capabilities} from './model';
+import type {Capabilities, RuntimeOutbounds, TrafficHistory} from './model';
 
 const navResources: Record<string, Array<keyof Capabilities['resources']>> = {
   connections: ['connections'], flows: ['flows'], dns: ['dns_query', 'dns_cache'], events: ['events'], policies: ['groups'], rules: ['routing_trace'], overview: ['runtime']
@@ -25,26 +25,38 @@ export function clientRows(snapshot: ConnectionList | undefined): ClientRow[] {
   return [...rows.values()].map(row => ({...row, outbounds: [...row.outbounds].join('、')}));
 }
 
-/** Prefer TCP data probes, then the newest observation with the same dimensions. */
+/** The latency column compares one fixed observation tuple; missing is unknown. */
 export function preferredHealth(node: Node): HealthObservation | undefined {
-  let best: HealthObservation | undefined, rank = -1;
-  for (const observation of node.health) {
-    const score = (observation.transport === 'tcp' ? 4 : 0) + (observation.purpose === 'data' ? 2 : 0) + (observation.sample_source === 'probe' ? 1 : 0);
-    if (score > rank || (score === rank && observation.observed_at > (best?.observed_at ?? ''))) { best = observation; rank = score; }
-  }
-  return best;
+  return node.health.find(h => h.transport === 'tcp' && h.purpose === 'data' && h.measurement === 'tcp_connect' && h.ip_version === 'ipv4' && h.warmth === 'warm');
 }
 
-export function outboundUsage(snapshot: ConnectionList) {
-  const totals = new Map<string, bigint | null>();
-  for (const connection of [...snapshot.tcp, ...snapshot.udp]) {
-    const outbound = connection.outbound ?? '—';
-    totals.set(outbound, addU64(totals.has(outbound) ? totals.get(outbound)! : 0n, connection.download_bytes));
-  }
-  const total = addU64(...totals.values());
-  const rows = [...totals].map(([name, bytes]) => ({name, bytes, percent: pctU64(bytes, total)}));
+export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
+  const total = snapshot ? addU64(...snapshot.outbounds.map(row => row.download_bytes)) : null;
+  const rows = (snapshot?.outbounds ?? []).map(row => ({name: row.name, bytes: parseU64(row.download_bytes), percent: pctU64(row.download_bytes, total)}));
   rows.sort((a, b) => a.bytes === b.bytes ? 0 : a.bytes === null ? 1 : b.bytes === null ? -1 : a.bytes > b.bytes ? -1 : 1);
   return {rows, total};
+}
+
+export function trafficSeries(history: TrafficHistory | undefined) {
+  const rate = (value: string | null) => value === null ? null : Number(parseU64(value)) / 1000;
+  const samples = history?.samples ?? [];
+  return {timestamps: samples.map(s => Date.parse(s.sampled_at)), down: samples.map(s => rate(s.download_bytes_per_second)), up: samples.map(s => rate(s.upload_bytes_per_second)), connections: samples.map(s => s.connections)};
+}
+
+export function ipLiteral(text: string): string | undefined {
+  const value = text.trim().replace(/^\[([^\]]+)\]$/, '$1');
+  if (/^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value) && value.split('.').every(n => Number(n) <= 255)) return value;
+  if (!value.includes(':') || !/^[\da-f:.]+$/i.test(value)) return undefined;
+  try { return new URL('http://[' + value + ']/').hostname.slice(1, -1); } catch { return undefined; }
+}
+
+export function sourceIp(src: string | undefined): string | undefined {
+  if (!src) return undefined;
+  return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
+}
+
+export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>): string {
+  return row.outbound === 'direct' || row.outbound === 'block' ? row.outbound : row.chain.join(' → ') || '—';
 }
 
 export const connectionStates: Record<Connection['state'], string> = {observed: '觀測中', routing: '路由中', dialing: '撥號中', active: '進行中', closed: '已關閉', blocked: '已封鎖', failed: '失敗', unknown: '未知'};
@@ -64,7 +76,7 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 }
 
 export function connectionDetails(c: Connection): Array<[string, string]> {
-  return [['來源', c.src ?? '—'], ['目標位址', c.dst ?? '—'], ['域名', c.domain ?? '—'], ['程序名稱', c.pname ?? '—'], ['觀測來源', c.observed_by], ['上傳', formatBytes(c.upload_bytes)], ['下載', formatBytes(c.download_bytes)], ['上傳速率', formatRate(c.upload_bytes_per_second)], ['下載速率', formatRate(c.download_bytes_per_second)], ['開始時間', c.started_at ?? '—']];
+  return [['來源', c.src ?? '—'], ['目標位址', c.dst ?? '—'], ['域名', c.domain ?? '—'], ['入口', c.ingress ?? '—'], ['域名來源', c.domain_source ?? '—'], ['程序名稱', c.pname ?? '—'], ['觀測來源', c.observed_by], ['上傳', formatBytes(c.upload_bytes)], ['下載', formatBytes(c.download_bytes)], ['上傳速率', formatRate(c.upload_bytes_per_second)], ['下載速率', formatRate(c.download_bytes_per_second)], ['開始時間', c.started_at ?? '—']];
 }
 
 export function flowStepFields(step: FlowStep): Array<[string, string]> | null {
@@ -74,7 +86,7 @@ export function flowStepFields(step: FlowStep): Array<[string, string]> | null {
     case 'route': return [['chain', step.data.chain], ['plane', step.data.plane], ['規則', step.data.rules.filter(rule => rule.result === 'matched').map(rule => rule.expression ?? rule.rule_id).join('；') || '—'], ['outbound', text(step.data.outbound)], ['must', text(step.data.must)]];
     case 'dial_mode': return [['撥號目標', step.data.configured + ' → ' + step.data.effective_target], ['verification', step.data.verification]];
     case 'dns': return [['name', step.data.name], ['source / cache', step.data.source + ' / ' + step.data.cache], ['upstream', text(step.data.upstream)], ['selected_ip', text(step.data.selected_ip)]];
-    case 'outbound': return [['出站', text(step.data.routed_outbound) + ' → ' + text(step.data.effective_outbound)], ['選擇路徑', step.data.selection_path.map(p => p.group_id + ' → ' + text(p.member_id)).join('；') || '—'], ['leaf_node_id', text(step.data.leaf_node_id)], ['target', text(step.data.target)], ['status', step.data.status]];
+    case 'outbound': return [['出站', text(step.data.routed_outbound) + ' → ' + text(step.data.effective_outbound)], ['選擇路徑', step.data.selection_path.map(p => p.group_id + ' → ' + text(p.member_name ?? p.member_id)).join('；') || '—'], ['leaf_node_id', text(step.data.leaf_node_id)], ['target', text(step.data.target)], ['status', step.data.status]];
     case 'connection': return [['狀態', connectionStates[step.data.state] ?? step.data.state], ['milestone', step.data.milestone], ['reason', step.data.reason]];
     case 'datapath': return [['plane', step.data.plane], ['action', step.data.action], ['reason', step.data.reason]];
     case 'reroute': return [['performed', text(step.data.performed)], ['reason', step.data.reason]];

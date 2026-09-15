@@ -3,22 +3,25 @@ import {SearchField, Input, Button as RButton} from 'react-aria-components';
 import Search from '@react-spectrum/s2/icons/Search';
 import Close from '@react-spectrum/s2/icons/Close';
 import {useConnections} from '../../api/store';
-import {connectionDetails, connectionRows, connectionStates, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionDetails, connectionRows, connectionStates, ipLiteral, relativeStart} from '../../api/selectors';
 import {formatBytes} from '../../api/u64';
 import {Button, DataTable, Kv, LabeledSelect, Light, Segmented} from '../ui';
 import {RuleDialog} from '../RuleDialog';
 import type {PageProps} from './types';
+import {useT} from '../../app/i18n';
 
 export function Connections({go, query}: PageProps) {
+  const t = useT();
   const q = new URLSearchParams(query);
   const [text, setText] = useState(q.get('q') || q.get('src') || '');
   const [network, setNetwork] = useState('all');
   const [out, setOut] = useState('all');
   const [sel, setSel] = useState<string | null>(q.get('id') || '2');
-  const resource = useConnections();
+  const src = ipLiteral(text);
+  const resource = useConnections(src);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
   const needle = text.trim().toLowerCase();
-  const shown = rows.filter(c => (network === 'all' || c.network === network) && (out === 'all' || c.outbound === out) && (!needle || [c.dst, c.domain, c.src, c.pname, c.outbound].join(' ').toLowerCase().includes(needle)));
+  const shown = rows.filter(c => (network === 'all' || c.network === network) && (out === 'all' || c.outbound === out) && (src || !needle || [c.dst, c.domain, c.src, c.pname, c.outbound, c.chain.join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle)));
   const cur = shown.find(c => c.id === sel);
   const outbounds = [...new Set(rows.flatMap(c => c.outbound ? [c.outbound] : []))];
   return (
@@ -32,16 +35,16 @@ export function Connections({go, query}: PageProps) {
         <LabeledSelect label="出站" side value={out} onChange={setOut} items={[{id: 'all', label: '所有出站'}, ...outbounds.map(id => ({id, label: id}))]} />
         <Button onPress={() => { setText(''); setNetwork('all'); setOut('all'); }}>清除篩選</Button>
       </div>
-      <div className="rp-split">
+      <div className="rp-page">
         <DataTable label="連線" rows={shown} selected={sel} onSelect={setSel} empty="沒有符合的連線"
-          cols={[{id: 'dst', label: '目標', isRowHeader: true}, {id: 'src', label: '來源', width: 112}, {id: 'out', label: '出站', width: 100}, {id: 'state', label: '狀態', width: 100}, {id: 'down', label: '下載', width: 88, align: 'end'}, {id: 'age', label: '開始', width: 88, align: 'end'}]}
-          render={c => [c.domain || c.dst || '—', <span className="rp-code">{c.src ?? '—'}</span>, c.outbound ?? '—', connectionStates[c.state] ?? c.state, formatBytes(c.download_bytes), relativeStart(c.started_at)]} />
+          cols={[{id: 'dst', label: '目標', width: 200, isRowHeader: true}, {id: 'src', label: '來源', width: 136}, {id: 'chain', label: t('conn.chain'), width: 180}, {id: 'rule', label: t('conn.rule'), width: 220}, {id: 'state', label: '狀態', width: 100}, {id: 'down', label: '下載', width: 88, align: 'end'}, {id: 'age', label: '開始', width: 104, align: 'end'}]}
+          render={c => [c.domain || c.dst || '—', <span className="rp-code">{c.src ?? '—'}</span>, chainLabel(c), <span className="rp-rule"><span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>{c.rule_source === 'recomputed' ? <small className="rp-provenance">{t('conn.recomputed')}</small> : c.rule_source === 'unknown' ? <small className="rp-provenance">—</small> : null}</span>, connectionStates[c.state] ?? c.state, formatBytes(c.download_bytes), relativeStart(c.started_at)]} />
         {cur ? (
           <div className="rp-card">
             <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>
             <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>{connectionStates[cur.state] ?? cur.state} · {cur.network.toUpperCase()}</Light>
             <Kv items={connectionDetails(cur)} />
-            <Button isDisabled={!cur.flow_id} tip={cur.flow_id ? undefined : '此連線沒有可用的流程記錄'} onPress={() => cur.flow_id && go('flows', 'id=' + encodeURIComponent(cur.flow_id))}>查看流程</Button>
+            <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>查看流程</Button>
             <RuleDialog trigger={<Button accent>新增規則</Button>} presets={[
               ...(cur.domain ? [{label: '域名 ' + cur.domain, cond: 'domain(full: ' + cur.domain + ')'}] : []),
               ...(cur.dst ? [{label: '目標 IP', cond: 'dip(' + cur.dst.replace(/:\d+$/, '').replace(/^\[|\]$/g, '') + ')'}] : []),

@@ -3,7 +3,7 @@ import type {ApiEvent, EventOptions, GroupSelectionResult, Operation, OperationA
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import * as fixtures from './fixtures';
-import {flows as flowFixtures} from './flows';
+import {ipLiteral, sourceIp} from '../selectors';
 import {patchGroupConfig, probeResult, resolveLeaf} from './control';
 import {routingTrace} from './routing';
 
@@ -24,9 +24,10 @@ export function createMockApi(): Api {
   let capabilities = fixtures.capabilities;
   try { if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase; } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
-  const flows = structuredClone(flowFixtures);
+  const flows = structuredClone(fixtures.flows);
   const connections = structuredClone(fixtures.connections);
   const runtime = structuredClone(fixtures.runtime);
+  const outbounds = structuredClone(fixtures.runtimeOutbounds);
   const dnsCache = structuredClone(fixtures.dnsCache);
   const revisions = new Map<string, bigint>();
   const operations = new Map<string, OperationState>();
@@ -94,6 +95,23 @@ export function createMockApi(): Api {
       if (runtime.lifecycle.started_at) runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((Date.now() - Date.parse(runtime.lifecycle.started_at)) / 1000)));
       return structuredClone(runtime);
     },
+    runtimeOutbounds: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_outbounds.available) throw new ApiError(404, 'not_found', 'Outbound counters unavailable');
+      return structuredClone(outbounds);
+    },
+    trafficHistory: async (query, signal) => {
+      signal?.throwIfAborted();
+      const limits = capabilities.resources.traffic_history;
+      if (!limits.available) throw new ApiError(404, 'not_found', 'Traffic history unavailable');
+      const window_seconds = query?.window_seconds ?? limits.max_window_seconds!;
+      const max_points = query?.max_points ?? limits.max_points!;
+      if (!Number.isSafeInteger(window_seconds) || window_seconds < 1 || window_seconds > limits.max_window_seconds! || !Number.isSafeInteger(max_points) || max_points < 1 || max_points > limits.max_points!) throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
+      const history = fixtures.trafficHistory;
+      const samples = history.samples.filter(s => Date.parse(s.sampled_at) > Date.parse(history.observed_at) - window_seconds * 1000);
+      const stride = Math.max(1, Math.ceil(samples.length / max_points));
+      return {...history, window_seconds, sampled_every_seconds: history.sampled_every_seconds * stride, samples: structuredClone(samples.filter((_, i) => (samples.length - 1 - i) % stride === 0))};
+    },
     datapath: async (detail, signal) => {
       signal?.throwIfAborted();
       const snapshot = structuredClone(fixtures.datapath);
@@ -108,7 +126,7 @@ export function createMockApi(): Api {
     },
     groups: async signal => {
       signal?.throwIfAborted();
-      return groups.map(g => ({id: g.id, name: g.name, policy: {...g.policy}, member_count: g.members.length, selection: {tcp_member_id: g.runtime.selection.tcp?.member_id ?? null, udp_member_id: g.runtime.selection.udp?.member_id ?? null}}));
+      return groups.map(g => ({id: g.id, name: g.name, config_revision: g.config_revision, policy: {...g.policy}, member_count: g.members.length, selection: {tcp_member_id: g.runtime.selection.tcp?.member_id ?? null, udp_member_id: g.runtime.selection.udp?.member_id ?? null}}));
     },
     group: async (id, signal) => { signal?.throwIfAborted(); return structuredClone(found(groups.find(g => g.id === id), 'Group')); },
     selectGroup: async (groupId, request, signal) => {
@@ -125,9 +143,13 @@ export function createMockApi(): Api {
         for (const connection of connections[network]) {
           if (connection.outbound !== groupId || !['active', 'dialing', 'routing'].includes(connection.state)) continue;
           interrupted = true;
+          if (connection.state === 'active') {
+            const counter = outbounds.outbounds.find(row => row.name === connection.outbound);
+            if (counter) counter.active_connections--;
+          }
           connection.state = 'closed';
           connection.upload_bytes_per_second = connection.download_bytes_per_second = '0';
-          const flow = flows.find(f => f.id === connection.flow_id);
+          const flow = flows.find(f => f.connection_id === connection.id);
           if (flow) {
             const observed_at = new Date().toISOString();
             const last = flow.trace.steps[flow.trace.steps.length - 1];
@@ -173,14 +195,16 @@ export function createMockApi(): Api {
     },
     connections: async (query, signal) => {
       signal?.throwIfAborted();
-      const snapshot = structuredClone(connections);
-      const tcp = query?.type === 'udp' ? [] : snapshot.tcp.slice(0, query?.limit);
-      const udp = query?.type === 'tcp' ? [] : snapshot.udp.slice(0, query?.limit);
-      return {...snapshot, tcp, udp, truncated: tcp.length < (query?.type === 'udp' ? 0 : snapshot.total_tcp) || udp.length < (query?.type === 'tcp' ? 0 : snapshot.total_udp)};
+      const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
+      const tcp = query?.type === 'udp' ? [] : connections.tcp.filter(c => !src || sourceIp(c.src) === src);
+      const udp = query?.type === 'tcp' ? [] : connections.udp.filter(c => !src || sourceIp(c.src) === src);
+      const limit = query?.limit ?? 1000;
+      return {...connections, total_tcp: tcp.length, total_udp: udp.length, tcp: structuredClone(tcp.slice(0, limit)), udp: structuredClone(udp.slice(0, Math.max(0, limit - tcp.length))), truncated: tcp.length + udp.length > limit};
     },
     flows: async (query, signal) => {
       signal?.throwIfAborted();
-      const result = page(flows.filter(f => (!query?.network || query.network === 'all' || f.network === query.network) && (!query?.state || query.state === 'all' || f.state === query.state)), query?.cursor, query?.limit);
+      const result = page(flows.filter(f => (!query?.network || query.network === 'all' || f.network === query.network) && (!query?.state || query.state === 'all' || f.state === query.state) && (query?.connection_id === undefined || f.connection_id === query.connection_id)), query?.cursor, query?.limit);
       return {instance_id: fixtures.instanceId, observed_at: fixtures.observedAt, coverage: {userspace_tcp: 'full', userspace_udp: 'full', kernel_direct: 'partial', kernel_block: 'partial', dns_intercept: 'partial', kernel_bypass: 'none'}, dropped_records: '0', flows: structuredClone(result.items.map(({trace, ...summary}) => summary)), next_cursor: result.next_cursor};
     },
     flow: async (id, signal) => { signal?.throwIfAborted(); return structuredClone(found(flows.find(f => f.id === id), 'Flow')); },
@@ -244,6 +268,6 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events, history: () => fixtures.history, configRules: () => fixtures.configRules
+    subscribeEvents: events, configRules: () => fixtures.configRules
   };
 }

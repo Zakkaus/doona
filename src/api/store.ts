@@ -97,6 +97,18 @@ export function useRuntime(enabled = true) {
   const api = getApi();
   return useResource(signal => api.runtime(signal), {deps: [api], enabled});
 }
+export function useRuntimeOutbounds(enabled: boolean) {
+  const api = getApi();
+  return useResource(signal => api.runtimeOutbounds(signal), {deps: [api], enabled});
+}
+const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
+export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
+  const api = getApi();
+  const limits = capabilities?.resources.traffic_history;
+  const window_seconds = Math.min(historyWindows[range] ?? 720, limits?.max_window_seconds ?? 720);
+  const max_points = Math.min(360, limits?.max_points ?? 360);
+  return useResource(signal => api.trafficHistory({window_seconds, max_points}, signal), {deps: [api, window_seconds, max_points], enabled: limits?.available === true});
+}
 export function useNodes() {
   const api = getApi();
   return useResource(async signal => {
@@ -114,11 +126,10 @@ export function useGroups() {
   const api = getApi();
   return useResource(signal => api.groups(signal), {deps: [api], every: 30000});
 }
-export function useConnections() {
+export function useConnections(src?: string) {
   const api = getApi();
-  return useResource(signal => api.connections({type: 'all', detail: 'full', limit: 1000}, signal), {deps: [api]});
+  return useResource(signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal), {deps: [api, src]});
 }
-export function useMockHistory() { return getApi().history(); }
 export function useConfigRules() { return getApi().configRules(); }
 
 const firstSeen = new Map<string, string>();
@@ -173,18 +184,18 @@ export function useRoutingTrace() {
   return {form, setForm, result, error: error ?? capabilities.error, busy, submit, invalid, available, modes};
 }
 
-export function useFlows() {
+export function useFlows(connection_id?: string) {
   const api = getApi();
   const resource = useResource(async signal => {
     let cursor: string | undefined;
     let snapshot: FlowList | undefined;
     do {
-      const result = await api.flows({network: 'all', state: 'all', cursor, limit: 1000}, signal);
+      const result = await api.flows({network: 'all', state: 'all', connection_id, cursor, limit: 1000}, signal);
       if (snapshot) snapshot.flows.push(...result.flows); else snapshot = result;
       cursor = result.next_cursor ?? undefined;
     } while (cursor);
     return snapshot;
-  }, {deps: [api]});
+  }, {deps: [api, connection_id]});
   useEvents(event => { if (event.event === 'flow.updated' || event.event === 'flow.gap') resource.refetch(); });
   return resource;
 }
