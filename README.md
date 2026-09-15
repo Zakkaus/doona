@@ -19,7 +19,7 @@ The build writes the static site to `dist/`. Serve `dist/` with any static serve
 
 ## Use a backend
 
-Until the settings page lands, configure the backend in browser local storage. Set `doona-api` to the server root or reverse-proxy prefix. Set `doona-api-token` to the bearer token. Leave `doona-api` unset to use the mock backend.
+Until the settings page lands, configure the backend in browser local storage. Set `doona-api` to the server root or reverse-proxy prefix. Set `doona-api-token` to the bearer token. Leave `doona-api` unset, or set it to `mock`, to use the mock backend.
 
 ## Check the repository
 
