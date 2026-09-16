@@ -383,9 +383,30 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[]; va
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: string; pct: number; color: string; icon?: ReactNode}) {
-  return (
-    <div className="rp-bar">
+// A ranked row: label, value, a thin fill. With `onPress` it is a toggle in the same clothes, for lists
+// where picking a row narrows something else (the flow map pins a path this way).
+export function Bar({
+  label,
+  value,
+  pct,
+  color,
+  icon,
+  selected,
+  dim,
+  onPress,
+  ...rest
+}: {
+  label: ReactNode;
+  value: string;
+  pct: number;
+  color: string;
+  icon?: ReactNode;
+  selected?: boolean;
+  dim?: boolean;
+  onPress?: (selected: boolean) => void;
+} & Record<`data-${string}`, string | undefined>) {
+  const body = (
+    <>
       <div className="top">
         <span className="l">
           {icon && <span className="ic">{icon}</span>}
@@ -396,6 +417,17 @@ export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: 
       <div className="track" aria-hidden="true">
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />
       </div>
+    </>
+  );
+  if (onPress)
+    return (
+      <ToggleButton className="rp-bar pressable" isSelected={!!selected} onChange={onPress} data-dim={dim ? '' : undefined} {...rest}>
+        {body}
+      </ToggleButton>
+    );
+  return (
+    <div className="rp-bar" data-dim={dim ? '' : undefined} {...rest}>
+      {body}
     </div>
   );
 }
@@ -722,8 +754,10 @@ export function DataTable<T extends {id: string}>({
   const [ref, width] = useContentWidth<HTMLDivElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
   const index = new Map(cols.map((column, i) => [column.id, i]));
+  // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
+  const fitted = Math.min(height, 41 + Math.max(rows.length, 2) * 40);
   return (
-    <ResizableTableContainer ref={ref} className="rp-table" style={{height}}>
+    <ResizableTableContainer ref={ref} className="rp-table" style={{height: fitted}}>
       <Table
         aria-label={label}
         selectionMode={onSelect ? 'single' : 'none'}
@@ -993,6 +1027,54 @@ export function Tabs({
 // From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
 // selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
 export const panelQuery = '(min-width: 1200px)';
+
+// A wrapping row of toggle chips with one selectable at a time; a count sits after the label when given.
+export function Chips({
+  label,
+  items,
+  value,
+  onChange
+}: {
+  label: string;
+  items: Array<{id: string; label: string; count?: string}>;
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  return (
+    <ToggleButtonGroup
+      className="rp-chips"
+      aria-label={label}
+      selectionMode="single"
+      selectedKeys={value ? [value] : []}
+      onSelectionChange={keys => {
+        const next = [...keys][0];
+        onChange(next == null ? null : String(next));
+      }}
+    >
+      {items.map(item => (
+        <ToggleButton key={item.id} id={item.id} className="rp-btn small">
+          <span className="rp-truncate">{item.label}</span>
+          {item.count !== undefined && <span className="n">{item.count}</span>}
+        </ToggleButton>
+      ))}
+    </ToggleButtonGroup>
+  );
+}
+
+// Hands the browser a file to save; the URL is released once the click has been dispatched.
+export function downloadFile(name: string, content: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], {type}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export function csvLine(values: Array<string | number | null | undefined>): string {
+  return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
+}
 
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);

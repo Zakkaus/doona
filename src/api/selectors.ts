@@ -16,11 +16,10 @@ import type {
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 import type {RuntimeOutbounds, TrafficHistory} from './model';
 
-/** The latency column compares one fixed observation tuple; missing is unknown. */
+/** The latency column compares one observation tuple: warm TCP data probes, IPv4 first and IPv6 when that is all a node has. */
 export function preferredHealth(node: Node): HealthObservation | undefined {
-  return node.health.find(
-    h => h.transport === 'tcp' && h.purpose === 'data' && h.measurement === 'tcp_connect' && h.ip_version === 'ipv4' && h.warmth === 'warm'
-  );
+  const warm = node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data' && h.measurement === 'tcp_connect' && h.warmth === 'warm');
+  return warm.find(h => h.ip_version === 'ipv4') ?? warm.find(h => h.ip_version === 'ipv6');
 }
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
@@ -57,8 +56,13 @@ export function sourceIp(src: string | undefined): string | undefined {
   return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
 }
 
-export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>): string {
-  return row.outbound === 'direct' || row.outbound === 'block' ? row.outbound : row.chain.join(' → ') || '—';
+// Built-in outbounds read in the user's language; group and node names stay as configured.
+export function outboundLabel(name: string | null, label: LabelFn): string {
+  return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
+}
+export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: LabelFn): string {
+  if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
+  return row.chain.join(' → ') || '—';
 }
 
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
@@ -352,6 +356,14 @@ export function localTime(iso: string | null, locale: string): string {
   return formatter.format(t);
 }
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
+export const eventKindLabels: Record<EventKind, Key> = {
+  'stream.ready': 'event.k.streamReady',
+  'runtime.updated': 'event.k.runtimeUpdated',
+  'flow.updated': 'event.k.flowUpdated',
+  'flow.gap': 'event.k.flowGap',
+  'operation.updated': 'event.k.operationUpdated',
+  'generation.changed': 'event.k.generationChanged'
+};
 export function eventSummary(event: ApiEvent): MessageRef {
   switch (event.event) {
     case 'stream.ready':

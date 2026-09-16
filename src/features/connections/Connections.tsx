@@ -13,11 +13,14 @@ import {
   Segmented,
   TextField,
   ErrorMessage,
+  csvLine,
+  downloadFile,
   errorText,
   panelQuery,
   toast,
   useMediaQuery
 } from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -142,6 +145,38 @@ export function Connections({go, query}: PageProps) {
           </Button>
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
+        <span className="rp-grow" />
+        <Button
+          isDisabled={!shown.length}
+          onPress={() =>
+            downloadFile(
+              'connections-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv',
+              [
+                csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
+                ...shown.map(c =>
+                  csvLine([
+                    c.id,
+                    c.dst,
+                    c.domain,
+                    c.src,
+                    c.network,
+                    c.state,
+                    c.outbound,
+                    c.chain.join(' > '),
+                    c.rule_expression,
+                    c.upload_bytes,
+                    c.download_bytes,
+                    c.started_at
+                  ])
+                )
+              ].join('\n') + '\n',
+              'text/csv;charset=utf-8'
+            )
+          }
+        >
+          <Download />
+          {t('conn.export')}
+        </Button>
       </div>
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable

@@ -798,11 +798,6 @@
   opacity: 0;
   transform: rotate(-90deg) scale(0.5);
 }
-.rp-dialog .close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-}
 .rp-dialog {
   position: relative;
 }
@@ -822,9 +817,15 @@ body {
 body {
   font:
     14px/20px 'Noto Sans TC',
+    'Noto Sans SC',
     system-ui,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. */
+:lang(zh-CN) body,
+body:lang(zh-CN) {
+  font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -1063,6 +1064,18 @@ input {
   .rp-mobile-nav {
     display: none;
   }
+}
+.rp-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.rp-hint {
+  color: var(--rp-subtle);
+  font-size: 13px;
+  line-height: 20px;
 }
 .rp-h1 {
   font-size: 28px;
@@ -1413,6 +1426,27 @@ input {
 .rp-seg .rp-btn[data-hovered] {
   color: var(--rp-text);
 }
+/* Chips: a wrapping row of small toggles; the chosen one takes the selection tint. */
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-chips .rp-btn {
+  max-width: 100%;
+  min-width: 0;
+  border-color: var(--rp-hl-med);
+}
+.rp-chips .rp-btn .n {
+  color: var(--rp-subtle);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.rp-chips .rp-btn[data-selected] {
+  background: var(--rp-selected);
+  border-color: var(--rp-pine);
+}
 .rp-seg .rp-btn[data-selected] {
   background: var(--rp-surface);
   color: var(--rp-pine);
@@ -1531,6 +1565,25 @@ input {
   height: 100%;
   display: block;
 }
+.flag.mark {
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--rp-on-accent);
+  background: var(--rp-muted);
+}
+.flag.mark[data-kind='direct'] {
+  background: var(--rp-foam);
+}
+.flag.mark[data-kind='block'] {
+  background: var(--rp-love);
+}
+.flag.mark[data-kind='node'] {
+  background: var(--rp-pine);
+  font-size: 8px;
+}
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);
@@ -1614,6 +1667,32 @@ input {
 .rp-bar .fill {
   height: 100%;
   border-radius: 2px;
+}
+.rp-bar.pressable {
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 150ms var(--rp-ease),
+    opacity 150ms var(--rp-ease);
+}
+.rp-bar.pressable[data-selected] {
+  background: var(--rp-selected);
+}
+.rp-bar.pressable[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-bar[data-dim] {
+  opacity: 0.4;
 }
 .rp-list {
   display: flex;
@@ -2812,17 +2891,33 @@ button.rp-node[data-focus-visible] {
 .rp-table [role='row'][data-pressed] {
   background-color: var(--rp-hl-high);
 }
-.rp-table [role='row'][data-disabled],
 .rp-node[data-disabled],
 .rp-item[data-disabled] {
   opacity: 0.5;
   cursor: default;
 }
+/* Group rows are headings, not disabled data: full-strength text on the overlay, the count muted. */
+.rp-table [role='row'][data-disabled] {
+  cursor: default;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+}
+.rp-chain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
 [data-focus-visible],
-.rp-truncate:focus-visible,
-.rp-input:focus-within {
+.rp-truncate:focus-visible {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
+}
+/* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
+.rp-input:focus-within {
+  border-color: var(--rp-pine);
+  box-shadow: 0 0 0 1px var(--rp-pine);
 }
 .rp-table [data-focus-visible],
 .rp-item[data-focus-visible] {
@@ -2843,6 +2938,10 @@ button.rp-node[data-focus-visible] {
   border-radius: 8px;
   padding: 0 8px;
   color: var(--rp-pine);
+}
+/* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
+.rp-card > .rp-link {
+  margin-left: -8px;
 }
 @media (max-width: 600px) {
   .rp-row {
@@ -2972,5 +3071,47 @@ button.rp-node[data-focus-visible] {
   from {
     translate: 24px 0;
     opacity: 0;
+  }
+}
+
+/* ---- Routing: one row per outbound in a single card; a dimmed row is off the pinned path. ---- */
+.rp-lanes {
+  gap: 0;
+  padding: 4px 16px;
+}
+.rp-lane {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 240px;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px 0;
+  transition: opacity 150ms var(--rp-ease);
+}
+.rp-lane + .rp-lane {
+  border-top: 1px solid var(--rp-hl-low);
+}
+.rp-lane[data-dim] {
+  opacity: 0.35;
+}
+.rp-lane-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-lane-title .rp-light {
+  min-width: 0;
+}
+.rp-lane-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-lane-node .rp-node {
+  height: auto;
+  padding: 6px 10px;
+}
+@media (max-width: 1023px) {
+  .rp-lane {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

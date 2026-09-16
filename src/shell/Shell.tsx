@@ -199,11 +199,13 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
         if (!o) onClose();
       }}
     >
-      <Button quiet icon className="close" onPress={onClose} label={t('close')}>
-        <Close />
-      </Button>
-      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-      <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus />
+      <div className="rp-toolbar">
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
+        <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
+        <Button quiet icon onPress={onClose} label={t('close')}>
+          <Close />
+        </Button>
+      </div>
       {error && <ErrorMessage error={error} />}
       {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
       <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
@@ -213,7 +215,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
             {hits.conns.map(c => (
               <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
                 <span>{c.domain || c.dst || c.src || c.id}</span>
-                <span className="desc">{chainLabel(c)}</span>
+                <span className="desc">{chainLabel(c, t)}</span>
               </ListBoxItem>
             ))}
           </ListBoxSection>
@@ -449,7 +451,10 @@ function Frame({
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">
-            <h1 className="rp-h1">{t(titleKey)}</h1>
+            <div className="rp-title">
+              <h1 className="rp-h1">{t(titleKey)}</h1>
+              {feature.nav?.hintKey && <span className="rp-hint">{t(feature.nav.hintKey)}</span>}
+            </div>
             <div className="rp-mobile-nav">
               <LabeledSelect
                 label={t('page')}

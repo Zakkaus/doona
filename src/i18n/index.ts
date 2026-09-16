@@ -50,9 +50,11 @@ export function useT(): Translator {
 }
 
 const lists = new Map<Lang, Intl.ListFormat>();
+// A plain enumeration for cells and captions: Chinese uses the enumeration comma, English a comma with no "and".
 export function formatList(lang: Lang, values: string[]): string {
+  if (lang.startsWith('zh')) return values.join('、');
   let formatter = lists.get(lang);
-  if (!formatter) lists.set(lang, (formatter = new Intl.ListFormat(LOCALE[lang], {style: 'short', type: 'unit'})));
+  if (!formatter) lists.set(lang, (formatter = new Intl.ListFormat(LOCALE[lang], {style: 'narrow', type: 'conjunction'})));
   return formatter.format(values);
 }
 

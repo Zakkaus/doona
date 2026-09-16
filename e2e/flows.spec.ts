@@ -27,6 +27,29 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(page.locator('.rp-panel')).toHaveCount(0);
 });
 
+test('the traffic map lays the config out as lanes and a pinned item filters the list', async ({page}) => {
+  await page.goto('/#/flows');
+  const map = page.getByRole('region', {name: 'Traffic path'});
+  const rows = page.locator('.rp-table tbody tr[data-key]');
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+  const lanes = map.locator('.rp-lane');
+  // One card per outbound: every configured group is there, used or not, with its selected node.
+  for (const group of ['proxy', 'Direct', 'airport']) await expect(map.locator('strong', {hasText: new RegExp(`^${group}$`)})).toBeVisible();
+  await expect(lanes.filter({has: page.locator('strong', {hasText: /^airport$/})})).toContainText('Selected');
+  const rule = map.getByRole('radio', {name: 'dip(geoip:cn) 2', exact: true});
+  await rule.click();
+  await expect(page).toHaveURL(/path=rule%3Adip/);
+  await expect(rule).toHaveAttribute('aria-checked', 'true');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('dip(geoip:cn)');
+  expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
+  await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
+  await expect(rows).toHaveCount(total);
+  await expect(page).not.toHaveURL(/path=/);
+  await expect(map.locator('[data-dim]')).toHaveCount(0);
+});
+
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
   await page.goto('/#/flows');
   const rows = page.locator('.rp-table tbody tr[data-key]');

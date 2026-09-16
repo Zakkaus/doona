@@ -456,6 +456,59 @@ flows.push(unobservedFlow, {
   id: 'flow-ipv6',
   input: {...unobservedFlow.input, src: '[2001:db8::12]:5000'}
 });
+// Retained terminal flows without a live connection: the routing view shows a config with many rules.
+function retained(id: string, domain: string, outbound: string, network: 'tcp' | 'udp' = 'tcp') {
+  const seed: ConnectionSeed = {
+    id,
+    flow_id: 'flow-' + id,
+    pname: null,
+    state: outbound === 'block' ? 'blocked' : 'closed',
+    src: '10.0.0.' + (10 + (Number(id.replace(/\D/g, '')) % 40)) + ':' + (40000 + Number(id.replace(/\D/g, ''))),
+    dst: '203.0.113.' + (Number(id.replace(/\D/g, '')) % 250) + ':443',
+    domain,
+    outbound,
+    started_at: ago(600 + Number(id.replace(/\D/g, '')) * 7),
+    observed_by: outbound === 'direct' || outbound === 'block' ? 'ebpf' : 'userspace',
+    upload_bytes: '4096',
+    download_bytes: '65536',
+    upload_bytes_per_second: '0',
+    download_bytes_per_second: '0'
+  };
+  flows.push(createFlow(seed, network, observedAt, instanceId));
+}
+for (const [id, domain, outbound] of [
+  ['r01', 'www.netflix.com', 'proxy'],
+  ['r02', 'rr1---sn-ab5l6n7z.googlevideo.com', 'proxy'],
+  ['r03', 'www.google.com', 'proxy'],
+  ['r04', 'raw.githubusercontent.com', 'proxy'],
+  ['r05', 'gateway.icloud.com', 'direct'],
+  ['r06', 'login.live.com', 'proxy'],
+  ['r07', 'store.steampowered.com', 'proxy'],
+  ['r08', 'api.spotify.com', 'proxy'],
+  ['r09', 'pbs.twimg.com', 'proxy'],
+  ['r10', 'scontent.cdninstagram.com', 'proxy'],
+  ['r11', 'chatgpt.com', 'proxy'],
+  ['r12', 'claude.ai', 'proxy'],
+  ['r13', 'www.reddit.com', 'proxy'],
+  ['r14', 'en.wikipedia.org', 'proxy'],
+  ['r15', 'api.cloudflare.com', 'proxy'],
+  ['r16', 'www.taobao.com', 'direct'],
+  ['r17', 'weixin.qq.com', 'direct'],
+  ['r18', 'www.zhihu.com', 'direct'],
+  ['r19', 'www.douyin.com', 'direct'],
+  ['r20', 'www.iqiyi.com', 'direct'],
+  ['r21', 'www.jd.com', 'direct'],
+  ['r22', 'www.xiaohongshu.com', 'direct'],
+  ['r23', 'www.baidu.com', 'direct'],
+  ['r24', 'steamcdn-a.akamaihd.net', 'proxy'],
+  ['r25', 'www.speedtest.net', 'direct'],
+  ['r26', 'ad.doubleclick.net', 'block'],
+  ['r27', 'pagead2.googlesyndication.com', 'block'],
+  ['r28', 'controlplane.tailscale.com', 'direct'],
+  ['r29', 'www.youtube.com', 'proxy'],
+  ['r30', 'graph.facebook.com', 'proxy']
+] as const)
+  retained(id, domain, outbound);
 
 export function connectionFixtures() {
   const templates = [

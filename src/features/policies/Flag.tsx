@@ -76,3 +76,24 @@ export function Flag({name, className}: {name: string; className?: string}) {
   if (!svg) return null;
   return <span className={className ?? 'flag'} role="img" aria-label={regionOf(name) ?? ''} dangerouslySetInnerHTML={{__html: svg}} />;
 }
+
+// Built-in outbounds get a mark in the flag's frame, so a chain reads the same whether it ends in a node or not.
+export function OutboundMark({name, className}: {name: string | null; className?: string}) {
+  if (name === 'direct' || name === 'block' || name === null || name === 'unknown') {
+    const kind = name === 'direct' ? 'direct' : name === 'block' ? 'block' : 'unknown';
+    return (
+      <span className={(className ?? 'flag') + ' mark'} data-kind={kind} role="img" aria-hidden="true">
+        {kind === 'direct' ? '⇄' : kind === 'block' ? '⊘' : '?'}
+      </span>
+    );
+  }
+  // A node outside the flag table still gets a mark, so a chain column never has an empty slot.
+  if (!flagSvg(name)) {
+    return (
+      <span className={(className ?? 'flag') + ' mark'} data-kind="node" role="img" aria-hidden="true">
+        ◆
+      </span>
+    );
+  }
+  return <Flag name={name} className={className} />;
+}

@@ -197,3 +197,21 @@ test('closing a connection removes it from the list and clears the selection', a
   await expect(page.locator('.rp-toast.negative')).toContainText('cannot be closed');
   await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
 });
+
+test('the connection list exports the filtered rows as CSV', async ({page}) => {
+  await page.goto('/#/connections');
+  await page.locator('.rp-toolbar input').fill('api.telegram.org');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Export CSV', exact: true}).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^connections-.*\.csv$/);
+  // The download stream is read chunk by chunk; the spec stays free of Node typings.
+  const stream = await file.createReadStream();
+  const decoder = new TextDecoder();
+  let body = '';
+  for await (const chunk of stream as AsyncIterable<Uint8Array>) body += decoder.decode(chunk, {stream: true});
+  const lines = body.trim().split('\n');
+  expect(lines[0]).toBe('id,target,domain,source,network,state,outbound,chain,rule,upload_bytes,download_bytes,started_at');
+  expect(lines.length).toBe(151);
+  expect(lines.slice(1).every(line => line.includes('api.telegram.org'))).toBe(true);
+});

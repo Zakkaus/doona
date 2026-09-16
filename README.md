@@ -45,7 +45,7 @@ sha256sum -c SHA256SUMS
 tar -xzf "doona-${VERSION}.tar.gz" -C "$WEBROOT"
 ```
 
-To add the optional Noto Sans TC fonts, extract into the same directory:
+To add the optional Noto Sans TC and SC fonts, extract into the same directory:
 
 ```sh
 tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
@@ -143,4 +143,4 @@ Local archive versions come from `package.json`; release builds use the Git desc
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). Noto Sans TC uses the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0 and flag-icons under MIT. The duck logo is the maintainer's artwork.
+[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0 and flag-icons under MIT. The duck logo is the maintainer's artwork.

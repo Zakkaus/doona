@@ -24,7 +24,8 @@ const Events = lazy(() => import('../features/events/Events').then(m => ({defaul
 type Feature = {
   id: string;
   path: string;
-  nav: {group: Key; titleKey: Key; Icon: typeof Home} | null;
+  // hintKey: the one question the page answers, shown under its title so the pages do not read as duplicates.
+  nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;
   requires: {resources?: Array<keyof Capabilities['resources']>};
@@ -37,7 +38,7 @@ export const features: Feature[] = [
     id: 'overview',
     path: 'overview',
     shortcut: 'o',
-    nav: {group: 'grp.status', titleKey: 'nav.overview', Icon: Home},
+    nav: {group: 'grp.status', titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
     Page: Overview,
     requires: {resources: ['runtime']}
   },
@@ -45,7 +46,7 @@ export const features: Feature[] = [
     id: 'connections',
     path: 'connections',
     shortcut: 'c',
-    nav: {group: 'grp.network', titleKey: 'nav.connections', Icon: Link},
+    nav: {group: 'grp.network', titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
     Page: Connections,
     requires: {resources: ['connections']}
   },
@@ -53,7 +54,7 @@ export const features: Feature[] = [
     id: 'flows',
     path: 'flows',
     shortcut: 'f',
-    nav: {group: 'grp.network', titleKey: 'nav.flows', Icon: ListBulleted},
+    nav: {group: 'grp.network', titleKey: 'nav.flows', hintKey: 'hint.flows', Icon: ListBulleted},
     Page: Flows,
     requires: {resources: ['flows']}
   },
@@ -61,7 +62,7 @@ export const features: Feature[] = [
     id: 'policies',
     path: 'policies',
     shortcut: 'p',
-    nav: {group: 'grp.proxy', titleKey: 'nav.policies', Icon: Share},
+    nav: {group: 'grp.proxy', titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
     Page: Policies,
     requires: {resources: ['groups']}
   },
@@ -69,12 +70,24 @@ export const features: Feature[] = [
     id: 'rules',
     path: 'rules',
     shortcut: 'r',
-    nav: {group: 'grp.proxy', titleKey: 'nav.rules', Icon: ListBulleted},
+    nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
     requires: {resources: ['routing_trace', 'flows']}
   },
-  {id: 'dns', path: 'dns', nav: {group: 'grp.proxy', titleKey: 'nav.dns', Icon: GlobeGrid}, Page: Dns, requires: {resources: ['dns_query', 'dns_cache']}},
-  {id: 'events', path: 'events', nav: {group: 'grp.system', titleKey: 'nav.events', Icon: History}, Page: Events, requires: {resources: ['events']}},
+  {
+    id: 'dns',
+    path: 'dns',
+    nav: {group: 'grp.proxy', titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
+    Page: Dns,
+    requires: {resources: ['dns_query', 'dns_cache']}
+  },
+  {
+    id: 'events',
+    path: 'events',
+    nav: {group: 'grp.system', titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
+    Page: Events,
+    requires: {resources: ['events']}
+  },
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ];
 
