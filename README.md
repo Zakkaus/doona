@@ -118,6 +118,8 @@ pnpm package
 
 The build writes `dist/`. `pnpm check` runs type, lint, translation, formatting, unit and generated-API checks. Browser tests cover root and `/ui/` deployments. Packaging writes `release/doona-<version>.tar.gz`, `release/doona-fonts-<version>.tar.gz` and `release/SHA256SUMS`.
 
+Run `pnpm test:coverage` from the repository root to print coverage totals and write `coverage/lcov.info`.
+
 Local archive versions come from `package.json`; release builds use the Git description. Archive timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. Set `SOURCE_DATE_EPOCH` when packaging without Git metadata. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 | Path            | Purpose                                       |

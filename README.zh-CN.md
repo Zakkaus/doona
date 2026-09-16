@@ -134,6 +134,8 @@ pnpm package
 浏览器测试覆盖根路径与 `/ui/` 部署。
 打包结果为 `release/doona-<version>.tar.gz`、`release/doona-fonts-<version>.tar.gz` 与 `release/SHA256SUMS`。
 
+在仓库根目录执行 `pnpm test:coverage`，输出覆盖率汇总并生成 `coverage/lcov.info`。
+
 本地归档版本取自 `package.json`；发行构建使用 Git 版本描述。
 归档时间戳取自 `SOURCE_DATE_EPOCH`，未设置时使用 HEAD 提交时间。
 没有 Git 元数据时，打包前须设置 `SOURCE_DATE_EPOCH`。

@@ -5,7 +5,7 @@ set -e
 SRC="$(cd "$(dirname "$0")" && pwd)"
 B="${DOONA_BUILD:-/scratch/ssd/doona-build}"
 mkdir -p "$B"
-rsync -a --delete --exclude node_modules --exclude dist --exclude .git --exclude vendor --exclude artifact --exclude reference --exclude .agents --exclude .claude "$SRC/" "$B/"
+rsync -a --delete --exclude node_modules --exclude dist --exclude .git --exclude reference --exclude .agents --exclude .claude "$SRC/" "$B/"
 cd "$B"
 [ -d node_modules ] || { pnpm install; pnpm approve-builds --all >/dev/null 2>&1 || true; pnpm install; }
 pnpm "${1:-build}"
