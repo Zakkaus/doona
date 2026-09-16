@@ -305,7 +305,8 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
       interrupt_connections: false
     },
     runtime: {
-      selection: {tcp: selection, udp: {...selection}},
+      // The proxy group selects different members per network so the TCP/UDP switch has something to show.
+      selection: {tcp: selection, udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}},
       health: nodes
         .filter(n => members.includes(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))

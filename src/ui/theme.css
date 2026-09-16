@@ -1215,7 +1215,7 @@ input {
   --rp-group: var(--rp-c1);
 }
 .rp-side [data-group='network'] {
-  --rp-group: var(--rp-c2);
+  --rp-group: var(--rp-c6);
 }
 .rp-side [data-group='proxy'] {
   --rp-group: var(--rp-c3);
@@ -1233,7 +1233,7 @@ input {
   --rp-group: var(--rp-c1);
 }
 .rp-side:has([data-group='network'] [aria-current='page']) .rp-nav-slider {
-  --rp-group: var(--rp-c2);
+  --rp-group: var(--rp-c6);
 }
 .rp-side:has([data-group='proxy'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c3);
@@ -2674,10 +2674,6 @@ button.rp-node[data-focus-visible] {
   margin: 0;
   padding: 0 10px;
   font-weight: 500;
-}
-.rp-flow-stage .rp-count {
-  background: var(--rp-hl-med);
-  color: var(--rp-subtle);
 }
 .rp-flow-row {
   width: 100%;

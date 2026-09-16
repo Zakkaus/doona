@@ -58,7 +58,7 @@ function StageColumns({graph, selected, onSelect}: GraphProps) {
           <div className="rp-flow-stage rp-list" key={stage}>
             <h4 className="rp-label">
               {t(graphStageLabels[stage])}
-              <span className="rp-count">{total}</span>
+              <span className="rp-muted">{total}</span>
             </h4>
             <div className="rp-list">
               {nodes.map(node => {
