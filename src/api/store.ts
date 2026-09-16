@@ -453,6 +453,17 @@ export function useRuntimeMemory(enabled = true) {
   const api = getApi();
   return useResource({key: ['runtimeMemory'], fetch: signal => api.runtimeMemory(signal)}, {deps: [api], enabled});
 }
+// The newest page of the resolver's ring, filtered server-side; the ring refreshes with the usual poll.
+export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true) {
+  const api = getApi();
+  const name = query.name?.trim() || undefined;
+  const type = query.type && query.type !== 'all' ? query.type : undefined;
+  const src = query.src?.trim() || undefined;
+  return useResource(
+    {key: ['dnsLog', {name, type, src}], fetch: signal => api.dnsLog({name, type: type as never, src, limit: 200}, signal)},
+    {deps: [api, name, type, src], enabled}
+  );
+}
 export function useDnsCache(enabled = true) {
   const api = getApi();
   return useResource(

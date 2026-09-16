@@ -8,8 +8,17 @@ import {validateResponse, walk} from './conformance.mjs';
 const contract = parse(readFileSync(new URL('../contract/api-standardize/openapi.yaml', import.meta.url), 'utf8'));
 const servers = [];
 const failures = checks => checks.filter(check => check.status === 'FAIL').map(check => check.id);
+// Shared responses live under components; a $ref there is followed once.
+function resolve(node) {
+  return node?.$ref
+    ? node.$ref
+        .replace(/^#\//, '')
+        .split('/')
+        .reduce((owner, key) => owner[key], contract)
+    : node;
+}
 function example(path, status = 200, method = 'get') {
-  const response = contract.paths[path][method].responses[status];
+  const response = resolve(contract.paths[path][method].responses[status]);
   const fixture = Object.values(response.content['application/json'].examples)[0];
   return {status, body: structuredClone(fixture.value), headers: {...fixture['x-headers']}};
 }
@@ -26,7 +35,9 @@ async function serve({broken = false, mutate = () => {}, events = 'ready', resum
     const url = new URL(request.url, 'http://127.0.0.1');
     const path = url.pathname.replace(/^\/proxy/, '');
     requests.push({path, query: url.search, method: request.method, headers: request.headers});
-    if (path === '/api/v1/events' && !request.headers['last-event-id']) {
+    // Every SSE resource in the contract (events, logs) answers with the same ready frame.
+    const streams = Object.keys(contract.paths).filter(candidate => contract.paths[candidate].get?.responses?.['200']?.content?.['text/event-stream']);
+    if (streams.includes(path) && !request.headers['last-event-id']) {
       response.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'});
       response.flushHeaders();
       if (events === 'timeout') return;
@@ -44,7 +55,7 @@ async function serve({broken = false, mutate = () => {}, events = 'ready', resum
       return;
     }
     let fixture;
-    if (path === '/api/v1/events') {
+    if (streams.includes(path)) {
       if (resume === 200) {
         response.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'});
         response.end(': resumed\n\n');
@@ -98,20 +109,21 @@ describe('native API conformance', () => {
     expect(result.summary.exitCode).toBe(0);
     const observedPaths = Object.entries(contract.paths)
       .filter(([, item]) => item.get?.['x-permission'] === 'observe')
-      .map(([path]) => path.replace('{groupId}', 'group-proxy').replace('{flow_id}', 'flow-23'));
+      .map(([path]) => path.replace('{groupId}', 'group-proxy').replace('{flow_id}', 'flow-23').replace('{id}', 'provider-a'));
     expect(new Set(server.requests.map(request => request.path))).toEqual(new Set(['/api', '/api/v1/version', '/api/v1/capabilities', ...observedPaths]));
     expect(server.requests.slice(0, 3).map(request => request.path)).toEqual(['/api', '/api/v1/version', '/api/v1/capabilities']);
     expect(server.requests.every(request => request.method === 'GET' && request.headers.authorization === 'Bearer test-secret')).toBe(true);
-    expect(server.requests.every(request => request.headers.accept === (request.path.endsWith('/events') ? 'text/event-stream' : 'application/json'))).toBe(
-      true
-    );
+    expect(
+      server.requests.every(request => request.headers.accept === (/\/(events|logs)$/.test(request.path) ? 'text/event-stream' : 'application/json'))
+    ).toBe(true);
     const pages = server.requests.filter(request => request.path === '/api/v1/dns/cache');
     expect(pages.map(request => request.query)).toEqual(['', '?cursor=eyJvZmZzZXQiOjEwMH0']);
     expect(server.requests.filter(request => request.path.endsWith('/events')).map(request => request.headers['last-event-id'])).toEqual([
       undefined,
       'instance-7:123'
     ]);
-    expect(result.summary.heartbeats).toEqual([': heartbeat']);
+    // One heartbeat per SSE resource: events and logs.
+    expect(result.summary.heartbeats).toEqual([': heartbeat', ': heartbeat']);
   });
 
   it('reports exactly the three planted GET failures', async () => {

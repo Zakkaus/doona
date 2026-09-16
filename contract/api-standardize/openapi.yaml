@@ -43,6 +43,9 @@ paths:
                       runtime_outbounds: /api/v1/runtime/outbounds
                       traffic_history: /api/v1/runtime/traffic/history
                       memory_history: /api/v1/runtime/memory/history
+                      logs: /api/v1/logs
+                      providers: /api/v1/providers
+                      rules: /api/v1/rules
                       operations: /api/v1/operations/{id}
                   x-headers:
                     Content-Type: application/json
@@ -143,6 +146,10 @@ paths:
                           - maps
                       nodes:
                         available: true
+                      providers:
+                        available: true
+                        can_refresh: true
+                        max_page_size: 1000
                       groups:
                         available: true
                         config_patch: true
@@ -199,6 +206,9 @@ paths:
                         timeout_ms: 5000
                         per_principal_requests_per_minute: 30
                         global_requests_per_minute: 120
+                      rules:
+                        available: true
+                        max_rules: 4096
                       events:
                         available: true
                         kinds:
@@ -212,6 +222,16 @@ paths:
                         max_buffered_events: 4096
                         max_clients: 16
                         heartbeat_seconds: 15
+                      logs:
+                        available: true
+                        levels:
+                          - trace
+                          - debug
+                          - info
+                          - warn
+                          - error
+                        max_buffered_records: 4096
+                        settings: true
                       dns_query:
                         available: true
                         record_types:
@@ -233,6 +253,10 @@ paths:
                         entry_kinds:
                           - positive
                           - negative
+                      dns_log:
+                        available: true
+                        max_records: 2048
+                        max_page_size: 500
                       operations:
                         available: true
                         retention_seconds: 300
@@ -750,6 +774,7 @@ paths:
                         name: hk-01
                         protocol: vless
                         subscription_tag: provider-a
+                        provider_id: provider-a
                         group_ids:
                           - group-proxy
                         health:
@@ -778,6 +803,248 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/providers:
+    get:
+      operationId: listProviders
+      summary: List provider metadata without credentials
+      description: |
+        Read current subscription, file and inline provider metadata; never fetch a
+        subscription while serving a GET. Use the shared snapshot cursor semantics.
+        The effective default limit is min(100, resources.providers.max_page_size).
+        A limit above the advertised maximum returns 400 invalid_request, as does an
+        unknown, expired or invalidated cursor. Restart the page walk without it.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/Limit1000'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Provider page
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderList'
+              examples:
+                providers:
+                  value:
+                    providers:
+                      - id: provider-a
+                        name: provider-a
+                        kind: subscription
+                        url_redacted: https://subscriptions.example.com/[redacted]
+                        node_count: 1
+                        updated_at: '2026-08-15T10:00:00Z'
+                        expires_at: '2026-10-01T00:00:00Z'
+                        traffic:
+                          upload_bytes: '1048576'
+                          download_bytes: '2097152'
+                          total_bytes: '107374182400'
+                        status: ok
+                        last_error: null
+                    next_cursor: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/providers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    get:
+      operationId: getProvider
+      summary: Read one provider's current metadata
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Provider metadata; reading does not refresh it
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+              examples:
+                subscription:
+                  value:
+                    id: provider-a
+                    name: provider-a
+                    kind: subscription
+                    url_redacted: https://subscriptions.example.com/[redacted]
+                    node_count: 1
+                    updated_at: '2026-08-15T10:00:00Z'
+                    expires_at: '2026-10-01T00:00:00Z'
+                    traffic:
+                      upload_bytes: '1048576'
+                      download_bytes: '2097152'
+                      total_bytes: '107374182400'
+                    status: ok
+                    last_error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/providers/{id}/refresh:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    post:
+      operationId: refreshProvider
+      summary: Queue a provider refresh
+      description: |
+        Requires resources.providers.can_refresh. This action takes no request body
+        and never changes the provider's configured source. Unsupported provider kinds
+        or refresh actions return 404 capability_not_supported. Follow the shared
+        operation ownership, retention and idempotency rules. Replaying an accepted
+        Idempotency-Key returns its original operation before checking for an in-flight
+        refresh; a distinct refresh for the same provider returns 409 state_conflict.
+        A full bounded queue returns 503 temporarily_unavailable with Retry-After.
+        A successful provider_refresh operation returns the refreshed Provider in result;
+        failure uses SafeError and leaves the last successfully loaded nodes intact.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Provider refresh accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderRefreshAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-provider-a
+                    kind: provider_refresh
+                    status: queued
+                    href: /api/v1/operations/op-provider-a
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-provider-a
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another refresh for this provider is queued or running, or an idempotency key conflicts
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                in_flight:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: A refresh for this provider is already queued or running.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                idempotency_conflict:
+                  value:
+                    error:
+                      code: idempotency_conflict
+                      message: The idempotency key was used with a different request.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: Provider refresh queue is full
+          headers:
+            Retry-After:
+              description: Retry delay in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                queue_full:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The provider refresh queue is full.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/groups:
     get:
       operationId: listGroups
@@ -2192,6 +2459,107 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /api/v1/rules:
+    get:
+      operationId: listRules
+      summary: Read the running generation's routing rules
+      description: |
+        Return one coherent, complete rule dictionary for the running routing generation,
+        in evaluation order, including its fallback entry. This resource is read-only;
+        it neither evaluates traffic nor reads back raw configuration. rule_id is identical
+        to the ID used by POST /api/v1/routing/trace and FlowSummary.rule_id for the same
+        generation. Join by generation_id and rule_id, never by expression or index alone.
+        generation_id is the invalidation cursor, not a pagination token. Refetch after
+        generation.changed; old flow evidence must not be joined to a new generation.
+        There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
+        generation cannot be pinned, return 409 snapshot_unavailable. If the complete
+        dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
+        rather than silently truncate it. Redact local paths and secret-bearing expression
+        values without changing rule identities or order; never expose raw configuration.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Ordered rules and fallback from one running generation
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleList'
+              examples:
+                running:
+                  value:
+                    generation_id: generation-42
+                    rules:
+                      - rule_id: traffic:0
+                        index: 0
+                        expression: pname(curl) -> direct
+                        outbound: direct
+                        must: false
+                        source:
+                          file: '[redacted]/routing.dae'
+                          line: 12
+                        kind: rule
+                      - rule_id: traffic:1
+                        index: 1
+                        expression: dip(198.51.100.0/24) -> proxy
+                        outbound: proxy
+                        must: false
+                        source:
+                          file: '[redacted]/routing.dae'
+                          line: 13
+                        kind: rule
+                      - rule_id: traffic:2
+                        index: 2
+                        expression: 'fallback: block'
+                        outbound: block
+                        must: false
+                        source: null
+                        kind: fallback
+                    fallback:
+                      outbound: block
+                      source: null
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The running routing generation could not be pinned coherently
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                snapshot_unavailable:
+                  value:
+                    error:
+                      code: snapshot_unavailable
+                      message: A coherent routing generation is unavailable; retry the read.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/events:
     get:
       operationId: streamEvents
@@ -2242,7 +2610,192 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and resnapshot.
+          $ref: '#/components/responses/EventCursorExpired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/logs:
+    get:
+      operationId: streamLogs
+      summary: Follow bounded resumable engine logs
+      description: |
+        Requires resources.logs.available. Emit stream.ready first on every connection,
+        using the shared StreamReadyEvent payload and an opaque replay cursor. On a
+        valid resume, deliver retained matching records strictly after Last-Event-ID,
+        then live records without an unobserved gap. The ready cursor must not skip
+        pending replay; retain the supplied cursor until replay advances it.
+        Each log frame carries an opaque id unique within the running instance.
+        Duplicate delivery is permitted; deduplicate by id, never by message or ts.
+        Cursors are bound to this stream, instance and filters. Unknown, expired,
+        previous-instance or changed-filter cursors return 409 event_cursor_expired
+        before opening the stream. Drop the cursor and reconnect to establish a new
+        baseline; lost history is not recovered. Filtered-out IDs may leave gaps.
+        Retain at most resources.logs.max_buffered_records; this is not durable storage.
+        Close slow clients when their bounded queue fills; never block engine writers.
+        Send heartbeat comments at most 15 seconds apart while idle. Recheck credentials
+        on reconnect and terminate streams when authorization is revoked.
+        Sanitize messages and fields before buffering: no secrets, credentials, raw
+        configuration, stack traces or unredacted local paths. Never forward raw engine output.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: level
+          in: query
+          description: Minimum severity, ordered trace < debug < info < warn < error. Omit for all advertised levels; an unadvertised level returns 400 invalid_request.
+          schema:
+            $ref: '#/components/schemas/LogLevel'
+          example: info
+        - name: target
+          in: query
+          description: Case-sensitive literal module prefix; omit for all targets.
+          schema:
+            type: string
+            minLength: 1
+          example: honk::routing
+        - $ref: '#/components/parameters/LastEventId'
+      responses:
+        '200':
+          description: Log stream; stream.ready precedes replay and live log frames. Heartbeat comments have no id or data.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              x-event-data-schemas:
+                stream.ready: '#/components/schemas/StreamReadyEvent'
+                log: '#/components/schemas/LogRecord'
+              examples:
+                records:
+                  value: |
+                    id: instance-7:logs:123
+                    event: stream.ready
+                    data: {"instance_id":"instance-7","observed_at":"2026-09-14T10:00:00Z"}
+
+                    id: instance-7:logs:124
+                    event: log
+                    data: {"ts":"2026-09-14T10:00:01Z","level":"info","target":"honk::routing","message":"Routing generation published.","fields":{"generation_id":"generation-42"}}
+
+                    : heartbeat
+                  x-headers:
+                    Content-Type: text/event-stream
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EventCursorExpired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/logs/settings:
+    get:
+      operationId: getLogSettings
+      summary: Read the engine's log level and replay buffer size
+      description: |
+        Requires resources.logs.available. Reports the level the engine currently
+        emits at and how many records the replay ring keeps. Values are the running
+        state, which may differ from the configuration file after a PATCH.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Current log settings
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogSettings'
+              examples:
+                current:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    level: info
+                    buffered_records: 4096
+                    source: config
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: patchLogSettings
+      summary: Change the log level or replay buffer size at runtime
+      description: |
+        Requires control, resources.logs.available and resources.logs.settings.
+        The change applies to the running engine immediately, without a reload, and
+        lasts until the process restarts or the next configuration activation resets
+        it; it is not written back to the configuration file. Both fields are
+        optional; an absent field keeps its value. level must be an advertised level.
+        buffered_records must lie in [64, resources.logs.max_buffered_records];
+        shrinking the ring drops the oldest records and cursors older than the new
+        floor expire. Out-of-range or unadvertised values return 400 invalid_request
+        and change nothing. Follows the shared idempotency rules.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogSettingsPatch'
+            examples:
+              debug:
+                value:
+                  level: debug
+      responses:
+        '200':
+          description: Settings after the change
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogSettings'
+              examples:
+                changed:
+                  value:
+                    observed_at: '2026-08-15T10:00:05Z'
+                    level: debug
+                    buffered_records: 4096
+                    source: runtime
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          description: Unadvertised level or buffered_records outside the advertised range
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -2253,21 +2806,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                event_cursor_expired:
+                too_many_records:
                   value:
                     error:
-                      code: event_cursor_expired
-                      message: Event cursor is older than the retained window; reconnect without it.
-                      details: null
-                    request_id: request-01HZX4K8W6
+                      code: invalid_request
+                      message: buffered_records exceeds the advertised limit.
+                    request_id: request-3
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/v1/dns/query:
     get:
       operationId: queryDns
@@ -2385,6 +2939,118 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /api/v1/dns/log:
+    get:
+      operationId: listDnsLog
+      summary: Read the bounded ring of recent resolutions
+      description: |
+        Requires resources.dns_log.available. The engine records every resolution it
+        performs for clients (not the diagnostic /dns/query calls) into a ring of at
+        most resources.dns_log.max_records; newest first, not durable, cleared on
+        restart. A record is one question and its outcome: which client asked, which
+        upstream answered or whether the cache did, the answers, the routing decision
+        and how long it took. Filters narrow by name (case-insensitive substring),
+        record type and client source IP. limit above max_page_size returns 400.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: name
+          in: query
+          description: Case-insensitive substring of the question name.
+          schema:
+            type: string
+            minLength: 1
+          example: telegram
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/DnsRecordType'
+          example: A
+        - name: src
+          in: query
+          description: Client source IP literal, IPv4 or IPv6.
+          schema:
+            type: string
+            minLength: 1
+          example: 10.0.0.12
+        - name: limit
+          in: query
+          schema:
+            $ref: '#/components/schemas/SafeUInt'
+            minimum: 1
+          example: 200
+        - name: cursor
+          in: query
+          description: Opaque cursor from a previous page; older records follow it.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Recent resolutions, newest first
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsLogList'
+              examples:
+                recent:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    total: 2
+                    next_cursor: null
+                    records:
+                      - id: dl-000002
+                        observed_at: '2026-08-15T09:59:59Z'
+                        src: 10.0.0.12:53211
+                        question:
+                          name: api.telegram.org.
+                          type: A
+                        status: NOERROR
+                        cached: false
+                        upstream: tls://1.1.1.1
+                        route:
+                          source: dns.routing
+                          rule: 'qname(geosite: telegram) -> proxy'
+                        elapsed_ms: 38
+                        answers:
+                          - name: api.telegram.org.
+                            type: A
+                            class: IN
+                            ttl: 240
+                            data: 149.154.167.220
+                      - id: dl-000001
+                        observed_at: '2026-08-15T09:59:58Z'
+                        src: '[2001:db8::12]:53210'
+                        question:
+                          name: cdn.bilibili.com.
+                          type: AAAA
+                        status: NOERROR
+                        cached: true
+                        upstream: null
+                        route:
+                          source: default
+                          rule: null
+                        elapsed_ms: 0
+                        answers: []
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/v1/dns/cache:
     get:
       operationId: listDnsCache
@@ -3029,9 +3695,9 @@ components:
         Opaque cursor bound to the resource, running adapter instance, filters,
         and retained snapshot. Restart, changed filters, or snapshot expiry or
         eviction invalidates it. GET /flows returns 410 snapshot_expired;
-        GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
-        that is unknown or no longer valid. Discard it and restart the page walk
-        without a cursor; never silently continue against a new snapshot.
+        GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+        for a cursor that is unknown or no longer valid. Discard it and restart
+        the page walk without a cursor; never silently continue against a new snapshot.
       schema:
         type: string
         minLength: 1
@@ -3098,6 +3764,14 @@ components:
         type: string
         minLength: 1
       example: instance-7:123
+    ProviderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: provider-a
   responses:
     OperationAccepted:
       description: Operation accepted
@@ -3123,17 +3797,108 @@ components:
           schema:
             $ref: '#/components/schemas/OperationAccepted'
     BadRequest:
-      $ref: '#/components/responses/ErrorResponseCommon'
       description: Malformed parameters or request shape
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid_request:
+              value:
+                error:
+                  code: invalid_request
+                  message: A request parameter is invalid.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     Unauthorized:
-      $ref: '#/components/responses/ErrorResponseCommon'
       description: Credentials are missing or invalid
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            authentication_required:
+              value:
+                error:
+                  code: authentication_required
+                  message: Valid bearer credentials are required.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     Forbidden:
-      $ref: '#/components/responses/ErrorResponseCommon'
       description: Authenticated caller lacks the required permission
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            permission_denied:
+              value:
+                error:
+                  code: permission_denied
+                  message: The caller lacks the required permission.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     NotFound:
-      $ref: '#/components/responses/ErrorResponseCommon'
       description: Resource/action unavailable, absent, expired, or concealed
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            resource_not_found:
+              value:
+                error:
+                  code: resource_not_found
+                  message: The requested resource was not found.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
+            capability_not_supported:
+              value:
+                error:
+                  code: capability_not_supported
+                  message: The requested resource or action is unavailable.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     Conflict:
       $ref: '#/components/responses/ErrorResponseCommon'
       description: State, idempotency, cursor, or coherent-snapshot conflict
@@ -3172,6 +3937,19 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rate_limited:
+              value:
+                error:
+                  code: rate_limited
+                  message: The request rate limit was reached.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Retry-After: 1
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     Unavailable:
       description: Bounded queue or required runtime component unavailable
       headers:
@@ -3188,6 +3966,19 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            temporarily_unavailable:
+              value:
+                error:
+                  code: temporarily_unavailable
+                  message: A required runtime component is unavailable.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Retry-After: 1
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
     ErrorResponseCommon:
       description: Native API error
       headers:
@@ -3199,6 +3990,29 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    EventCursorExpired:
+      description: Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and establish a new baseline.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            event_cursor_expired:
+              value:
+                error:
+                  code: event_cursor_expired
+                  message: Event cursor is older than the retained window; reconnect without it.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
   schemas:
     EmptyObject:
       type: object
@@ -3322,6 +4136,9 @@ components:
             - runtime_outbounds
             - traffic_history
             - memory_history
+            - logs
+            - providers
+            - rules
             - operations
           properties:
             version:
@@ -3342,6 +4159,15 @@ components:
             memory_history:
               type: string
               const: /api/v1/runtime/memory/history
+            logs:
+              type: string
+              const: /api/v1/logs
+            providers:
+              type: string
+              const: /api/v1/providers
+            rules:
+              type: string
+              const: /api/v1/rules
             operations:
               type: string
               const: /api/v1/operations/{id}
@@ -3449,14 +4275,18 @@ components:
             - memory_history
             - datapath
             - nodes
+            - providers
             - groups
             - probes
             - connections
             - flows
             - routing_trace
+            - rules
             - events
+            - logs
             - dns_query
             - dns_cache
+            - dns_log
             - operations
             - reload
             - suspend
@@ -3569,6 +4399,28 @@ components:
                       - maps
             nodes:
               $ref: '#/components/schemas/AvailableResource'
+            providers:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - can_refresh
+                  - max_page_size
+              properties:
+                available:
+                  type: boolean
+                can_refresh:
+                  type: boolean
+                  description: Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available.
+                max_page_size:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  maximum: 1000
             groups:
               type: object
               required:
@@ -3755,6 +4607,24 @@ components:
                 global_requests_per_minute:
                   type: integer
                   minimum: 1
+            rules:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - max_rules
+              properties:
+                available:
+                  type: boolean
+                max_rules:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum complete rule dictionary size, including the fallback entry; never a truncation limit.
             events:
               type: object
               required:
@@ -3791,6 +4661,35 @@ components:
                   type: integer
                   minimum: 1
                   maximum: 15
+            logs:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - levels
+                  - max_buffered_records
+                  - settings
+              properties:
+                available:
+                  type: boolean
+                settings:
+                  type: boolean
+                  description: Whether PATCH /logs/settings can change the level and ring size at runtime; false makes it return 404 capability_not_supported.
+                levels:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/LogLevel'
+                max_buffered_records:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Bounded replay buffer capacity, not a durable retention guarantee.
             dns_query:
               type: object
               required:
@@ -3847,6 +4746,28 @@ components:
                     enum:
                       - positive
                       - negative
+            dns_log:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - max_records
+                  - max_page_size
+              properties:
+                available:
+                  type: boolean
+                max_records:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Ring capacity in records; not a retention guarantee.
+                max_page_size:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
             operations:
               type: object
               required:
@@ -4643,6 +5564,12 @@ components:
           type:
             - string
             - 'null'
+        provider_id:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          description: Provider identity from GET /providers; omitted or null when provenance is unavailable. Never infer it from the node name.
         group_ids:
           type: array
           uniqueItems: true
@@ -4671,6 +5598,115 @@ components:
           type:
             - string
             - 'null'
+    Provider:
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - url_redacted
+        - node_count
+        - updated_at
+        - expires_at
+        - traffic
+        - status
+        - last_error
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Opaque provider identity, shared with Node.provider_id; not a URL or display name.
+        name:
+          type: string
+          minLength: 1
+        kind:
+          type: string
+          enum:
+            - subscription
+            - file
+            - inline
+        url_redacted:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          description: Display-only source URL with userinfo, query, fragment and secret-bearing path segments removed or redacted. Null for file/inline sources or when safe display is impossible. Never a fetchable credential source.
+        node_count:
+          $ref: '#/components/schemas/SafeUInt'
+        updated_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: Last successful load or refresh, or null if unknown or never loaded.
+        expires_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: Provider-reported expiry, or null when unavailable.
+        traffic:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ProviderTraffic'
+        status:
+          type: string
+          enum:
+            - ok
+            - stale
+            - error
+          description: ok has usable current data; stale retains older usable data; error has no usable data after a failure.
+        last_error:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeError'
+      description: Safe metadata only. Names, URLs and last_error must not contain secrets, raw configuration or unredacted local paths.
+    ProviderTraffic:
+      type: object
+      required:
+        - upload_bytes
+        - download_bytes
+        - total_bytes
+      properties:
+        upload_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+        download_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+        total_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+          description: Provider-reported total traffic allowance, not upload plus download. Null if unknown or unlimited.
+      description: Provider-reported usage, not runtime counters. Each unavailable quantity is null; traffic itself may be null when no usage metadata exists.
+    ProviderList:
+      type: object
+      required:
+        - providers
+        - next_cursor
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Provider'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+    ProviderRefreshAccepted:
+      allOf:
+        - $ref: '#/components/schemas/OperationAccepted'
+        - type: object
+          properties:
+            kind:
+              const: provider_refresh
+    ProviderRefreshSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: provider_refresh
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              $ref: '#/components/schemas/Provider'
+            error:
+              type: 'null'
     GroupPolicy:
       type: object
       required:
@@ -7082,6 +8118,96 @@ components:
           - required:
               - connection_id
       description: Hypothetical output. It never identifies or claims history for a live flow.
+    RuleSource:
+      oneOf:
+        - type: 'null'
+        - type: object
+          required:
+            - file
+            - line
+          properties:
+            file:
+              type: string
+              minLength: 1
+              description: Redacted source label; never an absolute local path or credential-bearing URL.
+            line:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 1
+      description: Source location, or null when unavailable or unsafe to disclose.
+    RoutingRule:
+      type: object
+      required:
+        - rule_id
+        - index
+        - expression
+        - outbound
+        - must
+        - source
+        - kind
+      properties:
+        rule_id:
+          type: string
+          minLength: 1
+          description: Identical to POST /routing/trace rule IDs and FlowSummary.rule_id within the same generation; opaque to clients.
+        index:
+          $ref: '#/components/schemas/SafeUInt'
+          description: Zero-based evaluation order within this generation, not a cross-generation identity.
+        expression:
+          type: string
+          minLength: 1
+          description: Safe display expression, not raw configuration or an editable source representation.
+        outbound:
+          type: string
+          minLength: 1
+          description: Rule outbound, not a resolved leaf node or a claim of a successful dial.
+        must:
+          type: boolean
+        source:
+          $ref: '#/components/schemas/RuleSource'
+        kind:
+          type: string
+          enum:
+            - rule
+            - fallback
+    RuleFallback:
+      type: object
+      required:
+        - outbound
+        - source
+      properties:
+        outbound:
+          type: string
+          minLength: 1
+        source:
+          $ref: '#/components/schemas/RuleSource'
+      description: Same outbound and source as the fallback entry in rules; the entry carries its rule_id.
+    RuleList:
+      type: object
+      required:
+        - generation_id
+        - rules
+        - fallback
+      properties:
+        generation_id:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RoutingRule'
+          contains:
+            type: object
+            required:
+              - kind
+            properties:
+              kind:
+                const: fallback
+          minContains: 1
+          maxContains: 1
+          description: Complete evaluation order with unique rule_id and index values, including exactly one final fallback entry.
+        fallback:
+          $ref: '#/components/schemas/RuleFallback'
     DnsRecordType:
       type: string
       pattern: ^(?:[A-Z][A-Z0-9-]*|TYPE[0-9]{1,5}|[0-9]{1,5})$
@@ -7267,6 +8393,75 @@ components:
           type:
             - string
             - 'null'
+    DnsLogRecord:
+      type: object
+      required:
+        - id
+        - observed_at
+        - src
+        - question
+        - status
+        - cached
+        - upstream
+        - route
+        - elapsed_ms
+        - answers
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Opaque, unique within the running instance; the cursor is derived from it.
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        src:
+          type:
+            - string
+            - 'null'
+          description: Client socket address, IPv6 in brackets; null when the resolver itself asked.
+        question:
+          $ref: '#/components/schemas/DnsQuestion'
+        status:
+          type: string
+          minLength: 1
+          description: RCODE name such as NOERROR or NXDOMAIN, or an engine outcome such as TIMEOUT.
+        cached:
+          type: boolean
+        upstream:
+          type:
+            - string
+            - 'null'
+          description: The upstream that answered, null on a cache hit or failure before sending.
+        route:
+          $ref: '#/components/schemas/DnsRoute'
+        elapsed_ms:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsAnswer'
+    DnsLogList:
+      type: object
+      required:
+        - observed_at
+        - total
+        - next_cursor
+        - records
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        total:
+          $ref: '#/components/schemas/SafeUInt'
+          description: Records in the ring at observed_at, before filters.
+        next_cursor:
+          type:
+            - string
+            - 'null'
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsLogRecord'
     DeleteCount:
       type: object
       required:
@@ -7295,6 +8490,7 @@ components:
         - suspend
         - resume
         - group_update
+        - provider_refresh
     OperationAccepted:
       type: object
       required:
@@ -7324,6 +8520,7 @@ components:
         - $ref: '#/components/schemas/SuspendSucceededOperation'
         - $ref: '#/components/schemas/ResumeSucceededOperation'
         - $ref: '#/components/schemas/GroupUpdateSucceededOperation'
+        - $ref: '#/components/schemas/ProviderRefreshSucceededOperation'
     QueuedOperation:
       allOf:
         - $ref: '#/components/schemas/OperationCommon'
@@ -7495,6 +8692,74 @@ components:
         - flow.gap
         - operation.updated
         - generation.changed
+    LogLevel:
+      type: string
+      enum:
+        - trace
+        - debug
+        - info
+        - warn
+        - error
+    LogRecord:
+      type: object
+      required:
+        - ts
+        - level
+        - target
+        - message
+        - fields
+      properties:
+        ts:
+          $ref: '#/components/schemas/Timestamp'
+        level:
+          $ref: '#/components/schemas/LogLevel'
+        target:
+          type: string
+          minLength: 1
+          description: Engine module name, not a network destination.
+        message:
+          type: string
+          minLength: 1
+          description: Sanitized operator message; no secrets or raw configuration.
+        fields:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+          description: Sanitized structured fields, or null when unavailable; the message safety rules apply recursively.
+    LogSettings:
+      type: object
+      required:
+        - observed_at
+        - level
+        - buffered_records
+        - source
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        level:
+          $ref: '#/components/schemas/LogLevel'
+          description: The minimum severity the engine emits; the stream's level filter cannot go below it.
+        buffered_records:
+          $ref: '#/components/schemas/SafeUInt'
+          minimum: 64
+          description: Replay ring capacity in records, at most resources.logs.max_buffered_records.
+        source:
+          type: string
+          enum:
+            - config
+            - runtime
+          description: config while the values come from the activated configuration; runtime after a PATCH overrode them.
+    LogSettingsPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        level:
+          $ref: '#/components/schemas/LogLevel'
+        buffered_records:
+          $ref: '#/components/schemas/SafeUInt'
+          minimum: 64
     StreamReadyEvent:
       type: object
       required:

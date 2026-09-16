@@ -117,6 +117,7 @@ export function createApi(base: string, token?: string): Api {
     // Readable in openapi-fetch drops required null fields from composed schemas.
     flow: async (id, signal) => data(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => data(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
+    dnsLog: async (query, signal) => data(await client.GET('/api/v1/dns/log', {params: {query}, signal})),
     dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
     // 204 carries no body; the response middleware has already turned any error status into an ApiError.
     closeConnection: async (connection_id, signal) => {

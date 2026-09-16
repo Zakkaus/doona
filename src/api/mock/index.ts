@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {ApiEvent, EventOptions, GroupSelectionResult, Operation, OperationAccepted, OperationState} from '../model';
+import type {ApiEvent, DnsLogRecord, EventOptions, FlowDetail, GroupSelectionResult, Operation, OperationAccepted, OperationState} from '../model';
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import * as fixtures from './fixtures';
@@ -16,6 +16,32 @@ function page<T>(items: T[], cursor?: string, limit = 1000) {
 function found<T>(value: T | undefined, kind: string): T {
   if (value === undefined) throw new ApiError(404, 'not_found', `${kind} not found`);
   return value;
+}
+
+// Every flow with a name resolved once: the record says who asked, what answered and how long it took.
+function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
+  return [...flows]
+    .filter(flow => flow.input.domain)
+    .sort((a, b) => Date.parse(b.started_at ?? '') - Date.parse(a.started_at ?? ''))
+    .map((flow, i) => {
+      const name = flow.input.domain!.replace(/\.$/, '') + '.';
+      const cached = i % 3 === 1;
+      const failed = !cached && i % 11 === 7;
+      const type = flow.network === 'udp' && i % 2 ? 'AAAA' : 'A';
+      const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
+      return {
+        id: 'dl-' + String(i + 1).padStart(6, '0'),
+        observed_at: new Date(Date.parse(flow.started_at ?? new Date().toISOString()) - 40).toISOString(),
+        src: flow.input.src ?? null,
+        question: {name, type},
+        status: failed ? 'TIMEOUT' : 'NOERROR',
+        cached,
+        upstream: cached || failed ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : 'tls://1.1.1.1',
+        route: flow.outbound === 'direct' ? {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'} : {source: 'default', rule: null},
+        elapsed_ms: cached ? 0 : failed ? 5000 : 12 + ((i * 7) % 60),
+        answers: failed || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
+      };
+    });
 }
 
 export function createMockApi(): Api {
@@ -143,6 +169,9 @@ export function createMockApi(): Api {
           runtime_outbounds: '/api/v1/runtime/outbounds',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
+          logs: '/api/v1/logs',
+          providers: '/api/v1/providers',
+          rules: '/api/v1/rules',
           operations: '/api/v1/operations/{id}'
         }
       };
@@ -443,6 +472,23 @@ export function createMockApi(): Api {
       const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
       const result = page(entries, query?.cursor, query?.limit);
       return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
+    },
+    dnsLog: async (query, signal) => {
+      signal?.throwIfAborted();
+      const limits = capabilities.resources.dns_log;
+      if (!limits.available) throw new ApiError(404, 'not_found', 'DNS log unavailable');
+      if (query?.limit !== undefined && query.limit > limits.max_page_size!)
+        throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
+      const needle = query?.name?.toLowerCase();
+      const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      const records = dnsLogRecords(flows).filter(
+        r =>
+          (!needle || r.question.name.toLowerCase().includes(needle)) &&
+          (!query?.type || r.question.type === query.type) &&
+          (!src || (r.src !== null && sourceIp(r.src) === src))
+      );
+      const result = page(records, query?.cursor, query?.limit ?? 200);
+      return {observed_at: new Date().toISOString(), total: records.length, next_cursor: result.next_cursor, records: structuredClone(result.items)};
     },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();

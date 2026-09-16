@@ -24,6 +24,8 @@ import type {
   FlowDetail,
   FlowQuery,
   DnsCacheList,
+  DnsLogList,
+  DnsLogQuery,
   DnsCacheQuery,
   DnsQueryResponse,
   DnsRecordType,
@@ -56,6 +58,7 @@ export interface Api {
   flows(query?: FlowQuery, signal?: AbortSignal): Promise<FlowList>;
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
+  dnsLog(query?: DnsLogQuery, signal?: AbortSignal): Promise<DnsLogList>;
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;

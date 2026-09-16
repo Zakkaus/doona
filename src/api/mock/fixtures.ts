@@ -151,6 +151,10 @@ export const capabilities: Capabilities = {
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
     memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     nodes: {available: true},
+    providers: {available: false},
+    rules: {available: false},
+    logs: {available: false},
+    dns_log: {available: true, max_records: 2048, max_page_size: 500},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {
       available: true,
@@ -224,6 +228,7 @@ export const capabilitiesBase: Capabilities = {
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
     memory_history: {available: false},
+    dns_log: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}
