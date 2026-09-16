@@ -9,12 +9,6 @@ import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 // The status light says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
 const kindOf = (outbound: MapNode) => (outbound.unknown ? 'unknown' : outbound.label === 'direct' ? 'direct' : outbound.label === 'block' ? 'block' : 'group');
 const tones = {group: 'info', direct: 'ok', block: 'err', unknown: 'muted'} as const;
-const kindLabels: Record<keyof typeof tones, Key> = {
-  group: 'flow.kind.group',
-  direct: 'flow.kind.direct',
-  block: 'flow.kind.block',
-  unknown: 'flow.kind.unknown'
-};
 
 // One card per outbound, three labelled columns like every detail view: the rules that send traffic there,
 // the outbound itself, the node it currently selects. A click pins one item and dims the cards it is not in.
