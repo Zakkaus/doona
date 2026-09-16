@@ -4,6 +4,7 @@ import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
+import {Badge} from '../../ui/ui';
 
 // Match the native table's measured row and collapsed-border header heights.
 const layoutOptions = {rowHeight: 40, headingHeight: 36.5};
@@ -37,7 +38,6 @@ export function ConnectionTable({rows, selected, onSelect}: {rows: Connection[];
   return (
     <div
       className="rp-table"
-      style={{height: 442}}
       onKeyDownCapture={event => {
         // RAC scopes Home/End to cells unless the row itself has focus.
         if (event.key === 'Home' || event.key === 'End') {
@@ -48,7 +48,6 @@ export function ConnectionTable({rows, selected, onSelect}: {rows: Connection[];
       <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
         <Table
           ref={ref}
-          className="rp-connection-grid"
           aria-label={t('nav.connections')}
           aria-rowcount={rows.length + 1}
           selectionMode="single"
@@ -73,18 +72,14 @@ export function ConnectionTable({rows, selected, onSelect}: {rows: Connection[];
                   chainLabel(c),
                   <span className="rp-rule">
                     <span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>
-                    {c.rule_source === 'recomputed' ? (
-                      <small className="rp-provenance">{t('conn.recomputed')}</small>
-                    ) : c.rule_source === 'unknown' ? (
-                      <small className="rp-provenance">—</small>
-                    ) : null}
+                    {c.rule_source === 'recomputed' ? <Badge>{t('conn.recomputed')}</Badge> : c.rule_source === 'unknown' ? <Badge>—</Badge> : null}
                   </span>,
                   t(connectionStates[c.state]),
                   formatBytes(c.download_bytes),
                   relativeStart(c.started_at, locale)
                 ].map((cell, i) => (
                   <Cell key={cols[i].id} className={cols[i].align}>
-                    <span className="rp-connection-cell">{cell}</span>
+                    <span className="cell">{cell}</span>
                   </Cell>
                 ))}
               </Row>

@@ -22,7 +22,7 @@ async function expectRowInView(row: Locator) {
 test('English Started values fit without truncation', async ({page}) => {
   await page.goto('/#/connections?id=c-0241');
   const row = page.locator('.rp-table [data-key="c-0241"]');
-  const started = row.getByRole('gridcell').last().locator('.rp-connection-cell');
+  const started = row.getByRole('gridcell').last().locator('.cell');
   await expect(started).toContainText('minutes ago');
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const widths = await started.evaluate(element => ({available: element.clientWidth, text: element.scrollWidth}));

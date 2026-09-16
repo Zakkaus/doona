@@ -1,10 +1,7 @@
 import {useMemo, useState} from 'react';
-import {SearchField, Input, Button as RButton} from 'react-aria-components';
-import Search from '../../ui/icons/Search';
-import Close from '../../ui/icons/Close';
 import {useConnections} from '../../api/store';
 import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
-import {Button, Kv, LabeledSelect, Light, Segmented} from '../../ui/ui';
+import {Button, Kv, LabeledSelect, Light, Segmented, TextField} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -53,13 +50,7 @@ export function Connections({go, query}: PageProps) {
       {resource.loading && !resource.data && <p role="status">{t('ui.loading')}</p>}
       {resource.data?.truncated && <p className="rp-note">{t('conn.truncated')}</p>}
       <div className="rp-toolbar">
-        <SearchField aria-label={t('ui.filter')} value={text} onChange={setText} className="rp-input" style={{width: 280}}>
-          <Search />
-          <Input placeholder={t('conn.filterHint')} />
-          <RButton className="clear" aria-label={t('clear')}>
-            <Close />
-          </RButton>
-        </SearchField>
+        <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={280} />
         <Segmented
           label={t('ui.network')}
           value={network}

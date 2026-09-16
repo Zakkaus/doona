@@ -1105,11 +1105,6 @@ input {
   flex-wrap: wrap;
   min-width: 0;
 }
-.rp-title {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 700;
-}
 .rp-label {
   font-size: 12px;
   line-height: 16px;
@@ -1297,7 +1292,7 @@ input {
 .rp-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 32px;
   padding: 0 12px;
   border-radius: 8px;
@@ -1339,7 +1334,7 @@ input {
 .rp-btn.negative,
 .rp-btn.secondary {
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 12px;
 }
 .rp-btn.secondary {
   background: transparent;
@@ -1354,7 +1349,7 @@ input {
 .rp-btn.sm.primary,
 .rp-btn.sm.negative,
 .rp-btn.sm.secondary {
-  padding: 0 10px;
+  padding: 0 8px;
 }
 .rp-btn.icon {
   width: 32px;
@@ -1380,7 +1375,7 @@ input {
 .rp-seg .rp-btn {
   flex: 0 1 auto;
   min-width: 0;
-  padding: 0 10px;
+  padding: 0 8px;
 }
 .rp-seg .rp-btn {
   height: 28px;
@@ -1551,6 +1546,13 @@ input {
 .rp-light.info {
   --dot: var(--rp-iris);
 }
+.rp-light.neutral {
+  --dot: var(--rp-subtle);
+}
+.rp-light.muted {
+  color: var(--rp-muted);
+  opacity: 0.6;
+}
 .rp-bar {
   display: flex;
   flex-direction: column;
@@ -1560,6 +1562,7 @@ input {
 }
 .rp-bar .top {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
@@ -1598,28 +1601,6 @@ input {
   min-height: 28px;
   color: var(--rp-subtle);
 }
-.rp-issue {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-}
-.rp-issue + .rp-issue,
-.rp-issues > div + div {
-  border-top: 1px solid var(--rp-hl-med);
-}
-.rp-issue .lvl {
-  width: 80px;
-  flex-shrink: 0;
-}
-.rp-issue .txt {
-  font-size: 14px;
-  line-height: 20px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .rp-hr {
   height: 0;
   border: 0;
@@ -1644,6 +1625,7 @@ input {
   width: 10px;
   height: 10px;
   border-radius: 3px;
+  background: var(--rp-c1);
 }
 .rp-legend b {
   color: var(--rp-text);
@@ -1713,7 +1695,7 @@ input {
   align-items: center;
   gap: 4px;
   height: 24px;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 8px;
   background: transparent;
   border: 0;
@@ -1747,6 +1729,8 @@ input {
 }
 .rp-input {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
   height: 32px;
@@ -1779,6 +1763,7 @@ input {
 }
 .rp-input input {
   flex: 1;
+  min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1877,23 +1862,6 @@ input {
   line-height: 20px;
   overflow-wrap: anywhere;
 }
-.rp-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: var(--rp-love);
-  color: var(--rp-on-accent);
-  font-size: 11px;
-  line-height: 18px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  margin-left: 2px;
-}
 .rp-badge {
   display: inline-flex;
   align-items: center;
@@ -1967,7 +1935,7 @@ input {
   gap: 2px;
   height: 56px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px solid transparent;
   background: var(--rp-overlay);
   color: var(--rp-text);
@@ -1995,7 +1963,7 @@ button.rp-node[data-focus-visible],
 }
 .rp-node .top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
@@ -2020,10 +1988,6 @@ button.rp-node[data-focus-visible],
 .rp-node .ms.err {
   color: var(--rp-love);
 }
-.rp-node .ms.nested {
-  color: var(--rp-subtle);
-  font-weight: 500;
-}
 .rp-node .s {
   display: flex;
   justify-content: space-between;
@@ -2039,22 +2003,12 @@ button.rp-node[data-focus-visible],
   color: var(--rp-pine);
   font-weight: 600;
 }
-/* Large groups: filter row plus a virtualised grid that scrolls inside the card. */
-.rp-nodeset {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-.rp-filter {
-  width: 240px;
-}
 .rp-nodegrid {
   height: 376px;
   overflow: auto;
   outline: none;
   scrollbar-width: thin;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .rp-nodegrid .rp-node {
   cursor: pointer;
@@ -2178,6 +2132,7 @@ button.rp-node[data-focus-visible],
 }
 .rp-table {
   width: 100%;
+  height: 442px;
   border: 1px solid var(--rp-hl-med);
   border-radius: 8px;
   background: var(--rp-surface);
@@ -2237,6 +2192,33 @@ button.rp-node[data-focus-visible],
 }
 .rp-table .end {
   text-align: end;
+}
+/* Virtualized tables use divs; only their layout differs from native cells. */
+.rp-table > div[role='grid'] {
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+  outline: none;
+}
+.rp-table div[role='row'],
+.rp-table div[role='columnheader'],
+.rp-table div[role='rowgroup'] {
+  height: 100%;
+}
+.rp-table div[role='columnheader'] {
+  position: static;
+}
+.rp-table div[role='rowheader'],
+.rp-table div[role='gridcell'] {
+  display: flex;
+  align-items: center;
+  max-width: none;
+}
+.rp-table .cell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rp-frame {
   border: 1px solid var(--rp-hl-med);
@@ -2317,33 +2299,9 @@ button.rp-node[data-focus-visible],
   border-radius: 10px;
   border: 1px solid var(--rp-love);
 }
-.rp-alert .h {
-  font-weight: 600;
-}
 .rp-p {
   margin: 0;
   line-height: 20px;
-}
-.rp-diff {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 24px;
-}
-.rp-diff .v {
-  color: var(--rp-subtle);
-  white-space: nowrap;
-}
-.rp-diff .rp-code {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rp-alert .b {
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--rp-subtle);
 }
 .rp-tabs {
   display: flex;
@@ -2391,17 +2349,6 @@ button.rp-node[data-focus-visible],
   flex-direction: column;
   gap: 12px;
 }
-.rp-fb {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 13px;
-  padding: 0 16px;
-  min-height: 40px;
-  background: var(--rp-base);
-  border-radius: 8px;
-}
 .rp-cards {
   display: grid;
   grid-template-columns: 1fr;
@@ -2437,7 +2384,8 @@ button.rp-node[data-focus-visible],
 }
 .rp-group-btns {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .rp-table .rp-group-btns {
@@ -2847,25 +2795,6 @@ button.rp-node:hover {
   font-family: monospace;
 }
 
-.rp-trace-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-.rp-trace-result.matched {
-  --dot: #28a745;
-}
-.rp-trace-result.not_matched {
-  --dot: var(--rp-subtle);
-}
-.rp-trace-result.skipped {
-  --dot: var(--rp-muted);
-  color: var(--rp-muted);
-  opacity: 0.6;
-}
-.rp-trace-result.indeterminate {
-  --dot: var(--rp-gold);
-}
 .rp-nav-compat {
   margin-inline-start: auto;
 }
@@ -2885,6 +2814,7 @@ button.rp-node:hover {
 .rp-rule {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 .rp-rule > span {
@@ -2894,48 +2824,6 @@ button.rp-node:hover {
 }
 .rp-rule > .rp-provenance {
   flex-shrink: 0;
-}
-
-/* Virtualized table elements are divs; retain the native table's cell geometry. */
-.rp-connection-grid {
-  height: 100%;
-  overflow: auto;
-  scrollbar-width: thin;
-  outline: none;
-}
-.rp-connection-grid [role='row'],
-.rp-connection-grid [role='columnheader'] {
-  height: 100%;
-}
-.rp-connection-grid [role='columnheader'] {
-  position: static;
-}
-.rp-connection-grid [role='rowheader'],
-.rp-connection-grid [role='gridcell'] {
-  display: flex;
-  align-items: center;
-  max-width: none;
-}
-.rp-connection-cell {
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rp-connection-grid [role='rowgroup'] {
-  height: 100%;
-}
-.rp-settings-secret {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.rp-settings-secret > .rp-input {
-  flex: 1;
-  min-width: 0;
-}
-.rp-settings-secret input {
-  min-width: 0;
 }
 
 .rp-sankey-node {
@@ -2956,9 +2844,6 @@ button.rp-node:hover {
 .rp-flow-filter .rp-btn {
   background: var(--rp-hl-low);
   border-color: var(--rp-hl-high);
-}
-.rp-quick-native {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .rp-spin svg {

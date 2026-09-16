@@ -1,9 +1,8 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
-import {Button as RButton, Input, Label, Text, TextField} from 'react-aria-components';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
-import {Button, Kv, LabeledSelect, MenuButton, Segmented} from '../../ui/ui';
+import {Button, Kv, LabeledSelect, MenuButton, Segmented, TextField} from '../../ui/ui';
 import {normalizeApi, readSettings, writeSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from './settings';
 
 type Appearance = {
@@ -155,7 +154,11 @@ export function Settings() {
             </div>
           </div>
           <TextField
-            className="rp-field"
+            label={t('settings.api')}
+            autoComplete="url"
+            spellCheck={false}
+            description={t('settings.apiHelp')}
+            error={invalid ? t('settings.invalidUrl') : undefined}
             name="api"
             value={api}
             isInvalid={invalid}
@@ -165,22 +168,12 @@ export function Settings() {
               validate(value);
               resetProbe();
             }}
-          >
-            <Label>{t('settings.api')}</Label>
-            <span className="rp-input">
-              <Input autoComplete="url" spellCheck={false} aria-describedby={invalid ? 'settings-url-error' : undefined} />
-            </span>
-            <Text slot="description" className="rp-label">
-              {t('settings.apiHelp')}
-            </Text>
-            {invalid && (
-              <span id="settings-url-error" role="alert">
-                {t('settings.invalidUrl')}
-              </span>
-            )}
-          </TextField>
+          />
           <TextField
-            className="rp-field"
+            label={t('settings.token')}
+            autoComplete="off"
+            spellCheck={false}
+            action={<Button onPress={() => setShowToken(value => !value)}>{t(showToken ? 'settings.hideToken' : 'settings.showToken')}</Button>}
             name="token"
             type={showToken ? 'text' : 'password'}
             value={token}
@@ -188,22 +181,14 @@ export function Settings() {
               setToken(value);
               resetProbe();
             }}
-          >
-            <Label>{t('settings.token')}</Label>
-            <div className="rp-settings-secret">
-              <span className="rp-input">
-                <Input autoComplete="off" spellCheck={false} />
-              </span>
-              <Button onPress={() => setShowToken(value => !value)}>{t(showToken ? 'settings.hideToken' : 'settings.showToken')}</Button>
-            </div>
-          </TextField>
+          />
           <div className="rp-toolbar">
             <Button onPress={() => void testConnection()} isDisabled={pending}>
               {t('settings.test')}
             </Button>
-            <RButton type="submit" className="rp-btn accent">
+            <Button type="submit" accent>
               {t('settings.save')}
-            </RButton>
+            </Button>
           </div>
           <div className="rp-label">{t('settings.saveHelp')}</div>
           {pending && <div role="status">{t('settings.testing')}</div>}

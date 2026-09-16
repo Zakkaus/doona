@@ -6,7 +6,8 @@ test('native activity uses API version and events without demo mode controls', a
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.locator('.rp-content .rp-mode-tile, .rp-content .rp-global-tile')).toHaveCount(0);
+  await expect(page.getByRole('radiogroup', {name: 'Mode', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveCount(0);
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
@@ -28,9 +29,14 @@ test.describe('Clash demo', () => {
   test.use({storage: {'doona-backend': 'clash'}});
   test('labels local mode controls and log fixtures as demos', async ({page}) => {
     await page.goto('/#/activity');
-    const mode = page.locator('.rp-mode-tile');
+    const mode = page.locator('.rp-card').filter({has: page.getByRole('radiogroup', {name: 'Mode', exact: true})});
     await expect(mode.locator('.rp-badge')).toHaveText('Demo');
-    await expect(page.locator('.rp-global-tile .rp-badge')).toHaveText('Demo');
+    await expect(
+      page
+        .locator('.rp-card')
+        .filter({has: page.getByRole('button', {name: 'Global target', exact: true})})
+        .locator('.rp-badge')
+    ).toHaveText('Demo');
     await mode.getByRole('radio', {name: 'Global', exact: true}).click();
     await expect(page.getByText('Demo: no Clash backend is connected', {exact: true})).toBeVisible();
     await page.goto('/#/events');

@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Frame, Line, LogLine} from '../../ui/ui';
+import {Badge, Frame, Line, LogLine} from '../../ui/ui';
 import {clashLog} from './fixtures';
 
 export function ClashLogs() {
@@ -7,7 +7,7 @@ export function ClashLogs() {
   return (
     <div className="rp-page">
       <p className="rp-note">
-        <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span> {t('compat.demoData')}
+        <Badge>{t('nav.compat')}</Badge> {t('compat.demoData')}
       </p>
       <Frame title={t('event.clashTitle')} actions={<span>{t('event.clashLevel')}</span>}>
         {clashLog.map((line, i) => (

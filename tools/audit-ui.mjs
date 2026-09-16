@@ -1,10 +1,10 @@
 // Run beside the installed dependencies: node tools/audit-ui.mjs [--md] [--axe] [URL].
-// Defaults to http://127.0.0.1:4184; measures Dawn/en at 1440px. No files or backend data are written.
-// JSON includes hidden controls; the Markdown inventory flags visible values only. --axe adds WCAG findings.
+// Defaults to Dawn/en at 1440px. --width=900 and --dark measure responsive and dark surfaces.
+// --screenshots=DIR saves full-page captures; --axe includes WCAG findings.
 // Use the shared SSD browser cache when present; PLAYWRIGHT_BROWSERS_PATH overrides it.
-import {existsSync, readFileSync} from 'node:fs';
+import {existsSync, mkdirSync, readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
-import {dirname} from 'node:path';
+import {dirname, join} from 'node:path';
 
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync('/scratch/ssd/pw-browsers')) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = '/scratch/ssd/pw-browsers';
@@ -21,31 +21,39 @@ try {
 const {chromium} = require(browserModule);
 const args = process.argv.slice(2);
 const baseURL = args.find(arg => !arg.startsWith('--')) ?? 'http://127.0.0.1:4184';
+const width = Number(args.find(arg => arg.startsWith('--width='))?.split('=')[1] ?? 1440);
+const scheme = args.includes('--dark') ? 'dark' : 'light';
+const screenshots = args.find(arg => arg.startsWith('--screenshots='))?.slice('--screenshots='.length);
+if (screenshots) mkdirSync(screenshots, {recursive: true});
 const fixture = readFileSync(new URL('../e2e/fixtures.ts', import.meta.url), 'utf8');
 const routeList = fixture.match(/export const routes = \[([\s\S]*?)\] as const;/);
 if (!routeList) throw new Error('Cannot read the route list from e2e/fixtures.ts');
 const routes = [...routeList[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+const compatRoutes = [...fixture.match(/export const compatRoutes[^=]*= \[([^\]]+)\]/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 const browser = await chromium.launch();
 const pages = [];
 try {
-  const context = await browser.newContext({viewport: {width: 1440, height: 1400}, colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block'});
-  await context.addInitScript(() => {
+  const context = await browser.newContext({viewport: {width, height: 1400}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});
+  await context.addInitScript(scheme => {
     localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-scheme', 'light');
+    localStorage.setItem('doona-scheme', scheme);
     localStorage.setItem('doona-palette', 'rose-pine/moon');
-  });
+  }, scheme);
   for (const route of routes) {
     const page = await context.newPage();
+    await page.addInitScript(backend => localStorage.setItem('doona-backend', backend), compatRoutes.includes(route) ? 'clash' : 'native');
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {
       if (message.type() === 'error') errors.push(message.text());
     });
     await page.goto(`${baseURL}/#/${route}`);
+    await page.locator('.rp-content > :not(.rp-head):not([role="status"])').first().waitFor();
     await page.locator('.rp-content').waitFor();
     await page.waitForFunction(() =>
       [...document.querySelectorAll('.rp-content [role="status"]')].every(element => !element.checkVisibility({visibilityProperty: true}))
     );
+    if (route === 'flows') await page.locator('.rp-flow-graph .recharts-surface').waitFor();
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     await page.waitForFunction(() =>
       document.getAnimations().every(animation => animation.effect?.getComputedTiming().iterations === Infinity || animation.playState === 'finished')
@@ -60,16 +68,18 @@ try {
         visible: element.getClientRects().length > 0 && element.getBoundingClientRect().height > 0 && getComputedStyle(element).visibility !== 'hidden'
       });
       const controls = selector =>
-        Array.from(document.querySelectorAll(selector), element => {
-          const style = getComputedStyle(element);
-          return {
-            ...describe(element),
-            height: round(element.getBoundingClientRect().height),
-            padding: style.padding,
-            'border-radius': style.borderRadius,
-            'font-size': style.fontSize
-          };
-        });
+        Array.from(document.querySelectorAll(selector))
+          .filter(element => element.namespaceURI === 'http://www.w3.org/1999/xhtml')
+          .map(element => {
+            const style = getComputedStyle(element);
+            return {
+              ...describe(element),
+              height: round(element.getBoundingClientRect().height),
+              padding: style.padding,
+              'border-radius': style.borderRadius,
+              'font-size': style.fontSize
+            };
+          });
       const cardElements = [...document.querySelectorAll('.rp-card')];
       const cards = cardElements.map(element => {
         const style = getComputedStyle(element);
@@ -101,9 +111,22 @@ try {
           kind: element.querySelector('[role="columnheader"], th') ? 'header' : 'body',
           height: round(element.getBoundingClientRect().height)
         })),
-        headings: Array.from(document.querySelectorAll('h1, h2, .rp-qlabel'), element => {
+        headings: Array.from(document.querySelectorAll('h1, h2, h3, .rp-title, .rp-qlabel'), element => {
           const style = getComputedStyle(element);
           return {...describe(element), 'font-size': style.fontSize, 'font-weight': style.fontWeight};
+        }),
+        alignment: Array.from(document.querySelectorAll('.rp-row, .rp-toolbar, .rp-cluster, .rp-between, .rp-kv, .rp-bar .top, .rp-node .top'), element => {
+          const style = getComputedStyle(element);
+          return {
+            ...describe(element),
+            align: style.alignItems,
+            gap: style.gap,
+            children: Array.from(element.children, child => {
+              const control = child.matches('.rp-field') ? (child.querySelector('.rp-input, button, .rp-seg') ?? child) : child;
+              const rect = control.getBoundingClientRect();
+              return {...describe(control), top: round(rect.top), bottom: round(rect.bottom), center: round(rect.top + rect.height / 2)};
+            })
+          };
         }),
         rhythm,
         tokens
@@ -120,6 +143,7 @@ try {
       }));
     }
     if (errors.length) throw new Error(`${route}: ${errors.join('; ')}`);
+    if (screenshots) await page.screenshot({path: join(screenshots, `${route}-${scheme}-${width}.png`), fullPage: true});
     pages.push({route, ...measurements});
     await page.close();
   }
@@ -165,7 +189,7 @@ const values = [...inventory.values()].map(entry => {
     ].filter(Boolean)
   };
 });
-const result = {baseURL, viewport: {width: 1440, height: 1400}, scheme: 'light', locale: 'en', pages, values};
+const result = {baseURL, viewport: {width, height: 1400}, scheme, locale: 'en', pages, values};
 if (args.includes('--md')) {
   const escape = value => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
   console.log('| Property | Value | Pages | Locations (zero-based element index) | Flags |');
@@ -175,6 +199,7 @@ if (args.includes('--md')) {
       `| ${[entry.property, entry.value, entry.pages.join(', '), entry.locations.join('; '), entry.flags.join(', ') || '—'].map(escape).join(' | ')} |`
     );
   }
+  console.log(`\nDistinct property/value pairs: ${values.length}; flagged pairs: ${values.filter(entry => entry.flags.length).length}.`);
   if (args.includes('--axe')) {
     console.log('\n| Page | Axe rule | Nodes |\n| --- | --- | --- |');
     for (const page of pages) for (const rule of page.axe) console.log(`| ${page.route} | ${rule.rule} | ${rule.count} |`);

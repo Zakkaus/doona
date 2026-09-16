@@ -1,5 +1,5 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject} from 'react';
+import {useId, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode, type RefObject} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -26,6 +26,7 @@ import Checkmark from './icons/Checkmark';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
+import Search from './icons/Search';
 import {useT} from '../i18n';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
@@ -85,7 +86,10 @@ export function Button({
   negative,
   label,
   isDisabled,
-  tip
+  tip,
+  type,
+  appearance,
+  className
 }: {
   children?: ReactNode;
   onPress?: () => void;
@@ -99,22 +103,27 @@ export function Button({
   label?: string;
   isDisabled?: boolean;
   tip?: string;
+  type?: 'button' | 'submit' | 'reset';
+  appearance?: 'search' | 'version' | 'select';
+  className?: string;
 }) {
   const btn = (
     <PressButton
       className={cx(
-        'rp-btn',
+        appearance ? `rp-${appearance}` : 'rp-btn',
         quiet && 'quiet',
         small && 'sm',
         icon && 'icon',
         accent && 'accent',
         primary && 'primary',
         secondary && 'secondary',
-        negative && 'negative'
+        negative && 'negative',
+        className
       )}
       onPress={onPress}
       aria-label={label}
       isDisabled={isDisabled}
+      type={type}
     >
       {children}
     </PressButton>
@@ -266,10 +275,10 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[]; va
     </Select>
   );
 }
-export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info'; children: ReactNode; small?: boolean}) {
+export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-export function Bar({label, value, pct, color, icon}: {label: string; value: string; pct: number; color: string; icon?: ReactNode}) {
+export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: string; pct: number; color: string; icon?: ReactNode}) {
   return (
     <div className="rp-bar">
       <div className="top">
@@ -279,7 +288,7 @@ export function Bar({label, value, pct, color, icon}: {label: string; value: str
         </span>
         <span className="v">{value}</span>
       </div>
-      <div className="track">
+      <div className="track" aria-hidden="true">
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />
       </div>
     </div>
@@ -292,6 +301,8 @@ import {
   Switch as RSwitch,
   TextField as RTextField,
   TextArea as RTextArea,
+  SearchField as RSearchField,
+  Text,
   Label,
   Input as RInput,
   Table,
@@ -333,23 +344,70 @@ export function Switch({
 }
 export function TextField({
   label,
-  value,
-  onChange,
-  defaultValue,
-  width
-}: {
-  label: string;
-  value?: string;
-  onChange?: (v: string) => void;
-  defaultValue?: string;
-  width?: number;
-}) {
+  width,
+  search,
+  large,
+  side,
+  className,
+  placeholder,
+  description,
+  error,
+  action,
+  autoComplete,
+  spellCheck,
+  ...props
+}: Pick<ComponentProps<typeof RTextField>, 'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus'> &
+  Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> & {
+    label: string;
+    width?: number;
+    search?: boolean;
+    large?: boolean;
+    side?: boolean;
+    className?: string;
+    placeholder?: string;
+    description?: string;
+    error?: string;
+    action?: ReactNode;
+  }) {
+  const t = useT();
+  const errorId = useId();
+  if (search) {
+    return (
+      <RSearchField {...props} aria-label={label} className={cx('rp-input', large && 'lg', className)} style={width ? {width} : undefined}>
+        <Search />
+        <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
+        <RButton className="clear" aria-label={t('clear')}>
+          <Close />
+        </RButton>
+      </RSearchField>
+    );
+  }
+  const input = (
+    <span className={cx('rp-input', (side || !!action) && 'rp-grow')}>
+      <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} aria-describedby={error ? errorId : undefined} />
+    </span>
+  );
   return (
-    <RTextField className="rp-field" value={value} onChange={onChange} defaultValue={defaultValue} style={width ? {width} : undefined}>
-      <Label>{label}</Label>
-      <span className="rp-input">
-        <RInput />
-      </span>
+    <RTextField {...props} className={cx(side ? 'rp-cluster' : 'rp-field', className)} style={width ? {width} : undefined}>
+      <Label className="rp-label">{label}</Label>
+      {action ? (
+        <div className="rp-toolbar">
+          {input}
+          {action}
+        </div>
+      ) : (
+        input
+      )}
+      {description && (
+        <Text slot="description" className="rp-label">
+          {description}
+        </Text>
+      )}
+      {error && (
+        <span id={errorId} role="alert">
+          {error}
+        </span>
+      )}
     </RTextField>
   );
 }
@@ -418,8 +476,8 @@ export function LabeledSelect({
     </div>
   );
 }
-export function Badge({children, tone}: {children: ReactNode; tone?: 'warn'}) {
-  return <span className={cx('rp-badge', tone)}>{children}</span>;
+export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
+  return <span className={cx('rp-badge', tone, className)}>{children}</span>;
 }
 export function Kv({items, inline}: {items: Array<[string, string]>; inline?: boolean}) {
   return (
@@ -433,8 +491,7 @@ export function Kv({items, inline}: {items: Array<[string, string]>; inline?: bo
     </div>
   );
 }
-// Node tile: name and the TCP latency up front, coloured by health; UDP and IPv6 underneath.
-// With onPress it is a toggle (selector groups); without, a static member that may be the group's current pick.
+// Virtual collections render the same tile body inside their own selectable item.
 export type NodeTileProps = {
   name: string;
   icon?: ReactNode;
@@ -442,14 +499,34 @@ export type NodeTileProps = {
   udp?: number;
   v6?: boolean;
   alive?: boolean;
+  unavailable?: boolean;
+  description?: string;
   nested?: boolean;
   selected?: boolean;
   cur?: boolean;
   onPress?: () => void;
+  isDisabled?: boolean;
+  bodyOnly?: boolean;
   labels: {timeout: string; nested: string; cur: string};
 };
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
-export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, selected, cur, onPress, labels}: NodeTileProps) {
+export function NodeTile({
+  name,
+  icon,
+  tcp,
+  udp,
+  v6,
+  alive = true,
+  unavailable = !alive || tcp == null,
+  description,
+  nested,
+  selected,
+  cur,
+  onPress,
+  isDisabled,
+  bodyOnly,
+  labels
+}: NodeTileProps) {
   const t = useT();
   const body = (
     <>
@@ -459,22 +536,23 @@ export function NodeTile({name, icon, tcp, udp, v6, alive = true, nested, select
           {name}
         </span>
         {nested ? (
-          <span className="ms nested">{labels.nested}</span>
+          <Badge>{labels.nested}</Badge>
         ) : alive && tcp != null ? (
           <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: tcp})}</span>
         ) : (
-          <span className="ms err">{labels.timeout}</span>
+          <span className={cx('ms', unavailable && 'err')}>{unavailable ? labels.timeout : '—'}</span>
         )}
       </span>
       <span className="s">
-        {nested ? ' ' : alive ? [t('ui.udpLatency', {n: String(udp)}), v6 && t('ui.ipv6')].filter(Boolean).join(' · ') : ' '}
+        {description ?? (nested || !alive ? ' ' : [t('ui.udpLatency', {n: String(udp)}), v6 && t('ui.ipv6')].filter(Boolean).join(' · '))}
         {cur && !onPress && <span className="cur">{labels.cur}</span>}
       </span>
     </>
   );
+  if (bodyOnly) return body;
   if (onPress) {
     return (
-      <ToggleButton className="rp-node" isSelected={selected} onChange={onPress}>
+      <ToggleButton className="rp-node" isSelected={selected} isDisabled={isDisabled} onChange={onPress}>
         {body}
       </ToggleButton>
     );
@@ -549,32 +627,43 @@ export function ModalDialog({
   children,
   footer,
   narrow,
-  alert
+  alert,
+  isOpen,
+  onOpenChange,
+  hideTitle
 }: {
-  trigger: ReactElement;
+  trigger?: ReactElement;
   title: string;
   children: ReactNode | ((close: () => void) => ReactNode);
   footer?: (close: () => void) => ReactNode;
   narrow?: boolean;
   alert?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTitle?: boolean;
 }) {
-  return (
+  const modal = (
+    <ModalOverlay className="rp-underlay" isDismissable={!alert} isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal>
+        <Dialog className={cx('rp-dialog', narrow && 'narrow')} role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
+          {({close}) => (
+            <>
+              {!hideTitle && <Heading slot="title">{title}</Heading>}
+              {typeof children === 'function' ? children(close) : children}
+              {footer && <div className="foot">{footer(close)}</div>}
+            </>
+          )}
+        </Dialog>
+      </Modal>
+    </ModalOverlay>
+  );
+  return trigger ? (
     <DialogTrigger>
       {trigger}
-      <ModalOverlay className="rp-underlay" isDismissable={!alert}>
-        <Modal>
-          <Dialog className={cx('rp-dialog', narrow && 'narrow')} role={alert ? 'alertdialog' : 'dialog'}>
-            {({close}) => (
-              <>
-                <Heading slot="title">{title}</Heading>
-                {typeof children === 'function' ? children(close) : children}
-                {footer && <div className="foot">{footer(close)}</div>}
-              </>
-            )}
-          </Dialog>
-        </Modal>
-      </ModalOverlay>
+      {modal}
     </DialogTrigger>
+  ) : (
+    modal
   );
 }
 export function Tabs({tabs, children, label}: {tabs: Array<[string, string]>; children: (id: string) => ReactNode; label: string}) {

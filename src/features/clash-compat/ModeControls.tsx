@@ -3,7 +3,7 @@ import type {GroupSummary} from '../../api/model';
 import {useT} from '../../i18n';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
-import {MenuButton, Segmented, toast} from '../../ui/ui';
+import {Badge, MenuButton, Segmented, toast} from '../../ui/ui';
 
 export function ModeControls({groups}: {groups: GroupSummary[]}) {
   const t = useT();
@@ -12,12 +12,12 @@ export function ModeControls({groups}: {groups: GroupSummary[]}) {
   const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
   return (
     <>
-      <div className="rp-card rp-mode-tile">
+      <div className="rp-card">
         <div className="rp-row">
           <span className="rp-qlabel rp-tint-c3">
             <Shuffle />
             {t('act.mode')}
-            <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>
+            <Badge>{t('nav.compat')}</Badge>
           </span>
           <Segmented
             label={t('act.mode')}
@@ -34,12 +34,12 @@ export function ModeControls({groups}: {groups: GroupSummary[]}) {
           />
         </div>
       </div>
-      <div className="rp-card rp-global-tile">
+      <div className="rp-card">
         <div className="rp-row">
           <span className="rp-qlabel rp-tint-c2">
             <Filter />
             {t('act.global')}
-            <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>
+            <Badge>{t('nav.compat')}</Badge>
           </span>
           <MenuButton
             quiet

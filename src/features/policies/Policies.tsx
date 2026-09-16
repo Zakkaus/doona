@@ -167,7 +167,7 @@ export function Policies({go}: PageProps) {
       )}
       {groups.loading && !groups.data && <p role="status">{t('ui.loading')}</p>}
       {groups.data?.length === 0 && <p className="rp-note">{t('policy.empty')}</p>}
-      <div className="rp-list">
+      <div className="rp-col">
         {groups.data?.map(g => (
           <PolicyCard key={g.id} id={g.id} health={health} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />
         ))}

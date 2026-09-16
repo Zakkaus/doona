@@ -118,9 +118,9 @@ export function Validate({go}: PageProps) {
             </div>
             <div className="rp-list">
               {pending.map(p => (
-                <div key={p.key} className="rp-diff">
+                <div key={p.key} className="rp-row">
                   <span className="rp-code">{p.key}</span>
-                  <span className="v">
+                  <span className="rp-note">
                     {p.from} → {p.to}
                   </span>
                   {p.restart && <Badge tone="warn">{t('ui.needRestart')}</Badge>}

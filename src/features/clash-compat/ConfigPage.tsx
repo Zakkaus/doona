@@ -51,7 +51,7 @@ export function ConfigPage({query, go}: PageProps) {
             <div className="rp-group-btns">
               <Button secondary onPress={() => go('validate')}>
                 {t('config.validate')}
-                {errs.length > 0 && <span className="rp-count">{errs.length}</span>}
+                {errs.length > 0 && <Badge>{errs.length}</Badge>}
               </Button>
               <Button primary onPress={() => toast('neutral', t('compat.disconnected'))}>
                 {t('config.reload')}
@@ -71,8 +71,8 @@ export function ConfigPage({query, go}: PageProps) {
             const [h, b] = e.msg.split('；');
             return (
               <div key={e.line} className="rp-alert">
-                <span className="h">{t('config.lineError', {n: e.line, error: h})}</span>
-                <span className="b">{b ?? e.why}</span>
+                <span className="rp-h3">{t('config.lineError', {n: e.line, error: h})}</span>
+                <span className="rp-note">{b ?? e.why}</span>
               </div>
             );
           })}
