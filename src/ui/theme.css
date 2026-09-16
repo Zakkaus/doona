@@ -798,11 +798,6 @@
   opacity: 0;
   transform: rotate(-90deg) scale(0.5);
 }
-.rp-dialog .close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-}
 .rp-dialog {
   position: relative;
 }

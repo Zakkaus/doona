@@ -199,11 +199,13 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
         if (!o) onClose();
       }}
     >
-      <Button quiet icon className="close" onPress={onClose} label={t('close')}>
-        <Close />
-      </Button>
-      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-      <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus />
+      <div className="rp-toolbar">
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
+        <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
+        <Button quiet icon onPress={onClose} label={t('close')}>
+          <Close />
+        </Button>
+      </div>
       {error && <ErrorMessage error={error} />}
       {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
       <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
