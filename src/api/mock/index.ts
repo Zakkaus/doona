@@ -201,7 +201,14 @@ export function createMockApi(): Api {
     },
     runtimeMemory: async signal => {
       signal?.throwIfAborted();
-      return structuredClone(fixtures.runtimeMemory);
+      // Each poll is a fresh observation with a little drift, so memory sparklines and charts get a shape.
+      const memory = structuredClone(fixtures.runtimeMemory);
+      const now = Date.now();
+      const drift = 1 + 0.04 * Math.sin(now / 60000);
+      memory.observed_at = new Date(now).toISOString();
+      memory.process = {rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift))};
+      memory.cgroup = {...memory.cgroup!, current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))};
+      return memory;
     },
     nodes: async (query, signal) => {
       signal?.throwIfAborted();

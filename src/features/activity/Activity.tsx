@@ -213,7 +213,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               </span>
               {cgroupPercent !== null && (
                 <Light small tone={cgroupPercent > 90 ? 'err' : cgroupPercent > 75 ? 'warn' : 'ok'}>
-                  {t('act.cgroupShare', {percent: Math.round(cgroupPercent)})}
+                  {t(cgroupPercent > 90 ? 'act.memoryNearLimit' : cgroupPercent > 75 ? 'act.memoryHigh' : 'act.memoryOk')}
                 </Light>
               )}
             </div>
