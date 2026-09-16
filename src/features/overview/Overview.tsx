@@ -192,7 +192,7 @@ export function Overview() {
               {datapath.data.ebpf && (
                 <DataTable
                   label={t('ov.attachments')}
-                  height={attachments.length ? Math.min(250, 40 + attachments.length * 40) : 120}
+                  height={250}
                   rows={attachments}
                   empty={t('ov.unknown')}
                   cols={[

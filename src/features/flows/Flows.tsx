@@ -1,5 +1,7 @@
 import {useMemo, useState} from 'react';
-import {useFlow, useFlows} from '../../api/store';
+import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
+import {FlowMap} from './FlowMap';
+import {flowMap, flowsThrough} from './map';
 import {chainLabel, connectionStates, flowStepFields, localTime, relativeStart} from '../../api/selectors';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
@@ -40,10 +42,27 @@ export function Flows({go, query}: PageProps) {
     else next.delete('id');
     go('flows', next.toString());
   };
-  const shown = (resource.data?.flows ?? []).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
+  // The map draws the config with every retained flow; the pinned path narrows the list beneath it.
+  const groups = useGroups();
+  const nodes = useNodes();
+  const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
+  const pinned = params.get('path');
+  const setPinned = (value: string | null) => {
+    const next = new URLSearchParams(query);
+    if (value) next.set('path', value);
+    else next.delete('path');
+    go('flows', next.toString());
+  };
+  const pinnedLabel = pinned ? (map.nodes.find(node => node.id === pinned)?.label ?? pinned.slice(pinned.indexOf(':') + 1)) : null;
+  const all = resource.data?.flows ?? [];
+  const shown = (pinned ? flowsThrough(all, pinned) : all).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
   return (
     <div className="rp-page">
       {resource.error && <ErrorMessage error={resource.error} />}
+      <section className="rp-card" aria-label={t('flow.map')}>
+        {resource.data || groups.data ? <FlowMap map={map} pinned={pinned} onPin={setPinned} /> : <Loading />}
+        {resource.data && !resource.data.flows.length && <span className="rp-empty">{t('flow.mapEmpty')}</span>}
+      </section>
       <div className="rp-toolbar">
         <Segmented
           label={t('ui.network')}
@@ -62,6 +81,12 @@ export function Flows({go, query}: PageProps) {
           onChange={setState}
           items={[{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]}
         />
+        {pinned && (
+          <Button small label={t('flow.clearMapFilter')} onPress={() => setPinned(null)}>
+            {t('flow.mapFilter', {label: pinnedLabel ?? ''})}
+            <Close />
+          </Button>
+        )}
         {connectionId && (
           <Button small label={t('flow.clearConnectionFilter')} onPress={() => go('flows', id ? 'id=' + encodeURIComponent(id) : '')}>
             {t('flow.connectionFilter', {id: connectionId})}

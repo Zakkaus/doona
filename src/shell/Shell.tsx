@@ -449,7 +449,10 @@ function Frame({
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">
-            <h1 className="rp-h1">{t(titleKey)}</h1>
+            <div className="rp-title">
+              <h1 className="rp-h1">{t(titleKey)}</h1>
+              {feature.nav?.hintKey && <span className="rp-hint">{t(feature.nav.hintKey)}</span>}
+            </div>
             <div className="rp-mobile-nav">
               <LabeledSelect
                 label={t('page')}

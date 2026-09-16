@@ -27,6 +27,29 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(page.locator('.rp-panel')).toHaveCount(0);
 });
 
+test('the traffic map lays out the config and a pinned path filters the list', async ({page}) => {
+  await page.goto('/#/flows');
+  const map = page.getByRole('region', {name: 'Traffic path'});
+  const rows = page.locator('.rp-table tbody tr[data-key]');
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+  for (const column of ['Ingress', 'Rule', 'Outbound', 'Node']) await expect(map.getByRole('group', {name: column})).toBeVisible();
+  // Every configured group is in the outbound column, used or not; links are drawn once boxes are laid out.
+  for (const group of ['proxy', 'direct', 'airport']) await expect(map.getByRole('group', {name: 'Outbound'}).getByText(group, {exact: true})).toBeVisible();
+  expect(await map.locator('svg path').count()).toBeGreaterThan(3);
+  const rule = map.getByRole('group', {name: 'Rule'}).getByRole('radio').or(map.getByRole('group', {name: 'Rule'}).getByRole('button')).filter({hasText: 'dip(geoip:cn)'});
+  await rule.click();
+  await expect(page).toHaveURL(/path=rule%3Adip/);
+  await expect(rule).toHaveAttribute('aria-pressed', 'true');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('dip(geoip:cn)');
+  await expect(map.locator('[data-map-id][data-dim]').first()).toBeVisible();
+  await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
+  await expect(rows).toHaveCount(total);
+  await expect(page).not.toHaveURL(/path=/);
+  await expect(map.locator('[data-map-id][data-dim]')).toHaveCount(0);
+});
+
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
   await page.goto('/#/flows');
   const rows = page.locator('.rp-table tbody tr[data-key]');

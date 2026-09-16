@@ -3,7 +3,7 @@ import {localTime} from '../../api/selectors';
 import {useEffect, useMemo} from 'react';
 import {useCapabilities, useRoutingTrace} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
-import {RuleDistribution} from './RuleDistribution';
+import {RuleList} from './RuleList';
 import type {PageProps} from '../types';
 import type {Key} from '../../i18n/messages';
 
@@ -14,18 +14,18 @@ const outcomes: Record<string, Key> = {
   indeterminate: 'rule.result.indeterminate'
 };
 
-// "Which rule decided the exit": the snapshot's distribution, and a simulator for a hypothetical input.
-// A rule list joins as a third tab once the contract exposes one.
+// The rules: a list of what decided the retained flows, and a simulator for a hypothetical input.
+// The config list and the editor join once the contract carries them.
 export function Rules({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const tabs = [
-    ...(resources?.flows.available !== false ? [{id: 'distribution', label: t('rule.distributionTitle'), content: <RuleDistribution />}] : []),
+    ...(resources?.flows.available !== false ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList />}] : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];
-  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'distribution');
+  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'list');
   if (capabilities.loading && !capabilities.data) return <Loading />;
   if (capabilities.error) return <ErrorMessage error={capabilities.error} />;
   if (!tabs.length)

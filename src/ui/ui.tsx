@@ -722,8 +722,10 @@ export function DataTable<T extends {id: string}>({
   const [ref, width] = useContentWidth<HTMLDivElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
   const index = new Map(cols.map((column, i) => [column.id, i]));
+  // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
+  const fitted = Math.min(height, 41 + Math.max(rows.length, 2) * 40);
   return (
-    <ResizableTableContainer ref={ref} className="rp-table" style={{height}}>
+    <ResizableTableContainer ref={ref} className="rp-table" style={{height: fitted}}>
       <Table
         aria-label={label}
         selectionMode={onSelect ? 'single' : 'none'}
