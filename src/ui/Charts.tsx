@@ -82,8 +82,8 @@ const LazyAreaChart = lazy(() =>
       const p = usePalette();
       const uid = useId();
       const span = timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
-      const withSeconds = span < 10 * 60 * 1000;
-      // Under ten minutes the hour repeats on every tick, so the axis reads minute:second instead.
+      const withSeconds = span < 3 * 60 * 1000;
+      // Under three minutes the hour repeats on every tick, so the axis reads minute:second instead.
       const clock = useMemo(
         () => new Intl.DateTimeFormat(locale, withSeconds ? {minute: '2-digit', second: '2-digit'} : {hour: '2-digit', minute: '2-digit'}),
         [locale, withSeconds]
@@ -103,7 +103,9 @@ const LazyAreaChart = lazy(() =>
         max = Math.ceil(top / step) * step + step;
       }
       const yTicks = baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max];
-      const ticks = [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
+      const ticks = [
+        ...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))
+      ];
       return (
         <div style={{height, width: '100%'}}>
           <ResponsiveContainer width="100%" height="100%">

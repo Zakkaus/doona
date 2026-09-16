@@ -72,52 +72,52 @@ export function Overview() {
       {runtime.error && <ErrorMessage error={runtime.error} />}
       {operations.error && <ErrorMessage error={operations.error} />}
       <div className="rp-g21">
-      <section className="rp-card" aria-labelledby="overview-datapath">
-        <h3 className="rp-h3" id="overview-datapath">
-          {t('ov.datapath')}
-        </h3>
-        {datapath.error && <ErrorMessage error={datapath.error} />}
-        {datapath.data ? (
-          <>
-            <Kv items={datapathFields(datapath.data, t('ov.unknown'), t)} />
-            {datapath.data.ebpf && (
-              <DataTable
-                label={t('ov.attachments')}
-                height={attachments.length ? Math.min(250, 40 + attachments.length * 40) : 120}
-                rows={attachments}
-                empty={t('ov.unknown')}
-                cols={[
-                  {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true},
-                  {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2},
-                  {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1},
-                  {id: 's', label: t('ov.state'), minWidth: 88, grow: 0}
-                ]}
-                render={a => [a.name, a.interface, datapathValue(a.direction, t), datapathValue(a.state, t)]}
-              />
-            )}
-            {(datapath.data.errors.length > 0 || datapath.data.ebpf?.last_error) && (
-              <div className="rp-cluster">
-                {datapath.data.errors.map((error, i) => (
-                  <TextTooltip key={i} text={error.code}>
-                    <Light small tone="err">
-                      {error.message}
+        <section className="rp-card" aria-labelledby="overview-datapath">
+          <h3 className="rp-h3" id="overview-datapath">
+            {t('ov.datapath')}
+          </h3>
+          {datapath.error && <ErrorMessage error={datapath.error} />}
+          {datapath.data ? (
+            <>
+              <Kv items={datapathFields(datapath.data, t('ov.unknown'), t)} />
+              {datapath.data.ebpf && (
+                <DataTable
+                  label={t('ov.attachments')}
+                  height={attachments.length ? Math.min(250, 40 + attachments.length * 40) : 120}
+                  rows={attachments}
+                  empty={t('ov.unknown')}
+                  cols={[
+                    {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true},
+                    {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2},
+                    {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1},
+                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0}
+                  ]}
+                  render={a => [a.name, a.interface, datapathValue(a.direction, t), datapathValue(a.state, t)]}
+                />
+              )}
+              {(datapath.data.errors.length > 0 || datapath.data.ebpf?.last_error) && (
+                <div className="rp-cluster">
+                  {datapath.data.errors.map((error, i) => (
+                    <TextTooltip key={i} text={error.code}>
+                      <Light small tone="err">
+                        {error.message}
+                      </Light>
+                    </TextTooltip>
+                  ))}
+                  {datapath.data.ebpf?.last_error && !datapath.data.errors.some(error => error.message === datapath.data?.ebpf?.last_error) && (
+                    <Light small tone="warn">
+                      {datapath.data.ebpf.last_error}
                     </Light>
-                  </TextTooltip>
-                ))}
-                {datapath.data.ebpf?.last_error && !datapath.data.errors.some(error => error.message === datapath.data?.ebpf?.last_error) && (
-                  <Light small tone="warn">
-                    {datapath.data.ebpf.last_error}
-                  </Light>
-                )}
-              </div>
-            )}
-          </>
-        ) : capabilities.loading || datapath.loading ? (
-          <Loading />
-        ) : (
-          <span className="rp-empty">{t('ov.unavailable')}</span>
-        )}
-      </section>
+                  )}
+                </div>
+              )}
+            </>
+          ) : capabilities.loading || datapath.loading ? (
+            <Loading />
+          ) : (
+            <span className="rp-empty">{t('ov.unavailable')}</span>
+          )}
+        </section>
         <section className="rp-card" aria-labelledby="overview-memory">
           <h3 className="rp-h3" id="overview-memory">
             {t('ov.memory')}

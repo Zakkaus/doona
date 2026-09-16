@@ -26,7 +26,7 @@ import type {Key} from '../../i18n/messages';
 const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
 import {NodeMenu} from '../policies/Nodes';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
-import {useMemorySamples} from '../overview/memory';
+import {useMemorySeries} from '../overview/memory';
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
@@ -41,7 +41,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
   const memory = useRuntimeMemory(capabilities.data?.resources.runtime_memory.available === true);
   const rss = memory.data?.process?.rss_bytes ?? null;
-  const memorySamples = useMemorySamples(memory.data);
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
+  const memorySamples = memoryHistory.samples;
   const memorySeries = [
     {label: t('act.rss'), color: p.cat[0], values: memorySamples.map(sample => sample.rss)},
     {label: t('act.cgroup'), color: p.cat[3], values: memorySamples.map(sample => sample.cgroup)}
@@ -333,12 +334,19 @@ export function Activity({go}: {go: (page: string) => void}) {
               {t('act.viewDetails')}
             </Button>
           </div>
-          {memory.error ? (
-            <ErrorMessage error={memory.error} />
+          {memory.error || memoryHistory.error ? (
+            <ErrorMessage error={memory.error ?? memoryHistory.error} />
           ) : memorySamples.length > 1 ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
-              <AreaChart series={memorySeries} timestamps={memorySamples.map(sample => sample.time)} fmt={memoryBytes} locale={locale} height={150} baseline="auto" />
+              <AreaChart
+                series={memorySeries}
+                timestamps={memorySamples.map(sample => sample.time)}
+                fmt={memoryBytes}
+                locale={locale}
+                height={150}
+                baseline="auto"
+              />
             </>
           ) : capabilities.data?.resources.runtime_memory.available === false ? (
             <span className="rp-empty">{t('act.noHistory')}</span>

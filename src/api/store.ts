@@ -200,6 +200,17 @@ export function useTrafficHistory(range: string, capabilities: Capabilities | un
     }
   );
 }
+// Ten minutes at the recorder cadence; the chart shows what the producer retained, not a local accumulation.
+export function useMemoryHistory(capabilities: Capabilities | undefined) {
+  const api = getApi();
+  const limits = capabilities?.resources.memory_history;
+  const window_seconds = Math.min(600, limits?.max_window_seconds ?? 600);
+  const max_points = Math.min(120, limits?.max_points ?? 120);
+  return useResource(
+    {key: ['memoryHistory', {window_seconds, max_points}], fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
+    {deps: [api, window_seconds, max_points], enabled: limits?.available === true}
+  );
+}
 export function useNodes() {
   const api = getApi();
   return useResource(

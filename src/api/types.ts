@@ -135,6 +135,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runtime/memory/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read bounded memory history
+         * @description Reads a bounded in-memory ring of memory samples without starting
+         *     sampling on GET. Same shape and rules as traffic history: the producer
+         *     samples independently of readers, SSE does not replay it, and a query
+         *     above either advertised limit returns 400 invalid_request rather than a
+         *     clamped result. Requires resources.memory_history.available.
+         */
+        get: operations["getMemoryHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/datapath": {
         parameters: {
             query?: never;
@@ -255,7 +279,88 @@ export interface paths {
         get: operations["listConnections"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Close matching userspace-owned connections
+         * @description Requires resources.connections.available and can_close; otherwise returns
+         *     404 capability_not_supported. Requires control permission.
+         *
+         *     Uses the list's type and exact source-IP src filters, combined with AND.
+         *     A missing type or type=all does not restrict the set. Without type=tcp,
+         *     type=udp, or src, require all=true; otherwise return 400 invalid_request
+         *     before closing anything. This prevents an omitted filter from accidentally
+         *     disconnecting every userspace connection. all=true permits an unfiltered
+         *     request but does not override supplied filters. limit and detail are list
+         *     presentation parameters, not bulk-close parameters.
+         *
+         *     Select the matching live entries once before closing. If their count,
+         *     including non-closable entries, exceeds resources.connections.max_bulk_close,
+         *     return 413 request_too_large before closing anything; do not truncate.
+         *     Close every closable match and count the non-closable matches as skipped.
+         *     An empty match succeeds with closed=0 and skipped=0. Connections arriving
+         *     after selection are not included; selected entries that disappear before
+         *     cancellation are not counted as closed or skipped.
+         *
+         *     Closable means the userspace datapath owns the TCP transport or UDP session
+         *     and can actually cancel or retire it, not merely delete its tracker entry.
+         *     observed_by labels observation, not ownership: userspace or mixed evidence
+         *     is not sufficient by itself. Kernel-direct and kernel-bypassed flows
+         *     (kernel_direct/kernel_bypass scopes, including ebpf-only observations)
+         *     are not closable. An outbound named direct alone does not determine ownership.
+         *
+         *     Idempotency-Key is accepted. These synchronous DELETEs evaluate current live
+         *     state on each call, even with a repeated key; they do not replay an earlier
+         *     result or return a retained operation.
+         *
+         *     Closing a recorded flow advances its terminal state and emits the existing
+         *     flow.updated invalidation when advertised. Clients fetch its href and
+         *     refresh /connections; runtime.updated invalidates changed runtime counters.
+         *     Coalescing and retention rules still apply. No flow ID or event is fabricated
+         *     for an unrecorded connection, and there is no new close event kind.
+         */
+        delete: operations["closeConnections"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Close one userspace-owned connection
+         * @description Requires resources.connections.available and can_close; otherwise returns
+         *     404 capability_not_supported. Requires control permission.
+         *
+         *     A connection is closable only when the userspace datapath owns its TCP
+         *     transport or UDP session and can actually cancel or retire it. Deleting a
+         *     tracker entry is not transport cancellation. observed_by is an observation
+         *     label, not an ownership guarantee: userspace or mixed evidence alone is not
+         *     sufficient. Kernel-direct and kernel-bypassed flows (kernel_direct and
+         *     kernel_bypass scopes, including ebpf-only observations) are not closable;
+         *     an observed but non-closable connection returns 409 state_conflict.
+         *     An outbound named direct alone does not determine ownership.
+         *
+         *     Success returns 204 only after cancellation or retirement, with no body.
+         *     An unknown or already-gone ID returns 404 resource_not_found. Closing the
+         *     same ID twice returns 404 on the second call, including when Idempotency-Key
+         *     is repeated. The header is accepted as on other control calls, but this
+         *     synchronous DELETE evaluates current live state rather than replaying a
+         *     previous 204 or returning a retained operation.
+         *
+         *     Closing a recorded flow advances its terminal state and emits the existing
+         *     flow.updated invalidation when advertised. Clients fetch its href and
+         *     refresh /connections; runtime.updated invalidates changed runtime counters.
+         *     Coalescing and retention rules still apply. No flow ID or event is fabricated
+         *     for an unrecorded connection, and there is no new close event kind.
+         */
+        delete: operations["closeConnection"];
         options?: never;
         head?: never;
         patch?: never;
@@ -520,6 +625,8 @@ export interface components {
                 /** @constant */
                 traffic_history: "/api/v1/runtime/traffic/history";
                 /** @constant */
+                memory_history: "/api/v1/runtime/memory/history";
+                /** @constant */
                 operations: "/api/v1/operations/{id}";
             };
         };
@@ -567,6 +674,13 @@ export interface components {
                     /** @description Maximum returned samples per history request. */
                     max_points?: components["schemas"]["SafeUInt"];
                 };
+                memory_history: {
+                    available: boolean;
+                    /** @description Maximum look-back window in seconds; not a guarantee against bounded-ring eviction. */
+                    max_window_seconds?: components["schemas"]["SafeUInt"];
+                    /** @description Maximum returned samples per history request. */
+                    max_points?: components["schemas"]["SafeUInt"];
+                };
                 datapath: {
                     available: boolean;
                     kinds?: components["schemas"]["DatapathKind"][];
@@ -588,7 +702,13 @@ export interface components {
                     ip_versions?: components["schemas"]["IpVersion"][];
                     limits?: components["schemas"]["ProbeLimits"];
                 };
-                connections: components["schemas"]["AvailableResource"];
+                connections: {
+                    available: boolean;
+                    /** @description Whether userspace-owned connections can be closed; false makes both connection DELETE endpoints return 404 capability_not_supported. */
+                    can_close?: boolean;
+                    /** @description Maximum matching live entries, including non-closable entries, per bulk close; used only when can_close is true. Excess returns 413 request_too_large before any connection is closed. */
+                    max_bulk_close?: components["schemas"]["SafeUInt"];
+                };
                 flows: {
                     available: boolean;
                     /** @enum {string} */
@@ -779,6 +899,31 @@ export interface components {
             download_bytes_per_second: components["schemas"]["NullableUInt64"];
             /** @description Visible active TCP and UDP connections at sampled_at, or null when unavailable. */
             connections: components["schemas"]["NullableSafeUInt"];
+        };
+        /**
+         * @description Samples lie in (observed_at - window_seconds, observed_at], oldest first,
+         *     with the same retention, thinning and gap rules as TrafficHistory.
+         *     Each sample carries the metrics advertised under resources.runtime_memory.metrics;
+         *     an unadvertised or unobservable metric is null.
+         */
+        MemoryHistory: {
+            observed_at: components["schemas"]["Timestamp"];
+            /** @description Requested look-back window, not the age of the oldest retained sample. */
+            window_seconds: components["schemas"]["SafeUInt"];
+            /** @description Nominal interval between returned samples after thinning, or the recorder interval for an empty result. */
+            sampled_every_seconds: number;
+            /** @description At most max_points retained samples; missed intervals remain gaps. */
+            samples: components["schemas"]["MemoryHistorySample"][];
+        };
+        MemoryHistorySample: {
+            /** @description Original sample timestamp, never the HTTP snapshot time. */
+            sampled_at: components["schemas"]["Timestamp"];
+            /** @description Process resident set at sampled_at, or null when unavailable. */
+            rss_bytes: components["schemas"]["NullableUInt64"];
+            /** @description cgroup memory.current at sampled_at, or null when unavailable. */
+            cgroup_current_bytes: components["schemas"]["NullableUInt64"];
+            /** @description Kernel eBPF memory at sampled_at; omitted or null when unadvertised. */
+            kernel_ebpf_bytes?: components["schemas"]["NullableUInt64"];
         };
         /** @enum {string} */
         DatapathKind: "ebpf" | "userspace" | "mock" | "unknown";
@@ -1177,6 +1322,13 @@ export interface components {
             total_tcp: components["schemas"]["SafeUInt"];
             /** @description Visible live UDP entries matching type and src before limit; zero when type excludes UDP. */
             total_udp: components["schemas"]["SafeUInt"];
+        };
+        /** @description Bounded JSON-number counts; closed + skipped cannot exceed resources.connections.max_bulk_close. */
+        BulkCloseResult: {
+            /** @description Selected connections actually cancelled or retired by the userspace datapath. */
+            closed: components["schemas"]["SafeUInt"];
+            /** @description Selected connections observed but not closable; excludes entries that disappeared before cancellation. */
+            skipped: components["schemas"]["SafeUInt"];
         };
         /** @enum {string} */
         FlowScope: "userspace_tcp" | "userspace_udp" | "kernel_direct" | "kernel_block" | "dns_intercept" | "kernel_bypass";
@@ -1969,6 +2121,12 @@ export interface components {
         };
     };
     parameters: {
+        0: "tcp" | "udp" | "all";
+        /**
+         * @description Exact source IP literal, without a port; applied with type before limit. Totals and truncated describe only matching visible entries.
+         * @example 192.168.1.100
+         */
+        1: components["schemas"]["IpAddress"];
         /** @example full */
         Detail: "summary" | "full";
         /** @example 100 */
@@ -1984,6 +2142,8 @@ export interface components {
         Cursor: string;
         /** @example group-proxy */
         GroupId: string;
+        /** @example tcp-01HZX4K8W5 */
+        ConnectionId: string;
         /** @example flow-23 */
         FlowId: string;
         /** @example dns-entry-01HZX4K8W5 */
@@ -2185,6 +2345,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrafficHistory"];
+                };
+            };
+            /** @description Invalid query or window_seconds/max_points above the advertised limit */
+            400: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getMemoryHistory: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Look-back window ending at observed_at; defaults to resources.memory_history.max_window_seconds.
+                 * @example 300
+                 */
+                window_seconds?: components["schemas"]["SafeUInt"];
+                /**
+                 * @description Maximum returned samples; defaults to resources.memory_history.max_points.
+                 * @example 3
+                 */
+                max_points?: components["schemas"]["SafeUInt"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retained memory samples, oldest first */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryHistory"];
                 };
             };
             /** @description Invalid query or window_seconds/max_points above the advertised limit */
@@ -2520,6 +2728,115 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    closeConnections: {
+        parameters: {
+            query?: {
+                type?: components["parameters"]["0"];
+                /**
+                 * @description Exact source IP literal, without a port; applied with type before limit. Totals and truncated describe only matching visible entries.
+                 * @example 192.168.1.100
+                 */
+                src?: components["parameters"]["1"];
+                /** @description Explicitly permit an unfiltered close; does not override type or src. */
+                all?: boolean;
+            };
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All selected closable matches closed; non-closable matches skipped. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkCloseResult"];
+                };
+            };
+            /** @description Invalid parameters, or an unfiltered close without all=true; no connections closed. */
+            400: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Connection closing is unavailable (capability_not_supported). */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Matching live entries exceed max_bulk_close (request_too_large); no connections closed. */
+            413: components["responses"]["TooLarge"];
+        };
+    };
+    closeConnection: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @example tcp-01HZX4K8W5 */
+                connection_id: components["parameters"]["ConnectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Connection closed; no response body or Content-Type. */
+            204: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Unknown or already-gone ID (resource_not_found), or closing unavailable (capability_not_supported). */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Observed connection is not owned by a cancellable userspace transport/session (state_conflict). */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     listFlows: {

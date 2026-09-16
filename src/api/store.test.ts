@@ -169,6 +169,7 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
     'runtime',
     'runtimeOutbounds',
     'trafficHistory',
+    'memoryHistory',
     'connections',
     'nodes',
     'groups',

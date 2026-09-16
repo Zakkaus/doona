@@ -42,6 +42,7 @@ paths:
                       runtime: /api/v1/runtime
                       runtime_outbounds: /api/v1/runtime/outbounds
                       traffic_history: /api/v1/runtime/traffic/history
+                      memory_history: /api/v1/runtime/memory/history
                       operations: /api/v1/operations/{id}
                   x-headers:
                     Content-Type: application/json
@@ -129,6 +130,10 @@ paths:
                         available: true
                         max_window_seconds: 3600
                         max_points: 360
+                      memory_history:
+                        available: true
+                        max_window_seconds: 3600
+                        max_points: 720
                       datapath:
                         available: true
                         kinds:
@@ -172,6 +177,8 @@ paths:
                           global_requests_per_minute: 240
                       connections:
                         available: true
+                        can_close: true
+                        max_bulk_close: 1000
                       flows:
                         available: true
                         recording: 'on'
@@ -495,6 +502,110 @@ paths:
                         upload_bytes_per_second: '4096'
                         download_bytes_per_second: '32768'
                         connections: 170
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          description: Invalid query or window_seconds/max_points above the advertised limit
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                window_too_large:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: window_seconds exceeds the advertised limit.
+                    request_id: request-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                too_many_points:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: max_points exceeds the advertised limit.
+                    request_id: request-2
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/runtime/memory/history:
+    get:
+      operationId: getMemoryHistory
+      summary: Read bounded memory history
+      description: |
+        Reads a bounded in-memory ring of memory samples without starting
+        sampling on GET. Same shape and rules as traffic history: the producer
+        samples independently of readers, SSE does not replay it, and a query
+        above either advertised limit returns 400 invalid_request rather than a
+        clamped result. Requires resources.memory_history.available.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: window_seconds
+          in: query
+          description: Look-back window ending at observed_at; defaults to resources.memory_history.max_window_seconds.
+          schema:
+            $ref: '#/components/schemas/SafeUInt'
+            minimum: 1
+          example: 300
+        - name: max_points
+          in: query
+          description: Maximum returned samples; defaults to resources.memory_history.max_points.
+          schema:
+            $ref: '#/components/schemas/SafeUInt'
+            minimum: 1
+          example: 3
+      responses:
+        '200':
+          description: Retained memory samples, oldest first
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryHistory'
+              examples:
+                recent:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    window_seconds: 300
+                    sampled_every_seconds: 5
+                    samples:
+                      - sampled_at: '2026-08-15T09:59:50Z'
+                        rss_bytes: '48234496'
+                        cgroup_current_bytes: '67108864'
+                        kernel_ebpf_bytes: '18874368'
+                      - sampled_at: '2026-08-15T09:59:55Z'
+                        rss_bytes: null
+                        cgroup_current_bytes: null
+                        kernel_ebpf_bytes: null
+                      - sampled_at: '2026-08-15T10:00:00Z'
+                        rss_bytes: '48762880'
+                        cgroup_current_bytes: '67371008'
+                        kernel_ebpf_bytes: '18874368'
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -1211,6 +1322,245 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: closeConnections
+      summary: Close matching userspace-owned connections
+      description: |
+        Requires resources.connections.available and can_close; otherwise returns
+        404 capability_not_supported. Requires control permission.
+
+        Uses the list's type and exact source-IP src filters, combined with AND.
+        A missing type or type=all does not restrict the set. Without type=tcp,
+        type=udp, or src, require all=true; otherwise return 400 invalid_request
+        before closing anything. This prevents an omitted filter from accidentally
+        disconnecting every userspace connection. all=true permits an unfiltered
+        request but does not override supplied filters. limit and detail are list
+        presentation parameters, not bulk-close parameters.
+
+        Select the matching live entries once before closing. If their count,
+        including non-closable entries, exceeds resources.connections.max_bulk_close,
+        return 413 request_too_large before closing anything; do not truncate.
+        Close every closable match and count the non-closable matches as skipped.
+        An empty match succeeds with closed=0 and skipped=0. Connections arriving
+        after selection are not included; selected entries that disappear before
+        cancellation are not counted as closed or skipped.
+
+        Closable means the userspace datapath owns the TCP transport or UDP session
+        and can actually cancel or retire it, not merely delete its tracker entry.
+        observed_by labels observation, not ownership: userspace or mixed evidence
+        is not sufficient by itself. Kernel-direct and kernel-bypassed flows
+        (kernel_direct/kernel_bypass scopes, including ebpf-only observations)
+        are not closable. An outbound named direct alone does not determine ownership.
+
+        Idempotency-Key is accepted. These synchronous DELETEs evaluate current live
+        state on each call, even with a repeated key; they do not replay an earlier
+        result or return a retained operation.
+
+        Closing a recorded flow advances its terminal state and emits the existing
+        flow.updated invalidation when advertised. Clients fetch its href and
+        refresh /connections; runtime.updated invalidates changed runtime counters.
+        Coalescing and retention rules still apply. No flow ID or event is fabricated
+        for an unrecorded connection, and there is no new close event kind.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/0'
+        - $ref: '#/components/parameters/1'
+        - name: all
+          in: query
+          description: Explicitly permit an unfiltered close; does not override type or src.
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: All selected closable matches closed; non-closable matches skipped.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCloseResult'
+              examples:
+                closed:
+                  value:
+                    closed: 2
+                    skipped: 1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          description: Invalid parameters, or an unfiltered close without all=true; no connections closed.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unfiltered:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: Supply type=tcp, type=udp, or src, or explicitly pass all=true.
+                      details: null
+                    request_id: request-close-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Connection closing is unavailable (capability_not_supported).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unsupported:
+                  value:
+                    error:
+                      code: capability_not_supported
+                      message: Connection closing is unavailable.
+                      details: null
+                    request_id: request-close-3
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '413':
+          $ref: '#/components/responses/TooLarge'
+          description: Matching live entries exceed max_bulk_close (request_too_large); no connections closed.
+  /api/v1/connections/{connection_id}:
+    delete:
+      operationId: closeConnection
+      summary: Close one userspace-owned connection
+      description: |
+        Requires resources.connections.available and can_close; otherwise returns
+        404 capability_not_supported. Requires control permission.
+
+        A connection is closable only when the userspace datapath owns its TCP
+        transport or UDP session and can actually cancel or retire it. Deleting a
+        tracker entry is not transport cancellation. observed_by is an observation
+        label, not an ownership guarantee: userspace or mixed evidence alone is not
+        sufficient. Kernel-direct and kernel-bypassed flows (kernel_direct and
+        kernel_bypass scopes, including ebpf-only observations) are not closable;
+        an observed but non-closable connection returns 409 state_conflict.
+        An outbound named direct alone does not determine ownership.
+
+        Success returns 204 only after cancellation or retirement, with no body.
+        An unknown or already-gone ID returns 404 resource_not_found. Closing the
+        same ID twice returns 404 on the second call, including when Idempotency-Key
+        is repeated. The header is accepted as on other control calls, but this
+        synchronous DELETE evaluates current live state rather than replaying a
+        previous 204 or returning a retained operation.
+
+        Closing a recorded flow advances its terminal state and emits the existing
+        flow.updated invalidation when advertised. Clients fetch its href and
+        refresh /connections; runtime.updated invalidates changed runtime counters.
+        Coalescing and retention rules still apply. No flow ID or event is fabricated
+        for an unrecorded connection, and there is no new close event kind.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/ConnectionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Connection closed; no response body or Content-Type.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          x-examples:
+            closed:
+              x-headers:
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Unknown or already-gone ID (resource_not_found), or closing unavailable (capability_not_supported).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                gone:
+                  value:
+                    error:
+                      code: resource_not_found
+                      message: Connection is unknown or already gone.
+                      details: null
+                    request_id: request-close-2
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                unsupported:
+                  value:
+                    error:
+                      code: capability_not_supported
+                      message: Connection closing is unavailable.
+                      details: null
+                    request_id: request-close-3
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '409':
+          description: Observed connection is not owned by a cancellable userspace transport/session (state_conflict).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_closable:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: The connection is observed by eBPF but its transport is not owned by userspace.
+                      details: null
+                    request_id: request-close-4
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/flows:
     get:
       operationId: listFlows
@@ -2636,6 +2986,23 @@ components:
         type: string
         minLength: 1
   parameters:
+    '0':
+      name: type
+      in: query
+      schema:
+        type: string
+        enum:
+          - tcp
+          - udp
+          - all
+        default: all
+    '1':
+      name: src
+      in: query
+      description: Exact source IP literal, without a port; applied with type before limit. Totals and truncated describe only matching visible entries.
+      schema:
+        $ref: '#/components/schemas/IpAddress'
+      example: 192.168.1.100
     Detail:
       name: detail
       in: query
@@ -2676,6 +3043,14 @@ components:
         type: string
         minLength: 1
       example: group-proxy
+    ConnectionId:
+      name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: tcp-01HZX4K8W5
     FlowId:
       name: flow_id
       in: path
@@ -2946,6 +3321,7 @@ components:
             - runtime
             - runtime_outbounds
             - traffic_history
+            - memory_history
             - operations
           properties:
             version:
@@ -2963,6 +3339,9 @@ components:
             traffic_history:
               type: string
               const: /api/v1/runtime/traffic/history
+            memory_history:
+              type: string
+              const: /api/v1/runtime/memory/history
             operations:
               type: string
               const: /api/v1/operations/{id}
@@ -3067,6 +3446,7 @@ components:
             - runtime_memory
             - runtime_outbounds
             - traffic_history
+            - memory_history
             - datapath
             - nodes
             - groups
@@ -3114,6 +3494,29 @@ components:
             runtime_outbounds:
               $ref: '#/components/schemas/AvailableResource'
             traffic_history:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - max_window_seconds
+                  - max_points
+              properties:
+                available:
+                  type: boolean
+                max_window_seconds:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum look-back window in seconds; not a guarantee against bounded-ring eviction.
+                max_points:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum returned samples per history request.
+            memory_history:
               type: object
               required:
                 - available
@@ -3242,7 +3645,27 @@ components:
                 limits:
                   $ref: '#/components/schemas/ProbeLimits'
             connections:
-              $ref: '#/components/schemas/AvailableResource'
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - can_close
+                  - max_bulk_close
+              properties:
+                available:
+                  type: boolean
+                can_close:
+                  type: boolean
+                  description: Whether userspace-owned connections can be closed; false makes both connection DELETE endpoints return 404 capability_not_supported.
+                max_bulk_close:
+                  $ref: '#/components/schemas/SafeUInt'
+                  minimum: 1
+                  description: Maximum matching live entries, including non-closable entries, per bulk close; used only when can_close is true. Excess returns 413 request_too_large before any connection is closed.
             flows:
               type: object
               required:
@@ -3830,6 +4253,53 @@ components:
         connections:
           $ref: '#/components/schemas/NullableSafeUInt'
           description: Visible active TCP and UDP connections at sampled_at, or null when unavailable.
+    MemoryHistory:
+      type: object
+      required:
+        - observed_at
+        - window_seconds
+        - sampled_every_seconds
+        - samples
+      description: |
+        Samples lie in (observed_at - window_seconds, observed_at], oldest first,
+        with the same retention, thinning and gap rules as TrafficHistory.
+        Each sample carries the metrics advertised under resources.runtime_memory.metrics;
+        an unadvertised or unobservable metric is null.
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        window_seconds:
+          $ref: '#/components/schemas/SafeUInt'
+          minimum: 1
+          description: Requested look-back window, not the age of the oldest retained sample.
+        sampled_every_seconds:
+          type: number
+          exclusiveMinimum: 0
+          description: Nominal interval between returned samples after thinning, or the recorder interval for an empty result.
+        samples:
+          type: array
+          description: At most max_points retained samples; missed intervals remain gaps.
+          items:
+            $ref: '#/components/schemas/MemoryHistorySample'
+    MemoryHistorySample:
+      type: object
+      required:
+        - sampled_at
+        - rss_bytes
+        - cgroup_current_bytes
+      properties:
+        sampled_at:
+          $ref: '#/components/schemas/Timestamp'
+          description: Original sample timestamp, never the HTTP snapshot time.
+        rss_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+          description: Process resident set at sampled_at, or null when unavailable.
+        cgroup_current_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+          description: cgroup memory.current at sampled_at, or null when unavailable.
+        kernel_ebpf_bytes:
+          $ref: '#/components/schemas/NullableUInt64'
+          description: Kernel eBPF memory at sampled_at; omitted or null when unadvertised.
     DatapathKind:
       type: string
       enum:
@@ -5170,6 +5640,19 @@ components:
         total_udp:
           $ref: '#/components/schemas/SafeUInt'
           description: Visible live UDP entries matching type and src before limit; zero when type excludes UDP.
+    BulkCloseResult:
+      type: object
+      required:
+        - closed
+        - skipped
+      description: Bounded JSON-number counts; closed + skipped cannot exceed resources.connections.max_bulk_close.
+      properties:
+        closed:
+          $ref: '#/components/schemas/SafeUInt'
+          description: Selected connections actually cancelled or retired by the userspace datapath.
+        skipped:
+          $ref: '#/components/schemas/SafeUInt'
+          description: Selected connections observed but not closable; excludes entries that disappeared before cancellation.
     FlowScope:
       type: string
       enum:

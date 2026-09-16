@@ -5,6 +5,8 @@ test('home charts collect memory polls and change the traffic history range', as
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
+  // Without a producer-side ring the curve is built from this session's polls.
+  capabilities.resources.memory_history = {available: false};
   const responses: Record<string, unknown> = {
     '/version': await api.version(),
     '/capabilities': capabilities,

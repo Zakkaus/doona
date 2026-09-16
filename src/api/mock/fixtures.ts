@@ -149,6 +149,7 @@ export const capabilities: Capabilities = {
     datapath: {available: true, kinds: ['ebpf'], details: ['attachments', 'maps']},
     runtime_outbounds: {available: true},
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
+    memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     nodes: {available: true},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {
@@ -169,7 +170,7 @@ export const capabilities: Capabilities = {
         global_requests_per_minute: 120
       }
     },
-    connections: {available: true},
+    connections: {available: true, can_close: false},
     flows: {
       available: true,
       recording: 'on',
@@ -222,6 +223,7 @@ export const capabilitiesBase: Capabilities = {
     ...capabilities.resources,
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
+    memory_history: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}

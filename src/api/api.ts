@@ -5,6 +5,8 @@ import type {
   RuntimeOutbounds,
   TrafficHistory,
   TrafficHistoryQuery,
+  MemoryHistory,
+  MemoryHistoryQuery,
   Datapath,
   DatapathDetail,
   RuntimeMemory,
@@ -41,6 +43,7 @@ export interface Api {
   runtime(signal?: AbortSignal): Promise<Runtime>;
   runtimeOutbounds(signal?: AbortSignal): Promise<RuntimeOutbounds>;
   trafficHistory(query?: TrafficHistoryQuery, signal?: AbortSignal): Promise<TrafficHistory>;
+  memoryHistory(query?: MemoryHistoryQuery, signal?: AbortSignal): Promise<MemoryHistory>;
   datapath(detail?: DatapathDetail, signal?: AbortSignal): Promise<Datapath>;
   runtimeMemory(signal?: AbortSignal): Promise<RuntimeMemory>;
   nodes(query?: NodeQuery, signal?: AbortSignal): Promise<NodeList>;

@@ -1,5 +1,6 @@
 import {useState} from 'react';
-import type {RuntimeMemory} from '../../api/model';
+import type {Capabilities, MemoryHistory, RuntimeMemory} from '../../api/model';
+import {useMemoryHistory} from '../../api/store';
 import {parseU64} from '../../api/u64';
 
 export type MemorySample = {time: number; rss: number | null; cgroup: number | null};
@@ -32,4 +33,24 @@ export function useMemorySamples(memory: RuntimeMemory | undefined) {
     setSamples(record(memory));
   }
   return samples;
+}
+
+export function historySamples(history: MemoryHistory): MemorySample[] {
+  return history.samples.map(sample => {
+    const rss = parseU64(sample.rss_bytes);
+    const cgroup = parseU64(sample.cgroup_current_bytes);
+    return {time: Date.parse(sample.sampled_at), rss: rss === null ? null : Number(rss), cgroup: cgroup === null ? null : Number(cgroup)};
+  });
+}
+
+// The producer's ring when the backend advertises one; otherwise the polls collected in this session.
+export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined) {
+  const history = useMemoryHistory(capabilities);
+  const polled = useMemorySamples(memory);
+  const advertised = capabilities?.resources.memory_history.available === true;
+  return {
+    samples: advertised && history.data ? historySamples(history.data) : polled,
+    loading: advertised && !history.data && history.loading,
+    error: advertised ? history.error : undefined
+  };
 }
