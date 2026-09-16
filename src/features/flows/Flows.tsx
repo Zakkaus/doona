@@ -121,13 +121,13 @@ export function Flows({go, query}: PageProps) {
         onSelect={value => value && go('flows', 'id=' + encodeURIComponent(value))}
         empty={t('flow.empty')}
         cols={[
-          {id: 'id', label: t('nav.flows'), width: 140, isRowHeader: true},
-          {id: 'target', label: t('ui.target'), width: 180},
-          {id: 'chain', label: t('conn.chain'), width: 180},
-          {id: 'rule', label: t('conn.rule'), width: 220},
-          {id: 'network', label: t('ui.protocol'), width: 80},
-          {id: 'state', label: t('ui.state'), width: 100},
-          {id: 'started', label: t('ui.started'), width: 104}
+          {id: 'id', label: t('nav.flows'), minWidth: 72, grow: 0, isRowHeader: true},
+          {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2},
+          {id: 'chain', label: t('conn.chain'), minWidth: 96},
+          {id: 'rule', label: t('conn.rule'), minWidth: 152, grow: 2},
+          {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0},
+          {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0},
+          {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0}
         ]}
         render={f => [
           f.id,

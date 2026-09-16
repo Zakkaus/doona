@@ -83,10 +83,10 @@ export function Rules() {
                 height={400}
                 rows={evaluation.rules.map(rule => ({...rule, id: rule.rule_id}))}
                 cols={[
-                  {id: 'id', label: t('rule.id'), width: 90, isRowHeader: true},
-                  {id: 'expression', label: t('rule.expression')},
-                  {id: 'result', label: t('rule.outcome'), width: 180},
-                  {id: 'missing', label: t('rule.missing'), width: 150}
+                  {id: 'id', label: t('rule.id'), minWidth: 72, grow: 0, isRowHeader: true},
+                  {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 2},
+                  {id: 'result', label: t('rule.outcome'), minWidth: 160, grow: 0},
+                  {id: 'missing', label: t('rule.missing'), minWidth: 144}
                 ]}
                 render={rule => [
                   rule.rule_id,
@@ -121,7 +121,7 @@ export function Rules() {
         <section className="rp-col">
           <h2 className="rp-h3">{t('rule.configTitle')}</h2>
           <p className="rp-note">{t('rule.configDemo')}</p>
-          <div className="rp-split">
+          <div className="rp-split rp-split-wide">
             <div className="rp-list">
               <DataTable
                 label={t('rule.configRules')}
@@ -129,12 +129,12 @@ export function Rules() {
                 selected={sel}
                 onSelect={setSel}
                 cols={[
-                  {id: 'n', label: '#', width: 56, align: 'end'},
-                  {id: 'c', label: t('rule.condition'), isRowHeader: true},
-                  {id: 'o', label: t('ui.target'), width: 88},
-                  {id: 'm', label: 'must', width: 80},
-                  {id: 's', label: t('ui.source'), width: 130},
-                  {id: 'x', label: t('rule.comment'), width: 80}
+                  {id: 'n', label: '#', minWidth: 56, grow: 0, align: 'end'},
+                  {id: 'c', label: t('rule.condition'), minWidth: 272, isRowHeader: true},
+                  {id: 'o', label: t('ui.target'), minWidth: 88, grow: 0},
+                  {id: 'm', label: 'must', minWidth: 64, grow: 0},
+                  {id: 's', label: t('ui.source'), minWidth: 104, grow: 0},
+                  {id: 'x', label: t('rule.comment'), minWidth: 80, grow: 0}
                 ]}
                 render={r => [
                   r.n,

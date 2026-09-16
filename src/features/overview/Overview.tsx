@@ -145,10 +145,10 @@ export function Overview() {
                   rows={attachments}
                   empty={t('ov.unknown')}
                   cols={[
-                    {id: 'n', label: t('ov.name'), isRowHeader: true},
-                    {id: 'i', label: t('ov.interface')},
-                    {id: 'd', label: t('ov.direction')},
-                    {id: 's', label: t('ov.state')}
+                    {id: 'n', label: t('ov.name'), minWidth: 152, isRowHeader: true},
+                    {id: 'i', label: t('ov.interface'), minWidth: 116},
+                    {id: 'd', label: t('ov.direction'), minWidth: 104, grow: 0},
+                    {id: 's', label: t('ov.state'), minWidth: 120, grow: 0}
                   ]}
                   render={a => [a.name, a.interface, a.direction, a.state]}
                 />

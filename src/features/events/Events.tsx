@@ -33,9 +33,9 @@ export function Events() {
         rows={shown}
         empty={t('event.empty')}
         cols={[
-          {id: 't', label: t('ui.time'), width: 220},
-          {id: 'k', label: t('event.kind'), width: 190},
-          {id: 'm', label: t('event.summary'), isRowHeader: true}
+          {id: 't', label: t('ui.time'), minWidth: 200, grow: 0},
+          {id: 'k', label: t('event.kind'), minWidth: 168},
+          {id: 'm', label: t('event.summary'), minWidth: 240, isRowHeader: true}
         ]}
         render={event => {
           const summary = eventSummary(event);

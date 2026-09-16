@@ -320,6 +320,7 @@ import {
   Label,
   Input as RInput,
   Table,
+  ResizableTableContainer,
   TableHeader,
   Column,
   TableBody,
@@ -563,8 +564,8 @@ export function NodeTile({
   return <div className={cx('rp-node', cur && 'cur')}>{body}</div>;
 }
 
-// Table: fixed height, scrolls, optional single selection.
-export type Col = {id: string; label: string; width?: number; isRowHeader?: boolean; align?: 'end'};
+// Column minima include cell padding; grow weights their fractional share (zero keeps the minimum).
+export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'};
 export function DataTable<T extends {id: string}>({
   label,
   cols,
@@ -586,7 +587,7 @@ export function DataTable<T extends {id: string}>({
 }) {
   const keys: Selection = selected ? new Set([selected]) : new Set();
   return (
-    <div className="rp-table" style={{height}}>
+    <ResizableTableContainer className="rp-table" style={{height}}>
       <Table
         aria-label={label}
         selectionMode={onSelect ? 'single' : 'none'}
@@ -601,7 +602,8 @@ export function DataTable<T extends {id: string}>({
               id={c.id}
               isRowHeader={c.isRowHeader}
               className={c.align === 'end' ? 'end' : undefined}
-              style={c.width ? {width: c.width} : undefined}
+              width={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
+              minWidth={c.minWidth}
             >
               {c.label}
             </Column>
@@ -619,7 +621,7 @@ export function DataTable<T extends {id: string}>({
           )}
         </TableBody>
       </Table>
-    </div>
+    </ResizableTableContainer>
   );
 }
 

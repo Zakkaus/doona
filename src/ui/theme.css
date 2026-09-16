@@ -1804,12 +1804,17 @@ input {
 }
 .rp-split {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 @media (min-width: 1280px) {
-  .rp-split {
+  .rp-split:not(.rp-split-wide) {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+@media (min-width: 1440px) {
+  .rp-split-wide {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
 }
@@ -2096,6 +2101,7 @@ button.rp-node[data-focus-visible] {
 }
 .rp-table {
   width: 100%;
+  min-width: 0;
   height: 442px;
   border: 1px solid var(--rp-hl-med);
   border-radius: 8px;
@@ -2104,10 +2110,17 @@ button.rp-node[data-focus-visible] {
   scrollbar-width: thin;
   outline: none;
 }
+.rp-table table {
+  --rp-cell-padding: 8px;
+}
 .rp-table table,
 .rp-table [role='grid'] {
-  width: 100%;
-  border-collapse: collapse;
+  /* RAC sets min-content inline; fractional columns must fill the scrollport. */
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
 }
 .rp-table [role='columnheader'] {
@@ -2116,10 +2129,12 @@ button.rp-node[data-focus-visible] {
   line-height: 20px;
   font-weight: 700;
   color: var(--rp-pine);
-  padding: 8px 16px;
+  padding: 8px var(--rp-cell-padding, 16px);
   background: var(--rp-base);
   border-bottom: 1px solid var(--rp-hl-med);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   position: sticky;
   top: 0;
   outline: none;
@@ -2136,7 +2151,7 @@ button.rp-node[data-focus-visible] {
 }
 .rp-table [role='rowheader'],
 .rp-table [role='gridcell'] {
-  padding: 0 16px;
+  padding: 0 var(--rp-cell-padding, 16px);
   height: 40px;
   border-bottom: 1px solid var(--rp-line);
   white-space: nowrap;

@@ -22,12 +22,12 @@ export function Clients({go}: PageProps) {
         empty={clients.loading ? t('ui.loading') : t('client.empty')}
         rows={clients.rows}
         cols={[
-          {id: 'ip', label: t('ui.sourceIp'), width: 150, isRowHeader: true},
-          {id: 'active', label: t('client.active'), width: 100, align: 'end'},
-          {id: 'download', label: t('client.download'), width: 110, align: 'end'},
-          {id: 'outbound', label: t('ui.outbound')},
-          {id: 'first', label: t('client.firstSeen'), width: 190},
-          {id: 'act', label: t('ui.actions'), width: 230}
+          {id: 'ip', label: t('ui.sourceIp'), minWidth: 136, isRowHeader: true},
+          {id: 'active', label: t('client.active'), minWidth: 64, grow: 0, align: 'end'},
+          {id: 'download', label: t('client.download'), minWidth: 80, grow: 0, align: 'end'},
+          {id: 'outbound', label: t('ui.outbound'), minWidth: 88},
+          {id: 'first', label: t('client.firstSeen'), minWidth: 144},
+          {id: 'act', label: t('ui.actions'), minWidth: 152, grow: 0}
         ]}
         render={c => [
           <span className="rp-code">{c.ip}</span>,
