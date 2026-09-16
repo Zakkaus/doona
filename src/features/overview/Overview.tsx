@@ -1,7 +1,8 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../api/store';
 import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, toast, errorText, ErrorMessage, Loading} from '../../ui/ui';
+import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, toast, errorText, ErrorMessage, Loading} from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 import {usePalette} from '../../ui/Charts';
 import {formatBytes, parseU64, pctU64} from '../../api/u64';
 import {formatNumber} from '../../i18n';
@@ -84,6 +85,32 @@ export function Overview() {
           )}
         </div>
         <div className="rp-cluster">
+          <Button
+            quiet
+            icon
+            label={t('ov.export')}
+            isDisabled={!runtime.data}
+            onPress={() =>
+              downloadFile(
+                'doona-state-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json',
+                JSON.stringify(
+                  {
+                    exported_at: new Date().toISOString(),
+                    version: version.data,
+                    capabilities: capabilities.data,
+                    runtime: runtime.data,
+                    datapath: datapath.data,
+                    memory: memory.data
+                  },
+                  null,
+                  2
+                ),
+                'application/json'
+              )
+            }
+          >
+            <Download />
+          </Button>
           {(['reload', 'suspend', 'resume'] as const)
             .filter(kind => operations.canRun(kind) || operations.busy === kind)
             .map(kind => (
