@@ -23,7 +23,6 @@ for (const width of [1024, 1280, 1440]) {
       await page.goto(`/#/${route}`);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
-      if (route === 'overview') await page.getByRole('button', {name: 'System details', exact: true}).click();
       if (route === 'rules') {
         await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
         await page.getByRole('button', {name: 'Run trace', exact: true}).click();

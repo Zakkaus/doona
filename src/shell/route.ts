@@ -7,7 +7,7 @@ type Route = {route: string; query: string};
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
-  return {route: (i < 0 ? h : h.slice(0, i)) || 'overview', query: i < 0 ? '' : h.slice(i + 1)};
+  return {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
 }
 
 export function buildHash(route: string, query?: string): string {

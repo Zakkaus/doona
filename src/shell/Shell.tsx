@@ -342,11 +342,11 @@ function Frame({
   }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
-  const titleKey = feature.nav?.titleKey ?? 'nav.overview';
+  const titleKey = feature.nav?.titleKey ?? 'nav.activity';
   return (
     <div className="rp-shell">
       <header className="rp-top">
-        <RLink className="rp-brand" href="#/overview">
+        <RLink className="rp-brand" href="#/activity">
           <img src={logo} alt="" />
           <span>doona</span>
         </RLink>

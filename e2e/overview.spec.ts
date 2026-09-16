@@ -28,15 +28,13 @@ test('overview charts collect memory polls and change the traffic history range'
     await route.fulfill({json: responses[path]});
   });
   await page.goto('/#/overview');
+  const memory = page.getByRole('region', {name: 'Memory history'});
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  await expect(traffic.locator('.recharts-surface')).toBeVisible();
-  await page.getByRole('button', {name: 'System details', exact: true}).click();
-  const memory = page.getByRole('region', {name: 'Memory', exact: true});
   await expect(memory.locator('.recharts-surface')).toBeVisible();
-  const legend = await memory.locator('.rp-legend').textContent();
-  expect(legend).toMatch(/\d MB/);
+  await expect(traffic.locator('.recharts-surface')).toBeVisible();
+  await expect(memory.locator('.rp-legend')).toContainText('1 MB');
   await page.clock.fastForward(5100);
-  await expect(memory.locator('.rp-legend')).not.toHaveText(legend!);
+  await expect(memory.locator('.rp-legend')).toContainText('2 MB');
   await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', /L|C/);
   const request = page.waitForRequest(
     request => request.url().includes('/runtime/traffic/history?') && new URL(request.url()).searchParams.get('window_seconds') === '3600'

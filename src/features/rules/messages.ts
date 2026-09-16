@@ -30,7 +30,7 @@ export const messages = defineMessages({
     'rule.address': '位址',
     'rule.distributionTitle': '規則分佈',
     'rule.distributionCaption': '目前保留的 {n} 筆流程，按規則分組；不跨輪詢累計',
-    'rule.distributionScope': '按運算式、ID 與來源區分；摘要不含配置世代，占比以整份快照計算。',
+    'rule.distributionScope': '按運算式、ID 與來源區分；摘要不含配置代次，占比以整份快照計算。',
     'rule.distributionSource': '規則來源',
     'rule.sourceKernel': 'kernel',
     'rule.sourceRecomputed': '重算',

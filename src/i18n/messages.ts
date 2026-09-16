@@ -1,6 +1,7 @@
 import type {Lang, Message} from './index';
 import {messages as shell} from '../shell/messages';
 import {messages as ui} from '../ui/messages';
+import {messages as activity} from '../features/activity/messages';
 import {messages as overview} from '../features/overview/messages';
 import {messages as connections} from '../features/connections/messages';
 import {messages as flows} from '../features/flows/messages';
@@ -16,6 +17,6 @@ function merge<T extends Record<Lang, Record<string, Message>>[]>(...modules: T)
     [L in Lang]: Intersection<T[number][L]>;
   };
 }
-export const modules = [shell, ui, overview, connections, flows, policies, rules, dns, events, settings] as const;
+export const modules = [shell, ui, activity, overview, connections, flows, policies, rules, dns, events, settings] as const;
 export const table = merge(...modules);
 export type Key = keyof (typeof table)['zh-TW'];

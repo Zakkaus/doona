@@ -8,9 +8,9 @@ test('deep links, fonts and the installed app stay under /ui/', async ({page}) =
   page.on('response', response => responses.push({path: new URL(response.url()).pathname, status: response.status()}));
   page.on('requestfailed', request => failures.push(request.url()));
 
-  await page.goto('/ui/#/overview');
+  await page.goto('/ui/#/activity');
   await expect(page.locator('.rp-content')).toBeVisible();
-  await expect(page.locator('.rp-nav[href="#/overview"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
   await page.evaluate(() => document.fonts.ready.then(() => true));
   expect(responses.filter(response => response.path.endsWith('.woff2')).length).toBeGreaterThan(0);
 

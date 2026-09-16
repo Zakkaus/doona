@@ -1,7 +1,7 @@
 import {test as base, expect, type Page} from '@playwright/test';
 
 // Route IDs from src/shell/registry.ts; importing it would load page components.
-export const routes = ['overview', 'connections', 'flows', 'policies', 'rules', 'dns', 'events', 'settings'] as const;
+export const routes = ['activity', 'overview', 'connections', 'flows', 'policies', 'rules', 'dns', 'events', 'settings'] as const;
 
 export const test = base.extend<{storage: Record<string, string>}>({
   storage: [{}, {option: true}],
