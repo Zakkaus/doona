@@ -2695,8 +2695,8 @@ button.rp-node:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px 32px;
 }
-.rp-flow-columns[data-active] .rp-flow-row:not([data-related]) {
-  opacity: 0.4;
+.rp-flow-columns[data-active] .rp-flow-row[data-related]:not([data-selected]) {
+  background: var(--rp-hl-low);
 }
 .rp-flow-stage {
   position: relative;

@@ -19,8 +19,7 @@ type GraphProps = {graph: FlowGraphData; selected: string | null; onSelect: (nod
 function StageColumns({graph, selected, onSelect}: GraphProps) {
   const t = useT();
   const p = usePalette();
-  const [hovered, setHovered] = useState<string | null>(null);
-  const active = hovered ?? selected;
+  const active = selected;
   const columns = useMemo(
     () =>
       graphStages.map(stage => {
@@ -30,7 +29,7 @@ function StageColumns({graph, selected, onSelect}: GraphProps) {
     [graph.nodes]
   );
 
-  // Nodes reachable from the active one, following links in both directions; the rest dims.
+  // Nodes reachable from the selected one, following links in both directions.
   const related = useMemo(() => {
     if (active === null) return null;
     const seen = new Set([active]);
@@ -78,7 +77,6 @@ function StageColumns({graph, selected, onSelect}: GraphProps) {
                     aria-label={`${t(graphStageLabels[stage])}: ${label} · ${value}`}
                     aria-pressed={selected === node.id}
                     onPress={() => onSelect(node)}
-                    onHoverChange={isHovered => setHovered(isHovered ? node.id : null)}
                   >
                     <Bar label={label} value={value} pct={(node.count / total) * 100} color={p.cat[index]} />
                   </RButton>

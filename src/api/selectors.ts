@@ -134,15 +134,53 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 }
 
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
+const flowWords: Record<string, Key> = {
+  kernel: 'flow.v.kernel',
+  userspace: 'flow.v.userspace',
+  matched: 'flow.v.matched',
+  other_family_trusted: 'flow.v.otherFamilyTrusted',
+  failed: 'flow.v.failed',
+  not_required: 'flow.v.notRequired',
+  unavailable: 'flow.v.unavailable',
+  pass: 'flow.v.pass',
+  redirect: 'flow.v.redirect',
+  hold: 'flow.v.hold',
+  arm_direct: 'flow.v.armDirect',
+  activate_direct: 'flow.v.activateDirect',
+  activate_proxy: 'flow.v.activateProxy',
+  drop: 'flow.v.drop',
+  started: 'flow.v.started',
+  succeeded: 'flow.v.succeeded',
+  cancelled: 'flow.v.cancelled',
+  transport_ready: 'flow.v.transportReady',
+  target_request_sent: 'flow.v.targetRequestSent',
+  target_confirmed: 'flow.v.targetConfirmed',
+  first_reply: 'flow.v.firstReply',
+  terminal: 'flow.v.terminal',
+  unknown: 'ui.unknown',
+  route_selected: 'flow.v.routeSelected',
+  no_new_routing_input: 'flow.v.noNewRoutingInput',
+  reply_received: 'flow.v.replyReceived',
+  hit: 'flow.v.hit',
+  miss: 'flow.v.miss',
+  cache: 'flow.v.cache',
+  upstream: 'ui.upstream'
+};
+// Known engine words become message keys; anything else stays as the engine reported it.
+const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
+const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
+
 export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
   const text = (value: unknown) => (value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
   switch (step.stage) {
     case 'input':
-      return Object.entries(step.data.values).map(([key, value]) => [{key: 'flow.f.input', params: {name: key}}, text(value)]);
+      return Object.entries(step.data.values)
+        .filter(([, value]) => value != null && value !== '')
+        .map(([key, value]) => [{key: 'flow.f.input', params: {name: key}}, text(value)]);
     case 'route':
       return [
         ['flow.f.chain', step.data.chain],
-        ['flow.f.plane', step.data.plane],
+        ['flow.f.plane', word(step.data.plane)],
         [
           'ui.rule',
           step.data.rules
@@ -151,17 +189,18 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
             .join('；') || '—'
         ],
         ['ui.outbound', text(step.data.outbound)],
-        ['flow.f.must', text(step.data.must)]
+        ['flow.f.must', yesNo(step.data.must)]
       ];
     case 'dial_mode':
       return [
         ['flow.f.dialTarget', step.data.configured + ' → ' + step.data.effective_target],
-        ['flow.f.verification', step.data.verification]
+        ['flow.f.verification', word(step.data.verification)]
       ];
     case 'dns':
       return [
         ['ui.name', step.data.name],
-        ['flow.f.sourceCache', step.data.source + ' / ' + step.data.cache],
+        ['flow.f.source', word(step.data.source)],
+        ['flow.f.cache', word(step.data.cache)],
         ['ui.upstream', text(step.data.upstream)],
         ['flow.f.selectedIp', text(step.data.selected_ip)]
       ];
@@ -171,24 +210,24 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
         ['flow.f.selectionPath', step.data.selection_path.map(p => p.group_id + ' → ' + text(p.member_name ?? p.member_id)).join(' / ') || '—'],
         ['flow.f.leafNode', text(step.data.leaf_node_id)],
         ['ui.target', text(step.data.target)],
-        ['ui.state', step.data.status]
+        ['ui.state', word(step.data.status)]
       ];
     case 'connection':
       return [
         ['ui.state', {key: connectionStates[step.data.state]}],
-        ['flow.f.milestone', step.data.milestone],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.milestone', word(step.data.milestone)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     case 'datapath':
       return [
-        ['flow.f.plane', step.data.plane],
-        ['flow.f.action', step.data.action],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.plane', word(step.data.plane)],
+        ['flow.f.action', word(step.data.action)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     case 'reroute':
       return [
-        ['flow.f.performed', text(step.data.performed)],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.performed', yesNo(step.data.performed)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     default:
       return null;
