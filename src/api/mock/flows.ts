@@ -17,6 +17,37 @@ export function flowFields(input: FlowDetail['input'], steps: FlowStep[]): FlowF
   };
 }
 
+// A slice of a real-world rule set, so the demo shows how a config with many rules reads.
+const ruleTable: Array<[string[], string]> = [
+  [['netflix.com', 'nflxvideo.net'], 'domain(geosite: netflix)'],
+  [['youtube.com', 'googlevideo.com', 'ytimg.com'], 'domain(geosite: youtube)'],
+  [['google.com', 'googleapis.com', 'gstatic.com'], 'domain(geosite: google)'],
+  [['github.com', 'githubusercontent.com'], 'domain(geosite: github)'],
+  [['apple.com', 'icloud.com', 'mzstatic.com'], 'domain(geosite: apple)'],
+  [['microsoft.com', 'live.com', 'office.com'], 'domain(geosite: microsoft)'],
+  [['steampowered.com', 'steamcommunity.com'], 'domain(geosite: steam)'],
+  [['spotify.com', 'scdn.co'], 'domain(geosite: spotify)'],
+  [['x.com', 'twimg.com'], 'domain(geosite: twitter)'],
+  [['instagram.com', 'facebook.com', 'fbcdn.net', 'whatsapp.net'], 'domain(geosite: meta)'],
+  [['openai.com', 'chatgpt.com', 'claude.ai', 'anthropic.com'], 'domain(geosite: category-ai-chat-!cn)'],
+  [['reddit.com', 'redd.it'], 'domain(suffix: reddit.com, redd.it)'],
+  [['wikipedia.org'], 'domain(geosite: wikimedia)'],
+  [['cloudflare.com', 'one.one.one.one'], 'domain(geosite: cloudflare)'],
+  [['taobao.com', 'tmall.com', 'alipay.com', 'alicdn.com'], 'domain(geosite: alibaba)'],
+  [['weixin.qq.com', 'wechat.com'], 'domain(geosite: tencent)'],
+  [['zhihu.com', 'zhimg.com'], 'domain(suffix: zhihu.com, zhimg.com)'],
+  [['douyin.com', 'iqiyi.com', 'youku.com', 'weibo.com', 'jd.com', 'xiaohongshu.com', 'baidu.com'], 'domain(geosite: cn)'],
+  [['steamcdn-a.akamaihd.net'], 'domain(keyword: steamcdn)'],
+  [['speedtest.net'], 'domain(suffix: speedtest.net)'],
+  [['ad.doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'domain(geosite: category-ads-all)'],
+  [['tailscale.com', 'controlplane.tailscale.com'], 'domain(geosite: tailscale)']
+];
+function ruleFor(domain: string): string | null {
+  const name = domain.toLowerCase();
+  for (const [suffixes, expression] of ruleTable) if (suffixes.some(s => name === s || name.endsWith('.' + s))) return expression;
+  return null;
+}
+
 export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', observedAt: string, instanceId: string): FlowDetail {
   const input: FlowDetail['input'] = {
     src: connection.src ?? null,
@@ -34,13 +65,16 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
   const common = {observed_at: observedAt, elapsed_us: 0, generation_id: '40', evidence: 'observed' as const};
   const direct = connection.outbound === 'direct';
   const blocked = connection.state === 'blocked';
-  const expression = blocked
-    ? 'domain(suffix: doubleclick.net)'
-    : direct
-      ? 'dip(geoip:cn)'
-      : connection.domain
-        ? 'domain(full: ' + connection.domain + ')'
-        : 'fallback: ' + connection.outbound;
+  const known = connection.domain ? ruleFor(connection.domain) : null;
+  const expression =
+    known ??
+    (blocked
+      ? 'domain(suffix: doubleclick.net)'
+      : direct
+        ? 'dip(geoip:cn)'
+        : connection.domain
+          ? 'domain(full: ' + connection.domain + ')'
+          : 'fallback: ' + connection.outbound);
   const leaf = connection.outbound === 'resilient' ? 'sg-01' : connection.outbound === 'gaming' ? 'hk-02' : 'hk-01';
   const policy = connection.outbound === 'resilient' ? 'score' : connection.outbound === 'gaming' ? 'urltest' : 'selector';
   const steps: FlowStep[] = [
@@ -186,7 +220,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     observed_at: new Date(Date.parse(connection.started_at ?? observedAt) + i * 1.2).toISOString()
   }));
   const summary = {
-    id: blocked ? 'flow-blocked' : 'flow-' + connection.id,
+    id: blocked && !connection.flow_id ? 'flow-blocked' : 'flow-' + connection.id,
     instance_id: instanceId,
     revision: 1,
     network,

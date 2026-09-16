@@ -35,8 +35,8 @@ test('the traffic map lays the config out as lanes and a pinned item filters the
   const total = await rows.count();
   const lanes = map.locator('.rp-lane');
   // One card per outbound: every configured group is there, used or not, with its selected node.
-  for (const group of ['proxy', 'direct', 'airport']) await expect(map.getByText(group, {exact: true})).toBeVisible();
-  await expect(lanes.filter({has: page.getByText('airport', {exact: true})})).toContainText('Selected');
+  for (const group of ['proxy', 'direct', 'airport']) await expect(map.locator('strong', {hasText: new RegExp(`^${group}$`)})).toBeVisible();
+  await expect(lanes.filter({has: page.locator('strong', {hasText: /^airport$/})})).toContainText('Selected');
   const rule = map.getByRole('radio', {name: 'dip(geoip:cn) 2', exact: true});
   await rule.click();
   await expect(page).toHaveURL(/path=rule%3Adip/);
