@@ -9,17 +9,19 @@ export const iconPacks: IconPack[] = [
 ];
 const key = 'doona-icon-pack';
 const listeners = new Set<() => void>();
+// Qure Color is the default; "off" is stored as the word so the default does not come back on reload.
+const defaultPack = 'qure-color';
 function read(): string {
   try {
-    return localStorage.getItem(key) ?? '';
+    const value = localStorage.getItem(key);
+    return value === null ? defaultPack : value === 'off' ? '' : value;
   } catch {
-    return '';
+    return defaultPack;
   }
 }
 export function setIconPack(value: string) {
   try {
-    if (value) localStorage.setItem(key, value);
-    else localStorage.removeItem(key);
+    localStorage.setItem(key, value || 'off');
   } catch {
     // Storage may be unavailable; the choice then lasts for the session only.
   }
@@ -32,7 +34,7 @@ export function useIconPack(): string {
       return () => listeners.delete(listener);
     },
     read,
-    () => ''
+    () => defaultPack
   );
 }
 export function iconUrl(pack: string, name: string): string {

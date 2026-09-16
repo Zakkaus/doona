@@ -78,22 +78,22 @@ export function Flag({name, className}: {name: string; className?: string}) {
 }
 
 // Built-in outbounds get a mark in the flag's frame, so a chain reads the same whether it ends in a node or not.
+// The glyph is drawn as SVG text centred on the box, so it sits where a flag's ink sits.
+function Mark({kind, className}: {kind: 'direct' | 'block' | 'unknown' | 'node'; className?: string}) {
+  const glyph = kind === 'direct' ? '⇄' : kind === 'block' ? '⊘' : kind === 'node' ? '◆' : '?';
+  return (
+    <span className={(className ?? 'flag') + ' mark'} data-kind={kind} role="img" aria-hidden="true">
+      <svg viewBox="0 0 16 12" width="16" height="12">
+        <text x="8" y="6.4" textAnchor="middle" dominantBaseline="central" fontSize={kind === 'node' ? 7 : 9} fontWeight="700" fill="currentColor">
+          {glyph}
+        </text>
+      </svg>
+    </span>
+  );
+}
 export function OutboundMark({name, className}: {name: string | null; className?: string}) {
-  if (name === 'direct' || name === 'block' || name === null || name === 'unknown') {
-    const kind = name === 'direct' ? 'direct' : name === 'block' ? 'block' : 'unknown';
-    return (
-      <span className={(className ?? 'flag') + ' mark'} data-kind={kind} role="img" aria-hidden="true">
-        {kind === 'direct' ? '⇄' : kind === 'block' ? '⊘' : '?'}
-      </span>
-    );
-  }
-  // A node outside the flag table still gets a mark, so a chain column never has an empty slot.
-  if (!flagSvg(name)) {
-    return (
-      <span className={(className ?? 'flag') + ' mark'} data-kind="node" role="img" aria-hidden="true">
-        ◆
-      </span>
-    );
-  }
+  if (name === 'direct' || name === 'block' || name === null || name === 'unknown')
+    return <Mark kind={name === 'direct' ? 'direct' : name === 'block' ? 'block' : 'unknown'} className={className} />;
+  if (!flagSvg(name)) return <Mark kind="node" className={className} />;
   return <Flag name={name} className={className} />;
 }

@@ -1567,11 +1567,6 @@ input {
   display: block;
 }
 .flag.mark {
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 700;
   color: var(--rp-on-accent);
   background: var(--rp-muted);
 }
@@ -1583,7 +1578,6 @@ input {
 }
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
-  font-size: 8px;
 }
 /* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
 .flag.brand {
@@ -1596,7 +1590,7 @@ input {
 .rp-chain > .flag,
 .rp-chips .flag,
 .rp-light > .flag {
-  translate: 0 1.5px;
+  translate: 0 0.5px;
 }
 .rp-tip {
   background: var(--rp-text);

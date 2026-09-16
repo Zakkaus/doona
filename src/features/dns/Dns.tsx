@@ -17,9 +17,12 @@ import {
   LabeledSelect,
   Tabs,
   TextField,
+  csvLine,
+  downloadFile,
   errorText,
   toast
 } from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
 
 // "How does a name resolve, and is the cache in the way": a query tab and a cache tab over the same domain.
@@ -259,6 +262,38 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
         />
         <TextField search label={t('ui.source')} value={src} onChange={setSrc} placeholder="10.0.0.12" width={160} />
         {log.data && <span className="rp-label">{t('dns.logTotal', {n: log.data.total})}</span>}
+        <span className="rp-grow" />
+        <Button
+          isDisabled={!rows.length}
+          onPress={() =>
+            downloadFile(
+              'dns-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv',
+              [
+                csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
+                ...rows.map(r =>
+                  csvLine([
+                    r.id,
+                    r.observed_at,
+                    r.src,
+                    r.question.name,
+                    r.question.type,
+                    r.status,
+                    r.cached ? 'true' : 'false',
+                    r.upstream,
+                    r.route.source,
+                    r.route.rule,
+                    r.elapsed_ms,
+                    r.answers.map(answer => answer.data).join(' ')
+                  ])
+                )
+              ].join('\n') + '\n',
+              'text/csv;charset=utf-8'
+            )
+          }
+        >
+          <Download />
+          {t('dns.exportLog')}
+        </Button>
       </div>
       {log.error && <ErrorMessage error={log.error} />}
       <DataTable

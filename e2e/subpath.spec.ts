@@ -1,6 +1,7 @@
 import {expect, test} from './fixtures';
 
-test.use({storage: {'doona-api': 'mock', 'doona-lang': 'zh-TW'}});
+// The icon pack is the one thing allowed off-origin; it stays off here so every request is the app's own.
+test.use({storage: {'doona-api': 'mock', 'doona-lang': 'zh-TW', 'doona-icon-pack': 'off'}});
 
 test('deep links, fonts and the installed app stay under /ui/', async ({page}) => {
   const responses: {path: string; status: number}[] = [];
