@@ -7,7 +7,7 @@ import {Badge, Chips, Light, NodeTile} from '../../ui/ui';
 import {Flag} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
-// Colour says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
+// The status light says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
 const kindOf = (outbound: MapNode) => (outbound.unknown ? 'unknown' : outbound.label === 'direct' ? 'direct' : outbound.label === 'block' ? 'block' : 'group');
 const tones = {group: 'info', direct: 'ok', block: 'err', unknown: 'muted'} as const;
 const kindLabels: Record<keyof typeof tones, Key> = {
@@ -17,9 +17,8 @@ const kindLabels: Record<keyof typeof tones, Key> = {
   unknown: 'flow.kind.unknown'
 };
 
-// One lane per outbound, read left to right: the rules that send traffic there, the outbound itself,
-// the node it currently selects. Nothing crosses and nothing moves on hover; a click pins one item
-// and dims the lanes it is not part of.
+// One card per outbound, three labelled columns like every detail view: the rules that send traffic there,
+// the outbound itself, the node it currently selects. A click pins one item and dims the cards it is not in.
 export function FlowMap({
   map,
   groups,
@@ -41,69 +40,60 @@ export function FlowMap({
   const label = (node: MapNode) => (node.unknown ? t('flow.mapUnknown') : node.label);
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <div className="rp-lanes">
-      <div className="rp-lane rp-lane-head" aria-hidden="true">
-        <span>{t('flow.mapRule')}</span>
-        <span />
-        <span>{t('flow.mapOutbound')}</span>
-        <span />
-        <span>{t('flow.mapNode')}</span>
-      </div>
+    <div className="rp-list">
       {rows.map(lane => {
         const kind = kindOf(lane.outbound);
         const members = [lane.outbound.id, ...lane.rules.map(rule => rule.node.id), ...(lane.node ? [lane.node.node.id] : [])];
         const dim = pinned !== null && !members.includes(pinned);
         const nodeHealth = lane.node ? health.get(lane.node.node.label) : undefined;
         return (
-          <div className="rp-lane" key={lane.outbound.id} data-kind={kind} data-dim={dim ? '' : undefined}>
-            {lane.rules.length ? (
-              <Chips
-                label={t('flow.mapRule')}
-                items={lane.rules.map(rule => ({id: rule.node.id, label: label(rule.node), count: n(rule.count)}))}
-                value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
-                onChange={onPin}
-              />
-            ) : (
-              <span className="rp-label">{t('flow.laneNoRules')}</span>
-            )}
-            <span className="rp-lane-arrow" data-empty={lane.rules.length ? undefined : ''} aria-hidden="true" />
-            <div className="rp-lane-out">
-              <Chips
-                label={t('flow.mapOutbound')}
-                items={[{id: lane.outbound.id, label: label(lane.outbound), count: n(lane.outbound.count)}]}
-                value={pinned === lane.outbound.id ? pinned : null}
-                onChange={onPin}
-              />
-              <span className="rp-cluster">
+          <div className="rp-card rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
+            <div className="rp-field">
+              <span className="rp-label">{t('flow.mapRule')}</span>
+              {lane.rules.length ? (
+                <Chips
+                  label={t('flow.mapRule')}
+                  items={lane.rules.map(rule => ({id: rule.node.id, label: label(rule.node), count: n(rule.count)}))}
+                  value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
+                  onChange={onPin}
+                />
+              ) : (
+                <span className="rp-empty-inline">{t('flow.laneNoRules')}</span>
+              )}
+            </div>
+            <div className="rp-field">
+              <span className="rp-label">{t('flow.mapOutbound')}</span>
+              <div className="rp-cluster">
+                <Chips
+                  label={t('flow.mapOutbound')}
+                  items={[{id: lane.outbound.id, label: label(lane.outbound), count: n(lane.outbound.count)}]}
+                  value={pinned === lane.outbound.id ? pinned : null}
+                  onChange={onPin}
+                />
                 <Light small tone={tones[kind]}>
                   {t(kindLabels[kind])}
                 </Light>
                 {policy.get(lane.outbound.label) && <Badge>{policy.get(lane.outbound.label)}</Badge>}
-              </span>
+              </div>
             </div>
-            {lane.node ? (
-              <>
-                <span className="rp-lane-arrow" data-empty={lane.node.count ? undefined : ''} aria-hidden="true" />
-                <div className="rp-lane-node">
-                  <NodeTile
-                    name={label(lane.node.node)}
-                    icon={<Flag name={lane.node.node.label} />}
-                    tcp={nodeHealth?.latency_ms ?? undefined}
-                    alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
-                    unavailable={nodeHealth?.state === 'unavailable'}
-                    description={lane.node.configured && !lane.node.count ? t('flow.laneSelected') : t('flow.laneFlows', {n: n(lane.node.count)})}
-                    labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
-                    selected={pinned === lane.node.node.id}
-                    onPress={() => onPin(pinned === lane.node!.node.id ? null : lane.node!.node.id)}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <span />
-                <span className="rp-label">{t('flow.laneTerminal')}</span>
-              </>
-            )}
+            <div className="rp-field">
+              <span className="rp-label">{t('flow.mapNode')}</span>
+              {lane.node ? (
+                <NodeTile
+                  name={label(lane.node.node)}
+                  icon={<Flag name={lane.node.node.label} />}
+                  tcp={nodeHealth?.latency_ms ?? undefined}
+                  alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
+                  unavailable={nodeHealth?.state === 'unavailable'}
+                  description={lane.node.configured && !lane.node.count ? t('flow.laneSelected') : t('flow.laneFlows', {n: n(lane.node.count)})}
+                  labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
+                  selected={pinned === lane.node.node.id}
+                  onPress={() => onPin(pinned === lane.node!.node.id ? null : lane.node!.node.id)}
+                />
+              ) : (
+                <span className="rp-empty-inline">{t('flow.laneTerminal')}</span>
+              )}
+            </div>
           </div>
         );
       })}
