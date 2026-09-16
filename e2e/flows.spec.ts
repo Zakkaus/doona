@@ -33,17 +33,17 @@ test('the traffic map lays the config out as lanes and a pinned item filters the
   const rows = page.locator('.rp-table tbody tr[data-key]');
   await expect(rows.first()).toBeVisible();
   const total = await rows.count();
-  const lanes = map.locator('.rp-card');
+  const lanes = map.locator('.rp-lane');
   // One card per outbound: every configured group is there, used or not, with its selected node.
-  for (const group of ['proxy', 'direct', 'airport']) await expect(map.getByRole('heading', {name: group, exact: true})).toBeVisible();
-  await expect(lanes.filter({has: page.getByRole('heading', {name: 'airport', exact: true})})).toContainText('Selected');
+  for (const group of ['proxy', 'direct', 'airport']) await expect(map.getByText(group, {exact: true})).toBeVisible();
+  await expect(lanes.filter({has: page.getByText('airport', {exact: true})})).toContainText('Selected');
   const rule = map.getByRole('radio', {name: 'dip(geoip:cn) 2', exact: true});
   await rule.click();
   await expect(page).toHaveURL(/path=rule%3Adip/);
   await expect(rule).toHaveAttribute('aria-checked', 'true');
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('dip(geoip:cn)');
-  expect(await map.locator('.rp-card[data-dim]').count()).toBeGreaterThan(0);
+  expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
   await expect(rows).toHaveCount(total);
   await expect(page).not.toHaveURL(/path=/);

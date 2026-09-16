@@ -1,6 +1,5 @@
 import {useMemo} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
-import type {Key} from '../../i18n/messages';
 import type {GroupSummary, Node} from '../../api/model';
 import {preferredHealth} from '../../api/selectors';
 import {Chips, Light, NodeTile} from '../../ui/ui';
@@ -40,37 +39,20 @@ export function FlowMap({
   const label = (node: MapNode) => (node.unknown ? t('flow.mapUnknown') : node.label);
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <div className="rp-list">
+    <div className="rp-card rp-lanes">
       {rows.map(lane => {
         const kind = kindOf(lane.outbound);
         const members = [lane.outbound.id, ...lane.rules.map(rule => rule.node.id), ...(lane.node ? [lane.node.node.id] : [])];
         const dim = pinned !== null && !members.includes(pinned);
         const nodeHealth = lane.node ? health.get(lane.node.node.label) : undefined;
-        const facts = [t(kindLabels[kind]), policy.get(lane.outbound.label), t('flow.laneFlows', {n: n(lane.outbound.count)})].filter(Boolean).join(' · ');
+        const facts = [policy.get(lane.outbound.label), t('flow.laneFlows', {n: n(lane.outbound.count)})].filter(Boolean).join(' · ');
         return (
-          <div className="rp-card" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
-            <div className="rp-row">
-              <div className="rp-col rp-lane-title">
-                <Light tone={tones[kind]}>
-                  <h3 className="rp-h3">{label(lane.outbound)}</h3>
-                </Light>
-                <span className="rp-label">{facts}</span>
-              </div>
-              {lane.node ? (
-                <div className="rp-lane-node">
-                  <NodeTile
-                    name={label(lane.node.node)}
-                    icon={<Flag name={lane.node.node.label} />}
-                    tcp={nodeHealth?.latency_ms ?? undefined}
-                    alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
-                    unavailable={nodeHealth?.state === 'unavailable'}
-                    description={lane.node.configured && !lane.node.count ? t('flow.laneSelected') : t('flow.laneFlows', {n: n(lane.node.count)})}
-                    labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
-                    selected={pinned === lane.node.node.id}
-                    onPress={() => onPin(pinned === lane.node!.node.id ? null : lane.node!.node.id)}
-                  />
-                </div>
-              ) : null}
+          <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
+            <div className="rp-lane-title">
+              <Light tone={tones[kind]}>
+                <strong>{label(lane.outbound)}</strong>
+              </Light>
+              <span className="rp-label">{facts}</span>
             </div>
             {lane.rules.length ? (
               <Chips
@@ -81,6 +63,23 @@ export function FlowMap({
               />
             ) : (
               <span className="rp-label">{t('flow.laneNoRules')}</span>
+            )}
+            {lane.node ? (
+              <div className="rp-lane-node">
+                <NodeTile
+                  name={label(lane.node.node)}
+                  icon={<Flag name={lane.node.node.label} />}
+                  tcp={nodeHealth?.latency_ms ?? undefined}
+                  alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
+                  unavailable={nodeHealth?.state === 'unavailable'}
+                  description={lane.node.configured && !lane.node.count ? t('flow.laneSelected') : t('flow.laneFlows', {n: n(lane.node.count)})}
+                  labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
+                  selected={pinned === lane.node.node.id}
+                  onPress={() => onPin(pinned === lane.node!.node.id ? null : lane.node!.node.id)}
+                />
+              </div>
+            ) : (
+              <span />
             )}
           </div>
         );

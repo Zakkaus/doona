@@ -3039,17 +3039,44 @@ button.rp-node[data-focus-visible] {
   }
 }
 
-/* ---- Routing: one card per outbound; the node sits in the title row, the rules below; a dimmed card is off the pinned path. ---- */
-.rp-card[data-dim] {
+/* ---- Routing: one row per outbound in a single card; a dimmed row is off the pinned path. ---- */
+.rp-lanes {
+  gap: 0;
+  padding: 4px 16px;
+}
+.rp-lane {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 240px;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px 0;
+  transition: opacity 150ms var(--rp-ease);
+}
+.rp-lane + .rp-lane {
+  border-top: 1px solid var(--rp-hl-low);
+}
+.rp-lane[data-dim] {
   opacity: 0.35;
 }
 .rp-lane-title {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-.rp-lane-node {
-  width: min(280px, 100%);
+.rp-lane-title .rp-light {
+  min-width: 0;
+}
+.rp-lane-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rp-lane-node .rp-node {
   height: auto;
+  padding: 6px 10px;
+}
+@media (max-width: 1023px) {
+  .rp-lane {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
