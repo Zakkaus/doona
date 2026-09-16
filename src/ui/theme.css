@@ -2826,21 +2826,6 @@ button.rp-node:hover {
   flex-shrink: 0;
 }
 
-.rp-sankey-node {
-  cursor: pointer;
-  outline: none;
-}
-.rp-sankey-node:is(:focus-visible, [aria-pressed='true']) > rect {
-  stroke: var(--rp-text);
-  stroke-width: 2;
-}
-.rp-sankey-label {
-  color: var(--rp-text);
-  line-height: 20px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .rp-flow-filter .rp-btn {
   background: var(--rp-hl-low);
   border-color: var(--rp-hl-high);
@@ -2848,4 +2833,69 @@ button.rp-node:hover {
 
 .rp-spin svg {
   animation-iteration-count: infinite;
+}
+
+.rp-flow-columns {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px 48px;
+}
+.rp-flow-ribbons {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.rp-flow-stage {
+  position: relative;
+  min-width: 0;
+}
+.rp-flow-stage > .rp-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 10px;
+  font-weight: 500;
+}
+.rp-flow-stage .rp-count {
+  background: var(--rp-hl-med);
+  color: var(--rp-subtle);
+}
+.rp-flow-row {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rp-text);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+.rp-flow-row[data-hovered] {
+  background: var(--rp-hl-low);
+}
+.rp-flow-row[data-selected] {
+  border-color: var(--rp-pine);
+  background: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
+}
+.rp-flow-row[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-flow-row[data-unknown] .l {
+  color: var(--rp-muted);
+}
+@media (max-width: 900px) {
+  .rp-flow-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+  .rp-flow-ribbons {
+    display: none;
+  }
 }
