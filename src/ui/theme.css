@@ -313,11 +313,11 @@
   --rp-on-accent: #ffffff;
   --rp-on-text: #141414;
   --rp-line: #303030;
-  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 /* Arco Design (ByteDance): tokens from @arco-design/web-react's arco.css, light body and body[arco-theme=dark]. */
 :root[data-family='arco'] {
-  --rp-base: #f2f3f5;
+  --rp-base: #ffffff;
   --rp-surface: #ffffff;
   --rp-overlay: #f2f3f5;
   --rp-muted: #c9cdd4;
@@ -329,12 +329,12 @@
   --rp-pine: #165dff;
   --rp-foam: #00b42a;
   --rp-iris: #722ed1;
-  --rp-c1: #165dff;
-  --rp-c2: #00b42a;
-  --rp-c3: #722ed1;
+  --rp-c1: #4080ff;
+  --rp-c2: #4cd263;
+  --rp-c3: #a871e3;
   --rp-c4: #ff7d00;
   --rp-c5: #14c9c9;
-  --rp-c6: #f5319d;
+  --rp-c6: #f979b7;
   --rp-c7: #f7ba1e;
   --rp-c8: #9fdb1d;
   --rp-hl-low: #f2f3f5;
@@ -358,25 +358,25 @@
   --rp-pine: #3c7eff;
   --rp-foam: #27c346;
   --rp-iris: #8e51da;
-  --rp-c1: #3c7eff;
-  --rp-c2: #27c346;
-  --rp-c3: #8e51da;
+  --rp-c1: #306fff;
+  --rp-c2: #129a37;
+  --rp-c3: #5a25b0;
   --rp-c4: #ff9626;
   --rp-c5: #3fd4cf;
-  --rp-c6: #f756a9;
+  --rp-c6: #cb2b88;
   --rp-c7: #f9cc44;
   --rp-c8: #b8e24b;
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: #333335;
   --rp-hl-high: rgba(255, 255, 255, 0.16);
-  --rp-on-accent: #ffffff;
+  --rp-on-accent: rgba(255, 255, 255, 0.9);
   --rp-on-text: #17171a;
   --rp-line: #333335;
-  --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 /* Semi Design (ByteDance): @douyinfe/semi-theme-default palette step 5 and its semantic bg/text/fill/border tokens. */
 :root[data-family='semi'] {
-  --rp-base: #f9f9f9;
+  --rp-base: #ffffff;
   --rp-surface: #ffffff;
   --rp-overlay: rgba(46, 50, 56, 0.05);
   --rp-muted: rgba(28, 31, 35, 0.35);
@@ -388,14 +388,14 @@
   --rp-pine: #0064fa;
   --rp-foam: #3bb346;
   --rp-iris: #6a3ac7;
-  --rp-c1: #0064fa;
-  --rp-c2: #00b3a1;
-  --rp-c3: #6a3ac7;
-  --rp-c4: #fc8800;
-  --rp-c5: #3bb346;
-  --rp-c6: #e91e63;
-  --rp-c7: #fac800;
-  --rp-c8: #05a4b6;
+  --rp-c1: #4a9cf7;
+  --rp-c2: #33b0ab;
+  --rp-c3: #b171f9;
+  --rp-c4: #f58700;
+  --rp-c5: #83b023;
+  --rp-c6: #fe8090;
+  --rp-c7: #f3cc35;
+  --rp-c8: #30a7ce;
   --rp-hl-low: rgba(28, 31, 35, 0.08);
   --rp-hl-med: rgba(46, 50, 56, 0.09);
   --rp-hl-high: rgba(46, 50, 56, 0.13);
@@ -417,21 +417,21 @@
   --rp-pine: #54a9ff;
   --rp-foam: #5dc264;
   --rp-iris: #8865d4;
-  --rp-c1: #54a9ff;
-  --rp-c2: #33c2b0;
-  --rp-c3: #8865d4;
-  --rp-c4: #ffae43;
-  --rp-c5: #5dc264;
-  --rp-c6: #ef5686;
-  --rp-c7: #fdde43;
-  --rp-c8: #38bbc6;
+  --rp-c1: #107df8;
+  --rp-c2: #0bb3a7;
+  --rp-c3: #7142c5;
+  --rp-c4: #faad3f;
+  --rp-c5: #9acf0d;
+  --rp-c6: #c31e57;
+  --rp-c7: #f8ca10;
+  --rp-c8: #10a2b4;
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: rgba(255, 255, 255, 0.16);
   --rp-hl-high: rgba(255, 255, 255, 0.2);
-  --rp-on-accent: #ffffff;
+  --rp-on-accent: #e4e7f5;
   --rp-on-text: #16161a;
   --rp-line: rgba(255, 255, 255, 0.08);
-  --rp-shadow: 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.5);
+  --rp-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 /* Glass. The recipe follows what the convincing implementations share (macOS vibrancy, Windows Acrylic, the
    glassmorphism generators): a THIN tint so the backdrop shows through, a LARGE blur plus saturation so it still reads,
