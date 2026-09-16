@@ -7,7 +7,7 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(4);
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(5);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');

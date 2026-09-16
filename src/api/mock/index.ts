@@ -1,5 +1,15 @@
 import type {Api} from '../api';
-import type {ApiEvent, DnsLogRecord, EventOptions, FlowDetail, GroupSelectionResult, Operation, OperationAccepted, OperationState, RuntimeSettingsPatch} from '../model';
+import type {
+  ApiEvent,
+  DnsLogRecord,
+  EventOptions,
+  FlowDetail,
+  GroupSelectionResult,
+  Operation,
+  OperationAccepted,
+  OperationState,
+  RuntimeSettingsPatch
+} from '../model';
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import * as fixtures from './fixtures';
@@ -546,7 +556,9 @@ export function createMockApi(): Api {
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
-      const fields = Object.entries(patch).flatMap(([section, values]) => Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const));
+      const fields = Object.entries(patch).flatMap(([section, values]) =>
+        Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const)
+      );
       for (const [field, value] of fields) {
         if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
         if (field === 'log.level') {

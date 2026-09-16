@@ -1932,6 +1932,10 @@ input {
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Fields with descriptions differ in height; align them by their labels instead of their middles. */
+.rp-toolbar.top {
+  align-items: flex-start;
+}
 .rp-between {
   display: flex;
   align-items: center;
