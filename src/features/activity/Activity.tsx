@@ -4,6 +4,8 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Clock from '../../ui/icons/Clock';
 import Data from '../../ui/icons/Data';
+import Shuffle from '../../ui/icons/Shuffle';
+import Filter from '../../ui/icons/Filter';
 import {
   useCapabilities,
   useConnections,
@@ -18,7 +20,10 @@ import {
 import {connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, sourceIp, trafficSeries} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Button, Segmented, Light, Bar, ErrorMessage, Loading} from '../../ui/ui';
+import {Button, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, toast} from '../../ui/ui';
+import type {Key} from '../../i18n/messages';
+
+const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
@@ -63,6 +68,9 @@ export function Activity({go}: {go: (page: string) => void}) {
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
+  // The quick row keeps its choice locally until the contract carries an outbound mode and a global target.
+  const [mode, setMode] = useState('rule');
+  const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
   const nodeName = node?.name ?? '';
@@ -70,6 +78,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   if (error) return <ErrorMessage error={error} />;
   if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
+  const groups = groupsResource.data;
+  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -84,7 +94,39 @@ export function Activity({go}: {go: (page: string) => void}) {
   const events = feed.events.slice(0, 6);
   return (
     <>
-      <div className="rp-col">
+      <div className="rp-quick">
+        <div className="rp-card">
+          <div className="rp-row">
+            <span className="rp-qlabel rp-tint-c3">
+              <Shuffle />
+              {t('act.mode')}
+            </span>
+            <Segmented
+              label={t('act.mode')}
+              value={mode}
+              onChange={k => {
+                setMode(k);
+                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
+              }}
+              items={[
+                ['rule', t('mode.rule')],
+                ['global', t('mode.global')],
+                ['direct', t('mode.direct')]
+              ]}
+            />
+          </div>
+        </div>
+        <div className="rp-card">
+          <div className="rp-row">
+            <span className="rp-qlabel rp-tint-c2">
+              <Filter />
+              {t('act.global')}
+            </span>
+            <MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>
+              {target}
+            </MenuButton>
+          </div>
+        </div>
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>

@@ -1144,6 +1144,21 @@ input {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.rp-quick {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .rp-quick {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .rp-quick {
+    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  }
+}
 .rp-qlabel {
   display: flex;
   align-items: center;
@@ -1159,7 +1174,7 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 24px;
+  height: 32px;
   font-size: 12px;
   line-height: 16px;
   min-width: 0;
@@ -1168,11 +1183,10 @@ input {
 }
 .rp-tile-body {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
-  flex-wrap: wrap;
+  height: 32px;
 }
 .rp-tile-val {
   display: flex;
@@ -1266,8 +1280,8 @@ input {
   color: var(--rp-rose);
 }
 .rp-spark {
-  flex: 1 1 80px;
-  min-width: 80px;
+  flex: 1 1 64px;
+  min-width: 48px;
   max-width: 120px;
 }
 /* Controls on react-aria-components */

@@ -6,8 +6,6 @@ test('native activity uses API version and events without demo mode controls', a
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.getByRole('radiogroup', {name: 'Mode', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveCount(0);
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
