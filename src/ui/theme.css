@@ -2635,20 +2635,6 @@ button.rp-node:hover {
   }
 }
 
-.rp-flow-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 0;
-  padding-inline-start: 24px;
-}
-.rp-flow-step {
-  border-inline-start: 2px solid var(--rp-hl-med);
-  padding: 8px 0 8px 16px;
-}
-.rp-flow-step > .rp-toolbar {
-  margin-bottom: 12px;
-}
 .rp-flow-raw {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2690,17 +2676,12 @@ button.rp-node:hover {
 }
 
 .rp-flow-columns {
-  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px 48px;
+  gap: 24px 32px;
 }
-.rp-flow-ribbons {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+.rp-flow-columns[data-active] .rp-flow-row:not([data-related]) {
+  opacity: 0.4;
 }
 .rp-flow-stage {
   position: relative;
@@ -2748,9 +2729,6 @@ button.rp-node:hover {
   .rp-flow-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 24px;
-  }
-  .rp-flow-ribbons {
-    display: none;
   }
 }
 

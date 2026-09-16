@@ -175,13 +175,13 @@ export function Flows({go, query}: PageProps) {
               [t('ui.state'), t(connectionStates[flow.state])]
             ]}
           />
-          <ol className="rp-flow-timeline">
+          <div className="rp-list">
             {[...flow.trace.steps]
               .sort((a, b) => a.seq - b.seq)
               .map(step => {
                 const fields = flowStepFields(step);
                 return (
-                  <li key={step.seq} className="rp-flow-step">
+                  <div key={step.seq} className="rp-card rp-col">
                     <div className="rp-toolbar">
                       <Badge>{stages[step.stage] ? t(stages[step.stage]) : step.stage}</Badge>
                       <span className="rp-code">{t('flow.sequence', {n: step.seq})}</span>
@@ -190,6 +190,7 @@ export function Flows({go, query}: PageProps) {
                     </div>
                     {fields ? (
                       <Kv
+                        inline
                         items={fields.map(([key, value]) => [
                           typeof key === 'string' ? t(key) : t(key.key, key.params),
                           typeof value === 'string' ? value : t(value.key, value.params)
@@ -200,10 +201,10 @@ export function Flows({go, query}: PageProps) {
                         <code>{JSON.stringify(step.data, null, 2)}</code>
                       </pre>
                     )}
-                  </li>
+                  </div>
                 );
               })}
-          </ol>
+          </div>
         </section>
       )}
     </div>
