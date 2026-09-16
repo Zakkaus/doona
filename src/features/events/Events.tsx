@@ -2,7 +2,8 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {useEventFeed} from '../../api/store';
 import {eventKindLabels, eventKinds, eventSummary, localTime} from '../../api/selectors';
-import {DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, downloadFile} from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 
 export function Events() {
   const t = useT();
@@ -25,6 +26,20 @@ export function Events() {
         </Light>
         {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
         <span className="rp-label">{t('event.limit')}</span>
+        <Button
+          small
+          isDisabled={!shown.length}
+          onPress={() =>
+            downloadFile(
+              `doona-events-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`,
+              JSON.stringify(shown, null, 2) + '\n',
+              'application/json'
+            )
+          }
+        >
+          <Download />
+          {t('event.export')}
+        </Button>
       </div>
       {feed.error && <ErrorMessage error={feed.error} />}
       <DataTable
