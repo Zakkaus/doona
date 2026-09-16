@@ -1,5 +1,5 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useId, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode, type RefObject} from 'react';
+import {useId, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -18,6 +18,10 @@ import {
   Tooltip,
   TooltipTrigger,
   OverlayArrow,
+  Disclosure as RDisclosure,
+  DisclosureGroup as RDisclosureGroup,
+  DisclosurePanel,
+  Focusable,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
@@ -28,6 +32,7 @@ import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
 import Search from './icons/Search';
 import {useT} from '../i18n';
+import {ApiError} from '../api/error';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -36,21 +41,6 @@ export function withCrossfade(fn: () => void) {
   const d = document as Document & {startViewTransition?: (cb: () => void) => void};
   if (!d.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return fn();
   d.startViewTransition(() => flushSync(fn));
-}
-
-// Press feedback is pure CSS (a small scale on [data-pressed], see theme.css): a JS-computed perspective transform
-// on every press promoted the button to its own layer mid-gesture and felt abrupt. The hook stays for the ref.
-export function usePress(): [RefObject<HTMLButtonElement | null>, (rp: {isPressed: boolean}) => CSSProperties] {
-  const ref = useRef<HTMLButtonElement>(null);
-  return [ref, () => ({})];
-}
-function PressButton(props: Parameters<typeof RButton>[0]) {
-  const [ref, style] = usePress();
-  return <RButton {...props} ref={ref} style={style} />;
-}
-function PressToggle(props: Parameters<typeof ToggleButton>[0]) {
-  const [ref, style] = usePress();
-  return <ToggleButton {...props} ref={ref} style={style} />;
 }
 
 // A selection indicator that slides between items, as in S2's SegmentedControl and Tabs.
@@ -86,6 +76,7 @@ export function Button({
   negative,
   label,
   isDisabled,
+  isPending,
   tip,
   type,
   appearance,
@@ -102,13 +93,14 @@ export function Button({
   negative?: boolean;
   label?: string;
   isDisabled?: boolean;
+  isPending?: boolean;
   tip?: string;
   type?: 'button' | 'submit' | 'reset';
   appearance?: 'search' | 'version' | 'select';
   className?: string;
 }) {
   const btn = (
-    <PressButton
+    <RButton
       className={cx(
         appearance ? `rp-${appearance}` : 'rp-btn',
         quiet && 'quiet',
@@ -123,10 +115,12 @@ export function Button({
       onPress={onPress}
       aria-label={label}
       isDisabled={isDisabled}
+      isPending={isPending}
       type={type}
     >
+      {isPending ? <span className="rp-spinner" aria-hidden="true" /> : null}
       {children}
-    </PressButton>
+    </RButton>
   );
   const text = label ?? tip;
   return text ? (
@@ -138,11 +132,99 @@ export function Button({
     btn
   );
 }
-function Tip({children}: {children: ReactNode}) {
+export function Tip({children}: {children: ReactNode}) {
   return (
     <Tooltip className="rp-tip" offset={6}>
       <OverlayArrow /> {children}
     </Tooltip>
+  );
+}
+
+export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
+  return (
+    <RDisclosure {...props} className="rp-disclosure">
+      <Heading level={3}>
+        <RButton slot="trigger" className="rp-btn quiet rp-disclosure-trigger">
+          <ChevronDown />
+          {title}
+        </RButton>
+      </Heading>
+      <DisclosurePanel className="rp-disclosure-panel">
+        <div className="rp-disclosure-content">{children}</div>
+      </DisclosurePanel>
+    </RDisclosure>
+  );
+}
+
+export function DisclosureGroup({children}: {children: ReactNode}) {
+  return (
+    <RDisclosureGroup className="rp-col" allowsMultipleExpanded>
+      {children}
+    </RDisclosureGroup>
+  );
+}
+
+export function Loading({children}: {children?: ReactNode}) {
+  const t = useT();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+  return visible ? (
+    <div className="rp-empty" role="status">
+      <span className="rp-spinner" aria-hidden="true" />
+      {children ?? t('ui.loading')}
+    </div>
+  ) : null;
+}
+
+export function errorText(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
+}
+
+// Resource refetch promises settle on both success and failure; refresh feedback uses committed inline errors.
+export const visibleErrors = new Map<string, Error>();
+export function ErrorMessage({error}: {error: Error | null | undefined}) {
+  const t = useT();
+  const id = useId();
+  useLayoutEffect(() => {
+    if (error) visibleErrors.set(id, error);
+    return () => {
+      visibleErrors.delete(id);
+    };
+  }, [error, id]);
+  return error ? (
+    <p role="alert" className="rp-alert">
+      {t('ui.loadFailed', {error: errorText(error)})}
+    </p>
+  ) : null;
+}
+
+export function TextTooltip({children, text, className}: {children: ReactNode; text?: string; className?: string}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [overflow, setOverflow] = useState(false);
+  const [nested, setNested] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setOverflow(el.scrollWidth > el.clientWidth);
+    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="radio"]'));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [children]);
+  return (
+    <TooltipTrigger delay={400} isDisabled={!overflow && !text}>
+      <Focusable>
+        <span ref={ref} className={cx('rp-truncate', className)} tabIndex={(overflow || text) && !nested ? 0 : -1}>
+          {children}
+        </span>
+      </Focusable>
+      <Tip>{text ?? children}</Tip>
+    </TooltipTrigger>
   );
 }
 export function Segmented({items, value, onChange, label}: {items: Array<[string, string]>; value: string; onChange: (k: string) => void; label: string}) {
@@ -162,9 +244,9 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
     >
       {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
       {items.map(([k, l]) => (
-        <PressToggle key={k} id={k} className="rp-btn">
+        <ToggleButton key={k} id={k} className="rp-btn">
           {l}
-        </PressToggle>
+        </ToggleButton>
       ))}
     </ToggleButtonGroup>
   );
@@ -174,7 +256,7 @@ type Item = {id: string; label: string; desc?: string; icon?: ReactNode; tone?: 
 const ItemLabel = ({i}: {i: Item}) => (
   <span className="rp-il">
     {i.icon && <span className="ic">{i.icon}</span>}
-    <span>{i.label}</span>
+    <TextTooltip>{i.label}</TextTooltip>
   </span>
 );
 // S2 marks the selected item with a checkmark in a leading column, not with a background.
@@ -218,10 +300,10 @@ export function MenuButton({
 }) {
   return (
     <MenuTrigger>
-      <PressButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>
+      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>
         {children}
         {chevron && <ChevronDown />}
-      </PressButton>
+      </RButton>
       <Popover className="rp-popover" placement="bottom end">
         {sections ? (
           <Menu aria-label={label}>
@@ -272,10 +354,10 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[]; va
         if (k != null) onChange(String(k));
       }}
     >
-      <PressButton className="rp-select">
+      <RButton className="rp-select">
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
         <ChevronDown />
-      </PressButton>
+      </RButton>
       <Popover className="rp-popover" placement="bottom start">
         <ListBox items={items}>
           {i => (
@@ -299,7 +381,7 @@ export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: 
       <div className="top">
         <span className="l">
           {icon && <span className="ic">{icon}</span>}
-          {label}
+          {typeof label === 'string' ? <TextTooltip>{label}</TextTooltip> : label}
         </span>
         <span className="v">{value}</span>
       </div>
@@ -448,10 +530,10 @@ export function LabeledSelect({
       }}
       isDisabled={isDisabled}
     >
-      <PressButton className="rp-selectbtn">
+      <RButton className="rp-selectbtn">
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
         <ChevronDown />
-      </PressButton>
+      </RButton>
       <Popover className="rp-popover" placement="bottom start">
         <ListBox items={items}>
           {i => (
@@ -481,7 +563,7 @@ export function LabeledSelect({
   );
 }
 export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
-  return <span className={cx('rp-badge', tone, className)}>{children}</span>;
+  return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
 }
 export function Kv({items, inline}: {items: Array<[string, string]>; inline?: boolean}) {
   return (
@@ -537,7 +619,7 @@ export function NodeTile({
       <span className="top">
         <span className="n">
           {icon && <span className="ic">{icon}</span>}
-          {name}
+          <TextTooltip>{name}</TextTooltip>
         </span>
         {nested ? (
           <Badge>{labels.nested}</Badge>
@@ -574,7 +656,8 @@ export function DataTable<T extends {id: string}>({
   height = 442,
   selected,
   onSelect,
-  empty
+  empty,
+  loading
 }: {
   label: string;
   cols: Col[];
@@ -584,7 +667,9 @@ export function DataTable<T extends {id: string}>({
   selected?: string | null;
   onSelect?: (id: string | null) => void;
   empty?: string;
+  loading?: boolean;
 }) {
+  const t = useT();
   const keys: Selection = selected ? new Set([selected]) : new Set();
   return (
     <ResizableTableContainer className="rp-table" style={{height}}>
@@ -609,12 +694,12 @@ export function DataTable<T extends {id: string}>({
             </Column>
           ))}
         </TableHeader>
-        <TableBody items={rows} renderEmptyState={() => <div className="empty">{empty ?? ''}</div>}>
+        <TableBody items={rows} renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}>
           {r => (
             <Row id={r.id}>
               {render(r).map((cell, i) => (
                 <Cell key={cols[i].id} className={cols[i].align === 'end' ? 'end' : undefined}>
-                  {cell}
+                  {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
                 </Cell>
               ))}
             </Row>
@@ -673,7 +758,6 @@ export function ModalDialog({
 }
 
 // Toasts: a queue rendered once by the shell, stacked like S2's ToastContainer.
-// The newest toast sits on top; older ones peek out behind it. Clicking the stack or "show all" expands the list over an underlay.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastItem = {id: number; kind: ToastKind; msg: string; exiting?: boolean; timer?: ReturnType<typeof setTimeout>; left: number; since: number};
 let listeners: Array<(t: ToastItem[]) => void> = [];
@@ -752,7 +836,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
   const ordered = [...items].reverse();
   return (
     <>
-      {expanded && <button type="button" className="rp-toast-underlay" aria-label={labels.collapse} onClick={() => setExpanded(false)} />}
+      {expanded && <RButton className="rp-toast-underlay" aria-label={labels.collapse} onPress={() => setExpanded(false)} />}
       <div
         className={cx('rp-toasts', expanded && 'expanded')}
         role="region"
@@ -772,13 +856,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
             </RButton>
           </div>
         )}
-        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- mouse-only convenience; the keyboard path is the "show all" button */}
-        <div
-          className="rp-toast-list"
-          onClick={e => {
-            if (!expanded && live.length > 1 && !(e.target as Element).closest('button')) setExpanded(true);
-          }}
-        >
+        <div className="rp-toast-list">
           {ordered.map((t, i) => {
             const idx = t.exiting ? 0 : live.length - 1 - live.indexOf(t);
             const Icon = TOAST_ICON[t.kind];
@@ -789,6 +867,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
                 className={cx('rp-toast', t.kind, t.exiting && 'exiting', background && 'background')}
                 style={{zIndex: ordered.length - i, '--i': Math.min(idx, 3)} as CSSProperties}
                 aria-hidden={background || undefined}
+                inert={background || t.exiting || undefined}
               >
                 <div className="main">
                   <span className="body">

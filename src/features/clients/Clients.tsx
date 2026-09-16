@@ -3,7 +3,7 @@ import LinkIcon from '../../ui/icons/Link';
 import {useClients} from '../../api/store';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Button, DataTable} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, TextTooltip} from '../../ui/ui';
 import type {PageProps} from '../types';
 
 export function Clients({go}: PageProps) {
@@ -14,12 +14,13 @@ export function Clients({go}: PageProps) {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('client.note')}</p>
-      {clients.error && <p role="alert">{clients.error.message}</p>}
+      {clients.error && <ErrorMessage error={clients.error} />}
       {clients.data?.truncated && <p className="rp-note">{t('client.truncated')}</p>}
       <DataTable
         label={t('nav.clients')}
         height={300}
-        empty={clients.loading ? t('ui.loading') : t('client.empty')}
+        loading={clients.loading && !clients.data}
+        empty={t('client.empty')}
         rows={clients.rows}
         cols={[
           {id: 'ip', label: t('ui.sourceIp'), minWidth: 136, isRowHeader: true},
@@ -30,11 +31,11 @@ export function Clients({go}: PageProps) {
           {id: 'act', label: t('ui.actions'), minWidth: 152, grow: 0}
         ]}
         render={c => [
-          <span className="rp-code">{c.ip}</span>,
+          <TextTooltip className="rp-code">{c.ip}</TextTooltip>,
           c.active,
           formatBytes(c.download),
           c.outbounds || '—',
-          <span title={c.firstSeen}>{localTime(c.firstSeen, locale)}</span>,
+          <TextTooltip text={c.firstSeen}>{localTime(c.firstSeen, locale)}</TextTooltip>,
           <span className="rp-group-btns">
             <Button small onPress={() => go('connections', 'src=' + encodeURIComponent(c.ip))}>
               <LinkIcon />

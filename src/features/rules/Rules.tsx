@@ -1,14 +1,20 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
-import {Button, DataTable, Kv, LabeledSelect, Light, TextField} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, TextField, errorText, toast} from '../../ui/ui';
 import {RuleDistribution} from './RuleDistribution';
 
 export function Rules() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
+  useEffect(() => {
+    if (trace.result) toast('positive', t('ui.completed'));
+  }, [trace.result, t]);
+  useEffect(() => {
+    if (trace.error) toast('negative', errorText(trace.error));
+  }, [trace.error]);
   const {form, setForm} = trace;
   const config = useConfigRules();
   const capabilities = useCapabilities();
@@ -17,6 +23,7 @@ export function Rules() {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('rule.note')}</p>
+      {capabilities.loading && !capabilities.data && <Loading />}
       <form
         className="rp-card"
         onSubmit={e => {
@@ -51,13 +58,14 @@ export function Rules() {
         {!trace.available && <p className="rp-note">{t('rule.unavailable')}</p>}
         <Button
           accent
+          isPending={trace.busy}
           isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(form.resolve)}
-          onPress={() => void trace.submit()}
+          type="submit"
         >
           {trace.busy ? t('rule.tracing') : t('rule.trace')}
         </Button>
       </form>
-      {trace.error && <p role="alert">{trace.error.message}</p>}
+      {trace.error && <ErrorMessage error={trace.error} />}
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
           <Kv
@@ -90,7 +98,7 @@ export function Rules() {
                 ]}
                 render={rule => [
                   rule.rule_id,
-                  <span className="rp-code">{rule.expression ?? '—'}</span>,
+                  <TextTooltip className="rp-code">{rule.expression ?? '—'}</TextTooltip>,
                   <Light tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}>
                     {rule.result}
                   </Light>,
@@ -138,7 +146,7 @@ export function Rules() {
                 ]}
                 render={r => [
                   r.n,
-                  <span className="rp-code">{r.cond}</span>,
+                  <TextTooltip className="rp-code">{r.cond}</TextTooltip>,
                   r.target,
                   r.must ? 'must' : '',
                   r.generated ? t('rule.generated') : r.source,

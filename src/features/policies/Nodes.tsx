@@ -88,6 +88,7 @@ export function NodeGrid({
     else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [nodes, big, q, region, sort, aliveOnly, contains]);
+  if (!nodes.length) return <div className="rp-empty">{labels.none}</div>;
   if (!big) {
     return (
       <div className="rp-nodes">

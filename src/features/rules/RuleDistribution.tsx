@@ -4,7 +4,7 @@ import {parseU64} from '../../api/u64';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {usePalette} from '../../ui/Charts';
-import {Badge, Bar, Segmented} from '../../ui/ui';
+import {Badge, Bar, Segmented, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
 import {ruleDistribution, ruleDistributionSummary} from './distribution';
 
 const sources: Record<string, Key> = {
@@ -49,12 +49,8 @@ export function RuleDistribution() {
           items={[['all', t('ui.all')], ...Object.entries(sources).map(([id, label]): [string, string] => [id, t(label)])]}
         />
       </div>
-      {resource.error && (
-        <p role="alert" className="rp-note">
-          {t('flow.loadFailed', {error: resource.error.message})}
-        </p>
-      )}
-      {resource.loading && !summary && <p role="status">{t('ui.loading')}</p>}
+      {resource.error && <ErrorMessage error={resource.error} />}
+      {resource.loading && !summary && <Loading>{t('ui.loading')}</Loading>}
       {summary && (
         <>
           <p className="rp-note">{t('rule.distributionCaption', {n: formatNumber(summary.total, locale)})}</p>
@@ -88,7 +84,7 @@ export function RuleDistribution() {
                     <Bar
                       label={
                         <span className="rp-rule">
-                          <span title={row.id === null ? expression : t('rule.distributionRule', {expression, id: row.id})}>{expression}</span>
+                          <TextTooltip text={row.id === null ? expression : t('rule.distributionRule', {expression, id: row.id})}>{expression}</TextTooltip>
                           <Badge>{t(sources[row.source])}</Badge>
                         </span>
                       }

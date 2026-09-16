@@ -3,7 +3,7 @@ import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOp
 import {datapathFields, formatDuration, lifecycleStates, localTime, memoryFields, trafficSeries} from '../../api/selectors';
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Button, DataTable, Kv, Light, Segmented, toast} from '../../ui/ui';
+import {Button, DataTable, Kv, Light, Segmented, toast, errorText, ErrorMessage, Loading} from '../../ui/ui';
 import {AreaChart, Legend, fmtRate, usePalette} from '../../ui/Charts';
 import {memorySampleLimit, useMemorySamples} from './memory';
 import type {Key} from '../../i18n/messages';
@@ -51,12 +51,12 @@ export function Overview() {
           })
         );
     } catch (error) {
-      toast('negative', t('ov.operationError', {error: String(error)}));
+      toast('negative', t('ov.operationError', {error: errorText(error)}));
     }
   }
   return (
     <div className="rp-page">
-      {capabilities.error && <p role="alert">{capabilities.error.message}</p>}
+      {capabilities.error && <ErrorMessage error={capabilities.error} />}
       <div className="rp-between">
         <Light tone={state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn'}>
           {state ? t(lifecycleStates[state]) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}
@@ -80,21 +80,23 @@ export function Overview() {
           ]}
         />
       </div>
-      {runtime.error && <p role="alert">{runtime.error.message}</p>}
+      {runtime.error && <ErrorMessage error={runtime.error} />}
       <div className="rp-grid-pair">
         <section className="rp-card" aria-labelledby="overview-memory-chart">
           <h3 className="rp-h3" id="overview-memory-chart">
             {t('ov.memoryHistory')}
           </h3>
           <p className="rp-note">{t('ov.memoryHistoryHelp', {n: memorySampleLimit})}</p>
-          {memory.error && <p role="alert">{memory.error.message}</p>}
+          {memory.error && <ErrorMessage error={memory.error} />}
           {samples.length ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
               <AreaChart series={memorySeries} timestamps={samples.map(sample => sample.time)} fmt={memoryBytes} locale={locale} height={150} />
             </>
+          ) : capabilities.loading || memory.loading ? (
+            <Loading />
           ) : (
-            <span className="rp-label">{capabilities.loading || memory.loading ? t('ov.loading') : t('ov.unavailable')}</span>
+            <span className="rp-empty">{t('ov.unavailable')}</span>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-traffic-chart">
@@ -116,13 +118,13 @@ export function Overview() {
             />
           </div>
           {history.error ? (
-            <p role="alert">{history.error.message}</p>
-          ) : resources?.traffic_history.available === false ? (
+            <ErrorMessage error={history.error} />
+          ) : capabilities.error || resources?.traffic_history.available === false ? (
             <span className="rp-label">{t('ov.unavailable')}</span>
           ) : !history.data ? (
-            <span role="status">{t('ov.loading')}</span>
+            <Loading>{t('ov.loading')}</Loading>
           ) : !history.data.samples.length ? (
-            <span className="rp-label">{t('act.emptyHistory')}</span>
+            <span className="rp-empty">{t('act.emptyHistory')}</span>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
@@ -134,7 +136,7 @@ export function Overview() {
       <div className="rp-split">
         <section className="rp-card">
           <h3 className="rp-h3">{t('ov.datapath')}</h3>
-          {datapath.error && <p role="alert">{datapath.error.message}</p>}
+          {datapath.error && <ErrorMessage error={datapath.error} />}
           {datapath.data ? (
             <>
               <Kv items={datapathFields(datapath.data, t('ov.unknown'), t)} />
@@ -166,35 +168,41 @@ export function Overview() {
                 <span>—</span>
               )}
             </>
+          ) : capabilities.loading || datapath.loading ? (
+            <Loading />
           ) : (
-            <span className="rp-label">
-              {capabilities.loading || datapath.loading ? t('ov.loading') : resources?.datapath.available ? '—' : t('ov.unavailable')}
-            </span>
+            <span className="rp-empty">{t('ov.unavailable')}</span>
           )}
         </section>
         <div className="rp-col">
           <section className="rp-card">
             <h3 className="rp-h3">{t('ov.memory')}</h3>
-            {memory.error && <p role="alert">{memory.error.message}</p>}
+            {memory.error && <ErrorMessage error={memory.error} />}
             {memory.data ? (
               <Kv items={memoryFields(memory.data, t)} />
+            ) : capabilities.loading || memory.loading ? (
+              <Loading />
             ) : (
-              <span className="rp-label">
-                {capabilities.loading || memory.loading ? t('ov.loading') : resources?.runtime_memory.available ? '—' : t('ov.unavailable')}
-              </span>
+              <span className="rp-empty">{t('ov.unavailable')}</span>
             )}
           </section>
           <section className="rp-card">
             <h3 className="rp-h3">{t('ov.operations')}</h3>
             <div className="rp-cluster">
               {(['reload', 'suspend', 'resume'] as const).map(kind => (
-                <Button key={kind} primary isDisabled={!!operations.busy || !operations.canRun(kind)} onPress={() => void run(kind)}>
+                <Button
+                  key={kind}
+                  primary
+                  isPending={operations.busy === kind}
+                  isDisabled={!!operations.busy || !operations.canRun(kind)}
+                  onPress={() => void run(kind)}
+                >
                   {operations.busy === kind ? t('ov.operationBusy', {action: t(operationLabels[kind])}) : t(operationLabels[kind])}
                 </Button>
               ))}
             </div>
             {operations.operation && <span className="rp-code">{operations.operation.operation_id}</span>}
-            {operations.error && <p role="alert">{operations.error.message}</p>}
+            {operations.error && <ErrorMessage error={operations.error} />}
           </section>
         </div>
       </div>

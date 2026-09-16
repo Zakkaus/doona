@@ -2,7 +2,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {useEventFeed} from '../../api/store';
 import {eventKinds, eventSummary, localTime} from '../../api/selectors';
-import {DataTable, LabeledSelect, Light} from '../../ui/ui';
+import {DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip} from '../../ui/ui';
 
 export function Events() {
   const t = useT();
@@ -26,10 +26,11 @@ export function Events() {
         {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
         <span className="rp-label">{t('event.limit')}</span>
       </div>
-      {feed.error && <p role="alert">{feed.error.message}</p>}
+      {feed.error && <ErrorMessage error={feed.error} />}
       <DataTable
         label={t('nav.events')}
         height={442}
+        loading={!feed.error && !feed.connected && feed.available !== false && !feed.events.length}
         rows={shown}
         empty={t('event.empty')}
         cols={[
@@ -39,7 +40,13 @@ export function Events() {
         ]}
         render={event => {
           const summary = eventSummary(event);
-          return [<span className="rp-code">{localTime(event.data.observed_at, locale)}</span>, event.event, t(summary.key, summary.params)];
+          return [
+            <TextTooltip className="rp-code" text={event.data.observed_at}>
+              {localTime(event.data.observed_at, locale)}
+            </TextTooltip>,
+            event.event,
+            t(summary.key, summary.params)
+          ];
         }}
       />
     </div>

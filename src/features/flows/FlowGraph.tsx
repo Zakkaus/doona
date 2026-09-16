@@ -1,8 +1,8 @@
 import {useMemo, useState, type ReactNode} from 'react';
-import {Button as RButton} from 'react-aria-components';
+import {Button as RButton, TooltipTrigger} from 'react-aria-components';
 import {useT, type Translator} from '../../i18n';
 import {Legend, usePalette} from '../../ui/Charts';
-import {Bar, Button} from '../../ui/ui';
+import {Bar, Disclosure, Tip} from '../../ui/ui';
 import {graphStages, unknownLabels, type FlowGraphData, type GraphNode} from './graph';
 
 export const graphStageLabels = {
@@ -65,21 +65,25 @@ function StageColumns({graph, selected, onSelect}: GraphProps) {
                 const label = graphLabel(node, t);
                 const value = t('flow.graphTooltip', {n: node.count});
                 return (
-                  <RButton
-                    key={node.id}
-                    className="rp-flow-row"
-                    data-stage={stage}
-                    data-stage-index={index}
-                    data-node-id={node.id}
-                    data-selected={selected === node.id || undefined}
-                    data-related={(related?.has(node.id) ?? true) || undefined}
-                    data-unknown={node.label === unknownLabels[stage] || undefined}
-                    aria-label={`${t(graphStageLabels[stage])}: ${label} · ${value}`}
-                    aria-pressed={selected === node.id}
-                    onPress={() => onSelect(node)}
-                  >
-                    <Bar label={label} value={value} pct={(node.count / total) * 100} color={p.cat[index]} />
-                  </RButton>
+                  <TooltipTrigger key={node.id} delay={400}>
+                    <RButton
+                      className="rp-flow-row"
+                      data-stage={stage}
+                      data-stage-index={index}
+                      data-node-id={node.id}
+                      data-selected={selected === node.id || undefined}
+                      data-related={(related?.has(node.id) ?? true) || undefined}
+                      data-unknown={node.label === unknownLabels[stage] || undefined}
+                      aria-label={`${t(graphStageLabels[stage])}: ${label} · ${value}`}
+                      aria-pressed={selected === node.id}
+                      onPress={() => onSelect(node)}
+                    >
+                      <Bar label={label} value={value} pct={(node.count / total) * 100} color={p.cat[index]} />
+                    </RButton>
+                    <Tip>
+                      {label} · {value}
+                    </Tip>
+                  </TooltipTrigger>
                 );
               })}
             </div>
@@ -101,28 +105,19 @@ export function FlowGraph({graph, selected, onSelect, caption}: GraphProps & {ca
   });
   return (
     <section className="rp-card rp-flow-graph" aria-label={t('flow.graphTitle')}>
-      <div className="rp-row">
-        <h3 className="rp-h3">{t('flow.graphTitle')}</h3>
-        <Button
-          quiet
-          small
-          onPress={() => {
-            const next = !open;
-            setOpen(next);
-            try {
-              localStorage.setItem('doona-flows-graph', next ? 'open' : 'closed');
-            } catch {}
-          }}
-        >
-          {t(open ? 'flow.graphHide' : 'flow.graphShow')}
-        </Button>
-      </div>
-      {open && (
-        <>
-          <StageColumns graph={graph} selected={selected} onSelect={onSelect} />
-          <p className="rp-note">{t('flow.graphNote')}</p>
-        </>
-      )}
+      <Disclosure
+        title={t('flow.graphTitle')}
+        isExpanded={open}
+        onExpandedChange={next => {
+          setOpen(next);
+          try {
+            localStorage.setItem('doona-flows-graph', next ? 'open' : 'closed');
+          } catch {}
+        }}
+      >
+        <StageColumns graph={graph} selected={selected} onSelect={onSelect} />
+        <p className="rp-note">{t('flow.graphNote')}</p>
+      </Disclosure>
       {caption}
     </section>
   );

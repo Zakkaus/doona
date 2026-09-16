@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows} from '../../api/store';
 import {chainLabel, connectionStates, flowStepFields, localTime, relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, Kv, LabeledSelect, Segmented} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
@@ -69,12 +69,7 @@ export function Flows({go, query}: PageProps) {
   const filterLabels = graphFilter ? {stage: t(graphStageLabels[graphFilter.stage]), label: graphLabel(graphFilter, t)} : null;
   return (
     <div className="rp-page">
-      {resource.error && (
-        <p role="alert" className="rp-note">
-          {t('flow.loadFailed', {error: resource.error.message})}
-        </p>
-      )}
-      {resource.loading && !resource.data && <p role="status">{t('ui.loading')}</p>}
+      {resource.error && <ErrorMessage error={resource.error} />}
       {resource.data &&
         (graph.nodes.length ? (
           <FlowGraph
@@ -115,6 +110,7 @@ export function Flows({go, query}: PageProps) {
       </div>
       <DataTable
         label={t('nav.flows')}
+        loading={resource.loading && !resource.data}
         rows={shown}
         height={250}
         selected={id}
@@ -134,7 +130,7 @@ export function Flows({go, query}: PageProps) {
           f.input?.domain || f.input?.dst || '—',
           chainLabel(f),
           <span className="rp-rule">
-            <span title={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</span>
+            <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>
             {f.rule_source === 'recomputed' ? (
               <small className="rp-provenance">{t('conn.recomputed')}</small>
             ) : f.rule_source === 'unknown' ? (
@@ -146,12 +142,8 @@ export function Flows({go, query}: PageProps) {
           relativeStart(f.started_at, locale)
         ]}
       />
-      {detail.error && (
-        <p role="alert" className="rp-note">
-          {t('flow.detailFailed', {error: detail.error.message})}
-        </p>
-      )}
-      {detail.loading && !flow && id && <p role="status">{t('flow.detailLoading')}</p>}
+      {detail.error && <ErrorMessage error={detail.error} />}
+      {detail.loading && !flow && id && <Loading>{t('flow.detailLoading')}</Loading>}
       {flow && (
         <section className="rp-card" aria-label={t('flow.trace')}>
           <div className="rp-row">
@@ -176,6 +168,7 @@ export function Flows({go, query}: PageProps) {
             ]}
           />
           <div className="rp-list">
+            {!flow.trace.steps.length && <div className="rp-empty">{t('ui.empty')}</div>}
             {[...flow.trace.steps]
               .sort((a, b) => a.seq - b.seq)
               .map(step => {

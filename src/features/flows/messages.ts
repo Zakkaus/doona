@@ -2,16 +2,12 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
-    'flow.loadFailed': '無法載入流程：{error}',
-    'flow.detailFailed': '無法載入流程記錄：{error}',
     'flow.detailLoading': '流程記錄載入中…',
     'flow.allStates': '全部狀態',
     'flow.coverage': '觀測涵蓋範圍',
     'flow.empty': '沒有符合的流程',
     'flow.graphTitle': '流程分佈',
     'flow.graphNote': '目前保留流程的筆數分佈，不代表流量或完整歷史。',
-    'flow.graphShow': '顯示流程圖',
-    'flow.graphHide': '隱藏',
     'flow.graphSource': '來源',
     'flow.graphRule': '規則',
     'flow.graphChain': '鏈',
@@ -95,16 +91,12 @@ export const messages = defineMessages({
     'flow.stage.reroute': '重新路由'
   },
   'zh-CN': {
-    'flow.loadFailed': '无法加载流程：{error}',
-    'flow.detailFailed': '无法加载流程记录：{error}',
     'flow.detailLoading': '流程记录加载中…',
     'flow.allStates': '全部状态',
     'flow.coverage': '观测覆盖范围',
     'flow.empty': '没有匹配的流程',
     'flow.graphTitle': '流程分布',
     'flow.graphNote': '当前保留流程的数量分布，不代表流量或完整历史。',
-    'flow.graphShow': '显示流程图',
-    'flow.graphHide': '隐藏',
     'flow.graphSource': '来源',
     'flow.graphRule': '规则',
     'flow.graphChain': '链',
@@ -188,16 +180,12 @@ export const messages = defineMessages({
     'flow.stage.reroute': '重新路由'
   },
   en: {
-    'flow.loadFailed': 'Could not load flows: {error}',
-    'flow.detailFailed': 'Could not load flow trace: {error}',
     'flow.detailLoading': 'Loading flow trace…',
     'flow.allStates': 'All states',
     'flow.coverage': 'Observation coverage',
     'flow.empty': 'No matching flows',
     'flow.graphTitle': 'Flow distribution',
     'flow.graphNote': 'Counts of currently retained flows, not traffic or complete history.',
-    'flow.graphShow': 'Show flow graph',
-    'flow.graphHide': 'Hide',
     'flow.graphSource': 'Source',
     'flow.graphRule': 'Rule',
     'flow.graphChain': 'Chain',

@@ -15,7 +15,6 @@ export const messages = defineMessages({
     'policy.none': '沒有符合的節點',
     'policy.members': '{n} 個成員',
     'policy.membersDown': '{n} 個成員，{down} 個無法使用',
-    'policy.error': '無法讀取或更新群組：{error}',
     'policy.loading': '{id} 載入中…',
     'policy.noProbe': '此群組不支援 TCP 探測',
     'policy.probing': '測試中…',
@@ -31,7 +30,6 @@ export const messages = defineMessages({
     'policy.selectedInterrupted': '{name} 已選擇 {member}，現有連線已中斷',
     'policy.selectedKept': '{name} 已選擇 {member}，現有連線未中斷',
     'policy.note': '僅支援手動選擇的 selector 群組可切換成員。TCP 與 UDP 可分別選擇。',
-    'policy.loadFailed': '無法載入策略：{error}',
     'policy.empty': '沒有群組。',
     'policy.probeChanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇已變更',
     'policy.probeUnchanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇未變更'
@@ -50,7 +48,6 @@ export const messages = defineMessages({
     'policy.none': '没有匹配的节点',
     'policy.members': '{n} 个成员',
     'policy.membersDown': '{n} 个成员，{down} 个不可用',
-    'policy.error': '无法读取或更新组：{error}',
     'policy.loading': '正在加载 {id}…',
     'policy.noProbe': '此组不支持 TCP 探测',
     'policy.probing': '测试中…',
@@ -66,7 +63,6 @@ export const messages = defineMessages({
     'policy.selectedInterrupted': '{name} 已选择 {member}，现有连接已中断',
     'policy.selectedKept': '{name} 已选择 {member}，现有连接未中断',
     'policy.note': '仅支持手动选择的 selector 组可切换成员。TCP 与 UDP 可分别选择。',
-    'policy.loadFailed': '无法加载策略：{error}',
     'policy.empty': '没有组。',
     'policy.probeChanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择已更改',
     'policy.probeUnchanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择未更改'
@@ -88,7 +84,6 @@ export const messages = defineMessages({
       other: '{n} members'
     },
     'policy.membersDown': '{n} members, {down} unavailable',
-    'policy.error': 'Could not read or update group: {error}',
     'policy.loading': 'Loading {id}…',
     'policy.noProbe': 'This group does not support TCP probes',
     'policy.probing': 'Testing…',
@@ -104,7 +99,6 @@ export const messages = defineMessages({
     'policy.selectedInterrupted': '{name} selected {member}; existing connections interrupted',
     'policy.selectedKept': '{name} selected {member}; existing connections kept',
     'policy.note': 'Only manual selector groups support member switching. TCP and UDP can be selected separately.',
-    'policy.loadFailed': 'Could not load policies: {error}',
     'policy.empty': 'No groups.',
     'policy.probeChanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection changed',
     'policy.probeUnchanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection unchanged'

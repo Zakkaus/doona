@@ -4,7 +4,7 @@ import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge} from '../../ui/ui';
+import {Badge, Loading, TextTooltip} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
 // Match the native table's measured row and collapsed-border header heights.
@@ -12,12 +12,14 @@ const layoutOptions = {rowHeight: 40, headingHeight: 36.5};
 
 export function ConnectionTable({
   rows,
+  loading,
   selected,
   onSelect,
   view,
   onSort
 }: {
   rows: Connection[];
+  loading: boolean;
   selected: string | null;
   onSelect: (id: string | null) => void;
   view: ConnectionView;
@@ -44,12 +46,12 @@ export function ConnectionTable({
   }, [selectedIndex]);
   const renderConnection = (c: Connection) => {
     const cells: Record<string, React.ReactNode> = {
-      dst: c.domain || c.dst || '—',
-      src: <span className="rp-code">{c.src ?? '—'}</span>,
-      chain: chainLabel(c),
+      dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
+      src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
+      chain: <TextTooltip>{chainLabel(c)}</TextTooltip>,
       rule: (
         <span className="rp-rule">
-          <span title={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</span>
+          <TextTooltip text={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</TextTooltip>
           {c.rule_source === 'recomputed' ? <Badge>{t('conn.recomputed')}</Badge> : c.rule_source === 'unknown' ? <Badge>—</Badge> : null}
         </span>
       ),
@@ -105,7 +107,11 @@ export function ConnectionTable({
               </Column>
             ))}
           </TableHeader>
-          <TableBody items={items} dependencies={[locale, view.hidden, view.group]} renderEmptyState={() => <div className="empty">{t('conn.empty')}</div>}>
+          <TableBody
+            items={items}
+            dependencies={[locale, view.hidden, view.group, loading]}
+            renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+          >
             {row => {
               if ('group' in row)
                 return (

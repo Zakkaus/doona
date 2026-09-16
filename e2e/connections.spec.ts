@@ -64,7 +64,7 @@ test('connection filtering narrows the collection and renders an empty result', 
   await expect(grid.getByRole('rowheader').filter({hasNotText: 'api.telegram.org'})).toHaveCount(0);
   expect(await page.locator('.rp-table [role="row"]').count()).toBeLessThan(60);
   await filter.fill('no-such-connection.invalid');
-  await expect(page.locator('.rp-table .empty')).toHaveText('No matching connections');
+  await expect(page.locator('.rp-table .rp-empty')).toBeVisible();
   await expect(grid).toHaveAttribute('aria-rowcount', '1');
   await filter.fill('');
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');

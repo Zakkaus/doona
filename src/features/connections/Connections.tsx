@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useConnections} from '../../api/store';
 import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
-import {Button, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField} from '../../ui/ui';
+import {Button, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField, ErrorMessage} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -53,12 +53,7 @@ export function Connections({go, query}: PageProps) {
   const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
   return (
     <div className="rp-page">
-      {resource.error && (
-        <p role="alert" className="rp-note">
-          {t('conn.loadFailed', {error: resource.error.message})}
-        </p>
-      )}
-      {resource.loading && !resource.data && <p role="status">{t('ui.loading')}</p>}
+      {resource.error && <ErrorMessage error={resource.error} />}
       {resource.data?.truncated && <p className="rp-note">{t('conn.truncated')}</p>}
       <div className="rp-toolbar">
         <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={280} />
@@ -115,7 +110,14 @@ export function Connections({go, query}: PageProps) {
         />
       </div>
       <div className="rp-page">
-        <ConnectionTable rows={shown} selected={sel} onSelect={setSel} view={view} onSort={sort => updateView({sort})} />
+        <ConnectionTable
+          rows={shown}
+          loading={resource.loading && !resource.data}
+          selected={sel}
+          onSelect={setSel}
+          view={view}
+          onSort={sort => updateView({sort})}
+        />
         {cur ? (
           <div className="rp-card">
             <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>

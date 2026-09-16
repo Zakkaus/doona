@@ -3,7 +3,7 @@ import {useState} from 'react';
 import Delete from '../../ui/icons/Delete';
 import {useDnsControl} from '../../api/store';
 import {relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, Kv, LabeledSelect, TextField, toast} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, TextTooltip, Kv, LabeledSelect, TextField, errorText, toast} from '../../ui/ui';
 
 export function Dns() {
   const t = useT();
@@ -19,9 +19,10 @@ export function Dns() {
   const error = dns.error ?? dns.cache.error ?? dns.capabilities.error;
   async function query() {
     try {
-      await dns.query(domain.trim(), type === 'all' ? types : [type]);
+      const result = await dns.query(domain.trim(), type === 'all' ? types : [type]);
+      if (result) toast('positive', t('ui.completed'));
     } catch (error) {
-      toast('negative', t('dns.queryFailed', {error: String(error)}));
+      toast('negative', t('dns.queryFailed', {error: errorText(error)}));
     }
   }
   async function remove(id: string) {
@@ -29,7 +30,7 @@ export function Dns() {
       const result = await dns.remove(id);
       if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.deleteFailed', {error: String(error)}));
+      toast('negative', t('dns.deleteFailed', {error: errorText(error)}));
     }
   }
   async function flush() {
@@ -37,12 +38,12 @@ export function Dns() {
       const result = await dns.flush();
       if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: String(error)}));
+      toast('negative', t('dns.flushFailed', {error: errorText(error)}));
     }
   }
   return (
     <div className="rp-page">
-      {error && <p role="alert">{error.message}</p>}
+      {error && <ErrorMessage error={error} />}
       <div className="rp-card">
         <div className="rp-toolbar">
           <TextField side label={t('ui.domain')} value={domain} onChange={setDomain} width={280} />
@@ -53,7 +54,7 @@ export function Dns() {
             onChange={setType}
             items={[...types.map(t => ({id: t, label: t})), {id: 'all', label: t('dns.allTypes')}]}
           />
-          <Button accent isDisabled={!!dns.busy || !canQuery || !domain.trim()} onPress={() => void query()}>
+          <Button accent isPending={dns.busy === 'query'} isDisabled={!!dns.busy || !canQuery || !domain.trim()} onPress={() => void query()}>
             {dns.busy === 'query' ? t('dns.querying') : t('dns.query')}
           </Button>
         </div>
@@ -83,7 +84,7 @@ export function Dns() {
                     </div>
                   ))
                 ) : (
-                  <span className="rp-label">{t('dns.noAnswers')}</span>
+                  <span className="rp-empty">{t('dns.noAnswers')}</span>
                 )}
               </section>
             ))}
@@ -109,7 +110,12 @@ export function Dns() {
             [t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']
           ]}
         />
-        <Button negative isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush} onPress={() => void flush()}>
+        <Button
+          negative
+          isPending={dns.busy === 'flush'}
+          isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush}
+          onPress={() => void flush()}
+        >
           {dns.busy === 'flush' ? t('dns.flushing') : t('dns.flushAll')}
         </Button>
       </div>
@@ -117,13 +123,8 @@ export function Dns() {
         label={t('ui.cache')}
         height={342}
         rows={rows}
-        empty={
-          dns.cache.loading || dns.capabilities.loading
-            ? t('ui.loading')
-            : resources?.dns_cache.available && resources.dns_cache.read
-              ? t('dns.empty')
-              : t('dns.cacheUnavailable')
-        }
+        loading={(dns.cache.loading || dns.capabilities.loading) && !dns.cache.data}
+        empty={resources?.dns_cache.available && resources.dns_cache.read ? t('dns.empty') : t('dns.cacheUnavailable')}
         cols={[
           {id: 'id', label: t('dns.id'), minWidth: 56, grow: 0},
           {id: 'q', label: t('ui.domain'), minWidth: 192, isRowHeader: true},
@@ -135,16 +136,17 @@ export function Dns() {
         ]}
         render={entry => [
           entry.entry_id,
-          <span className="rp-code">{entry.domain}</span>,
+          <TextTooltip className="rp-code">{entry.domain}</TextTooltip>,
           entry.type,
           entry.status,
-          <span title={entry.expires_at}>{relativeStart(entry.expires_at, locale)}</span>,
-          <span title={entry.stale_until ?? undefined}>{relativeStart(entry.stale_until, locale)}</span>,
+          <TextTooltip text={entry.expires_at}>{relativeStart(entry.expires_at, locale)}</TextTooltip>,
+          <TextTooltip text={entry.stale_until ?? undefined}>{relativeStart(entry.stale_until, locale)}</TextTooltip>,
           <Button
             quiet
             icon
             small
             label={t('dns.deleteEntry', {id: entry.entry_id})}
+            isPending={dns.busy === entry.entry_id}
             isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry}
             onPress={() => void remove(entry.entry_id)}
           >

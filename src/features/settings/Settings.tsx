@@ -1,8 +1,11 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
+import {flushSync} from 'react-dom';
+import {Link} from 'react-aria-components';
+import {useCapabilities} from '../../api/store';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
-import {Button, Kv, LabeledSelect, MenuButton, ModalDialog, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 
 type Appearance = {
@@ -21,10 +24,11 @@ export const SettingsContext = createContext<{
   paletteSections: Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}>;
 } | null>(null);
 
-type Result = {key: Key; params?: Params; error?: boolean};
+type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
 export function Settings() {
   const t = useT();
+  const capabilities = useCapabilities();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
@@ -36,6 +40,8 @@ export function Settings() {
   const [invalid, setInvalid] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
 
@@ -58,12 +64,21 @@ export function Settings() {
     }
   };
   const persist = (profiles: Profile[], activeId: string) => {
+    if (saveLock.current) return;
+    saveLock.current = true;
+    flushSync(() => setSaving(true));
     try {
       writeProfiles({profiles, activeId});
     } catch {
       setResult({key: 'settings.saveError', error: true});
+      saveLock.current = false;
+      setSaving(false);
+      toast('negative', t('settings.saveError'));
       return;
     }
+    try {
+      sessionStorage.setItem('doona-saved', '1');
+    } catch {}
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };
@@ -96,11 +111,13 @@ export function Settings() {
     }
   };
   const testConnection = async () => {
+    if (request.current) return;
     resetProbe();
     const base = validate(api);
     if (base === null) return;
     if (!base || base === 'mock') {
       setResult({key: 'settings.demo'});
+      toast('neutral', t('settings.demo'));
       return;
     }
     const controller = new AbortController();
@@ -112,7 +129,10 @@ export function Settings() {
       if (!discovery || !Number.isInteger(discovery.api_major) || discovery.api_major < 1) {
         throw new ApiError(200, 'invalid_discovery', 'Missing API version');
       }
-      if (request.current === controller) setResult({key: 'settings.reachable', params: {version: discovery.api_major}});
+      if (request.current === controller) {
+        setResult({key: 'settings.reachable', params: {version: discovery.api_major}});
+        toast('positive', t('settings.reachable', {version: discovery.api_major}));
+      }
     } catch (error) {
       if (request.current !== controller) return;
       let failure: Result;
@@ -126,7 +146,8 @@ export function Settings() {
       // Fetch does not distinguish cross-origin network failures from CORS rejection.
       else if (error instanceof TypeError && new URL(base).origin !== location.origin) failure = {key: 'settings.cors'};
       else failure = {key: 'settings.network'};
-      setResult({...failure, error: true});
+      setResult({...failure, error: true, requestId: error instanceof ApiError ? error.requestId : null});
+      toast('negative', `${t(failure.key, failure.params)} · ${errorText(error)}`);
     } finally {
       clearTimeout(timer);
       if (request.current === controller) {
@@ -143,6 +164,7 @@ export function Settings() {
         <h2 className="rp-h3" id="settings-backend">
           {t('settings.backend')}
         </h2>
+        <ErrorMessage error={capabilities.error} />
         <div className="rp-toolbar">
           <LabeledSelect
             label={t('settings.profile')}
@@ -211,16 +233,21 @@ export function Settings() {
             }}
           />
           <div className="rp-toolbar">
-            <Button onPress={() => void testConnection()} isDisabled={pending}>
+            <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
               {t('settings.test')}
             </Button>
-            <Button type="submit" accent>
+            <Button type="submit" accent isPending={saving}>
               {t('settings.save')}
             </Button>
           </div>
           <div className="rp-label">{t('settings.saveHelp')}</div>
           {pending && <div role="status">{t('settings.testing')}</div>}
-          {result && <div role={result.error ? 'alert' : 'status'}>{t(result.key, result.params)}</div>}
+          {result && (
+            <div role={result.error ? 'alert' : 'status'}>
+              {t(result.key, result.params)}
+              {result.requestId && <span className="rp-code"> · request_id: {result.requestId}</span>}
+            </div>
+          )}
         </form>
       </section>
       <section className="rp-card" aria-labelledby="settings-appearance">
@@ -261,9 +288,9 @@ export function Settings() {
             [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT]
           ]}
         />
-        <a href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
+        <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
           {t('github')}
-        </a>
+        </Link>
       </section>
       {dialog && (
         <ModalDialog

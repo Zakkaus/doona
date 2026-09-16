@@ -1,5 +1,5 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
-import {Suspense, useEffect, useLayoutEffect, useState, type ReactNode} from 'react';
+import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {I18nProvider, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
 import Close from '../ui/icons/Close';
 import Search from '../ui/icons/Search';
@@ -10,7 +10,22 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
-import {Button, MenuButton, ModalDialog, TextField, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
+import {
+  Button,
+  MenuButton,
+  ModalDialog,
+  TextField,
+  Toasts,
+  LabeledSelect,
+  ErrorMessage,
+  Loading,
+  TextTooltip,
+  errorText,
+  toast,
+  visibleErrors,
+  useSlider,
+  withCrossfade
+} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
@@ -189,7 +204,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
       </Button>
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
       <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus />
-      {error && <p role="alert">{error.message}</p>}
+      {error && <ErrorMessage error={error} />}
       {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
       <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
         {hits.conns.length > 0 && (
@@ -275,16 +290,15 @@ export function Shell() {
 
 function ToastHost() {
   const t = useT();
-  return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
-}
-
-function Delayed({children}: {children: ReactNode}) {
-  const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 150);
-    return () => clearTimeout(timer);
-  }, []);
-  return visible ? children : null;
+    try {
+      if (sessionStorage.getItem('doona-saved')) {
+        sessionStorage.removeItem('doona-saved');
+        toast('positive', t('ui.saved'));
+      }
+    } catch {}
+  }, [t]);
+  return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
 }
 
 function Frame({
@@ -317,6 +331,15 @@ function Frame({
   );
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
+  const refreshLock = useRef(false);
+  const [refreshed, setRefreshed] = useState(0);
+  const announcedRefresh = useRef(0);
+  useEffect(() => {
+    if (refreshed === announcedRefresh.current) return;
+    announcedRefresh.current = refreshed;
+    const error = visibleErrors.values().next().value;
+    toast(error ? 'negative' : 'positive', error ? t('ui.refreshFailed', {error: errorText(error)}) : t('ui.refreshed'));
+  }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
   const titleKey = feature.nav?.titleKey ?? 'nav.activity';
@@ -340,28 +363,26 @@ function Frame({
               <Search />
             </Button>
           </span>
-          <span className={spinning ? 'rp-spin' : undefined}>
-            <Button
-              quiet
-              icon
-              label={t('refresh')}
-              isDisabled={spinning}
-              onPress={async () => {
-                setSpinning(true);
-                let timer: number | undefined;
-                await Promise.race([
-                  refetchAll(),
-                  new Promise<void>(resolve => {
-                    timer = window.setTimeout(resolve, 2000);
-                  })
-                ]);
-                clearTimeout(timer);
+          <Button
+            quiet
+            icon
+            label={t('refresh')}
+            isPending={spinning}
+            onPress={async () => {
+              if (refreshLock.current) return;
+              refreshLock.current = true;
+              setSpinning(true);
+              try {
+                await refetchAll();
+                setRefreshed(value => value + 1);
+              } finally {
+                refreshLock.current = false;
                 setSpinning(false);
-              }}
-            >
-              <Refresh />
-            </Button>
-          </span>
+              }
+            }}
+          >
+            <Refresh />
+          </Button>
           <Separator orientation="vertical" className="rp-vrule" />
           <MenuButton
             quiet
@@ -422,7 +443,7 @@ function Frame({
         <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
           <GitHub />
           {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-          {settings.profiles.length > 1 && <span title={profile?.name}>{profile?.name}</span>}
+          {settings.profiles.length > 1 && <TextTooltip text={profile?.name}>{profile?.name}</TextTooltip>}
         </Button>
       </nav>
       <main className="rp-main">
@@ -450,17 +471,9 @@ function Frame({
               />
             </div>
           </div>
+          <ErrorMessage error={capabilities.error ? null : version.error} />
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            <Suspense
-              key={feature.id}
-              fallback={
-                <Delayed>
-                  <div className="rp-empty" role="status">
-                    {t('ui.loading')}
-                  </div>
-                </Delayed>
-              }
-            >
+            <Suspense key={feature.id} fallback={<Loading />}>
               <Page go={go} query={query} />
             </Suspense>
           </SettingsContext.Provider>

@@ -7,7 +7,7 @@ import {useCapabilities, useConnections, useEventFeed, useGroups, useNodes, useR
 import {clientRows, connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Button, Segmented, Light, Bar} from '../../ui/ui';
+import {Button, Segmented, Light, Bar, ErrorMessage, Loading} from '../../ui/ui';
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
@@ -57,13 +57,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
   const nodeName = node?.name ?? '';
   const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? capabilities.error;
-  if (error)
-    return (
-      <div role="alert">
-        {t('act.loadFailed')} {error.message}
-      </div>
-    );
-  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <div role="status">{t('act.loading')}</div>;
+  if (error) return <ErrorMessage error={error} />;
+  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const usage = outboundUsage(outbounds.data);
   const traffic = [
@@ -174,13 +169,13 @@ export function Activity({go}: {go: (page: string) => void}) {
             />
           </div>
           {history.error ? (
-            <p role="alert">{history.error.message}</p>
+            <ErrorMessage error={history.error} />
           ) : capabilities.data?.resources.traffic_history.available === false ? (
             <span className="rp-label">{t('act.noHistory')}</span>
           ) : !history.data ? (
-            <span role="status">{t('act.loading')}</span>
+            <Loading>{t('act.loading')}</Loading>
           ) : !history.data.samples.length ? (
-            <span className="rp-label">{t('act.emptyHistory')}</span>
+            <span className="rp-empty">{t('act.emptyHistory')}</span>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
@@ -196,11 +191,13 @@ export function Activity({go}: {go: (page: string) => void}) {
             </div>
           </div>
           {outbounds.error ? (
-            <p role="alert">{outbounds.error.message}</p>
+            <ErrorMessage error={outbounds.error} />
           ) : capabilities.data?.resources.runtime_outbounds.available === false ? (
             <span className="rp-label">{t('act.noOutbounds')}</span>
           ) : !outbounds.data ? (
-            <span role="status">{t('act.loading')}</span>
+            <Loading>{t('act.loading')}</Loading>
+          ) : !OUT.length ? (
+            <span className="rp-empty">{t('ui.empty')}</span>
           ) : (
             <Donut rows={OUT} total={formatBytes(usage.total)} />
           )}
@@ -222,12 +219,14 @@ export function Activity({go}: {go: (page: string) => void}) {
             />
           </div>
           <p className="rp-note">{t('act.rankingScope')}</p>
-          {connections.error && <p role="alert">{connections.error.message}</p>}
+          {connections.error && <ErrorMessage error={connections.error} />}
           {connections.data?.truncated && <p className="rp-note">{t('act.rankingTruncated')}</p>}
           {!connections.data ? (
-            <span role="status">{t('act.loading')}</span>
+            connections.error ? null : (
+              <Loading>{t('act.loading')}</Loading>
+            )
           ) : ranking.length === 0 ? (
-            <span className="rp-label">{t('act.rankingEmpty')}</span>
+            <span className="rp-empty">{t('act.rankingEmpty')}</span>
           ) : (
             <div className="rp-list">
               {ranking.map((row, i) => (
@@ -250,6 +249,7 @@ export function Activity({go}: {go: (page: string) => void}) {
             </Button>
           </div>
           <div className="rp-list">
+            {!NODES.length && <span className="rp-empty">{t('ui.empty')}</span>}
             {[...NODES]
               .sort((x, y) => (x.alive ? (x.tcp ?? 0) : 1e9) - (y.alive ? (y.tcp ?? 0) : 1e9))
               .slice(0, 6)
@@ -275,9 +275,11 @@ export function Activity({go}: {go: (page: string) => void}) {
               {t('act.viewAll')}
             </Button>
           </div>
-          {feed.error && <p role="alert">{feed.error.message}</p>}
-          {events.length === 0 ? (
-            <span className="rp-label">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
+          {feed.error && <ErrorMessage error={feed.error} />}
+          {!feed.error && feed.available === null ? (
+            <Loading />
+          ) : events.length === 0 ? (
+            <span className="rp-empty">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
           ) : (
             <div className="rp-list" role="list">
               {events.map(event => {
