@@ -34,6 +34,12 @@ export const messages = defineMessages({
     'settings.appearance': '外觀',
     'settings.scheme': '明暗模式',
     'settings.about': '關於',
+    'settings.icons': '圖示',
+    'settings.iconPack': '圖示包',
+    'settings.iconsOff': '不顯示',
+    'settings.iconsCustom': '自訂前綴',
+    'settings.iconPrefix': 'URL 前綴',
+    'settings.iconsNote': '圖示由第三方圖示包提供，瀏覽器會向該來源請求規則與出站的名稱；沒有對應圖示時留白。檔名依 Qure 慣例。',
     'settings.version': 'doona 版本',
     'settings.contract': '契約提交'
   },
@@ -70,6 +76,12 @@ export const messages = defineMessages({
     'settings.appearance': '外观',
     'settings.scheme': '明暗模式',
     'settings.about': '关于',
+    'settings.icons': '图标',
+    'settings.iconPack': '图标包',
+    'settings.iconsOff': '不显示',
+    'settings.iconsCustom': '自定义前缀',
+    'settings.iconPrefix': 'URL 前缀',
+    'settings.iconsNote': '图标由第三方图标包提供，浏览器会向该来源请求规则与出站的名称；没有对应图标时留白。文件名依 Qure 惯例。',
     'settings.version': 'doona 版本',
     'settings.contract': '契约提交'
   },
@@ -106,6 +118,13 @@ export const messages = defineMessages({
     'settings.appearance': 'Appearance',
     'settings.scheme': 'Color scheme',
     'settings.about': 'About',
+    'settings.icons': 'Icons',
+    'settings.iconPack': 'Icon pack',
+    'settings.iconsOff': 'Off',
+    'settings.iconsCustom': 'Custom prefix',
+    'settings.iconPrefix': 'URL prefix',
+    'settings.iconsNote':
+      'Icons come from a third-party pack; the browser requests rule and outbound names from that origin. Names without an icon stay blank. File names follow the Qure convention.',
     'settings.version': 'doona version',
     'settings.contract': 'Contract commit'
   }

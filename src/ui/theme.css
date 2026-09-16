@@ -1584,6 +1584,17 @@ input {
   background: var(--rp-pine);
   font-size: 8px;
 }
+/* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
+.flag.brand {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: none;
+  object-fit: contain;
+}
+.rp-chain > .flag {
+  translate: 0 1px;
+}
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);

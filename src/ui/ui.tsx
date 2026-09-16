@@ -1,6 +1,7 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
+import {iconUrl, useIconPack} from './brand';
 import {
   Button as RButton,
   Link as RLink,
@@ -1036,7 +1037,7 @@ export function Chips({
   onChange
 }: {
   label: string;
-  items: Array<{id: string; label: string; count?: string}>;
+  items: Array<{id: string; label: string; count?: string; icon?: ReactNode}>;
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
@@ -1053,6 +1054,7 @@ export function Chips({
     >
       {items.map(item => (
         <ToggleButton key={item.id} id={item.id} className="rp-btn small">
+          {item.icon}
           <span className="rp-truncate">{item.label}</span>
           {item.count !== undefined && <span className="n">{item.count}</span>}
         </ToggleButton>
@@ -1074,6 +1076,13 @@ export function downloadFile(name: string, content: string, type: string) {
 }
 export function csvLine(values: Array<string | number | null | undefined>): string {
   return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
+}
+
+// A service's icon from the configured pack, the flag's size; nothing when no pack is set or the pack lacks it.
+export function BrandIcon({name}: {name: string | null}) {
+  const pack = useIconPack();
+  if (!pack || !name) return null;
+  return <img className="flag brand" src={iconUrl(pack, name)} alt="" loading="lazy" onError={event => (event.currentTarget.hidden = true)} />;
 }
 
 export function useMediaQuery(query: string) {
