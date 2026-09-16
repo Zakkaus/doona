@@ -46,10 +46,11 @@ export function Dns() {
       <div className="rp-split">
         <div className="rp-col">
           <div className="rp-card">
-            <div className="rp-toolbar" style={{alignItems: 'flex-end'}}>
-              <TextField label={t('ui.domain')} value={domain} onChange={setDomain} width={280} />
+            <div className="rp-toolbar">
+              <TextField side label={t('ui.domain')} value={domain} onChange={setDomain} width={280} />
               <LabeledSelect
                 label={t('ui.type')}
+                side
                 value={type}
                 onChange={setType}
                 items={[...types.map(t => ({id: t, label: t})), {id: 'all', label: t('dns.allTypes')}]}

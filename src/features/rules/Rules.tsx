@@ -2,11 +2,10 @@ import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
 import {useState} from 'react';
 import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
-import {Button, DataTable, Kv, LabeledSelect, TextField} from '../../ui/ui';
-import type {PageProps} from '../types';
+import {Button, DataTable, Kv, LabeledSelect, Light, TextField} from '../../ui/ui';
 import {RuleDistribution} from './RuleDistribution';
 
-export function Rules({go}: PageProps) {
+export function Rules() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
@@ -25,7 +24,7 @@ export function Rules({go}: PageProps) {
           void trace.submit();
         }}
       >
-        <div className="rp-trace-form">
+        <div className="rp-toolbar">
           <LabeledSelect
             label={t('ui.network')}
             value={form.network}
@@ -92,7 +91,9 @@ export function Rules({go}: PageProps) {
                 render={rule => [
                   rule.rule_id,
                   <span className="rp-code">{rule.expression ?? '—'}</span>,
-                  <span className={'rp-light rp-trace-result ' + rule.result}>{rule.result}</span>,
+                  <Light tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}>
+                    {rule.result}
+                  </Light>,
                   formatList(lang, rule.missing_inputs) || '—'
                 ]}
               />
@@ -118,9 +119,7 @@ export function Rules({go}: PageProps) {
       {capabilities.data?.resources.flows.available && <RuleDistribution />}
       {config && (
         <section className="rp-col">
-          <h2 className="rp-h3">
-            {t('rule.configTitle')} <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>
-          </h2>
+          <h2 className="rp-h3">{t('rule.configTitle')}</h2>
           <p className="rp-note">{t('rule.configDemo')}</p>
           <div className="rp-split">
             <div className="rp-list">
@@ -146,7 +145,7 @@ export function Rules({go}: PageProps) {
                   r.note
                 ]}
               />
-              <div className="rp-fb">
+              <div className="rp-toolbar rp-code">
                 <span className="rp-kw">fallback</span>: <span className="rp-out">{config.fallback.target}</span>
                 <span className="rp-label">{t('rule.editFallback', {source: config.fallback.source})}</span>
               </div>
@@ -166,17 +165,6 @@ export function Rules({go}: PageProps) {
                       [t('ui.generation'), config.generation_id]
                     ]}
                   />
-                  <div className="rp-col">
-                    <div className="rp-group-btns">
-                      <Button
-                        onPress={() => go('config', 'src=' + cur.source.split(':')[0] + '&line=' + cur.source.split(':')[1])}
-                        isDisabled={!cur.editable}
-                        secondary
-                      >
-                        {t('ui.openSource')}
-                      </Button>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <span className="rp-label">{t('rule.pick')}</span>

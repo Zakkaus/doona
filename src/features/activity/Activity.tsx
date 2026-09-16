@@ -8,13 +8,11 @@ import {clientRows, connectionRows, eventSummary, lifecycleStates, localTime, ou
 import {addU64, formatBytes, formatRate, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Button, Segmented, Light, Bar} from '../../ui/ui';
-import {ModeControls} from '../clash-compat/ModeControls';
-import type {BackendKind} from '../settings/settings';
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 
-export function Activity({go, backend}: {go: (page: string) => void; backend: BackendKind}) {
+export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -81,8 +79,7 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
   const events = feed.events.slice(0, 6);
   return (
     <>
-      <div className={backend === 'clash' ? 'rp-quick' : 'rp-quick rp-quick-native'}>
-        {backend === 'clash' && <ModeControls groups={groupsResource.data} />}
+      <div className="rp-col">
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
@@ -162,7 +159,7 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
       <div className="rp-g21">
         <div className="rp-card">
           <div className="rp-row">
-            <span className="rp-title">{t('act.traffic')}</span>
+            <h3 className="rp-h3">{t('act.traffic')}</h3>
             <Segmented
               label={t('act.historyRange')}
               value={range}
@@ -193,10 +190,10 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
         </div>
         <div className="rp-card">
           <div className="rp-row">
-            <span className="rp-cluster">
-              <span className="rp-title">{t('act.outUsage')}</span>
+            <div className="rp-cluster">
+              <h3 className="rp-h3">{t('act.outUsage')}</h3>
               {outbounds.data && <span className="rp-label">{t('act.since', {t: localTime(outbounds.data.counter_since, locale)})}</span>}
-            </span>
+            </div>
           </div>
           {outbounds.error ? (
             <p role="alert">{outbounds.error.message}</p>
@@ -213,7 +210,7 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
       <div className="rp-g3">
         <div className="rp-card">
           <div className="rp-row">
-            <span className="rp-title">{t('act.topDevices')}</span>
+            <h3 className="rp-h3">{t('act.topDevices')}</h3>
             <Segmented
               label={t('act.topDevices')}
               value={by}
@@ -247,7 +244,7 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
         </div>
         <div className="rp-card">
           <div className="rp-row">
-            <span className="rp-title">{t('act.probeLatency')}</span>
+            <h3 className="rp-h3">{t('act.probeLatency')}</h3>
             <Button quiet small onPress={() => go('policies')}>
               {t('act.viewAll')}
             </Button>
@@ -270,10 +267,10 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
         </div>
         <section className="rp-card" aria-label={t('act.issues')}>
           <div className="rp-row">
-            <span className="rp-cluster">
-              <span className="rp-title">{t('act.issues')}</span>
+            <div className="rp-cluster">
+              <h3 className="rp-h3">{t('act.issues')}</h3>
               {events.length > 0 && <span className="rp-label">{events.length}</span>}
-            </span>
+            </div>
             <Button quiet small onPress={() => go('events')}>
               {t('act.viewAll')}
             </Button>
@@ -282,17 +279,15 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
           {events.length === 0 ? (
             <span className="rp-label">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
           ) : (
-            <div className="rp-issues" role="list">
+            <div className="rp-list" role="list">
               {events.map(event => {
                 const summary = eventSummary(event);
                 return (
-                  <div key={event.id} role="listitem" className="rp-issue">
-                    <span className="lvl">
-                      <Light small tone={event.event === 'flow.gap' ? 'warn' : 'info'}>
-                        {t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice')}
-                      </Light>
-                    </span>
-                    <span className="txt">
+                  <div key={event.id} role="listitem" className="rp-row">
+                    <Light small tone={event.event === 'flow.gap' ? 'warn' : 'info'}>
+                      {t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice')}
+                    </Light>
+                    <span className="rp-note rp-grow">
                       {event.event} · {t(summary.key, summary.params)}
                     </span>
                   </div>

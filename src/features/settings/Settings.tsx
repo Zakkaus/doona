@@ -1,10 +1,9 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
-import {Button as RButton, Input, Label, Text, TextField} from 'react-aria-components';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
-import {Button, Kv, LabeledSelect, MenuButton, Segmented} from '../../ui/ui';
-import {normalizeApi, readSettings, writeSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from './settings';
+import {Button, Kv, LabeledSelect, MenuButton, TextField} from '../../ui/ui';
+import {normalizeApi, readSettings, writeSettings, type PaletteId, type Scheme, type Wordmark} from './settings';
 
 type Appearance = {
   scheme: Scheme;
@@ -30,7 +29,6 @@ export function Settings() {
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
   const [token, setToken] = useState(saved.token);
-  const [backend, setBackend] = useState(saved.backend);
   const [showToken, setShowToken] = useState(false);
   const [invalid, setInvalid] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -60,7 +58,7 @@ export function Settings() {
     const base = validate(api);
     if (base === null) return;
     try {
-      writeSettings({api: base, token, backend});
+      writeSettings({api: base, token});
     } catch {
       setResult({key: 'settings.saveError', error: true});
       return;
@@ -81,23 +79,11 @@ export function Settings() {
     const timer = setTimeout(() => controller.abort(new DOMException('Connection timeout', 'TimeoutError')), 5000);
     setPending(true);
     try {
-      if (backend === 'native') {
-        const discovery = await createApi(base, token).discovery(controller.signal);
-        if (!discovery || !Number.isInteger(discovery.api_major) || discovery.api_major < 1) {
-          throw new ApiError(200, 'invalid_discovery', 'Missing API version');
-        }
-        if (request.current === controller) setResult({key: 'settings.reachable', params: {version: discovery.api_major}});
-      } else {
-        const headers: Record<string, string> = {Accept: 'application/json'};
-        if (token) headers.Authorization = 'Bearer ' + token;
-        const response = await fetch(base + '/version', {headers, signal: controller.signal, cache: 'no-store'});
-        if (!response.ok) throw new ApiError(response.status, 'http_error', 'Clash request failed');
-        const data: unknown = await response.json();
-        if (!data || typeof data !== 'object' || !('version' in data) || typeof data.version !== 'string' || !data.version.trim()) {
-          throw new ApiError(200, 'invalid_discovery', 'Missing Clash version');
-        }
-        if (request.current === controller) setResult({key: 'settings.clashReachable', params: {version: data.version}});
+      const discovery = await createApi(base, token).discovery(controller.signal);
+      if (!discovery || !Number.isInteger(discovery.api_major) || discovery.api_major < 1) {
+        throw new ApiError(200, 'invalid_discovery', 'Missing API version');
       }
+      if (request.current === controller) setResult({key: 'settings.reachable', params: {version: discovery.api_major}});
     } catch (error) {
       if (request.current !== controller) return;
       let failure: Result;
@@ -136,26 +122,12 @@ export function Settings() {
             save();
           }}
         >
-          <div className="rp-field">
-            <span className="lbl">{t('settings.kind')}</span>
-            <input type="hidden" name="backend" value={backend} />
-            <div className="rp-toolbar">
-              <Segmented
-                label={t('settings.kind')}
-                value={backend}
-                items={[
-                  ['native', t('settings.native')],
-                  ['clash', t('settings.clash')]
-                ]}
-                onChange={value => {
-                  setBackend(value as BackendKind);
-                  resetProbe();
-                }}
-              />
-            </div>
-          </div>
           <TextField
-            className="rp-field"
+            label={t('settings.api')}
+            autoComplete="url"
+            spellCheck={false}
+            description={t('settings.apiHelp')}
+            error={invalid ? t('settings.invalidUrl') : undefined}
             name="api"
             value={api}
             isInvalid={invalid}
@@ -165,22 +137,12 @@ export function Settings() {
               validate(value);
               resetProbe();
             }}
-          >
-            <Label>{t('settings.api')}</Label>
-            <span className="rp-input">
-              <Input autoComplete="url" spellCheck={false} aria-describedby={invalid ? 'settings-url-error' : undefined} />
-            </span>
-            <Text slot="description" className="rp-label">
-              {t('settings.apiHelp')}
-            </Text>
-            {invalid && (
-              <span id="settings-url-error" role="alert">
-                {t('settings.invalidUrl')}
-              </span>
-            )}
-          </TextField>
+          />
           <TextField
-            className="rp-field"
+            label={t('settings.token')}
+            autoComplete="off"
+            spellCheck={false}
+            action={<Button onPress={() => setShowToken(value => !value)}>{t(showToken ? 'settings.hideToken' : 'settings.showToken')}</Button>}
             name="token"
             type={showToken ? 'text' : 'password'}
             value={token}
@@ -188,22 +150,14 @@ export function Settings() {
               setToken(value);
               resetProbe();
             }}
-          >
-            <Label>{t('settings.token')}</Label>
-            <div className="rp-settings-secret">
-              <span className="rp-input">
-                <Input autoComplete="off" spellCheck={false} />
-              </span>
-              <Button onPress={() => setShowToken(value => !value)}>{t(showToken ? 'settings.hideToken' : 'settings.showToken')}</Button>
-            </div>
-          </TextField>
+          />
           <div className="rp-toolbar">
             <Button onPress={() => void testConnection()} isDisabled={pending}>
               {t('settings.test')}
             </Button>
-            <RButton type="submit" className="rp-btn accent">
+            <Button type="submit" accent>
               {t('settings.save')}
-            </RButton>
+            </Button>
           </div>
           <div className="rp-label">{t('settings.saveHelp')}</div>
           {pending && <div role="status">{t('settings.testing')}</div>}

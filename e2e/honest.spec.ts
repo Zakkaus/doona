@@ -1,4 +1,4 @@
-import {expect, test, compatRoutes} from './fixtures';
+import {expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 test('native activity uses API version and events without demo mode controls', async ({page}) => {
@@ -6,7 +6,8 @@ test('native activity uses API version and events without demo mode controls', a
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.locator('.rp-content .rp-mode-tile, .rp-content .rp-global-tile')).toHaveCount(0);
+  await expect(page.getByRole('radiogroup', {name: 'Mode', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveCount(0);
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
@@ -16,28 +17,7 @@ test('native activity uses API version and events without demo mode controls', a
   await expect(detail).toBeVisible();
   await expect(detail.locator('.rp-btn.accent')).toHaveCount(0);
   await page.goto('/#/events');
-  await expect(page.getByRole('tab', {name: 'Clash logs'})).toHaveCount(0);
-  for (const route of compatRoutes) {
-    await page.goto(`/#/${route}`);
-    await expect(page.locator('.rp-content .rp-note')).toHaveText('This demo page is only available in Clash-compatible mode.');
-    await expect(page.locator('.rp-content .rp-card, .rp-content .rp-frame')).toHaveCount(0);
-  }
-});
-
-test.describe('Clash demo', () => {
-  test.use({storage: {'doona-backend': 'clash'}});
-  test('labels local mode controls and log fixtures as demos', async ({page}) => {
-    await page.goto('/#/activity');
-    const mode = page.locator('.rp-mode-tile');
-    await expect(mode.locator('.rp-badge')).toHaveText('Demo');
-    await expect(page.locator('.rp-global-tile .rp-badge')).toHaveText('Demo');
-    await mode.getByRole('radio', {name: 'Global', exact: true}).click();
-    await expect(page.getByText('Demo: no Clash backend is connected', {exact: true})).toBeVisible();
-    await page.goto('/#/events');
-    await page.getByRole('tab', {name: 'Clash logs'}).click();
-    await expect(page.locator('.rp-content .rp-badge')).toHaveText('Demo');
-    await expect(page.locator('.rp-content')).toContainText('Demo data. No Clash backend is connected.');
-  });
+  await expect(page.getByRole('tab')).toHaveCount(0);
 });
 
 test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {

@@ -18,6 +18,8 @@ Run `pnpm check` before opening a pull request. It runs:
 - `pnpm test` for the Vitest suite.
 - `pnpm check:gen` to verify generated API types match the vendored contract.
 
+`REUSE.toml` handles license headers; preserve its third-party annotations when adding or moving files. From the repository root, run `reuse lint` if you have REUSE, and run `pnpm test:coverage` to print coverage totals and write `coverage/lcov.info`.
+
 ## Organize changes
 
 Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Access backend data only through `src/api`.

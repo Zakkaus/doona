@@ -10,7 +10,6 @@ import {messages as policies} from '../features/policies/messages';
 import {messages as rules} from '../features/rules/messages';
 import {messages as dns} from '../features/dns/messages';
 import {messages as events} from '../features/events/messages';
-import {messages as clashCompat} from '../features/clash-compat/messages';
 import {messages as settings} from '../features/settings/messages';
 
 type Intersection<U> = (U extends unknown ? (value: U) => void : never) extends (value: infer I) => void ? I : never;
@@ -19,6 +18,6 @@ function merge<T extends Record<Lang, Record<string, Message>>[]>(...modules: T)
     [L in Lang]: Intersection<T[number][L]>;
   };
 }
-export const modules = [shell, ui, activity, overview, connections, flows, clients, policies, rules, dns, events, clashCompat, settings] as const;
+export const modules = [shell, ui, activity, overview, connections, flows, clients, policies, rules, dns, events, settings] as const;
 export const table = merge(...modules);
 export type Key = keyof (typeof table)['zh-TW'];

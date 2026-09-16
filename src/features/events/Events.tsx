@@ -2,29 +2,9 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {useEventFeed} from '../../api/store';
 import {eventKinds, eventSummary, localTime} from '../../api/selectors';
-import {DataTable, LabeledSelect, Light, Tabs} from '../../ui/ui';
-import {ClashLogs} from '../clash-compat/ClashLogs';
-import type {BackendKind} from '../settings/settings';
+import {DataTable, LabeledSelect, Light} from '../../ui/ui';
 
-export function Events({backend}: {backend: BackendKind}) {
-  const t = useT();
-  if (backend !== 'clash') return <EventFeed />;
-  return (
-    <div className="rp-page">
-      <Tabs
-        label={t('event.tabs')}
-        tabs={[
-          ['events', t('nav.events')],
-          ['clash', t('event.clash')]
-        ]}
-      >
-        {id => (id === 'events' ? <EventFeed /> : <ClashLogs />)}
-      </Tabs>
-    </div>
-  );
-}
-
-function EventFeed() {
+export function Events() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [kind, setKind] = useState('all');

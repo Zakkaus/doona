@@ -1,7 +1,6 @@
 // Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
 import {lazy, Suspense, useId, useMemo, useSyncExternalStore} from 'react';
 import type {ComponentProps} from 'react';
-import type {SankeyProps} from 'recharts';
 import {formatNumber, useT, type Translator} from '../i18n';
 
 export type Series = {label: string; color: string; values: Array<number | null>};
@@ -249,34 +248,3 @@ const LazyDonut = lazy(() =>
     }
   }))
 );
-
-const LazySankey = lazy(() =>
-  import('recharts').then(({Sankey: RSankey, ResponsiveContainer, Tooltip}) => ({
-    default: function Sankey({
-      height = 280,
-      formatTooltip,
-      ...props
-    }: Omit<SankeyProps, 'height' | 'width'> & {height?: number; formatTooltip: (label: string, count: number) => string}) {
-      const p = usePalette();
-      return (
-        <ResponsiveContainer width="100%" height={height}>
-          <RSankey nodePadding={2} nodeWidth={4} align="left" {...props}>
-            <Tooltip
-              content={({active, payload}) =>
-                active && payload?.length ? <div style={tip(p)}>{formatTooltip(String(payload[0].name ?? ''), Number(payload[0].value))}</div> : null
-              }
-            />
-          </RSankey>
-        </ResponsiveContainer>
-      );
-    }
-  }))
-);
-
-export function Sankey(props: ComponentProps<typeof LazySankey>) {
-  return (
-    <Suspense fallback={<div style={{height: props.height ?? 280, width: '100%'}} />}>
-      <LazySankey {...props} />
-    </Suspense>
-  );
-}

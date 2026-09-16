@@ -34,30 +34,27 @@ it('preserves preferences across backend writes and validates before changing st
   const values = new Map<string, string>();
   const storage = {getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value)};
   writeSettings({lang: 'en', scheme: 'dark', palette: 'nord/nord', wordmark: 'plain'}, storage);
-  writeSettings({api: ' https://honk.example/proxy/ ', token: 'secret', backend: 'clash'}, storage);
+  writeSettings({api: ' https://honk.example/proxy/ ', token: 'secret'}, storage);
   expect(readSettings(storage)).toEqual({
     api: 'https://honk.example/proxy',
     token: 'secret',
-    backend: 'clash',
     lang: 'en',
     scheme: 'dark',
     palette: 'nord/nord',
     wordmark: 'plain'
   });
   const before = new Map(values);
-  expect(() => writeSettings({token: 'replacement', api: '/invalid', backend: 'native'}, storage)).toThrow();
+  expect(() => writeSettings({token: 'replacement', api: '/invalid'}, storage)).toThrow();
   expect(values).toEqual(before);
-  writeSettings({api: 'mock', token: '', backend: 'native'}, storage);
+  writeSettings({api: 'mock', token: ''}, storage);
   expect(readSettings(storage)).toEqual({
     api: 'mock',
     token: '',
-    backend: 'native',
     lang: 'en',
     scheme: 'dark',
     palette: 'nord/nord',
     wordmark: 'plain'
   });
-  expect([...values.keys()].sort()).toEqual(['doona-api', 'doona-api-token', 'doona-backend', 'doona-lang', 'doona-palette', 'doona-scheme', 'doona-wordmark']);
 });
 
 it('keeps demo navigation usable when storage is unavailable', () => {
@@ -67,7 +64,6 @@ it('keeps demo navigation usable when storage is unavailable', () => {
     }
   });
   expect(settings.api).toBeNull();
-  expect(settings.backend).toBe('native');
   expect(shouldOpenSettings(settings.api, '#/')).toBe(true);
 });
 

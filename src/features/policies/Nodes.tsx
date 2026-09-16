@@ -3,18 +3,14 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
   Autocomplete,
-  Button as RButton,
-  ToggleButton,
   GridLayout,
   GridList,
   GridListItem,
-  Input,
   Menu,
   MenuItem,
   MenuSection,
   MenuTrigger,
   Popover,
-  SearchField,
   Header,
   Size,
   Virtualizer,
@@ -22,11 +18,9 @@ import {
   type Key
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
-import Close from '../../ui/icons/Close';
-import Search from '../../ui/icons/Search';
 import {regionOf} from './geo';
 import {Flag} from './Flag';
-import {Badge, Check, InlineSelect, MenuButton, Switch, latencyTone, usePress} from '../../ui/ui';
+import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
@@ -74,7 +68,6 @@ export function NodeGrid({
   labels: NodeLabels;
   isDisabled?: boolean;
 }) {
-  const t = useT();
   const [q, setQ] = useState('');
   const [region, setRegion] = useState('all');
   const [sort, setSort] = useState('latency');
@@ -98,31 +91,25 @@ export function NodeGrid({
   if (!big) {
     return (
       <div className="rp-nodes">
-        {nodes.map(n =>
-          onSelect ? (
-            <ToggleButton key={n.id} className="rp-node" isSelected={selected === n.id} isDisabled={isDisabled} onChange={() => onSelect(n.id)}>
-              <NodeBody n={n} labels={labels} cur={false} />
-            </ToggleButton>
-          ) : (
-            <div key={n.id} className={'rp-node' + (cur === n.id ? ' cur' : '')}>
-              <NodeBody n={n} labels={labels} cur={cur === n.id} />
-            </div>
-          )
-        )}
+        {nodes.map(n => (
+          <MemberTile
+            key={n.id}
+            n={n}
+            labels={labels}
+            selected={selected === n.id}
+            isDisabled={isDisabled}
+            onPress={onSelect ? () => onSelect(n.id) : undefined}
+            cur={!onSelect && cur === n.id}
+          />
+        ))}
       </div>
     );
   }
   const down = nodes.filter(n => n.health?.state === 'unavailable').length;
   return (
-    <div className="rp-nodeset">
+    <div className="rp-form">
       <div className="rp-toolbar">
-        <SearchField aria-label={labels.filter} value={q} onChange={setQ} className="rp-input rp-filter">
-          <Search />
-          <Input placeholder={labels.filter} />
-          <RButton className="clear" aria-label={t('clear')}>
-            <Close />
-          </RButton>
-        </SearchField>
+        <TextField search label={labels.filter} value={q} onChange={setQ} width={240} />
         <MenuButton
           quiet
           label={labels.region}
@@ -175,7 +162,7 @@ export function NodeGrid({
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={'rp-node' + (cur === n.id && !onSelect ? ' cur' : '')}>
-              <NodeBody n={n} labels={labels} cur={!onSelect && cur === n.id} />
+              <MemberTile n={n} labels={labels} cur={!onSelect && cur === n.id} bodyOnly />
             </GridListItem>
           )}
         </GridList>
@@ -183,31 +170,18 @@ export function NodeGrid({
     </div>
   );
 }
-function NodeBody({n, labels, cur}: {n: MemberInfo; labels: NodeLabels; cur: boolean}) {
-  const t = useT();
+function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels' | 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
   const health = n.health;
   return (
-    <>
-      <span className="top">
-        <span className="n">
-          <span className="ic">
-            <Flag name={n.name} />
-          </span>
-          {n.name}
-        </span>
-        {n.kind === 'group' ? (
-          <Badge>{labels.nested}</Badge>
-        ) : health?.state === 'healthy' && health.latency_ms !== null ? (
-          <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: health.latency_ms})}</span>
-        ) : (
-          <span className={'ms' + (health?.state === 'unavailable' ? ' err' : '')}>{health?.state === 'unavailable' ? labels.timeout : '—'}</span>
-        )}
-      </span>
-      <span className="s">
-        {health ? health.transport.toUpperCase() + ' · ' + health.purpose : ' '}
-        {cur && <span className="cur">{labels.cur}</span>}
-      </span>
-    </>
+    <NodeTile
+      {...props}
+      name={n.name}
+      icon={<Flag name={n.name} />}
+      nested={n.kind === 'group'}
+      tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
+      unavailable={health?.state === 'unavailable'}
+      description={health ? health.transport.toUpperCase() + ' · ' + health.purpose : ' '}
+    />
   );
 }
 
@@ -226,7 +200,6 @@ export function NodeMenu({
   labels: {timeout: string; filter: string; loading: string};
 }) {
   const t = useT();
-  const [ref, style] = usePress();
   const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
   const all = useMemo(() => {
@@ -316,7 +289,7 @@ export function NodeMenu({
   );
   return (
     <MenuTrigger>
-      <RButton ref={ref} style={style} className="rp-select" aria-label={label}>
+      <Button appearance="select" label={label}>
         <span className="rp-il">
           <span className="ic">
             <Flag name={value} />
@@ -324,18 +297,12 @@ export function NodeMenu({
           <span>{value}</span>
         </span>
         <ChevronDown />
-      </RButton>
+      </Button>
       <Popover className="rp-popover" placement="bottom start">
         {big ? (
           <Autocomplete filter={contains}>
             {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-            <SearchField aria-label={labels.filter} autoFocus className="rp-input rp-menu-search">
-              <Search />
-              <Input placeholder={labels.filter} />
-              <RButton className="clear" aria-label={t('clear')}>
-                <Close />
-              </RButton>
-            </SearchField>
+            <TextField search label={labels.filter} autoFocus className="rp-menu-search" />
             {menu}
           </Autocomplete>
         ) : (

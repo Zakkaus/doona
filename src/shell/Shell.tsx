@@ -1,20 +1,6 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
 import {Suspense, useEffect, useLayoutEffect, useState, type ReactNode} from 'react';
-import {
-  I18nProvider,
-  Button as RButton,
-  Dialog,
-  Modal,
-  ModalOverlay,
-  SearchField,
-  Input,
-  ListBox,
-  ListBoxItem,
-  ListBoxSection,
-  Header,
-  Link as RLink,
-  Separator
-} from 'react-aria-components';
+import {I18nProvider, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
 import Close from '../ui/icons/Close';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
@@ -24,7 +10,7 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
-import {Button, MenuButton, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
+import {Button, MenuButton, ModalDialog, TextField, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
@@ -32,7 +18,7 @@ import {refetchAll, useCapabilities, useConnections, useGroups, useNodes, useVer
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
-import {readSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
+import {readSettings, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
 
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
@@ -162,7 +148,7 @@ function SchemeIcon({dark}: {dark: boolean}) {
   );
 }
 
-function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProps['go']; backend: BackendKind}) {
+function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
   const [q, setQ] = useState('');
   const connections = useConnections();
@@ -178,7 +164,7 @@ function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProp
     nodes: (nodes.data ?? []).filter(n => n.name.toLowerCase().includes(needle)).slice(0, limit),
     groups: (groups.data ?? []).filter(g => g.name.toLowerCase().includes(needle)).slice(0, limit),
     pages: features
-      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data, backend) && t(feature.nav.titleKey).toLowerCase().includes(needle))
+      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data) && t(feature.nav.titleKey).toLowerCase().includes(needle))
       .slice(0, limit)
   };
   const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
@@ -189,75 +175,65 @@ function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProp
     onClose();
   };
   return (
-    <ModalOverlay
-      className="rp-underlay"
+    <ModalDialog
+      title={t('search')}
+      hideTitle
       isOpen
       onOpenChange={o => {
         if (!o) onClose();
       }}
-      isDismissable
     >
-      <Modal>
-        <Dialog className="rp-dialog" aria-label={t('search')}>
-          <RButton className="rp-btn quiet icon close" onPress={onClose} aria-label={t('close')}>
-            <Close />
-          </RButton>
-          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-          <SearchField aria-label={t('search')} value={q} onChange={setQ} autoFocus className="rp-input lg">
-            <Search />
-            <Input placeholder={t('search')} />
-            <RButton className="clear" aria-label={t('clear')}>
-              <Close />
-            </RButton>
-          </SearchField>
-          {error && <p role="alert">{error.message}</p>}
-          {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
-          <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
-            {hits.conns.length > 0 && (
-              <ListBoxSection id="conns">
-                <Header className="rp-section-h">{t('nav.connections')}</Header>
-                {hits.conns.map(c => (
-                  <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
-                    <span>{c.domain || c.dst || c.src || c.id}</span>
-                    <span className="desc">{chainLabel(c)}</span>
-                  </ListBoxItem>
-                ))}
-              </ListBoxSection>
-            )}
-            {hits.nodes.length > 0 && (
-              <ListBoxSection id="nodes">
-                <Header className="rp-section-h">{t('search.nodes')}</Header>
-                {hits.nodes.map(n => (
-                  <ListBoxItem key={n.id} id={'node:' + n.id} className="rp-item plain" textValue={n.name}>
-                    {n.name}
-                  </ListBoxItem>
-                ))}
-              </ListBoxSection>
-            )}
-            {hits.groups.length > 0 && (
-              <ListBoxSection id="groups">
-                <Header className="rp-section-h">{t('search.groups')}</Header>
-                {hits.groups.map(g => (
-                  <ListBoxItem key={g.id} id={'group:' + g.id} className="rp-item plain" textValue={g.name}>
-                    {g.name}
-                  </ListBoxItem>
-                ))}
-              </ListBoxSection>
-            )}
-            {hits.pages.length > 0 && (
-              <ListBoxSection id="pages">
-                <Header className="rp-section-h">{t('search.pages')}</Header>
-                {hits.pages.map(page => (
-                  <ListBoxItem key={page.path} id={'page:' + page.path} className="rp-item plain" textValue={t(page.nav!.titleKey)}>
-                    {t(page.nav!.titleKey)}
-                  </ListBoxItem>
-                ))}
-              </ListBoxSection>
-            )}
-          </ListBox>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <Button quiet icon className="close" onPress={onClose} label={t('close')}>
+        <Close />
+      </Button>
+      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
+      <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus />
+      {error && <p role="alert">{error.message}</p>}
+      {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
+      <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
+        {hits.conns.length > 0 && (
+          <ListBoxSection id="conns">
+            <Header className="rp-section-h">{t('nav.connections')}</Header>
+            {hits.conns.map(c => (
+              <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
+                <span>{c.domain || c.dst || c.src || c.id}</span>
+                <span className="desc">{chainLabel(c)}</span>
+              </ListBoxItem>
+            ))}
+          </ListBoxSection>
+        )}
+        {hits.nodes.length > 0 && (
+          <ListBoxSection id="nodes">
+            <Header className="rp-section-h">{t('search.nodes')}</Header>
+            {hits.nodes.map(n => (
+              <ListBoxItem key={n.id} id={'node:' + n.id} className="rp-item plain" textValue={n.name}>
+                {n.name}
+              </ListBoxItem>
+            ))}
+          </ListBoxSection>
+        )}
+        {hits.groups.length > 0 && (
+          <ListBoxSection id="groups">
+            <Header className="rp-section-h">{t('search.groups')}</Header>
+            {hits.groups.map(g => (
+              <ListBoxItem key={g.id} id={'group:' + g.id} className="rp-item plain" textValue={g.name}>
+                {g.name}
+              </ListBoxItem>
+            ))}
+          </ListBoxSection>
+        )}
+        {hits.pages.length > 0 && (
+          <ListBoxSection id="pages">
+            <Header className="rp-section-h">{t('search.pages')}</Header>
+            {hits.pages.map(page => (
+              <ListBoxItem key={page.path} id={'page:' + page.path} className="rp-item plain" textValue={t(page.nav!.titleKey)}>
+                {t(page.nav!.titleKey)}
+              </ListBoxItem>
+            ))}
+          </ListBoxSection>
+        )}
+      </ListBox>
+    </ModalDialog>
   );
 }
 
@@ -297,18 +273,8 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame
-          lang={lang}
-          pickLang={pickLang}
-          ap={ap}
-          backend={settings.backend}
-          route={route}
-          query={query}
-          go={go}
-          openSearch={() => setSearchOpen(true)}
-          mac={mac}
-        />
-        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} backend={settings.backend} />}
+        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
@@ -333,7 +299,6 @@ function Frame({
   lang,
   pickLang,
   ap,
-  backend,
   route,
   query,
   go,
@@ -343,7 +308,6 @@ function Frame({
   lang: Lang;
   pickLang: (l: Lang) => void;
   ap: ReturnType<typeof useAppearance>;
-  backend: BackendKind;
   route: string;
   query: string;
   go: PageProps['go'];
@@ -355,7 +319,7 @@ function Frame({
   const capabilities = useCapabilities();
   const version = useVersion();
   const nav = navGroups.map(
-    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data, backend))] as const
+    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
   );
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
@@ -370,11 +334,11 @@ function Frame({
           <span>doona</span>
         </RLink>
         <div className="rp-search-wrap">
-          <RButton className="rp-search" onPress={openSearch}>
+          <Button appearance="search" onPress={openSearch}>
             <Search />
             <span className="grow">{t('search')}</span>
             <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>
-          </RButton>
+          </Button>
         </div>
         <div className="rp-actions">
           <span className="rp-search-compact">
@@ -450,22 +414,21 @@ function Frame({
           <div key={g} data-group={g.replace('grp.', '')}>
             <div className="rp-group">{t(g)}</div>
             {items.map(
-              ({id, path, nav, compat}) =>
+              ({id, path, nav}) =>
                 nav && (
                   <RLink key={id} className="rp-nav" href={'#/' + path} aria-current={route === path ? 'page' : undefined}>
                     <nav.Icon />
                     {t(nav.titleKey)}
-                    {compat && <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span>}
                   </RLink>
                 )
             )}
           </div>
         ))}
         <div className="rp-side-grow" />
-        <RButton className="rp-version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} aria-label={t('github')}>
+        <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
           <GitHub />
           {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-        </RButton>
+        </Button>
       </nav>
       <main className="rp-main">
         <div className="rp-content">
@@ -478,13 +441,12 @@ function Frame({
                 onChange={k => go(k)}
                 items={nav
                   .flatMap(([, items]) => items)
-                  .flatMap(({path, nav, compat}) =>
+                  .flatMap(({path, nav}) =>
                     nav
                       ? [
                           {
                             id: path,
-                            label: t(nav.titleKey),
-                            icon: compat ? <span className="rp-badge rp-nav-compat">{t('nav.compat')}</span> : undefined
+                            label: t(nav.titleKey)
                           }
                         ]
                       : []
@@ -494,22 +456,18 @@ function Frame({
             </div>
           </div>
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            {feature.requires.backend && feature.requires.backend !== backend ? (
-              <p className="rp-note">{t('shell.backendRequired')}</p>
-            ) : (
-              <Suspense
-                key={feature.id}
-                fallback={
-                  <Delayed>
-                    <div className="rp-empty" role="status">
-                      {t('ui.loading')}
-                    </div>
-                  </Delayed>
-                }
-              >
-                <Page go={go} query={query} backend={backend} />
-              </Suspense>
-            )}
+            <Suspense
+              key={feature.id}
+              fallback={
+                <Delayed>
+                  <div className="rp-empty" role="status">
+                    {t('ui.loading')}
+                  </div>
+                </Delayed>
+              }
+            >
+              <Page go={go} query={query} />
+            </Suspense>
           </SettingsContext.Provider>
         </div>
       </main>

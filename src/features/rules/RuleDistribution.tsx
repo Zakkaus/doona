@@ -39,9 +39,9 @@ export function RuleDistribution() {
   return (
     <section className="rp-card" aria-labelledby={titleId}>
       <div className="rp-row">
-        <span className="rp-title" id={titleId}>
+        <h3 className="rp-h3" id={titleId}>
           {t('rule.distributionTitle')}
-        </span>
+        </h3>
         <Segmented
           label={t('rule.distributionSource')}
           value={source}
@@ -73,7 +73,7 @@ export function RuleDistribution() {
           </div>
           <div className="rp-legend">
             <span className="it">
-              <i className="sw" style={{background: palette.cat[0]}} />
+              <i className="sw" />
               {t('rule.snapshotShare')}
             </span>
           </div>
@@ -84,19 +84,18 @@ export function RuleDistribution() {
               {visible.map(row => {
                 const expression = row.id === null || row.expression === null ? t('rule.unknownRule') : row.expression;
                 return (
-                  <div className="rp-bar" role="listitem" key={JSON.stringify([row.id, row.expression, row.source])}>
-                    <div className="top">
-                      <span className="l rp-rule">
-                        <span title={row.id === null ? expression : t('rule.distributionRule', {expression, id: row.id})}>{expression}</span>
-                        <small className="rp-provenance">{t(sources[row.source])}</small>
-                      </span>
-                      <span className="v">
-                        {t('rule.distributionValue', {n: formatNumber(row.count, locale), percent: formatNumber(row.share * 100, locale, 1)})}
-                      </span>
-                    </div>
-                    <div className="track" aria-hidden="true">
-                      <div className="fill" style={{width: `${row.share * 100}%`, background: palette.cat[0]}} />
-                    </div>
+                  <div role="listitem" key={JSON.stringify([row.id, row.expression, row.source])}>
+                    <Bar
+                      label={
+                        <span className="rp-rule">
+                          <span title={row.id === null ? expression : t('rule.distributionRule', {expression, id: row.id})}>{expression}</span>
+                          <Badge>{t(sources[row.source])}</Badge>
+                        </span>
+                      }
+                      value={t('rule.distributionValue', {n: formatNumber(row.count, locale), percent: formatNumber(row.share * 100, locale, 1)})}
+                      pct={row.share * 100}
+                      color={palette.cat[0]}
+                    />
                   </div>
                 );
               })}

@@ -1,4 +1,4 @@
-import {compatRoutes, expect, test} from './fixtures';
+import {expect, test} from './fixtures';
 import {translate} from '../src/i18n';
 
 const t = (key: Parameters<typeof translate>[1]) => translate('en', key);
@@ -42,30 +42,10 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
   expect(await page.evaluate(() => [localStorage.getItem('doona-api'), localStorage.getItem('doona-api-token')])).toEqual([null, null]);
 });
 
-test('compat navigation follows the saved backend kind, not the unsaved selection', async ({page}) => {
-  await page.goto('/#/settings');
-  for (const route of compatRoutes) await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveCount(0);
-  await page.getByRole('radio', {name: t('settings.clash'), exact: true}).click();
-  for (const route of compatRoutes) await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveCount(0);
-  await page.locator('[name=api]').fill('mock');
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
-  for (const route of compatRoutes) await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toBeVisible();
-  await page.getByRole('radio', {name: t('settings.native'), exact: true}).click();
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
-  for (const route of compatRoutes) await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveCount(0);
-  await page.goto('/#/config');
-  await expect(page).toHaveURL(/#\/config$/);
-  await expect(page.locator('.rp-content')).toBeVisible();
-});
-
-test('connection testing uses the unsaved prefix, token, and backend protocol', async ({page}) => {
+test('connection testing uses the unsaved prefix and token for native discovery', async ({page}) => {
   await page.route('**/settings-backend/api', async route => {
     if (route.request().headers().authorization !== 'Bearer test-token') return route.fulfill({status: 401});
     await route.fulfill({json: {name: 'dae/honk-native', status: 'draft', api_major: 1, base_path: '/api/v1', links: {version: '/api/v1/version'}}});
-  });
-  await page.route('**/settings-backend/version', async route => {
-    if (route.request().headers().authorization !== 'Bearer test-token') return route.fulfill({status: 401});
-    await route.fulfill({json: {version: '1.19.0'}});
   });
   await page.goto('/#/settings');
   const origin = new URL(page.url()).origin;
@@ -73,8 +53,5 @@ test('connection testing uses the unsaved prefix, token, and backend protocol', 
   await page.locator('[name=token]').fill('test-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await expect(page.locator('form').getByRole('status')).toContainText('API v1');
-  await page.getByRole('radio', {name: t('settings.clash'), exact: true}).click();
-  await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
-  await expect(page.locator('form').getByRole('status')).toContainText('1.19.0');
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
 });

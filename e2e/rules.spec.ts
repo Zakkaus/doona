@@ -12,7 +12,7 @@ test('rule distribution filters sources without changing snapshot shares or accu
   const sourceRows = await Promise.all(
     ['kernel', 'Recomputed', 'Unknown'].map(async source => ({
       source,
-      texts: await rows.filter({has: page.locator('.rp-provenance', {hasText: new RegExp(`^${source}$`)})}).allTextContents()
+      texts: await rows.filter({has: page.locator('.rp-badge', {hasText: new RegExp(`^${source}$`)})}).allTextContents()
     }))
   );
   const filters = card.getByRole('radiogroup', {name: 'Rule source'});
