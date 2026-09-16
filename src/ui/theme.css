@@ -704,26 +704,7 @@
   border-color: transparent;
   box-shadow: none;
 }
-:root[data-family='glass'] .rp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-.rp-chips .rp-btn {
-  max-width: 100%;
-  min-width: 0;
-}
-.rp-chips .rp-btn .n {
-  color: var(--rp-subtle);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-.rp-chips .rp-btn[data-selected] {
-  background: var(--rp-selected);
-  border-color: var(--rp-pine);
-}
-.rp-seg .rp-btn[data-selected] {
+:root[data-family='glass'] .rp-seg .rp-btn[data-selected] {
   color: var(--rp-text);
 }
 :root[data-family='glass'] .rp-slider {
@@ -1438,6 +1419,27 @@ input {
 }
 .rp-seg .rp-btn[data-hovered] {
   color: var(--rp-text);
+}
+/* Chips: a wrapping row of small toggles; the chosen one takes the selection tint. */
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-chips .rp-btn {
+  max-width: 100%;
+  min-width: 0;
+  border-color: var(--rp-hl-med);
+}
+.rp-chips .rp-btn .n {
+  color: var(--rp-subtle);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.rp-chips .rp-btn[data-selected] {
+  background: var(--rp-selected);
+  border-color: var(--rp-pine);
 }
 .rp-seg .rp-btn[data-selected] {
   background: var(--rp-surface);
@@ -3031,25 +3033,17 @@ button.rp-node[data-focus-visible] {
   }
 }
 
-/* ---- Routing: one card per outbound with three labelled columns; a dimmed card is off the pinned path. ---- */
-.rp-lane {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px 24px;
-  transition: opacity 150ms var(--rp-ease);
-}
-@media (min-width: 1024px) {
-  .rp-lane {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 4fr);
-  }
-}
-.rp-lane[data-dim] {
+/* ---- Routing: one card per outbound; the node sits in the title row, the rules below; a dimmed card is off the pinned path. ---- */
+.rp-card[data-dim] {
   opacity: 0.35;
 }
-.rp-lane .rp-node {
-  height: auto;
+.rp-lane-title {
+  gap: 2px;
+  min-width: 0;
 }
-.rp-empty-inline {
-  color: var(--rp-subtle);
-  line-height: 32px;
+.rp-lane-node {
+  width: min(280px, 100%);
+}
+.rp-lane-node .rp-node {
+  height: auto;
 }
