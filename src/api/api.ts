@@ -57,6 +57,7 @@ export interface Api {
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
+  closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
   routingTrace(request: RoutingTraceRequest, signal?: AbortSignal): Promise<RoutingTraceResponse>;

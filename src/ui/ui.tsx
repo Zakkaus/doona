@@ -581,9 +581,10 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
-export function Kv({items, inline}: {items: Array<[string, string]>; inline?: boolean}) {
+// `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
+export function Kv({items, inline, row}: {items: Array<[string, string]>; inline?: boolean; row?: boolean}) {
   return (
-    <div className={cx('rp-kv', inline && 'inline')}>
+    <div className={cx('rp-kv', (inline || row) && 'inline', row && 'row')}>
       {items.map(([k, v]) => (
         <div key={k}>
           <span className="k">{k}</span>

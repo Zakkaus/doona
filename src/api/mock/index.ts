@@ -468,6 +468,19 @@ export function createMockApi(): Api {
         })
       };
     },
+    closeConnection: async (connectionId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.connections.can_close) throw new ApiError(404, 'capability_not_supported', 'Closing connections is unavailable');
+      for (const list of [connections.tcp, connections.udp]) {
+        const index = list.findIndex(c => c.id === connectionId);
+        if (index < 0) continue;
+        // Only the userspace datapath can cancel what it owns; kernel-observed entries stay.
+        if (list[index].observed_by === 'ebpf') throw new ApiError(409, 'state_conflict', 'Connection is not owned by the userspace datapath');
+        list.splice(index, 1);
+        return;
+      }
+      throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
     deleteDnsEntry: async (entryId, signal) => {
       signal?.throwIfAborted();
       const index = dnsCache.entries.findIndex(entry => entry.entry_id === entryId);

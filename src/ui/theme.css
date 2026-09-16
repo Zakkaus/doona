@@ -2336,6 +2336,17 @@ button.rp-node[data-focus-visible] {
   gap: 24px;
   flex-wrap: wrap;
 }
+.rp-kv.row {
+  gap: 16px;
+}
+.rp-kv.row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rp-kv.row .k {
+  line-height: 20px;
+}
 
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
 :root {

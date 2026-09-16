@@ -182,3 +182,18 @@ test.describe('default view', () => {
     await expect(groups).toHaveCount(1);
   });
 });
+
+test('closing a connection removes it from the list and clears the selection', async ({page}) => {
+  await page.goto('/#/connections?id=c-0001');
+  const panel = page.locator('.rp-panel');
+  await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Closed api.telegram.org');
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect(page.locator('.rp-table [data-key="c-0001"]')).toHaveCount(0);
+  // A kernel-observed connection is refused by the backend, and the row stays.
+  await page.goto('/#/connections?id=c-0002');
+  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('cannot be closed');
+  await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
+});

@@ -1,7 +1,23 @@
 import {useMemo, useState} from 'react';
-import {useConnections} from '../../api/store';
+import {useCapabilities, useConnectionClose, useConnections} from '../../api/store';
+import {ApiError} from '../../api/error';
 import {connectionDetails, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
-import {Badge, Button, DetailPanel, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField, ErrorMessage, panelQuery, useMediaQuery} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DetailPanel,
+  Kv,
+  LabeledSelect,
+  Light,
+  MenuButton,
+  Segmented,
+  TextField,
+  ErrorMessage,
+  errorText,
+  panelQuery,
+  toast,
+  useMediaQuery
+} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -43,6 +59,20 @@ export function Connections({go, query}: PageProps) {
   };
   const src = ipLiteral(text);
   const resource = useConnections(src);
+  const canClose = useCapabilities().data?.resources.connections.can_close === true;
+  const closing = useConnectionClose(resource.refetch);
+  async function close(id: string, name: string) {
+    try {
+      await closing.close(id);
+      select(null);
+      toast('positive', t('conn.closed', {name}));
+    } catch (error) {
+      toast(
+        'negative',
+        error instanceof ApiError && error.code === 'state_conflict' ? t('conn.notClosable') : t('conn.closeFailed', {error: errorText(error)})
+      );
+    }
+  }
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
   const needle = text.trim().toLowerCase();
   const shown = rows.filter(
@@ -138,6 +168,20 @@ export function Connections({go, query}: PageProps) {
                   <Button quiet onPress={() => setText(sourceIp(cur.src) ?? cur.src ?? '')}>
                     {t('conn.onlyThisClient')}
                   </Button>
+                )}
+                {canClose && (cur.state === 'active' || cur.state === 'dialing' || cur.state === 'routing') && (
+                  <>
+                    <span className="rp-grow" />
+                    <Button
+                      negative
+                      quiet
+                      isPending={closing.busy === cur.id}
+                      isDisabled={!!closing.busy}
+                      onPress={() => void close(cur.id, cur.domain || cur.dst || cur.id)}
+                    >
+                      {t('conn.close')}
+                    </Button>
+                  </>
                 )}
               </div>
             </>

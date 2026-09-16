@@ -118,6 +118,10 @@ export function createApi(base: string, token?: string): Api {
     flow: async (id, signal) => data(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => data(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
     dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
+    // 204 carries no body; the response middleware has already turned any error status into an ApiError.
+    closeConnection: async (connection_id, signal) => {
+      await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
+    },
     deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.

@@ -242,6 +242,23 @@ export function useConnections(src?: string) {
   );
 }
 
+// Closing one connection: the list refetches on success; a 409 is the backend saying it does not own the transport.
+export function useConnectionClose(refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<string | null>(null);
+  async function close(id: string) {
+    if (busy) return;
+    setBusy(id);
+    try {
+      await api.closeConnection(id);
+      refetch();
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {busy, close};
+}
+
 export function useRoutingTrace() {
   const api = getApi();
   const capabilities = useCapabilities();

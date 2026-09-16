@@ -170,7 +170,7 @@ export const capabilities: Capabilities = {
         global_requests_per_minute: 120
       }
     },
-    connections: {available: true, can_close: false},
+    connections: {available: true, can_close: true, max_bulk_close: 200},
     flows: {
       available: true,
       recording: 'on',
