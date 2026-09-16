@@ -14,6 +14,9 @@ it('lays the config out as columns and weights them with retained flows', async 
   const configured = map.links.filter(link => link.configured);
   expect(configured.length).toBeGreaterThan(0);
   for (const link of configured) expect(link.source.startsWith('outbound:') && link.target.startsWith('node:')).toBe(true);
+  // A path keeps its outbound on every hop, so an ingress can fan out in as many colours as it has outbounds.
+  const lanOutbounds = new Set(map.links.filter(link => link.source === 'ingress:lan').map(link => link.outbound));
+  expect(lanOutbounds.size).toBeGreaterThan(1);
   // Counts flow along the path: the ingress column adds up to the flow total.
   expect(stages('ingress').reduce((sum, node) => sum + node.count, 0)).toBe(flows.flows.length);
   // Terminal outbounds have no node hop.

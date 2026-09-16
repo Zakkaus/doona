@@ -383,9 +383,30 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[]; va
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: string; pct: number; color: string; icon?: ReactNode}) {
-  return (
-    <div className="rp-bar">
+// A ranked row: label, value, a thin fill. With `onPress` it is a toggle in the same clothes, for lists
+// where picking a row narrows something else (the flow map pins a path this way).
+export function Bar({
+  label,
+  value,
+  pct,
+  color,
+  icon,
+  selected,
+  dim,
+  onPress,
+  ...rest
+}: {
+  label: ReactNode;
+  value: string;
+  pct: number;
+  color: string;
+  icon?: ReactNode;
+  selected?: boolean;
+  dim?: boolean;
+  onPress?: (selected: boolean) => void;
+} & Record<`data-${string}`, string | undefined>) {
+  const body = (
+    <>
       <div className="top">
         <span className="l">
           {icon && <span className="ic">{icon}</span>}
@@ -396,6 +417,17 @@ export function Bar({label, value, pct, color, icon}: {label: ReactNode; value: 
       <div className="track" aria-hidden="true">
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />
       </div>
+    </>
+  );
+  if (onPress)
+    return (
+      <ToggleButton className="rp-bar pressable" isSelected={!!selected} onChange={onPress} data-dim={dim ? '' : undefined} {...rest}>
+        {body}
+      </ToggleButton>
+    );
+  return (
+    <div className="rp-bar" data-dim={dim ? '' : undefined} {...rest}>
+      {body}
     </div>
   );
 }

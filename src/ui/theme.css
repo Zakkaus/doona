@@ -1627,6 +1627,31 @@ input {
   height: 100%;
   border-radius: 2px;
 }
+.rp-bar.pressable {
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 150ms var(--rp-ease),
+    opacity 150ms var(--rp-ease);
+}
+.rp-bar.pressable[data-selected] {
+  background: var(--rp-selected);
+}
+.rp-bar.pressable[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-bar[data-dim] {
+  opacity: 0.4;
+}
 .rp-list {
   display: flex;
   flex-direction: column;
@@ -2991,8 +3016,8 @@ button.rp-node[data-focus-visible] {
 .rp-flowmap {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 40px;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr) minmax(0, 3fr);
+  gap: 96px;
   align-items: start;
 }
 .rp-flowmap-links {
@@ -3005,22 +3030,17 @@ button.rp-node[data-focus-visible] {
 }
 .rp-flowmap-links path {
   fill: none;
-  stroke: var(--rp-hl-med);
-  transition:
-    stroke 150ms var(--rp-ease),
-    opacity 150ms var(--rp-ease);
-}
-.rp-flowmap-links path[data-on] {
-  stroke: var(--rp-pine);
+  opacity: 0.85;
+  transition: opacity 150ms var(--rp-ease);
 }
 .rp-flowmap-links path[data-dim] {
-  opacity: 0.35;
+  opacity: 0.12;
 }
 .rp-flowmap-col {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 .rp-flowmap-head {
@@ -3028,43 +3048,6 @@ button.rp-node[data-focus-visible] {
   line-height: 16px;
   color: var(--rp-muted);
   padding: 0 4px;
-}
-.rp-flowmap-node {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background: var(--rp-overlay);
-  color: var(--rp-text);
-  font: inherit;
-  text-align: start;
-  min-width: 0;
-  cursor: pointer;
-  outline: none;
-  transition:
-    opacity 150ms var(--rp-ease),
-    border-color 150ms var(--rp-ease);
-}
-.rp-flowmap-node[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
-  outline-offset: 2px;
-}
-.rp-flowmap-node[data-selected] {
-  border-color: var(--rp-pine);
-  background: var(--rp-selected);
-}
-.rp-flowmap-node[data-dim] {
-  opacity: 0.4;
-}
-.rp-flowmap-node .n {
-  flex: none;
-  font-size: 12px;
-  color: var(--rp-subtle);
-  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 899px) {
   .rp-flowmap {

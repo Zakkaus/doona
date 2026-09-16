@@ -37,7 +37,11 @@ test('the traffic map lays out the config and a pinned path filters the list', a
   // Every configured group is in the outbound column, used or not; links are drawn once boxes are laid out.
   for (const group of ['proxy', 'direct', 'airport']) await expect(map.getByRole('group', {name: 'Outbound'}).getByText(group, {exact: true})).toBeVisible();
   expect(await map.locator('svg path').count()).toBeGreaterThan(3);
-  const rule = map.getByRole('group', {name: 'Rule'}).getByRole('radio').or(map.getByRole('group', {name: 'Rule'}).getByRole('button')).filter({hasText: 'dip(geoip:cn)'});
+  const rule = map
+    .getByRole('group', {name: 'Rule'})
+    .getByRole('radio')
+    .or(map.getByRole('group', {name: 'Rule'}).getByRole('button'))
+    .filter({hasText: 'dip(geoip:cn)'});
   await rule.click();
   await expect(page).toHaveURL(/path=rule%3Adip/);
   await expect(rule).toHaveAttribute('aria-pressed', 'true');
