@@ -147,7 +147,6 @@ export function Connections({go, query}: PageProps) {
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
         <span className="rp-grow" />
         <Button
-          secondary
           isDisabled={!shown.length}
           onPress={() =>
             downloadFile(

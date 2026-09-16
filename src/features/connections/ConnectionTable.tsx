@@ -1,10 +1,10 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
-import {chainLabel, connectionStates, outboundLabel, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
 import {OutboundMark} from '../policies/Flag';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
-import {LOCALE, formatList, useLang, useT} from '../../i18n';
+import {LOCALE, useLang, useT} from '../../i18n';
 import {Badge, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
@@ -148,17 +148,6 @@ export function ConnectionTable({
                             <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>
                           ) : column.id === 'down' ? (
                             formatBytes(row.download)
-                          ) : column.id === 'chain' ? (
-                            <TextTooltip>
-                              {row.outbounds.length
-                                ? t('conn.groupOutbounds', {
-                                    list: formatList(
-                                      lang,
-                                      row.outbounds.map(name => outboundLabel(name, t))
-                                    )
-                                  })
-                                : '—'}
-                            </TextTooltip>
                           ) : column.id === 'state' ? (
                             t('conn.activeCount', {n: row.active})
                           ) : null}

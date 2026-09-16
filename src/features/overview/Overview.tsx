@@ -86,7 +86,6 @@ export function Overview() {
         </div>
         <div className="rp-cluster">
           <Button
-            secondary
             isDisabled={!runtime.data}
             onPress={() =>
               downloadFile(

@@ -356,6 +356,14 @@ export function localTime(iso: string | null, locale: string): string {
   return formatter.format(t);
 }
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
+export const eventKindLabels: Record<EventKind, Key> = {
+  'stream.ready': 'event.k.streamReady',
+  'runtime.updated': 'event.k.runtimeUpdated',
+  'flow.updated': 'event.k.flowUpdated',
+  'flow.gap': 'event.k.flowGap',
+  'operation.updated': 'event.k.operationUpdated',
+  'generation.changed': 'event.k.generationChanged'
+};
 export function eventSummary(event: ApiEvent): MessageRef {
   switch (event.event) {
     case 'stream.ready':

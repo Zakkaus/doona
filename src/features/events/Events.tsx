@@ -1,7 +1,7 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {useEventFeed} from '../../api/store';
-import {eventKinds, eventSummary, localTime} from '../../api/selectors';
+import {eventKindLabels, eventKinds, eventSummary, localTime} from '../../api/selectors';
 import {DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip} from '../../ui/ui';
 
 export function Events() {
@@ -18,7 +18,7 @@ export function Events() {
           side
           value={kind}
           onChange={setKind}
-          items={[{id: 'all', label: t('event.allKinds')}, ...eventKinds.map(id => ({id, label: id}))]}
+          items={[{id: 'all', label: t('event.allKinds')}, ...eventKinds.map(id => ({id, label: t(eventKindLabels[id])}))]}
         />
         <Light small tone={feed.connected ? 'ok' : 'warn'}>
           {feed.available === false ? t('event.unavailable') : feed.connected ? t('event.connected') : t('event.reconnecting')}
@@ -44,7 +44,7 @@ export function Events() {
             <TextTooltip className="rp-code" text={event.data.observed_at}>
               {localTime(event.data.observed_at, locale)}
             </TextTooltip>,
-            event.event,
+            <TextTooltip text={event.event}>{t(eventKindLabels[event.event])}</TextTooltip>,
             t(summary.key, summary.params)
           ];
         }}

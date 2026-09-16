@@ -2939,6 +2939,10 @@ button.rp-node[data-focus-visible] {
   padding: 0 8px;
   color: var(--rp-pine);
 }
+/* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
+.rp-card > .rp-link {
+  margin-left: -8px;
+}
 @media (max-width: 600px) {
   .rp-row {
     flex-wrap: wrap;
