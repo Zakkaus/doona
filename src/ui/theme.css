@@ -1364,11 +1364,12 @@ input {
 .rp-btn.sm.icon {
   width: 32px;
 }
+/* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
+   destructive ones, secondary outlined. */
 .rp-btn.accent,
 .rp-btn.primary,
 .rp-btn.negative,
 .rp-btn.secondary {
-  border-radius: 999px;
   padding: 0 12px;
 }
 .rp-btn.secondary {
@@ -1592,8 +1593,10 @@ input {
   box-shadow: none;
   object-fit: contain;
 }
-.rp-chain > .flag {
-  translate: 0 1px;
+.rp-chain > .flag,
+.rp-chips .flag,
+.rp-light > .flag {
+  translate: 0 1.5px;
 }
 .rp-tip {
   background: var(--rp-text);
@@ -2284,6 +2287,37 @@ button.rp-node[data-focus-visible] {
 }
 .rp-table [role='row'][data-selected] {
   background: var(--rp-selected);
+}
+/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
+.rp-table [role='columnheader'] {
+  position: sticky;
+}
+.rp-th {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.rp-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  box-sizing: border-box;
+  border-right: 2px solid transparent;
+  outline: none;
+}
+.rp-resizer[data-hovered],
+.rp-resizer[data-resizing],
+.rp-resizer[data-focus-visible] {
+  border-right-color: var(--rp-pine);
+}
+.rp-table [role='columnheader'][data-resizing] {
+  color: var(--rp-pine);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);

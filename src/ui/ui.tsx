@@ -444,6 +444,7 @@ import {
   Input as RInput,
   Table,
   ResizableTableContainer,
+  ColumnResizer,
   TableHeader,
   Column,
   TableBody,
@@ -774,10 +775,11 @@ export function DataTable<T extends {id: string}>({
               id={c.id}
               isRowHeader={c.isRowHeader}
               className={c.align === 'end' ? 'end' : undefined}
-              width={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
+              defaultWidth={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
               minWidth={c.minWidth}
             >
-              {c.label}
+              <span className="rp-th">{c.label}</span>
+              <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
             </Column>
           ))}
         </TableHeader>
