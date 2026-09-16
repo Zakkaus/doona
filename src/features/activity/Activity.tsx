@@ -3,14 +3,30 @@ import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Clock from '../../ui/icons/Clock';
-import {useCapabilities, useConnections, useEventFeed, useGroups, useNodes, useRuntime, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {clientRows, connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, trafficSeries} from '../../api/selectors';
-import {addU64, formatBytes, formatRate, pctU64} from '../../api/u64';
+import Data from '../../ui/icons/Data';
+import Shuffle from '../../ui/icons/Shuffle';
+import Filter from '../../ui/icons/Filter';
+import {
+  useCapabilities,
+  useConnections,
+  useEventFeed,
+  useGroups,
+  useNodes,
+  useRuntime,
+  useRuntimeMemory,
+  useRuntimeOutbounds,
+  useTrafficHistory
+} from '../../api/store';
+import {connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, sourceIp, trafficSeries} from '../../api/selectors';
+import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Button, Segmented, Light, Bar} from '../../ui/ui';
+import {Badge, Button, CardLink, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, TextTooltip, toast} from '../../ui/ui';
+import type {Key} from '../../i18n/messages';
+
+const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
 import {NodeMenu} from '../policies/Nodes';
-import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
+import {useMemorySeries} from '../overview/memory';
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
@@ -23,6 +39,16 @@ export function Activity({go}: {go: (page: string) => void}) {
     groupsResource = useGroups(),
     capabilities = useCapabilities();
   const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
+  const memory = useRuntimeMemory(capabilities.data?.resources.runtime_memory.available === true);
+  const rss = memory.data?.process?.rss_bytes ?? null;
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
+  const memorySamples = memoryHistory.samples;
+  const memorySeries = [
+    {label: t('act.rss'), color: p.cat[0], values: memorySamples.map(sample => sample.rss)},
+    {label: t('act.cgroup'), color: p.cat[3], values: memorySamples.map(sample => sample.cgroup)}
+  ];
+  const memoryBytes = (value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value)));
+  const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
   const NODES = useMemo(
     () =>
       (nodesResource.data ?? []).map(n => {
@@ -35,17 +61,13 @@ export function Activity({go}: {go: (page: string) => void}) {
   const connections = useConnections();
   const feed = useEventFeed();
   const ranking = useMemo(() => {
-    let rows: Array<{name: string; download: bigint | null}>;
-    if (by === 'dev') rows = clientRows(connections.data).map(row => ({name: row.ip, download: row.download}));
-    else {
-      const totals = new Map<string, bigint | null>();
-      for (const row of connectionRows(connections.data)) {
-        const name = row.domain || row.dst;
-        if (!name) continue;
-        totals.set(name, addU64(totals.has(name) ? totals.get(name)! : 0n, row.download_bytes));
-      }
-      rows = [...totals].map(([name, download]) => ({name, download}));
+    const totals = new Map<string, bigint | null>();
+    for (const row of connectionRows(connections.data)) {
+      const name = by === 'dev' ? sourceIp(row.src) : row.domain || row.dst;
+      if (!name) continue;
+      totals.set(name, addU64(totals.has(name) ? totals.get(name)! : 0n, row.download_bytes));
     }
+    const rows = [...totals].map(([name, download]) => ({name, download}));
     const total = addU64(...rows.map(row => row.download));
     rows.sort((a, b) => (a.download === b.download ? 0 : a.download === null ? 1 : b.download === null ? -1 : a.download > b.download ? -1 : 1));
     return rows.slice(0, 5).map(row => ({...row, percent: pctU64(row.download, total)}));
@@ -53,18 +75,18 @@ export function Activity({go}: {go: (page: string) => void}) {
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
+  // The quick row keeps its choice locally until the contract carries an outbound mode and a global target.
+  const [mode, setMode] = useState('rule');
+  const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
   const nodeName = node?.name ?? '';
   const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? capabilities.error;
-  if (error)
-    return (
-      <div role="alert">
-        {t('act.loadFailed')} {error.message}
-      </div>
-    );
-  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <div role="status">{t('act.loading')}</div>;
+  if (error) return <ErrorMessage error={error} />;
+  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
+  const groups = groupsResource.data;
+  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -79,7 +101,39 @@ export function Activity({go}: {go: (page: string) => void}) {
   const events = feed.events.slice(0, 6);
   return (
     <>
-      <div className="rp-col">
+      <div className="rp-quick">
+        <div className="rp-card">
+          <div className="rp-row">
+            <span className="rp-qlabel rp-tint-c3">
+              <Shuffle />
+              {t('act.mode')}
+            </span>
+            <Segmented
+              label={t('act.mode')}
+              value={mode}
+              onChange={k => {
+                setMode(k);
+                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
+              }}
+              items={[
+                ['rule', t('mode.rule')],
+                ['global', t('mode.global')],
+                ['direct', t('mode.direct')]
+              ]}
+            />
+          </div>
+        </div>
+        <div className="rp-card">
+          <div className="rp-row">
+            <span className="rp-qlabel rp-tint-c2">
+              <Filter />
+              {t('act.global')}
+            </span>
+            <MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>
+              {target}
+            </MenuButton>
+          </div>
+        </div>
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
@@ -119,7 +173,7 @@ export function Activity({go}: {go: (page: string) => void}) {
             </span>
           </div>
         </div>
-        <div className="rp-card">
+        <CardLink href="#/connections" label={t('act.active')}>
           <span className="rp-tile-head rp-tint-c3">
             <LinkIcon />
             {t('act.active')}
@@ -132,7 +186,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Spark values={series.connections} timestamps={series.timestamps} color={p.cat[2]} />
             </span>
           </div>
-        </div>
+        </CardLink>
         <div className="rp-card">
           <span className="rp-tile-head rp-tint-c5">
             <Clock />
@@ -154,12 +208,32 @@ export function Activity({go}: {go: (page: string) => void}) {
             </Light>
           </div>
         </div>
+        {capabilities.data?.resources.runtime_memory.available && (
+          <div className="rp-card">
+            <span className="rp-tile-head rp-tint-c2">
+              <Data />
+              {t('act.memory')}
+            </span>
+            <div className="rp-tile-body">
+              <span className="rp-tile-val">
+                <span className="rp-big">{formatBytes(rss)}</span>
+              </span>
+              {cgroupPercent !== null && (
+                <Light small tone={cgroupPercent > 90 ? 'err' : cgroupPercent > 75 ? 'warn' : 'ok'}>
+                  {t(cgroupPercent > 90 ? 'act.memoryNearLimit' : cgroupPercent > 75 ? 'act.memoryHigh' : 'act.memoryOk')}
+                </Light>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rp-g21">
-        <div className="rp-card">
+        <section className="rp-card" aria-labelledby="activity-traffic">
           <div className="rp-row">
-            <h3 className="rp-h3">{t('act.traffic')}</h3>
+            <h3 className="rp-h3" id="activity-traffic">
+              {t('act.traffic')}
+            </h3>
             <Segmented
               label={t('act.historyRange')}
               value={range}
@@ -174,20 +248,20 @@ export function Activity({go}: {go: (page: string) => void}) {
             />
           </div>
           {history.error ? (
-            <p role="alert">{history.error.message}</p>
+            <ErrorMessage error={history.error} />
           ) : capabilities.data?.resources.traffic_history.available === false ? (
             <span className="rp-label">{t('act.noHistory')}</span>
           ) : !history.data ? (
-            <span role="status">{t('act.loading')}</span>
+            <Loading>{t('act.loading')}</Loading>
           ) : !history.data.samples.length ? (
-            <span className="rp-label">{t('act.emptyHistory')}</span>
+            <span className="rp-empty">{t('act.emptyHistory')}</span>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
               <AreaChart series={traffic} timestamps={series.timestamps} fmt={chartRate} locale={locale} height={120} />
             </>
           )}
-        </div>
+        </section>
         <div className="rp-card">
           <div className="rp-row">
             <div className="rp-cluster">
@@ -196,11 +270,13 @@ export function Activity({go}: {go: (page: string) => void}) {
             </div>
           </div>
           {outbounds.error ? (
-            <p role="alert">{outbounds.error.message}</p>
+            <ErrorMessage error={outbounds.error} />
           ) : capabilities.data?.resources.runtime_outbounds.available === false ? (
             <span className="rp-label">{t('act.noOutbounds')}</span>
           ) : !outbounds.data ? (
-            <span role="status">{t('act.loading')}</span>
+            <Loading>{t('act.loading')}</Loading>
+          ) : !OUT.length ? (
+            <span className="rp-empty">{t('ui.empty')}</span>
           ) : (
             <Donut rows={OUT} total={formatBytes(usage.total)} />
           )}
@@ -210,7 +286,9 @@ export function Activity({go}: {go: (page: string) => void}) {
       <div className="rp-g3">
         <div className="rp-card">
           <div className="rp-row">
-            <h3 className="rp-h3">{t('act.topDevices')}</h3>
+            <TextTooltip text={t('act.rankingScope')}>
+              <h3 className="rp-h3">{t('act.topDevices')}</h3>
+            </TextTooltip>
             <Segmented
               label={t('act.topDevices')}
               value={by}
@@ -221,13 +299,18 @@ export function Activity({go}: {go: (page: string) => void}) {
               ]}
             />
           </div>
-          <p className="rp-note">{t('act.rankingScope')}</p>
-          {connections.error && <p role="alert">{connections.error.message}</p>}
-          {connections.data?.truncated && <p className="rp-note">{t('act.rankingTruncated')}</p>}
+          {connections.error && <ErrorMessage error={connections.error} />}
+          {connections.data?.truncated && (
+            <TextTooltip text={t('act.rankingTruncated')}>
+              <Badge tone="warn">{t('act.truncated')}</Badge>
+            </TextTooltip>
+          )}
           {!connections.data ? (
-            <span role="status">{t('act.loading')}</span>
+            connections.error ? null : (
+              <Loading>{t('act.loading')}</Loading>
+            )
           ) : ranking.length === 0 ? (
-            <span className="rp-label">{t('act.rankingEmpty')}</span>
+            <span className="rp-empty">{t('act.rankingEmpty')}</span>
           ) : (
             <div className="rp-list">
               {ranking.map((row, i) => (
@@ -242,29 +325,37 @@ export function Activity({go}: {go: (page: string) => void}) {
             </div>
           )}
         </div>
-        <div className="rp-card">
+        <section className="rp-card" aria-labelledby="activity-memory">
           <div className="rp-row">
-            <h3 className="rp-h3">{t('act.probeLatency')}</h3>
-            <Button quiet small onPress={() => go('policies')}>
-              {t('act.viewAll')}
+            <h3 className="rp-h3" id="activity-memory">
+              {t('act.memory')}
+            </h3>
+            <Button quiet small onPress={() => go('overview')}>
+              {t('act.viewDetails')}
             </Button>
           </div>
-          <div className="rp-list">
-            {[...NODES]
-              .sort((x, y) => (x.alive ? (x.tcp ?? 0) : 1e9) - (y.alive ? (y.tcp ?? 0) : 1e9))
-              .slice(0, 6)
-              .map(n => (
-                <Bar
-                  key={n.name}
-                  icon={<Flag name={n.name} />}
-                  label={n.name}
-                  value={n.alive && n.tcp !== undefined ? t('ui.latency', {n: n.tcp}) : n.unavailable ? t('act.timeout') : t('act.unknown')}
-                  pct={n.alive ? ((n.tcp ?? 0) / 250) * 100 : 100}
-                  color={n.alive ? ((n.tcp ?? 0) < 100 ? p.foam : p.gold) : p.love}
-                />
-              ))}
-          </div>
-        </div>
+          {memory.error || memoryHistory.error ? (
+            <ErrorMessage error={memory.error ?? memoryHistory.error} />
+          ) : memorySamples.length > 1 ? (
+            <>
+              <Legend series={memorySeries} fmt={memoryBytes} />
+              <AreaChart
+                series={memorySeries}
+                timestamps={memorySamples.map(sample => sample.time)}
+                fmt={memoryBytes}
+                locale={locale}
+                height={150}
+                baseline="auto"
+              />
+            </>
+          ) : capabilities.data?.resources.runtime_memory.available === false ? (
+            <span className="rp-empty">{t('act.noHistory')}</span>
+          ) : (
+            <div className="rp-chart-wait">
+              <Loading>{t('act.sampling')}</Loading>
+            </div>
+          )}
+        </section>
         <section className="rp-card" aria-label={t('act.issues')}>
           <div className="rp-row">
             <div className="rp-cluster">
@@ -275,9 +366,11 @@ export function Activity({go}: {go: (page: string) => void}) {
               {t('act.viewAll')}
             </Button>
           </div>
-          {feed.error && <p role="alert">{feed.error.message}</p>}
-          {events.length === 0 ? (
-            <span className="rp-label">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
+          {feed.error && <ErrorMessage error={feed.error} />}
+          {!feed.error && feed.available === null ? (
+            <Loading />
+          ) : events.length === 0 ? (
+            <span className="rp-empty">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
           ) : (
             <div className="rp-list" role="list">
               {events.map(event => {

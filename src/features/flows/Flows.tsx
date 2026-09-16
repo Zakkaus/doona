@@ -1,24 +1,13 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useFlow, useFlows} from '../../api/store';
+import {useFlow, useFlows} from '../../api/store';
 import {chainLabel, connectionStates, flowStepFields, localTime, relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, Kv, LabeledSelect, Segmented} from '../../ui/ui';
+import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
+import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import type {FlowList} from '../../api/model';
 import Close from '../../ui/icons/Close';
-import {FlowGraph, graphLabel, graphStageLabels} from './FlowGraph';
-import {flowGraph, flowNodeLabel, type GraphNode} from './graph';
 
-const coverageLabels: Record<string, Key> = {
-  userspace_tcp: 'flow.userspaceTcp',
-  userspace_udp: 'flow.userspaceUdp',
-  kernel_direct: 'flow.kernelDirect',
-  kernel_block: 'flow.kernelBlock',
-  dns_intercept: 'flow.dnsIntercept',
-  kernel_bypass: 'flow.kernelBypass'
-};
-const visibility: Record<string, Key> = {full: 'flow.full', partial: 'flow.partialVisibility', none: 'ui.none', unknown: 'ui.unknown'};
 const stages: Record<string, Key> = {
   input: 'flow.stage.input',
   route: 'flow.stage.route',
@@ -31,61 +20,30 @@ const stages: Record<string, Key> = {
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
 
-function Coverage({data}: {data: FlowList}) {
-  const t = useT();
-  return (
-    <div className="rp-toolbar" role="group" aria-label={t('flow.coverage')}>
-      {Object.entries(data.coverage).map(([scope, value]) => (
-        <Badge key={scope} tone={value === 'full' ? undefined : 'warn'}>
-          {t('ui.valuePair', {label: coverageLabels[scope] ? t(coverageLabels[scope]) : scope, value: t(visibility[value])})}
-        </Badge>
-      ))}
-      {data.dropped_records !== null && BigInt(data.dropped_records) > 0n && <Badge tone="warn">{t('flow.dropped', {n: data.dropped_records})}</Badge>}
-    </div>
-  );
-}
-
+// "Which decisions did this traffic go through": a list of retained flows, the trace of the selected one beside it.
 export function Flows({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
   const [network, setNetwork] = useState('all');
   const [state, setState] = useState('all');
-  const [graphFilter, setGraphFilter] = useState<GraphNode | null>(null);
+  const wide = useMediaQuery(panelQuery);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
-  const available = useCapabilities().data?.resources.flows.available;
-  const id = params.get('id') ?? resource.data?.flows.find(f => !connectionId || f.connection_id === connectionId)?.id ?? null;
+  const id = params.get('id');
   const detail = useFlow(id);
   const flow = detail.data;
-  const graph = useMemo(() => flowGraph(available ? (resource.data?.flows ?? []) : []), [available, resource.data?.flows]);
-  const shown = (resource.data?.flows ?? []).filter(
-    f =>
-      (network === 'all' || f.network === network) &&
-      (state === 'all' || f.state === state) &&
-      (!graphFilter || flowNodeLabel(f, graphFilter.stage) === graphFilter.label)
-  );
-  const filterLabels = graphFilter ? {stage: t(graphStageLabels[graphFilter.stage]), label: graphLabel(graphFilter, t)} : null;
+  const select = (value: string | null) => {
+    const next = new URLSearchParams(query);
+    if (value) next.set('id', value);
+    else next.delete('id');
+    go('flows', next.toString());
+  };
+  const shown = (resource.data?.flows ?? []).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
   return (
     <div className="rp-page">
-      {resource.error && (
-        <p role="alert" className="rp-note">
-          {t('flow.loadFailed', {error: resource.error.message})}
-        </p>
-      )}
-      {resource.loading && !resource.data && <p role="status">{t('ui.loading')}</p>}
-      {resource.data &&
-        (graph.nodes.length ? (
-          <FlowGraph
-            graph={graph}
-            selected={graphFilter?.id ?? null}
-            onSelect={node => setGraphFilter(current => (current?.id === node.id ? null : node))}
-            caption={<Coverage data={resource.data} />}
-          />
-        ) : (
-          <Coverage data={resource.data} />
-        ))}
+      {resource.error && <ErrorMessage error={resource.error} />}
       <div className="rp-toolbar">
         <Segmented
           label={t('ui.network')}
@@ -104,108 +62,115 @@ export function Flows({go, query}: PageProps) {
           onChange={setState}
           items={[{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]}
         />
-        {filterLabels && (
-          <span className="rp-flow-filter">
-            <Button small label={t('flow.graphClearFilter', filterLabels)} onPress={() => setGraphFilter(null)}>
-              {t('flow.graphFilter', filterLabels)}
-              <Close />
-            </Button>
-          </span>
+        {connectionId && (
+          <Button small label={t('flow.clearConnectionFilter')} onPress={() => go('flows', id ? 'id=' + encodeURIComponent(id) : '')}>
+            {t('flow.connectionFilter', {id: connectionId})}
+            <Close />
+          </Button>
         )}
+        {resource.data && <Coverage data={resource.data} />}
       </div>
-      <DataTable
-        label={t('nav.flows')}
-        rows={shown}
-        height={250}
-        selected={id}
-        onSelect={value => value && go('flows', 'id=' + encodeURIComponent(value))}
-        empty={t('flow.empty')}
-        cols={[
-          {id: 'id', label: t('nav.flows'), width: 140, isRowHeader: true},
-          {id: 'target', label: t('ui.target'), width: 180},
-          {id: 'chain', label: t('conn.chain'), width: 180},
-          {id: 'rule', label: t('conn.rule'), width: 220},
-          {id: 'network', label: t('ui.protocol'), width: 80},
-          {id: 'state', label: t('ui.state'), width: 100},
-          {id: 'started', label: t('ui.started'), width: 104}
-        ]}
-        render={f => [
-          f.id,
-          f.input?.domain || f.input?.dst || '—',
-          chainLabel(f),
-          <span className="rp-rule">
-            <span title={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</span>
-            {f.rule_source === 'recomputed' ? (
-              <small className="rp-provenance">{t('conn.recomputed')}</small>
-            ) : f.rule_source === 'unknown' ? (
-              <small className="rp-provenance">—</small>
-            ) : null}
-          </span>,
-          f.network.toUpperCase(),
-          t(connectionStates[f.state]),
-          relativeStart(f.started_at, locale)
-        ]}
-      />
-      {detail.error && (
-        <p role="alert" className="rp-note">
-          {t('flow.detailFailed', {error: detail.error.message})}
-        </p>
-      )}
-      {detail.loading && !flow && id && <p role="status">{t('flow.detailLoading')}</p>}
-      {flow && (
-        <section className="rp-card" aria-label={t('flow.trace')}>
-          <div className="rp-row">
-            <h3 className="rp-h3">{flow.id}</h3>
-            <Badge>{t(traceStates[flow.trace.status])}</Badge>
-            <span className="rp-label">{t('flow.revision', {n: flow.revision})}</span>
-          </div>
-          <p className="rp-note">
-            {flow.trace.status === 'partial' ? t('flow.partial') : flow.trace.status === 'disabled' ? t('flow.disabled') : t('flow.complete')}
-          </p>
-          <Kv
-            items={[
-              [
-                t('flow.missing'),
-                formatList(
-                  lang,
-                  flow.trace.missing.map(stage => (stages[stage] ? t(stages[stage]) : stage))
-                ) || '—'
-              ],
-              [t('nav.connections'), flow.connection_id ?? '—'],
-              [t('ui.state'), t(connectionStates[flow.state])]
-            ]}
-          />
-          <ol className="rp-flow-timeline">
-            {[...flow.trace.steps]
-              .sort((a, b) => a.seq - b.seq)
-              .map(step => {
-                const fields = flowStepFields(step);
-                return (
-                  <li key={step.seq} className="rp-flow-step">
-                    <div className="rp-toolbar">
-                      <Badge>{stages[step.stage] ? t(stages[step.stage]) : step.stage}</Badge>
-                      <span className="rp-code">{t('flow.sequence', {n: step.seq})}</span>
-                      <time dateTime={step.observed_at ?? undefined}>{localTime(step.observed_at, locale)}</time>
-                      <span className="rp-label">{t('ui.microseconds', {n: step.elapsed_us ?? '—'})}</span>
-                    </div>
-                    {fields ? (
-                      <Kv
-                        items={fields.map(([key, value]) => [
-                          typeof key === 'string' ? t(key) : t(key.key, key.params),
-                          typeof value === 'string' ? value : t(value.key, value.params)
-                        ])}
-                      />
-                    ) : (
-                      <pre className="rp-flow-raw">
-                        <code>{JSON.stringify(step.data, null, 2)}</code>
-                      </pre>
-                    )}
-                  </li>
-                );
-              })}
-          </ol>
-        </section>
-      )}
+      <div className="rp-with-panel" data-open={flow || (id && detail.loading) ? '' : undefined}>
+        <DataTable
+          label={t('nav.flows')}
+          loading={resource.loading && !resource.data}
+          rows={shown}
+          height={442}
+          selected={id}
+          onSelect={select}
+          selectOnFocus={wide}
+          empty={t('flow.empty')}
+          cols={[
+            {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true},
+            {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2},
+            {id: 'rule', label: t('conn.rule'), minWidth: 152, grow: 2, drop: 1},
+            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3},
+            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5},
+            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4}
+          ]}
+          render={f => [
+            <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
+            chainLabel(f),
+            <span className="rp-rule">
+              <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>
+              {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
+            </span>,
+            f.network.toUpperCase(),
+            t(connectionStates[f.state]),
+            relativeStart(f.started_at, locale)
+          ]}
+        />
+        <DetailPanel
+          open={!!flow || (!!id && detail.loading)}
+          title={flow?.input?.domain || flow?.input?.dst || flow?.id || id || ''}
+          onClose={() => select(null)}
+        >
+          {detail.error && <ErrorMessage error={detail.error} />}
+          {!flow && detail.loading && <Loading>{t('flow.detailLoading')}</Loading>}
+          {flow && (
+            <>
+              <div className="rp-cluster">
+                <Badge tone={flow.trace.status === 'complete' ? undefined : 'warn'}>{t(traceStates[flow.trace.status])}</Badge>
+                <span className="rp-label">{t('flow.revision', {n: flow.revision})}</span>
+              </div>
+              <Kv
+                inline
+                items={[
+                  [t('ui.state'), t(connectionStates[flow.state])],
+                  [t('ui.outbound'), flow.outbound ?? '—'],
+                  ...(flow.trace.missing.length
+                    ? [
+                        [
+                          t('flow.missing'),
+                          formatList(
+                            lang,
+                            flow.trace.missing.map(stage => (stages[stage] ? t(stages[stage]) : stage))
+                          )
+                        ] as [string, string]
+                      ]
+                    : [])
+                ]}
+              />
+              {flow.connection_id && (
+                <Button small onPress={() => go('connections', 'id=' + encodeURIComponent(flow.connection_id ?? ''))}>
+                  {t('flow.viewConnection')}
+                </Button>
+              )}
+              <div className="rp-list">
+                {!flow.trace.steps.length && <div className="rp-empty">{t('ui.empty')}</div>}
+                {[...flow.trace.steps]
+                  .sort((a, b) => a.seq - b.seq)
+                  .map(step => {
+                    const fields = flowStepFields(step);
+                    return (
+                      <div key={step.seq} className="rp-col rp-step">
+                        <div className="rp-cluster">
+                          <Badge>{stages[step.stage] ? t(stages[step.stage]) : step.stage}</Badge>
+                          <TextTooltip text={localTime(step.observed_at, locale)} className="rp-label">
+                            {t('ui.microseconds', {n: step.elapsed_us ?? '—'})}
+                          </TextTooltip>
+                        </div>
+                        {fields ? (
+                          <Kv
+                            inline
+                            items={fields.map(([key, value]) => [
+                              typeof key === 'string' ? t(key) : t(key.key, key.params),
+                              typeof value === 'string' ? value : t(value.key, value.params)
+                            ])}
+                          />
+                        ) : (
+                          <pre className="rp-flow-raw">
+                            <code>{JSON.stringify(step.data, null, 2)}</code>
+                          </pre>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          )}
+        </DetailPanel>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,8 @@ import type {
   RuntimeOutbounds,
   TrafficHistory,
   TrafficHistoryQuery,
+  MemoryHistory,
+  MemoryHistoryQuery,
   Datapath,
   DatapathDetail,
   RuntimeMemory,
@@ -31,7 +33,7 @@ import type {
   OperationState,
   EventOptions
 } from './model';
-import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
+import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
 
 export interface Api {
@@ -41,6 +43,7 @@ export interface Api {
   runtime(signal?: AbortSignal): Promise<Runtime>;
   runtimeOutbounds(signal?: AbortSignal): Promise<RuntimeOutbounds>;
   trafficHistory(query?: TrafficHistoryQuery, signal?: AbortSignal): Promise<TrafficHistory>;
+  memoryHistory(query?: MemoryHistoryQuery, signal?: AbortSignal): Promise<MemoryHistory>;
   datapath(detail?: DatapathDetail, signal?: AbortSignal): Promise<Datapath>;
   runtimeMemory(signal?: AbortSignal): Promise<RuntimeMemory>;
   nodes(query?: NodeQuery, signal?: AbortSignal): Promise<NodeList>;
@@ -54,6 +57,7 @@ export interface Api {
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
+  closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
   routingTrace(request: RoutingTraceRequest, signal?: AbortSignal): Promise<RoutingTraceResponse>;
@@ -65,5 +69,4 @@ export interface Api {
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
   /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
-  configRules(): MockConfigRules | null;
 }

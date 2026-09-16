@@ -142,6 +142,7 @@ export function createMockApi(): Api {
           runtime: '/api/v1/runtime',
           runtime_outbounds: '/api/v1/runtime/outbounds',
           traffic_history: '/api/v1/runtime/traffic/history',
+          memory_history: '/api/v1/runtime/memory/history',
           operations: '/api/v1/operations/{id}'
         }
       };
@@ -190,6 +191,39 @@ export function createMockApi(): Api {
         samples: structuredClone(samples.filter((_, i) => (samples.length - 1 - i) % stride === 0))
       };
     },
+    memoryHistory: async (query, signal) => {
+      signal?.throwIfAborted();
+      const limits = capabilities.resources.memory_history;
+      if (!limits.available) throw new ApiError(404, 'not_found', 'Memory history unavailable');
+      const window_seconds = query?.window_seconds ?? limits.max_window_seconds!;
+      const max_points = query?.max_points ?? limits.max_points!;
+      if (
+        !Number.isSafeInteger(window_seconds) ||
+        window_seconds < 1 ||
+        window_seconds > limits.max_window_seconds! ||
+        !Number.isSafeInteger(max_points) ||
+        max_points < 1 ||
+        max_points > limits.max_points!
+      )
+        throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
+      // The ring is synthesised on read: one sample every five seconds back through the window, with the
+      // same slow drift the memory snapshot follows, so the curve and the tile agree at the newest point.
+      const now = Date.now();
+      const every = 5;
+      const count = Math.min(Math.floor(window_seconds / every), max_points);
+      const stride = Math.max(1, Math.ceil(window_seconds / every / max_points));
+      const samples = Array.from({length: count}, (_, i) => {
+        const at = now - (count - 1 - i) * every * stride * 1000;
+        const drift = 1 + 0.04 * Math.sin(at / 60000);
+        return {
+          sampled_at: new Date(at).toISOString(),
+          rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift)),
+          cgroup_current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift)),
+          kernel_ebpf_bytes: fixtures.runtimeMemory.kernel?.ebpf_bytes ?? null
+        };
+      });
+      return {observed_at: new Date(now).toISOString(), window_seconds, sampled_every_seconds: every * stride, samples};
+    },
     datapath: async (detail, signal) => {
       signal?.throwIfAborted();
       const snapshot = structuredClone(fixtures.datapath);
@@ -201,7 +235,14 @@ export function createMockApi(): Api {
     },
     runtimeMemory: async signal => {
       signal?.throwIfAborted();
-      return structuredClone(fixtures.runtimeMemory);
+      // Each poll is a fresh observation with a little drift, so memory sparklines and charts get a shape.
+      const memory = structuredClone(fixtures.runtimeMemory);
+      const now = Date.now();
+      const drift = 1 + 0.04 * Math.sin(now / 60000);
+      memory.observed_at = new Date(now).toISOString();
+      memory.process = {rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift))};
+      memory.cgroup = {...memory.cgroup!, current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))};
+      return memory;
     },
     nodes: async (query, signal) => {
       signal?.throwIfAborted();
@@ -427,6 +468,19 @@ export function createMockApi(): Api {
         })
       };
     },
+    closeConnection: async (connectionId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.connections.can_close) throw new ApiError(404, 'capability_not_supported', 'Closing connections is unavailable');
+      for (const list of [connections.tcp, connections.udp]) {
+        const index = list.findIndex(c => c.id === connectionId);
+        if (index < 0) continue;
+        // Only the userspace datapath can cancel what it owns; kernel-observed entries stay.
+        if (list[index].observed_by === 'ebpf') throw new ApiError(409, 'state_conflict', 'Connection is not owned by the userspace datapath');
+        list.splice(index, 1);
+        return;
+      }
+      throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
     deleteDnsEntry: async (entryId, signal) => {
       signal?.throwIfAborted();
       const index = dnsCache.entries.findIndex(entry => entry.entry_id === entryId);
@@ -468,7 +522,6 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events,
-    configRules: () => fixtures.configRules
+    subscribeEvents: events
   };
 }

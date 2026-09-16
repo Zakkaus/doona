@@ -1,10 +1,10 @@
 import {useT} from '../../i18n';
-import {useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Kv, Segmented, Switch, toast} from '../../ui/ui';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 
 function PolicyCard({
@@ -34,6 +34,9 @@ function PolicyCard({
     count: (n: number, down: number) => (down ? t('policy.membersDown', {n, down}) : t('policy.members', {n}))
   };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
+  useEffect(() => {
+    if (control.error) toast('negative', errorText(control.error));
+  }, [control.error]);
   const g = control.data;
   const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id)})) ?? [], [g, health]);
   const tcp = g?.runtime.selection.tcp?.member_id;
@@ -44,13 +47,11 @@ function PolicyCard({
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
   return (
     <section className="rp-card" aria-label={g?.name ?? id}>
-      {control.error && (
-        <p role="alert" className="rp-note">
-          {t('policy.error', {error: control.error.message})}
-        </p>
-      )}
+      <ErrorMessage error={control.error} />
       {!g ? (
-        <p role="status">{t('policy.loading', {id})}</p>
+        control.error ? null : (
+          <Loading>{t('policy.loading', {id})}</Loading>
+        )
       ) : (
         <>
           <div className="rp-row">
@@ -61,6 +62,7 @@ function PolicyCard({
             </span>
             <Button
               small
+              isPending={control.busy === 'probe'}
               isDisabled={!!control.busy || !g.capabilities.probe_transports.includes('tcp')}
               tip={!g.capabilities.probe_transports.includes('tcp') ? t('policy.noProbe') : undefined}
               onPress={() => {
@@ -85,10 +87,14 @@ function PolicyCard({
               [t('ui.revision'), g.config_revision]
             ]}
           />
-          <details>
-            <summary>{t('ui.config')}</summary>
-            <Kv items={groupConfigFields(g)} />
-          </details>
+          <Disclosure id={id} title={t('ui.config')}>
+            <Kv
+              items={groupConfigFields(g).map(([key, value]) => [
+                typeof key === 'string' ? t(key) : t(key.key, key.params),
+                typeof value === 'string' ? value : t(value.key, value.params)
+              ])}
+            />
+          </Disclosure>
           <div className="rp-toolbar">
             {selectable && (
               <Segmented
@@ -151,18 +157,14 @@ export function Policies() {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
-      {(groups.error || nodes.error) && (
-        <p role="alert" className="rp-note">
-          {t('policy.loadFailed', {error: (groups.error ?? nodes.error)?.message ?? ''})}
-        </p>
-      )}
-      {groups.loading && !groups.data && <p role="status">{t('ui.loading')}</p>}
-      {groups.data?.length === 0 && <p className="rp-note">{t('policy.empty')}</p>}
-      <div className="rp-col">
+      <ErrorMessage error={groups.error ?? nodes.error} />
+      {groups.loading && !groups.data && <Loading />}
+      {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
+      <DisclosureGroup>
         {groups.data?.map(g => (
           <PolicyCard key={g.id} id={g.id} health={health} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />
         ))}
-      </div>
+      </DisclosureGroup>
     </div>
   );
 }

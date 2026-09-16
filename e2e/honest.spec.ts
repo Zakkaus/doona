@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {detail, expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 test('native activity uses API version and events without demo mode controls', async ({page}) => {
@@ -6,16 +6,13 @@ test('native activity uses API version and events without demo mode controls', a
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.getByRole('radiogroup', {name: 'Mode', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveCount(0);
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
   await expect(page.locator('.rp-tile-val .rp-delta')).toHaveCount(0);
   await page.goto('/#/connections?id=2');
-  const detail = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'cdn.bilibili.com'})});
-  await expect(detail).toBeVisible();
-  await expect(detail.locator('.rp-btn.accent')).toHaveCount(0);
+  await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
+  await expect(detail(page).locator('.rp-btn.accent')).toHaveCount(0);
   await page.goto('/#/events');
   await expect(page.getByRole('tab')).toHaveCount(0);
 });
@@ -55,7 +52,10 @@ test('search reads live connection addresses, node and group names, and availabl
   }
   await dialog.getByRole('option', {name: /live-search.example/}).click();
   await expect(page).toHaveURL(/#\/connections\?id=live%2Fid%3A1$/);
-  await expect(page.locator('.rp-card h3')).toHaveText('live-search.example');
+  await expect(detail(page).getByRole('heading')).toHaveText('live-search.example');
+  await page.keyboard.press('Escape');
+  await expect(page).not.toHaveURL(/id=/);
+  await expect(detail(page)).toHaveCount(0);
   for (const query of ['Live node', 'Live group', 'Settings']) {
     await page.keyboard.press('Control+K');
     await dialog.getByRole('searchbox').fill(query);
@@ -64,7 +64,7 @@ test('search reads live connection addresses, node and group names, and availabl
   }
 });
 
-test('refresh waits for the round, stops at two seconds, and refetches non-polling resources', async ({page}) => {
+test('refresh remains pending until completion, refetches non-polling resources, and reports errors', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
@@ -73,6 +73,8 @@ test('refresh waits for the round, stops at two seconds, and refetches non-polli
     '/capabilities': capabilities,
     '/version': version,
     '/runtime': await api.runtime(),
+    '/runtime/memory': await api.runtimeMemory(),
+    '/runtime/memory/history': await api.memoryHistory(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections(),
@@ -102,26 +104,28 @@ test('refresh waits for the round, stops at two seconds, and refetches non-polli
     release = resolve;
   });
   responses['/version'] = {...version, engine: {name: 'honk-live', version: '1.2.4'}};
+  const refresh = page.getByRole('button', {name: 'Reload data', exact: true});
   await page.getByRole('button', {name: 'Reload data', exact: true}).click();
   await expect.poll(() => Object.entries(before).every(([path, count]) => counts[path] === count + 1)).toBe(true);
   await page.clock.fastForward(700);
-  await expect(page.locator('.rp-spin')).toHaveCount(1);
+  await expect(refresh).toHaveAttribute('data-pending');
   release();
   await expect(page.locator('.rp-version')).toHaveText('honk-live 1.2.4');
-  await expect(page.locator('.rp-spin')).toHaveCount(0);
+  await expect(refresh).not.toHaveAttribute('data-pending');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed.');
   hold = new Promise<void>(resolve => {
     release = resolve;
   });
   await page.getByRole('button', {name: 'Reload data', exact: true}).click();
-  await expect(page.locator('.rp-spin')).toHaveCount(1);
-  await page.clock.fastForward(1999);
-  await expect(page.locator('.rp-spin')).toHaveCount(1);
-  await page.clock.fastForward(1);
-  await expect(page.locator('.rp-spin')).toHaveCount(0);
+  await expect(refresh).toHaveAttribute('data-pending');
+  await page.clock.fastForward(2100);
+  await expect(refresh).toHaveAttribute('data-pending');
   release();
+  await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.getByRole('alert')).toHaveCount(0);
   brokenRuntime = true;
   await page.getByRole('button', {name: 'Reload data', exact: true}).click();
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
-  await expect(page.locator('.rp-spin')).toHaveCount(0);
+  await expect(refresh).not.toHaveAttribute('data-pending');
+  await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');
 });

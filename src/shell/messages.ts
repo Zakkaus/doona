@@ -2,10 +2,13 @@ import {defineMessages} from '../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'shell.shortcuts': '鍵盤快捷鍵',
+    'shell.shortcutHelp': '顯示快捷鍵說明',
+    'shell.shortcutSequence': '先按 g，再於 800 毫秒內按下頁面字母。輸入文字時不啟用快捷鍵。',
     'conn.chain': '鏈',
     'conn.rule': '規則',
     'conn.recomputed': '重算',
-    'nav.routingTrace': '路由追蹤',
+    'nav.rules': '規則',
     'lifecycle.starting': '啟動中',
     'lifecycle.running': '運行中',
     'lifecycle.reloading': '重載中',
@@ -16,7 +19,6 @@ export const messages = defineMessages({
     'nav.activity': '活動',
     'nav.overview': '概覽',
     'nav.connections': '連線',
-    'nav.clients': '客戶端',
     'nav.policies': '策略',
     'nav.dns': 'DNS',
     'nav.events': '事件',
@@ -75,10 +77,13 @@ export const messages = defineMessages({
     'palette.glassName': '玻璃'
   },
   'zh-CN': {
+    'shell.shortcuts': '键盘快捷键',
+    'shell.shortcutHelp': '显示快捷键说明',
+    'shell.shortcutSequence': '先按 g，再于 800 毫秒内按下页面字母。输入文字时不启用快捷键。',
     'conn.chain': '链',
     'conn.rule': '规则',
     'conn.recomputed': '重算',
-    'nav.routingTrace': '路由追踪',
+    'nav.rules': '规则',
     'lifecycle.starting': '启动中',
     'lifecycle.running': '运行中',
     'lifecycle.reloading': '重载中',
@@ -89,7 +94,6 @@ export const messages = defineMessages({
     'nav.activity': '活动',
     'nav.overview': '概览',
     'nav.connections': '连接',
-    'nav.clients': '客户端',
     'nav.policies': '策略',
     'nav.dns': 'DNS',
     'nav.events': '事件',
@@ -148,10 +152,13 @@ export const messages = defineMessages({
     'palette.glassName': '玻璃'
   },
   en: {
+    'shell.shortcuts': 'Keyboard shortcuts',
+    'shell.shortcutHelp': 'Show shortcut help',
+    'shell.shortcutSequence': 'Press g, then the page letter within 800 ms. Shortcuts are inactive while typing.',
     'conn.chain': 'Chain',
     'conn.rule': 'Rule',
     'conn.recomputed': 'Recomputed',
-    'nav.routingTrace': 'Routing trace',
+    'nav.rules': 'Rules',
     'lifecycle.starting': 'Starting',
     'lifecycle.running': 'Running',
     'lifecycle.reloading': 'Reloading',
@@ -162,7 +169,6 @@ export const messages = defineMessages({
     'nav.activity': 'Activity',
     'nav.overview': 'Overview',
     'nav.connections': 'Connections',
-    'nav.clients': 'Clients',
     'nav.policies': 'Policies',
     'nav.dns': 'DNS',
     'nav.events': 'Events',

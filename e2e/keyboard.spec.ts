@@ -21,3 +21,27 @@ test('tab order reaches the first navigation link', async ({page}) => {
   }
   await expect(page.locator('.rp-nav').first()).toBeFocused();
 });
+
+test('shortcut help and page sequences respect focus and the sequence deadline', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/activity');
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
+  await expect(help).toBeVisible();
+  await expect(help).toContainText('g c');
+  await page.keyboard.press('Escape');
+  await expect(help).toBeHidden();
+  await page.keyboard.press('g');
+  await page.clock.fastForward(801);
+  await page.keyboard.press('c');
+  await expect(page).toHaveURL(/#\/activity$/);
+  await page.keyboard.press('g');
+  await page.keyboard.press('c');
+  await expect(page).toHaveURL(/#\/connections$/);
+  const input = page.getByRole('searchbox', {name: 'Filter'});
+  await input.focus();
+  await page.keyboard.type('g a?');
+  await expect(input).toHaveValue('g a?');
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect(help).toBeHidden();
+});

@@ -16,25 +16,6 @@ import type {
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 import type {RuntimeOutbounds, TrafficHistory} from './model';
 
-export type ClientRow = {id: string; ip: string; active: number; download: bigint | null; outbounds: string};
-
-export function clientRows(snapshot: ConnectionList | undefined): ClientRow[] {
-  const rows = new Map<string, {id: string; ip: string; active: number; download: bigint | null; outbounds: Set<string>}>();
-  for (const c of connectionRows(snapshot)) {
-    if (!c.src) continue;
-    const ip = c.src.startsWith('[') ? c.src.slice(0, c.src.indexOf(']') + 1) : c.src.split(':').length > 2 ? '[' + c.src + ']' : c.src.split(':')[0];
-    let row = rows.get(ip);
-    if (!row) {
-      row = {id: ip, ip, active: 0, download: 0n, outbounds: new Set()};
-      rows.set(ip, row);
-    }
-    if (c.state === 'active') row.active++;
-    row.download = addU64(row.download, c.download_bytes);
-    if (c.outbound) row.outbounds.add(c.outbound);
-  }
-  return [...rows.values()].map(row => ({...row, outbounds: [...row.outbounds].join('、')}));
-}
-
 /** The latency column compares one fixed observation tuple; missing is unknown. */
 export function preferredHealth(node: Node): HealthObservation | undefined {
   return node.health.find(
@@ -134,15 +115,53 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 }
 
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
+const flowWords: Record<string, Key> = {
+  kernel: 'flow.v.kernel',
+  userspace: 'flow.v.userspace',
+  matched: 'flow.v.matched',
+  other_family_trusted: 'flow.v.otherFamilyTrusted',
+  failed: 'flow.v.failed',
+  not_required: 'flow.v.notRequired',
+  unavailable: 'flow.v.unavailable',
+  pass: 'flow.v.pass',
+  redirect: 'flow.v.redirect',
+  hold: 'flow.v.hold',
+  arm_direct: 'flow.v.armDirect',
+  activate_direct: 'flow.v.activateDirect',
+  activate_proxy: 'flow.v.activateProxy',
+  drop: 'flow.v.drop',
+  started: 'flow.v.started',
+  succeeded: 'flow.v.succeeded',
+  cancelled: 'flow.v.cancelled',
+  transport_ready: 'flow.v.transportReady',
+  target_request_sent: 'flow.v.targetRequestSent',
+  target_confirmed: 'flow.v.targetConfirmed',
+  first_reply: 'flow.v.firstReply',
+  terminal: 'flow.v.terminal',
+  unknown: 'ui.unknown',
+  route_selected: 'flow.v.routeSelected',
+  no_new_routing_input: 'flow.v.noNewRoutingInput',
+  reply_received: 'flow.v.replyReceived',
+  hit: 'flow.v.hit',
+  miss: 'flow.v.miss',
+  cache: 'flow.v.cache',
+  upstream: 'ui.upstream'
+};
+// Known engine words become message keys; anything else stays as the engine reported it.
+const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
+const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
+
 export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
   const text = (value: unknown) => (value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
   switch (step.stage) {
     case 'input':
-      return Object.entries(step.data.values).map(([key, value]) => [{key: 'flow.f.input', params: {name: key}}, text(value)]);
+      return Object.entries(step.data.values)
+        .filter(([, value]) => value != null && value !== '')
+        .map(([key, value]) => [{key: 'flow.f.input', params: {name: key}}, text(value)]);
     case 'route':
       return [
         ['flow.f.chain', step.data.chain],
-        ['flow.f.plane', step.data.plane],
+        ['flow.f.plane', word(step.data.plane)],
         [
           'ui.rule',
           step.data.rules
@@ -151,17 +170,18 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
             .join('；') || '—'
         ],
         ['ui.outbound', text(step.data.outbound)],
-        ['flow.f.must', text(step.data.must)]
+        ['flow.f.must', yesNo(step.data.must)]
       ];
     case 'dial_mode':
       return [
         ['flow.f.dialTarget', step.data.configured + ' → ' + step.data.effective_target],
-        ['flow.f.verification', step.data.verification]
+        ['flow.f.verification', word(step.data.verification)]
       ];
     case 'dns':
       return [
         ['ui.name', step.data.name],
-        ['flow.f.sourceCache', step.data.source + ' / ' + step.data.cache],
+        ['flow.f.source', word(step.data.source)],
+        ['flow.f.cache', word(step.data.cache)],
         ['ui.upstream', text(step.data.upstream)],
         ['flow.f.selectedIp', text(step.data.selected_ip)]
       ];
@@ -171,34 +191,52 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
         ['flow.f.selectionPath', step.data.selection_path.map(p => p.group_id + ' → ' + text(p.member_name ?? p.member_id)).join(' / ') || '—'],
         ['flow.f.leafNode', text(step.data.leaf_node_id)],
         ['ui.target', text(step.data.target)],
-        ['ui.state', step.data.status]
+        ['ui.state', word(step.data.status)]
       ];
     case 'connection':
       return [
         ['ui.state', {key: connectionStates[step.data.state]}],
-        ['flow.f.milestone', step.data.milestone],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.milestone', word(step.data.milestone)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     case 'datapath':
       return [
-        ['flow.f.plane', step.data.plane],
-        ['flow.f.action', step.data.action],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.plane', word(step.data.plane)],
+        ['flow.f.action', word(step.data.action)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     case 'reroute':
       return [
-        ['flow.f.performed', text(step.data.performed)],
-        ['flow.f.reason', step.data.reason]
+        ['flow.f.performed', yesNo(step.data.performed)],
+        ['flow.f.reason', word(step.data.reason)]
       ];
     default:
       return null;
   }
 }
 
-export function groupConfigFields(group: Group): Array<[string, string]> {
+const groupConfigLabels: Record<string, Key> = {
+  default_member_id: 'policy.cfg.defaultMember',
+  final_outbound: 'policy.cfg.finalOutbound',
+  check_url: 'policy.cfg.checkUrl',
+  check_interval: 'policy.cfg.checkInterval',
+  tolerance: 'policy.cfg.tolerance',
+  idle_timeout: 'policy.cfg.idleTimeout',
+  interrupt_connections: 'policy.cfg.interruptConnections'
+};
+const secondsFields = new Set(['check_interval', 'idle_timeout']);
+const millisFields = new Set(['tolerance']);
+// Known fields get a label and a unit; anything the contract adds later shows its raw name.
+export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
   return Object.entries(group.config)
     .filter(([, value]) => value !== null)
-    .map(([key, value]) => [key, String(value)]);
+    .map(([key, value]) => {
+      const label: Key | MessageRef = groupConfigLabels[key] ?? {key: 'flow.f.input', params: {name: key}};
+      if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
+      if (typeof value === 'number' && secondsFields.has(key)) return [label, {key: 'policy.cfg.seconds', params: {n: value}}];
+      if (typeof value === 'number' && millisFields.has(key)) return [label, {key: 'policy.cfg.millis', params: {n: value}}];
+      return [label, String(value)];
+    });
 }
 
 export function probeSummary(result: ProbeResult): MessageRef {
@@ -220,22 +258,52 @@ export function probeSummary(result: ProbeResult): MessageRef {
 
 // Field lists take a label function so the pages can translate the keys; values stay contract vocabulary.
 export type LabelFn = (key: Key) => string;
+// Enum values shown to people go through the dictionary; anything outside the contract shows as is.
+const datapathValues: Record<string, Key> = {
+  ebpf: 'ov.v.ebpf',
+  userspace: 'ov.v.userspace',
+  mock: 'ov.v.mock',
+  active: 'ov.v.active',
+  degraded: 'ov.v.degraded',
+  detached: 'ov.v.detached',
+  failed: 'ov.v.failed',
+  disabled: 'ov.v.disabled',
+  full: 'ov.v.full',
+  partial: 'ov.v.partial',
+  none: 'ov.v.none',
+  real: 'ov.v.real',
+  loaded: 'ov.v.loaded',
+  not_loaded: 'ov.v.notLoaded',
+  attached: 'ov.v.attached',
+  partially_attached: 'ov.v.partiallyAttached',
+  published: 'ov.v.published',
+  not_published: 'ov.v.notPublished',
+  healthy: 'ov.v.healthy',
+  ready: 'ov.v.ready',
+  error: 'ov.v.error',
+  unknown: 'ov.v.unknown',
+  ingress: 'ov.v.ingress',
+  egress: 'ov.v.egress'
+};
+export function datapathValue(value: string, label: LabelFn): string {
+  return datapathValues[value] ? label(datapathValues[value]) : value;
+}
 export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn): Array<[string, string]> {
   const ebpf = datapath.ebpf;
   const occupancy = ebpf?.maps?.conn_state;
+  const v = (value: string) => datapathValue(value, label);
   return [
-    [label('ov.f.kind'), datapath.kind],
-    [label('ov.f.state'), datapath.state],
-    [label('ov.f.visibility'), datapath.visibility],
+    [label('ov.f.kind'), v(datapath.kind)],
+    [label('ov.f.state'), v(datapath.state)],
+    [label('ov.f.visibility'), v(datapath.visibility)],
     ...(ebpf
       ? ([
-          [label('ov.f.backend'), ebpf.backend],
-          [label('ov.f.programs'), ebpf.programs],
-          [label('ov.f.hooks'), ebpf.hooks],
-          [label('ov.f.routing'), ebpf.routing.state + ' / ' + (ebpf.routing.generation_id ?? '—')],
-          [label('ov.f.health'), ebpf.health],
-          [label('ov.f.lastError'), ebpf.last_error ?? '—'],
-          [label('ov.f.maps'), ebpf.maps?.state ?? '—'],
+          [label('ov.f.backend'), v(ebpf.backend)],
+          [label('ov.f.programs'), v(ebpf.programs)],
+          [label('ov.f.hooks'), v(ebpf.hooks)],
+          [label('ov.f.routing'), v(ebpf.routing.state)],
+          [label('ov.f.health'), v(ebpf.health)],
+          [label('ov.f.maps'), v(ebpf.maps?.state ?? 'unknown')],
           [label('ov.f.connState'), occupancy?.occupancy_known && occupancy.occupancy !== null ? occupancy.occupancy + ' / ' + occupancy.capacity : unknown]
         ] as Array<[string, string]>)
       : [])
@@ -247,7 +315,7 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn): Array<[stri
     [label('ov.f.rss'), formatBytes(memory.process?.rss_bytes ?? null)],
     [label('ov.f.cgroupCurrent'), formatBytes(memory.cgroup?.current_bytes ?? null)],
     [label('ov.f.cgroupLimit'), formatBytes(memory.cgroup?.limit_bytes ?? null)],
-    [label('ov.f.cgroupPercent'), percent === null ? '—' : percent + '%'],
+    [label('ov.f.cgroupPercent'), percent === null ? '—' : Math.round(percent) + '%'],
     [label('ov.f.oomHigh'), memory.cgroup?.events?.high ?? '—'],
     [label('ov.f.oom'), memory.cgroup?.events?.oom ?? '—'],
     [label('ov.f.oomKill'), memory.cgroup?.events?.oom_kill ?? '—'],

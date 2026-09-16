@@ -1,9 +1,9 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {chainLabel, clientRows, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
+import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
 import {addU64, formatRate} from './u64';
 import type {ApiEvent} from './model';
-import {connectionFixtures, connections, trafficHistory} from './mock/fixtures';
+import {connectionFixtures, trafficHistory} from './mock/fixtures';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -358,22 +358,4 @@ it('uses fallback when every earlier predicate is false', async () => {
   expect(evaluation).toMatchObject({decision: 'determinate', outbound: 'resilient', missing_inputs: []});
   expect(evaluation.rules.slice(0, -1).every(r => r.result === 'not_matched')).toBe(true);
   expect(evaluation.rules.at(-1)).toMatchObject({rule_id: 'fallback', result: 'matched'});
-});
-
-it('groups source ports without losing IPv6 hosts or UInt64 precision', () => {
-  const c = connections.tcp[0];
-  const rows = clientRows({
-    ...connections,
-    tcp: [
-      {...c, src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
-      {...c, src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
-      {...c, src: '10.0.0.7:123', download_bytes: null},
-      {...c, src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
-    ],
-    udp: []
-  });
-  expect(rows).toEqual([
-    {id: '[2001:db8::1]', ip: '[2001:db8::1]', active: 2, download: 9007199254741000n, outbounds: 'proxy、direct'},
-    {id: '10.0.0.7', ip: '10.0.0.7', active: 1, download: null, outbounds: 'proxy'}
-  ]);
 });

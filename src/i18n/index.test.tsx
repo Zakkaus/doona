@@ -14,10 +14,10 @@ it('substitutes placeholders once and selects plural forms in the active languag
         <Message messageKey={key} params={params} />
       </LangContext.Provider>
     );
-  expect(render('en', 'act.nTimeouts', {n: 1, list: '{n}'})).toBe('1 node timed out: {n}');
-  expect(render('en', 'act.nTimeouts', {n: 2, list: 'edge-a, edge-b'})).toBe('2 nodes timed out: edge-a, edge-b');
-  expect(render('zh-TW', 'act.nTimeouts', {n: 1, list: 'edge-a'})).toBe('1 個節點逾時：edge-a');
-  expect(render('zh-CN', 'act.nTimeouts', {n: 2, list: 'edge-a、edge-b'})).toBe('2 个节点超时：edge-a、edge-b');
+  expect(render('en', 'dns.deleted', {n: 1})).toBe('Deleted 1 cache entry');
+  expect(render('en', 'dns.deleted', {n: 2})).toBe('Deleted 2 cache entries');
+  expect(render('zh-TW', 'dns.deleted', {n: 1})).toBe('已刪除 1 筆快取');
+  expect(render('zh-CN', 'dns.deleted', {n: 2})).toBe('已删除 2 条缓存');
 });
 
 it('never overwrites a message from another module during merging', () => {

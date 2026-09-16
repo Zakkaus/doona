@@ -84,12 +84,12 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
   try {
     await page.goto('/#/activity', {waitUntil: 'domcontentloaded'});
     await expect(page.locator('.rp-donut .center')).toBeVisible();
-    await expect(page.locator('.rp-legend')).toBeVisible();
+    await expect(page.locator('.rp-legend').first()).toBeVisible();
     const cards = page.locator('.rp-content .rp-card');
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
     await expect(page.locator('.recharts-surface')).toHaveCount(0);
     release();
-    await expect(page.locator('.recharts-surface')).toHaveCount(5);
+    await expect(page.locator('.recharts-surface')).toHaveCount(6);
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();

@@ -14,7 +14,6 @@ import type {
   TrafficHistory,
   Version
 } from '../model';
-import type {ConfigRule, MockConfigRules} from '../model';
 import {createFlow, flowFields, type ConnectionSeed} from './flows';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
@@ -150,6 +149,7 @@ export const capabilities: Capabilities = {
     datapath: {available: true, kinds: ['ebpf'], details: ['attachments', 'maps']},
     runtime_outbounds: {available: true},
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
+    memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     nodes: {available: true},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {
@@ -170,7 +170,7 @@ export const capabilities: Capabilities = {
         global_requests_per_minute: 120
       }
     },
-    connections: {available: true},
+    connections: {available: true, can_close: true, max_bulk_close: 200},
     flows: {
       available: true,
       recording: 'on',
@@ -223,12 +223,16 @@ export const capabilitiesBase: Capabilities = {
     ...capabilities.resources,
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
+    memory_history: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}
   }
 };
 
+// The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
+type ConfigRule = {id: string; n: number; cond: string; target: string; must: boolean; source: string; note: string; editable: boolean; generated?: boolean};
+export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const rules: ConfigRule[] = [
   {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
   {
@@ -305,7 +309,11 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
       interrupt_connections: false
     },
     runtime: {
-      selection: {tcp: selection, udp: {...selection}},
+      // The proxy group selects different members per network so the TCP/UDP switch has something to show.
+      selection: {
+        tcp: selection,
+        udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
+      },
       health: nodes
         .filter(n => members.includes(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))

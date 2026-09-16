@@ -25,6 +25,7 @@ test('saving mock and a token reloads and restores the default activity route', 
   await page.getByRole('button', {name: t('settings.hideToken'), exact: true}).click();
   await expect(page.locator('.rp-content')).not.toContainText('test-secret');
   await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await expect(page.locator('.rp-toast.positive')).toContainText('Settings saved.');
   await expect(page.locator('[name=api]')).toHaveValue('mock');
   await expect(page.locator('[name=token]')).toHaveValue('test-secret');
   await expect(page.locator('[name=token]')).toHaveAttribute('type', 'password');

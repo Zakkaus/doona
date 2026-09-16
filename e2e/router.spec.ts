@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 
 test('same-route query changes selection through browser history', async ({page}) => {
-  await page.goto('/#/flows');
+  await page.goto('/#/flows?id=flow-1');
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await expect(selected).toHaveAttribute('data-key', 'flow-1');
   await page.evaluate(() => {

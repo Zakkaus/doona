@@ -1,10 +1,9 @@
 import type {Key} from '../i18n/messages';
-import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
+import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
 import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
-import {clientRows} from './selectors';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -201,6 +200,17 @@ export function useTrafficHistory(range: string, capabilities: Capabilities | un
     }
   );
 }
+// Ten minutes at the recorder cadence; the chart shows what the producer retained, not a local accumulation.
+export function useMemoryHistory(capabilities: Capabilities | undefined) {
+  const api = getApi();
+  const limits = capabilities?.resources.memory_history;
+  const window_seconds = Math.min(600, limits?.max_window_seconds ?? 600);
+  const max_points = Math.min(120, limits?.max_points ?? 120);
+  return useResource(
+    {key: ['memoryHistory', {window_seconds, max_points}], fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
+    {deps: [api, window_seconds, max_points], enabled: limits?.available === true}
+  );
+}
 export function useNodes() {
   const api = getApi();
   return useResource(
@@ -225,32 +235,28 @@ export function useGroups() {
   return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000});
 }
 export function useConnections(src?: string) {
-  return useConnectionList(src, 'connections');
-}
-function useConnectionList(src: string | undefined, invalidateAs: 'connections' | 'clients') {
   const api = getApi();
   return useResource(
-    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal), invalidateAs},
+    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
     {deps: [api, src]}
   );
 }
-export function useConfigRules() {
-  const api = getApi();
-  const resource = useResource({key: ['configRules'], fetch: async () => api.configRules()}, {deps: [api], every: 0});
-  return resource.data === undefined ? api.configRules() : resource.data;
-}
 
-const firstSeen = new Map<string, string>();
-export function useClients() {
-  const connections = useConnectionList(undefined, 'clients');
-  const rows = useMemo(() => {
-    const now = new Date().toISOString();
-    return clientRows(connections.data).map(row => {
-      if (!firstSeen.has(row.ip)) firstSeen.set(row.ip, now);
-      return {...row, firstSeen: firstSeen.get(row.ip)!};
-    });
-  }, [connections.data]);
-  return {...connections, rows};
+// Closing one connection: the list refetches on success; a 409 is the backend saying it does not own the transport.
+export function useConnectionClose(refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<string | null>(null);
+  async function close(id: string) {
+    if (busy) return;
+    setBusy(id);
+    try {
+      await api.closeConnection(id);
+      refetch();
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {busy, close};
 }
 
 export function useRoutingTrace() {
