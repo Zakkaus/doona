@@ -86,9 +86,7 @@ export function Overview() {
         </div>
         <div className="rp-cluster">
           <Button
-            quiet
-            icon
-            label={t('ov.export')}
+            secondary
             isDisabled={!runtime.data}
             onPress={() =>
               downloadFile(
@@ -110,6 +108,7 @@ export function Overview() {
             }
           >
             <Download />
+            {t('ov.export')}
           </Button>
           {(['reload', 'suspend', 'resume'] as const)
             .filter(kind => operations.canRun(kind) || operations.busy === kind)

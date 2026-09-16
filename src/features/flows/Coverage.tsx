@@ -1,7 +1,7 @@
 import {useT, useLang, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {FlowList} from '../../api/model';
-import {Badge, TextTooltip} from '../../ui/ui';
+import {Light, TextTooltip} from '../../ui/ui';
 
 const scopes: Record<string, Key> = {
   userspace_tcp: 'flow.userspaceTcp',
@@ -28,10 +28,16 @@ export function Coverage({data}: {data: Pick<FlowList, 'coverage' | 'dropped_rec
     <div className="rp-cluster" role="group" aria-label={t('flow.coverage')}>
       {partial.length > 0 && (
         <TextTooltip text={detail}>
-          <Badge tone="warn">{t('flow.coverageSummary', {n: partial.length})}</Badge>
+          <Light small tone="warn">
+            {t('flow.coverageSummary', {n: partial.length})}
+          </Light>
         </TextTooltip>
       )}
-      {dropped && <Badge tone="warn">{t('flow.dropped', {n: data.dropped_records ?? 0})}</Badge>}
+      {dropped && (
+        <Light small tone="warn">
+          {t('flow.dropped', {n: data.dropped_records ?? 0})}
+        </Light>
+      )}
     </div>
   );
 }

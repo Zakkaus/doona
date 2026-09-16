@@ -1580,6 +1580,10 @@ input {
 .flag.mark[data-kind='block'] {
   background: var(--rp-love);
 }
+.flag.mark[data-kind='node'] {
+  background: var(--rp-pine);
+  font-size: 8px;
+}
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);

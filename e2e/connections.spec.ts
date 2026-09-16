@@ -205,8 +205,12 @@ test('the connection list exports the filtered rows as CSV', async ({page}) => {
   await page.getByRole('button', {name: 'Export CSV', exact: true}).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^connections-.*\.csv$/);
-  const text = await (await file.createReadStream()).toArray().then(chunks => Buffer.concat(chunks as Buffer[]).toString('utf8'));
-  const lines = text.trim().split('\n');
+  // The download stream is read chunk by chunk; the spec stays free of Node typings.
+  const stream = await file.createReadStream();
+  const decoder = new TextDecoder();
+  let body = '';
+  for await (const chunk of stream as AsyncIterable<Uint8Array>) body += decoder.decode(chunk, {stream: true});
+  const lines = body.trim().split('\n');
   expect(lines[0]).toBe('id,target,domain,source,network,state,outbound,chain,rule,upload_bytes,download_bytes,started_at');
   expect(lines.length).toBe(151);
   expect(lines.slice(1).every(line => line.includes('api.telegram.org'))).toBe(true);

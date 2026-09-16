@@ -87,5 +87,13 @@ export function OutboundMark({name, className}: {name: string | null; className?
       </span>
     );
   }
+  // A node outside the flag table still gets a mark, so a chain column never has an empty slot.
+  if (!flagSvg(name)) {
+    return (
+      <span className={(className ?? 'flag') + ' mark'} data-kind="node" role="img" aria-hidden="true">
+        ◆
+      </span>
+    );
+  }
   return <Flag name={name} className={className} />;
 }

@@ -150,10 +150,14 @@ export function ConnectionTable({
                             formatBytes(row.download)
                           ) : column.id === 'chain' ? (
                             <TextTooltip>
-                              {formatList(
-                                lang,
-                                row.outbounds.map(name => outboundLabel(name, t))
-                              ) || '—'}
+                              {row.outbounds.length
+                                ? t('conn.groupOutbounds', {
+                                    list: formatList(
+                                      lang,
+                                      row.outbounds.map(name => outboundLabel(name, t))
+                                    )
+                                  })
+                                : '—'}
                             </TextTooltip>
                           ) : column.id === 'state' ? (
                             t('conn.activeCount', {n: row.active})

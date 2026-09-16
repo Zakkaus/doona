@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {useFlows} from '../../api/store';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {Badge, DataTable, Segmented, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {Badge, DataTable, Light, Segmented, ErrorMessage, TextTooltip} from '../../ui/ui';
 import {ruleDistribution, ruleDistributionSummary} from './distribution';
 import {Coverage} from '../flows/Coverage';
 
@@ -49,7 +49,11 @@ export function RuleList() {
           </TextTooltip>
         )}
         {summary && <Coverage data={{coverage: summary.coverage, dropped_records: summary.dropped}} />}
-        {summary && summary.dropped === null && <Badge tone="warn">{t('rule.droppedUnknown')}</Badge>}
+        {summary && summary.dropped === null && (
+          <Light small tone="warn">
+            {t('rule.droppedUnknown')}
+          </Light>
+        )}
       </div>
       {resource.error && <ErrorMessage error={resource.error} />}
       <DataTable
