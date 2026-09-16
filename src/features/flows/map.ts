@@ -77,3 +77,32 @@ export function flowsThrough(flows: FlowSummary[], id: string): FlowSummary[] {
     return !!part && part.label === label;
   });
 }
+
+// The map as lanes, one per outbound: the rules that lead into it on the left, the node it selects on the
+// right. Lanes never cross, which is what makes the config readable at a glance.
+export type Lane = {
+  outbound: MapNode;
+  rules: Array<{node: MapNode; count: number}>;
+  node: {node: MapNode; count: number; configured: boolean} | null;
+};
+export function lanes(map: FlowMap): Lane[] {
+  const byId = new Map(map.nodes.map(node => [node.id, node]));
+  return map.nodes
+    .filter(node => node.stage === 'outbound')
+    .map(outbound => {
+      const rules = new Map<string, number>();
+      let node: Lane['node'] = null;
+      for (const link of map.links) {
+        if (link.target === outbound.id && link.source.startsWith('rule:')) rules.set(link.source, (rules.get(link.source) ?? 0) + link.count);
+        if (link.source === outbound.id && link.target.startsWith('node:')) {
+          if (!node || link.count > node.count || (link.configured && !node.configured && link.count >= node.count))
+            node = {node: byId.get(link.target)!, count: link.count, configured: !!link.configured};
+        }
+      }
+      return {
+        outbound,
+        rules: [...rules].map(([id, count]) => ({node: byId.get(id)!, count})).sort((a, b) => b.count - a.count),
+        node
+      };
+    });
+}

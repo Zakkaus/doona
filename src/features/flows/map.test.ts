@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {flowMap, flowsThrough} from './map';
+import {flowMap, flowsThrough, lanes} from './map';
 
 it('lays the config out as columns and weights them with retained flows', async () => {
   const api = createMockApi();
@@ -26,4 +26,22 @@ it('lays the config out as columns and weights them with retained flows', async 
   // Sorted busiest first, unknowns after named entries of the same weight.
   const rules = stages('rule');
   for (let i = 1; i < rules.length; i++) expect(rules[i - 1].count).toBeGreaterThanOrEqual(rules[i].count);
+});
+
+it('folds the map into one lane per outbound with its rules and selected node', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
+  const map = flowMap(flows.flows, groups, nodes.nodes);
+  const rows = lanes(map);
+  expect(rows.map(lane => lane.outbound.label)).toEqual(map.nodes.filter(node => node.stage === 'outbound').map(node => node.label));
+  const proxy = rows.find(lane => lane.outbound.label === 'proxy')!;
+  expect(proxy.rules.reduce((sum, rule) => sum + rule.count, 0)).toBe(proxy.outbound.count);
+  expect(proxy.node?.node.label).toBe('hk-01');
+  // A group nothing used still shows its configured node, marked as configured only.
+  const airport = rows.find(lane => lane.outbound.label === 'airport')!;
+  expect(airport.rules).toEqual([]);
+  expect(airport.node?.configured).toBe(true);
+  expect(airport.node?.count).toBe(0);
+  // Terminal outbounds have no node.
+  expect(rows.find(lane => lane.outbound.label === 'direct')!.node).toBeNull();
 });

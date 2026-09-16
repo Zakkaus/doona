@@ -1635,7 +1635,8 @@ input {
   border: 0;
   border-radius: 8px;
   padding: 6px 8px;
-  margin: -6px -8px;
+  width: 100%;
+  box-sizing: border-box;
   cursor: pointer;
   outline: none;
   transition:
@@ -3012,48 +3013,68 @@ button.rp-node[data-focus-visible] {
   }
 }
 
-/* ---- Flow map: the routing config as four columns with thin connectors; a pinned path stays lit. ---- */
-.rp-flowmap {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr) minmax(0, 3fr);
-  gap: 96px;
-  align-items: start;
-}
-.rp-flowmap-links {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-.rp-flowmap-links path {
-  fill: none;
-  opacity: 0.85;
-  transition: opacity 150ms var(--rp-ease);
-}
-.rp-flowmap-links path[data-dim] {
-  opacity: 0.12;
-}
-.rp-flowmap-col {
-  position: relative;
+/* ---- Flow map: one lane per outbound, rules on the left, the selected node on the right; nothing crosses. ---- */
+.rp-lanes {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 0;
+  gap: 4px;
 }
-.rp-flowmap-head {
+.rp-lane {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) 32px minmax(0, 3fr) 32px minmax(0, 3fr);
+  gap: 0 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--rp-hl-low);
+  transition: opacity 150ms var(--rp-ease);
+}
+.rp-lane[data-dim] {
+  opacity: 0.35;
+}
+.rp-lane-head {
+  padding: 0 0 4px;
+  border-top: 0;
   font-size: 12px;
   line-height: 16px;
   color: var(--rp-muted);
-  padding: 0 4px;
+}
+.rp-lane-rules {
+  gap: 10px;
+  padding-right: 12px;
+  border-right: 2px solid var(--lane);
+}
+.rp-lane-arrow {
+  position: relative;
+  height: 2px;
+  background: var(--lane);
+}
+.rp-lane-arrow::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid var(--lane);
+  border-right: 2px solid var(--lane);
+  transform: rotate(45deg);
+}
+.rp-lane-arrow[data-empty] {
+  background: repeating-linear-gradient(90deg, var(--lane) 0 4px, transparent 4px 8px);
+  opacity: 0.6;
+}
+.rp-lane-terminal {
+  justify-self: start;
 }
 @media (max-width: 899px) {
-  .rp-flowmap {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .rp-lane {
+    grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
   }
-  .rp-flowmap-links {
+  .rp-lane-node,
+  .rp-lane-terminal,
+  .rp-lane > .rp-lane-arrow:nth-child(4),
+  .rp-lane > span:nth-child(4),
+  .rp-lane-head > :nth-child(n + 4) {
     display: none;
   }
 }
