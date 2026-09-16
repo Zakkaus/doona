@@ -60,7 +60,11 @@ export function Flows({go, query}: PageProps) {
     <div className="rp-page">
       {resource.error && <ErrorMessage error={resource.error} />}
       <section className="rp-card" aria-label={t('flow.map')}>
-        {resource.data || groups.data ? <FlowMap map={map} pinned={pinned} onPin={setPinned} /> : resource.error || groups.error ? null : <Loading />}
+        {resource.data || groups.data ? (
+          <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
+        ) : resource.error || groups.error ? null : (
+          <Loading />
+        )}
         {resource.data && !resource.data.flows.length && <span className="rp-empty">{t('flow.mapEmpty')}</span>}
       </section>
       <div className="rp-toolbar">

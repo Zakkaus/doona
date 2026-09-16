@@ -1028,6 +1028,39 @@ export function Tabs({
 // selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
 export const panelQuery = '(min-width: 1200px)';
 
+// A wrapping row of toggle chips with one selectable at a time; a count sits after the label when given.
+export function Chips({
+  label,
+  items,
+  value,
+  onChange
+}: {
+  label: string;
+  items: Array<{id: string; label: string; count?: string}>;
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  return (
+    <ToggleButtonGroup
+      className="rp-chips"
+      aria-label={label}
+      selectionMode="single"
+      selectedKeys={value ? [value] : []}
+      onSelectionChange={keys => {
+        const next = [...keys][0];
+        onChange(next == null ? null : String(next));
+      }}
+    >
+      {items.map(item => (
+        <ToggleButton key={item.id} id={item.id} className="rp-btn small">
+          <span className="rp-truncate">{item.label}</span>
+          {item.count !== undefined && <span className="n">{item.count}</span>}
+        </ToggleButton>
+      ))}
+    </ToggleButtonGroup>
+  );
+}
+
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
   useEffect(() => {

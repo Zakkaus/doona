@@ -704,7 +704,26 @@
   border-color: transparent;
   box-shadow: none;
 }
-:root[data-family='glass'] .rp-seg .rp-btn[data-selected] {
+:root[data-family='glass'] .rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-chips .rp-btn {
+  max-width: 100%;
+  min-width: 0;
+}
+.rp-chips .rp-btn .n {
+  color: var(--rp-subtle);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.rp-chips .rp-btn[data-selected] {
+  background: var(--rp-selected);
+  border-color: var(--rp-pine);
+}
+.rp-seg .rp-btn[data-selected] {
   color: var(--rp-text);
 }
 :root[data-family='glass'] .rp-slider {
@@ -2852,10 +2871,14 @@ button.rp-node[data-focus-visible] {
   cursor: default;
 }
 [data-focus-visible],
-.rp-truncate:focus-visible,
-.rp-input:focus-within {
+.rp-truncate:focus-visible {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
+}
+/* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
+.rp-input:focus-within {
+  border-color: var(--rp-pine);
+  box-shadow: 0 0 0 1px var(--rp-pine);
 }
 .rp-table [data-focus-visible],
 .rp-item[data-focus-visible] {
@@ -3008,35 +3031,55 @@ button.rp-node[data-focus-visible] {
   }
 }
 
-/* ---- Flow map: one lane per outbound, rules on the left, the selected node on the right; nothing crosses. ---- */
+/* ---- Routing map: one lane per outbound, rules on the left, the selected node on the right; nothing crosses. ---- */
 .rp-lanes {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 .rp-lane {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) 32px minmax(0, 3fr) 32px minmax(0, 3fr);
-  gap: 0 8px;
+  grid-template-columns: minmax(0, 5fr) 28px minmax(0, 2fr) 28px minmax(0, 3fr);
+  gap: 0 12px;
   align-items: center;
-  padding: 10px 0;
-  border-top: 1px solid var(--rp-hl-low);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--rp-overlay);
+  border-left: 4px solid var(--lane);
   transition: opacity 150ms var(--rp-ease);
 }
 .rp-lane[data-dim] {
   opacity: 0.35;
 }
+.rp-lane[data-kind='group'] {
+  --lane: var(--rp-pine);
+}
+.rp-lane[data-kind='direct'] {
+  --lane: var(--rp-foam);
+}
+.rp-lane[data-kind='block'] {
+  --lane: var(--rp-love);
+}
+.rp-lane[data-kind='unknown'] {
+  --lane: var(--rp-muted);
+}
+@media (max-width: 899px) {
+  .rp-lane {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px 0;
+  }
+  .rp-lane-arrow,
+  .rp-lane-head {
+    display: none;
+  }
+}
 .rp-lane-head {
-  padding: 0 0 4px;
-  border-top: 0;
+  padding: 0 16px;
+  background: none;
+  border-left: 4px solid transparent;
   font-size: 12px;
   line-height: 16px;
   color: var(--rp-muted);
-}
-.rp-lane-rules {
-  gap: 10px;
-  padding-right: 12px;
-  border-right: 2px solid var(--lane);
 }
 .rp-lane-arrow {
   position: relative;
@@ -3058,18 +3101,33 @@ button.rp-node[data-focus-visible] {
   background: repeating-linear-gradient(90deg, var(--lane) 0 4px, transparent 4px 8px);
   opacity: 0.6;
 }
-.rp-lane-terminal {
-  justify-self: start;
+.rp-lane-out {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
-@media (max-width: 899px) {
-  .rp-lane {
-    grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
-  }
-  .rp-lane-node,
-  .rp-lane-terminal,
-  .rp-lane > .rp-lane-arrow:nth-child(4),
-  .rp-lane > span:nth-child(4),
-  .rp-lane-head > :nth-child(n + 4) {
-    display: none;
-  }
+.rp-lane-out .rp-light {
+  font-weight: 700;
+}
+.rp-lane-out .rp-light[data-selected] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.rp-lane-node .rp-node {
+  height: auto;
+}
+/* Controls inside a lane sit on the overlay, so they take the surface to stay visible. */
+.rp-lane .rp-chips .rp-btn,
+.rp-lane .rp-node {
+  background: var(--rp-surface);
+  border-color: var(--rp-hl-med);
+}
+.rp-lane .rp-chips .rp-btn[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-lane .rp-chips .rp-btn[data-selected],
+.rp-lane .rp-node[data-selected] {
+  background: var(--rp-selected);
+  border-color: var(--rp-pine);
 }

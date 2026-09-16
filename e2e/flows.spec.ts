@@ -35,13 +35,13 @@ test('the traffic map lays the config out as lanes and a pinned item filters the
   const total = await rows.count();
   const lanes = map.locator('.rp-lane:not(.rp-lane-head)');
   // One lane per outbound: every configured group is there, used or not, with its selected node.
-  for (const group of ['proxy 3', 'direct 2', 'airport 0']) await expect(map.getByRole('button', {name: group, exact: true})).toBeVisible();
-  await expect(lanes.filter({has: page.getByRole('button', {name: 'airport 0', exact: true})})).toContainText('Selected');
-  await expect(lanes.filter({has: page.getByRole('button', {name: 'direct 2', exact: true})})).toContainText('Leaves directly');
-  const rule = map.getByRole('button', {name: 'dip(geoip:cn) 2', exact: true});
+  for (const group of ['proxy 3', 'direct 2', 'airport 0']) await expect(map.getByRole('radio', {name: group, exact: true})).toBeVisible();
+  await expect(lanes.filter({has: page.getByRole('radio', {name: 'airport 0', exact: true})})).toContainText('Selected');
+  await expect(lanes.filter({has: page.getByRole('radio', {name: 'direct 2', exact: true})})).toContainText('Leaves directly');
+  const rule = map.getByRole('radio', {name: 'dip(geoip:cn) 2', exact: true});
   await rule.click();
   await expect(page).toHaveURL(/path=rule%3Adip/);
-  await expect(rule).toHaveAttribute('aria-pressed', 'true');
+  await expect(rule).toHaveAttribute('aria-checked', 'true');
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('dip(geoip:cn)');
   expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
