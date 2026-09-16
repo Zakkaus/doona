@@ -1,7 +1,7 @@
 import {expect, routes, test} from './fixtures';
 
 // Keep install-time precaching out of the navigation request log.
-test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock', 'doona-backend': 'clash'}});
+test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock'}});
 
 for (const route of routes) {
   test(`cold navigation to ${route} loads its chunks`, async ({page}) => {

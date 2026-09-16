@@ -1,4 +1,3 @@
-export type BackendKind = 'native' | 'clash';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
 export type PaletteId =
@@ -16,7 +15,6 @@ export type PaletteId =
 export type Settings = {
   api: string | null;
   token: string;
-  backend: BackendKind;
   lang: 'zh-TW' | 'zh-CN' | 'en';
   scheme: Scheme;
   palette: PaletteId;
@@ -26,7 +24,6 @@ export type Settings = {
 const keys = {
   api: 'doona-api',
   token: 'doona-api-token',
-  backend: 'doona-backend',
   lang: 'doona-lang',
   scheme: 'doona-scheme',
   palette: 'doona-palette',
@@ -57,7 +54,6 @@ export function readSettings(storage?: Pick<Storage, 'getItem'>): Settings {
   return {
     api: read(keys.api),
     token: read(keys.token) ?? '',
-    backend: read(keys.backend) === 'clash' ? 'clash' : 'native',
     lang: lang === 'zh-CN' || lang === 'en' ? lang : 'zh-TW',
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
     palette: palette?.includes('/') ? (palette as PaletteId) : 'rose-pine/moon',

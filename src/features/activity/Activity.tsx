@@ -8,13 +8,11 @@ import {clientRows, connectionRows, eventSummary, lifecycleStates, localTime, ou
 import {addU64, formatBytes, formatRate, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Button, Segmented, Light, Bar} from '../../ui/ui';
-import {ModeControls} from '../clash-compat/ModeControls';
-import type {BackendKind} from '../settings/settings';
 import {NodeMenu} from '../policies/Nodes';
 import {Flag} from '../policies/Flag';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 
-export function Activity({go, backend}: {go: (page: string) => void; backend: BackendKind}) {
+export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -81,8 +79,7 @@ export function Activity({go, backend}: {go: (page: string) => void; backend: Ba
   const events = feed.events.slice(0, 6);
   return (
     <>
-      <div className={backend === 'clash' ? 'rp-quick' : 'rp-col'}>
-        {backend === 'clash' && <ModeControls groups={groupsResource.data} />}
+      <div className="rp-col">
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>

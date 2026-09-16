@@ -300,7 +300,6 @@ import {useEffect, type ReactElement} from 'react';
 import {
   Switch as RSwitch,
   TextField as RTextField,
-  TextArea as RTextArea,
   SearchField as RSearchField,
   Text,
   Label,
@@ -316,10 +315,6 @@ import {
   ModalOverlay,
   Dialog,
   Heading,
-  Tabs as RTabs,
-  TabList as RTabList,
-  Tab as RTab,
-  TabPanel as RTabPanel,
   type Selection,
   type SortDescriptor
 } from 'react-aria-components';
@@ -408,13 +403,6 @@ export function TextField({
           {error}
         </span>
       )}
-    </RTextField>
-  );
-}
-export function TextArea({label, value, onChange}: {label: string; value: string; onChange: (v: string) => void}) {
-  return (
-    <RTextField className="rp-field" value={value} onChange={onChange} aria-label={label}>
-      <RTextArea />
     </RTextField>
   );
 }
@@ -664,106 +652,6 @@ export function ModalDialog({
     </DialogTrigger>
   ) : (
     modal
-  );
-}
-export function Tabs({tabs, children, label}: {tabs: Array<[string, string]>; children: (id: string) => ReactNode; label: string}) {
-  const [sel, setSel] = useState(tabs[0][0]);
-  const [ref, pos] = useSlider(sel);
-  return (
-    <RTabs className="rp-tabs" selectedKey={sel} onSelectionChange={k => setSel(String(k))}>
-      <div ref={ref} className="rp-tabhead">
-        <RTabList className="rp-tablist" aria-label={label}>
-          {tabs.map(([id, l]) => (
-            <RTab key={id} id={id} className="rp-tab">
-              {l}
-            </RTab>
-          ))}
-        </RTabList>
-        {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
-      </div>
-      {tabs.map(([id]) => (
-        <RTabPanel key={id} id={id}>
-          {children(id)}
-        </RTabPanel>
-      ))}
-    </RTabs>
-  );
-}
-
-// Code and log frames
-export function Frame({title, actions, children}: {title: ReactNode; actions?: ReactNode; children: ReactNode}) {
-  return (
-    <div className="rp-frame">
-      <div className="head">
-        <span>{title}</span>
-        {actions}
-      </div>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll the code pane */}
-      <div className="body" tabIndex={0}>
-        {children}
-      </div>
-    </div>
-  );
-}
-export function Line({n, err, children}: {n: number; err?: boolean; children: ReactNode}) {
-  return (
-    <div className={cx('rp-line', err && 'err')}>
-      <span className="n">{n}</span>
-      {children}
-    </div>
-  );
-}
-export function DaeLine({text}: {text: string}) {
-  if (/^\s*#/.test(text)) return <span className="rp-cmt">{text}</span>;
-  const sec = text.match(/^(\s*)(global|dns|upstream|routing|request|response|subscription|group|include|fallback)(\b.*)$/);
-  if (sec && sec[2] === 'fallback') {
-    const t = sec[3].match(/^: (\w+)$/);
-    return (
-      <span>
-        {sec[1]}
-        <span className="rp-kw">fallback</span>: <span className="rp-out">{t?.[1]}</span>
-      </span>
-    );
-  }
-  if (sec)
-    return (
-      <span>
-        {sec[1]}
-        <span className="rp-kw">{sec[2]}</span>
-        {sec[3]}
-      </span>
-    );
-  const r = text.match(/^(\s*)(.+?) -> (\w+)(\(must\))?$/);
-  if (r)
-    return (
-      <span>
-        {r[1]}
-        <span className="rp-arg">{r[2]}</span> -&gt;{' '}
-        <span className="rp-out">
-          {r[3]}
-          {r[4]}
-        </span>
-      </span>
-    );
-  const s = text.match(/^(\s*)([\w-]+): ('.*')$/);
-  if (s)
-    return (
-      <span>
-        {s[1]}
-        {s[2]}: <span className="rp-str">{s[3]}</span>
-      </span>
-    );
-  return <span>{text}</span>;
-}
-export function LogLine({text}: {text: string}) {
-  const m = text.match(/^\[(\w+)\]\s?(.*)$/);
-  if (!m) return <span>{text}</span>;
-  const cls = m[1] === 'WARN' ? 'rp-lv-warn' : m[1] === 'ERROR' ? 'rp-lv-err' : 'rp-lv-info';
-  return (
-    <span>
-      <span className={'rp-lv ' + cls}>{m[1]}</span>
-      {m[2]}
-    </span>
   );
 }
 

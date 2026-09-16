@@ -10,7 +10,7 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
-import {Badge, Button, MenuButton, ModalDialog, TextField, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
+import {Button, MenuButton, ModalDialog, TextField, Toasts, LabeledSelect, useSlider, withCrossfade} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
@@ -18,7 +18,7 @@ import {refetchAll, useCapabilities, useConnections, useGroups, useNodes, useVer
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
-import {readSettings, type BackendKind, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
+import {readSettings, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
 
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
@@ -148,7 +148,7 @@ function SchemeIcon({dark}: {dark: boolean}) {
   );
 }
 
-function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProps['go']; backend: BackendKind}) {
+function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
   const [q, setQ] = useState('');
   const connections = useConnections();
@@ -164,7 +164,7 @@ function SearchDialog({onClose, go, backend}: {onClose: () => void; go: PageProp
     nodes: (nodes.data ?? []).filter(n => n.name.toLowerCase().includes(needle)).slice(0, limit),
     groups: (groups.data ?? []).filter(g => g.name.toLowerCase().includes(needle)).slice(0, limit),
     pages: features
-      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data, backend) && t(feature.nav.titleKey).toLowerCase().includes(needle))
+      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data) && t(feature.nav.titleKey).toLowerCase().includes(needle))
       .slice(0, limit)
   };
   const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
@@ -273,18 +273,8 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame
-          lang={lang}
-          pickLang={pickLang}
-          ap={ap}
-          backend={settings.backend}
-          route={route}
-          query={query}
-          go={go}
-          openSearch={() => setSearchOpen(true)}
-          mac={mac}
-        />
-        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} backend={settings.backend} />}
+        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
@@ -309,7 +299,6 @@ function Frame({
   lang,
   pickLang,
   ap,
-  backend,
   route,
   query,
   go,
@@ -319,7 +308,6 @@ function Frame({
   lang: Lang;
   pickLang: (l: Lang) => void;
   ap: ReturnType<typeof useAppearance>;
-  backend: BackendKind;
   route: string;
   query: string;
   go: PageProps['go'];
@@ -331,7 +319,7 @@ function Frame({
   const capabilities = useCapabilities();
   const version = useVersion();
   const nav = navGroups.map(
-    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data, backend))] as const
+    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
   );
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
@@ -426,12 +414,11 @@ function Frame({
           <div key={g} data-group={g.replace('grp.', '')}>
             <div className="rp-group">{t(g)}</div>
             {items.map(
-              ({id, path, nav, compat}) =>
+              ({id, path, nav}) =>
                 nav && (
                   <RLink key={id} className="rp-nav" href={'#/' + path} aria-current={route === path ? 'page' : undefined}>
                     <nav.Icon />
                     {t(nav.titleKey)}
-                    {compat && <Badge className="rp-nav-compat">{t('nav.compat')}</Badge>}
                   </RLink>
                 )
             )}
@@ -454,13 +441,12 @@ function Frame({
                 onChange={k => go(k)}
                 items={nav
                   .flatMap(([, items]) => items)
-                  .flatMap(({path, nav, compat}) =>
+                  .flatMap(({path, nav}) =>
                     nav
                       ? [
                           {
                             id: path,
-                            label: t(nav.titleKey),
-                            icon: compat ? <Badge className="rp-nav-compat">{t('nav.compat')}</Badge> : undefined
+                            label: t(nav.titleKey)
                           }
                         ]
                       : []
@@ -470,22 +456,18 @@ function Frame({
             </div>
           </div>
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            {feature.requires.backend && feature.requires.backend !== backend ? (
-              <p className="rp-note">{t('shell.backendRequired')}</p>
-            ) : (
-              <Suspense
-                key={feature.id}
-                fallback={
-                  <Delayed>
-                    <div className="rp-empty" role="status">
-                      {t('ui.loading')}
-                    </div>
-                  </Delayed>
-                }
-              >
-                <Page go={go} query={query} backend={backend} />
-              </Suspense>
-            )}
+            <Suspense
+              key={feature.id}
+              fallback={
+                <Delayed>
+                  <div className="rp-empty" role="status">
+                    {t('ui.loading')}
+                  </div>
+                </Delayed>
+              }
+            >
+              <Page go={go} query={query} />
+            </Suspense>
           </SettingsContext.Provider>
         </div>
       </main>

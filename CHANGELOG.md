@@ -22,13 +22,13 @@ This changelog uses the Keep a Changelog format.
 - Organized one product UI by feature, with shared navigation and capability checks.
 - Kept hash routes, query parameters and browser history in sync.
 - Connected refresh, search, version details and activity events to live API data.
-- Restricted Clash demo pages and controls to the Clash backend selection.
 - Updated the vendored API contract and generated client types.
 - Bundled Noto Sans TC under its own name and used local SVG icons.
 - Improved English table labels, keyboard scrolling and control spacing.
 
 ### Removed
 
+- Removed: the Clash-compatible pages and backend kind; doona targets the native API only, per the maintainer's decision.
 - S2 panels and UI experiments from product builds; archived sources remain readable.
 - Fake rule writes and fixture data from native-mode pages.
 - Runtime Typekit requests, Spectrum package dependencies and machine-specific build settings.

@@ -1,13 +1,11 @@
 import {useT} from '../../i18n';
 import {useMemo} from 'react';
 import Refresh from '../../ui/icons/Refresh';
-import Data from '../../ui/icons/Data';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Kv, Segmented, Switch, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
-import type {PageProps} from '../types';
 
 function PolicyCard({
   id,
@@ -145,21 +143,14 @@ function PolicyCard({
     </section>
   );
 }
-export function Policies({go}: PageProps) {
+export function Policies() {
   const t = useT();
   const groups = useGroups();
   const nodes = useNodes();
   const health = useMemo(() => new Map((nodes.data ?? []).map(n => [n.id, preferredHealth(n)])), [nodes.data]);
   return (
     <div className="rp-page">
-      <div className="rp-toolbar">
-        <p className="rp-note">{t('policy.note')}</p>
-        <span className="rp-grow" />
-        <Button onPress={() => go('resources')}>
-          <Data />
-          {t('policy.sources')}
-        </Button>
-      </div>
+      <p className="rp-note">{t('policy.note')}</p>
       {(groups.error || nodes.error) && (
         <p role="alert" className="rp-note">
           {t('policy.loadFailed', {error: (groups.error ?? nodes.error)?.message ?? ''})}

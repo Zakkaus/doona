@@ -75,7 +75,6 @@ tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
 
 | 欄位       | 儲存鍵            | 取值                                                     |
 | ---------- | ----------------- | -------------------------------------------------------- |
-| 後端種類   | `doona-backend`   | `native`（預設）、`clash`（示範頁面）                    |
 | 伺服器網址 | `doona-api`       | 伺服器根網址或代理前綴；留空或 `mock` 使用示範資料       |
 | 權杖       | `doona-api-token` | Bearer 權杖，透過 Authorization 請求標頭傳送，不放入 URL |
 | 語言       | `doona-lang`      | `zh-TW`（預設）、`zh-CN`、`en`                           |
@@ -83,7 +82,7 @@ tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
 | 配色       | `doona-palette`   | 預設值：`rose-pine/moon`                                 |
 | 品牌字樣   | `doona-wordmark`  | `gradient`（預設）、`plain`                              |
 
-測試連線會檢查填寫的後端；儲存後端設定會重新載入頁面。
+測試連線會檢查原生 API 的 `/api` 探索端點；儲存後端設定會重新載入頁面。
 權杖會持久儲存在瀏覽器儲存空間中。安全問題的回報方式見 [SECURITY.md](SECURITY.md)。
 
 ## 頁面
@@ -101,9 +100,6 @@ tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
 | 策略     | 群組與節點                                     | `groups`                   |
 | 路由追蹤 | 路由診斷                                       | `routing_trace`            |
 | DNS      | 查詢與快取項目                                 | `dns_query` 或 `dns_cache` |
-| 資源     | 示範資源                                       | 僅在選擇 Clash 時顯示      |
-| 配置     | 示範配置                                       | 僅在選擇 Clash 時顯示      |
-| 校驗     | 示範校驗                                       | 僅在選擇 Clash 時顯示      |
 | 事件     | 後端事件串流                                   | `events`                   |
 | 設定     | 後端與外觀設定                                 | 無限制                     |
 

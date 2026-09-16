@@ -2,11 +2,10 @@ import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
 import {useState} from 'react';
 import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
-import {Badge, Button, DataTable, Kv, LabeledSelect, Light, TextField} from '../../ui/ui';
-import type {PageProps} from '../types';
+import {Button, DataTable, Kv, LabeledSelect, Light, TextField} from '../../ui/ui';
 import {RuleDistribution} from './RuleDistribution';
 
-export function Rules({go}: PageProps) {
+export function Rules() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
@@ -120,9 +119,7 @@ export function Rules({go}: PageProps) {
       {capabilities.data?.resources.flows.available && <RuleDistribution />}
       {config && (
         <section className="rp-col">
-          <h2 className="rp-h3 rp-toolbar">
-            {t('rule.configTitle')} <Badge>{t('nav.compat')}</Badge>
-          </h2>
+          <h2 className="rp-h3">{t('rule.configTitle')}</h2>
           <p className="rp-note">{t('rule.configDemo')}</p>
           <div className="rp-split">
             <div className="rp-list">
@@ -168,17 +165,6 @@ export function Rules({go}: PageProps) {
                       [t('ui.generation'), config.generation_id]
                     ]}
                   />
-                  <div className="rp-col">
-                    <div className="rp-group-btns">
-                      <Button
-                        onPress={() => go('config', 'src=' + cur.source.split(':')[0] + '&line=' + cur.source.split(':')[1])}
-                        isDisabled={!cur.editable}
-                        secondary
-                      >
-                        {t('ui.openSource')}
-                      </Button>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <span className="rp-label">{t('rule.pick')}</span>

@@ -67,7 +67,6 @@ Values live in this browser's `localStorage`, scoped to the site's origin:
 
 | Field         | Storage key       | Values                                                      |
 | ------------- | ----------------- | ----------------------------------------------------------- |
-| Backend kind  | `doona-backend`   | `native` (default), `clash` (demo pages)                    |
 | Server URL    | `doona-api`       | Server root or proxy prefix; empty or `mock` for demo data  |
 | Token         | `doona-api-token` | Bearer token; sent in the Authorization header, not the URL |
 | Language      | `doona-lang`      | `zh-TW` (default), `zh-CN`, `en`                            |
@@ -75,7 +74,7 @@ Values live in this browser's `localStorage`, scoped to the site's origin:
 | Palette       | `doona-palette`   | Default: `rose-pine/moon`                                   |
 | Wordmark      | `doona-wordmark`  | `gradient` (default), `plain`                               |
 
-Test Connection checks the entered backend; saving backend settings reloads the page. The token persists in browser storage. See [SECURITY.md](SECURITY.md) for security reporting.
+Test Connection checks native API discovery at `/api`; saving backend settings reloads the page. The token persists in browser storage. See [SECURITY.md](SECURITY.md) for security reporting.
 
 ## Pages
 
@@ -91,9 +90,6 @@ The resource column lists navigation requirements from [registry.ts](src/shell/r
 | Policies      | Groups and nodes                                                         | `groups`                   |
 | Routing trace | Routing diagnostics                                                      | `routing_trace`            |
 | DNS           | Queries and cache entries                                                | `dns_query` or `dns_cache` |
-| Resources     | Demo resources                                                           | Clash selection only       |
-| Configuration | Demo configuration                                                       | Clash selection only       |
-| Validation    | Demo validation                                                          | Clash selection only       |
 | Events        | Backend event stream                                                     | `events`                   |
 | Settings      | Backend and appearance settings                                          | None                       |
 
