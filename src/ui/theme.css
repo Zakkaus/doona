@@ -829,6 +829,8 @@ body:lang(zh-CN) {
 }
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rp-hl-high) transparent;
 }
 button,
 input {
