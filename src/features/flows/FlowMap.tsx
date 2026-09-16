@@ -1,9 +1,9 @@
 import {useMemo, useState} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
-import {preferredHealth} from '../../api/selectors';
+import {outboundLabel, preferredHealth} from '../../api/selectors';
 import {Button, Chips, Light, NodeTile} from '../../ui/ui';
-import {Flag} from '../policies/Flag';
+import {Flag, OutboundMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
 // The status light says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
@@ -47,7 +47,7 @@ export function FlowMap({
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
-                <strong>{label(lane.outbound)}</strong>
+                <strong>{outboundLabel(lane.outbound.unknown ? null : lane.outbound.label, t)}</strong>
               </Light>
               <span className="rp-label">{facts}</span>
             </div>
@@ -99,7 +99,8 @@ export function FlowMap({
             ) : (
               <div className="rp-lane-node">
                 <NodeTile
-                  name={label(lane.outbound)}
+                  name={outboundLabel(lane.outbound.label, t)}
+                  icon={<OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />}
                   description={t('flow.builtin')}
                   unavailable={false}
                   labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}

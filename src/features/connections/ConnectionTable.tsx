@@ -1,6 +1,7 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
-import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, outboundLabel, relativeStart} from '../../api/selectors';
+import {OutboundMark} from '../policies/Flag';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, formatList, useLang, useT} from '../../i18n';
@@ -59,7 +60,12 @@ export function ConnectionTable({
     const cells: Record<string, React.ReactNode> = {
       dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-      chain: <TextTooltip>{chainLabel(c)}</TextTooltip>,
+      chain: (
+        <span className="rp-chain">
+          <OutboundMark name={c.outbound === 'direct' || c.outbound === 'block' ? c.outbound : (c.chain.at(-1) ?? null)} />
+          <TextTooltip>{chainLabel(c, t)}</TextTooltip>
+        </span>
+      ),
       rule: (
         <span className="rp-rule">
           <TextTooltip text={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</TextTooltip>
@@ -143,7 +149,12 @@ export function ConnectionTable({
                           ) : column.id === 'down' ? (
                             formatBytes(row.download)
                           ) : column.id === 'chain' ? (
-                            <TextTooltip>{formatList(lang, row.outbounds) || '—'}</TextTooltip>
+                            <TextTooltip>
+                              {formatList(
+                                lang,
+                                row.outbounds.map(name => outboundLabel(name, t))
+                              ) || '—'}
+                            </TextTooltip>
                           ) : column.id === 'state' ? (
                             t('conn.activeCount', {n: row.active})
                           ) : null}

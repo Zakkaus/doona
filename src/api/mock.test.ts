@@ -147,18 +147,20 @@ it('keeps list decisions consistent with recorded traces rather than current sel
   expect((await api.groups()).find(g => g.id === 'proxy')?.config_revision).toBe((await api.group('proxy')).config_revision);
 });
 
-it('never substitutes another health tuple for the latency column', async () => {
+it('keeps the latency column on one tuple, with IPv6 only where no IPv4 observation exists', async () => {
   const node = (await createMockApi().nodes()).nodes[0];
   const exact = preferredHealth(node)!;
   const alternatives = [
     {...exact, measurement: 'http_round_trip' as const},
-    {...exact, ip_version: 'ipv6' as const},
     {...exact, warmth: 'cold' as const},
     {...exact, purpose: 'dns' as const},
     {...exact, transport: 'udp' as const}
   ];
+  const v6 = {...exact, ip_version: 'ipv6' as const};
   expect(preferredHealth({...node, health: alternatives})).toBeUndefined();
   expect(preferredHealth({...node, health: [...alternatives, exact]})).toBe(exact);
+  expect(preferredHealth({...node, health: [...alternatives, v6]})).toBe(v6);
+  expect(preferredHealth({...node, health: [v6, exact]})).toBe(exact);
 });
 it('pages the airport override without losing members', async () => {
   vi.stubGlobal('localStorage', {getItem: () => '12'});

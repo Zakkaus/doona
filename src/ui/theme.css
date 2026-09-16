@@ -1565,6 +1565,21 @@ input {
   height: 100%;
   display: block;
 }
+.flag.mark {
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--rp-on-accent);
+  background: var(--rp-muted);
+}
+.flag.mark[data-kind='direct'] {
+  background: var(--rp-foam);
+}
+.flag.mark[data-kind='block'] {
+  background: var(--rp-love);
+}
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);
@@ -2872,11 +2887,23 @@ button.rp-node[data-focus-visible] {
 .rp-table [role='row'][data-pressed] {
   background-color: var(--rp-hl-high);
 }
-.rp-table [role='row'][data-disabled],
 .rp-node[data-disabled],
 .rp-item[data-disabled] {
   opacity: 0.5;
   cursor: default;
+}
+/* Group rows are headings, not disabled data: full-strength text on the overlay, the count muted. */
+.rp-table [role='row'][data-disabled] {
+  cursor: default;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+}
+.rp-chain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 [data-focus-visible],
 .rp-truncate:focus-visible {

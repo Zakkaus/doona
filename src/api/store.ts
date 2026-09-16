@@ -361,6 +361,7 @@ export function useFlow(id: string | null) {
 
 export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void) {
   const api = getApi();
+  const capabilities = useCapabilities().data;
   const resource = useResource({key: ['group', {id}], fetch: signal => api.group(id, signal)}, {deps: [api, id], every: 30000});
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
   const [busy, setBusy] = useState<'selection' | 'probe' | 'config' | null>(null);
@@ -412,7 +413,8 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
             purpose: 'data',
             transport: ['tcp'],
             warmth: 'warm',
-            ip_version: 'ipv4',
+            // Probe whatever the backend can reach; a v6-only node is not a failure.
+            ip_version: capabilities?.resources.probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
             members: 'direct'
           },
           signal

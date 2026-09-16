@@ -215,7 +215,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
             {hits.conns.map(c => (
               <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
                 <span>{c.domain || c.dst || c.src || c.id}</span>
-                <span className="desc">{chainLabel(c)}</span>
+                <span className="desc">{chainLabel(c, t)}</span>
               </ListBoxItem>
             ))}
           </ListBoxSection>

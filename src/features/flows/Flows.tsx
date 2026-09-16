@@ -2,7 +2,8 @@ import {useMemo, useState} from 'react';
 import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
-import {chainLabel, connectionStates, flowStepFields, localTime, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {OutboundMark} from '../policies/Flag';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
@@ -119,7 +120,10 @@ export function Flows({go, query}: PageProps) {
           ]}
           render={f => [
             <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
-            chainLabel(f),
+            <span className="rp-chain">
+              <OutboundMark name={f.outbound === 'direct' || f.outbound === 'block' ? f.outbound : (f.chain.at(-1) ?? null)} />
+              <TextTooltip>{chainLabel(f, t)}</TextTooltip>
+            </span>,
             <span className="rp-rule">
               <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>
               {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
@@ -146,7 +150,7 @@ export function Flows({go, query}: PageProps) {
                 inline
                 items={[
                   [t('ui.state'), t(connectionStates[flow.state])],
-                  [t('ui.outbound'), flow.outbound ?? '—'],
+                  [t('ui.outbound'), outboundLabel(flow.outbound, t)],
                   ...(flow.trace.missing.length
                     ? [
                         [
