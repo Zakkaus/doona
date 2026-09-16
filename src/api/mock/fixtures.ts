@@ -389,7 +389,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     nodes.push(...airport);
     groups.push(
       group(
-        'airport',
+        'skylink',
         'selector',
         airport.map(n => n.id),
         airport[0].id,
