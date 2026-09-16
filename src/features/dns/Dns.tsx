@@ -314,7 +314,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
         render={record => [
           <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
           <span className="rp-chain">
-            <BrandIcon name={brandFor(record.question.name)} />
+            <BrandIcon brand={brandFor(record.question.name)} />
             <TextTooltip>{record.question.name}</TextTooltip>
           </span>,
           record.question.type,

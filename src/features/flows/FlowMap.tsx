@@ -3,7 +3,7 @@ import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
 import {BrandIcon, Button, Chips, Light, NodeTile} from '../../ui/ui';
-import {brandFor} from '../../ui/brand';
+import {brandFor, brandForPolicy} from '../../ui/brand';
 import {OutboundMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
@@ -48,7 +48,11 @@ export function FlowMap({
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
-                <BrandIcon name={lane.outbound.unknown ? null : brandFor(lane.outbound.label)} />
+                {kind === 'group' ? (
+                  <BrandIcon brand={brandForPolicy(policy.get(lane.outbound.label))} size="lg" />
+                ) : (
+                  <OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />
+                )}
                 <strong>{outboundLabel(lane.outbound.unknown ? null : lane.outbound.label, t)}</strong>
               </Light>
               <span className="rp-label">{facts}</span>
@@ -61,7 +65,8 @@ export function FlowMap({
                     id: rule.node.id,
                     label: label(rule.node),
                     count: n(rule.count),
-                    icon: <BrandIcon name={rule.node.unknown ? null : brandFor(rule.node.label)} />
+                    countLabel: t('flow.laneFlows', {n: n(rule.count)}),
+                    icon: <BrandIcon brand={rule.node.unknown ? null : brandFor(rule.node.label)} />
                   }))}
                   value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
                   onChange={onPin}

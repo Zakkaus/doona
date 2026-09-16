@@ -1,7 +1,7 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
-import {iconUrl, useIconPack} from './brand';
+import {iconUrl, useIconPack, type Brand} from './brand';
 import {
   Button as RButton,
   Link as RLink,
@@ -1039,7 +1039,7 @@ export function Chips({
   onChange
 }: {
   label: string;
-  items: Array<{id: string; label: string; count?: string; icon?: ReactNode}>;
+  items: Array<{id: string; label: string; count?: string; countLabel?: string; icon?: ReactNode}>;
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
@@ -1058,7 +1058,11 @@ export function Chips({
         <ToggleButton key={item.id} id={item.id} className="rp-btn small">
           {item.icon}
           <span className="rp-truncate">{item.label}</span>
-          {item.count !== undefined && <span className="n">{item.count}</span>}
+          {item.count !== undefined && (
+            <span className="n" title={item.countLabel}>
+              {item.count}
+            </span>
+          )}
         </ToggleButton>
       ))}
     </ToggleButtonGroup>
@@ -1081,10 +1085,18 @@ export function csvLine(values: Array<string | number | null | undefined>): stri
 }
 
 // A service's icon from the configured pack, the flag's size; nothing when no pack is set or the pack lacks it.
-export function BrandIcon({name}: {name: string | null}) {
+export function BrandIcon({brand, size}: {brand: Brand | null; size?: 'lg'}) {
   const pack = useIconPack();
-  if (!pack || !name) return null;
-  return <img className="flag brand" src={iconUrl(pack, name)} alt="" loading="lazy" onError={event => (event.currentTarget.hidden = true)} />;
+  if (!pack || !brand) return null;
+  return (
+    <img
+      className={size ? 'flag brand ' + size : 'flag brand'}
+      src={iconUrl(pack, brand)}
+      alt=""
+      loading="lazy"
+      onError={event => (event.currentTarget.hidden = true)}
+    />
+  );
 }
 
 export function useMediaQuery(query: string) {

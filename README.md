@@ -116,24 +116,26 @@ pnpm e2e
 pnpm package
 ```
 
-The build writes `dist/`. `pnpm check` runs type, lint, translation, formatting, unit and generated-API checks. Browser tests cover root and `/ui/` deployments. Packaging writes `release/doona-<version>.tar.gz`, `release/doona-fonts-<version>.tar.gz` and `release/SHA256SUMS`.
+The build writes `dist/`. `pnpm check` runs type, lint, translation, icon-catalogue, formatting, unit and generated-API checks. Browser tests cover root and `/ui/` deployments. Packaging writes `release/doona-<version>.tar.gz`, `release/doona-fonts-<version>.tar.gz` and `release/SHA256SUMS`.
 
 Run `pnpm test:coverage` from the repository root to print coverage totals and write `coverage/lcov.info`.
 
+Brand icons are catalogued in `src/ui/brands.json` (one entry per service: icon source, which is a file in a community pack or `favicon/<host>`, plus geosite names, domains, keywords, addresses and group policies). After editing it, run `python3 tools/icons/fetch.py` to refresh `public/brands/`; `pnpm check:icons` verifies the catalogue against the pack listings in `tools/icons/lists/` and the files on disk.
+
 Local archive versions come from `package.json`; release builds use the Git description. Archive timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. Set `SOURCE_DATE_EPOCH` when packaging without Git metadata. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
-| Path            | Purpose                                       |
-| --------------- | --------------------------------------------- |
-| `src/features/` | Product pages, hooks and messages             |
-| `src/shell/`    | Application shell and routing                 |
-| `src/ui/`       | Shared components and icons                   |
-| `src/api/`      | Client, mock backend and generated types      |
-| `src/i18n/`     | Translations and locale helpers               |
-| `contract/`     | Vendored OpenAPI contract                     |
-| `public/`       | Static assets, fonts and service worker       |
-| `e2e/`          | Browser tests                                 |
-| `tools/`        | Development, verification and packaging tools |
-| `reference/`    | Read-only archived UI references              |
+| Path            | Purpose                                              |
+| --------------- | ---------------------------------------------------- |
+| `src/features/` | Product pages, hooks and messages                    |
+| `src/shell/`    | Application shell and routing                        |
+| `src/ui/`       | Shared components and icons                          |
+| `src/api/`      | Client, mock backend and generated types             |
+| `src/i18n/`     | Translations and locale helpers                      |
+| `contract/`     | Vendored OpenAPI contract                            |
+| `public/`       | Static assets, fonts, brand icons and service worker |
+| `e2e/`          | Browser tests                                        |
+| `tools/`        | Development, verification and packaging tools        |
+| `reference/`    | Read-only archived UI references                     |
 
 ## Contract
 
@@ -143,4 +145,4 @@ Local archive versions come from `package.json`; release builds use the Git desc
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0 and flag-icons under MIT. The duck logo is the maintainer's artwork.
+[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0, flag-icons under MIT, and lists the community icon sets the brand icons in `public/brands` come from. The duck logo is the maintainer's artwork.

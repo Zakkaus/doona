@@ -61,7 +61,7 @@ export function ConnectionTable({
     const cells: Record<string, React.ReactNode> = {
       dst: (
         <span className="rp-chain">
-          <BrandIcon name={brandFor(c.domain)} />
+          <BrandIcon brand={brandFor(c.domain || c.dst)} />
           <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>
         </span>
       ),

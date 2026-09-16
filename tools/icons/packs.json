@@ -1,0 +1,11 @@
+{
+  "qure-color": {"repo": "Koolson/Qure", "dir": "IconSet/Color"},
+  "orz3-color": {"repo": "Orz-3/mini", "dir": "Color"},
+  "orz3-alpha": {"repo": "Orz-3/mini", "dir": "Alpha"},
+  "lige47-cn": {"repo": "lige47/QuanX-icon-rule", "dir": "icon/03CNSoft"},
+  "lige47-proxy": {"repo": "lige47/QuanX-icon-rule", "dir": "icon/04ProxySoft"},
+  "lige47-icon": {"repo": "lige47/QuanX-icon-rule", "dir": "icon/05icon"},
+  "lige47-country": {"repo": "lige47/QuanX-icon-rule", "dir": "icon/01Country"},
+  "semporia-rr": {"repo": "Semporia/Hand-Painted-icon", "dir": "Rounded_Rectangle"},
+  "semporia-social": {"repo": "Semporia/Hand-Painted-icon", "dir": "Social_Media"}
+}

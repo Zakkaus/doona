@@ -135,7 +135,7 @@ export function Flows({go, query}: PageProps) {
           ]}
           render={f => [
             <span className="rp-chain">
-              <BrandIcon name={brandFor(f.input?.domain)} />
+              <BrandIcon brand={brandFor(f.input?.domain || f.input?.dst)} />
               <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>
             </span>,
             <span className="rp-chain">

@@ -4,17 +4,20 @@ import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
+import {Badge, BrandIcon, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
+import {brandForPolicy} from '../../ui/brand';
 import {NodeGrid} from './Nodes';
 
 function PolicyCard({
   id,
   health,
+  policies,
   refreshGroups,
   refreshNodes
 }: {
   id: string;
   health: Map<string, HealthObservation | undefined>;
+  policies: Map<string, string>;
   refreshGroups: () => void;
   refreshNodes: () => void;
 }) {
@@ -38,7 +41,7 @@ function PolicyCard({
     if (control.error) toast('negative', errorText(control.error));
   }, [control.error]);
   const g = control.data;
-  const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id)})) ?? [], [g, health]);
+  const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), policy: policies.get(m.id)})) ?? [], [g, health, policies]);
   const tcp = g?.runtime.selection.tcp?.member_id;
   const udp = g?.runtime.selection.udp?.member_id;
   const selected = control.network === 'tcp' ? tcp : control.network === 'udp' ? udp : tcp === udp ? tcp : undefined;
@@ -56,6 +59,7 @@ function PolicyCard({
         <>
           <div className="rp-row">
             <span className="rp-cluster">
+              <BrandIcon brand={brandForPolicy(g.policy.kind)} size="lg" />
               <h3 className="rp-h3">{g.name}</h3>
               <Badge>{g.policy.kind}</Badge>
               <span className="rp-label">{t('policy.members', {n: members.length})}</span>
@@ -154,6 +158,7 @@ export function Policies() {
   const groups = useGroups();
   const nodes = useNodes();
   const health = useMemo(() => new Map((nodes.data ?? []).map(n => [n.id, preferredHealth(n)])), [nodes.data]);
+  const policies = useMemo(() => new Map((groups.data ?? []).map(g => [g.id, g.policy.kind])), [groups.data]);
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
@@ -162,7 +167,7 @@ export function Policies() {
       {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
       <DisclosureGroup>
         {groups.data?.map(g => (
-          <PolicyCard key={g.id} id={g.id} health={health} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />
+          <PolicyCard key={g.id} id={g.id} health={health} policies={policies} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />
         ))}
       </DisclosureGroup>
     </div>

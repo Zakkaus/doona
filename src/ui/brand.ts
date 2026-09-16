@@ -1,22 +1,41 @@
 import {useSyncExternalStore} from 'react';
+import catalogue from './brands.json';
 
-// Brand icons come from a pack the user points at; nothing is bundled, so a service name only leaves the
-// browser when a pack is set. Names follow the Qure convention (Loon and Stash users already have it).
-export type IconPack = {id: string; label: string; base: string};
-export const iconPacks: IconPack[] = [
-  {id: 'qure-color', label: 'Qure Color', base: 'https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/'},
-  {id: 'qure-mini', label: 'Qure Mini', base: 'https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Mini/'}
-];
+// One catalogue entry: an icon under public/brands/<id>.png and the rule terms, hostnames, addresses and group
+// policies it stands for. The data lives in brands.json (checked by tools/icons/check.mjs); this module only
+// indexes it and answers lookups.
+export type Brand = {
+  id: string;
+  label: string;
+  source: string;
+  geosite?: string[];
+  domain?: string[];
+  keyword?: string[];
+  address?: string[];
+  policy?: string[];
+};
+const brands = catalogue as Brand[];
+type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'policy';
+function index(field: Field): Map<string, Brand> {
+  const map = new Map<string, Brand>();
+  for (const brand of brands) for (const value of brand[field] ?? []) map.set(value, brand);
+  return map;
+}
+const by = {geosite: index('geosite'), domain: index('domain'), keyword: index('keyword'), address: index('address'), policy: index('policy')};
+
+// The icons ship with doona; the setting chooses between them, none, or a self-hosted prefix that serves
+// <prefix><id>.png. "off" is stored as the word so the default does not come back on reload.
+export const builtinPack = 'builtin';
 const key = 'doona-icon-pack';
 const listeners = new Set<() => void>();
-// Qure Color is the default; "off" is stored as the word so the default does not come back on reload.
-const defaultPack = 'qure-color';
 function read(): string {
   try {
     const value = localStorage.getItem(key);
-    return value === null ? defaultPack : value === 'off' ? '' : value;
+    if (value === null) return builtinPack;
+    if (value === 'off') return '';
+    return /^https?:\/\//.test(value) ? value : builtinPack;
   } catch {
-    return defaultPack;
+    return builtinPack;
   }
 }
 export function setIconPack(value: string) {
@@ -34,219 +53,59 @@ export function useIconPack(): string {
       return () => listeners.delete(listener);
     },
     read,
-    () => defaultPack
+    () => builtinPack
   );
 }
-export function iconUrl(pack: string, name: string): string {
-  const base = iconPacks.find(item => item.id === pack)?.base ?? (pack.endsWith('/') ? pack : pack + '/');
-  return base + encodeURIComponent(name) + '.png';
+export function iconUrl(pack: string, brand: Brand): string {
+  const base = pack === builtinPack ? import.meta.env.BASE_URL + 'brands/' : pack.endsWith('/') ? pack : pack + '/';
+  return base + brand.id + '.png';
 }
 
-// geosite categories and registrable domains to Qure names; everything else has no icon.
-const geosites: Record<string, string> = {
-  cn: 'China',
-  'geolocation-cn': 'China',
-  'geolocation-!cn': 'Global',
-  private: 'Direct',
-  'category-ads': 'Advertising',
-  'category-ads-all': 'Advertising',
-  'category-ai-chat-!cn': 'AI',
-  'category-games': 'Game',
-  'category-games-!cn': 'Game',
-  telegram: 'Telegram',
-  discord: 'Discord',
-  netflix: 'Netflix',
-  youtube: 'YouTube',
-  google: 'Google',
-  github: 'GitHub',
-  apple: 'Apple',
-  icloud: 'iCloud',
-  microsoft: 'Microsoft',
-  onedrive: 'OneDrive',
-  steam: 'Steam',
-  spotify: 'Spotify',
-  twitter: 'X',
-  x: 'X',
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  meta: 'Facebook',
-  openai: 'ChatGPT',
-  cloudflare: 'Cloudflare',
-  alibaba: 'Taobao',
-  tencent: 'QQ',
-  wechat: 'WeChat',
-  bilibili: 'bilibili',
-  tiktok: 'TikTok',
-  bytedance: 'TikTok',
-  iqiyi: 'iQIYI',
-  disney: 'Disney+',
-  hbo: 'HBO',
-  amazon: 'Amazon',
-  primevideo: 'Prime_Video',
-  paypal: 'PayPal',
-  linkedin: 'Linkedin',
-  line: 'Line',
-  kakao: 'Kakao',
-  notion: 'Notion',
-  twitch: 'Twitch',
-  epicgames: 'Epic_Games',
-  xbox: 'Xbox',
-  playstation: 'PlayStation',
-  nintendo: 'Nintendo',
-  speedtest: 'Speedtest',
-  binance: 'Cryptocurrency',
-  netease: 'Netease_Music',
-  hulu: 'Hulu',
-  dazn: 'DAZN',
-  paramount: 'Paramount',
-  bbc: 'BBC_iPlayer',
-  abema: 'AbemaTV',
-  niconico: 'niconico',
-  streaming: 'Streaming',
-  weibo: 'Weibo',
-  zoom: 'Global'
-};
-const domains: Record<string, string> = {
-  'telegram.org': 'Telegram',
-  't.me': 'Telegram',
-  'telegra.ph': 'Telegram',
-  'discord.com': 'Discord',
-  'discord.gg': 'Discord',
-  'discordapp.com': 'Discord',
-  'netflix.com': 'Netflix',
-  'nflxvideo.net': 'Netflix',
-  'youtube.com': 'YouTube',
-  'googlevideo.com': 'YouTube',
-  'ytimg.com': 'YouTube',
-  'google.com': 'Google',
-  'googleapis.com': 'Google',
-  'gstatic.com': 'Google',
-  'gmail.com': 'Gmail',
-  'drive.google.com': 'Google_Drive',
-  'github.com': 'GitHub',
-  'githubusercontent.com': 'GitHub',
-  'apple.com': 'Apple',
-  'apps.apple.com': 'App_Store',
-  'itunes.apple.com': 'App_Store',
-  'music.apple.com': 'Apple_Music',
-  'tv.apple.com': 'Apple_TV',
-  'icloud.com': 'iCloud',
-  'mzstatic.com': 'Apple',
-  'microsoft.com': 'Microsoft',
-  'live.com': 'Microsoft',
-  'office.com': 'Microsoft',
-  'onedrive.com': 'OneDrive',
-  'windows.com': 'Windows',
-  'xbox.com': 'Xbox',
-  'azure.com': 'Azure',
-  'steampowered.com': 'Steam',
-  'steamcommunity.com': 'Steam',
-  'steamstatic.com': 'Steam',
-  'akamaihd.net': 'Steam',
-  'spotify.com': 'Spotify',
-  'scdn.co': 'Spotify',
-  'x.com': 'X',
-  'twitter.com': 'X',
-  'twimg.com': 'X',
-  'instagram.com': 'Instagram',
-  'cdninstagram.com': 'Instagram',
-  'facebook.com': 'Facebook',
-  'fbcdn.net': 'Facebook',
-  'openai.com': 'ChatGPT',
-  'chatgpt.com': 'ChatGPT',
-  'claude.ai': 'AI',
-  'anthropic.com': 'AI',
-  'cloudflare.com': 'Cloudflare',
-  'taobao.com': 'Taobao',
-  'tmall.com': 'Taobao',
-  'alicdn.com': 'Taobao',
-  'alipay.com': 'Alibaba',
-  'aliyun.com': 'Alibaba',
-  'qq.com': 'QQ',
-  'weixin.qq.com': 'WeChat',
-  'wechat.com': 'WeChat',
-  'weibo.com': 'Weibo',
-  'bilibili.com': 'bilibili',
-  'hdslb.com': 'bilibili',
-  'douyin.com': 'TikTok',
-  'tiktok.com': 'TikTok',
-  'tiktokcdn.com': 'TikTok',
-  'iqiyi.com': 'iQIYI',
-  'music.163.com': 'Netease_Music',
-  'disneyplus.com': 'Disney+',
-  'hbomax.com': 'HBO_Max',
-  'max.com': 'HBO_Max',
-  'amazon.com': 'Amazon',
-  'primevideo.com': 'Prime_Video',
-  'paypal.com': 'PayPal',
-  'linkedin.com': 'Linkedin',
-  'line.me': 'Line',
-  'line-apps.com': 'Line',
-  'kakao.com': 'Kakao',
-  'notion.so': 'Notion',
-  'twitch.tv': 'Twitch',
-  'epicgames.com': 'Epic_Games',
-  'playstation.com': 'PlayStation',
-  'nintendo.net': 'Nintendo',
-  'speedtest.net': 'Speedtest',
-  'binance.com': 'Cryptocurrency',
-  'hulu.com': 'Hulu',
-  'dazn.com': 'DAZN',
-  'paramountplus.com': 'Paramount',
-  'bbc.co.uk': 'BBC_iPlayer',
-  'abema.tv': 'AbemaTV',
-  'nicovideo.jp': 'niconico',
-  'vimeo.com': 'Vimeo',
-  'yahoo.com': 'Yahoo',
-  'doubleclick.net': 'Advertising',
-  'googlesyndication.com': 'Advertising',
-  'googleadservices.com': 'Advertising',
-  'pornhub.com': 'Pornhub',
-  'kkbox.com': 'KKBOX',
-  'joox.com': 'JOOX',
-  'viu.com': 'Viu',
-  'tvb.com': 'TVB',
-  'emby.media': 'Emby',
-  'testflight.apple.com': 'TestFlight'
-};
-const outbounds: Record<string, string> = {
-  direct: 'Direct',
-  block: 'Reject',
-  reject: 'Reject',
-  proxy: 'Proxy',
-  global: 'Global',
-  final: 'Final',
-  gaming: 'Game',
-  game: 'Game',
-  airport: 'Airport',
-  streaming: 'Streaming',
-  media: 'Media',
-  ai: 'AI'
-};
-
-function forDomain(host: string): string | null {
-  const name = host.toLowerCase().replace(/\.$/, '');
-  const labels = name.split('.');
+// A socket address in any of the list formats: host, host:port, [v6]:port.
+function hostOf(text: string): string {
+  const bracket = /^\[([^\]]+)\](?::\d+)?$/.exec(text);
+  if (bracket) return bracket[1].toLowerCase();
+  const parts = text.split(':');
+  return (parts.length === 2 ? parts[0] : text).toLowerCase();
+}
+// Longest claimed suffix on label boundaries: "www.reddit.com" hits "reddit.com".
+function forDomain(host: string): Brand | null {
+  const labels = host.toLowerCase().replace(/\.$/, '').split('.');
   for (let i = 0; i < labels.length - 1; i++) {
-    const hit = domains[labels.slice(i).join('.')];
+    const hit = by.domain.get(labels.slice(i).join('.'));
     if (hit) return hit;
   }
   return null;
 }
+// A keyword rule names a substring; take the catalogue keyword, else the brand whose domain label it is.
+function forKeyword(term: string): Brand | null {
+  const direct = by.keyword.get(term);
+  if (direct) return direct;
+  for (const [domain, brand] of by.domain) if (domain.split('.')[0] === term) return brand;
+  return null;
+}
+const first = <T>(items: T[], pick: (item: T) => Brand | null | undefined) => items.map(pick).find(Boolean) ?? null;
 
-// The icon a rule expression, a domain, or an outbound name maps to, or null when the pack has nothing for it.
-export function brandFor(text: string | null | undefined): string | null {
+// The brand a rule expression, hostname or address stands for; null when the catalogue has nothing for it.
+export function brandFor(text: string | null | undefined): Brand | null {
   if (!text) return null;
   const rule = /^domain\((geosite|suffix|full|keyword|regex):\s*([^)]*)\)/.exec(text);
   if (rule) {
     const terms = rule[2].split(',').map(term => term.trim().toLowerCase());
-    if (rule[1] === 'geosite') return terms.map(term => geosites[term]).find(Boolean) ?? null;
+    if (rule[1] === 'geosite') return first(terms, term => by.geosite.get(term));
+    if (rule[1] === 'keyword') return first(terms, forKeyword);
     if (rule[1] === 'regex') return null;
-    return terms.map(forDomain).find(Boolean) ?? null;
+    return first(terms, forDomain);
   }
-  if (/^dip\(geoip:\s*cn\)/.test(text)) return 'China';
-  if (/^dip\(geoip:\s*private\)/.test(text)) return 'Direct';
-  if (/^fallback:\s*(.+)$/.test(text)) return outbounds[/^fallback:\s*(.+)$/.exec(text)![1].toLowerCase()] ?? null;
-  if (/^[a-z0-9.-]+$/i.test(text) && text.includes('.')) return forDomain(text);
-  return outbounds[text.toLowerCase()] ?? null;
+  const geoip = /^dip\(geoip:\s*([^)]+)\)/.exec(text);
+  if (geoip) return by.geosite.get(geoip[1].trim().toLowerCase()) ?? null;
+  const host = hostOf(text.trim());
+  const address = by.address.get(host);
+  if (address) return address;
+  if (/^[a-z0-9.-]+$/i.test(host) && /[a-z]/i.test(host) && host.includes('.')) return forDomain(host);
+  return null;
+}
+// The generic icon for a policy group, by how it picks members (selector, urltest, fallback, …).
+export function brandForPolicy(kind: string | null | undefined): Brand | null {
+  return (kind && by.policy.get(kind.toLowerCase())) || null;
 }

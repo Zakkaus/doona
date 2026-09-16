@@ -1,22 +1,39 @@
 import {expect, it} from 'vitest';
-import {brandFor, iconUrl} from './brand';
+import {brandFor, brandForPolicy, builtinPack, iconUrl} from './brand';
 
-it('maps rule expressions, domains and outbounds to pack names', () => {
-  expect(brandFor('domain(geosite: netflix)')).toBe('Netflix');
-  expect(brandFor('domain(geosite: category-ads-all)')).toBe('Advertising');
-  expect(brandFor('domain(full: api.telegram.org)')).toBe('Telegram');
-  expect(brandFor('domain(suffix: zhihu.com, zhimg.com)')).toBeNull();
-  expect(brandFor('domain(suffix: unknown.example, discord.gg)')).toBe('Discord');
-  expect(brandFor('dip(geoip:cn)')).toBe('China');
-  expect(brandFor('fallback: gaming')).toBe('Game');
-  expect(brandFor('rr1---sn-ab5l6n7z.googlevideo.com')).toBe('YouTube');
-  expect(brandFor('apps.apple.com')).toBe('App_Store');
-  expect(brandFor('direct')).toBe('Direct');
-  expect(brandFor('hk-01')).toBeNull();
-  expect(brandFor(null)).toBeNull();
+const id = (text: string | null) => brandFor(text)?.id ?? null;
+
+it('maps rule expressions, hostnames and addresses to catalogue entries', () => {
+  expect(id('domain(geosite: netflix)')).toBe('netflix');
+  expect(id('domain(geosite: category-ads-all)')).toBe('category-ads');
+  expect(id('domain(full: api.telegram.org)')).toBe('telegram');
+  expect(id('domain(suffix: zhihu.com, zhimg.com)')).toBe('zhihu');
+  expect(id('domain(suffix: unknown.example, discord.gg)')).toBe('discord');
+  expect(id('domain(keyword: steamcdn)')).toBe('steam');
+  expect(id('domain(keyword: reddit)')).toBe('reddit');
+  expect(id('domain(regex: ^cdn\\d+\\.example$)')).toBeNull();
+  expect(id('dip(geoip:cn)')).toBe('china-zone');
+  expect(id('fallback: gaming')).toBeNull();
+  expect(id('rr1---sn-ab5l6n7z.googlevideo.com')).toBe('youtube');
+  expect(id('apps.apple.com')).toBe('app-store');
+  expect(id('proxy')).toBeNull();
+  expect(id('hk-01')).toBeNull();
+  expect(id('1.1.1.1:53')).toBe('cloudflare');
+  expect(id('[2001:4860:4860::8888]:53')).toBe('google');
+  expect(id('223.5.5.5')).toBe('alidns');
+  expect(id('203.0.113.9:8443')).toBeNull();
+  expect(id(null)).toBeNull();
 });
 
-it('builds pack URLs for presets and custom prefixes', () => {
-  expect(iconUrl('qure-color', 'Disney+')).toBe('https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Disney%2B.png');
-  expect(iconUrl('https://icons.example/pack', 'Netflix')).toBe('https://icons.example/pack/Netflix.png');
+it('gives policy groups a generic icon by how they pick members', () => {
+  expect(brandForPolicy('selector')?.id).toBe('policy-selector');
+  expect(brandForPolicy('urltest')?.id).toBe('policy-urltest');
+  expect(brandForPolicy('random')?.id).toBe('policy-balance');
+  expect(brandForPolicy('unknown')).toBeNull();
+});
+
+it('builds icon URLs for the bundled set and custom prefixes', () => {
+  const netflix = brandFor('netflix.com')!;
+  expect(iconUrl(builtinPack, netflix)).toBe('/brands/netflix.png');
+  expect(iconUrl('https://icons.example/pack', netflix)).toBe('https://icons.example/pack/netflix.png');
 });

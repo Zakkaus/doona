@@ -7,7 +7,7 @@ import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
-import {iconPacks, setIconPack, useIconPack} from '../../ui/brand';
+import {builtinPack, setIconPack, useIconPack} from '../../ui/brand';
 
 type Appearance = {
   scheme: Scheme;
@@ -328,7 +328,7 @@ export function Settings() {
 function IconPackCard() {
   const t = useT();
   const pack = useIconPack();
-  const preset = iconPacks.some(item => item.id === pack) ? pack : pack ? 'custom' : '';
+  const preset = pack === builtinPack ? builtinPack : pack ? 'custom' : '';
   const [custom, setCustom] = useState(preset === 'custom' ? pack : '');
   return (
     <section className="rp-card" aria-labelledby="settings-icons">
@@ -339,13 +339,10 @@ function IconPackCard() {
         <LabeledSelect
           label={t('settings.iconPack')}
           value={preset}
-          onChange={value => {
-            if (value === 'custom') setIconPack(custom || 'https://');
-            else setIconPack(value);
-          }}
+          onChange={value => setIconPack(value === 'custom' ? custom || 'https://' : value)}
           items={[
+            {id: builtinPack, label: t('settings.iconsBuiltin')},
             {id: '', label: t('settings.iconsOff')},
-            ...iconPacks.map(item => ({id: item.id, label: item.label})),
             {id: 'custom', label: t('settings.iconsCustom')}
           ]}
         />
