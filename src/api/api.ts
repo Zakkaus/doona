@@ -31,7 +31,7 @@ import type {
   OperationState,
   EventOptions
 } from './model';
-import type {RoutingTraceRequest, RoutingTraceResponse, MockConfigRules} from './model';
+import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
 
 export interface Api {
@@ -65,5 +65,4 @@ export interface Api {
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
   /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
-  configRules(): MockConfigRules | null;
 }

@@ -5,7 +5,7 @@ for (const lang of ['zh-TW', 'zh-CN', 'en']) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
     test('renders navigation without browser errors', async ({page}) => {
-      await page.goto('/#/activity');
+      await page.goto('/#/overview');
       await expect(page.locator('html')).toHaveAttribute('lang', LOCALE[lang]);
       for (const route of routes) {
         const nav = page.locator(`.rp-nav[href="#/${route}"]`);

@@ -129,7 +129,6 @@ export function createApi(base: string, token?: string): Api {
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
     pollOperation,
-    subscribeEvents,
-    configRules: () => null
+    subscribeEvents
   };
 }

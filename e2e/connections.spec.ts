@@ -1,8 +1,11 @@
 import type {Locator} from '@playwright/test';
 import {expect, test} from './fixtures';
 
-test.beforeEach(async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-mock-big', '100'));
+// The flat list exercises the virtualizer; grouping (the default) gets its own test below.
+// At 1440px the detail opens beside the table and the table keeps its main columns.
+test.use({
+  viewport: {width: 1440, height: 900},
+  storage: {'doona-mock-big': '100', 'doona-connections-view': JSON.stringify({hidden: [], sort: null, group: 'none'})}
 });
 
 async function expectRowInView(row: Locator) {
@@ -34,7 +37,7 @@ test('connection selection follows clicks, arrows and Home/End across virtual ro
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await page.locator('.rp-table [data-key="c-0002"]').click();
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
-  await expect(page.locator('.rp-card .rp-h3')).toHaveText('cdn.bilibili.com');
+  await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
   await page.keyboard.press('ArrowDown');
   await expect(selected).toHaveAttribute('data-key', 'c-0003');
   await page.keyboard.press('ArrowUp');
@@ -80,7 +83,7 @@ test('connection selection survives a runtime poll', async ({page}) => {
   await page.clock.fastForward(6000);
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
   await expect(selected.getByRole('gridcell').last()).not.toHaveText(age!);
-  await expect(page.locator('.rp-card .rp-h3')).toHaveText('cdn.bilibili.com');
+  await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
 });
 
 test('connection deep links reveal selected rows, including same-route query changes', async ({page}) => {
@@ -88,7 +91,7 @@ test('connection deep links reveal selected rows, including same-route query cha
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await expect(selected).toHaveAttribute('data-key', 'c-0500');
   await expectRowInView(selected);
-  await expect(page.locator('.rp-card .rp-h3')).toHaveText('doubleclick.net');
+  await expect(page.locator('.rp-panel .rp-h3')).toHaveText('doubleclick.net');
   await page.evaluate(() => {
     location.hash = '#/connections?id=c-0001';
   });
@@ -100,7 +103,7 @@ test('1000 connections keep the DOM bounded at the top, middle and bottom', asyn
   await page.goto('/#/connections');
   const grid = page.getByRole('grid', {name: 'Connections'});
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
-  await expect(page.locator('.rp-note')).toHaveText('The connection list is truncated; only some records are shown.');
+  await expect(page.locator('.rp-toolbar .rp-badge')).toHaveText('The connection list is truncated; only some records are shown.');
   for (const [fraction, key] of [
     [0, 'c-0001'],
     [0.5, 'c-0667'],
@@ -146,9 +149,36 @@ test('column visibility, sorting and grouping persist without expanding the virt
     expect(await grid.getByRole('row').count()).toBeLessThan(60);
   }
   await page.getByRole('button', {name: 'Group by'}).click();
-  await page.getByRole('option', {name: 'Source', exact: true}).click();
+  await page.getByRole('option', {name: 'By client', exact: true}).click();
   await grid.evaluate(element => {
     element.scrollTop = 0;
   });
   await expect(grid.locator('[role=row][aria-level="1"]').first()).toContainText('10.0.0.');
+});
+
+test.describe('default view', () => {
+  test.use({storage: {'doona-mock-big': '100'}, viewport: {width: 1024, height: 768}});
+
+  test('groups by client with counts and opens the selection beside the table', async ({page}) => {
+    await page.goto('/#/connections');
+    const grid = page.getByRole('treegrid', {name: 'Connections'});
+    const groups = grid.locator('[role=row][aria-level="1"]');
+    await expect(groups.first()).toContainText('10.0.0.');
+    await expect(groups.first()).toContainText('active');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await grid.locator('[role=row][aria-level="2"]').first().click();
+    await expect(page).toHaveURL(/#\/connections\?id=c-\d+$/);
+    // Below 1200px the detail is a drawer; Escape closes it and clears the selection.
+    const drawer = page.getByRole('dialog');
+    await expect(drawer.getByRole('heading')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
+    await expect(page).toHaveURL(/#\/connections$/);
+    await page.setViewportSize({width: 1440, height: 900});
+    await grid.locator('[role=row][aria-level="2"]').first().click();
+    await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
+    await page.locator('.rp-panel').getByRole('button', {name: 'Only this client', exact: true}).click();
+    await expect(page.locator('.rp-toolbar input')).toHaveValue(/^10\.0\.0\.\d+$/);
+    await expect(groups).toHaveCount(1);
+  });
 });

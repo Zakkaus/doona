@@ -138,14 +138,14 @@ it('refreshes runtime counters immediately but leaves inventory and clients to t
   for (const resource of ['runtime', 'runtimeOutbounds', 'trafficHistory', 'connections'] as const) {
     expect(shouldRefetch(resource, event('runtime.updated'))).toBe(true);
   }
-  for (const resource of ['nodes', 'groups', 'group', 'clients'] as const) expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
+  for (const resource of ['nodes', 'groups', 'group'] as const) expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
   expect(shouldRefetch('capabilities', event('runtime.updated'))).toBe(false);
   expect(shouldRefetch('runtime', event('operation.updated'))).toBe(true);
   expect(shouldRefetch('groups', event('operation.updated'))).toBe(false);
 });
 
 it('refreshes generation-dependent resources but leaves DNS cache to its poll', () => {
-  for (const resource of ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'configRules', 'flows', 'flow'] as const) {
+  for (const resource of ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'] as const) {
     expect(shouldRefetch(resource, event('generation.changed'))).toBe(true);
   }
   expect(invalidations['generation.changed'].poll).toContain('dnsCache');
@@ -170,7 +170,6 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
     'runtimeOutbounds',
     'trafficHistory',
     'connections',
-    'clients',
     'nodes',
     'groups',
     'group',
@@ -178,8 +177,7 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
     'flow',
     'datapath',
     'runtimeMemory',
-    'dnsCache',
-    'configRules'
+    'dnsCache'
   ];
   for (const resource of resources) {
     expect(shouldRefetch(resource, event('stream.ready'))).toBe(false);

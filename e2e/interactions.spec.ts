@@ -63,7 +63,10 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
     '/version': await api.version(),
     '/connections': connections
   };
-  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'}));
+  });
   await page.route('**/api/v1/**', route => route.fulfill({json: responses[new URL(route.request().url()).pathname.replace('/api/v1', '')]}));
   await page.goto('/#/connections');
   const cell = page.getByRole('rowheader').getByText(full, {exact: true});
@@ -75,9 +78,13 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toBeHidden();
   await page.mouse.move(0, 0);
-  await page.keyboard.press('Tab');
-  await cell.focus();
+  // Keyboard users reach the text through grid navigation: the row, then its first cell.
+  await page.locator('.rp-table [role="row"][data-key]').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(cell).toBeFocused();
   await expect(page.getByRole('tooltip')).toHaveText(full);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).toBeHidden();
   await expect(cell).not.toHaveAttribute('title');
 });
 
@@ -105,7 +112,7 @@ browserTest('API failures preserve request_id in the inline error', async ({page
   await page.route('**/api/v1/**', route =>
     route.fulfill({status: 503, json: {request_id: 'interaction-request-503', error: {code: 'unavailable', message: 'Backend unavailable'}}})
   );
-  await page.goto('/#/clients');
+  await page.goto('/#/connections');
   await expect(page.locator('.rp-content .rp-alert').first()).toContainText('request_id: interaction-request-503');
 });
 
@@ -113,7 +120,7 @@ test('shared controls distinguish a held press from hover without moving', async
   for (const [route, selector] of [
     ['settings', '.rp-selectbtn:not([disabled])'],
     ['settings', '.rp-btn.accent'],
-    ['overview', '.rp-btn.primary'],
+    ['overview', '.rp-btn.secondary'],
     ['flows', '.rp-nav']
   ]) {
     await page.goto('/#/' + route);

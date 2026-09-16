@@ -1,5 +1,5 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useId, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
+import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -22,6 +22,10 @@ import {
   DisclosureGroup as RDisclosureGroup,
   DisclosurePanel,
   Focusable,
+  Tabs as RTabs,
+  TabList,
+  Tab,
+  TabPanel,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
@@ -53,7 +57,8 @@ export function useSlider(value: string, selector = '[data-selected]') {
     const measure = () => {
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      setPos({x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight});
+      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight};
+      setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -210,7 +215,9 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     const el = ref.current;
     if (!el) return;
     const measure = () => setOverflow(el.scrollWidth > el.clientWidth);
-    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="radio"]'));
+    // Inside a pressable ancestor the span must not be its own tab stop: a focusable child would swallow the row's
+    // press. Grid navigation still reaches it, because a cell hands keyboard focus to its focusable child.
+    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="radio"], [role="row"]'));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
@@ -647,7 +654,35 @@ export function NodeTile({
 }
 
 // Column minima include cell padding; grow weights their fractional share (zero keeps the minimum).
-export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'};
+// `drop` orders which columns give way first when the container is narrower than the minima add up to;
+// a column without it always stays. Tables never scroll sideways on a desktop.
+export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number};
+
+export function fitColumns<C extends {id: string; minWidth: number; drop?: number}>(cols: C[], width: number | null): C[] {
+  if (width === null) return cols;
+  const kept = new Set(cols.map(column => column.id));
+  let total = cols.reduce((sum, column) => sum + column.minWidth, 0);
+  for (const column of [...cols].filter(column => column.drop).sort((a, b) => a.drop! - b.drop!)) {
+    if (total <= width) break;
+    kept.delete(column.id);
+    total -= column.minWidth;
+  }
+  return cols.filter(column => kept.has(column.id));
+}
+
+// The content width of an element, tracked through resizes; null until measured.
+export function useContentWidth<E extends HTMLElement>() {
+  const ref = useRef<E>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => setWidth(Math.floor(entries[0].contentRect.width)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
 export function DataTable<T extends {id: string}>({
   label,
   cols,
@@ -656,6 +691,7 @@ export function DataTable<T extends {id: string}>({
   height = 442,
   selected,
   onSelect,
+  selectOnFocus,
   empty,
   loading
 }: {
@@ -666,22 +702,28 @@ export function DataTable<T extends {id: string}>({
   height?: number;
   selected?: string | null;
   onSelect?: (id: string | null) => void;
+  // Arrow keys select as they move (a list with its detail beside it); otherwise Enter or Space selects.
+  selectOnFocus?: boolean;
   empty?: string;
   loading?: boolean;
 }) {
   const t = useT();
   const keys: Selection = selected ? new Set([selected]) : new Set();
+  const [ref, width] = useContentWidth<HTMLDivElement>();
+  const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
+  const index = new Map(cols.map((column, i) => [column.id, i]));
   return (
-    <ResizableTableContainer className="rp-table" style={{height}}>
+    <ResizableTableContainer ref={ref} className="rp-table" style={{height}}>
       <Table
         aria-label={label}
         selectionMode={onSelect ? 'single' : 'none'}
+        selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
         selectedKeys={keys}
         onSelectionChange={k => onSelect && onSelect(k === 'all' ? null : k.size ? String([...k][0]) : null)}
         disallowEmptySelection={!!onSelect}
       >
         <TableHeader>
-          {cols.map(c => (
+          {shown.map(c => (
             <Column
               key={c.id}
               id={c.id}
@@ -694,16 +736,26 @@ export function DataTable<T extends {id: string}>({
             </Column>
           ))}
         </TableHeader>
-        <TableBody items={rows} renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}>
-          {r => (
-            <Row id={r.id}>
-              {render(r).map((cell, i) => (
-                <Cell key={cols[i].id} className={cols[i].align === 'end' ? 'end' : undefined}>
-                  {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
-                </Cell>
-              ))}
-            </Row>
-          )}
+        <TableBody
+          items={rows}
+          dependencies={[shown]}
+          renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}
+        >
+          {r => {
+            const cells = render(r);
+            return (
+              <Row id={r.id}>
+                {shown.map(c => {
+                  const cell = cells[index.get(c.id)!];
+                  return (
+                    <Cell key={c.id} className={c.align === 'end' ? 'end' : undefined}>
+                      {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
+                    </Cell>
+                  );
+                })}
+              </Row>
+            );
+          }}
         </TableBody>
       </Table>
     </ResizableTableContainer>
@@ -892,3 +944,95 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
   );
 }
 export type {SortDescriptor};
+
+// Tabs: the selected key is the caller's (URL-backed), panels render only when selected.
+export function Tabs({
+  label,
+  items,
+  value,
+  onChange
+}: {
+  label: string;
+  items: Array<{id: string; label: string; content: ReactNode}>;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  // The marker lives beside the TabList, not inside it: anything inside is part of the RAC collection and re-renders the tabs.
+  const [ref, pos] = useSlider(value, '[data-selected]');
+  return (
+    <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
+      <div className="rp-tabbar" ref={ref}>
+        {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+        <TabList aria-label={label} className="rp-tablist">
+          {items.map(item => (
+            <Tab key={item.id} id={item.id} className="rp-tab">
+              {item.label}
+            </Tab>
+          ))}
+        </TabList>
+      </div>
+      {items.map(item => (
+        <TabPanel key={item.id} id={item.id} className="rp-tabpanel">
+          {item.content}
+        </TabPanel>
+      ))}
+    </RTabs>
+  );
+}
+
+// From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
+// selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
+export const panelQuery = '(min-width: 1200px)';
+
+export function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const on = () => setMatches(list.matches);
+    on();
+    list.addEventListener('change', on);
+    return () => list.removeEventListener('change', on);
+  }, [query]);
+  return matches;
+}
+
+// Detail beside a list: a non-modal side panel when the page is wide, a dismissable drawer otherwise.
+// Place it as the last child of a `.rp-with-panel` container; the container lays the list and panel out.
+export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {
+  const t = useT();
+  const wide = useMediaQuery(panelQuery);
+  useEffect(() => {
+    if (!open || !wide) return;
+    const on = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"]')) onClose();
+    };
+    addEventListener('keydown', on);
+    return () => removeEventListener('keydown', on);
+  }, [open, wide, onClose]);
+  if (!open) return null;
+  const head = (
+    <div className="rp-row">
+      <h3 className="rp-h3">{title}</h3>
+      <RButton className="rp-btn quiet icon close" aria-label={t('close')} onPress={onClose}>
+        <Close />
+      </RButton>
+    </div>
+  );
+  if (wide)
+    return (
+      <aside className="rp-panel rp-card" aria-label={title}>
+        {head}
+        {children}
+      </aside>
+    );
+  return (
+    <ModalOverlay className="rp-underlay rp-drawer-underlay" isDismissable isOpen onOpenChange={o => !o && onClose()}>
+      <Modal>
+        <Dialog className="rp-dialog rp-drawer" aria-label={title}>
+          {head}
+          {children}
+        </Dialog>
+      </Modal>
+    </ModalOverlay>
+  );
+}

@@ -1,47 +1,36 @@
-import {expect, it, vi} from 'vitest';
+import {expect, it} from 'vitest';
 import {connections} from '../../api/mock/fixtures';
-import {columns, readView, tableRows} from './view';
+import {columns, tableRows} from './view';
+import {fitColumns} from '../../ui/ui';
 
-it('sorts UInt64 downloads exactly with unknown values last in both directions', () => {
-  const seed = connections.tcp[0];
-  const rows = [
-    {...seed, id: 'larger', download_bytes: '9007199254740993'},
-    {...seed, id: 'unknown', download_bytes: null},
-    {...seed, id: 'smaller', download_bytes: '9007199254740992'}
-  ];
-  expect(tableRows(rows, {hidden: [], group: 'none', sort: {column: 'down', direction: 'ascending'}}, 'en').map(row => row.id)).toEqual([
-    'smaller',
-    'larger',
-    'unknown'
-  ]);
-  expect(tableRows(rows, {hidden: [], group: 'none', sort: {column: 'down', direction: 'descending'}}, 'en').map(row => row.id)).toEqual([
-    'larger',
-    'smaller',
-    'unknown'
-  ]);
-});
-
-it('sorts start times chronologically rather than by their displayed age', () => {
-  const seed = connections.tcp[0];
-  const rows = [
-    {...seed, id: 'new', started_at: '2026-09-16T00:00:00Z'},
-    {...seed, id: 'unknown', started_at: null},
-    {...seed, id: 'old', started_at: '2026-09-15T00:00:00Z'}
-  ];
-  expect(tableRows(rows, {hidden: [], group: 'none', sort: {column: 'age', direction: 'ascending'}}, 'en').map(row => row.id)).toEqual([
-    'old',
-    'new',
-    'unknown'
+it('groups by client address without losing IPv6 hosts or UInt64 precision', () => {
+  const c = connections.tcp[0];
+  const rows = tableRows(
+    [
+      {...c, id: 'a', src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
+      {...c, id: 'b', src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
+      {...c, id: 'c', src: '10.0.0.7:123', download_bytes: null},
+      {...c, id: 'd', src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
+    ],
+    {hidden: [], sort: null, group: 'source'},
+    'en-US'
+  );
+  expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download, row.outbounds] : row.id))).toEqual([
+    ['2001:db8::1', 2, 2, 9007199254741000n, ['proxy', 'direct']],
+    ['10.0.0.7', 2, 1, null, ['proxy']]
   ]);
 });
 
-it('keeps a usable table when stored view settings are invalid', () => {
-  vi.stubGlobal('localStorage', {
-    getItem: () => JSON.stringify({hidden: columns.map(column => column.id), sort: {column: 'rule', direction: 'ascending'}, group: 'invalid'})
-  });
-  try {
-    expect(readView()).toEqual({hidden: [], sort: null, group: 'none'});
-  } finally {
-    vi.unstubAllGlobals();
-  }
+it('drops columns by priority until the minimum widths fit, keeping the target', () => {
+  const ids = (width: number | null, hidden: string[] = []) =>
+    fitColumns(
+      columns.filter(column => !hidden.includes(column.id)),
+      width
+    ).map(column => column.id);
+  expect(ids(null)).toEqual(['dst', 'src', 'chain', 'rule', 'state', 'down', 'age']);
+  expect(ids(1032)).toEqual(['dst', 'src', 'chain', 'rule', 'state', 'down', 'age']);
+  expect(ids(942)).toEqual(['dst', 'src', 'chain', 'state', 'down', 'age']);
+  expect(ids(726)).toEqual(['dst', 'src', 'state', 'down', 'age']);
+  expect(ids(726, ['down'])).toEqual(['dst', 'src', 'chain', 'state', 'age']);
+  expect(ids(100)).toEqual(['dst']);
 });

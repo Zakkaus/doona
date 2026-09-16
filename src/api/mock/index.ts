@@ -468,7 +468,6 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events,
-    configRules: () => fixtures.configRules
+    subscribeEvents: events
   };
 }

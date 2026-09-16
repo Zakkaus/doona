@@ -1,29 +1,65 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime} from '../../api/selectors';
-import {useEffect, useState} from 'react';
-import {useCapabilities, useConfigRules, useRoutingTrace} from '../../api/store';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, TextField, errorText, toast} from '../../ui/ui';
+import {useEffect, useMemo} from 'react';
+import {useCapabilities, useRoutingTrace} from '../../api/store';
+import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleDistribution} from './RuleDistribution';
+import type {PageProps} from '../types';
+import type {Key} from '../../i18n/messages';
 
-export function Rules() {
+const outcomes: Record<string, Key> = {
+  matched: 'rule.result.matched',
+  not_matched: 'rule.result.not_matched',
+  skipped: 'rule.result.skipped',
+  indeterminate: 'rule.result.indeterminate'
+};
+
+// "Which rule decided the exit": the snapshot's distribution, and a simulator for a hypothetical input.
+// A rule list joins as a third tab once the contract exposes one.
+export function Rules({go, query}: PageProps) {
+  const t = useT();
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const params = useMemo(() => new URLSearchParams(query), [query]);
+  const tabs = [
+    ...(resources?.flows.available !== false ? [{id: 'distribution', label: t('rule.distributionTitle'), content: <RuleDistribution />}] : []),
+    ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
+  ];
+  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'distribution');
+  if (capabilities.loading && !capabilities.data) return <Loading />;
+  if (capabilities.error) return <ErrorMessage error={capabilities.error} />;
+  if (!tabs.length)
+    return (
+      <div className="rp-page">
+        <span className="rp-empty">{t('rule.unavailable')}</span>
+      </div>
+    );
+  return (
+    <div className="rp-page">
+      <Tabs
+        label={t('nav.rules')}
+        items={tabs}
+        value={tab}
+        onChange={next => {
+          const nextParams = new URLSearchParams(query);
+          nextParams.set('tab', next);
+          go('rules', nextParams.toString());
+        }}
+      />
+    </div>
+  );
+}
+
+function Trace() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
   useEffect(() => {
-    if (trace.result) toast('positive', t('ui.completed'));
-  }, [trace.result, t]);
-  useEffect(() => {
     if (trace.error) toast('negative', errorText(trace.error));
   }, [trace.error]);
   const {form, setForm} = trace;
-  const config = useConfigRules();
-  const capabilities = useCapabilities();
-  const [sel, setSel] = useState<string | null>('r4');
-  const cur = config?.rules.find(r => r.id === sel);
   return (
-    <div className="rp-page">
-      <p className="rp-note">{t('rule.note')}</p>
-      {capabilities.loading && !capabilities.data && <Loading />}
+    <>
       <form
         className="rp-card"
         onSubmit={e => {
@@ -44,63 +80,69 @@ export function Rules() {
           <TextField label={t('ui.domain')} value={form.domain} onChange={domain => setForm({...form, domain})} />
           <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} />
           <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} />
-          <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} />
-          <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} />
-          <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
           <LabeledSelect
             label={t('rule.resolve')}
             value={form.resolve}
             onChange={resolve => setForm({...form, resolve: resolve as 'none' | 'live'})}
             items={trace.modes.map(id => ({id, label: id === 'none' ? t('rule.resolveNone') : t('rule.resolveLive')}))}
           />
+          <Button
+            accent
+            isPending={trace.busy}
+            isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(form.resolve)}
+            type="submit"
+          >
+            {t('rule.run')}
+          </Button>
         </div>
-        {trace.invalid && <p className="rp-note">{t(trace.invalid)}</p>}
-        {!trace.available && <p className="rp-note">{t('rule.unavailable')}</p>}
-        <Button
-          accent
-          isPending={trace.busy}
-          isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(form.resolve)}
-          type="submit"
-        >
-          {trace.busy ? t('rule.tracing') : t('rule.trace')}
-        </Button>
+        <Disclosure id="rules-trace-advanced" title={t('rule.advanced')}>
+          <div className="rp-toolbar">
+            <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} />
+            <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} />
+            <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
+          </div>
+        </Disclosure>
+        {trace.invalid && <span className="rp-label">{t(trace.invalid)}</span>}
+        {!trace.available && <span className="rp-label">{t('rule.unavailable')}</span>}
       </form>
-      {trace.error && <ErrorMessage error={trace.error} />}
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
-          <Kv
-            items={[
-              [t('rule.mode'), trace.result.mode],
-              [t('rule.instance'), trace.result.instance_id],
-              [t('ui.generation'), trace.result.generation_id],
-              [t('rule.observed'), localTime(trace.result.observed_at, LOCALE[lang])]
-            ]}
-          />
+          <div className="rp-toolbar">
+            <TextTooltip text={t('rule.note')} className="rp-label">
+              {t('rule.observed')}: {localTime(trace.result.observed_at, LOCALE[lang])} · {t('ui.generation')} {trace.result.generation_id}
+            </TextTooltip>
+          </div>
           {trace.result.evaluations.map((evaluation, i) => (
             <section className="rp-card" key={i}>
-              <h3 className="rp-h3">{evaluation.dst_ip ?? t('ui.domain')}</h3>
-              <Kv
-                items={[
-                  [t('rule.decision'), evaluation.decision],
-                  [t('ui.outbound'), evaluation.outbound ?? '—'],
-                  [t('rule.missing'), formatList(lang, evaluation.missing_inputs) || t('ui.none')]
-                ]}
-              />
+              <div className="rp-row">
+                <h3 className="rp-h3">{evaluation.dst_ip ?? form.domain}</h3>
+                <Kv
+                  inline
+                  items={[
+                    [t('rule.decision'), t(evaluation.decision === 'determinate' ? 'rule.determinate' : 'rule.result.indeterminate')],
+                    [t('ui.outbound'), evaluation.outbound ?? '—'],
+                    ...(evaluation.missing_inputs.length ? [[t('rule.missing'), formatList(lang, evaluation.missing_inputs)] as [string, string]] : [])
+                  ]}
+                />
+              </div>
               <DataTable
                 label={t('rule.evaluation', {n: i + 1})}
-                height={400}
+                height={360}
                 rows={evaluation.rules.map(rule => ({...rule, id: rule.rule_id}))}
                 cols={[
-                  {id: 'id', label: t('rule.id'), minWidth: 72, grow: 0, isRowHeader: true},
-                  {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 2},
-                  {id: 'result', label: t('rule.outcome'), minWidth: 160, grow: 0},
+                  {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 2, isRowHeader: true},
+                  {id: 'result', label: t('rule.outcome'), minWidth: 120, grow: 0},
                   {id: 'missing', label: t('rule.missing'), minWidth: 144}
                 ]}
                 render={rule => [
-                  rule.rule_id,
-                  <TextTooltip className="rp-code">{rule.expression ?? '—'}</TextTooltip>,
-                  <Light tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}>
-                    {rule.result}
+                  <TextTooltip className="rp-code" text={rule.rule_id}>
+                    {rule.expression ?? rule.rule_id}
+                  </TextTooltip>,
+                  <Light
+                    small
+                    tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}
+                  >
+                    {outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result}
                   </Light>,
                   formatList(lang, rule.missing_inputs) || '—'
                 ]}
@@ -111,77 +153,20 @@ export function Rules() {
             <section className="rp-card" key={dns.lookup_id}>
               <h3 className="rp-h3">DNS · {dns.name}</h3>
               <Kv
+                inline
                 items={[
                   [t('ui.type'), dns.qtype],
                   [t('ui.state'), dns.status],
                   [t('ui.source'), dns.source],
                   [t('ui.cache'), dns.cache],
                   [t('rule.address'), formatList(lang, dns.addresses) || '—'],
-                  [t('ui.error'), dns.error ?? '—']
+                  ...(dns.error ? [[t('ui.error'), dns.error] as [string, string]] : [])
                 ]}
               />
             </section>
           ))}
         </section>
       )}
-      {capabilities.data?.resources.flows.available && <RuleDistribution />}
-      {config && (
-        <section className="rp-col">
-          <h2 className="rp-h3">{t('rule.configTitle')}</h2>
-          <p className="rp-note">{t('rule.configDemo')}</p>
-          <div className="rp-split rp-split-wide">
-            <div className="rp-list">
-              <DataTable
-                label={t('rule.configRules')}
-                rows={config.rules}
-                selected={sel}
-                onSelect={setSel}
-                cols={[
-                  {id: 'n', label: '#', minWidth: 56, grow: 0, align: 'end'},
-                  {id: 'c', label: t('rule.condition'), minWidth: 272, isRowHeader: true},
-                  {id: 'o', label: t('ui.target'), minWidth: 88, grow: 0},
-                  {id: 'm', label: 'must', minWidth: 64, grow: 0},
-                  {id: 's', label: t('ui.source'), minWidth: 104, grow: 0},
-                  {id: 'x', label: t('rule.comment'), minWidth: 80, grow: 0}
-                ]}
-                render={r => [
-                  r.n,
-                  <TextTooltip className="rp-code">{r.cond}</TextTooltip>,
-                  r.target,
-                  r.must ? 'must' : '',
-                  r.generated ? t('rule.generated') : r.source,
-                  r.note
-                ]}
-              />
-              <div className="rp-toolbar rp-code">
-                <span className="rp-kw">fallback</span>: <span className="rp-out">{config.fallback.target}</span>
-                <span className="rp-label">{t('rule.editFallback', {source: config.fallback.source})}</span>
-              </div>
-            </div>
-            <div className="rp-card">
-              {cur ? (
-                <>
-                  <h3 className="rp-h3">
-                    #{cur.n} {cur.target}
-                    {cur.must ? '(must)' : ''}
-                  </h3>
-                  <span className="rp-code">{cur.cond}</span>
-                  <Kv
-                    items={[
-                      [t('ui.source'), cur.generated ? t('rule.generatedPolicy') : cur.source],
-                      [t('ui.state'), t('ui.readonly')],
-                      [t('ui.generation'), config.generation_id]
-                    ]}
-                  />
-                </>
-              ) : (
-                <span className="rp-label">{t('rule.pick')}</span>
-              )}
-              <span className="rp-label">{t('rule.noCounts')}</span>
-            </div>
-          </div>
-        </section>
-      )}
-    </div>
+    </>
   );
 }

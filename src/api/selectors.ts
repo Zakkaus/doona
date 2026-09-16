@@ -16,25 +16,6 @@ import type {
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 import type {RuntimeOutbounds, TrafficHistory} from './model';
 
-export type ClientRow = {id: string; ip: string; active: number; download: bigint | null; outbounds: string};
-
-export function clientRows(snapshot: ConnectionList | undefined): ClientRow[] {
-  const rows = new Map<string, {id: string; ip: string; active: number; download: bigint | null; outbounds: Set<string>}>();
-  for (const c of connectionRows(snapshot)) {
-    if (!c.src) continue;
-    const ip = c.src.startsWith('[') ? c.src.slice(0, c.src.indexOf(']') + 1) : c.src.split(':').length > 2 ? '[' + c.src + ']' : c.src.split(':')[0];
-    let row = rows.get(ip);
-    if (!row) {
-      row = {id: ip, ip, active: 0, download: 0n, outbounds: new Set()};
-      rows.set(ip, row);
-    }
-    if (c.state === 'active') row.active++;
-    row.download = addU64(row.download, c.download_bytes);
-    if (c.outbound) row.outbounds.add(c.outbound);
-  }
-  return [...rows.values()].map(row => ({...row, outbounds: [...row.outbounds].join('、')}));
-}
-
 /** The latency column compares one fixed observation tuple; missing is unknown. */
 export function preferredHealth(node: Node): HealthObservation | undefined {
   return node.health.find(

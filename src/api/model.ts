@@ -34,18 +34,6 @@ export type DeleteCount = Schema['DeleteCount'];
 export type RoutingTraceInput = Extract<Schema['RoutingTraceInput'], {network: unknown}> & ({domain: string} | {dst_ip: string});
 export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> & {input: RoutingTraceInput};
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
-export type ConfigRule = {
-  id: string;
-  n: number;
-  cond: string;
-  target: string;
-  must: boolean;
-  source: string;
-  note: string;
-  editable: boolean;
-  generated?: boolean;
-};
-export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
 export type ErrorResponse = Schema['ErrorResponse'];
 export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};

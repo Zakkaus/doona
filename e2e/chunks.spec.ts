@@ -16,7 +16,7 @@ for (const route of routes) {
     });
     page.on('requestfailed', request => failedRequests.push(request.url()));
 
-    await page.goto('/#/activity');
+    await page.goto('/#/overview');
     await expect(page.locator('.rp-strip')).toBeVisible();
     await page.waitForLoadState('networkidle');
     const initialScripts = new Set(scripts);
@@ -26,11 +26,11 @@ for (const route of routes) {
     }, route);
     await expect(page.locator('.rp-content')).toBeVisible();
     await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
-    const content = route === 'activity' ? '.rp-strip' : route === 'settings' ? '#settings-backend' : '.rp-content > .rp-page';
+    const content = route === 'overview' ? '.rp-strip' : route === 'settings' ? '#settings-backend' : '.rp-content > .rp-page';
     await expect(page.locator(content)).toBeVisible();
     await page.waitForLoadState('networkidle');
 
-    if (route !== 'activity' && route !== 'settings') {
+    if (route !== 'overview' && route !== 'settings') {
       expect([...scripts].filter(url => !initialScripts.has(url)).length, 'New lazy-route JS requests').toBeGreaterThanOrEqual(1);
     }
     expect(failedResponses, 'Non-2xx responses').toHaveLength(0);
@@ -39,7 +39,7 @@ for (const route of routes) {
 }
 
 test('slow page chunks delay the loading treatment without hiding the frame', async ({page}) => {
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await page.waitForLoadState('networkidle');
   await page.clock.install();
   await page.clock.pauseAt(new Date());
@@ -74,7 +74,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
   expect(await bounds()).toEqual(before);
 });
 
-test('activity keeps card geometry while its charts load', async ({page}) => {
+test('overview keeps card geometry while its charts load', async ({page}) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
   await page.route('**/assets/vendor-charts-*.js', async route => {
@@ -82,7 +82,7 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
     await route.continue();
   });
   try {
-    await page.goto('/#/activity', {waitUntil: 'domcontentloaded'});
+    await page.goto('/#/overview', {waitUntil: 'domcontentloaded'});
     await expect(page.locator('.rp-donut .center')).toBeVisible();
     await expect(page.locator('.rp-legend')).toBeVisible();
     const cards = page.locator('.rp-content .rp-card');

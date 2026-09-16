@@ -3,21 +3,21 @@ import {buildHash, parseHash, updateRoute} from './route';
 
 describe('hash routing', () => {
   it.each([
-    ['', 'activity', ''],
-    ['#', 'activity', ''],
-    ['#/', 'activity', ''],
+    ['', 'overview', ''],
+    ['#', 'overview', ''],
+    ['#/', 'overview', ''],
     ['#/flows', 'flows', ''],
     ['#/flows?id=a&x=1', 'flows', 'id=a&x=1'],
     ['#flows?id=a', 'flows', 'id=a'],
     ['#/flows?next=/connections?src=192.168.1.2', 'flows', 'next=/connections?src=192.168.1.2'],
-    ['#/?id=a', 'activity', 'id=a'],
+    ['#/?id=a', 'overview', 'id=a'],
     ['#/unknown?id=a', 'unknown', 'id=a']
   ])('parses %s', (hash, route, query) => {
     expect(parseHash(hash)).toEqual({route, query});
   });
 
   it.each<[string, string?]>([
-    ['activity', undefined],
+    ['overview', undefined],
     ['flows', ''],
     ['flows', 'id=a&x=1'],
     ['connections', 'q=example?src=a%26b']

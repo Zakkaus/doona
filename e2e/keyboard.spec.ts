@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 
 test('search shortcut moves focus into a dismissible dialog', async ({page}) => {
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   await page.keyboard.press('Control+K');
   const dialog = page.locator('.rp-dialog');
@@ -12,7 +12,7 @@ test('search shortcut moves focus into a dismissible dialog', async ({page}) => 
 });
 
 test('tab order reaches the first navigation link', async ({page}) => {
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   // Allow header controls, but fail if navigation is skipped or starts midway.
   for (let tabs = 0; tabs < 12; tabs++) {
@@ -24,7 +24,7 @@ test('tab order reaches the first navigation link', async ({page}) => {
 
 test('shortcut help and page sequences respect focus and the sequence deadline', async ({page}) => {
   await page.clock.install();
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await page.keyboard.press('?');
   const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
   await expect(help).toBeVisible();
@@ -34,7 +34,7 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await page.keyboard.press('g');
   await page.clock.fastForward(801);
   await page.keyboard.press('c');
-  await expect(page).toHaveURL(/#\/activity$/);
+  await expect(page).toHaveURL(/#\/overview$/);
   await page.keyboard.press('g');
   await page.keyboard.press('c');
   await expect(page).toHaveURL(/#\/connections$/);

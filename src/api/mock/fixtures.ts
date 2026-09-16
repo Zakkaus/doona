@@ -14,7 +14,6 @@ import type {
   TrafficHistory,
   Version
 } from '../model';
-import type {ConfigRule, MockConfigRules} from '../model';
 import {createFlow, flowFields, type ConnectionSeed} from './flows';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
@@ -229,6 +228,9 @@ export const capabilitiesBase: Capabilities = {
   }
 };
 
+// The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
+type ConfigRule = {id: string; n: number; cond: string; target: string; must: boolean; source: string; note: string; editable: boolean; generated?: boolean};
+export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const rules: ConfigRule[] = [
   {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
   {
@@ -306,7 +308,10 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
     },
     runtime: {
       // The proxy group selects different members per network so the TCP/UDP switch has something to show.
-      selection: {tcp: selection, udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}},
+      selection: {
+        tcp: selection,
+        udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
+      },
       health: nodes
         .filter(n => members.includes(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))

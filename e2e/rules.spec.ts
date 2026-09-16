@@ -4,7 +4,7 @@ import {expect, test} from './fixtures';
 test('rule distribution filters sources without changing snapshot shares or accumulating polls', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/rules');
-  const card = page.getByRole('region', {name: 'Rule distribution'});
+  const card = page.getByRole('tabpanel', {name: 'Rule distribution'});
   const rows = card.getByRole('listitem');
   await expect(rows.first()).toBeVisible();
   const allCount = await rows.count();
@@ -54,7 +54,7 @@ test('retains overflow shares and exact loss counts, then replaces an empty snap
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules');
-  const card = page.getByRole('region', {name: 'Rule distribution'});
+  const card = page.getByRole('tabpanel', {name: 'Rule distribution'});
   const rows = card.getByRole('listitem');
   await expect(rows).toHaveCount(13);
   await expect(rows.last()).toContainText('Other 3 rules');
@@ -75,11 +75,11 @@ test('retains overflow shares and exact loss counts, then replaces an empty snap
 test.describe('without flow capability', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 
-  test('renders the routing page without a distribution card', async ({page}) => {
+  test('renders the rules page without tabs', async ({page}) => {
     await page.goto('/#/rules');
     await expect(page.locator('.rp-content')).toBeVisible();
     await expect(page.getByText('Routing trace unavailable', {exact: true})).toBeVisible();
-    await expect(page.getByRole('region', {name: 'Rule distribution'})).toHaveCount(0);
+    await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page).toHaveURL(/#\/rules$/);
   });
 });

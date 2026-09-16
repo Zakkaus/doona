@@ -1,17 +1,20 @@
 import {useMemo, useState} from 'react';
 import {useConnections} from '../../api/store';
-import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
-import {Button, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField, ErrorMessage} from '../../ui/ui';
+import {connectionDetails, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
+import {Badge, Button, DetailPanel, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField, ErrorMessage, panelQuery, useMediaQuery} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {columns, readView, viewKey, type ConnectionView} from './view';
 
+// One page for "who is connected to what right now": the table groups by client by default,
+// the selected row opens beside the table and is remembered in the URL.
 export function Connections({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
   const [view, setView] = useState(readView);
+  const wide = useMediaQuery(panelQuery);
   const updateView = (patch: Partial<ConnectionView>) => {
     const next = {...view, ...patch};
     setView(next);
@@ -25,20 +28,19 @@ export function Connections({go, query}: PageProps) {
   const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
   const [network, setNetwork] = useState('all');
   const [out, setOut] = useState('all');
-  const [sel, setSel] = useState<string | null>(q.get('id') ?? '2');
+  const sel = q.get('id');
   const [lastQuery, setLastQuery] = useState(query);
   if (lastQuery !== query) {
     setLastQuery(query);
-    const text = q.get('q') ?? q.get('src');
-    const id = q.get('id');
-    if (text !== null) setText(text);
-    if (id !== null) {
-      setSel(id);
-      if (text === null) setText('');
-      setNetwork('all');
-      setOut('all');
-    }
+    const next = q.get('q') ?? q.get('src');
+    if (next !== null) setText(next);
   }
+  const select = (id: string | null) => {
+    const params = new URLSearchParams(query);
+    if (id) params.set('id', id);
+    else params.delete('id');
+    go('connections', params.toString());
+  };
   const src = ipLiteral(text);
   const resource = useConnections(src);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
@@ -49,14 +51,14 @@ export function Connections({go, query}: PageProps) {
       (out === 'all' || c.outbound === out) &&
       (src || !needle || [c.dst, c.domain, c.src, c.pname, c.outbound, c.chain.join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
   );
-  const cur = shown.find(c => c.id === sel);
+  const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
+  const filtered = network !== 'all' || out !== 'all' || needle !== '';
   return (
     <div className="rp-page">
       {resource.error && <ErrorMessage error={resource.error} />}
-      {resource.data?.truncated && <p className="rp-note">{t('conn.truncated')}</p>}
       <div className="rp-toolbar">
-        <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={280} />
+        <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={260} />
         <Segmented
           label={t('ui.network')}
           value={network}
@@ -74,17 +76,17 @@ export function Connections({go, query}: PageProps) {
           onChange={setOut}
           items={[{id: 'all', label: t('conn.allOutbounds')}, ...outbounds.map(id => ({id, label: id}))]}
         />
-        <Button
-          onPress={() => {
-            setText('');
-            setNetwork('all');
-            setOut('all');
-          }}
-        >
-          {t('ui.clearFilters')}
-        </Button>
-      </div>
-      <div className="rp-toolbar">
+        <LabeledSelect
+          label={t('conn.group')}
+          side
+          value={view.group}
+          onChange={group => updateView({group: group as ConnectionView['group']})}
+          items={[
+            {id: 'source', label: t('conn.byClient')},
+            {id: 'outbound', label: t('ui.outbound')},
+            {id: 'none', label: t('conn.ungrouped')}
+          ]}
+        />
         <MenuButton
           label={t('conn.columns')}
           multiple
@@ -97,44 +99,52 @@ export function Connections({go, query}: PageProps) {
         >
           {t('conn.columns')}
         </MenuButton>
-        <LabeledSelect
-          label={t('conn.group')}
-          side
-          value={view.group}
-          onChange={group => updateView({group: group as ConnectionView['group']})}
-          items={[
-            {id: 'none', label: t('conn.ungrouped')},
-            {id: 'source', label: t('ui.source')},
-            {id: 'outbound', label: t('ui.outbound')}
-          ]}
-        />
+        {filtered && (
+          <Button
+            quiet
+            onPress={() => {
+              setText('');
+              setNetwork('all');
+              setOut('all');
+            }}
+          >
+            {t('ui.clearFilters')}
+          </Button>
+        )}
+        {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
       </div>
-      <div className="rp-page">
+      <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
           rows={shown}
           loading={resource.loading && !resource.data}
           selected={sel}
-          onSelect={setSel}
+          onSelect={select}
+          selectOnFocus={wide}
           view={view}
           onSort={sort => updateView({sort})}
         />
-        {cur ? (
-          <div className="rp-card">
-            <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>
-            <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>
-              {t(connectionStates[cur.state])} · {cur.network.toUpperCase()}
-            </Light>
-            <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), value])} />
-            <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
-              {t('conn.viewFlow')}
-            </Button>
-          </div>
-        ) : (
-          <div className="rp-card">
-            <span className="rp-label">{t('conn.pick')}</span>
-          </div>
-        )}
+        <DetailPanel open={!!cur} title={cur?.domain || cur?.dst || cur?.id || ''} onClose={() => select(null)}>
+          {cur && (
+            <>
+              <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>
+                {t(connectionStates[cur.state])} · {cur.network.toUpperCase()}
+              </Light>
+              <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), value])} />
+              <div className="rp-cluster">
+                <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
+                  {t('conn.viewFlow')}
+                </Button>
+                {cur.src && (
+                  <Button quiet onPress={() => setText(sourceIp(cur.src) ?? cur.src ?? '')}>
+                    {t('conn.onlyThisClient')}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </DetailPanel>
       </div>
+      {sel && !cur && resource.data && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
     </div>
   );
 }

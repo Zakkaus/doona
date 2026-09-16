@@ -7,7 +7,6 @@ export type ResourceName =
   | 'runtimeOutbounds'
   | 'trafficHistory'
   | 'connections'
-  | 'clients'
   | 'nodes'
   | 'groups'
   | 'group'
@@ -15,17 +14,16 @@ export type ResourceName =
   | 'flow'
   | 'datapath'
   | 'runtimeMemory'
-  | 'dnsCache'
-  | 'configRules';
+  | 'dnsCache';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
   'stream.ready': {now: 'all', poll: []},
-  'runtime.updated': {now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'connections'], poll: ['nodes', 'groups', 'group', 'clients']},
+  'runtime.updated': {now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'connections'], poll: ['nodes', 'groups', 'group']},
   'flow.updated': {now: ['flows', 'flow', 'connections'], poll: []},
   'flow.gap': {now: ['flows', 'flow'], poll: []},
   'operation.updated': {now: ['runtime'], poll: []},
-  'generation.changed': {now: ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'configRules', 'flows', 'flow'], poll: ['dnsCache']}
+  'generation.changed': {now: ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'], poll: ['dnsCache']}
 };
 
 export function shouldRefetch(resource: ResourceName, event: Pick<ApiEvent, 'event'>, reconnected = false): boolean {

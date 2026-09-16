@@ -1,10 +1,9 @@
 import type {Key} from '../i18n/messages';
-import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
+import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
 import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
-import {clientRows} from './selectors';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -225,32 +224,11 @@ export function useGroups() {
   return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000});
 }
 export function useConnections(src?: string) {
-  return useConnectionList(src, 'connections');
-}
-function useConnectionList(src: string | undefined, invalidateAs: 'connections' | 'clients') {
   const api = getApi();
   return useResource(
-    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal), invalidateAs},
+    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
     {deps: [api, src]}
   );
-}
-export function useConfigRules() {
-  const api = getApi();
-  const resource = useResource({key: ['configRules'], fetch: async () => api.configRules()}, {deps: [api], every: 0});
-  return resource.data === undefined ? api.configRules() : resource.data;
-}
-
-const firstSeen = new Map<string, string>();
-export function useClients() {
-  const connections = useConnectionList(undefined, 'clients');
-  const rows = useMemo(() => {
-    const now = new Date().toISOString();
-    return clientRows(connections.data).map(row => {
-      if (!firstSeen.has(row.ip)) firstSeen.set(row.ip, now);
-      return {...row, firstSeen: firstSeen.get(row.ip)!};
-    });
-  }, [connections.data]);
-  return {...connections, rows};
 }
 
 export function useRoutingTrace() {

@@ -30,7 +30,7 @@ test('saving mock and a token reloads and restores the default activity route', 
   await expect(page.locator('[name=token]')).toHaveValue('test-secret');
   await expect(page.locator('[name=token]')).toHaveAttribute('type', 'password');
   await page.goto('/#/');
-  await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.rp-nav[href="#/overview"]')).toHaveAttribute('aria-current', 'page');
 });
 
 test('an invalid URL is identified and cannot overwrite saved settings', async ({page}) => {

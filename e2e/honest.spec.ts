@@ -1,21 +1,21 @@
-import {expect, test} from './fixtures';
+import {detail, expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 test('native activity uses API version and events without demo mode controls', async ({page}) => {
   const version = await createMockApi().version();
   await page.clock.install();
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
   await expect(page.getByRole('radiogroup', {name: 'Mode', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveCount(0);
-  const notifications = page.getByRole('region', {name: 'Notifications'});
-  await page.clock.fastForward(5100);
-  await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
   await expect(page.locator('.rp-tile-val .rp-delta')).toHaveCount(0);
+  await page.goto('/#/events');
+  await expect(page.getByText('Connected', {exact: true})).toBeVisible();
+  await page.clock.fastForward(5100);
+  await expect(page.getByRole('row').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
   await page.goto('/#/connections?id=2');
-  const detail = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'cdn.bilibili.com'})});
-  await expect(detail).toBeVisible();
-  await expect(detail.locator('.rp-btn.accent')).toHaveCount(0);
+  await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
+  await expect(detail(page).locator('.rp-btn.accent')).toHaveCount(0);
   await page.goto('/#/events');
   await expect(page.getByRole('tab')).toHaveCount(0);
 });
@@ -55,7 +55,10 @@ test('search reads live connection addresses, node and group names, and availabl
   }
   await dialog.getByRole('option', {name: /live-search.example/}).click();
   await expect(page).toHaveURL(/#\/connections\?id=live%2Fid%3A1$/);
-  await expect(page.locator('.rp-card h3')).toHaveText('live-search.example');
+  await expect(detail(page).getByRole('heading')).toHaveText('live-search.example');
+  await page.keyboard.press('Escape');
+  await expect(page).not.toHaveURL(/id=/);
+  await expect(detail(page)).toHaveCount(0);
   for (const query of ['Live node', 'Live group', 'Settings']) {
     await page.keyboard.press('Control+K');
     await dialog.getByRole('searchbox').fill(query);
@@ -73,11 +76,10 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/capabilities': capabilities,
     '/version': version,
     '/runtime': await api.runtime(),
+    '/runtime/memory': await api.runtimeMemory(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
-    '/connections': await api.connections(),
-    '/nodes': await api.nodes(),
-    '/groups': await api.groups()
+    '/datapath': await api.datapath()
   };
   const counts: Record<string, number> = {};
   let hold: Promise<void> | undefined;
@@ -93,7 +95,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
     if (path === '/runtime' && brokenRuntime) return route.fulfill({contentType: 'application/json', body: '{'});
     await route.fulfill({json: responses[path]});
   });
-  await page.goto('/#/activity');
+  await page.goto('/#/overview');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
   await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
   await expect.poll(() => Object.keys(counts).sort()).toEqual(Object.keys(responses).sort());
