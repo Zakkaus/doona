@@ -15,12 +15,21 @@ export function appendMemorySample(samples: MemorySample[], memory: RuntimeMemor
   return [...samples.slice(-(memorySampleLimit - 1)), sample];
 }
 
+// One history for the whole session: the curve keeps growing while the user moves between pages.
+let history: MemorySample[] = [];
+function record(memory: RuntimeMemory | undefined): MemorySample[] {
+  if (memory) history = appendMemorySample(history, memory);
+  return history;
+}
+export function resetMemorySamples() {
+  history = [];
+}
 export function useMemorySamples(memory: RuntimeMemory | undefined) {
   const [observed, setObserved] = useState(memory);
-  const [samples, setSamples] = useState<MemorySample[]>(() => (memory ? appendMemorySample([], memory) : []));
+  const [samples, setSamples] = useState<MemorySample[]>(() => record(memory));
   if (observed !== memory) {
     setObserved(memory);
-    setSamples(memory ? appendMemorySample(samples, memory) : []);
+    setSamples(record(memory));
   }
   return samples;
 }

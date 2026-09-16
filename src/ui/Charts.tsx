@@ -40,6 +40,13 @@ const niceMax = (v: number) => {
   const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10;
   return s * p;
 };
+// A step that divides the range into a few round intervals, for axes that do not start at zero.
+const niceStep = (range: number) => {
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(range, 1e-9))));
+  const n = range / p;
+  const s = n <= 1 ? 0.2 : n <= 2 ? 0.5 : n <= 5 ? 1 : 2;
+  return s * p;
+};
 const tip = (p: Palette) => ({backgroundColor: p.text, color: p.surface, border: 'none', borderRadius: 8, fontSize: 12, padding: '8px 12px'});
 
 export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null | undefined) => string}) {
@@ -61,23 +68,42 @@ const LazyAreaChart = lazy(() =>
       timestamps,
       fmt,
       locale,
-      height = 150
+      height = 150,
+      baseline = 'zero'
     }: {
       series: Series[];
       timestamps: number[];
       fmt: (v: number) => string;
       locale: string;
       height?: number;
+      // Rates start at zero; a level such as memory zooms to its own range so small movements stay visible.
+      baseline?: 'zero' | 'auto';
     }) {
       const p = usePalette();
       const uid = useId();
-      const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit'}), [locale]);
+      const span = timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+      const withSeconds = span < 10 * 60 * 1000;
+      // Under ten minutes the hour repeats on every tick, so the axis reads minute:second instead.
+      const clock = useMemo(
+        () => new Intl.DateTimeFormat(locale, withSeconds ? {minute: '2-digit', second: '2-digit'} : {hour: '2-digit', minute: '2-digit'}),
+        [locale, withSeconds]
+      );
       const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
       if (!timestamps.length) return null;
       const last = timestamps.length - 1;
       const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
-      const max = niceMax(Math.max(1, ...series.flatMap(s => s.values.filter((v): v is number => v !== null))) * 1.08);
-      const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last].map(i => timestamps[i]))];
+      const values = series.flatMap(s => s.values.filter((v): v is number => v !== null));
+      let lo = 0;
+      let max = niceMax(Math.max(1, ...values) * 1.08);
+      if (baseline === 'auto' && values.length) {
+        const min = Math.min(...values);
+        const top = Math.max(...values);
+        const step = niceStep(Math.max(top - min, top * 0.02, 1));
+        lo = Math.max(0, Math.floor(min / step) * step - step);
+        max = Math.ceil(top / step) * step + step;
+      }
+      const yTicks = baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max];
+      const ticks = [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
       return (
         <div style={{height, width: '100%'}}>
           <ResponsiveContainer width="100%" height="100%">
@@ -104,8 +130,8 @@ const LazyAreaChart = lazy(() =>
               />
               <YAxis
                 orientation="right"
-                ticks={[max / 2, max]}
-                domain={[0, max]}
+                ticks={yTicks}
+                domain={[lo, max]}
                 tickFormatter={v => fmt(v)}
                 tick={{fontSize: 11, fill: p.subtle}}
                 axisLine={false}

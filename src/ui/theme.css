@@ -1071,6 +1071,13 @@ input {
   line-height: 36px;
   color: var(--rp-text);
 }
+/* Holds a chart's height while its first samples arrive, so the card does not jump. */
+.rp-chart-wait {
+  min-height: 182px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .rp-card-link {
   color: inherit;
   text-decoration: none;

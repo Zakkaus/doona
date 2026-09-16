@@ -228,9 +228,11 @@ export function Activity({go}: {go: (page: string) => void}) {
       </div>
 
       <div className="rp-g21">
-        <div className="rp-card">
+        <section className="rp-card" aria-labelledby="activity-traffic">
           <div className="rp-row">
-            <h3 className="rp-h3">{t('act.traffic')}</h3>
+            <h3 className="rp-h3" id="activity-traffic">
+              {t('act.traffic')}
+            </h3>
             <Segmented
               label={t('act.historyRange')}
               value={range}
@@ -258,7 +260,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <AreaChart series={traffic} timestamps={series.timestamps} fmt={chartRate} locale={locale} height={120} />
             </>
           )}
-        </div>
+        </section>
         <div className="rp-card">
           <div className="rp-row">
             <div className="rp-cluster">
@@ -322,26 +324,30 @@ export function Activity({go}: {go: (page: string) => void}) {
             </div>
           )}
         </div>
-        <div className="rp-card">
+        <section className="rp-card" aria-labelledby="activity-memory">
           <div className="rp-row">
-            <h3 className="rp-h3">{t('act.memory')}</h3>
+            <h3 className="rp-h3" id="activity-memory">
+              {t('act.memory')}
+            </h3>
             <Button quiet small onPress={() => go('overview')}>
               {t('act.viewDetails')}
             </Button>
           </div>
           {memory.error ? (
             <ErrorMessage error={memory.error} />
-          ) : memorySamples.length ? (
+          ) : memorySamples.length > 1 ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
-              <AreaChart series={memorySeries} timestamps={memorySamples.map(sample => sample.time)} fmt={memoryBytes} locale={locale} height={150} />
+              <AreaChart series={memorySeries} timestamps={memorySamples.map(sample => sample.time)} fmt={memoryBytes} locale={locale} height={150} baseline="auto" />
             </>
           ) : capabilities.data?.resources.runtime_memory.available === false ? (
             <span className="rp-empty">{t('act.noHistory')}</span>
           ) : (
-            <Loading />
+            <div className="rp-chart-wait">
+              <Loading>{t('act.sampling')}</Loading>
+            </div>
           )}
-        </div>
+        </section>
         <section className="rp-card" aria-label={t('act.issues')}>
           <div className="rp-row">
             <div className="rp-cluster">

@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
-test('overview charts collect memory polls and change the traffic history range', async ({page}) => {
+test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
@@ -9,7 +9,10 @@ test('overview charts collect memory polls and change the traffic history range'
     '/version': await api.version(),
     '/capabilities': capabilities,
     '/runtime': await api.runtime(),
-    '/datapath': await api.datapath('full')
+    '/runtime/outbounds': await api.runtimeOutbounds(),
+    '/connections': await api.connections(),
+    '/nodes': await api.nodes(),
+    '/groups': await api.groups()
   };
   let memoryPoll = 0;
   await page.clock.install();
@@ -27,13 +30,14 @@ test('overview charts collect memory polls and change the traffic history range'
       return route.fulfill({json: await api.trafficHistory({window_seconds: Number(url.searchParams.get('window_seconds'))})});
     await route.fulfill({json: responses[path]});
   });
-  await page.goto('/#/overview');
+  await page.goto('/#/activity');
   const memory = page.getByRole('region', {name: 'Memory', exact: true});
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  await expect(memory.locator('.recharts-surface')).toBeVisible();
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
-  await expect(memory.locator('.rp-legend')).toContainText('1 MB');
+  // One sample is not a curve yet; the second poll draws it.
+  await expect(memory.getByRole('status')).toContainText('Sampling');
   await page.clock.fastForward(5100);
+  await expect(memory.locator('.recharts-surface')).toBeVisible();
   await expect(memory.locator('.rp-legend')).toContainText('2 MB');
   await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', /L|C/);
   const request = page.waitForRequest(

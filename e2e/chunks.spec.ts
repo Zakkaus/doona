@@ -89,7 +89,7 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
     await expect(page.locator('.recharts-surface')).toHaveCount(0);
     release();
-    await expect(page.locator('.recharts-surface')).toHaveCount(6);
+    await expect(page.locator('.recharts-surface')).toHaveCount(5);
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();

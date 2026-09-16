@@ -2,7 +2,6 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
-    'ov.traffic': '流量',
     'ov.v.ebpf': 'eBPF',
     'ov.v.userspace': '使用者空間',
     'ov.v.mock': '模擬',
@@ -68,7 +67,6 @@ export const messages = defineMessages({
     'ov.operationError': '操作失敗：{error}'
   },
   'zh-CN': {
-    'ov.traffic': '流量',
     'ov.v.ebpf': 'eBPF',
     'ov.v.userspace': '用户空间',
     'ov.v.mock': '模拟',
@@ -134,7 +132,6 @@ export const messages = defineMessages({
     'ov.operationError': '操作失败：{error}'
   },
   en: {
-    'ov.traffic': 'Traffic',
     'ov.v.ebpf': 'eBPF',
     'ov.v.userspace': 'Userspace',
     'ov.v.mock': 'Mock',
