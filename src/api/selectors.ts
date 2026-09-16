@@ -234,10 +234,28 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
   }
 }
 
-export function groupConfigFields(group: Group): Array<[string, string]> {
+const groupConfigLabels: Record<string, Key> = {
+  default_member_id: 'policy.cfg.defaultMember',
+  final_outbound: 'policy.cfg.finalOutbound',
+  check_url: 'policy.cfg.checkUrl',
+  check_interval: 'policy.cfg.checkInterval',
+  tolerance: 'policy.cfg.tolerance',
+  idle_timeout: 'policy.cfg.idleTimeout',
+  interrupt_connections: 'policy.cfg.interruptConnections'
+};
+const secondsFields = new Set(['check_interval', 'idle_timeout']);
+const millisFields = new Set(['tolerance']);
+// Known fields get a label and a unit; anything the contract adds later shows its raw name.
+export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
   return Object.entries(group.config)
     .filter(([, value]) => value !== null)
-    .map(([key, value]) => [key, String(value)]);
+    .map(([key, value]) => {
+      const label: Key | MessageRef = groupConfigLabels[key] ?? {key: 'flow.f.input', params: {name: key}};
+      if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
+      if (typeof value === 'number' && secondsFields.has(key)) return [label, {key: 'policy.cfg.seconds', params: {n: value}}];
+      if (typeof value === 'number' && millisFields.has(key)) return [label, {key: 'policy.cfg.millis', params: {n: value}}];
+      return [label, String(value)];
+    });
 }
 
 export function probeSummary(result: ProbeResult): MessageRef {

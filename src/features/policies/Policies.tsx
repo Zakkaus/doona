@@ -88,7 +88,12 @@ function PolicyCard({
             ]}
           />
           <Disclosure id={id} title={t('ui.config')}>
-            <Kv items={groupConfigFields(g)} />
+            <Kv
+              items={groupConfigFields(g).map(([key, value]) => [
+                typeof key === 'string' ? t(key) : t(key.key, key.params),
+                typeof value === 'string' ? value : t(value.key, value.params)
+              ])}
+            />
           </Disclosure>
           <div className="rp-toolbar">
             {selectable && (
