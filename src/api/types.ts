@@ -576,7 +576,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/logs/settings": {
+    "/api/v1/runtime/settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -584,30 +584,34 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read the engine's log level and replay buffer size
-         * @description Requires resources.logs.available. Reports the level the engine currently
-         *     emits at and how many records the replay ring keeps. Values are the running
-         *     state, which may differ from the configuration file after a PATCH.
+         * Read the runtime-adjustable settings
+         * @description Requires resources.runtime_settings.available. Reports the values the running
+         *     engine uses for the things a panel may tune without a reload: the log level and
+         *     replay ring, the DNS log ring, and flow retention. Ceilings come from the
+         *     matching capability (logs.max_buffered_records, dns_log.max_records,
+         *     flows.max_flows, flows.retention_seconds); a value never exceeds its ceiling.
+         *     source says whether the values still come from the activated configuration
+         *     or were overridden at runtime.
          */
-        get: operations["getLogSettings"];
+        get: operations["getRuntimeSettings"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /**
-         * Change the log level or replay buffer size at runtime
-         * @description Requires control, resources.logs.available and resources.logs.settings.
-         *     The change applies to the running engine immediately, without a reload, and
-         *     lasts until the process restarts or the next configuration activation resets
-         *     it; it is not written back to the configuration file. Both fields are
-         *     optional; an absent field keeps its value. level must be an advertised level.
-         *     buffered_records must lie in [64, resources.logs.max_buffered_records];
-         *     shrinking the ring drops the oldest records and cursors older than the new
-         *     floor expire. Out-of-range or unadvertised values return 400 invalid_request
-         *     and change nothing. Follows the shared idempotency rules.
+         * Change runtime-adjustable settings without a reload
+         * @description Requires control and resources.runtime_settings.available; only the fields
+         *     listed in resources.runtime_settings.fields may appear, others return 400
+         *     invalid_request. The body is a merge: an absent field keeps its value. Every
+         *     value is checked against its ceiling before anything changes; an unadvertised
+         *     log level, a ring below 64 records, or a value above the ceiling returns 400
+         *     and changes nothing. Shrinking a ring drops its oldest records and expires
+         *     cursors older than the new floor. The change applies immediately and lasts
+         *     until the process restarts or the next configuration activation resets it; it
+         *     is not written to the configuration file. Follows the shared idempotency rules.
          */
-        patch: operations["patchLogSettings"];
+        patch: operations["patchRuntimeSettings"];
         trace?: never;
     };
     "/api/v1/dns/query": {
@@ -958,8 +962,6 @@ export interface components {
                 };
                 logs: {
                     available: boolean;
-                    /** @description Whether PATCH /logs/settings can change the level and ring size at runtime; false makes it return 404 capability_not_supported. */
-                    settings?: boolean;
                     levels?: components["schemas"]["LogLevel"][];
                     /** @description Bounded replay buffer capacity, not a durable retention guarantee. */
                     max_buffered_records?: components["schemas"]["SafeUInt"];
@@ -982,6 +984,11 @@ export interface components {
                     /** @description Ring capacity in records; not a retention guarantee. */
                     max_records?: components["schemas"]["SafeUInt"];
                     max_page_size?: components["schemas"]["SafeUInt"];
+                };
+                runtime_settings: {
+                    available: boolean;
+                    /** @description The settings PATCH /runtime/settings accepts on this backend; others return 400. */
+                    fields?: components["schemas"]["RuntimeSettingField"][];
                 };
                 operations: {
                     available: boolean;
@@ -2277,21 +2284,44 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        LogSettings: {
+        /** @enum {string} */
+        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds";
+        RuntimeSettings: {
             observed_at: components["schemas"]["Timestamp"];
-            /** @description The minimum severity the engine emits; the stream's level filter cannot go below it. */
-            level: components["schemas"]["LogLevel"];
-            /** @description Replay ring capacity in records, at most resources.logs.max_buffered_records. */
-            buffered_records: components["schemas"]["SafeUInt"];
             /**
-             * @description config while the values come from the activated configuration; runtime after a PATCH overrode them.
+             * @description config while every value comes from the activated configuration; runtime once any PATCH overrode one.
              * @enum {string}
              */
             source: "config" | "runtime";
+            log: {
+                /** @description The minimum severity the engine emits; the stream's level filter cannot go below it. */
+                level: components["schemas"]["LogLevel"];
+                /** @description Log replay ring capacity, at most logs.max_buffered_records. */
+                buffered_records: components["schemas"]["SafeUInt"];
+            };
+            dns_log: {
+                /** @description DNS log ring capacity, at most dns_log.max_records. */
+                max_records: components["schemas"]["SafeUInt"];
+            };
+            flows: {
+                /** @description Retained flows, at most flows.max_flows. */
+                max_flows: components["schemas"]["SafeUInt"];
+                /** @description How long a terminal flow stays, at most flows.retention_seconds. */
+                retention_seconds: components["schemas"]["SafeUInt"];
+            };
         };
-        LogSettingsPatch: {
-            level?: components["schemas"]["LogLevel"];
-            buffered_records?: components["schemas"]["SafeUInt"];
+        RuntimeSettingsPatch: {
+            log?: {
+                level?: components["schemas"]["LogLevel"];
+                buffered_records?: components["schemas"]["SafeUInt"];
+            };
+            dns_log?: {
+                max_records?: components["schemas"]["SafeUInt"];
+            };
+            flows?: {
+                max_flows?: components["schemas"]["SafeUInt"];
+                retention_seconds?: components["schemas"]["SafeUInt"];
+            };
         };
         StreamReadyEvent: {
             instance_id: string;
@@ -3605,7 +3635,7 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
-    getLogSettings: {
+    getRuntimeSettings: {
         parameters: {
             query?: never;
             header?: never;
@@ -3614,7 +3644,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current log settings */
+            /** @description Current runtime settings */
             200: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -3622,7 +3652,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LogSettings"];
+                    "application/json": components["schemas"]["RuntimeSettings"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -3630,7 +3660,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    patchLogSettings: {
+    patchRuntimeSettings: {
         parameters: {
             query?: never;
             header?: {
@@ -3641,7 +3671,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LogSettingsPatch"];
+                "application/json": components["schemas"]["RuntimeSettingsPatch"];
             };
         };
         responses: {
@@ -3653,10 +3683,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LogSettings"];
+                    "application/json": components["schemas"]["RuntimeSettings"];
                 };
             };
-            /** @description Unadvertised level or buffered_records outside the advertised range */
+            /** @description A field outside resources.runtime_settings.fields, an unadvertised level, or a value outside its range */
             400: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];

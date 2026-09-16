@@ -1,1 +1,1 @@
-openapi.yaml: generated bundle from daeuniverse/api-standardize PR #7 (connection-close) merged with PR #6 (observability-endpoints), fork branch doona-pin commit d988bc4 (2026-09-17). Regenerate src/api/types.ts with: pnpm gen:api
+openapi.yaml: generated bundle from daeuniverse/api-standardize PR #7 (connection-close) merged with PR #6 (observability-endpoints), fork branch doona-pin commit 125a0e0 (2026-09-17, includes b90caaa runtime settings). Regenerate src/api/types.ts with: pnpm gen:api

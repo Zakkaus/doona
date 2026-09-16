@@ -2,7 +2,7 @@ import type {Key} from '../i18n/messages';
 import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
-import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime} from './model';
+import type {ApiEvent, Capabilities, DnsCacheList, DnsQueryResponse, FlowList, GroupSelectionRequest, Node, OperationAccepted, Runtime, RuntimeSettings, RuntimeSettingsPatch} from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
@@ -448,6 +448,26 @@ export function useCapabilities() {
 export function useDatapath(enabled = true) {
   const api = getApi();
   return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {deps: [api], enabled});
+}
+// Runtime-adjustable settings: read with the usual poll, written as one merge PATCH; the response replaces
+// the cached copy so the form reflects what the backend actually kept.
+export function useRuntimeSettings(enabled = true) {
+  const api = getApi();
+  const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {deps: [api], enabled});
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<RuntimeSettings | null>(null);
+  async function save(patch: RuntimeSettingsPatch): Promise<RuntimeSettings> {
+    setBusy(true);
+    try {
+      const next = await api.patchRuntimeSettings(patch);
+      setSaved(next);
+      resource.refetch();
+      return next;
+    } finally {
+      setBusy(false);
+    }
+  }
+  return {...resource, data: saved && (!resource.data || saved.observed_at >= resource.data.observed_at) ? saved : resource.data, busy, save};
 }
 export function useRuntimeMemory(enabled = true) {
   const api = getApi();

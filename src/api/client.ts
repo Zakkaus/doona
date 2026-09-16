@@ -123,6 +123,8 @@ export function createApi(base: string, token?: string): Api {
     closeConnection: async (connection_id, signal) => {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
     },
+    runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
+    patchRuntimeSettings: async (body, signal) => data(await client.PATCH('/api/v1/runtime/settings', {body, signal})),
     deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.

@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {ApiEvent, DnsLogRecord, EventOptions, FlowDetail, GroupSelectionResult, Operation, OperationAccepted, OperationState} from '../model';
+import type {ApiEvent, DnsLogRecord, EventOptions, FlowDetail, GroupSelectionResult, Operation, OperationAccepted, OperationState, RuntimeSettingsPatch} from '../model';
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import * as fixtures from './fixtures';
@@ -53,6 +53,7 @@ export function createMockApi(): Api {
     if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
   } catch {}
   let capabilities = fixtures.capabilities;
+  const settings = structuredClone(fixtures.runtimeSettings);
   try {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
@@ -526,6 +527,43 @@ export function createMockApi(): Api {
         return;
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
+    runtimeSettings: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      return structuredClone(settings);
+    },
+    // Merge semantics: every value is checked against its ceiling before anything changes.
+    patchRuntimeSettings: async (patch, signal) => {
+      signal?.throwIfAborted();
+      const resources = capabilities.resources;
+      if (!resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      const allowed = new Set(resources.runtime_settings.fields ?? []);
+      const ceilings = {
+        'log.buffered_records': resources.logs.max_buffered_records ?? 0,
+        'dns_log.max_records': resources.dns_log.max_records ?? 0,
+        'flows.max_flows': resources.flows.max_flows ?? 0,
+        'flows.retention_seconds': resources.flows.retention_seconds ?? 0
+      };
+      const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+      const fields = Object.entries(patch).flatMap(([section, values]) => Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const));
+      for (const [field, value] of fields) {
+        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (field === 'log.level') {
+          if (!(resources.logs.levels ?? []).includes(value as never)) throw invalid(`${value} is not an advertised log level`);
+          continue;
+        }
+        const ceiling = ceilings[field as keyof typeof ceilings];
+        const floor = field === 'flows.retention_seconds' ? 1 : 64;
+        if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
+      }
+      const apply = <S extends keyof RuntimeSettingsPatch>(section: S) => Object.assign(settings[section], patch[section] ?? {});
+      apply('log');
+      apply('dns_log');
+      apply('flows');
+      settings.source = 'runtime';
+      settings.observed_at = new Date().toISOString();
+      return structuredClone(settings);
     },
     deleteDnsEntry: async (entryId, signal) => {
       signal?.throwIfAborted();

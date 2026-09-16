@@ -231,7 +231,6 @@ paths:
                           - warn
                           - error
                         max_buffered_records: 4096
-                        settings: true
                       dns_query:
                         available: true
                         record_types:
@@ -257,6 +256,14 @@ paths:
                         available: true
                         max_records: 2048
                         max_page_size: 500
+                      runtime_settings:
+                        available: true
+                        fields:
+                          - log.level
+                          - log.buffered_records
+                          - dns_log.max_records
+                          - flows.max_flows
+                          - flows.retention_seconds
                       operations:
                         available: true
                         retention_seconds: 300
@@ -2701,21 +2708,25 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-  /api/v1/logs/settings:
+  /api/v1/runtime/settings:
     get:
-      operationId: getLogSettings
-      summary: Read the engine's log level and replay buffer size
+      operationId: getRuntimeSettings
+      summary: Read the runtime-adjustable settings
       description: |
-        Requires resources.logs.available. Reports the level the engine currently
-        emits at and how many records the replay ring keeps. Values are the running
-        state, which may differ from the configuration file after a PATCH.
+        Requires resources.runtime_settings.available. Reports the values the running
+        engine uses for the things a panel may tune without a reload: the log level and
+        replay ring, the DNS log ring, and flow retention. Ceilings come from the
+        matching capability (logs.max_buffered_records, dns_log.max_records,
+        flows.max_flows, flows.retention_seconds); a value never exceeds its ceiling.
+        source says whether the values still come from the activated configuration
+        or were overridden at runtime.
       x-permission: observe
       security:
         - bearerAuth: []
         - {}
       responses:
         '200':
-          description: Current log settings
+          description: Current runtime settings
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -2724,14 +2735,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LogSettings'
+                $ref: '#/components/schemas/RuntimeSettings'
               examples:
                 current:
                   value:
                     observed_at: '2026-08-15T10:00:00Z'
-                    level: info
-                    buffered_records: 4096
                     source: config
+                    log:
+                      level: info
+                      buffered_records: 4096
+                    dns_log:
+                      max_records: 2048
+                    flows:
+                      max_flows: 10000
+                      retention_seconds: 300
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -2743,18 +2760,18 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      operationId: patchLogSettings
-      summary: Change the log level or replay buffer size at runtime
+      operationId: patchRuntimeSettings
+      summary: Change runtime-adjustable settings without a reload
       description: |
-        Requires control, resources.logs.available and resources.logs.settings.
-        The change applies to the running engine immediately, without a reload, and
-        lasts until the process restarts or the next configuration activation resets
-        it; it is not written back to the configuration file. Both fields are
-        optional; an absent field keeps its value. level must be an advertised level.
-        buffered_records must lie in [64, resources.logs.max_buffered_records];
-        shrinking the ring drops the oldest records and cursors older than the new
-        floor expire. Out-of-range or unadvertised values return 400 invalid_request
-        and change nothing. Follows the shared idempotency rules.
+        Requires control and resources.runtime_settings.available; only the fields
+        listed in resources.runtime_settings.fields may appear, others return 400
+        invalid_request. The body is a merge: an absent field keeps its value. Every
+        value is checked against its ceiling before anything changes; an unadvertised
+        log level, a ring below 64 records, or a value above the ceiling returns 400
+        and changes nothing. Shrinking a ring drops its oldest records and expires
+        cursors older than the new floor. The change applies immediately and lasts
+        until the process restarts or the next configuration activation resets it; it
+        is not written to the configuration file. Follows the shared idempotency rules.
       x-permission: control
       security:
         - bearerAuth: []
@@ -2766,11 +2783,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LogSettingsPatch'
+              $ref: '#/components/schemas/RuntimeSettingsPatch'
             examples:
               debug:
                 value:
-                  level: debug
+                  log:
+                    level: debug
+                  dns_log:
+                    max_records: 4096
       responses:
         '200':
           description: Settings after the change
@@ -2782,20 +2802,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LogSettings'
+                $ref: '#/components/schemas/RuntimeSettings'
               examples:
                 changed:
                   value:
                     observed_at: '2026-08-15T10:00:05Z'
-                    level: debug
-                    buffered_records: 4096
                     source: runtime
+                    log:
+                      level: debug
+                      buffered_records: 4096
+                    dns_log:
+                      max_records: 4096
+                    flows:
+                      max_flows: 10000
+                      retention_seconds: 300
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
         '400':
-          description: Unadvertised level or buffered_records outside the advertised range
+          description: A field outside resources.runtime_settings.fields, an unadvertised level, or a value outside its range
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -2806,11 +2832,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                too_many_records:
+                above_ceiling:
                   value:
                     error:
                       code: invalid_request
-                      message: buffered_records exceeds the advertised limit.
+                      message: dns_log.max_records exceeds the advertised ceiling.
                     request_id: request-3
                   x-headers:
                     Content-Type: application/json
@@ -4287,6 +4313,7 @@ components:
             - dns_query
             - dns_cache
             - dns_log
+            - runtime_settings
             - operations
             - reload
             - suspend
@@ -4673,13 +4700,9 @@ components:
                 required:
                   - levels
                   - max_buffered_records
-                  - settings
               properties:
                 available:
                   type: boolean
-                settings:
-                  type: boolean
-                  description: Whether PATCH /logs/settings can change the level and ring size at runtime; false makes it return 404 capability_not_supported.
                 levels:
                   type: array
                   minItems: 1
@@ -4768,6 +4791,26 @@ components:
                 max_page_size:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
+            runtime_settings:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - fields
+              properties:
+                available:
+                  type: boolean
+                fields:
+                  type: array
+                  uniqueItems: true
+                  description: The settings PATCH /runtime/settings accepts on this backend; others return 400.
+                  items:
+                    $ref: '#/components/schemas/RuntimeSettingField'
             operations:
               type: object
               required:
@@ -8727,39 +8770,101 @@ components:
             - 'null'
           additionalProperties: true
           description: Sanitized structured fields, or null when unavailable; the message safety rules apply recursively.
-    LogSettings:
+    RuntimeSettingField:
+      type: string
+      enum:
+        - log.level
+        - log.buffered_records
+        - dns_log.max_records
+        - flows.max_flows
+        - flows.retention_seconds
+    RuntimeSettings:
       type: object
       required:
         - observed_at
-        - level
-        - buffered_records
         - source
+        - log
+        - dns_log
+        - flows
       properties:
         observed_at:
           $ref: '#/components/schemas/Timestamp'
-        level:
-          $ref: '#/components/schemas/LogLevel'
-          description: The minimum severity the engine emits; the stream's level filter cannot go below it.
-        buffered_records:
-          $ref: '#/components/schemas/SafeUInt'
-          minimum: 64
-          description: Replay ring capacity in records, at most resources.logs.max_buffered_records.
         source:
           type: string
           enum:
             - config
             - runtime
-          description: config while the values come from the activated configuration; runtime after a PATCH overrode them.
-    LogSettingsPatch:
+          description: config while every value comes from the activated configuration; runtime once any PATCH overrode one.
+        log:
+          type: object
+          required:
+            - level
+            - buffered_records
+          properties:
+            level:
+              $ref: '#/components/schemas/LogLevel'
+              description: The minimum severity the engine emits; the stream's level filter cannot go below it.
+            buffered_records:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+              description: Log replay ring capacity, at most logs.max_buffered_records.
+        dns_log:
+          type: object
+          required:
+            - max_records
+          properties:
+            max_records:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+              description: DNS log ring capacity, at most dns_log.max_records.
+        flows:
+          type: object
+          required:
+            - max_flows
+            - retention_seconds
+          properties:
+            max_flows:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+              description: Retained flows, at most flows.max_flows.
+            retention_seconds:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 1
+              description: How long a terminal flow stays, at most flows.retention_seconds.
+    RuntimeSettingsPatch:
       type: object
       additionalProperties: false
       minProperties: 1
       properties:
-        level:
-          $ref: '#/components/schemas/LogLevel'
-        buffered_records:
-          $ref: '#/components/schemas/SafeUInt'
-          minimum: 64
+        log:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            level:
+              $ref: '#/components/schemas/LogLevel'
+            buffered_records:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+        dns_log:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            max_records:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+        flows:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            max_flows:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 64
+            retention_seconds:
+              $ref: '#/components/schemas/SafeUInt'
+              minimum: 1
     StreamReadyEvent:
       type: object
       required:
