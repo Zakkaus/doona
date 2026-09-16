@@ -258,22 +258,52 @@ export function probeSummary(result: ProbeResult): MessageRef {
 
 // Field lists take a label function so the pages can translate the keys; values stay contract vocabulary.
 export type LabelFn = (key: Key) => string;
+// Enum values shown to people go through the dictionary; anything outside the contract shows as is.
+const datapathValues: Record<string, Key> = {
+  ebpf: 'ov.v.ebpf',
+  userspace: 'ov.v.userspace',
+  mock: 'ov.v.mock',
+  active: 'ov.v.active',
+  degraded: 'ov.v.degraded',
+  detached: 'ov.v.detached',
+  failed: 'ov.v.failed',
+  disabled: 'ov.v.disabled',
+  full: 'ov.v.full',
+  partial: 'ov.v.partial',
+  none: 'ov.v.none',
+  real: 'ov.v.real',
+  loaded: 'ov.v.loaded',
+  not_loaded: 'ov.v.notLoaded',
+  attached: 'ov.v.attached',
+  partially_attached: 'ov.v.partiallyAttached',
+  published: 'ov.v.published',
+  not_published: 'ov.v.notPublished',
+  healthy: 'ov.v.healthy',
+  ready: 'ov.v.ready',
+  error: 'ov.v.error',
+  unknown: 'ov.v.unknown',
+  ingress: 'ov.v.ingress',
+  egress: 'ov.v.egress'
+};
+export function datapathValue(value: string, label: LabelFn): string {
+  return datapathValues[value] ? label(datapathValues[value]) : value;
+}
 export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn): Array<[string, string]> {
   const ebpf = datapath.ebpf;
   const occupancy = ebpf?.maps?.conn_state;
+  const v = (value: string) => datapathValue(value, label);
   return [
-    [label('ov.f.kind'), datapath.kind],
-    [label('ov.f.state'), datapath.state],
-    [label('ov.f.visibility'), datapath.visibility],
+    [label('ov.f.kind'), v(datapath.kind)],
+    [label('ov.f.state'), v(datapath.state)],
+    [label('ov.f.visibility'), v(datapath.visibility)],
     ...(ebpf
       ? ([
-          [label('ov.f.backend'), ebpf.backend],
-          [label('ov.f.programs'), ebpf.programs],
-          [label('ov.f.hooks'), ebpf.hooks],
-          [label('ov.f.routing'), ebpf.routing.state + ' / ' + (ebpf.routing.generation_id ?? '—')],
-          [label('ov.f.health'), ebpf.health],
-          [label('ov.f.lastError'), ebpf.last_error ?? '—'],
-          [label('ov.f.maps'), ebpf.maps?.state ?? '—'],
+          [label('ov.f.backend'), v(ebpf.backend)],
+          [label('ov.f.programs'), v(ebpf.programs)],
+          [label('ov.f.hooks'), v(ebpf.hooks)],
+          [label('ov.f.routing'), v(ebpf.routing.state)],
+          [label('ov.f.health'), v(ebpf.health)],
+          [label('ov.f.maps'), v(ebpf.maps?.state ?? 'unknown')],
           [label('ov.f.connState'), occupancy?.occupancy_known && occupancy.occupancy !== null ? occupancy.occupancy + ' / ' + occupancy.capacity : unknown]
         ] as Array<[string, string]>)
       : [])
@@ -285,7 +315,7 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn): Array<[stri
     [label('ov.f.rss'), formatBytes(memory.process?.rss_bytes ?? null)],
     [label('ov.f.cgroupCurrent'), formatBytes(memory.cgroup?.current_bytes ?? null)],
     [label('ov.f.cgroupLimit'), formatBytes(memory.cgroup?.limit_bytes ?? null)],
-    [label('ov.f.cgroupPercent'), percent === null ? '—' : percent + '%'],
+    [label('ov.f.cgroupPercent'), percent === null ? '—' : Math.round(percent) + '%'],
     [label('ov.f.oomHigh'), memory.cgroup?.events?.high ?? '—'],
     [label('ov.f.oom'), memory.cgroup?.events?.oom ?? '—'],
     [label('ov.f.oomKill'), memory.cgroup?.events?.oom_kill ?? '—'],

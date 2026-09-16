@@ -54,7 +54,7 @@ export function ConnectionTable({
       else if (bottom > table.scrollTop + table.clientHeight) table.scrollTop = bottom - table.clientHeight;
     });
     return () => cancelAnimationFrame(frame);
-  }, [selectedIndex]);
+  }, [ref, selectedIndex]);
   const renderConnection = (c: Connection) => {
     const cells: Record<string, React.ReactNode> = {
       dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,

@@ -3,6 +3,7 @@ import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, 
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
+  Link as RLink,
   ToggleButton,
   ToggleButtonGroup,
   Menu,
@@ -571,6 +572,14 @@ export function LabeledSelect({
 }
 export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
   return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
+}
+// A whole card as one link: a tile that opens the page it summarises.
+export function CardLink({href, label, children}: {href: string; label: string; children: ReactNode}) {
+  return (
+    <RLink href={href} aria-label={label} className="rp-card rp-card-link">
+      {children}
+    </RLink>
+  );
 }
 export function Kv({items, inline}: {items: Array<[string, string]>; inline?: boolean}) {
   return (

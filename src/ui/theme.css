@@ -1071,6 +1071,25 @@ input {
   line-height: 36px;
   color: var(--rp-text);
 }
+.rp-card-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 150ms var(--rp-ease),
+    background 150ms var(--rp-ease);
+}
+.rp-card-link[data-hovered] {
+  border-color: var(--rp-pine);
+}
+.rp-card-link[data-pressed] {
+  background: var(--rp-overlay);
+}
+.rp-card-link[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
 .rp-card {
   background: var(--rp-base);
   border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
@@ -2672,6 +2691,7 @@ button.rp-node[data-focus-visible] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
 }
 @media (min-width: 1280px) {
   .rp-grid-pair {

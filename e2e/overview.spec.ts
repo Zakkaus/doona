@@ -28,7 +28,7 @@ test('overview charts collect memory polls and change the traffic history range'
     await route.fulfill({json: responses[path]});
   });
   await page.goto('/#/overview');
-  const memory = page.getByRole('region', {name: 'Memory history'});
+  const memory = page.getByRole('region', {name: 'Memory', exact: true});
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   await expect(memory.locator('.recharts-surface')).toBeVisible();
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
