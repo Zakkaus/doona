@@ -1,7 +1,11 @@
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations} from '../../api/store';
-import {datapathFields, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
+import {useMemo, useState} from 'react';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useTrafficHistory} from '../../api/store';
+import {datapathFields, formatDuration, lifecycleStates, localTime, memoryFields, trafficSeries} from '../../api/selectors';
+import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Button, DataTable, Kv, Light, toast} from '../../ui/ui';
+import {Button, DataTable, Kv, Light, Segmented, toast} from '../../ui/ui';
+import {AreaChart, Legend, fmtRate, usePalette} from '../../ui/Charts';
+import {memorySampleLimit, useMemorySamples} from './memory';
 import type {Key} from '../../i18n/messages';
 
 const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
@@ -16,6 +20,21 @@ export function Overview() {
   const datapath = useDatapath(!!resources?.datapath.available);
   const memory = useRuntimeMemory(!!resources?.runtime_memory.available);
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
+  const palette = usePalette();
+  const samples = useMemorySamples(memory.data);
+  const memorySeries = [
+    {label: t('ov.f.rss'), color: palette.cat[0], values: samples.map(sample => sample.rss)},
+    {label: t('ov.f.cgroupCurrent'), color: palette.cat[3], values: samples.map(sample => sample.cgroup)}
+  ];
+  const memoryBytes = (value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value)));
+  const [range, setRange] = useState('live');
+  const history = useTrafficHistory(range, capabilities.data);
+  const series = useMemo(() => trafficSeries(history.data), [history.data]);
+  const traffic = [
+    {label: t('ui.download'), color: palette.cat[0], values: series.down},
+    {label: t('ui.upload'), color: palette.cat[3], values: series.up}
+  ];
+  const chartRate = (value: number | null | undefined) => fmtRate(value, locale, t);
   const state = runtime.data?.lifecycle.state;
   const reload = runtime.data?.last_reload;
   const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
@@ -62,6 +81,56 @@ export function Overview() {
         />
       </div>
       {runtime.error && <p role="alert">{runtime.error.message}</p>}
+      <div className="rp-grid-pair">
+        <section className="rp-card" aria-labelledby="overview-memory-chart">
+          <h3 className="rp-h3" id="overview-memory-chart">
+            {t('ov.memoryHistory')}
+          </h3>
+          <p className="rp-note">{t('ov.memoryHistoryHelp', {n: memorySampleLimit})}</p>
+          {memory.error && <p role="alert">{memory.error.message}</p>}
+          {samples.length ? (
+            <>
+              <Legend series={memorySeries} fmt={memoryBytes} />
+              <AreaChart series={memorySeries} timestamps={samples.map(sample => sample.time)} fmt={memoryBytes} locale={locale} height={150} />
+            </>
+          ) : (
+            <span className="rp-label">{capabilities.loading || memory.loading ? t('ov.loading') : t('ov.unavailable')}</span>
+          )}
+        </section>
+        <section className="rp-card" aria-labelledby="overview-traffic-chart">
+          <div className="rp-row">
+            <h3 className="rp-h3" id="overview-traffic-chart">
+              {t('ov.traffic')}
+            </h3>
+            <Segmented
+              label={t('act.historyRange')}
+              value={range}
+              onChange={setRange}
+              items={[
+                ['live', t('act.live')],
+                ['h1', t('act.h1')],
+                ['h6', t('act.h6')],
+                ['h24', t('act.h24')],
+                ['d7', t('act.d7')]
+              ]}
+            />
+          </div>
+          {history.error ? (
+            <p role="alert">{history.error.message}</p>
+          ) : resources?.traffic_history.available === false ? (
+            <span className="rp-label">{t('ov.unavailable')}</span>
+          ) : !history.data ? (
+            <span role="status">{t('ov.loading')}</span>
+          ) : !history.data.samples.length ? (
+            <span className="rp-label">{t('act.emptyHistory')}</span>
+          ) : (
+            <>
+              <Legend series={traffic} fmt={chartRate} />
+              <AreaChart series={traffic} timestamps={series.timestamps} fmt={chartRate} locale={locale} height={150} />
+            </>
+          )}
+        </section>
+      </div>
       <div className="rp-split">
         <section className="rp-card">
           <h3 className="rp-h3">{t('ov.datapath')}</h3>

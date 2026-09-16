@@ -19,6 +19,7 @@ import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
 import {readSettings, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
+import {Shortcuts} from './Shortcuts';
 
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
 const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
@@ -246,16 +247,6 @@ export function Shell() {
   const [settings] = useState(readSettings);
   const {route, query, go} = useRoute(settings.api);
   const [searchOpen, setSearchOpen] = useState(false);
-  useEffect(() => {
-    const on = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    addEventListener('keydown', on);
-    return () => removeEventListener('keydown', on);
-  }, []);
   const pickLang = (l: Lang) => {
     setLang(l);
     try {
@@ -275,6 +266,7 @@ export function Shell() {
       <I18nProvider locale={LOCALE[lang]}>
         <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
         {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
+        <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
@@ -318,6 +310,8 @@ function Frame({
   const paletteSections = palettes(t);
   const capabilities = useCapabilities();
   const version = useVersion();
+  const [settings] = useState(readSettings);
+  const profile = settings.profiles.find(item => item.id === settings.activeId);
   const nav = navGroups.map(
     group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
   );
@@ -428,6 +422,7 @@ function Frame({
         <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
           <GitHub />
           {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
+          {settings.profiles.length > 1 && <span title={profile?.name}>{profile?.name}</span>}
         </Button>
       </nav>
       <main className="rp-main">

@@ -28,22 +28,38 @@ type Feature = {
   path: string;
   nav: {group: Key; titleKey: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
+  shortcut?: string;
   requires: {resources?: Array<keyof Capabilities['resources']>};
 };
 
 export const features: Feature[] = [
-  {id: 'activity', path: 'activity', nav: {group: 'grp.status', titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
+  {id: 'activity', path: 'activity', shortcut: 'a', nav: {group: 'grp.status', titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
   {id: 'overview', path: 'overview', nav: {group: 'grp.status', titleKey: 'nav.overview', Icon: Home}, Page: Overview, requires: {resources: ['runtime']}},
   {
     id: 'connections',
     path: 'connections',
+    shortcut: 'c',
     nav: {group: 'grp.network', titleKey: 'nav.connections', Icon: Link},
     Page: Connections,
     requires: {resources: ['connections']}
   },
-  {id: 'flows', path: 'flows', nav: {group: 'grp.network', titleKey: 'nav.flows', Icon: ListBulleted}, Page: Flows, requires: {resources: ['flows']}},
+  {
+    id: 'flows',
+    path: 'flows',
+    shortcut: 'f',
+    nav: {group: 'grp.network', titleKey: 'nav.flows', Icon: ListBulleted},
+    Page: Flows,
+    requires: {resources: ['flows']}
+  },
   {id: 'clients', path: 'clients', nav: {group: 'grp.network', titleKey: 'nav.clients', Icon: DeviceAll}, Page: Clients, requires: {}},
-  {id: 'policies', path: 'policies', nav: {group: 'grp.proxy', titleKey: 'nav.policies', Icon: Share}, Page: Policies, requires: {resources: ['groups']}},
+  {
+    id: 'policies',
+    path: 'policies',
+    shortcut: 'p',
+    nav: {group: 'grp.proxy', titleKey: 'nav.policies', Icon: Share},
+    Page: Policies,
+    requires: {resources: ['groups']}
+  },
   {
     id: 'rules',
     path: 'rules',
@@ -53,7 +69,7 @@ export const features: Feature[] = [
   },
   {id: 'dns', path: 'dns', nav: {group: 'grp.proxy', titleKey: 'nav.dns', Icon: GlobeGrid}, Page: Dns, requires: {resources: ['dns_query', 'dns_cache']}},
   {id: 'events', path: 'events', nav: {group: 'grp.system', titleKey: 'nav.events', Icon: History}, Page: Events, requires: {resources: ['events']}},
-  {id: 'settings', path: 'settings', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
+  {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ];
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {

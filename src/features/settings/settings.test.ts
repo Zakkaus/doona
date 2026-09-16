@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {normalizeApi, readSettings, shouldOpenSettings, writeSettings} from './settings';
+import {normalizeApi, normalizeProfiles, readProfiles, readSettings, shouldOpenSettings, writeProfiles} from './settings';
 
 describe('backend URL normalization', () => {
   it.each([
@@ -30,35 +30,80 @@ describe('backend URL normalization', () => {
   });
 });
 
-it('preserves preferences across backend writes and validates before changing storage', () => {
-  const values = new Map<string, string>();
-  const storage = {getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value)};
-  writeSettings({lang: 'en', scheme: 'dark', palette: 'nord/nord', wordmark: 'plain'}, storage);
-  writeSettings({api: ' https://honk.example/proxy/ ', token: 'secret'}, storage);
-  expect(readSettings(storage)).toEqual({
-    api: 'https://honk.example/proxy',
-    token: 'secret',
-    lang: 'en',
-    scheme: 'dark',
-    palette: 'nord/nord',
-    wordmark: 'plain'
-  });
-  const before = new Map(values);
-  expect(() => writeSettings({token: 'replacement', api: '/invalid'}, storage)).toThrow();
-  expect(values).toEqual(before);
-  writeSettings({api: 'mock', token: ''}, storage);
-  expect(readSettings(storage)).toEqual({
-    api: 'mock',
-    token: '',
-    lang: 'en',
-    scheme: 'dark',
-    palette: 'nord/nord',
-    wordmark: 'plain'
-  });
+function storageFrom(entries: Array<[string, string]> = []) {
+  const values = new Map(entries);
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    }
+  };
+}
+
+it('migrates legacy credentials once and never resurrects a deleted profile', () => {
+  const storage = storageFrom([
+    ['doona-api', ' https://honk.example/proxy/ '],
+    ['doona-api-token', 'secret']
+  ]);
+  const migrated = readProfiles(storage);
+  expect(migrated.profiles).toEqual([{id: 'legacy', name: 'https://honk.example/proxy/', api: 'https://honk.example/proxy', token: 'secret'}]);
+  expect(readSettings(storage).api).toBe('https://honk.example/proxy');
+  expect(storage.getItem('doona-api')).toBeNull();
+  expect(storage.getItem('doona-api-token')).toBeNull();
+  expect(readProfiles(storage)).toEqual(migrated);
+  writeProfiles({profiles: [], activeId: ''}, storage);
+  storage.setItem('doona-api', 'mock');
+  expect(readSettings(storage).api).toBeNull();
+});
+
+it('migrates an explicitly empty legacy endpoint as configured demo data', () => {
+  const storage = storageFrom([['doona-api', '']]);
+  expect(readSettings(storage).api).toBe('');
+  expect(readProfiles(storage).profiles).toHaveLength(1);
+});
+
+it('normalizes saved profiles and falls back from a missing active id', () => {
+  const values = [
+    null,
+    {},
+    {id: 'bad', api: 'ftp://example.org'},
+    {id: 'a', name: ' Home ', api: ' https://example.org/// ', token: ' secret '},
+    {id: 'a', name: 'duplicate', api: 'mock'},
+    {id: 'b', name: '', api: 'mock', token: 4}
+  ];
+  const profiles = normalizeProfiles(values);
+  expect(profiles).toEqual([
+    {id: 'a', name: 'Home', api: 'https://example.org', token: ' secret '},
+    {id: 'b', name: 'mock', api: 'mock', token: ''}
+  ]);
+  const storage = storageFrom([
+    ['doona-profiles', JSON.stringify(values)],
+    ['doona-profile', 'missing']
+  ]);
+  expect(readSettings(storage).api).toBe('https://example.org');
+  storage.setItem('doona-profile', 'b');
+  expect(readSettings(storage).api).toBe('mock');
+  storage.setItem('doona-profiles', '{');
+  expect(readProfiles(storage)).toEqual({profiles: [], activeId: ''});
+});
+
+it('validates all backend URLs before writing and preserves appearance preferences', () => {
+  const storage = storageFrom([
+    ['doona-lang', 'en'],
+    ['doona-scheme', 'dark']
+  ]);
+  const profile = {id: 'home', name: 'Home', api: 'mock', token: 'secret'};
+  writeProfiles({profiles: [profile], activeId: 'home'}, storage);
+  expect(() => writeProfiles({profiles: [{...profile, api: '/invalid'}], activeId: 'home'}, storage)).toThrow();
+  expect(readSettings(storage)).toMatchObject({api: 'mock', token: 'secret', lang: 'en', scheme: 'dark'});
 });
 
 it('keeps demo navigation usable when storage is unavailable', () => {
   const settings = readSettings({
+    ...storageFrom(),
     getItem: () => {
       throw new Error('Storage denied');
     }

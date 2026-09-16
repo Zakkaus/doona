@@ -2,6 +2,10 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'conn.columns': '欄位',
+    'conn.group': '分組',
+    'conn.ungrouped': '不分組',
+    'conn.groupCount': '{name} · {n}',
     'conn.loadFailed': '無法載入連線：{error}',
     'conn.truncated': '連線清單已截斷，僅顯示部分記錄。',
     'conn.filterHint': '域名、IP、來源、程序',
@@ -18,6 +22,10 @@ export const messages = defineMessages({
     'conn.f.started': '開始時間'
   },
   'zh-CN': {
+    'conn.columns': '列',
+    'conn.group': '分组',
+    'conn.ungrouped': '不分组',
+    'conn.groupCount': '{name} · {n}',
     'conn.loadFailed': '无法加载连接：{error}',
     'conn.truncated': '连接列表已截断，仅显示部分记录。',
     'conn.filterHint': '域名、IP、来源、进程',
@@ -34,6 +42,10 @@ export const messages = defineMessages({
     'conn.f.started': '开始时间'
   },
   en: {
+    'conn.columns': 'Columns',
+    'conn.group': 'Group by',
+    'conn.ungrouped': 'None',
+    'conn.groupCount': '{name} · {n}',
     'conn.loadFailed': 'Could not load connections: {error}',
     'conn.truncated': 'The connection list is truncated; only some records are shown.',
     'conn.filterHint': 'Domain, IP, source, process',

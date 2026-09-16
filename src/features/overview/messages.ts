@@ -2,6 +2,9 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'ov.memoryHistory': '記憶體趨勢',
+    'ov.memoryHistoryHelp': '保留此頁面開啟期間最近 {n} 次記憶體取樣。',
+    'ov.traffic': '流量',
     'ov.f.kind': '類型',
     'ov.f.state': '狀態',
     'ov.f.visibility': '可見度',
@@ -49,6 +52,9 @@ export const messages = defineMessages({
     'ov.operationBusy': '{action} · 執行中'
   },
   'zh-CN': {
+    'ov.memoryHistory': '内存趋势',
+    'ov.memoryHistoryHelp': '保留此页面打开期间最近 {n} 次内存采样。',
+    'ov.traffic': '流量',
     'ov.f.kind': '类型',
     'ov.f.state': '状态',
     'ov.f.visibility': '可见度',
@@ -96,6 +102,9 @@ export const messages = defineMessages({
     'ov.operationBusy': '{action} · 执行中'
   },
   en: {
+    'ov.memoryHistory': 'Memory history',
+    'ov.memoryHistoryHelp': 'The latest {n} memory samples collected while this page is open.',
+    'ov.traffic': 'Traffic',
     'ov.f.kind': 'Kind',
     'ov.f.state': 'State',
     'ov.f.visibility': 'Visibility',

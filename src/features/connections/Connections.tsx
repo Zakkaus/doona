@@ -1,15 +1,26 @@
 import {useMemo, useState} from 'react';
 import {useConnections} from '../../api/store';
 import {connectionDetails, connectionRows, connectionStates, ipLiteral} from '../../api/selectors';
-import {Button, Kv, LabeledSelect, Light, Segmented, TextField} from '../../ui/ui';
+import {Button, Kv, LabeledSelect, Light, MenuButton, Segmented, TextField} from '../../ui/ui';
 import {ConnectionTable} from './ConnectionTable';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
+import {columns, readView, viewKey, type ConnectionView} from './view';
 
 export function Connections({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
+  const [view, setView] = useState(readView);
+  const updateView = (patch: Partial<ConnectionView>) => {
+    const next = {...view, ...patch};
+    setView(next);
+    try {
+      localStorage.setItem(viewKey, JSON.stringify(next));
+    } catch {
+      // Keep the controls usable when storage is unavailable.
+    }
+  };
   const q = useMemo(() => new URLSearchParams(query), [query]);
   const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
   const [network, setNetwork] = useState('all');
@@ -78,8 +89,33 @@ export function Connections({go, query}: PageProps) {
           {t('ui.clearFilters')}
         </Button>
       </div>
+      <div className="rp-toolbar">
+        <MenuButton
+          label={t('conn.columns')}
+          multiple
+          value={columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id)}
+          items={columns.map(column => ({id: column.id, label: t(column.label)}))}
+          onChange={id => {
+            const hidden = view.hidden.includes(id) ? view.hidden.filter(value => value !== id) : [...view.hidden, id];
+            if (hidden.length < columns.length) updateView({hidden});
+          }}
+        >
+          {t('conn.columns')}
+        </MenuButton>
+        <LabeledSelect
+          label={t('conn.group')}
+          side
+          value={view.group}
+          onChange={group => updateView({group: group as ConnectionView['group']})}
+          items={[
+            {id: 'none', label: t('conn.ungrouped')},
+            {id: 'source', label: t('ui.source')},
+            {id: 'outbound', label: t('ui.outbound')}
+          ]}
+        />
+      </div>
       <div className="rp-page">
-        <ConnectionTable rows={shown} selected={sel} onSelect={setSel} />
+        <ConnectionTable rows={shown} selected={sel} onSelect={setSel} view={view} onSort={sort => updateView({sort})} />
         {cur ? (
           <div className="rp-card">
             <h3 className="rp-h3">{cur.domain || cur.dst || cur.id}</h3>

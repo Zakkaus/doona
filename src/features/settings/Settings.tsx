@@ -2,8 +2,8 @@ import {createContext, useContext, useEffect, useRef, useState} from 'react';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
-import {Button, Kv, LabeledSelect, MenuButton, TextField} from '../../ui/ui';
-import {normalizeApi, readSettings, writeSettings, type PaletteId, type Scheme, type Wordmark} from './settings';
+import {Button, Kv, LabeledSelect, MenuButton, ModalDialog, TextField} from '../../ui/ui';
+import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 
 type Appearance = {
   scheme: Scheme;
@@ -29,6 +29,9 @@ export function Settings() {
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
   const [token, setToken] = useState(saved.token);
+  const active = saved.profiles.find(profile => profile.id === saved.activeId);
+  const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
+  const [name, setName] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [invalid, setInvalid] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -54,17 +57,43 @@ export function Settings() {
       return null;
     }
   };
-  const save = () => {
-    const base = validate(api);
-    if (base === null) return;
+  const persist = (profiles: Profile[], activeId: string) => {
     try {
-      writeSettings({api: base, token});
+      writeProfiles({profiles, activeId});
     } catch {
       setResult({key: 'settings.saveError', error: true});
       return;
     }
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
+  };
+  const editedProfiles = () => {
+    const base = validate(api);
+    if (base === null) return null;
+    const profile = {...(active ?? {id: crypto.randomUUID(), name: t('settings.backend')}), api: base, token};
+    return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
+  };
+  const save = (id?: string) => {
+    const profiles = editedProfiles();
+    if (profiles) persist(profiles, id ?? active?.id ?? profiles[0].id);
+  };
+  const confirmProfile = () => {
+    if (dialog === 'delete') {
+      const profiles = saved.profiles.filter(profile => profile.id !== active?.id);
+      persist(profiles, profiles[0]?.id ?? '');
+      return;
+    }
+    const profiles = dialog === 'add' && !active ? [] : editedProfiles();
+    if (!profiles || !name.trim()) return;
+    if (dialog === 'add') {
+      const profile = {id: crypto.randomUUID(), name: name.trim(), api: 'mock', token: ''};
+      persist([...profiles, profile], profile.id);
+    } else {
+      persist(
+        profiles.map(profile => (profile.id === active?.id ? {...profile, name: name.trim()} : profile)),
+        saved.activeId
+      );
+    }
   };
   const testConnection = async () => {
     resetProbe();
@@ -114,6 +143,36 @@ export function Settings() {
         <h2 className="rp-h3" id="settings-backend">
           {t('settings.backend')}
         </h2>
+        <div className="rp-toolbar">
+          <LabeledSelect
+            label={t('settings.profile')}
+            side
+            value={saved.activeId}
+            isDisabled={!active}
+            items={saved.profiles.map(profile => ({id: profile.id, label: profile.name}))}
+            onChange={save}
+          />
+          <Button
+            onPress={() => {
+              setName('');
+              setDialog('add');
+            }}
+          >
+            {t('settings.addProfile')}
+          </Button>
+          <Button
+            isDisabled={!active}
+            onPress={() => {
+              setName(active?.name ?? '');
+              setDialog('rename');
+            }}
+          >
+            {t('settings.renameProfile')}
+          </Button>
+          <Button isDisabled={!active} onPress={() => setDialog('delete')}>
+            {t('settings.deleteProfile')}
+          </Button>
+        </div>
         <form
           className="rp-form"
           noValidate
@@ -206,6 +265,32 @@ export function Settings() {
           {t('github')}
         </a>
       </section>
+      {dialog && (
+        <ModalDialog
+          title={t(dialog === 'add' ? 'settings.addProfile' : dialog === 'rename' ? 'settings.renameProfile' : 'settings.deleteProfile')}
+          isOpen
+          narrow
+          alert={dialog === 'delete'}
+          onOpenChange={open => {
+            if (!open) setDialog(null);
+          }}
+          footer={() => (
+            <>
+              <Button onPress={() => setDialog(null)}>{t('close')}</Button>
+              <Button accent={dialog !== 'delete'} negative={dialog === 'delete'} isDisabled={dialog !== 'delete' && !name.trim()} onPress={confirmProfile}>
+                {t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
+              </Button>
+            </>
+          )}
+        >
+          {dialog === 'delete' ? (
+            <p>{t('settings.deleteProfileHelp', {name: active?.name ?? ''})}</p>
+          ) : (
+            <TextField label={t('settings.profileName')} value={name} onChange={setName} />
+          )}
+          {result?.error && <p role="alert">{t(result.key, result.params)}</p>}
+        </ModalDialog>
+      )}
     </div>
   );
 }

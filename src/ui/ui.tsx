@@ -199,6 +199,7 @@ export function MenuButton({
   sections,
   value,
   onChange,
+  multiple = false,
   label,
   quiet,
   chevron = true,
@@ -207,8 +208,9 @@ export function MenuButton({
   children: ReactNode;
   items?: Item[];
   sections?: Array<{title: string; items: Item[]}>;
-  value: string;
+  value: string | string[];
   onChange: (k: string) => void;
+  multiple?: boolean;
   label: string;
   quiet?: boolean;
   chevron?: boolean;
@@ -224,7 +226,13 @@ export function MenuButton({
         {sections ? (
           <Menu aria-label={label}>
             {sections.map(sec => (
-              <MenuSection key={sec.title} id={sec.title} selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)}>
+              <MenuSection
+                key={sec.title}
+                id={sec.title}
+                selectionMode="single"
+                selectedKeys={typeof value === 'string' ? [value] : value}
+                onSelectionChange={pick(onChange)}
+              >
                 <Header className="rp-sec-h">{sec.title}</Header>
                 {sec.items.map(item)}
               </MenuSection>
@@ -240,7 +248,14 @@ export function MenuButton({
             )}
           </Menu>
         ) : (
-          <Menu selectionMode="single" selectedKeys={[value]} onSelectionChange={pick(onChange)} aria-label={label}>
+          <Menu
+            selectionMode={multiple ? 'multiple' : 'single'}
+            selectedKeys={typeof value === 'string' ? [value] : value}
+            onSelectionChange={multiple ? undefined : pick(onChange)}
+            onAction={multiple ? key => onChange(String(key)) : undefined}
+            shouldCloseOnSelect={!multiple}
+            aria-label={label}
+          >
             {(items ?? []).map(item)}
           </Menu>
         )}
