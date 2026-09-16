@@ -87,7 +87,7 @@ export function Overview() {
           {(['reload', 'suspend', 'resume'] as const)
             .filter(kind => operations.canRun(kind) || operations.busy === kind)
             .map(kind => (
-              <Button key={kind} secondary small isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void run(kind)}>
+              <Button key={kind} secondary isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void run(kind)}>
                 {t(operationLabels[kind])}
               </Button>
             ))}

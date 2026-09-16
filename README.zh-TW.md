@@ -50,7 +50,7 @@ sha256sum -c SHA256SUMS
 tar -xzf "doona-${VERSION}.tar.gz" -C "$WEBROOT"
 ```
 
-如需選用的 Noto Sans TC 字型，將字型封存檔解壓縮至同一目錄：
+如需選用的 Noto Sans TC 與 SC 字型，將字型封存檔解壓縮至同一目錄：
 
 ```sh
 tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
@@ -163,6 +163,6 @@ pnpm package
 
 ## 授權與致謝
 
-採用 [GPL-3.0-only](LICENSE)。Noto Sans TC 使用 [Open Font License](public/fonts/OFL.txt)。
+採用 [GPL-3.0-only](LICENSE)。Noto Sans TC 與 SC 使用 [Open Font License](public/fonts/OFL.txt)。
 [NOTICE](NOTICE) 列出採用 Apache-2.0 的 Adobe Spectrum 圖示與採用 MIT 的 flag-icons。
 鴨子標誌由維護者繪製。

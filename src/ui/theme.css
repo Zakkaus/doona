@@ -817,9 +817,15 @@ body {
 body {
   font:
     14px/20px 'Noto Sans TC',
+    'Noto Sans SC',
     system-ui,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. */
+:lang(zh-CN) body,
+body:lang(zh-CN) {
+  font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
 }
 * {
   box-sizing: border-box;
