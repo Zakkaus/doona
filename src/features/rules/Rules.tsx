@@ -24,14 +24,11 @@ export function Rules({go, query}: PageProps) {
   const resources = capabilities.data?.resources;
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const flows = resources?.flows.available !== false;
+  const rules = resources?.rules.available === true;
   const tabs = [
-    ...(flows
-      ? [
-          {id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />},
-          {id: 'list', label: t('rule.listTitle'), content: <RuleList />},
-          {id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}
-        ]
-      : []),
+    ...(flows ? [{id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />}] : []),
+    ...(flows || rules ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList go={go} />}] : []),
+    ...(flows ? [{id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}] : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];
   const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'map');

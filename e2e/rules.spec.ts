@@ -1,8 +1,18 @@
 import {createMockApi} from '../src/api/mock';
 import {expect, test} from './fixtures';
 
+// Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.rules.available = false;
+  const flows = await api.flows();
   await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
@@ -34,6 +44,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
+  capabilities.resources.rules.available = false;
   const snapshot = await api.flows();
   const flow = snapshot.flows[0];
   snapshot.flows = Array.from({length: 13}, (_, i) => ({

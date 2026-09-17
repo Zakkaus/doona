@@ -43,6 +43,7 @@ import type {
   ProviderCreate,
   NodeCreate,
   GeoData,
+  RuleList,
   RuntimeMode,
   RuntimeModeRequest,
   LogOptions,
@@ -87,6 +88,8 @@ export interface Api {
   createNode(request: NodeCreate, signal?: AbortSignal): Promise<Node>;
   deleteNode(nodeId: string, signal?: AbortSignal): Promise<DeleteCount>;
   geodata(signal?: AbortSignal): Promise<GeoData>;
+  /** The running generation's rule dictionary; ids match routing trace and flow evidence. */
+  rules(signal?: AbortSignal): Promise<RuleList>;
   updateGeodata(signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;

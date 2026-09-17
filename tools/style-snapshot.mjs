@@ -4,22 +4,99 @@ import {chromium} from '@playwright/test';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
 const [base, out] = process.argv.slice(2);
-const palettes = ['rose-pine/main', 'rose-pine/moon', 'catppuccin/frappe', 'catppuccin/mocha', 'nord/nord', 'glass/glass', 'antd/antd', 'arco/arco', 'semi/semi'];
-const routes = ['activity', 'overview', 'connections', 'connections?id=2', 'dns', 'dns?tab=cache', 'policies', 'rules', 'rules?tab=list', 'rules?tab=trace', 'nodes', 'config', 'config?tab=setup', 'config?tab=validate', 'events', 'logs', 'settings'];
-const props = ['display','position','width','height','padding','margin','border','border-radius','background-color','background-image','color','font-size','font-weight','line-height','gap','align-self','align-items','justify-content','flex','overflow','box-shadow','outline','opacity','translate','scale','z-index','min-height','max-height','white-space','text-overflow','cursor','fill','stroke'];
+const palettes = [
+  'rose-pine/main',
+  'rose-pine/moon',
+  'catppuccin/frappe',
+  'catppuccin/mocha',
+  'nord/nord',
+  'glass/glass',
+  'antd/antd',
+  'arco/arco',
+  'semi/semi'
+];
+const routes = [
+  'activity',
+  'overview',
+  'connections',
+  'connections?id=2',
+  'dns',
+  'dns?tab=cache',
+  'policies',
+  'rules',
+  'rules?tab=list',
+  'rules?tab=trace',
+  'nodes',
+  'config',
+  'config?tab=setup',
+  'config?tab=validate',
+  'events',
+  'logs',
+  'settings'
+];
+const props = [
+  'display',
+  'position',
+  'width',
+  'height',
+  'padding',
+  'margin',
+  'border',
+  'border-radius',
+  'background-color',
+  'background-image',
+  'color',
+  'font-size',
+  'font-weight',
+  'line-height',
+  'gap',
+  'align-self',
+  'align-items',
+  'justify-content',
+  'flex',
+  'overflow',
+  'box-shadow',
+  'outline',
+  'opacity',
+  'translate',
+  'scale',
+  'z-index',
+  'min-height',
+  'max-height',
+  'white-space',
+  'text-overflow',
+  'cursor',
+  'fill',
+  'stroke'
+];
 const browser = await chromium.launch();
 const result = {};
 for (const palette of palettes) {
   for (const scheme of ['light', 'dark']) {
     const context = await browser.newContext({viewport: {width: 1280, height: 900}, reducedMotion: 'reduce'});
-    await context.addInitScript(([p, s]) => { localStorage.setItem('doona-lang', 'zh-TW'); localStorage.setItem('doona-scheme', s); localStorage.setItem('doona-api', 'mock'); localStorage.setItem('doona-palette', p); }, [palette, scheme]);
+    await context.addInitScript(
+      ([p, s]) => {
+        localStorage.setItem('doona-lang', 'zh-TW');
+        localStorage.setItem('doona-scheme', s);
+        localStorage.setItem('doona-api', 'mock');
+        localStorage.setItem('doona-palette', p);
+      },
+      [palette, scheme]
+    );
     const page = await context.newPage();
     for (const route of routes) {
       await page.goto(base + '/#/' + route);
       await page.waitForTimeout(600);
       const rows = await page.evaluate(props => {
         const out = [];
-        const path = el => { const parts = []; for (let e = el; e && e !== document.body; e = e.parentElement) { const cls = [...e.classList].sort().join('.'); parts.unshift(e.tagName.toLowerCase() + (cls ? '.' + cls : '')); } return parts.join('>'); };
+        const path = el => {
+          const parts = [];
+          for (let e = el; e && e !== document.body; e = e.parentElement) {
+            const cls = [...e.classList].sort().join('.');
+            parts.unshift(e.tagName.toLowerCase() + (cls ? '.' + cls : ''));
+          }
+          return parts.join('>');
+        };
         for (const el of document.querySelectorAll('body *')) {
           if (el.closest('.cm-editor') || el.tagName === 'svg' || el.closest('svg') || el.closest('.recharts-wrapper')) continue;
           const cs = getComputedStyle(el);

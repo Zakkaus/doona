@@ -704,6 +704,11 @@ export function useDnsFlush() {
   }
   return {busy, flush};
 }
+// The rule dictionary of the running generation; refetched on generation.changed.
+export function useRules(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['rules'], fetch: signal => api.rules(signal)}, {deps: [api], enabled, every: 0});
+}
 export function useGeodata(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['geodata'], fetch: signal => api.geodata(signal)}, {deps: [api], enabled, every: 0});

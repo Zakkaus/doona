@@ -21,6 +21,7 @@ export type ResourceName =
   | 'config'
   | 'providers'
   | 'geodata'
+  | 'rules'
   | 'runtimeMode';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.

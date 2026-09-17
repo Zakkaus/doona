@@ -12,6 +12,7 @@ import type {
   OperationAccepted,
   OperationState,
   Provider,
+  RuleList,
   RuntimeSettingsPatch
 } from '../model';
 import {ApiError} from '../error';
@@ -780,6 +781,65 @@ export function createMockApi(): Api {
       log('info', 'honk::config', 'Node removed.', {node: node.name});
       advance();
       return {deleted: 1};
+    },
+    // The dictionary is read off the accepted text: main routing first, includes in place, in evaluation order.
+    // A line the demo's flows and trace already refer to keeps that id; anything added later gets one from its
+    // file and line.
+    rules: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
+      const list = await loadSources();
+      const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
+      const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
+      const entries: RuleList['rules'] = [];
+      let fallback: RuleList['fallback'] | null = null;
+      const read = (file: (typeof list)[number], bare: boolean) => {
+        let depth = 0;
+        file.content.split('\n').forEach((raw, i) => {
+          const code = raw.replace(/#.*$/, '').trim();
+          if (!bare) {
+            if (/^routing\s*\{/.test(code)) {
+              depth = 1;
+              return;
+            }
+            if (depth === 0) return;
+            if (code === '}') {
+              depth = 0;
+              return;
+            }
+          }
+          const include = /^include\s+(\S+)$/.exec(code);
+          if (include) {
+            const target = byPath.get(include[1]);
+            if (target) read(target, true);
+            return;
+          }
+          const fb = /^fallback:\s*(\S+)$/.exec(code);
+          const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
+          if (!fb && !rule) return;
+          const source = {file: file.path.split('/').pop()!, line: i + 1};
+          if (fb) {
+            fallback = {outbound: fb[1], source};
+            entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
+            return;
+          }
+          const must = rule![2].endsWith('(must)');
+          const outbound = rule![2].replace(/\(must\)$/, '');
+          entries.push({
+            rule_id: known.get(code) ?? `${source.file}:${source.line}`,
+            index: entries.length,
+            expression: code,
+            outbound,
+            must,
+            source,
+            kind: 'rule'
+          });
+        });
+      };
+      const main = list.find(item => item.kind === 'main');
+      if (main) read(main, false);
+      if (!fallback) throw new ApiError(409, 'snapshot_unavailable', 'The routing section has no fallback');
+      return {generation_id: String(configRevision), rules: entries, fallback};
     },
     geodata: async signal => {
       signal?.throwIfAborted();

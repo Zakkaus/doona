@@ -172,6 +172,7 @@ export function createApi(base: string, token?: string): Api {
     createNode: async (body, signal) => data(await client.POST('/api/v1/nodes', {body, signal})),
     deleteNode: async (id, signal) => data(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
     geodata: async signal => data(await client.GET('/api/v1/geodata', {signal})),
+    rules: async signal => data(await client.GET('/api/v1/rules', {signal})),
     updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {signal})),
     config: async signal => data(await client.GET('/api/v1/config', {signal})),
     validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
