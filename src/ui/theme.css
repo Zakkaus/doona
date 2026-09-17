@@ -1581,9 +1581,6 @@ input {
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
 }
-.flag.mark:is([data-kind='selector'], [data-kind='urltest'], [data-kind='fallback'], [data-kind='loadbalance'], [data-kind='random'], [data-kind='score']) {
-  background: var(--rp-iris);
-}
 /* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
 .flag.brand {
   width: 16px;
@@ -1607,6 +1604,8 @@ input {
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 6px;
+  /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
+  z-index: 10;
 }
 .rp-light {
   display: inline-flex;
@@ -2290,6 +2289,8 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
   position: sticky;
   top: 0;
+  /* Above row content that forms its own stacking context (translated flag marks). */
+  z-index: 1;
   outline: none;
 }
 .rp-table [role='row'][data-selected] {

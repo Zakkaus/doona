@@ -78,10 +78,10 @@ export function Flag({name, className}: {name: string; className?: string}) {
   return <span className={className ?? 'flag'} role="img" aria-label={regionOf(name) ?? ''} dangerouslySetInnerHTML={{__html: svg}} />;
 }
 
-// Built-in outbounds and policy groups get a mark in the flag's frame, so a chain reads the same whether it
-// ends in a node or not. Each glyph says what the thing does: an arrow straight through for direct, a barred
-// circle for block, and for groups the way they pick a member.
-export type MarkKind = 'direct' | 'block' | 'unknown' | 'node' | 'selector' | 'urltest' | 'fallback' | 'loadbalance' | 'random' | 'score';
+// Built-in outbounds get a mark in the flag's frame, so a chain reads the same whether it ends in a node or
+// not: an arrow straight through for direct, a barred circle for block, a dashed ring for unknown, a diamond
+// for a node without a recognisable region. Groups show the flag of the node they currently exit through.
+export type MarkKind = 'direct' | 'block' | 'unknown' | 'node';
 const stroke = {fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round'} as const;
 const glyphs: Record<MarkKind, ReactNode> = {
   // straight through
@@ -91,30 +91,7 @@ const glyphs: Record<MarkKind, ReactNode> = {
   // dashed ring
   unknown: <circle cx="8" cy="6" r="3.6" {...stroke} strokeDasharray="2 1.6" />,
   // one node
-  node: <path d="M8 1.8L12.2 6 8 10.2 3.8 6z" fill="currentColor" />,
-  // a list with one row picked by hand
-  selector: (
-    <g {...stroke}>
-      <path d="M7.5 3.8H13M7.5 8.2H13" />
-      <circle cx="4.2" cy="3.8" r="1.5" fill="currentColor" />
-      <circle cx="4.2" cy="8.2" r="1.2" />
-    </g>
-  ),
-  // a gauge: the fastest wins
-  urltest: (
-    <g {...stroke}>
-      <path d="M3 9a5 5 0 0 1 10 0" />
-      <path d="M8 9l3-3.6" />
-      <circle cx="8" cy="9" r="0.9" fill="currentColor" />
-    </g>
-  ),
-  // steps: the next one down when the first fails
-  fallback: <path d="M3 3h3.3v3H9.6v3H13" {...stroke} />,
-  // crossing paths: traffic spread over members
-  loadbalance: <path d="M3 3.5h3l4 5h3M3 8.5h3l4-5h3M11.5 2l1.5 1.5-1.5 1.5M11.5 7l1.5 1.5-1.5 1.5" {...stroke} />,
-  random: <path d="M3 3.5h3l4 5h3M3 8.5h3l4-5h3M11.5 2l1.5 1.5-1.5 1.5M11.5 7l1.5 1.5-1.5 1.5" {...stroke} />,
-  // a podium: ranked by score
-  score: <path d="M3.5 10V6M7 10V2.5M10.5 10V7.5M2.5 10h11" {...stroke} />
+  node: <path d="M8 1.8L12.2 6 8 10.2 3.8 6z" fill="currentColor" />
 };
 function Mark({kind, className}: {kind: MarkKind; className?: string}) {
   return (
@@ -124,11 +101,6 @@ function Mark({kind, className}: {kind: MarkKind; className?: string}) {
       </svg>
     </span>
   );
-}
-// The mark for a policy group, by how it picks its member; unknown kinds fall back to the plain node mark.
-export function PolicyMark({kind, className}: {kind: string | null | undefined; className?: string}) {
-  const known = kind && kind in glyphs && !['direct', 'block', 'unknown', 'node'].includes(kind) ? (kind as MarkKind) : 'node';
-  return <Mark kind={known} className={className} />;
 }
 export function OutboundMark({name, className}: {name: string | null; className?: string}) {
   if (name === 'direct' || name === 'block' || name === null || name === 'unknown')

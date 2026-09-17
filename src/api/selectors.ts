@@ -7,6 +7,7 @@ import type {
   EventKind,
   FlowStep,
   Group,
+  GroupSummary,
   HealthObservation,
   Node,
   ProbeResult,
@@ -57,6 +58,19 @@ export function sourceIp(src: string | undefined): string | undefined {
 }
 
 // Built-in outbounds read in the user's language; group and node names stay as configured.
+// The node a group currently exits through, following nested groups by their TCP selection; undefined when the
+// chain is broken or cycles. Summaries carry member ids only, so node names come from the node list.
+export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]): string | undefined {
+  const byGroup = new Map(groups.map(group => [group.id, group]));
+  const byNode = new Map(nodes.map(node => [node.id, node.name]));
+  const seen = new Set<string>();
+  let id: string | null = groupId;
+  while (id && byGroup.has(id) && !seen.has(id)) {
+    seen.add(id);
+    id = byGroup.get(id)!.selection.tcp_member_id;
+  }
+  return id ? byNode.get(id) : undefined;
+}
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
 }
