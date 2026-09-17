@@ -53,6 +53,7 @@ export type Operation =
   | SucceededOperation<'reload', Schema['ReloadResult']>
   | SucceededOperation<'probe', Schema['ProbeResult']>
   | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
+  | SucceededOperation<'provider_refresh', Schema['Provider']>
   | SucceededOperation<'suspend', {runtime_state: 'suspended' | null}>
   | SucceededOperation<'resume', {runtime_state: 'running' | null}>;
 export type OperationState = Operation & {retryAfter?: number};
@@ -64,6 +65,8 @@ export type DnsLogList = Schema['DnsLogList'];
 export type DnsLogRecord = Schema['DnsLogRecord'];
 export type DnsLogQuery = operations['listDnsLog']['parameters']['query'];
 export type RuntimeSettings = Schema['RuntimeSettings'];
+export type Provider = Schema['Provider'];
+export type ProviderList = Schema['ProviderList'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'];

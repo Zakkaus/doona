@@ -482,6 +482,29 @@ export function useRuntimeSettings(enabled = true) {
   }
   return {...resource, data: saved && (!resource.data || saved.observed_at >= resource.data.observed_at) ? saved : resource.data, busy, save};
 }
+// Where nodes come from, and a refresh that re-reads one source through an operation.
+export function useProviders(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['providers'], fetch: signal => api.providers(signal)}, {deps: [api], enabled});
+}
+export function useProviderRefresh(refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<string | null>(null);
+  async function refresh(id: string) {
+    if (busy) return undefined;
+    setBusy(id);
+    try {
+      const accepted = await api.refreshProvider(id);
+      const result = await api.pollOperation(accepted);
+      refetch();
+      if (result.status !== 'succeeded') throw new Error(result.error?.message ?? 'Refresh failed');
+      return result;
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {busy, refresh};
+}
 // The accepted configuration: sources, diagnostics and the running generation; refetched on generation.changed.
 export function useConfig(enabled = true) {
   const api = getApi();

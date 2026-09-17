@@ -69,6 +69,7 @@ export function createMockApi(): Api {
   let sources: Awaited<ReturnType<typeof stored>>[] | null = null;
   const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
   let configRevision = 40;
+  const providers = structuredClone(fixtures.providers);
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   try {
@@ -573,6 +574,27 @@ export function createMockApi(): Api {
         return;
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
+    providers: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.available) throw new ApiError(404, 'capability_not_supported', 'Providers are unavailable');
+      return {providers: structuredClone(providers), next_cursor: null};
+    },
+    // A refresh re-reads the source; the demo keeps the node set and moves the timestamps.
+    refreshProvider: async (providerId, signal) => {
+      signal?.throwIfAborted();
+      const provider = found(
+        providers.find(item => item.id === providerId),
+        'Provider'
+      );
+      if (!capabilities.resources.providers.can_refresh || provider.kind !== 'subscription')
+        throw new ApiError(409, 'state_conflict', 'This provider cannot be refreshed');
+      return enqueue('provider_refresh', () => {
+        provider.updated_at = new Date().toISOString();
+        provider.status = 'ok';
+        provider.last_error = null;
+        return structuredClone(provider);
+      });
     },
     config: async signal => {
       signal?.throwIfAborted();

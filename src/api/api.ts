@@ -36,6 +36,7 @@ import type {
   EventOptions,
   RuntimeSettings,
   RuntimeSettingsPatch,
+  ProviderList,
   EffectiveConfig,
   ConfigSource,
   ConfigValidationRequest,
@@ -69,6 +70,8 @@ export interface Api {
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
+  providers(signal?: AbortSignal): Promise<ProviderList>;
+  refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
   configSource(sourceId: string, signal?: AbortSignal): Promise<ConfigSource>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;

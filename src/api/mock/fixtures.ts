@@ -14,6 +14,7 @@ import type {
   RuntimeSettings,
   ConfigSource,
   ConfigDiagnostic,
+  Provider,
   TrafficHistory,
   Version
 } from '../model';
@@ -154,7 +155,7 @@ export const capabilities: Capabilities = {
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
     memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     nodes: {available: true},
-    providers: {available: false},
+    providers: {available: true, can_refresh: true, max_page_size: 1000},
     rules: {available: false},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
@@ -310,6 +311,7 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     name,
     protocol: 'shadowsocks',
     subscription_tag: source,
+    provider_id: source === 'inline' ? 'inline' : source,
     group_ids: [],
     health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
   };
@@ -361,11 +363,11 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
 }
 export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const nodes = [
-    node('hk-01', 84, 91, true, 'sub-a'),
-    node('hk-02', 91, 88, true, 'sub-a'),
-    node('sg-01', 63, 70, false, 'sub-a'),
-    node('jp-01', null, null, false, 'sub-b'),
-    node('us-01', 188, 201, true, 'sub-b')
+    node('hk-01', 84, 91, true, 'inline'),
+    node('hk-02', 91, 88, true, 'inline'),
+    node('sg-01', 63, 70, false, 'inline'),
+    node('jp-01', null, null, false, 'inline'),
+    node('us-01', 188, 201, true, 'inline')
   ];
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
@@ -705,6 +707,33 @@ export const configNotes: ConfigDiagnostic[] = [
     span: null,
     code: 'subscription_cached',
     message: 'Subscription fetched 30 minutes ago; nodes come from the cache'
+  }
+];
+// Where nodes come from: the subscription the config names, and the nodes written by hand in config.dae.
+export const providers: Provider[] = [
+  {
+    id: 'sub-c',
+    name: 'sub-c',
+    kind: 'subscription',
+    url_redacted: 'https://sub.example.net/api/v1/client/subscribe?token=<redacted>',
+    node_count: 100,
+    updated_at: ago(1800),
+    expires_at: new Date(now + 23 * 86400 * 1000).toISOString(),
+    traffic: {upload_bytes: '48318382080', download_bytes: '412316860416', total_bytes: '1099511627776'},
+    status: 'ok',
+    last_error: null
+  },
+  {
+    id: 'inline',
+    name: 'config.dae',
+    kind: 'inline',
+    url_redacted: null,
+    node_count: 5,
+    updated_at: ago(3600),
+    expires_at: null,
+    traffic: null,
+    status: 'ok',
+    last_error: null
   }
 ];
 export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [

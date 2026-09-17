@@ -18,7 +18,8 @@ export type ResourceName =
   | 'dnsCache'
   | 'dnsLog'
   | 'runtimeSettings'
-  | 'config';
+  | 'config'
+  | 'providers';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {

@@ -5,6 +5,7 @@ import type {PageProps} from '../features/types';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
+import Data from '../ui/icons/Data';
 import ListBulleted from '../ui/icons/ListBulleted';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
@@ -17,6 +18,7 @@ import SettingsIcon from '../ui/icons/Settings';
 const Overview = lazy(() => import('../features/overview/Overview').then(m => ({default: m.Overview})));
 const Connections = lazy(() => import('../features/connections/Connections').then(m => ({default: m.Connections})));
 const Policies = lazy(() => import('../features/policies/Policies').then(m => ({default: m.Policies})));
+const NodesPage = lazy(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes})));
 const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
 const Config = lazy(() => import('../features/config/Config').then(m => ({default: m.Config})));
 const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
@@ -65,6 +67,14 @@ export const features: Feature[] = [
     nav: {group: 'grp.proxy', titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
     Page: Policies,
     requires: {resources: ['groups']}
+  },
+  {
+    id: 'nodes',
+    path: 'nodes',
+    shortcut: 'n',
+    nav: {group: 'grp.proxy', titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
+    Page: NodesPage,
+    requires: {resources: ['providers']}
   },
   {
     id: 'rules',

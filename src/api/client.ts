@@ -126,6 +126,8 @@ export function createApi(base: string, token?: string): Api {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
     },
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
+    providers: async signal => data(await client.GET('/api/v1/providers', {params: {query: {limit: 1000}}, signal})),
+    refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, signal})),
     config: async signal => data(await client.GET('/api/v1/config', {signal})),
     configSource: async (source_id, signal) => data(await client.GET('/api/v1/config/sources/{source_id}', {params: {path: {source_id}}, signal})),
     validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
