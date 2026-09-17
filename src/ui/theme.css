@@ -1581,6 +1581,9 @@ input {
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
 }
+.flag.mark:is([data-kind='selector'], [data-kind='urltest'], [data-kind='fallback'], [data-kind='loadbalance'], [data-kind='random'], [data-kind='score']) {
+  background: var(--rp-iris);
+}
 /* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
 .flag.brand {
   width: 16px;
@@ -1588,11 +1591,6 @@ input {
   border-radius: 4px;
   box-shadow: none;
   object-fit: contain;
-}
-.flag.brand.lg {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
 }
 .rp-chips .flag.brand {
   width: 18px;

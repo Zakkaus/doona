@@ -4,8 +4,8 @@ import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, BrandIcon, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
-import {brandForPolicy} from '../../ui/brand';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
+import {PolicyMark} from './Flag';
 import {NodeGrid} from './Nodes';
 
 function PolicyCard({
@@ -59,7 +59,7 @@ function PolicyCard({
         <>
           <div className="rp-row">
             <span className="rp-cluster">
-              <BrandIcon brand={brandForPolicy(g.policy.kind)} size="lg" />
+              <PolicyMark kind={g.policy.kind} />
               <h3 className="rp-h3">{g.name}</h3>
               <Badge>{g.policy.kind}</Badge>
               <span className="rp-label">{t('policy.members', {n: members.length})}</span>

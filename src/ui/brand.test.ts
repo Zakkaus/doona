@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {brandFor, brandForPolicy, builtinPack, iconUrl} from './brand';
+import {brandFor, builtinPack, iconUrl} from './brand';
 
 const id = (text: string | null) => brandFor(text)?.id ?? null;
 
@@ -23,13 +23,6 @@ it('maps rule expressions, hostnames and addresses to catalogue entries', () => 
   expect(id('223.5.5.5')).toBe('alidns');
   expect(id('203.0.113.9:8443')).toBeNull();
   expect(id(null)).toBeNull();
-});
-
-it('gives policy groups a generic icon by how they pick members', () => {
-  expect(brandForPolicy('selector')?.id).toBe('policy-selector');
-  expect(brandForPolicy('urltest')?.id).toBe('policy-urltest');
-  expect(brandForPolicy('random')?.id).toBe('policy-balance');
-  expect(brandForPolicy('unknown')).toBeNull();
 });
 
 it('builds icon URLs for the bundled set and custom prefixes', () => {

@@ -3,8 +3,8 @@ import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
 import {BrandIcon, Button, Chips, Light, NodeTile} from '../../ui/ui';
-import {brandFor, brandForPolicy} from '../../ui/brand';
-import {OutboundMark} from '../policies/Flag';
+import {brandFor} from '../../ui/brand';
+import {OutboundMark, PolicyMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
 // The status light says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
@@ -49,7 +49,7 @@ export function FlowMap({
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
                 {kind === 'group' ? (
-                  <BrandIcon brand={brandForPolicy(policy.get(lane.outbound.label))} size="lg" />
+                  <PolicyMark kind={policy.get(lane.outbound.label)} />
                 ) : (
                   <OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />
                 )}

@@ -19,9 +19,8 @@ import {
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
-import {Flag} from './Flag';
-import {BrandIcon, Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
-import {brandForPolicy} from '../../ui/brand';
+import {Flag, PolicyMark} from './Flag';
+import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
@@ -178,7 +177,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels
     <NodeTile
       {...props}
       name={n.name}
-      icon={n.kind === 'group' ? <BrandIcon brand={brandForPolicy(n.policy)} /> : <Flag name={n.name} />}
+      icon={n.kind === 'group' ? <PolicyMark kind={n.policy} /> : <Flag name={n.name} />}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}

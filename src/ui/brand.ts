@@ -1,8 +1,8 @@
 import {useSyncExternalStore} from 'react';
 import catalogue from './brands.json';
 
-// One catalogue entry: an icon under public/brands/<id>.png and the rule terms, hostnames, addresses and group
-// policies it stands for. The data lives in brands.json (checked by tools/icons/check.mjs); this module only
+// One catalogue entry: an icon under public/brands/<id>.png and the rule terms, hostnames and addresses it
+// stands for. The data lives in brands.json (checked by tools/icons/check.mjs); this module only
 // indexes it and answers lookups.
 export type Brand = {
   id: string;
@@ -12,11 +12,10 @@ export type Brand = {
   domain?: string[];
   keyword?: string[];
   address?: string[];
-  policy?: string[];
   expression?: string[];
 };
 const brands = catalogue as Brand[];
-type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'policy' | 'expression';
+type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'expression';
 function index(field: Field): Map<string, Brand> {
   const map = new Map<string, Brand>();
   for (const brand of brands) for (const value of brand[field] ?? []) map.set(value, brand);
@@ -27,7 +26,6 @@ const by = {
   domain: index('domain'),
   keyword: index('keyword'),
   address: index('address'),
-  policy: index('policy'),
   expression: index('expression')
 };
 
@@ -115,8 +113,4 @@ export function brandFor(text: string | null | undefined): Brand | null {
   if (address) return address;
   if (/^[a-z0-9.-]+$/i.test(host) && /[a-z]/i.test(host) && host.includes('.')) return forDomain(host);
   return null;
-}
-// The generic icon for a policy group, by how it picks members (selector, urltest, fallback, …).
-export function brandForPolicy(kind: string | null | undefined): Brand | null {
-  return (kind && by.policy.get(kind.toLowerCase())) || null;
 }

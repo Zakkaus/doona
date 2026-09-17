@@ -2363,36 +2363,6 @@
     "domain": ["pluto.tv"]
   },
   {
-    "id": "policy-balance",
-    "label": "Load balance",
-    "source": "qure-color/Round_Robin",
-    "policy": ["loadbalance", "random"]
-  },
-  {
-    "id": "policy-fallback",
-    "label": "Fallback",
-    "source": "qure-color/Available",
-    "policy": ["fallback"]
-  },
-  {
-    "id": "policy-score",
-    "label": "Score",
-    "source": "orz3-color/Available",
-    "policy": ["score"]
-  },
-  {
-    "id": "policy-selector",
-    "label": "Selector",
-    "source": "orz3-color/Manual",
-    "policy": ["selector"]
-  },
-  {
-    "id": "policy-urltest",
-    "label": "URL test",
-    "source": "qure-color/Auto",
-    "policy": ["urltest"]
-  },
-  {
     "id": "pornhub",
     "label": "Pornhub",
     "source": "qure-color/Pornhub",
