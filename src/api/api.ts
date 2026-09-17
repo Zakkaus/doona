@@ -37,6 +37,7 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch,
   ProviderList,
+  LogOptions,
   EffectiveConfig,
   ConfigSource,
   ConfigValidationRequest,
@@ -87,5 +88,6 @@ export interface Api {
   pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState>;
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
+  subscribeLogs(options: LogOptions): Promise<void>;
   /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
 }

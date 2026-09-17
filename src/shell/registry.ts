@@ -10,6 +10,7 @@ import ListBulleted from '../ui/icons/ListBulleted';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
+import FileTextIcon from '../ui/icons/FileText';
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import {Settings} from '../features/settings/Settings';
@@ -22,6 +23,7 @@ const NodesPage = lazy(() => import('../features/nodes/Nodes').then(m => ({defau
 const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
 const Config = lazy(() => import('../features/config/Config').then(m => ({default: m.Config})));
 const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
+const Logs = lazy(() => import('../features/logs/Logs').then(m => ({default: m.Logs})));
 const Events = lazy(() => import('../features/events/Events').then(m => ({default: m.Events})));
 
 type Feature = {
@@ -98,6 +100,14 @@ export const features: Feature[] = [
     nav: {group: 'grp.system', titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
     Page: Events,
     requires: {resources: ['events']}
+  },
+  {
+    id: 'logs',
+    path: 'logs',
+    shortcut: 'l',
+    nav: {group: 'grp.system', titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: FileTextIcon},
+    Page: Logs,
+    requires: {resources: ['logs']}
   },
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ];

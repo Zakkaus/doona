@@ -5,6 +5,8 @@ import type {
   EventOptions,
   FlowDetail,
   GroupSelectionResult,
+  LogOptions,
+  LogRecord,
   Operation,
   OperationAccepted,
   OperationState,
@@ -142,6 +144,54 @@ export function createMockApi(): Api {
     signal?.throwIfAborted();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
+  // Logs: a bounded ring the stream replays from, fed by what the mock does plus a quiet background trickle.
+  const levels: LogRecord['level'][] = ['trace', 'debug', 'info', 'warn', 'error'];
+  const logRing: Array<LogRecord & {id: string}> = [];
+  const logListeners = new Set<(record: LogRecord & {id: string}) => void>();
+  let logSequence = 0;
+  const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null) => {
+    const record = {id: `${fixtures.instanceId}:logs:${++logSequence}`, ts: new Date().toISOString(), level, target, message, fields};
+    logRing.push(record);
+    if (logRing.length > settings.log.buffered_records) logRing.splice(0, logRing.length - settings.log.buffered_records);
+    logListeners.forEach(listener => listener(record));
+  };
+  const trickle = [
+    () => log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)}),
+    () => log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12}),
+    () => log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: 3, unavailable: 0}),
+    () => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}),
+    () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
+  ];
+  for (const record of fixtures.logSeed) log(record.level, record.target, record.message, record.fields ?? null);
+  let logTimer: ReturnType<typeof setInterval> | undefined;
+  async function logs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
+    if (signal?.aborted) return;
+    if (!capabilities.resources.logs.available) throw new ApiError(404, 'capability_not_supported', 'Logs are unavailable');
+    const floor = level ? levels.indexOf(level) : 0;
+    const emit = (record: LogRecord & {id: string}) => {
+      if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target))) onRecord(structuredClone(record));
+    };
+    const cursor = lastEventId?.startsWith(fixtures.instanceId + ':logs:') ? Number(lastEventId.split(':')[2]) : 0;
+    onConnectionChange?.(true);
+    for (const record of logRing) if (Number(record.id.split(':')[2]) > cursor) emit(record);
+    logListeners.add(emit);
+    if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), 2500);
+    await new Promise<void>(resolve => {
+      signal?.addEventListener(
+        'abort',
+        () => {
+          logListeners.delete(emit);
+          if (!logListeners.size) {
+            clearInterval(logTimer);
+            logTimer = undefined;
+          }
+          onConnectionChange?.(false);
+          resolve();
+        },
+        {once: true}
+      );
+    });
+  }
   async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     if (signal?.aborted) return;
     const emit = (event: ApiEvent) => {
@@ -648,8 +698,10 @@ export function createMockApi(): Api {
         throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
       Object.assign(source, next);
+      log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
         configRevision += 1;
+        log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
         const generation = String(configRevision);
         runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
         publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
@@ -693,6 +745,7 @@ export function createMockApi(): Api {
       apply('flows');
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
+      log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});
       return structuredClone(settings);
     },
     deleteDnsEntry: async (entryId, signal) => {
@@ -736,6 +789,7 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events
+    subscribeEvents: events,
+    subscribeLogs: logs
   };
 }

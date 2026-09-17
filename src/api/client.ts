@@ -1,7 +1,7 @@
 import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
-import type {ApiEvent, EventKind, EventOptions, FlowDetail, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
+import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
 import {ApiError, responseError} from './error';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -87,6 +87,45 @@ export function createApi(base: string, token?: string): Api {
       onConnectionChange?.(false);
     }
   }
+  // The log stream follows the event stream's rules: stream.ready first, Last-Event-ID to resume, 409 when
+  // the cursor is gone, a Retry-After pause between attempts.
+  async function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
+    let cursor = lastEventId;
+    const url = new URL(baseUrl + '/api/v1/logs', globalThis.location?.href);
+    if (level) url.searchParams.set('level', level);
+    if (target) url.searchParams.set('target', target);
+    try {
+      while (!signal?.aborted) {
+        onConnectionChange?.(false);
+        const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
+        const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
+        if (!response.ok) {
+          const error = await responseError(response);
+          if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
+            cursor = undefined;
+            continue;
+          }
+          throw error;
+        }
+        if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
+        await readSse(
+          response.body,
+          frame => {
+            if (frame.id !== undefined) cursor = frame.id;
+            if (frame.event === 'stream.ready') onConnectionChange?.(true);
+            if (frame.event === 'log' && frame.data) onRecord({id: cursor ?? '', ...(JSON.parse(frame.data) as LogRecord)});
+          },
+          signal
+        );
+        onConnectionChange?.(false);
+        await wait(retryAfter(response), signal);
+      }
+    } catch (error) {
+      if (!signal?.aborted) throw error;
+    } finally {
+      onConnectionChange?.(false);
+    }
+  }
   return {
     discovery: async signal => data(await client.GET('/api', {signal})),
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
@@ -146,6 +185,7 @@ export function createApi(base: string, token?: string): Api {
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
     pollOperation,
-    subscribeEvents
+    subscribeEvents,
+    subscribeLogs
   };
 }

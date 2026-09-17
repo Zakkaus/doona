@@ -15,7 +15,7 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch
 } from './model';
-import type {ConfigValidationRequest, ConfigValidationResult, RoutingTraceRequest, RoutingTraceResponse} from './model';
+import type {ConfigValidationRequest, ConfigValidationResult, LogLevel, LogRecord, RoutingTraceRequest, RoutingTraceResponse} from './model';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -481,6 +481,47 @@ export function useRuntimeSettings(enabled = true) {
     }
   }
   return {...resource, data: saved && (!resource.data || saved.observed_at >= resource.data.observed_at) ? saved : resource.data, busy, save};
+}
+// The engine's log stream, newest first, bounded; filters restart the stream from the ring. Paused keeps the
+// stream open but stops appending, so the list can be read.
+export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLevel; target?: string; paused: boolean; limit?: number}) {
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const available = capabilities.data?.resources.logs.available;
+  const [records, setRecords] = useState<Array<LogRecord & {id: string}>>([]);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  // A filter change starts a new stream; the list is emptied during render, not inside the effect.
+  const [filterKey, setFilterKey] = useState({api, level, target});
+  if (filterKey.api !== api || filterKey.level !== level || filterKey.target !== target) {
+    setFilterKey({api, level, target});
+    setRecords([]);
+    setError(null);
+  }
+  const hold = useRef(paused);
+  useEffect(() => {
+    hold.current = paused;
+  }, [paused]);
+  useEffect(() => {
+    if (!available) return;
+    const controller = new AbortController();
+    api
+      .subscribeLogs({
+        level,
+        target: target || undefined,
+        signal: controller.signal,
+        onConnectionChange: setConnected,
+        onRecord: record => {
+          if (hold.current) return;
+          setRecords(previous => [record, ...previous].slice(0, limit));
+        }
+      })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason : new Error(String(reason)));
+      });
+    return () => controller.abort();
+  }, [api, available, level, target, limit]);
+  return {records, connected, error, available, clear: () => setRecords([])};
 }
 // Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {

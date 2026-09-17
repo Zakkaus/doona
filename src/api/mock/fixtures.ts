@@ -15,6 +15,7 @@ import type {
   ConfigSource,
   ConfigDiagnostic,
   Provider,
+  LogRecord,
   TrafficHistory,
   Version
 } from '../model';
@@ -159,7 +160,7 @@ export const capabilities: Capabilities = {
     rules: {available: false},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
-    logs: {available: false, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
+    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
     runtime_settings: {available: true, fields: ['log.level', 'log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
@@ -235,6 +236,7 @@ export const capabilitiesBase: Capabilities = {
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
     memory_history: {available: false},
+    logs: {available: false},
     dns_log: {available: false},
     runtime_settings: {available: false},
     config: {available: false, content: false},
@@ -735,6 +737,18 @@ export const providers: Provider[] = [
     status: 'ok',
     last_error: null
   }
+];
+// What the engine logged while starting: the replay ring's first records.
+export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {fields?: LogRecord['fields']}> = [
+  {level: 'info', target: 'honk::main', message: 'honk 0.9.3 starting.', fields: {pid: 4120}},
+  {level: 'info', target: 'honk::config', message: 'Configuration accepted.', fields: {sources: 4, generation_id: '40'}},
+  {level: 'info', target: 'honk::subscription', message: 'Subscription loaded.', fields: {provider: 'sub-c', nodes: 100}},
+  {level: 'warn', target: 'honk::subscription', message: 'Subscription served from cache.', fields: {provider: 'sub-c', age_seconds: 1800}},
+  {level: 'info', target: 'honk::datapath', message: 'Kernel datapath attached.', fields: {interface: 'br-lan'}},
+  {level: 'info', target: 'honk::dns', message: 'DNS listener bound.', fields: {bind: '127.0.0.1:5353'}},
+  {level: 'info', target: 'honk::routing', message: 'Routing generation published.', fields: {generation_id: '40'}},
+  {level: 'error', target: 'honk::group', message: 'Health check failed.', fields: {node: 'jp-01', error: 'connect timeout'}},
+  {level: 'info', target: 'honk::api', message: 'Native API listening.', fields: {listen: '127.0.0.1:9090'}}
 ];
 export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},

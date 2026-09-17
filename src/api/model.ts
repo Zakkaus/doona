@@ -84,6 +84,16 @@ type EventData = {
   'generation.changed': Schema['GenerationChangedEvent'];
 };
 export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
+export type LogRecord = Schema['LogRecord'];
+export type LogLevel = Schema['LogLevel'];
+export type LogOptions = {
+  level?: LogLevel;
+  target?: string;
+  lastEventId?: string;
+  signal?: AbortSignal;
+  onRecord: (record: LogRecord & {id: string}) => void;
+  onConnectionChange?: (connected: boolean) => void;
+};
 export type EventOptions = {
   kinds?: EventKind[];
   lastEventId?: string;
