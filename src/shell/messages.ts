@@ -3,6 +3,8 @@ import {defineMessages} from '../i18n';
 export const messages = defineMessages({
   'zh-TW': {
     'shell.shortcuts': '鍵盤快捷鍵',
+    'shell.notOffered': '後端未提供這個頁面。',
+    'shell.toActivity': '回到活動',
     'shell.shortcutHelp': '顯示快捷鍵說明',
     'shell.shortcutSequence': '先按 g，再於 800 毫秒內按下頁面字母。輸入文字時不啟用快捷鍵。',
     'conn.chain': '鏈',
@@ -98,6 +100,8 @@ export const messages = defineMessages({
   },
   'zh-CN': {
     'shell.shortcuts': '键盘快捷键',
+    'shell.notOffered': '后端未提供这个页面。',
+    'shell.toActivity': '回到活动',
     'shell.shortcutHelp': '显示快捷键说明',
     'shell.shortcutSequence': '先按 g，再于 800 毫秒内按下页面字母。输入文字时不启用快捷键。',
     'conn.chain': '链',
@@ -193,6 +197,8 @@ export const messages = defineMessages({
   },
   en: {
     'shell.shortcuts': 'Keyboard shortcuts',
+    'shell.notOffered': 'The backend does not offer this page.',
+    'shell.toActivity': 'Back to activity',
     'shell.shortcutHelp': 'Show shortcut help',
     'shell.shortcutSequence': 'Press g, then the page letter within 800 ms. Shortcuts are inactive while typing.',
     'conn.chain': 'Chain',

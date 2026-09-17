@@ -104,12 +104,6 @@ export function Config({go, query}: PageProps) {
       toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
     } else toast('negative', errorText(editor.error));
   }, [editor.error, t]);
-  if (resources && !resources.config.available)
-    return (
-      <div className="rp-page">
-        <span className="rp-empty">{t('config.unavailable')}</span>
-      </div>
-    );
   return (
     <div className="rp-page">
       <ErrorMessage error={config.error} />

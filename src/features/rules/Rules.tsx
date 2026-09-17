@@ -34,12 +34,6 @@ export function Rules({go, query}: PageProps) {
   const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'map');
   if (capabilities.loading && !capabilities.data) return <Loading />;
   if (capabilities.error) return <ErrorMessage error={capabilities.error} />;
-  if (!tabs.length)
-    return (
-      <div className="rp-page">
-        <span className="rp-empty">{t('rule.unavailable')}</span>
-      </div>
-    );
   return (
     <div className="rp-page">
       <Tabs

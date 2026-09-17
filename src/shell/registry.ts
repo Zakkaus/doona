@@ -76,7 +76,7 @@ export const features: Feature[] = [
     shortcut: 'r',
     nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
-    requires: {resources: ['routing_trace', 'flows']}
+    requires: {resources: ['routing_trace', 'flows', 'rules']}
   },
   {
     id: 'nodes',

@@ -462,7 +462,7 @@ function Frame({
           </Button>
         </div>
       </header>
-      <nav className="rp-side" ref={navRef}>
+      <nav className="rp-side" ref={navRef} aria-busy={capabilities.data || capabilities.error ? undefined : true}>
         {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
         {nav.map(([g, items]) => (
           <div key={g} data-group={g.replace('grp.', '')}>
@@ -517,6 +517,16 @@ function Frame({
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
             {needsToken && feature.id !== 'settings' ? (
               <Login backend={profile?.name ?? profile?.api ?? ''} rejected={!!profile?.token} />
+            ) : !capabilities.data && !capabilities.error && feature.id !== 'settings' ? (
+              // Pages mount once the capabilities are known, so none asks for a resource the backend lacks.
+              <Loading />
+            ) : capabilities.data && !navAvailable(feature.path, capabilities.data) ? (
+              <div className="rp-empty">
+                {t('shell.notOffered')}
+                <Button secondary onPress={() => go('activity')}>
+                  {t('shell.toActivity')}
+                </Button>
+              </div>
             ) : (
               <Suspense key={feature.id} fallback={<Loading />}>
                 <Page go={go} query={query} />

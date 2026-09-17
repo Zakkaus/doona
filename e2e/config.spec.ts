@@ -72,7 +72,7 @@ test.describe('without configuration readback', () => {
   test('the page is hidden from navigation and says so when opened', async ({page}) => {
     await page.goto('/#/config');
     await expect(page.locator('.rp-nav[href="#/config"]')).toHaveCount(0);
-    await expect(page.locator('.rp-content')).toContainText('does not expose its configuration');
+    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
   });
 });
 

@@ -2722,6 +2722,12 @@ button.rp-node[data-focus-visible] {
 .rp-empty > .rp-spinner {
   margin-inline-end: 8px;
 }
+.rp-empty > .rp-btn,
+.rp-empty > .rp-tipwrap {
+  display: block;
+  margin: 16px auto 0;
+  width: max-content;
+}
 .rp-btn[data-pending] {
   cursor: progress;
 }

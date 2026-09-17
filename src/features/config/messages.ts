@@ -2,7 +2,6 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
-    'config.unavailable': '此後端不提供配置讀取。',
     'config.generation': '生效代次',
     'config.revision': '配置修訂',
     'config.errors': '{n} 個錯誤',
@@ -87,7 +86,6 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   'zh-CN': {
-    'config.unavailable': '此后端不提供配置读取。',
     'config.generation': '生效代次',
     'config.revision': '配置修订',
     'config.errors': '{n} 个错误',
@@ -172,7 +170,6 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   en: {
-    'config.unavailable': 'This backend does not expose its configuration.',
     'config.generation': 'Generation',
     'config.revision': 'Revision',
     'config.errors': {one: '{n} error', other: '{n} errors'},

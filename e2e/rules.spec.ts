@@ -87,10 +87,10 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
 test.describe('without flow capability', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 
-  test('renders the rules page without tabs', async ({page}) => {
+  test('the page leaves the navigation and a deep link says so', async ({page}) => {
     await page.goto('/#/rules');
-    await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.getByText('Routing trace unavailable', {exact: true})).toBeVisible();
+    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveCount(0);
+    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
     await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page).toHaveURL(/#\/rules$/);
   });
