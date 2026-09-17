@@ -64,11 +64,28 @@ describe('quick setup text transforms', () => {
     expect(readState(out).subscriptions.map(s => [s.name, s.url])).toEqual(state.subscriptions.map(s => [s.name, s.url]));
   });
   it('replaces routing with a template routed to the first group', () => {
-    const out = writeState(main, {...readState(main), rules: 'blacklist'});
+    const out = writeState(main, {...readState(main), rules: 'gfw'});
     expect(out).toContain('domain(geosite:gfw) -> proxy');
     expect(out).toContain('  fallback: direct');
     expect(out).not.toContain('dip(geoip:cn) -> direct');
     expect(out.match(/^routing \{/gm)).toHaveLength(1);
+  });
+  it('adds the groups a template needs and leaves the ones the file has alone', () => {
+    const out = writeState(main, {...readState(main), rules: 'standard'});
+    // The existing `proxy` stays as written; the template's other groups are appended inside the section.
+    expect(out).toContain('  proxy {\n    filter: name(hk-01, sg-01)\n    policy: fixed(0)\n  }');
+    expect(out.match(/^group \{/gm)).toHaveLength(1);
+    expect(out).toContain('  auto {\n    policy: min_moving_avg\n  }');
+    expect(out).toContain("  telegram {\n    filter: group('proxy', 'auto')\n    filter: name(regex: '.')\n    policy: select\n    default: 'proxy'\n  }");
+    expect(out).toContain('domain(geosite:apple) -> apple');
+    expect(out).toContain('domain(geosite:microsoft) -> direct');
+    expect(out).toContain('  fallback: proxy');
+    const again = writeState(out, {...readState(out), rules: 'standard'});
+    expect(again).toBe(out);
+    const full = writeState(main, {...readState(main), rules: 'full'});
+    expect(full).toContain("  tw {\n    filter: name(regex: '");
+    expect(full).toContain("  bahamut {\n    filter: group('tw', 'proxy', 'auto')");
+    expect(full).toContain('domain(geosite:bilibili) -> direct');
   });
   it('adds a group section only when the source has none, and generates a whole file for an empty source', () => {
     // A group name outside [\w-] is still the routing target, and its section is still left alone.
@@ -81,9 +98,10 @@ describe('quick setup text transforms', () => {
     const state = readState(noGroup);
     expect(state.group).toBeNull();
     expect(writeState(noGroup, state)).toContain('group {\n  proxy { policy: min_moving_avg }\n}');
-    const fresh = writeState('', {subscriptions: [{name: 'sub', url: 'https://example.org/sub'}], group: null, rules: 'whitelist', lanInterface: ''});
+    const fresh = writeState('', {subscriptions: [{name: 'sub', url: 'https://example.org/sub'}], group: null, rules: 'keep', lanInterface: ''});
     expect(fresh).toContain('lan_interface: auto');
     expect(fresh).toContain('      qname(geosite:cn) -> alidns\n      fallback: cloudflare');
+    expect(fresh).toContain("  proxy {\n    filter: group('auto')\n    filter: name(regex: '.')\n    policy: select\n    default: 'auto'\n  }");
     expect(fresh).toContain('geosite:category-games@cn) -> direct');
     expect(fresh).toContain('fallback: proxy');
   });

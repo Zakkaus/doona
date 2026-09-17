@@ -97,7 +97,7 @@ test('the quick setup guards unsaved changes like the editor', async ({page}) =>
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('option', {name: /^GFW list only/}).click();
   await page.getByRole('tab', {name: 'Sources'}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
   await expect(dialog).toBeVisible();
@@ -112,13 +112,14 @@ test('the quick setup writes a rule template into routing', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Whitelist/}).click();
+  await page.getByRole('option', {name: /^Standard groups/}).click();
   const preview = card.locator('.cm-content');
   await expect(preview).toContainText('domain(geosite:category-ads-all) -> block');
   await expect(preview).toContainText('geosite:category-games@cn) -> direct');
-  await expect(preview).toContainText('domain(geosite:geolocation-!cn) -> proxy');
+  await expect(preview).toContainText('domain(geosite:telegram) -> telegram');
+  await expect(preview).toContainText('telegram {');
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('option', {name: /^GFW list only/}).click();
   await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
   await expect(preview).toContainText('fallback: direct');
 });
