@@ -119,7 +119,7 @@ function PolicyCard({
               />
             )}
             {overridable && (
-              <Light small tone={pinned ? 'info' : 'neutral'}>
+              <Light small tone={pinned ? 'neutral' : 'ok'}>
                 {t(pinned ? 'policy.overridden' : 'policy.automatic')}
               </Light>
             )}
