@@ -1382,6 +1382,8 @@ export interface components {
         Group: {
             id: string;
             name: string;
+            /** @description An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally. */
+            icon: string | null;
             config_revision: string;
             policy: components["schemas"]["GroupPolicy"];
             members: components["schemas"]["GroupMember"][];
@@ -1392,6 +1394,8 @@ export interface components {
         GroupSummary: {
             id: string;
             name: string;
+            /** @description An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally. */
+            icon: string | null;
             /** @description Same opaque configuration revision as Group.config_revision; preserve without numeric parsing. */
             config_revision: string;
             policy: components["schemas"]["GroupPolicy"];

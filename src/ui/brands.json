@@ -335,8 +335,7 @@
     "label": "bilibili",
     "source": "qure-color/bilibili",
     "geosite": ["bilibili", "bilibili2"],
-    "domain": ["bilibili.com", "bilivideo.com", "hdslb.com"],
-    "keyword": ["bilibili"]
+    "domain": ["bilibili.com", "bilivideo.com", "hdslb.com"]
   },
   {
     "id": "binance",
@@ -2651,8 +2650,7 @@
     "label": "Steam",
     "source": "qure-color/Steam",
     "geosite": ["steam"],
-    "domain": ["steampowered.com", "steamcommunity.com", "steamstatic.com", "steamcontent.com"],
-    "keyword": ["steamcdn"]
+    "domain": ["steampowered.com", "steamcommunity.com", "steamstatic.com", "steamcontent.com"]
   },
   {
     "id": "stripe",
@@ -3036,8 +3034,7 @@
     "label": "YouTube",
     "source": "favicon/youtube.com",
     "geosite": ["youtube"],
-    "domain": ["youtube.com", "youtu.be", "ytimg.com", "googlevideo.com"],
-    "keyword": ["googlevideo"]
+    "domain": ["youtube.com", "youtu.be", "ytimg.com", "googlevideo.com"]
   },
   {
     "id": "zdf",

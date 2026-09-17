@@ -315,12 +315,13 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
+function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[], icon: string | null = null): Group {
   for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
   return {
     id: name,
     name,
+    icon,
     config_revision: '40',
     policy: {kind, native: kind},
     members: members.map(id => ({id, name: id, kind: nodes.some(n => n.id === id) ? 'node' : 'group'})),
@@ -363,7 +364,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
     group('resilient', 'score', ['hk-01', 'sg-01', 'us-01'], 'sg-01', nodes),
-    group('gaming', 'urltest', ['jp-01', 'hk-02'], 'hk-02', nodes)
+    group('gaming', 'urltest', ['jp-01', 'hk-02'], 'hk-02', nodes, 'brands/steam.png')
   ];
   const regions: Array<[string, number]> = [
     ['香港', 60],

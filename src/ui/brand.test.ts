@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {brandFor, builtinPack, iconUrl} from './brand';
+import {brandFor, builtinPack, iconForName, iconSource, iconUrl} from './brand';
 
 const id = (text: string | null) => brandFor(text)?.id ?? null;
 
@@ -9,8 +9,8 @@ it('maps rule expressions, hostnames and addresses to catalogue entries', () => 
   expect(id('domain(full: api.telegram.org)')).toBe('telegram');
   expect(id('domain(suffix: zhihu.com, zhimg.com)')).toBe('zhihu');
   expect(id('domain(suffix: unknown.example, discord.gg)')).toBe('discord');
-  expect(id('domain(keyword: steamcdn)')).toBe('steam');
-  expect(id('domain(keyword: reddit)')).toBe('reddit');
+  expect(id('domain(keyword: steamcdn)')).toBeNull();
+  expect(id('domain(keyword: reddit)')).toBeNull();
   expect(id('domain(regex: ^cdn\\d+\\.example$)')).toBeNull();
   expect(id('dip(geoip:cn)')).toBe('china-zone');
   expect(id('fallback: gaming')).toBe('rule-fallback');
@@ -29,4 +29,15 @@ it('builds icon URLs for the bundled set and custom prefixes', () => {
   const netflix = brandFor('netflix.com')!;
   expect(iconUrl(builtinPack, netflix)).toBe('/brands/netflix.png');
   expect(iconUrl('https://icons.example/pack', netflix)).toBe('https://icons.example/pack/netflix.png');
+});
+
+it('resolves named icons from the local mapping, then the configuration', () => {
+  const overrides = [{name: 'gaming', icon: 'steam'}];
+  expect(iconForName('gaming', 'https://icons.example/g.png', overrides)).toBe('steam');
+  expect(iconForName('proxy', 'https://icons.example/p.png', overrides)).toBe('https://icons.example/p.png');
+  expect(iconForName('proxy', null, overrides)).toBeNull();
+  expect(iconSource(builtinPack, 'steam')).toBe('/brands/steam.png');
+  expect(iconSource('', 'steam')).toBeNull();
+  expect(iconSource(builtinPack, 'https://icons.example/p.png')).toBe('https://icons.example/p.png');
+  expect(iconSource(builtinPack, 'javascript:alert(1)')).toBeNull();
 });

@@ -294,6 +294,7 @@ export function createMockApi(): Api {
       return groups.map(g => ({
         id: g.id,
         name: g.name,
+        icon: g.icon,
         config_revision: g.config_revision,
         policy: {...g.policy},
         member_count: g.members.length,

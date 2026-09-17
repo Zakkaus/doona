@@ -9,6 +9,7 @@ import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextFi
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {builtinPack, setIconPack, useIconPack} from '../../ui/brand';
 import {RuntimeSettingsCard} from './RuntimeSettings';
+import {CustomIcons} from './CustomIcons';
 
 type Appearance = {
   scheme: Scheme;
@@ -281,6 +282,7 @@ export function Settings() {
           />
         </div>
       </section>
+      <CustomIconsCard />
       <IconPackCard />
       <section className="rp-card" aria-labelledby="settings-about">
         <h2 className="rp-h3" id="settings-about">
@@ -363,6 +365,18 @@ function IconPackCard() {
         )}
       </div>
       <span className="rp-label">{t('settings.iconsNote')}</span>
+    </section>
+  );
+}
+function CustomIconsCard() {
+  const t = useT();
+  return (
+    <section className="rp-card" aria-labelledby="settings-custom-icons">
+      <h2 className="rp-h3" id="settings-custom-icons">
+        {t('settings.customIcons')}
+      </h2>
+      <span className="rp-label">{t('settings.customIconsNote')}</span>
+      <CustomIcons />
     </section>
   );
 }

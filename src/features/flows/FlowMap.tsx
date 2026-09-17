@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {BrandIcon, Button, Chips, Light, NodeTile} from '../../ui/ui';
+import {BrandIcon, Button, Chips, Light, NamedIcon, NodeTile} from '../../ui/ui';
 import {brandFor} from '../../ui/brand';
 import {OutboundMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
@@ -33,6 +33,7 @@ export function FlowMap({
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const shownRules = 6;
   const policy = useMemo(() => new Map(groups.map(group => [group.name, group.policy.kind])), [groups]);
+  const icons = useMemo(() => new Map(groups.map(group => [group.name, group.icon])), [groups]);
   const health = useMemo(() => new Map(nodes.map(node => [node.name, preferredHealth(node)])), [nodes]);
   const label = (node: MapNode) => (node.unknown ? t('flow.mapUnknown') : node.label);
   const n = (value: number) => formatNumber(value, locale);
@@ -48,11 +49,15 @@ export function FlowMap({
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
-                <OutboundMark
-                  name={
-                    kind === 'group' ? (lane.node && !lane.node.node.unknown ? lane.node.node.label : null) : lane.outbound.unknown ? null : lane.outbound.label
-                  }
-                />
+                {kind === 'group' ? (
+                  <NamedIcon
+                    name={lane.outbound.label}
+                    icon={icons.get(lane.outbound.label)}
+                    fallback={<OutboundMark name={lane.node && !lane.node.node.unknown ? lane.node.node.label : null} />}
+                  />
+                ) : (
+                  <OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />
+                )}
                 <strong>{outboundLabel(lane.outbound.unknown ? null : lane.outbound.label, t)}</strong>
               </Light>
               <span className="rp-label">{facts}</span>

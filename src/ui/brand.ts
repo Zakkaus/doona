@@ -10,12 +10,11 @@ export type Brand = {
   source: string;
   geosite?: string[];
   domain?: string[];
-  keyword?: string[];
   address?: string[];
   expression?: string[];
 };
 const brands = catalogue as Brand[];
-type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'expression';
+type Field = 'geosite' | 'domain' | 'address' | 'expression';
 function index(field: Field): Map<string, Brand> {
   const map = new Map<string, Brand>();
   for (const brand of brands) for (const value of brand[field] ?? []) map.set(value, brand);
@@ -24,7 +23,6 @@ function index(field: Field): Map<string, Brand> {
 const by = {
   geosite: index('geosite'),
   domain: index('domain'),
-  keyword: index('keyword'),
   address: index('address'),
   expression: index('expression')
 };
@@ -83,24 +81,18 @@ function forDomain(host: string): Brand | null {
   }
   return null;
 }
-// A keyword rule names a substring; take the catalogue keyword, else the brand whose domain label it is.
-function forKeyword(term: string): Brand | null {
-  const direct = by.keyword.get(term);
-  if (direct) return direct;
-  for (const [domain, brand] of by.domain) if (domain.split('.')[0] === term) return brand;
-  return null;
-}
 const first = <T>(items: T[], pick: (item: T) => Brand | null | undefined) => items.map(pick).find(Boolean) ?? null;
 
 // The brand a rule expression, hostname or address stands for; null when the catalogue has nothing for it.
+// Only exact matches: a geosite name, a domain suffix on label boundaries, an address, a bare rule form.
 export function brandFor(text: string | null | undefined): Brand | null {
   if (!text) return null;
   const rule = /^domain\((geosite|suffix|full|keyword|regex):\s*([^)]*)\)/.exec(text);
   if (rule) {
     const terms = rule[2].split(',').map(term => term.trim().toLowerCase());
     if (rule[1] === 'geosite') return first(terms, term => by.geosite.get(term));
-    if (rule[1] === 'keyword') return first(terms, forKeyword);
-    if (rule[1] === 'regex') return null;
+    // Keyword and regex rules match substrings; guessing a brand from those is how icons go wrong.
+    if (rule[1] === 'keyword' || rule[1] === 'regex') return null;
     return first(terms, forDomain);
   }
   const geoip = /^dip\(geoip:\s*([^)]+)\)/.exec(text);
@@ -113,4 +105,53 @@ export function brandFor(text: string | null | undefined): Brand | null {
   if (address) return address;
   if (/^[a-z0-9.-]+$/i.test(host) && /[a-z]/i.test(host) && host.includes('.')) return forDomain(host);
   return null;
+}
+
+// Icons for groups and nodes by name, the way Clash Meta dashboards do it: the configuration's icon, or a
+// mapping the user keeps in this browser (an http(s) URL, a data URI, or the id of a bundled brand).
+export type IconOverride = {name: string; icon: string};
+const overridesKey = 'doona-icon-overrides';
+const overrideListeners = new Set<() => void>();
+let overridesCache: IconOverride[] | null = null;
+function readOverrides(): IconOverride[] {
+  if (overridesCache) return overridesCache;
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(overridesKey) ?? '[]');
+    overridesCache = Array.isArray(parsed)
+      ? parsed.filter((item): item is IconOverride => !!item && typeof item.name === 'string' && typeof item.icon === 'string')
+      : [];
+  } catch {
+    overridesCache = [];
+  }
+  return overridesCache;
+}
+export function setIconOverrides(list: IconOverride[]) {
+  overridesCache = list;
+  try {
+    localStorage.setItem(overridesKey, JSON.stringify(list));
+  } catch {
+    // Storage may be unavailable; the list then lasts for the session only.
+  }
+  for (const listener of overrideListeners) listener();
+}
+export function useIconOverrides(): IconOverride[] {
+  return useSyncExternalStore(
+    listener => {
+      overrideListeners.add(listener);
+      return () => overrideListeners.delete(listener);
+    },
+    readOverrides,
+    () => []
+  );
+}
+const byId = new Map(brands.map(brand => [brand.id, brand]));
+// What an icon value points at: a bundled brand by id, else the URL as given (http(s) or data:).
+export function iconSource(pack: string, value: string): string | null {
+  const brand = byId.get(value);
+  if (brand) return pack ? iconUrl(pack, brand) : null;
+  return /^(https?:\/\/|data:image\/)/.test(value) ? value : null;
+}
+// The icon for a named group or node: the user's mapping wins over what the configuration names.
+export function iconForName(name: string, configured: string | null | undefined, overrides: IconOverride[]): string | null {
+  return overrides.find(item => item.name === name)?.icon ?? configured ?? null;
 }
