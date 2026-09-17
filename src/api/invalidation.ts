@@ -19,12 +19,16 @@ export type ResourceName =
   | 'dnsLog'
   | 'runtimeSettings'
   | 'config'
-  | 'providers';
+  | 'providers'
+  | 'runtimeMode';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
   'stream.ready': {now: 'all', poll: []},
-  'runtime.updated': {now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'memoryHistory', 'connections'], poll: ['nodes', 'groups', 'group']},
+  'runtime.updated': {
+    now: ['runtime', 'runtimeMode', 'runtimeOutbounds', 'trafficHistory', 'memoryHistory', 'connections'],
+    poll: ['nodes', 'groups', 'group']
+  },
   'flow.updated': {now: ['flows', 'flow', 'connections'], poll: []},
   'flow.gap': {now: ['flows', 'flow'], poll: []},
   'operation.updated': {now: ['runtime'], poll: []},

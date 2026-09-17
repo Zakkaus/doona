@@ -37,6 +37,8 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch,
   ProviderList,
+  RuntimeMode,
+  RuntimeModeRequest,
   LogOptions,
   EffectiveConfig,
   ConfigSource,
@@ -71,6 +73,8 @@ export interface Api {
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
+  runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
+  setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
   providers(signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;

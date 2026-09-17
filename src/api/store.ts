@@ -15,7 +15,16 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch
 } from './model';
-import type {ConfigValidationRequest, ConfigValidationResult, LogLevel, LogRecord, RoutingTraceRequest, RoutingTraceResponse} from './model';
+import type {
+  ConfigValidationRequest,
+  ConfigValidationResult,
+  LogLevel,
+  LogRecord,
+  RoutingTraceRequest,
+  RoutingTraceResponse,
+  RuntimeMode,
+  RuntimeModeRequest
+} from './model';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -522,6 +531,25 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
     return () => controller.abort();
   }, [api, available, level, target, limit]);
   return {records, connected, error, available, clear: () => setRecords([])};
+}
+// The outbound mode switch: read with the usual poll, set at once; the reply replaces the cached copy.
+export function useRuntimeMode(enabled = true) {
+  const api = getApi();
+  const resource = useResource({key: ['runtimeMode'], fetch: signal => api.runtimeMode(signal)}, {deps: [api], enabled});
+  const [busy, setBusy] = useState(false);
+  const [set, setSet] = useState<RuntimeMode | null>(null);
+  async function change(request: RuntimeModeRequest): Promise<RuntimeMode> {
+    setBusy(true);
+    try {
+      const next = await api.setRuntimeMode(request);
+      setSet(next);
+      resource.refetch();
+      return next;
+    } finally {
+      setBusy(false);
+    }
+  }
+  return {...resource, data: set && (!resource.data || set.observed_at >= resource.data.observed_at) ? set : resource.data, busy, change};
 }
 // Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {

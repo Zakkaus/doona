@@ -48,6 +48,7 @@ paths:
                       logs: /api/v1/logs
                       providers: /api/v1/providers
                       rules: /api/v1/rules
+                      runtime_mode: /api/v1/runtime/mode
                       operations: /api/v1/operations/{id}
                   x-headers:
                     Content-Type: application/json
@@ -152,6 +153,12 @@ paths:
                         available: true
                         max_window_seconds: 3600
                         max_points: 720
+                      runtime_mode:
+                        available: true
+                        modes:
+                          - rule
+                          - direct
+                          - global
                       datapath:
                         available: true
                         kinds:
@@ -1529,6 +1536,112 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/v1/runtime/mode:
+    get:
+      operationId: getRuntimeMode
+      summary: Read the outbound mode
+      description: |
+        The engine's outbound mode: rule follows the configuration, direct
+        sends every flow straight out as if the routing section were only
+        `fallback: direct`, global sends every flow through one outbound. Runtime
+        state, never written to the configuration; the next activation returns
+        to rule. Requires resources.runtime_mode.available.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Current outbound mode
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeMode'
+              examples:
+                rule:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    mode: rule
+                    target: null
+                    source: config
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: setRuntimeMode
+      summary: Switch the outbound mode without a reload
+      description: |
+        Requires control and resources.runtime_mode.available; mode must be one
+        of resources.runtime_mode.modes. global needs target, the id of a group
+        or node every flow then leaves through; rule and direct take no target.
+        Presets the engine treats as must (LAN, multicast, the network manager)
+        keep applying in every mode. The change applies immediately, interrupts
+        nothing already established, and is dropped by the next activation.
+        Follows the shared idempotency rules.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuntimeModeRequest'
+            examples:
+              global:
+                value:
+                  mode: global
+                  target: group-proxy
+      responses:
+        '200':
+          description: Mode after the change
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeMode'
+              examples:
+                global:
+                  value:
+                    observed_at: '2026-08-15T10:00:05Z'
+                    mode: global
+                    target: group-proxy
+                    source: runtime
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /api/v1/datapath:
     get:
       operationId: getDatapath
@@ -5101,6 +5214,7 @@ components:
             - runtime_outbounds
             - traffic_history
             - memory_history
+            - runtime_mode
             - logs
             - providers
             - rules
@@ -5139,6 +5253,9 @@ components:
             rules:
               type: string
               const: /api/v1/rules
+            runtime_mode:
+              type: string
+              const: /api/v1/runtime/mode
             operations:
               type: string
               const: /api/v1/operations/{id}
@@ -5246,6 +5363,7 @@ components:
             - runtime_outbounds
             - traffic_history
             - memory_history
+            - runtime_mode
             - datapath
             - nodes
             - providers
@@ -5410,6 +5528,27 @@ components:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
                   description: Maximum returned samples per history request.
+            runtime_mode:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - modes
+              properties:
+                available:
+                  type: boolean
+                modes:
+                  type: array
+                  uniqueItems: true
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/OutboundMode'
+                  description: The modes PUT /runtime/mode accepts; rule is always one of them.
             datapath:
               type: object
               required:
@@ -6474,6 +6613,47 @@ components:
         connections:
           $ref: '#/components/schemas/NullableSafeUInt'
           description: Visible active TCP and UDP connections at sampled_at, or null when unavailable.
+    RuntimeMode:
+      type: object
+      required:
+        - observed_at
+        - mode
+        - target
+        - source
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        mode:
+          $ref: '#/components/schemas/OutboundMode'
+        target:
+          type:
+            - string
+            - 'null'
+          description: The group or node id every flow leaves through in global mode; null otherwise.
+        source:
+          type: string
+          enum:
+            - config
+            - runtime
+          description: config until a PUT changed the mode in this generation, runtime afterwards.
+    OutboundMode:
+      type: string
+      enum:
+        - rule
+        - direct
+        - global
+    RuntimeModeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+      properties:
+        mode:
+          $ref: '#/components/schemas/OutboundMode'
+        target:
+          type: string
+          minLength: 1
+          description: Required with global; rejected with rule and direct.
     MemoryHistory:
       type: object
       required:

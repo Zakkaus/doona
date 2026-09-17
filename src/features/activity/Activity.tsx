@@ -15,12 +15,13 @@ import {
   useRuntime,
   useRuntimeMemory,
   useRuntimeOutbounds,
-  useTrafficHistory
+  useTrafficHistory,
+  useRuntimeMode
 } from '../../api/store';
 import {connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, sourceIp, trafficSeries} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Button, CardLink, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, TextTooltip, toast} from '../../ui/ui';
+import {Badge, Button, CardLink, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
 import type {Key} from '../../i18n/messages';
 
 const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
@@ -75,8 +76,9 @@ export function Activity({go}: {go: (page: string) => void}) {
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
-  // The quick row keeps its choice locally until the contract carries an outbound mode and a global target.
-  const [mode, setMode] = useState('rule');
+  // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
+  const runtimeMode = useRuntimeMode(capabilities.data?.resources.runtime_mode?.available !== false);
+  const mode = runtimeMode.data?.mode ?? 'rule';
   const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
@@ -86,7 +88,15 @@ export function Activity({go}: {go: (page: string) => void}) {
   if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const groups = groupsResource.data;
-  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
+  const target = groups.some(g => g.id === (chosenTarget || runtimeMode.data?.target)) ? chosenTarget || runtimeMode.data!.target! : (groups[0]?.id ?? '');
+  const targetName = groups.find(g => g.id === target)?.name ?? '—';
+  const switchMode = (next: string) => {
+    if (next !== 'rule' && next !== 'direct' && next !== 'global') return;
+    void runtimeMode.change(next === 'global' ? {mode: 'global', target} : {mode: next}).then(
+      result => toast('positive', t('act.modeChanged', {mode: t(modeLabels[result.mode])})),
+      (error: unknown) => toast('negative', errorText(error))
+    );
+  };
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -111,10 +121,7 @@ export function Activity({go}: {go: (page: string) => void}) {
             <Segmented
               label={t('act.mode')}
               value={mode}
-              onChange={k => {
-                setMode(k);
-                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
-              }}
+              onChange={switchMode}
               items={[
                 ['rule', t('mode.rule')],
                 ['global', t('mode.global')],
@@ -129,8 +136,17 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Filter />
               {t('act.global')}
             </span>
-            <MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>
-              {target}
+            <MenuButton
+              quiet
+              label={t('act.global')}
+              value={target}
+              onChange={id => {
+                setTarget(id);
+                if (mode === 'global') void runtimeMode.change({mode: 'global', target: id}).catch((error: unknown) => toast('negative', errorText(error)));
+              }}
+              items={groups.map(g => ({id: g.id, label: g.name}))}
+            >
+              {targetName}
             </MenuButton>
           </div>
         </div>

@@ -72,6 +72,8 @@ export function createMockApi(): Api {
   const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
   let configRevision = 40;
   const providers = structuredClone(fixtures.providers);
+  // The outbound mode: runtime state the next activation resets.
+  let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   try {
@@ -240,6 +242,7 @@ export function createMockApi(): Api {
           config_validate: '/api/v1/config/validate',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
+          runtime_mode: '/api/v1/runtime/mode',
           logs: '/api/v1/logs',
           providers: '/api/v1/providers',
           rules: '/api/v1/rules',
@@ -625,6 +628,26 @@ export function createMockApi(): Api {
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
     },
+    runtimeMode: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
+      return {observed_at: new Date().toISOString(), ...mode};
+    },
+    setRuntimeMode: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
+      if (!capabilities.resources.runtime_mode.modes?.includes(request.mode))
+        throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
+      if (request.mode === 'global') {
+        if (!request.target) throw new ApiError(400, 'invalid_request', 'global needs a target');
+        if (!groups.some(g => g.id === request.target) && !nodes.some(n => n.id === request.target))
+          throw new ApiError(422, 'unsupported_value', `No group or node named ${request.target}`);
+      } else if (request.target) throw new ApiError(400, 'invalid_request', `${request.mode} takes no target`);
+      mode = {mode: request.mode, target: request.mode === 'global' ? request.target! : null, source: 'runtime'};
+      log('info', 'honk::routing', 'Outbound mode changed.', {mode: mode.mode, target: mode.target});
+      publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
+      return {observed_at: new Date().toISOString(), ...mode};
+    },
     providers: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.providers.available) throw new ApiError(404, 'capability_not_supported', 'Providers are unavailable');
@@ -701,6 +724,7 @@ export function createMockApi(): Api {
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
         configRevision += 1;
+        mode = {mode: 'rule', target: null, source: 'config'};
         log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
         const generation = String(configRevision);
         runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
