@@ -2,8 +2,7 @@ import {useMemo, useState} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {BrandIcon, Button, Chips, Light, NodeTile} from '../../ui/ui';
-import {brandFor} from '../../ui/brand';
+import {Button, Chips, Light, NodeTile} from '../../ui/ui';
 import {OutboundMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
@@ -66,7 +65,7 @@ export function FlowMap({
                     label: label(rule.node),
                     count: n(rule.count),
                     countLabel: t('flow.laneFlows', {n: n(rule.count)}),
-                    icon: rule.node.unknown ? <OutboundMark name={null} /> : <BrandIcon brand={brandFor(rule.node.label)} />
+                    icon: rule.node.unknown ? <OutboundMark name={null} /> : undefined
                   }))}
                   value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
                   onChange={onPin}

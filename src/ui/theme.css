@@ -2003,7 +2003,8 @@ input {
   padding: 0 8px;
   border-radius: 6px;
   font-size: 12px;
-  line-height: 16px;
+  /* The line box spans the badge, so its text sits on the same line as neighbouring labels. */
+  line-height: 20px;
   font-weight: 500;
   border: 1px solid var(--rp-hl-high);
   color: var(--rp-subtle);

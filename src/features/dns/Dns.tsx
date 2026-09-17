@@ -2,11 +2,9 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {useMemo, useState} from 'react';
 import Delete from '../../ui/icons/Delete';
 import {useDnsControl, useDnsLog} from '../../api/store';
-import {brandFor} from '../../ui/brand';
 import {localTime, relativeStart} from '../../api/selectors';
 import {
   Badge,
-  BrandIcon,
   Button,
   DataTable,
   ErrorMessage,
@@ -141,7 +139,7 @@ export function Dns({go, query}: PageProps) {
   const cacheTab = (
     <>
       <div className="rp-toolbar">
-        <Kv inline items={[[t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']]} />
+        <Kv row items={[[t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']]} />
         {dns.cache.data &&
           (['positive', 'negative', 'persistent'] as const)
             .filter(key => !dns.cache.data!.coverage[key])
@@ -313,10 +311,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
         ]}
         render={record => [
           <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
-          <span className="rp-chain">
-            <BrandIcon brand={brandFor(record.question.name)} />
-            <TextTooltip>{record.question.name}</TextTooltip>
-          </span>,
+          <TextTooltip>{record.question.name}</TextTooltip>,
           record.question.type,
           <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>,
           record.status !== 'NOERROR' ? (

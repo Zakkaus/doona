@@ -4,8 +4,7 @@ import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
-import {OutboundMark} from './Flag';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 
 function PolicyCard({
@@ -46,6 +45,10 @@ function PolicyCard({
   const udp = g?.runtime.selection.udp?.member_id;
   const selected = control.network === 'tcp' ? tcp : control.network === 'udp' ? udp : tcp === udp ? tcp : undefined;
   const selectable = g?.policy.kind === 'selector' && g.capabilities.can_select;
+  // An automatic policy that accepts a pin: tiles pick like a selector, and a pinned pick can be released.
+  const overridable = !selectable && (g?.capabilities.can_override ?? false);
+  const pinned = overridable && [g?.runtime.selection.tcp, g?.runtime.selection.udp].some(item => item?.source === 'override');
+  const interruptable = g?.capabilities.mutable_config.includes('interrupt_connections') ?? false;
   const healthy = members.filter(m => m.health?.state === 'healthy').length;
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
   return (
@@ -59,10 +62,16 @@ function PolicyCard({
         <>
           <div className="rp-row">
             <span className="rp-cluster">
-              <OutboundMark name={leaves.get(g.id) ?? null} />
               <h3 className="rp-h3">{g.name}</h3>
               <Badge>{g.policy.kind}</Badge>
-              <span className="rp-label">{t('policy.members', {n: members.length})}</span>
+              <Light small tone="ok">
+                {t('policy.healthy', {n: healthy})}
+              </Light>
+              {unavailable > 0 && (
+                <Light small tone="err">
+                  {t('policy.down', {n: unavailable})}
+                </Light>
+              )}
             </span>
             <Button
               small
@@ -82,25 +91,18 @@ function PolicyCard({
               {control.busy === 'probe' ? t('policy.probing') : t('policy.probeAll')}
             </Button>
           </div>
-          <Kv
-            inline
-            items={[
-              [t('policy.tcpSelection'), tcp ?? '—'],
-              [t('policy.udpSelection'), udp ?? '—'],
-              [t('policy.health'), t('policy.healthCounts', {healthy, unavailable})],
-              [t('ui.revision'), g.config_revision]
-            ]}
-          />
           <Disclosure id={id} title={t('ui.config')}>
             <Kv
-              items={groupConfigFields(g).map(([key, value]) => [
-                typeof key === 'string' ? t(key) : t(key.key, key.params),
-                typeof value === 'string' ? value : t(value.key, value.params)
-              ])}
+              items={groupConfigFields(g)
+                .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
+                .map(([key, value]): [string, string] => [
+                  typeof key === 'string' ? t(key) : t(key.key, key.params),
+                  typeof value === 'string' ? value : t(value.key, value.params)
+                ])}
             />
           </Disclosure>
           <div className="rp-toolbar">
-            {selectable && (
+            {(selectable || overridable) && (
               <Segmented
                 label={t('policy.network', {name: g.name})}
                 value={control.network}
@@ -114,7 +116,26 @@ function PolicyCard({
                 ]}
               />
             )}
-            {g.capabilities.mutable_config.includes('interrupt_connections') && (
+            {overridable && (
+              <Light small tone={pinned ? 'neutral' : 'ok'}>
+                {t(pinned ? 'policy.overridden' : 'policy.automatic')}
+              </Light>
+            )}
+            {pinned && (
+              <Button
+                small
+                isPending={control.busy === 'selection'}
+                isDisabled={!!control.busy}
+                onPress={() => {
+                  void control.clearOverride().then(result => {
+                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: result.member_id}));
+                  });
+                }}
+              >
+                {t('policy.releaseOverride')}
+              </Button>
+            )}
+            {interruptable && (
               <Switch
                 isSelected={g.config.interrupt_connections}
                 isDisabled={!!control.busy}
@@ -135,13 +156,20 @@ function PolicyCard({
             cur={selected}
             isDisabled={!!control.busy}
             onSelect={
-              selectable
+              selectable || overridable
                 ? memberId => {
                     void control.select(memberId).then(result => {
                       if (result)
                         toast(
                           'positive',
-                          t(result.connections_interrupted ? 'policy.selectedInterrupted' : 'policy.selectedKept', {name: g.name, member: result.member_id})
+                          t(
+                            result.source === 'override'
+                              ? 'policy.pinned'
+                              : result.connections_interrupted
+                                ? 'policy.selectedInterrupted'
+                                : 'policy.selectedKept',
+                            {name: g.name, member: result.member_id}
+                          )
                         );
                     });
                   }

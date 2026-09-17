@@ -101,6 +101,8 @@ export function createApi(base: string, token?: string): Api {
     groups: async signal => data(await client.GET('/api/v1/groups', {signal})),
     group: async (id, signal) => data(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
     selectGroup: async (groupId, body, signal) => data(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
+    clearGroupOverride: async (groupId, network, signal) =>
+      data(await client.DELETE('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}, query: {network}}, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
       const result = await client.PATCH('/api/v1/groups/{groupId}', {
         params: {path: {groupId}, header: {'If-Match': ifMatch}},

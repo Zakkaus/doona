@@ -415,6 +415,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     setNetwork,
     busy,
     select: (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal)),
+    clearOverride: () => run('selection', signal => api.clearGroupOverride(id, network, signal)),
     probe: () =>
       run('probe', async signal => {
         if (!resource.data?.capabilities.probe_transports.includes('tcp')) throw new Error('TCP probes are not supported');

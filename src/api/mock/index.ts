@@ -294,6 +294,7 @@ export function createMockApi(): Api {
       return groups.map(g => ({
         id: g.id,
         name: g.name,
+        icon: g.icon,
         config_revision: g.config_revision,
         policy: {...g.policy},
         member_count: g.members.length,
@@ -315,8 +316,9 @@ export function createMockApi(): Api {
         groups.find(g => g.id === groupId),
         'Group'
       );
-      if (group.policy.kind !== 'selector' || !group.capabilities.can_select)
-        throw new ApiError(409, 'selection_not_supported', 'Group does not support manual selection');
+      // A selector takes the choice; an automatic policy takes it as a pin that stands until cleared.
+      const override = !group.capabilities.can_select && group.capabilities.can_override;
+      if (!group.capabilities.can_select && !override) throw new ApiError(422, 'selection_not_supported', 'Group does not support manual selection');
       found(
         group.members.find(m => m.id === request.member_id),
         'Group member'
@@ -328,7 +330,7 @@ export function createMockApi(): Api {
         group.runtime.selection[network] = {
           member_id: request.member_id,
           resolved_leaf_node_id: resolveLeaf(request.member_id, network, nodes, groups)?.id ?? null,
-          source: 'runtime'
+          source: override ? 'override' : 'runtime'
         };
         if (previous === request.member_id || !group.config.interrupt_connections) continue;
         for (const connection of connections[network]) {
@@ -365,12 +367,37 @@ export function createMockApi(): Api {
         group_id: groupId,
         member_id: request.member_id,
         network: request.network,
-        source: 'runtime',
+        source: override ? 'override' : 'runtime',
         selection_revision: String(revision),
         connections_interrupted: interrupted
       };
       if (request.network !== 'both') result.resolved_leaf_node_id = group.runtime.selection[request.network]?.resolved_leaf_node_id;
       return result;
+    },
+    // Back to the policy's own pick: the pin goes and the member the policy last ranked first comes back.
+    clearGroupOverride: async (groupId, network, signal) => {
+      signal?.throwIfAborted();
+      const group = found(
+        groups.find(g => g.id === groupId),
+        'Group'
+      );
+      if (!group.capabilities.can_override) throw new ApiError(409, 'state_conflict', 'Group has no override to clear');
+      const networks: Array<'tcp' | 'udp'> = network === 'both' ? ['tcp', 'udp'] : [network];
+      const chosen = fixtures.policyPick(group);
+      for (const item of networks) {
+        group.runtime.selection[item] = {member_id: chosen, resolved_leaf_node_id: resolveLeaf(chosen, item, nodes, groups)?.id ?? null, source: 'policy'};
+      }
+      const revision = (revisions.get(groupId) ?? 0n) + 1n;
+      revisions.set(groupId, revision);
+      return {
+        group_id: groupId,
+        member_id: chosen,
+        resolved_leaf_node_id: network === 'both' ? undefined : group.runtime.selection[network]?.resolved_leaf_node_id,
+        network,
+        source: 'policy',
+        selection_revision: String(revision),
+        connections_interrupted: false
+      };
     },
     patchGroup: async (groupId, ops, ifMatch, signal) => {
       signal?.throwIfAborted();

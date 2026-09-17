@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== ROOT.origin || /\/api(?:\/|$)/.test(url.pathname) || !url.pathname.startsWith(ROOT.pathname)) return;
   const navigation = request.mode === 'navigate';
-  if (!navigation && !/^(assets|fonts|icons|brands)\//.test(url.pathname.slice(ROOT.pathname.length))) return;
+  if (!navigation && !/^(assets|fonts|icons)\//.test(url.pathname.slice(ROOT.pathname.length))) return;
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE);

@@ -47,13 +47,6 @@ export const messages = defineMessages({
     'settings.apply': '套用',
     'settings.runtimeSaved': '後端選項已套用',
     'settings.about': '關於',
-    'settings.icons': '圖示',
-    'settings.iconPack': '圖示包',
-    'settings.iconsBuiltin': '內建',
-    'settings.iconsOff': '不顯示',
-    'settings.iconsCustom': '自訂前綴',
-    'settings.iconPrefix': 'URL 前綴',
-    'settings.iconsNote': '內建圖示隨 doona 一起提供，不需連線；自訂前綴時，瀏覽器會向該來源請求「識別碼.png」。沒有對應圖示時留白。',
     'settings.version': 'doona 版本',
     'settings.contract': '契約提交'
   },
@@ -103,13 +96,6 @@ export const messages = defineMessages({
     'settings.apply': '应用',
     'settings.runtimeSaved': '后端选项已应用',
     'settings.about': '关于',
-    'settings.icons': '图标',
-    'settings.iconPack': '图标包',
-    'settings.iconsBuiltin': '内置',
-    'settings.iconsOff': '不显示',
-    'settings.iconsCustom': '自定义前缀',
-    'settings.iconPrefix': 'URL 前缀',
-    'settings.iconsNote': '内置图标随 doona 一起提供，不需联网；自定义前缀时，浏览器会向该来源请求「标识符.png」。没有对应图标时留白。',
     'settings.version': 'doona 版本',
     'settings.contract': '契约提交'
   },
@@ -159,14 +145,6 @@ export const messages = defineMessages({
     'settings.apply': 'Apply',
     'settings.runtimeSaved': 'Backend options applied',
     'settings.about': 'About',
-    'settings.icons': 'Icons',
-    'settings.iconPack': 'Icon pack',
-    'settings.iconsBuiltin': 'Built in',
-    'settings.iconsOff': 'Off',
-    'settings.iconsCustom': 'Custom prefix',
-    'settings.iconPrefix': 'URL prefix',
-    'settings.iconsNote':
-      'Built-in icons ship with doona and need no network. With a custom prefix the browser requests <id>.png from that origin. Names without an icon stay blank.',
     'settings.version': 'doona version',
     'settings.contract': 'Contract commit'
   }

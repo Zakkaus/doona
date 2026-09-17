@@ -2,24 +2,9 @@ import {useMemo, useState} from 'react';
 import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
-import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
 import {OutboundMark} from '../policies/Flag';
-import {
-  Badge,
-  BrandIcon,
-  Button,
-  DataTable,
-  DetailPanel,
-  ErrorMessage,
-  Loading,
-  TextTooltip,
-  Kv,
-  LabeledSelect,
-  Segmented,
-  panelQuery,
-  useMediaQuery
-} from '../../ui/ui';
-import {brandFor} from '../../ui/brand';
+import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
@@ -38,8 +23,53 @@ const stages: Record<string, Key> = {
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
 
-// "Which decisions did this traffic go through": a list of retained flows, the trace of the selected one beside it.
-export function Flows({go, query}: PageProps) {
+// A query change that keeps the rules tab the reader is on.
+function within(query: string, patch: Record<string, string | null>): string {
+  const next = new URLSearchParams(query);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+  }
+  return next.toString();
+}
+
+// The config as a picture: every retained flow drawn through rules, outbounds and selected nodes. A click pins
+// one item and dims the rest; the pinned path can be followed into the flow records.
+export function RoutingMap({go, query}: PageProps) {
+  const t = useT();
+  const params = useMemo(() => new URLSearchParams(query), [query]);
+  const resource = useFlows(undefined);
+  const groups = useGroups();
+  const nodes = useNodes();
+  const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
+  const pinned = params.get('path');
+  const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
+  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned).length : 0;
+  return (
+    <section className="rp-col" aria-label={t('flow.map')}>
+      {resource.error && <ErrorMessage error={resource.error} />}
+      {resource.data || groups.data ? (
+        <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
+      ) : resource.error || groups.error ? null : (
+        <Loading />
+      )}
+      {resource.data && !resource.data.flows.length && <span className="rp-empty">{t('flow.mapEmpty')}</span>}
+      {pinned && (
+        <div className="rp-toolbar">
+          <Button small onPress={() => go('rules', within(query, {tab: 'flows'}))}>
+            {t('flow.viewPinned', {n: pinnedCount})}
+          </Button>
+          <Button small quiet onPress={() => setPinned(null)}>
+            {t('flow.clearMapFilter')}
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// "Which decisions did this traffic go through": the retained flows, the trace of the selected one beside it.
+export function FlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -52,37 +82,18 @@ export function Flows({go, query}: PageProps) {
   const id = params.get('id');
   const detail = useFlow(id);
   const flow = detail.data;
-  const select = (value: string | null) => {
-    const next = new URLSearchParams(query);
-    if (value) next.set('id', value);
-    else next.delete('id');
-    go('flows', next.toString());
-  };
-  // The map draws the config with every retained flow; the pinned path narrows the list beneath it.
+  const select = (value: string | null) => go('rules', within(query, {id: value}));
   const groups = useGroups();
   const nodes = useNodes();
   const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
   const pinned = params.get('path');
-  const setPinned = (value: string | null) => {
-    const next = new URLSearchParams(query);
-    if (value) next.set('path', value);
-    else next.delete('path');
-    go('flows', next.toString());
-  };
+  const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
   const pinnedLabel = pinned ? (map.nodes.find(node => node.id === pinned)?.label ?? pinned.slice(pinned.indexOf(':') + 1)) : null;
   const all = resource.data?.flows ?? [];
   const shown = (pinned ? flowsThrough(all, pinned) : all).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
   return (
-    <div className="rp-page">
+    <>
       {resource.error && <ErrorMessage error={resource.error} />}
-      <section className="rp-col" aria-label={t('flow.map')}>
-        {resource.data || groups.data ? (
-          <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
-        ) : resource.error || groups.error ? null : (
-          <Loading />
-        )}
-        {resource.data && !resource.data.flows.length && <span className="rp-empty">{t('flow.mapEmpty')}</span>}
-      </section>
       <div className="rp-toolbar">
         <Segmented
           label={t('ui.network')}
@@ -108,7 +119,7 @@ export function Flows({go, query}: PageProps) {
           </Button>
         )}
         {connectionId && (
-          <Button small label={t('flow.clearConnectionFilter')} onPress={() => go('flows', id ? 'id=' + encodeURIComponent(id) : '')}>
+          <Button small label={t('flow.clearConnectionFilter')} onPress={() => go('rules', within(query, {connection_id: null}))}>
             {t('flow.connectionFilter', {id: connectionId})}
             <Close />
           </Button>
@@ -117,7 +128,7 @@ export function Flows({go, query}: PageProps) {
       </div>
       <div className="rp-with-panel" data-open={flow || (id && detail.loading) ? '' : undefined}>
         <DataTable
-          label={t('nav.flows')}
+          label={t('rule.flows')}
           loading={resource.loading && !resource.data}
           rows={shown}
           height={442}
@@ -134,10 +145,7 @@ export function Flows({go, query}: PageProps) {
             {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4}
           ]}
           render={f => [
-            <span className="rp-chain">
-              <BrandIcon brand={brandFor(f.input?.domain || f.input?.dst)} />
-              <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>
-            </span>,
+            <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
             <span className="rp-chain">
               <OutboundMark name={f.outbound === 'direct' || f.outbound === 'block' ? f.outbound : (f.chain.at(-1) ?? null)} />
               <TextTooltip>{chainLabel(f, t)}</TextTooltip>
@@ -175,7 +183,7 @@ export function Flows({go, query}: PageProps) {
                           t('flow.missing'),
                           formatList(
                             lang,
-                            flow.trace.missing.map(stage => (stages[stage] ? t(stages[stage]) : stage))
+                            flow.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
                           )
                         ] as [string, string]
                       ]
@@ -222,6 +230,6 @@ export function Flows({go, query}: PageProps) {
           )}
         </DetailPanel>
       </div>
-    </div>
+    </>
   );
 }
