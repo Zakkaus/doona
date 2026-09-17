@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fetch every icon named in src/ui/brands.json and store it as a 64px PNG under public/brands/<id>.png.
 
-Sources are the community packs listed in packs.json, fetched through jsDelivr, or "favicon/<host>" for a
+Sources are the community packs listed in packs.json, fetched through jsDelivr; "favicon/<host>" for a
 site's own icon (Google's favicon service first, DuckDuckGo's as the fallback; anything under 48px is
-rejected as too blurry). Downloads are cached so a re-run after editing the catalogue only touches new
+rejected as too blurry); or "flag/<cc>" for a country flag from flag-icons, rasterised with rsvg-convert. Downloads are cached so a re-run after editing the catalogue only touches new
 entries. Run from anywhere.
 """
 import io
@@ -13,9 +13,10 @@ import subprocess
 import sys
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
@@ -26,11 +27,16 @@ CACHE = Path(os.environ.get('DOONA_ICON_CACHE', '/scratch/ssd/doona-tools/icons/
 MIN_FAVICON = 48
 
 
+_fetching = Lock()
+
+
 def fetch(url: str, cache: Path) -> bytes:
-    if not cache.exists():
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(['curl', '-sSfL', '--max-time', '30', '-o', str(cache), url], check=True)
-    return cache.read_bytes()
+    # Several entries can share one source file; take it under a lock so no worker reads a half-written copy.
+    with _fetching:
+        if not cache.exists():
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(['curl', '-sSfL', '--max-time', '30', '-o', str(cache), url], check=True)
+        return cache.read_bytes()
 
 
 def favicon(host: str, cache: Path) -> Image.Image:
@@ -54,6 +60,20 @@ def favicon(host: str, cache: Path) -> Image.Image:
     return best
 
 
+FLAG_ICONS = 'https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/'
+
+
+def flag(code: str, cache: Path) -> Image.Image:
+    """A 4:3 flag rasterised at icon size with the same rounded hairline tile the UI draws for node flags."""
+    svg = fetch(FLAG_ICONS + code + '.svg', cache.with_suffix('.svg'))
+    png = subprocess.run(['rsvg-convert', '-w', '256', '-h', '192'], input=svg, capture_output=True, check=True).stdout
+    image = Image.open(io.BytesIO(png)).convert('RGBA')
+    mask = Image.new('L', image.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, image.width - 1, image.height - 1), radius=24, fill=255)
+    image.putalpha(mask)
+    return image
+
+
 def main() -> int:
     packs = json.loads((HERE / 'packs.json').read_text())
     brands = json.loads((ROOT / 'src/ui/brands.json').read_text())
@@ -71,6 +91,9 @@ def main() -> int:
             if pack == 'favicon':
                 url = name
                 image = favicon(name, CACHE / pack / name)
+            elif pack == 'flag':
+                url = FLAG_ICONS + name + '.svg'
+                image = flag(name, CACHE / pack / name)
             else:
                 repo, folder = packs[pack]['repo'], packs[pack]['dir']
                 url = f"https://cdn.jsdelivr.net/gh/{repo}@master/{folder}/{urllib.parse.quote(name)}.png"

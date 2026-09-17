@@ -152,7 +152,7 @@
   {
     "id": "android",
     "label": "Android",
-    "source": "lige47-proxy/google",
+    "source": "lige47-proxy/GooglePlay",
     "geosite": ["android"],
     "domain": ["android.com"]
   },
@@ -497,37 +497,37 @@
   {
     "id": "category-banks-china",
     "label": "China Banks",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-bank-cn"]
   },
   {
     "id": "category-banks-iran",
     "label": "Iran Banks",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-bank-ir"]
   },
   {
     "id": "category-banks-japan",
     "label": "Japan Banks",
-    "source": "semporia-rr/Japan",
+    "source": "flag/jp",
     "geosite": ["category-bank-jp"]
   },
   {
     "id": "category-banks-myanmar",
     "label": "Myanmar Banks",
-    "source": "semporia-rr/Myanmar",
+    "source": "flag/mm",
     "geosite": ["category-bank-mm"]
   },
   {
     "id": "category-blogs-china",
     "label": "China Blogs",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-blog-cn"]
   },
   {
     "id": "category-bourse-iran",
     "label": "Iran Stock Exchanges",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-bourse-ir"]
   },
   {
@@ -545,7 +545,7 @@
   {
     "id": "category-collaboration-china",
     "label": "China Collaboration",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-collaborate-cn"]
   },
   {
@@ -581,13 +581,13 @@
   {
     "id": "category-developers-china",
     "label": "China Developer Services",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-dev-cn"]
   },
   {
     "id": "category-documents-china",
     "label": "China Documents",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-documents-cn"]
   },
   {
@@ -605,7 +605,7 @@
   {
     "id": "category-education-iran",
     "label": "Iran Education",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-education-ir"]
   },
   {
@@ -617,7 +617,7 @@
   {
     "id": "category-enterprise-query-china",
     "label": "China Enterprise Query",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-enterprise-query-platform-cn"]
   },
   {
@@ -641,7 +641,7 @@
   {
     "id": "category-food-china",
     "label": "China Food Services",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-food-cn"]
   },
   {
@@ -653,7 +653,7 @@
   {
     "id": "category-forums-iran",
     "label": "Iran Forums",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-forums-ir"]
   },
   {
@@ -677,25 +677,25 @@
   {
     "id": "category-government-iran",
     "label": "Iran Government",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-gov-ir"]
   },
   {
     "id": "category-government-russia",
     "label": "Russia Government",
-    "source": "semporia-rr/Russia",
+    "source": "flag/ru",
     "geosite": ["category-gov-ru"]
   },
   {
     "id": "category-hospitals-china",
     "label": "China Hospitals",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-hospital-cn"]
   },
   {
     "id": "category-httpdns-china",
     "label": "China HTTPDNS",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-httpdns-cn"]
   },
   {
@@ -707,7 +707,7 @@
   {
     "id": "category-insurance-iran",
     "label": "Iran Insurance",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-insurance-ir"]
   },
   {
@@ -719,13 +719,13 @@
   {
     "id": "category-iran",
     "label": "Iran Services",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-ir"]
   },
   {
     "id": "category-logistics-china",
     "label": "China Logistics",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-logistics-cn"]
   },
   {
@@ -743,13 +743,13 @@
   {
     "id": "category-media-iran",
     "label": "Iran Media",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-media-ir"]
   },
   {
     "id": "category-media-russia",
     "label": "Russia Media",
-    "source": "semporia-rr/Russia",
+    "source": "flag/ru",
     "geosite": ["category-media-ru"]
   },
   {
@@ -767,19 +767,19 @@
   {
     "id": "category-netdisks-china",
     "label": "China Cloud Drives",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-netdisk-cn"]
   },
   {
     "id": "category-network-security-china",
     "label": "China Network Security",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-network-security-cn"]
   },
   {
     "id": "category-news-iran",
     "label": "Iran News",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-news-ir"]
   },
   {
@@ -797,7 +797,7 @@
   {
     "id": "category-number-verification-china",
     "label": "China Number Verification",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-number-verification-cn"]
   },
   {
@@ -815,7 +815,7 @@
   {
     "id": "category-payments-iran",
     "label": "Iran Payments",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-payment-ir"]
   },
   {
@@ -845,7 +845,7 @@
   {
     "id": "category-russia",
     "label": "Russia Services",
-    "source": "semporia-rr/Russia",
+    "source": "flag/ru",
     "geosite": ["category-ru"]
   },
   {
@@ -875,19 +875,19 @@
   {
     "id": "category-securities-china",
     "label": "China Securities",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-securities-cn"]
   },
   {
     "id": "category-shopping-iran",
     "label": "Iran Shopping",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-shopping-ir"]
   },
   {
     "id": "category-social-media-china",
     "label": "China Social Media",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-social-media-cn"]
   },
   {
@@ -899,7 +899,7 @@
   {
     "id": "category-social-media-iran",
     "label": "Iran Social Media",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-social-media-ir"]
   },
   {
@@ -911,7 +911,7 @@
   {
     "id": "category-tech-iran",
     "label": "Iran Technology",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-tech-ir"]
   },
   {
@@ -923,7 +923,7 @@
   {
     "id": "category-travel-iran",
     "label": "Iran Travel",
-    "source": "semporia-rr/Iran",
+    "source": "flag/ir",
     "geosite": ["category-travel-ir"]
   },
   {
@@ -935,7 +935,7 @@
   {
     "id": "category-wikis-china",
     "label": "China Wikis",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["category-wiki-cn"]
   },
   {
@@ -1002,7 +1002,7 @@
   {
     "id": "china-zone",
     "label": "China",
-    "source": "qure-color/China",
+    "source": "flag/cn",
     "geosite": ["cn", "geolocation-cn", "tld-cn"]
   },
   {
@@ -1561,7 +1561,7 @@
   {
     "id": "google",
     "label": "Google",
-    "source": "lige47-proxy/google",
+    "source": "favicon/google.com",
     "geosite": ["google", "google-deepmind", "google-registry", "google-trust-services"],
     "domain": ["google.com", "googleusercontent.com"],
     "address": ["8.8.8.8", "8.8.4.4", "2001:4860:4860::8888", "2001:4860:4860::8844"]

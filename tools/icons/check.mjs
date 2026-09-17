@@ -39,9 +39,12 @@ for (const brand of Array.isArray(brands) ? brands : []) {
   const source = typeof brand.source === 'string' ? brand.source.split('/') : [];
   const [pack, ...rest] = source;
   const file = rest.join('/');
-  // "favicon/<host>" takes the site's own icon (see fetch.py); every other source names a file in a pack.
+  // "favicon/<host>" takes the site's own icon and "flag/<cc>" a flag-icons flag (see fetch.py); every other
+  // source names a file in a pack.
   if (pack === 'favicon') {
     if (!domainPattern.test(file)) errors.push(`${where}: favicon source "${file}" is not a hostname`);
+  } else if (pack === 'flag') {
+    if (!/^[a-z]{2}$/.test(file)) errors.push(`${where}: flag source "${file}" is not a country code`);
   } else if (!packs[pack]) errors.push(`${where}: unknown pack in source "${brand.source}"`);
   else if (!files[pack].has(file)) errors.push(`${where}: "${file}" is not in ${pack}`);
   const known = new Set(['id', 'label', 'source', 'geosite', 'domain', 'keyword', 'address', 'expression']);
