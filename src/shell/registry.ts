@@ -50,6 +50,13 @@ export const features: Feature[] = [
     requires: {resources: ['connections']}
   },
   {
+    id: 'dns',
+    path: 'dns',
+    nav: {group: 'grp.network', titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
+    Page: Dns,
+    requires: {resources: ['dns_query', 'dns_cache']}
+  },
+  {
     id: 'policies',
     path: 'policies',
     shortcut: 'p',
@@ -64,13 +71,6 @@ export const features: Feature[] = [
     nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
     requires: {resources: ['routing_trace', 'flows']}
-  },
-  {
-    id: 'dns',
-    path: 'dns',
-    nav: {group: 'grp.proxy', titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
-    Page: Dns,
-    requires: {resources: ['dns_query', 'dns_cache']}
   },
   {
     id: 'events',

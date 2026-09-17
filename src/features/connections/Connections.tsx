@@ -194,7 +194,7 @@ export function Connections({go, query}: PageProps) {
               <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>
                 {t(connectionStates[cur.state])} · {cur.network.toUpperCase()}
               </Light>
-              <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), value])} />
+              <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)])} />
               <div className="rp-cluster">
                 <Button
                   onPress={() =>

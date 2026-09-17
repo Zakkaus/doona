@@ -115,13 +115,13 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
   return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
 }
 
-export function connectionDetails(c: Connection, locale: string): Array<[Key, string]> {
+export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
     ['ui.source', c.src ?? '—'],
     ['conn.f.dst', c.dst ?? '—'],
     ['ui.domain', c.domain ?? '—'],
-    ['conn.f.ingress', c.ingress ?? '—'],
-    ['conn.f.domainSource', c.domain_source ?? '—'],
+    ['conn.f.ingress', word(c.ingress)],
+    ['conn.f.domainSource', word(c.domain_source)],
     ['ui.process', c.pname ?? '—'],
     ['conn.f.observedBy', c.observed_by],
     ['ui.upload', formatBytes(c.upload_bytes)],
@@ -163,7 +163,37 @@ const flowWords: Record<string, Key> = {
   hit: 'flow.v.hit',
   miss: 'flow.v.miss',
   cache: 'flow.v.cache',
-  upstream: 'ui.upstream'
+  upstream: 'ui.upstream',
+  lan: 'flow.v.lan',
+  wan: 'flow.v.wan',
+  tls_sni: 'flow.v.tlsSni',
+  http_host: 'flow.v.httpHost',
+  quic_sni: 'flow.v.quicSni',
+  dns_mapping: 'flow.v.dnsMapping',
+  explicit: 'flow.v.explicit'
+};
+// Why a trace is incomplete.
+export const traceGaps: Record<string, Key> = {
+  not_instrumented: 'flow.m.notInstrumented',
+  started_late: 'flow.m.startedLate',
+  buffer_overflow: 'flow.m.bufferOverflow',
+  sampled: 'flow.m.sampled',
+  redacted: 'flow.m.redacted',
+  evicted: 'flow.m.evicted'
+};
+// The routing inputs a trace records, labelled like the connection detail; kernel field names stay as they are.
+const inputLabels: Record<string, Key | string> = {
+  src: 'ui.source',
+  dst: 'conn.f.dst',
+  domain: 'ui.domain',
+  domain_source: 'conn.f.domainSource',
+  ingress: 'conn.f.ingress',
+  pname: 'ui.process',
+  network: 'ui.protocol',
+  dscp: 'DSCP',
+  mark: 'fwmark',
+  uid: 'UID',
+  pid: 'PID'
 };
 // Known engine words become message keys; anything else stays as the engine reported it.
 const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
@@ -175,7 +205,12 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
     case 'input':
       return Object.entries(step.data.values)
         .filter(([, value]) => value != null && value !== '')
-        .map(([key, value]) => [{key: 'flow.f.input', params: {name: key}}, text(value)]);
+        .map(([name, value]) => {
+          const label = inputLabels[name];
+          const labelRef: Key | MessageRef =
+            label === undefined || !label.includes('.') ? {key: 'flow.f.input', params: {name: label ?? name}} : (label as Key);
+          return [labelRef, typeof value === 'string' ? word(value) : text(value)];
+        });
     case 'route':
       return [
         ['flow.f.chain', step.data.chain],

@@ -3,7 +3,7 @@ import {expect, test} from './fixtures';
 
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
   await page.clock.install();
-  await page.goto('/#/rules');
+  await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
   const rows = panel.locator('.rp-table tbody tr[data-key]');
   await expect(rows.first()).toBeVisible();
@@ -53,7 +53,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
-  await page.goto('/#/rules');
+  await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
   const rows = panel.locator('.rp-table tbody tr[data-key]');
   await expect(rows).toHaveCount(15);

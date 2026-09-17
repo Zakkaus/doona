@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
-import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
 import {OutboundMark} from '../policies/Flag';
 import {
   Badge,
@@ -201,7 +201,7 @@ export function FlowRecords({go, query}: PageProps) {
                           t('flow.missing'),
                           formatList(
                             lang,
-                            flow.trace.missing.map(stage => (stages[stage] ? t(stages[stage]) : stage))
+                            flow.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
                           )
                         ] as [string, string]
                       ]

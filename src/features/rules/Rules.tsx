@@ -27,14 +27,14 @@ export function Rules({go, query}: PageProps) {
   const tabs = [
     ...(flows
       ? [
-          {id: 'list', label: t('rule.listTitle'), content: <RuleList />},
           {id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />},
+          {id: 'list', label: t('rule.listTitle'), content: <RuleList />},
           {id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}
         ]
       : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];
-  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'list');
+  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'map');
   if (capabilities.loading && !capabilities.data) return <Loading />;
   if (capabilities.error) return <ErrorMessage error={capabilities.error} />;
   if (!tabs.length)
