@@ -24,6 +24,7 @@ export const messages = defineMessages({
     'config.invalid': '驗證發現 {n} 個錯誤',
     'config.saved': '{path} 已寫入，配置已重載',
     'config.diagnostics': '診斷',
+    'config.export': '匯出',
     'config.wizard': '快速設定',
     'config.wizardNote': '貼上訂閱網址，選規則與策略，產生一份主配置。網址原樣寫進 subscription，由引擎抓取與解析；格式要是後端支援的。',
     'config.wizardSubscription': '訂閱網址',
@@ -100,6 +101,7 @@ export const messages = defineMessages({
     'config.invalid': '验证发现 {n} 个错误',
     'config.saved': '{path} 已写入，配置已重载',
     'config.diagnostics': '诊断',
+    'config.export': '导出',
     'config.wizard': '快速设置',
     'config.wizardNote': '粘贴订阅网址，选规则与策略，生成一份主配置。网址原样写进 subscription，由引擎获取与解析；格式要是后端支持的。',
     'config.wizardSubscription': '订阅网址',
@@ -176,6 +178,7 @@ export const messages = defineMessages({
     'config.invalid': {one: 'Validation found {n} error', other: 'Validation found {n} errors'},
     'config.saved': '{path} written, configuration reloaded',
     'config.diagnostics': 'Diagnostics',
+    'config.export': 'Export',
     'config.wizard': 'Quick setup',
     'config.wizardNote':
       'Paste a subscription URL, pick rules and a policy, and a main source is written. The URL goes into subscription as is; the engine fetches and parses it, so the format must be one the backend supports.',

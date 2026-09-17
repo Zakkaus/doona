@@ -7,7 +7,23 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, ModalDialog, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  ErrorMessage,
+  Kv,
+  LabeledSelect,
+  Light,
+  ModalDialog,
+  Segmented,
+  Tabs,
+  TextTooltip,
+  downloadFile,
+  errorText,
+  toast
+} from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
@@ -61,7 +77,7 @@ export function Config({go, query}: PageProps) {
   const config = useConfig(resources?.config.available !== false);
   const editor = useConfigEditor(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  const tab = params.get('tab') === 'validate' ? 'validate' : 'source';
+  const tab = ['validate', 'setup'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'source';
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
@@ -157,10 +173,13 @@ export function Config({go, query}: PageProps) {
                           </span>
                         </>
                       )}
-                      {mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined && (
+                      {source?.content !== undefined && (
                         <>
                           <span className="rp-grow" />
-                          <Wizard main={mainSource} editor={editor} onDone={() => select(mainSource.id)} />
+                          <Button small onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
+                            <Download />
+                            {t('config.export')}
+                          </Button>
                         </>
                       )}
                     </div>
@@ -181,6 +200,15 @@ export function Config({go, query}: PageProps) {
                 </>
               )
             },
+            ...(mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined
+              ? [
+                  {
+                    id: 'setup',
+                    label: t('config.wizard'),
+                    content: <Wizard main={mainSource} editor={editor} onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))} />
+                  }
+                ]
+              : []),
             {
               id: 'validate',
               label: t('config.tabValidate'),
