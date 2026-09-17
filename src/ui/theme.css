@@ -634,10 +634,7 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
-:root[data-family='glass'] .rp-login {
-  max-width: 480px;
-}
-.rp-card {
+:root[data-family='glass'] .rp-card {
   border-radius: 20px;
 }
 :root[data-family='glass'] .rp-popover::after {
@@ -681,23 +678,21 @@
 :root[data-family='glass'] .rp-btn.secondary {
   background: transparent;
 }
-:root[data-family='glass'] .rp-btn.accent,
-:root[data-family='glass'] .rp-btn.primary {
+:root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-pine);
   border-color: transparent;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 4px 12px rgba(0, 122, 255, 0.35);
 }
-:root[data-family='glass'] .rp-btn.accent[data-hovered],
-:root[data-family='glass'] .rp-btn.primary[data-hovered] {
+:root[data-family='glass'] .rp-btn.accent[data-hovered] {
   background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
 }
-:root[data-family='glass'] .rp-btn.accent[data-pressed],
-:root[data-family='glass'] .rp-btn.primary[data-pressed] {
+:root[data-family='glass'] .rp-btn.accent[data-pressed] {
   background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
 }
-:root[data-family='glass'] .rp-seg {
+:root[data-family='glass'] .rp-seg,
+:root[data-family='glass'] .rp-tabbar {
   background: var(--rp-track);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
@@ -707,7 +702,8 @@
   border-color: transparent;
   box-shadow: none;
 }
-:root[data-family='glass'] .rp-seg .rp-btn[data-selected] {
+:root[data-family='glass'] .rp-seg .rp-btn[data-selected],
+:root[data-family='glass'] .rp-tab[data-selected] {
   color: var(--rp-text);
 }
 :root[data-family='glass'] .rp-slider {
@@ -1126,6 +1122,9 @@ input {
   min-width: 0;
   overflow: hidden;
 }
+.rp-login {
+  max-width: 480px;
+}
 .rp-row {
   display: flex;
   align-items: center;
@@ -1299,23 +1298,11 @@ input {
 .rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c4);
 }
-.rp-nav[data-hovered] {
-  color: var(--rp-text);
-}
 :root:not([data-wordmark='plain']) .rp-brand span {
   background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.rp-h1 {
-  color: var(--rp-text);
-}
-.rp-table [role='columnheader'] {
-  color: var(--rp-pine);
-}
-.rp-light.info::before {
-  background: var(--rp-foam);
 }
 .rp-delta.good {
   color: var(--rp-pine);
@@ -1360,23 +1347,12 @@ input {
   background: var(--rp-hl-low);
 }
 .rp-btn.sm {
-  height: 32px;
   padding: 0 8px;
   font-size: 12px;
   line-height: 16px;
-  border-radius: 8px;
-}
-.rp-btn.sm.icon {
-  width: 32px;
 }
 /* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
    destructive ones, secondary outlined. */
-.rp-btn.accent,
-.rp-btn.primary,
-.rp-btn.negative,
-.rp-btn.secondary {
-  padding: 0 12px;
-}
 .rp-btn.secondary {
   background: transparent;
   border-color: var(--rp-hl-high);
@@ -1387,12 +1363,6 @@ input {
 }
 .rp-btn.secondary[data-pressed] {
   background: var(--rp-hl-high);
-}
-.rp-btn.sm.accent,
-.rp-btn.sm.primary,
-.rp-btn.sm.negative,
-.rp-btn.sm.secondary {
-  padding: 0 8px;
 }
 .rp-btn.icon {
   width: 32px;
@@ -1454,9 +1424,10 @@ input {
   border-color: var(--rp-pine);
 }
 .rp-seg .rp-btn[data-selected] {
-  background: var(--rp-surface);
+  /* The slider draws the selection; the button itself stays flat. */
+  background: transparent;
+  border-color: transparent;
   color: var(--rp-pine);
-  border-color: var(--rp-pine);
 }
 .rp-sec-h {
   font-size: 12px;
@@ -1585,17 +1556,7 @@ input {
   background: var(--rp-pine);
 }
 /* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
-.flag.brand {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  box-shadow: none;
-  object-fit: contain;
-}
-.rp-chips .flag.brand {
-  width: 18px;
-  height: 18px;
-}
+
 .rp-chain > .flag,
 .rp-chips .flag,
 .rp-light > .flag {
@@ -1687,50 +1648,13 @@ input {
   height: 100%;
   border-radius: 2px;
 }
-.rp-bar.pressable {
-  font: inherit;
-  color: inherit;
-  text-align: start;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  padding: 6px 8px;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background 150ms var(--rp-ease),
-    opacity 150ms var(--rp-ease);
-}
-.rp-bar.pressable[data-selected] {
-  background: var(--rp-selected);
-}
-.rp-bar.pressable[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
-  outline-offset: 2px;
-}
-.rp-bar[data-dim] {
-  opacity: 0.4;
-}
+
 .rp-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.rp-dev {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  color: var(--rp-subtle);
-}
-.rp-hr {
-  height: 0;
-  border: 0;
-  border-top: 1px solid var(--rp-hl-med);
-  margin: 0;
-}
+
 .rp-legend {
   display: flex;
   gap: 16px;
@@ -1836,6 +1760,8 @@ input {
   border-radius: 16px;
   padding: 24px 32px;
   width: min(720px, 90vw);
+  max-height: calc(100vh - 12vh - 24px);
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1858,7 +1784,6 @@ input {
   align-items: center;
   gap: 8px;
   height: 32px;
-  min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--rp-hl-high);
   border-radius: 8px;
@@ -1872,8 +1797,8 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -1889,7 +1814,7 @@ input {
 .rp-input input {
   flex: 1;
   min-width: 0;
-  min-height: 32px;
+  align-self: stretch;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1908,9 +1833,6 @@ input {
   line-height: 16px;
   color: var(--rp-muted);
   padding: 8px 12px 4px;
-}
-.rp-placeholder {
-  color: var(--rp-subtle);
 }
 
 /* Kit additions for the remaining pages */
@@ -1953,22 +1875,7 @@ input {
 .rp-card > .rp-btn {
   align-self: flex-start;
 }
-.rp-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (min-width: 1280px) {
-  .rp-split:not(.rp-split-wide) {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
-@media (min-width: 1440px) {
-  .rp-split-wide {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
+
 .rp-h3 {
   margin: 0;
   font-size: 16px;
@@ -2028,16 +1935,7 @@ input {
 .rp-btn.negative[data-pressed] {
   background: color-mix(in srgb, var(--rp-love) 20%, transparent);
 }
-.rp-btn.primary {
-  background: var(--rp-pine);
-  color: var(--rp-on-accent);
-}
-.rp-btn.primary[data-hovered] {
-  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
-}
-.rp-btn.primary[data-pressed] {
-  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
-}
+
 .rp-btn[data-disabled] {
   cursor: default;
   pointer-events: none;
@@ -2052,8 +1950,7 @@ input {
   background: transparent;
   border-color: var(--rp-hl-med);
 }
-.rp-btn.accent[data-disabled],
-.rp-btn.primary[data-disabled] {
+.rp-btn.accent[data-disabled] {
   background: var(--rp-hl-med);
   color: var(--rp-muted);
 }
@@ -2087,9 +1984,6 @@ input {
 }
 button.rp-node {
   cursor: pointer;
-}
-button.rp-node[data-hovered] {
-  background: var(--rp-hl-med);
 }
 button.rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
@@ -2153,9 +2047,6 @@ button.rp-node[data-focus-visible] {
   cursor: default;
   outline: none;
 }
-.rp-nodegrid .rp-node[data-hovered] {
-  background: var(--rp-hl-med);
-}
 .rp-nodegrid .rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
   outline-offset: -2px;
@@ -2169,9 +2060,7 @@ button.rp-node[data-focus-visible] {
   margin: 4px 4px 8px;
   width: 240px;
 }
-.rp-more {
-  color: var(--rp-subtle);
-}
+
 .rp-spinner {
   width: 14px;
   height: 14px;
@@ -2230,9 +2119,6 @@ button.rp-node[data-focus-visible] {
   font-size: 12px;
   line-height: 16px;
   color: var(--rp-subtle);
-}
-.rp-field .rp-input {
-  height: 32px;
 }
 .rp-selectbtn {
   display: inline-flex;
@@ -2301,9 +2187,6 @@ button.rp-node[data-focus-visible] {
   background: var(--rp-selected);
 }
 /* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
-.rp-table [role='columnheader'] {
-  position: sticky;
-}
 .rp-th {
   display: inline-block;
   max-width: 100%;
@@ -2383,13 +2266,7 @@ button.rp-node[data-focus-visible] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.rp-kw {
-  color: var(--rp-love);
-}
-.rp-out {
-  color: var(--rp-pine);
-  font-weight: 600;
-}
+
 .rp-alert {
   display: flex;
   flex-direction: column;
@@ -2398,10 +2275,7 @@ button.rp-node[data-focus-visible] {
   border-radius: 10px;
   border: 1px solid var(--rp-love);
 }
-.rp-p {
-  margin: 0;
-  line-height: 20px;
-}
+
 .rp-dialog .foot {
   display: flex;
   justify-content: flex-end;
@@ -2422,48 +2296,7 @@ button.rp-node[data-focus-visible] {
   flex-direction: column;
   gap: 12px;
 }
-.rp-cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-@media (min-width: 1280px) {
-  .rp-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-.rp-check {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: center;
-  gap: 16px;
-}
-@media (min-width: 1024px) {
-  .rp-check {
-    grid-template-columns: 200px minmax(0, 1fr) auto;
-  }
-}
-.rp-pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.rp-fail {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--rp-hl-med);
-}
-.rp-group-btns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.rp-table .rp-group-btns {
-  flex-wrap: nowrap;
-}
+
 .rp-table [role='gridcell']:has(.rp-btn) {
   overflow: visible;
 }
@@ -2508,7 +2341,6 @@ button.rp-node[data-focus-visible] {
 .rp-input .clear,
 .rp-table [role='row'],
 .rp-switch,
-.rp-check,
 .rp-badge {
   transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
   transition-duration: var(--rp-duration);
@@ -2545,10 +2377,6 @@ button.rp-node[data-focus-visible] {
 .rp-seg .rp-btn {
   position: relative;
   z-index: 1;
-}
-.rp-seg .rp-btn[data-selected] {
-  background: transparent;
-  border-color: transparent;
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,
@@ -2757,13 +2585,11 @@ button.rp-node[data-focus-visible] {
   min-height: 0;
   translate: 0 calc(var(--i) * -10px);
   scale: calc(1 - var(--i) * 0.06);
-  opacity: 1;
+  /* The fourth card back (--i 3) is fully faded; the ones in front stay opaque. */
+  opacity: clamp(0, 3 - var(--i), 1);
 }
 .rp-toast.background > * {
   visibility: hidden;
-}
-.rp-toast.background[style*='--i: 3'] {
-  opacity: 0;
 }
 .rp-toasts:not(.expanded) .rp-toast-list {
   cursor: default;
@@ -2853,18 +2679,6 @@ button.rp-node[data-focus-visible] {
   flex-shrink: 0;
 }
 
-.rp-grid-pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (min-width: 1280px) {
-  .rp-grid-pair {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .rp-table > div[role='treegrid'] {
   width: 100%;
   height: 100%;
@@ -2950,10 +2764,6 @@ button.rp-node[data-focus-visible] {
 .rp-node[data-hovered]:not([data-disabled]) {
   background-color: var(--rp-hl-med);
 }
-.rp-node[data-selected],
-.rp-node.cur {
-  background-color: var(--rp-selected);
-}
 .rp-btn.quiet[data-pressed] {
   background-color: var(--rp-hl-high);
 }
@@ -2979,9 +2789,15 @@ button.rp-node[data-focus-visible] {
   max-width: 100%;
 }
 [data-focus-visible],
-.rp-truncate:focus-visible {
+.rp-truncate:focus-visible,
+.rp-tipwrap:focus-visible {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
+}
+/* A disabled button cannot take focus or hover, so its tip hangs off this wrapper. */
+.rp-tipwrap {
+  display: inline-flex;
+  border-radius: 8px;
 }
 /* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
 .rp-input:focus-within {
@@ -3013,9 +2829,6 @@ button.rp-node[data-focus-visible] {
   margin-left: -8px;
 }
 @media (max-width: 600px) {
-  .rp-row {
-    flex-wrap: wrap;
-  }
   .rp-field {
     max-width: 100%;
   }
