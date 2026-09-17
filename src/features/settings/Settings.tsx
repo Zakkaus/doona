@@ -8,7 +8,6 @@ import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
-import {CustomIcons} from './CustomIcons';
 
 type Appearance = {
   scheme: Scheme;
@@ -281,7 +280,6 @@ export function Settings() {
           />
         </div>
       </section>
-      <CustomIconsCard />
       <section className="rp-card" aria-labelledby="settings-about">
         <h2 className="rp-h3" id="settings-about">
           {t('settings.about')}
@@ -323,18 +321,5 @@ export function Settings() {
         </ModalDialog>
       )}
     </div>
-  );
-}
-
-function CustomIconsCard() {
-  const t = useT();
-  return (
-    <section className="rp-card" aria-labelledby="settings-custom-icons">
-      <h2 className="rp-h3" id="settings-custom-icons">
-        {t('settings.customIcons')}
-      </h2>
-      <span className="rp-label">{t('settings.customIconsNote')}</span>
-      <CustomIcons />
-    </section>
   );
 }

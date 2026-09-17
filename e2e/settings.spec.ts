@@ -7,7 +7,7 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(5);
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(4);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
@@ -55,21 +55,4 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await expect(page.locator('form').getByRole('status')).toContainText('API v1');
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
-});
-
-test('a custom icon mapping shows on the group and can be removed', async ({page}) => {
-  await page.goto('/#/settings');
-  const card = page.locator('[aria-labelledby="settings-custom-icons"]');
-  await card.getByLabel('Name', {exact: true}).fill('proxy');
-  await card
-    .getByLabel('Icon', {exact: true})
-    .fill('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-  await card.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(card.locator('img.brand')).toHaveAttribute('src', /^data:image\/png/);
-  await page.goto('/#/policies');
-  const title = page.locator('.rp-content .rp-card').first().locator('.rp-row').first();
-  await expect(title.locator('img.brand')).toHaveAttribute('src', /^data:image\/png/);
-  await page.goto('/#/settings');
-  await card.getByRole('button', {name: 'Remove the icon for proxy', exact: true}).click();
-  await expect(card.locator('img.brand')).toHaveCount(0);
 });
