@@ -92,16 +92,12 @@ function PolicyCard({
           </div>
           <Disclosure id={id} title={t('ui.config')}>
             <Kv
-              row
-              items={[
-                [t('ui.revision'), g.config_revision],
-                ...groupConfigFields(g)
-                  .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
-                  .map(([key, value]): [string, string] => [
-                    typeof key === 'string' ? t(key) : t(key.key, key.params),
-                    typeof value === 'string' ? value : t(value.key, value.params)
-                  ])
-              ]}
+              items={groupConfigFields(g)
+                .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
+                .map(([key, value]): [string, string] => [
+                  typeof key === 'string' ? t(key) : t(key.key, key.params),
+                  typeof value === 'string' ? value : t(value.key, value.params)
+                ])}
             />
           </Disclosure>
           <div className="rp-toolbar">
