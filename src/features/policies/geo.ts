@@ -1,5 +1,5 @@
-// Region guessed from a node name: common airport/ISO codes, English names and Chinese names. Purely cosmetic;
-// Flag.tsx draws the flag for a region, and unknown names get none.
+// Region guessed from a node name: common airport/ISO codes, English names and Chinese names. Used only to
+// group and filter node lists by region; unknown names fall into their own bucket.
 const TABLE: Array<[string, string[]]> = [
   ['HK', ['hk', 'hkg', 'hongkong', 'hong kong', '香港', '港']],
   ['TW', ['tw', 'tpe', 'taiwan', 'taipei', '台灣', '台湾', '臺灣', '台北']],

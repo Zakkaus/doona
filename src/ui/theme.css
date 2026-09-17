@@ -1556,8 +1556,7 @@ input {
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
 }
-/* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
-
+/* Marks sit on the text baseline of the chain, chip or light they lead. */
 .rp-chain > .flag,
 .rp-chips .flag,
 .rp-light > .flag {
@@ -2185,7 +2184,7 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
   position: sticky;
   top: 0;
-  /* Above row content that forms its own stacking context (translated flag marks). */
+  /* Above row content that forms its own stacking context (translated marks). */
   z-index: 1;
   outline: none;
 }

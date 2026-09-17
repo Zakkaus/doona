@@ -1,7 +1,7 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
 import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
-import {OutboundMark} from '../policies/Flag';
+import {OutboundMark} from '../policies/Mark';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';

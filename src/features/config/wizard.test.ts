@@ -26,6 +26,19 @@ routing {
 `;
 
 describe('quick setup text transforms', () => {
+  it('reads and keeps sections written on one line', () => {
+    const oneLine =
+      "global { lan_interface: eth0 }\nsubscription { a: 'https://x.example/sub' }\ngroup { proxy { policy: fixed(0) } }\nrouting { fallback: proxy }\n";
+    const state = readState(oneLine);
+    expect(state.lanInterface).toBe('eth0');
+    expect(state.subscriptions.map(s => [s.name, s.url])).toEqual([['a', 'https://x.example/sub']]);
+    expect(state.group).toBe('proxy');
+    const out = writeState(oneLine, {...state, rules: 'global'});
+    expect(out).toContain('group { proxy { policy: fixed(0) } }');
+    expect(out).not.toContain('routing { fallback: proxy }');
+    expect(out).toContain('pname(NetworkManager) -> direct');
+    expect(out.match(/^routing \{/gm)).toHaveLength(1);
+  });
   it('reads the subscriptions it models, keeps the rest as written, and names the first group', () => {
     const state = readState(main);
     expect(state.subscriptions.map(s => [s.name, s.url])).toEqual([

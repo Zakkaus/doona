@@ -60,13 +60,15 @@ function sections(lines: string[]): Section[] {
   lines.forEach((raw, index) => {
     const code = raw.replace(/#.*$/, '');
     if (!open) {
-      const match = /^([A-Za-z_][\w.-]*)\s*\{\s*$/.exec(code.trim());
-      if (match) open = {name: match[1], start: index, depth: 1};
-      return;
+      const match = /^([A-Za-z_][\w.-]*)\s*\{/.exec(code.trim());
+      if (!match) return;
+      open = {name: match[1], start: index, depth: 0};
     }
     open.depth += (code.match(/\{/g) ?? []).length - (code.match(/\}/g) ?? []).length;
     if (open.depth === 0) {
-      out.push({name: open.name, start: open.start, end: index, body: lines.slice(open.start + 1, index)});
+      // A section written on one line (`node { 'a': '...' }`) has its body between the braces of that line.
+      const body = open.start === index ? [code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'))] : lines.slice(open.start + 1, index);
+      out.push({name: open.name, start: open.start, end: index, body});
       open = null;
     }
   });

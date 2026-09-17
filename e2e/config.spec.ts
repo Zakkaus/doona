@@ -93,6 +93,21 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });
 
+test('the quick setup guards unsaved changes like the editor', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('tab', {name: 'Sources'}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page).toHaveURL(/tab=setup$/);
+  await page.getByRole('tab', {name: 'Sources'}).click();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/tab=source$/);
+});
+
 test('the quick setup writes a rule template into routing', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});

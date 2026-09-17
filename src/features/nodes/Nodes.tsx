@@ -23,7 +23,6 @@ import {
 import Refresh from '../../ui/icons/Refresh';
 import Close from '../../ui/icons/Close';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {Flag} from '../policies/Flag';
 import type {PageProps} from '../types';
 
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
@@ -255,7 +254,6 @@ export function Nodes({go, query}: PageProps) {
           const health = preferredHealth(node);
           return [
             <span className="rp-chain">
-              <Flag name={node.name} />
               <TextTooltip>{node.name}</TextTooltip>
             </span>,
             node.protocol ?? '—',

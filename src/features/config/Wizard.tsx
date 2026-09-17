@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useT} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {useConfigEditor} from '../../api/store';
@@ -16,13 +16,15 @@ export function Wizard({
   complete,
   canValidate,
   editor,
-  onDone
+  onDone,
+  onDirty
 }: {
   main: ConfigSource;
   complete: boolean | null;
   canValidate: boolean;
   editor: ReturnType<typeof useConfigEditor>;
   onDone: () => void;
+  onDirty: (dirty: boolean) => void;
 }) {
   const t = useT();
   // The text and digest the form started from: the preview builds on them, and the save's If-Match names the
@@ -34,6 +36,12 @@ export function Wizard({
     return {...read, rules: current.trim() ? 'keep' : 'whitelist', subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]};
   });
   const text = useMemo(() => writeState(current, state), [current, state]);
+  // A form that would write something different is unsaved work, guarded the same way as the editor's draft.
+  const dirty = text !== current;
+  useEffect(() => {
+    onDirty(dirty);
+    return () => onDirty(false);
+  }, [dirty, onDirty]);
   // Lines the form left as written are valid by definition; the ones it edited need a name and an http(s) URL.
   const valid = state.subscriptions.every(s => s.raw !== undefined || (s.name.trim() && isSubscriptionUrl(s.url)));
   const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));

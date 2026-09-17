@@ -71,20 +71,20 @@ export const features: Feature[] = [
     requires: {resources: ['groups']}
   },
   {
-    id: 'nodes',
-    path: 'nodes',
-    shortcut: 'n',
-    nav: {group: 'grp.proxy', titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
-    Page: NodesPage,
-    requires: {resources: ['providers']}
-  },
-  {
     id: 'rules',
     path: 'rules',
     shortcut: 'r',
     nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
     requires: {resources: ['routing_trace', 'flows']}
+  },
+  {
+    id: 'nodes',
+    path: 'nodes',
+    shortcut: 'n',
+    nav: {group: 'grp.proxy', titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
+    Page: NodesPage,
+    requires: {resources: ['providers']}
   },
   {
     id: 'config',

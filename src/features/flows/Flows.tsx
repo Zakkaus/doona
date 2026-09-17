@@ -3,7 +3,7 @@ import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
 import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
-import {OutboundMark} from '../policies/Flag';
+import {OutboundMark} from '../policies/Mark';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';

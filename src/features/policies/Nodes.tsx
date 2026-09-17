@@ -19,7 +19,7 @@ import {
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
-import {Flag, OutboundMark} from './Flag';
+import {OutboundMark} from './Mark';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
@@ -102,19 +102,9 @@ export function NodeGrid({
           label={t('policy.region')}
           value={region}
           onChange={setRegion}
-          items={[
-            {id: 'all', label: t('policy.allRegions')},
-            ...facets.map(([r, c]) => ({id: r, label: r === '?' ? '—' : r, icon: r === '?' ? undefined : <Flag name={r} />, desc: String(c)}))
-          ]}
+          items={[{id: 'all', label: t('policy.allRegions')}, ...facets.map(([r, c]) => ({id: r, label: r === '?' ? '—' : r, desc: String(c)}))]}
         >
-          {region === 'all' ? (
-            t('policy.allRegions')
-          ) : (
-            <>
-              <Flag name={region} />
-              {region}
-            </>
-          )}
+          {region === 'all' ? t('policy.allRegions') : region}
         </MenuButton>
         <InlineSelect
           label={t('policy.sort')}
@@ -163,7 +153,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
     <NodeTile
       {...props}
       name={n.name}
-      icon={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : <Flag name={n.name} />}
+      icon={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : undefined}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}
@@ -190,9 +180,6 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
     <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}>
       <Check />
       <span className="rp-il">
-        <span className="ic">
-          <Flag name={n.name} />
-        </span>
         <span>{n.name}</span>
       </span>
       {n.alive === false ? (
@@ -221,11 +208,6 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
             <MenuSection key={r} id={r}>
               <Header className="rp-sec-h">
                 <span className="rp-il">
-                  {r !== '—' && (
-                    <span className="ic">
-                      <Flag name={r} />
-                    </span>
-                  )}
                   {r}
                   <span className="rp-muted"> · {list.length}</span>
                 </span>
@@ -240,9 +222,6 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
     <MenuTrigger>
       <Button appearance="select" label={label}>
         <span className="rp-il">
-          <span className="ic">
-            <Flag name={value} />
-          </span>
           <span>{value}</span>
         </span>
         <ChevronDown />

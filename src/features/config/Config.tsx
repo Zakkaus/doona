@@ -150,6 +150,7 @@ export function Config({go, query}: PageProps) {
                         canValidate={canValidate}
                         editor={editor}
                         onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))}
+                        onDirty={setDirty}
                       />
                     )
                   }

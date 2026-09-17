@@ -164,5 +164,5 @@ pnpm package
 ## 许可与致谢
 
 采用 [GPL-3.0-only](LICENSE)。Noto Sans TC 与 SC 使用 [Open Font License](public/fonts/OFL.txt)。
-[NOTICE](NOTICE) 列出采用 Apache-2.0 的 Adobe Spectrum 图标与采用 MIT 的 flag-icons。
+[NOTICE](NOTICE) 列出采用 Apache-2.0 的 Adobe Spectrum 图标。
 鸭子标志由维护者绘制。
