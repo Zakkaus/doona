@@ -66,7 +66,7 @@ export function FlowMap({
                     label: label(rule.node),
                     count: n(rule.count),
                     countLabel: t('flow.laneFlows', {n: n(rule.count)}),
-                    icon: <BrandIcon brand={rule.node.unknown ? null : brandFor(rule.node.label)} />
+                    icon: rule.node.unknown ? <OutboundMark name={null} /> : <BrandIcon brand={brandFor(rule.node.label)} />
                   }))}
                   value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
                   onChange={onPin}
