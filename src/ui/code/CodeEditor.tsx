@@ -25,7 +25,11 @@ export type EditorMark = {line: number; column?: number | null; level: 'error' |
 const theme = EditorView.theme({
   '&': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)', border: '1px solid var(--rp-hl-high)', borderRadius: '8px', fontSize: '13px'},
   '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-pine)', boxShadow: '0 0 0 1px var(--rp-pine)'},
-  '.cm-scroller': {fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace", lineHeight: '20px', maxHeight: '70vh'},
+  '.cm-scroller': {
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
+    lineHeight: '20px',
+    maxHeight: '70vh'
+  },
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
   '.cm-gutters': {backgroundColor: 'transparent', color: 'var(--rp-muted)', border: 'none'},
@@ -41,7 +45,9 @@ const theme = EditorView.theme({
   '.cm-diagnostic-warning': {borderLeftColor: 'var(--rp-gold)'},
   '.cm-tooltip': {backgroundColor: 'var(--rp-surface)', border: '1px solid var(--rp-hl-high)', borderRadius: '8px', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {backgroundColor: 'var(--rp-selected)', color: 'var(--rp-text)'},
-  '.cm-tooltip.cm-tooltip-autocomplete > ul': {fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"},
+  '.cm-tooltip.cm-tooltip-autocomplete > ul': {
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace"
+  },
   '.cm-panels': {backgroundColor: 'var(--rp-surface)', color: 'var(--rp-text)'},
   '.cm-panels-bottom': {borderTop: '1px solid var(--rp-hl-med)'},
   '.cm-textfield': {border: '1px solid var(--rp-hl-high)', borderRadius: '6px', backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)'},

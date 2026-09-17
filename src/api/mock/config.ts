@@ -6,6 +6,25 @@ type Stored = ConfigSource & {content: string};
 
 const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response']);
 const builtinOutbounds = new Set(['direct', 'block', 'must_direct', 'must_block']);
+const globalKeys = new Set([
+  'tproxy_port',
+  'log_level',
+  'lan_interface',
+  'wan_interface',
+  'allow_insecure',
+  'auto_config_kernel_parameter',
+  'tcp_check_url',
+  'udp_check_dns',
+  'check_interval',
+  'check_tolerance',
+  'dial_mode',
+  'disable_waiting_network',
+  'enable_local_tcp_fast_redirect',
+  'sniffing_timeout',
+  'tls_implementation',
+  'so_mark_reserved_upper',
+  'pprof_port'
+]);
 
 export async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -43,6 +62,12 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
       return;
     }
     const section = bare ? 'routing' : stack[stack.length - 1]?.name;
+    if (section === 'global') {
+      const pair = /^([\w.-]+)\s*:\s*(.*)$/.exec(code);
+      if (!pair) at(line, 1, 'error', 'not_a_setting', 'Expected "<key>: <value>"');
+      else if (!globalKeys.has(pair[1])) at(line, 1, 'error', 'unknown_key', `Unknown global setting "${pair[1]}"`);
+      return;
+    }
     if (section === 'routing' && stack.length <= 1) {
       if (/^include\s+\S+$/.test(code)) return;
       const fallback = /^fallback:\s*(\S+)$/.exec(code);

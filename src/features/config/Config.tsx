@@ -6,7 +6,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
 import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
@@ -219,10 +219,14 @@ function SourceCard({
     return own.length ? own : groups;
   };
   const text = draft ?? source.content ?? '';
+  const [jump, setJump] = useState<number | null>(null);
   const validate = async () => {
     const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
     if (!result) return false;
     setFound(result.diagnostics);
+    // Put the cursor on the first error so the problem is on screen, not below a long file.
+    const first = result.diagnostics.find(d => d.level === 'error' && d.line !== null);
+    setJump(first ? first.line : null);
     toast(
       result.valid ? 'positive' : 'negative',
       t(result.valid ? 'config.valid' : 'config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)})
@@ -282,6 +286,20 @@ function SourceCard({
           )}
         </span>
       </div>
+      {shown.length > 0 && (
+        <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
+          {shown.map((item, index) => (
+            <div className="rp-cluster" role="listitem" key={index}>
+              <Light small tone={tones[item.level]}>
+                {t(levels[item.level])}
+              </Light>
+              <span className="rp-code">{item.line !== null ? t('config.lineRef', {line: n(item.line)}) : '—'}</span>
+              <span>{item.message}</span>
+              <span className="rp-label">{item.code}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {source.content === undefined ? (
         <span className="rp-empty">{t('config.contentHidden')}</span>
       ) : (
@@ -291,21 +309,9 @@ function SourceCard({
           readOnly={!editing || editor.busy === 'save'}
           onChange={editing ? setDraft : undefined}
           marks={marks}
-          focusLine={focusLine}
+          focusLine={jump ?? focusLine}
           outbounds={outbounds}
         />
-      )}
-      {shown.length > 0 && (
-        <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
-          {shown.map((item, index) => (
-            <div role="listitem" key={index}>
-              <InlineAlert tone={tones[item.level]} title={item.line !== null ? t('config.atLine', {line: n(item.line), message: item.message}) : item.message}>
-                {t(levels[item.level])} · {item.code}
-                {item.column !== null && item.line !== null ? ` · ${t('config.column', {n: n(item.column)})}` : ''}
-              </InlineAlert>
-            </div>
-          ))}
-        </div>
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
     </section>
@@ -412,10 +418,13 @@ function ValidateTab({
       />
       {cur && (
         <div className="rp-cluster">
-          <InlineAlert tone={tones[cur.level]} title={cur.line !== null ? t('config.atLine', {line: n(cur.line), message: cur.message}) : cur.message}>
-            {pathOf(cur.source_id)} · {cur.code}
-            {cur.column !== null && cur.line !== null ? ` · ${t('config.column', {n: n(cur.column)})}` : ''}
-          </InlineAlert>
+          <Light small tone={tones[cur.level]}>
+            {t(levels[cur.level])}
+          </Light>
+          <span className="rp-code">
+            {cur.line !== null ? `${pathOf(cur.source_id)}:${cur.line}${cur.column !== null ? ':' + cur.column : ''}` : pathOf(cur.source_id)}
+          </span>
+          <span>{cur.message}</span>
           <Button small onPress={() => open(cur.source_id, cur.line)}>
             {t('config.openSource')}
           </Button>

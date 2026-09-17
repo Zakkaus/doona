@@ -627,15 +627,6 @@ export function Kv({items, inline, row}: {items: Array<[string, string]>; inline
     </div>
   );
 }
-// A bordered message with a heading and body, coloured by tone; for diagnostics that stay on the page.
-export function InlineAlert({tone, title, children}: {tone: 'err' | 'warn' | 'info'; title: string; children?: ReactNode}) {
-  return (
-    <div className={cx('rp-inline-alert', tone)} role={tone === 'err' ? 'alert' : 'status'}>
-      <strong>{title}</strong>
-      {children && <span>{children}</span>}
-    </div>
-  );
-}
 // Virtual collections render the same tile body inside their own selectable item.
 export type NodeTileProps = {
   name: string;

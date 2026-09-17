@@ -1975,7 +1975,7 @@ input {
   overflow-wrap: anywhere;
 }
 .rp-code {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: 13px;
 }
 .rp-kv {
@@ -2821,30 +2821,6 @@ button.rp-node[data-focus-visible] {
 }
 .rp-editor .cm-editor {
   max-width: 100%;
-}
-/* An inline alert keeps a diagnostic on the page: heading, body, tone by border. */
-.rp-inline-alert {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--rp-hl-high);
-  border-inline-start-width: 4px;
-  line-height: 20px;
-  overflow-wrap: anywhere;
-}
-.rp-inline-alert.err {
-  border-color: var(--rp-love);
-}
-.rp-inline-alert.warn {
-  border-color: var(--rp-gold);
-}
-.rp-inline-alert.info {
-  border-color: var(--rp-foam);
-}
-.rp-inline-alert > span {
-  color: var(--rp-subtle);
 }
 
 .rp-provenance {
