@@ -6,7 +6,8 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, Kv, Light, SourceView, TextArea, TextTooltip, errorText, toast} from '../../ui/ui';
+import {Badge, Button, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, SourceView, TextArea, errorText, toast} from '../../ui/ui';
+import {daeLine} from './dae';
 import type {PageProps} from '../types';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -94,34 +95,28 @@ export function Config({go, query}: PageProps) {
           )}
         </div>
       )}
-      <DataTable
-        label={t('nav.config')}
-        loading={config.loading && !config.data}
-        rows={sources}
-        height={300}
-        selected={selectedId}
-        onSelect={id => id && select(id)}
-        selectOnFocus
-        empty={t('config.noSources')}
-        cols={[
-          {id: 'path', label: t('config.path'), minWidth: 240, grow: 2, isRowHeader: true},
-          {id: 'kind', label: t('config.kindLabel'), minWidth: 110, grow: 0},
-          {id: 'bytes', label: t('config.size'), minWidth: 90, grow: 0, align: 'end', drop: 2},
-          {id: 'lines', label: t('config.lines'), minWidth: 80, grow: 0, align: 'end', drop: 3},
-          {id: 'loaded', label: t('config.loaded'), minWidth: 160, drop: 1},
-          {id: 'writable', label: t('config.writable'), minWidth: 100, grow: 0, drop: 4}
-        ]}
-        render={row => [
-          <TextTooltip className="rp-code">{row.path}</TextTooltip>,
-          <Badge>{t(kinds[row.kind])}</Badge>,
-          formatBytes(String(row.bytes)),
-          n(row.line_count),
-          localTime(row.loaded_at, locale),
-          <Light small tone={row.writable ? 'ok' : 'muted'}>
-            {t(row.writable ? 'config.editable' : 'config.readOnly')}
-          </Light>
-        ]}
-      />
+      {config.data && (
+        <div className="rp-toolbar">
+          <LabeledSelect
+            side
+            label={t('config.source')}
+            value={selectedId ?? ''}
+            onChange={select}
+            items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
+          />
+          {source && (
+            <>
+              <Badge>{t(kinds[source.kind])}</Badge>
+              <Light small tone={source.writable ? 'ok' : 'muted'}>
+                {t(source.writable ? 'config.editable' : 'config.readOnly')}
+              </Light>
+              <span className="rp-label">
+                {t('config.sourceFacts', {lines: n(source.line_count), size: formatBytes(String(source.bytes)), time: localTime(source.loaded_at, locale)})}
+              </span>
+            </>
+          )}
+        </div>
+      )}
       {source && config.data && (
         <SourceCard
           key={source.id}
@@ -151,6 +146,7 @@ function SourceCard({
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
   const [draft, setDraft] = useState<string | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   // Content is only safe to edit when it is the complete accepted text: present and hashing to the accepted digest.
@@ -191,8 +187,7 @@ function SourceCard({
       <div className="rp-row">
         <span className="rp-cluster">
           <h3 className="rp-h3 rp-code">{source.path}</h3>
-          <Badge>{t(kinds[source.kind])}</Badge>
-          <span className="rp-label">{t('config.loadedAt', {time: localTime(source.loaded_at, locale)})}</span>
+          {editing && draft !== source.content && <Badge tone="warn">{t('config.unsaved')}</Badge>}
         </span>
         <span className="rp-cluster">
           {canValidate && (
@@ -234,22 +229,21 @@ function SourceCard({
       ) : editing ? (
         <TextArea label={source.path} value={draft} onChange={setDraft} isDisabled={editor.busy === 'save'} />
       ) : (
-        <SourceView label={source.path} text={source.content} marks={marks} />
+        <SourceView label={source.path} text={source.content} marks={marks} render={daeLine} />
       )}
       {shown.length > 0 && (
         <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
-            <div className="rp-cluster" role="listitem" key={index}>
-              <Light small tone={tones[item.level]}>
-                {t(levels[item.level])}
-              </Light>
-              <span className="rp-code">{item.line !== null ? `${item.line}:${item.column ?? 1}` : '—'}</span>
-              <span>{item.message}</span>
-              <span className="rp-label">{item.code}</span>
+            <div role="listitem" key={index}>
+              <InlineAlert tone={tones[item.level]} title={item.line !== null ? t('config.atLine', {line: n(item.line), message: item.message}) : item.message}>
+                {t(levels[item.level])} · {item.code}
+                {item.column !== null && item.line !== null ? ` · ${t('config.column', {n: n(item.column)})}` : ''}
+              </InlineAlert>
             </div>
           ))}
         </div>
       )}
+      <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
     </section>
   );
 }

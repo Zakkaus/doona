@@ -649,8 +649,19 @@ export function TextArea({
     />
   );
 }
-// Read-only source text with line numbers; lines named in `marks` get their level's tint.
-export function SourceView({text, marks, label}: {text: string; marks?: Map<number, 'error' | 'warning' | 'info'>; label: string}) {
+// Read-only source text with line numbers; lines named in `marks` get their level's tint, and `render`
+// may colour a line's tokens.
+export function SourceView({
+  text,
+  marks,
+  label,
+  render
+}: {
+  text: string;
+  marks?: Map<number, 'error' | 'warning' | 'info'>;
+  label: string;
+  render?: (line: string) => ReactNode;
+}) {
   const lines = text === '' ? [] : text.replace(/\n$/, '').split('\n');
   return (
     // A scrollable region needs focus so the keyboard can scroll it.
@@ -658,9 +669,18 @@ export function SourceView({text, marks, label}: {text: string; marks?: Map<numb
     <div className="rp-source" role="region" aria-label={label} tabIndex={0}>
       {lines.map((line, index) => (
         <div key={index} data-level={marks?.get(index + 1)}>
-          <span>{line}</span>
+          <span>{render ? render(line) : line}</span>
         </div>
       ))}
+    </div>
+  );
+}
+// A bordered message with a heading and body, coloured by tone; for diagnostics that stay on the page.
+export function InlineAlert({tone, title, children}: {tone: 'err' | 'warn' | 'info'; title: string; children?: ReactNode}) {
+  return (
+    <div className={cx('rp-inline-alert', tone)} role={tone === 'err' ? 'alert' : 'status'}>
+      <strong>{title}</strong>
+      {children && <span>{children}</span>}
     </div>
   );
 }

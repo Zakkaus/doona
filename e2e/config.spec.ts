@@ -4,12 +4,13 @@ test.use({viewport: {width: 1440, height: 1000}});
 
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
   await page.goto('/#/config');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
-  await expect(rows).toHaveCount(4);
-  await expect(rows.first()).toContainText('/etc/honk/config.dae');
   await expect(page.getByRole('region', {name: '/etc/honk/config.dae'})).toContainText('tproxy_port: 12345');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
-  await rows.filter({hasText: 'sub-c.dae'}).click();
+  const picker = page.getByRole('button', {name: /Source/});
+  await expect(picker).toContainText('/etc/honk/config.dae');
+  await picker.click();
+  await expect(page.getByRole('option')).toHaveCount(4);
+  await page.getByRole('option', {name: /sub-c\.dae/}).click();
   await expect(page).toHaveURL(/source=src-sub-c$/);
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
   await expect(page.getByRole('region', {name: '/var/lib/honk/subscriptions/sub-c.dae'})).toContainText('redacted');
@@ -27,13 +28,13 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(diagnostics).toContainText('No group named "nowhere"');
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
   await editor.fill(original + 'domain(geosite: netflix) -> proxy\n');
-  await page.getByRole('button', {name: 'Save and reload', exact: true}).click();
+  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toBeVisible();
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
   await expect(page.getByRole('region', {name: '/etc/honk/rules.dae'})).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
-  await expect(rows.filter({hasText: 'rules.dae'})).toContainText('8');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('8 lines');
 });
 
 test.describe('without configuration readback', () => {

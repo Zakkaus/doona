@@ -2860,6 +2860,46 @@ button.rp-node[data-focus-visible] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.rp-source .kw {
+  color: var(--rp-love);
+}
+.rp-source .arg {
+  color: var(--rp-pine);
+}
+.rp-source .out {
+  color: var(--rp-pine);
+  font-weight: 700;
+}
+.rp-source .str {
+  color: var(--rp-gold);
+}
+.rp-source .cmt {
+  color: var(--rp-muted);
+}
+/* An inline alert keeps a diagnostic on the page: heading, body, tone by border. */
+.rp-inline-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--rp-hl-high);
+  border-inline-start-width: 4px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.rp-inline-alert.err {
+  border-color: var(--rp-love);
+}
+.rp-inline-alert.warn {
+  border-color: var(--rp-gold);
+}
+.rp-inline-alert.info {
+  border-color: var(--rp-foam);
+}
+.rp-inline-alert > span {
+  color: var(--rp-subtle);
+}
 .rp-textarea {
   min-height: 320px;
   max-height: 70vh;
