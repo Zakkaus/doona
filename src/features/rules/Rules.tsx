@@ -118,7 +118,8 @@ function Trace() {
         <section className="rp-col" aria-label={t('rule.result')}>
           <div className="rp-toolbar">
             <TextTooltip text={t('rule.note')} className="rp-label">
-              {t('rule.observed')}: {localTime(trace.result.observed_at, LOCALE[lang])} · {t('ui.generation')} {trace.result.generation_id}
+              {t('ui.valuePair', {label: t('rule.observed'), value: localTime(trace.result.observed_at, LOCALE[lang])})} ·{' '}
+              {t('ui.valuePair', {label: t('ui.generation'), value: trace.result.generation_id})}
             </TextTooltip>
           </div>
           {trace.result.evaluations.map((evaluation, i) => (

@@ -1,6 +1,6 @@
 // Node collections that stay usable at airport scale (hundreds of nodes): a filterable, virtualised grid for policy
 // groups and a searchable, region-sectioned menu for pickers. Small collections fall back to the plain tiles.
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {
   Autocomplete,
   GridLayout,
@@ -24,22 +24,9 @@ import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, la
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
-export type NodeInfo = {name: string; tcp?: number; udp?: number; v6?: boolean; alive?: boolean; nested?: boolean};
+// `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
+export type NodeInfo = {name: string; tcp?: number; alive?: boolean; nested?: boolean};
 export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
-export type NodeLabels = {
-  timeout: string;
-  nested: string;
-  cur: string;
-  filter: string;
-  region: string;
-  allRegions: string;
-  sort: string;
-  byLatency: string;
-  byName: string;
-  aliveOnly: string;
-  count: (n: number, down: number) => string;
-  none: string;
-};
 const BIG = 12;
 
 // Region facets for a node list, ordered by count.
@@ -58,16 +45,15 @@ export function NodeGrid({
   selected,
   cur,
   onSelect,
-  labels,
   isDisabled
 }: {
   nodes: MemberInfo[];
   selected?: string;
   cur?: string;
   onSelect?: (id: string) => void;
-  labels: NodeLabels;
   isDisabled?: boolean;
 }) {
+  const t = useT();
   const [q, setQ] = useState('');
   const [region, setRegion] = useState('all');
   const [sort, setSort] = useState('latency');
@@ -88,7 +74,8 @@ export function NodeGrid({
     else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [nodes, big, q, region, sort, aliveOnly, contains]);
-  if (!nodes.length) return <div className="rp-empty">{labels.none}</div>;
+  const facets = useMemo(() => regions(nodes), [nodes]);
+  if (!nodes.length) return <div className="rp-empty">{t('policy.none')}</div>;
   if (!big) {
     return (
       <div className="rp-nodes">
@@ -96,7 +83,6 @@ export function NodeGrid({
           <MemberTile
             key={n.id}
             n={n}
-            labels={labels}
             selected={selected === n.id}
             isDisabled={isDisabled}
             onPress={onSelect ? () => onSelect(n.id) : undefined}
@@ -110,19 +96,19 @@ export function NodeGrid({
   return (
     <div className="rp-form">
       <div className="rp-toolbar">
-        <TextField search label={labels.filter} value={q} onChange={setQ} width={240} />
+        <TextField search label={t('policy.filter')} value={q} onChange={setQ} width={240} />
         <MenuButton
           quiet
-          label={labels.region}
+          label={t('policy.region')}
           value={region}
           onChange={setRegion}
           items={[
-            {id: 'all', label: labels.allRegions},
-            ...regions(nodes).map(([r, c]) => ({id: r, label: r === '?' ? '—' : r, icon: r === '?' ? undefined : <Flag name={r} />, desc: String(c)}))
+            {id: 'all', label: t('policy.allRegions')},
+            ...facets.map(([r, c]) => ({id: r, label: r === '?' ? '—' : r, icon: r === '?' ? undefined : <Flag name={r} />, desc: String(c)}))
           ]}
         >
           {region === 'all' ? (
-            labels.allRegions
+            t('policy.allRegions')
           ) : (
             <>
               <Flag name={region} />
@@ -131,24 +117,24 @@ export function NodeGrid({
           )}
         </MenuButton>
         <InlineSelect
-          label={labels.sort}
+          label={t('policy.sort')}
           value={sort}
           onChange={setSort}
           items={[
-            {id: 'latency', label: labels.byLatency},
-            {id: 'name', label: labels.byName}
+            {id: 'latency', label: t('policy.byLatency')},
+            {id: 'name', label: t('policy.byName')}
           ]}
         />
         <Switch isSelected={aliveOnly} onChange={setAliveOnly}>
-          {labels.aliveOnly}
+          {t('policy.aliveOnly')}
         </Switch>
         <span className="rp-grow" />
-        <span className="rp-label">{labels.count(shown.length, down)}</span>
+        <span className="rp-label">{down ? t('policy.membersDown', {n: shown.length, down}) : t('policy.members', {n: shown.length})}</span>
       </div>
       <Virtualizer layout={GridLayout} layoutOptions={{minItemSize: new Size(200, 56), maxItemSize: new Size(Infinity, 56), minSpace: new Size(8, 8)}}>
         <GridList
           className="rp-nodegrid"
-          aria-label={labels.filter}
+          aria-label={t('policy.filter')}
           items={shown}
           selectionMode={onSelect ? 'single' : 'none'}
           disabledKeys={isDisabled ? nodes.map(n => n.id) : []}
@@ -159,11 +145,11 @@ export function NodeGrid({
             const v = [...k][0];
             if (v != null) onSelect(String(v));
           }}
-          renderEmptyState={() => <div className="rp-empty">{labels.none}</div>}
+          renderEmptyState={() => <div className="rp-empty">{t('policy.none')}</div>}
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={'rp-node' + (cur === n.id && !onSelect ? ' cur' : '')}>
-              <MemberTile n={n} labels={labels} cur={!onSelect && cur === n.id} bodyOnly />
+              <MemberTile n={n} cur={!onSelect && cur === n.id} bodyOnly />
             </GridListItem>
           )}
         </GridList>
@@ -171,7 +157,7 @@ export function NodeGrid({
     </div>
   );
 }
-function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels' | 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
+function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
   const health = n.health;
   return (
     <NodeTile
@@ -187,23 +173,11 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels
 }
 
 // Picker for one node out of many: the trigger shows flag and name; the menu is searchable and grouped by region.
-export function NodeMenu({
-  nodes,
-  value,
-  onChange,
-  label,
-  labels
-}: {
-  nodes: NodeInfo[];
-  value: string;
-  onChange: (name: string) => void;
-  label: string;
-  labels: {timeout: string; filter: string; loading: string};
-}) {
+export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
   const t = useT();
   const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
-  const all = useMemo(() => {
+  const sections = useMemo(() => {
     const m = new Map<string, NodeInfo[]>();
     for (const n of [...nodes].sort(byLatency)) {
       const r = regionOf(n.name) ?? '—';
@@ -212,25 +186,6 @@ export function NodeMenu({
     }
     return [...m];
   }, [nodes]);
-  // Sections arrive in pages of three, as from a backend; reaching the end of the list asks for the next page.
-  const [pages, setPages] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const sections = all.slice(0, pages * 3);
-  const done = sections.length >= all.length;
-  useEffect(() => {
-    if (!loading) return;
-    const id = setTimeout(() => {
-      setPages(p => p + 1);
-      setLoading(false);
-    }, 350);
-    return () => clearTimeout(id);
-  }, [loading]);
-  const listRef = useRef<HTMLDivElement>(null);
-  const onScroll = () => {
-    const el = listRef.current;
-    if (!el || loading || done) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) setLoading(true);
-  };
   const item = (n: NodeInfo) => (
     <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}>
       <Check />
@@ -240,15 +195,17 @@ export function NodeMenu({
         </span>
         <span>{n.name}</span>
       </span>
-      <span className={'desc ' + (n.alive !== false ? latencyTone(n.tcp ?? 0) : 'err')}>
-        {n.alive !== false ? t('ui.latency', {n: String(n.tcp)}) : labels.timeout}
-      </span>
+      {n.alive === false ? (
+        <span className="desc err">{t('ui.unavailable')}</span>
+      ) : n.tcp === undefined ? (
+        <span className="desc">—</span>
+      ) : (
+        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: n.tcp})}</span>
+      )}
     </MenuItem>
   );
   const menu = (
     <Menu
-      ref={listRef}
-      onScroll={onScroll}
       className="rp-menu-scroll"
       aria-label={label}
       selectionMode="single"
@@ -277,15 +234,6 @@ export function NodeMenu({
             </MenuSection>
           ))
         : nodes.map(item)}
-      {big && !done && (
-        <MenuItem id="__more" isDisabled className="rp-item rp-more" textValue={labels.loading}>
-          <span />
-          <span className="rp-il">
-            <span className="rp-spinner" />
-            {labels.loading}
-          </span>
-        </MenuItem>
-      )}
     </Menu>
   );
   return (
@@ -303,7 +251,7 @@ export function NodeMenu({
         {big ? (
           <Autocomplete filter={contains}>
             {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-            <TextField search label={labels.filter} autoFocus className="rp-menu-search" />
+            <TextField search label={t('policy.filter')} autoFocus className="rp-menu-search" />
             {menu}
           </Autocomplete>
         ) : (

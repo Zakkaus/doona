@@ -1,10 +1,10 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useLogFeed} from '../../api/store';
 import type {LogLevel} from '../../api/model';
 import {localTime} from '../../api/selectors';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, downloadFile} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, downloadFile, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 
 const tones: Record<LogLevel, 'muted' | 'neutral' | 'info' | 'warn' | 'err'> = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'};
@@ -25,8 +25,14 @@ export function Logs() {
   const resources = capabilities.data?.resources;
   const [level, setLevel] = useState<LogLevel>('info');
   const [target, setTarget] = useState('');
+  // The module filter restarts the stream, so it follows the field only after typing pauses.
+  const [targetFilter, setTargetFilter] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setTargetFilter(target.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [target]);
   const [paused, setPaused] = useState(false);
-  const feed = useLogFeed({level, target, paused});
+  const feed = useLogFeed({level, target: targetFilter, paused});
   const levels = resources?.logs.levels ?? ['trace', 'debug', 'info', 'warn', 'error'];
   if (resources && !resources.logs.available)
     return (
@@ -60,7 +66,7 @@ export function Logs() {
           isDisabled={!feed.records.length}
           onPress={() =>
             downloadFile(
-              `honk-log-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`,
+              exportName('honk-log', 'txt'),
               [...feed.records]
                 .reverse()
                 .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)

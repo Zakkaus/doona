@@ -7,10 +7,10 @@ import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
 import Data from '../ui/icons/Data';
 import ListBulleted from '../ui/icons/ListBulleted';
+import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
-import FileTextIcon from '../ui/icons/FileText';
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import {Settings} from '../features/settings/Settings';
@@ -105,7 +105,7 @@ export const features: Feature[] = [
     id: 'logs',
     path: 'logs',
     shortcut: 'l',
-    nav: {group: 'grp.system', titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: FileTextIcon},
+    nav: {group: 'grp.system', titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
     Page: Logs,
     requires: {resources: ['logs']}
   },

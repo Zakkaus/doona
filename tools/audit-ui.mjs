@@ -29,7 +29,6 @@ const fixture = readFileSync(new URL('../e2e/fixtures.ts', import.meta.url), 'ut
 const routeList = fixture.match(/export const routes = \[([\s\S]*?)\] as const;/);
 if (!routeList) throw new Error('Cannot read the route list from e2e/fixtures.ts');
 const routes = [...routeList[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
-const compatRoutes = [...fixture.match(/export const compatRoutes[^=]*= \[([^\]]+)\]/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 const browser = await chromium.launch();
 const pages = [];
 try {
@@ -41,7 +40,7 @@ try {
   }, scheme);
   for (const route of routes) {
     const page = await context.newPage();
-    await page.addInitScript(backend => localStorage.setItem('doona-backend', backend), compatRoutes.includes(route) ? 'clash' : 'native');
+    await page.addInitScript(() => localStorage.setItem('doona-api', 'mock'));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {

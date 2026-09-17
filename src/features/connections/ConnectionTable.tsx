@@ -5,11 +5,9 @@ import {OutboundMark} from '../policies/Flag';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
+import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
-// Match the native table's measured row and collapsed-border header heights.
-const layoutOptions = {rowHeight: 40, headingHeight: 36.5};
 
 export function ConnectionTable({
   rows,
@@ -49,9 +47,9 @@ export function ConnectionTable({
     const frame = requestAnimationFrame(() => {
       const table = ref.current;
       if (!table || selectedIndex < 0) return;
-      const top = layoutOptions.headingHeight + selectedIndex * layoutOptions.rowHeight;
-      const bottom = top + layoutOptions.rowHeight;
-      if (top < table.scrollTop + layoutOptions.headingHeight) table.scrollTop = top - layoutOptions.headingHeight;
+      const top = tableLayout.headingHeight + selectedIndex * tableLayout.rowHeight;
+      const bottom = top + tableLayout.rowHeight;
+      if (top < table.scrollTop + tableLayout.headingHeight) table.scrollTop = top - tableLayout.headingHeight;
       else if (bottom > table.scrollTop + table.clientHeight) table.scrollTop = bottom - table.clientHeight;
     });
     return () => cancelAnimationFrame(frame);
@@ -96,7 +94,7 @@ export function ConnectionTable({
       }}
     >
       <ResizableTableContainer className="rp-table">
-        <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
+        <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
           <Table
             ref={ref}
             aria-label={t('nav.connections')}

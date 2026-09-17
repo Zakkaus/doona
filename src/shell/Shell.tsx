@@ -180,7 +180,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
   const limit = needle ? 8 : 5;
   const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
   const available = (path: string) => navAvailable(path, capabilities.data);
-  // Pages and their tabs and cards, so "校驗" or "地理資料" lands on the right place, not just the page.
+  // Pages and their tabs and cards, so a tab or card name lands on the right place, not just the page.
   const places = [
     ...features
       .filter(feature => feature.nav && available(feature.path))
@@ -306,11 +306,12 @@ export function Shell() {
     }
   };
   const mac = navigator.platform.startsWith('Mac');
-  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
+  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé") in the face the language
+  // renders with; otherwise the first open fetches one and the whole page relays out.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px 'Noto Sans TC'`, sample).catch(() => {});
-  }, []);
+    document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
+  }, [lang]);
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
@@ -333,7 +334,7 @@ function ToastHost() {
       }
     } catch {}
   }, [t]);
-  return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
+  return <Toasts />;
 }
 
 function Frame({
@@ -479,7 +480,7 @@ function Frame({
         <div className="rp-side-grow" />
         <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
           <GitHub />
-          {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
+          {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
           {settings.profiles.length > 1 && <TextTooltip text={profile?.name}>{profile?.name}</TextTooltip>}
         </Button>
       </nav>
@@ -514,7 +515,7 @@ function Frame({
           <ErrorMessage error={capabilities.error ? null : version.error} />
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
             {needsToken && feature.id !== 'settings' ? (
-              <Login backend={profile?.name ?? profile?.api ?? ''} />
+              <Login backend={profile?.name ?? profile?.api ?? ''} rejected={!!profile?.token} />
             ) : (
               <Suspense key={feature.id} fallback={<Loading />}>
                 <Page go={go} query={query} />

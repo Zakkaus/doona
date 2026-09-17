@@ -10,6 +10,7 @@ import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId,
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {useInstallOffer} from '../../shell/install';
+import type {PageProps} from '../types';
 
 type Appearance = {
   scheme: Scheme;
@@ -31,37 +32,43 @@ type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | 
 
 // `#/settings?api=<base>&token=<token>` fills the backend form so one link pairs a device; nothing is saved
 // until the person presses Save, and the address bar is scrubbed so the token is not left in history.
-function readPairing(): {api: string; token: string} | null {
-  const query = location.hash.split('?')[1];
-  if (!query) return null;
+function readPairing(query: string): {api: string; token: string} | null {
   const params = new URLSearchParams(query);
   const api = params.get('api');
-  if (!api) return null;
-  const token = params.get('token') ?? '';
-  params.delete('api');
-  params.delete('token');
-  const rest = params.toString();
-  history.replaceState(null, '', location.pathname + location.search + '#/settings' + (rest ? '?' + rest : ''));
-  return {api, token};
-}
-// `?card=` (from search) scrolls to that card's heading.
-function readCard(): string | null {
-  return new URLSearchParams(location.hash.split('?')[1] ?? '').get('card');
+  return api ? {api, token: params.get('token') ?? ''} : null;
 }
 
-export function Settings() {
+export function Settings({query}: PageProps) {
   const t = useT();
   const install = useInstallOffer();
   const capabilities = useCapabilities();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
-  const [paired] = useState(readPairing);
-  const [card] = useState(readCard);
+  const [api, setApi] = useState(saved.api ?? '');
+  const [token, setToken] = useState(saved.token);
+  const [paired, setPaired] = useState(false);
+  // The query is read whenever it changes, so links work while the page is already open: a pairing link fills
+  // the form during render, the address bar and the card scroll follow in an effect.
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  if (lastQuery !== query) {
+    setLastQuery(query);
+    const pair = readPairing(query);
+    if (pair) {
+      setPaired(true);
+      setApi(pair.api);
+      setToken(pair.token);
+    }
+  }
   useEffect(() => {
+    const params = new URLSearchParams(query);
+    if (params.has('api')) {
+      params.delete('api');
+      params.delete('token');
+      history.replaceState(null, '', location.pathname + location.search + '#/settings' + (params.size ? '?' + params : ''));
+    }
+    const card = params.get('card');
     if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
-  }, [card]);
-  const [api, setApi] = useState(paired?.api ?? saved.api ?? '');
-  const [token, setToken] = useState(paired?.token ?? saved.token);
+  }, [query]);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
   const [name, setName] = useState('');
@@ -128,7 +135,13 @@ export function Settings() {
       return;
     }
     const profiles = dialog === 'add' && !active ? [] : editedProfiles();
-    if (!profiles || !name.trim()) return;
+    if (!profiles) {
+      // The form's URL is invalid, so the current profile cannot be carried over; say so behind the dialog.
+      setDialog(null);
+      toast('negative', t('settings.invalidUrl'));
+      return;
+    }
+    if (!name.trim()) return;
     if (dialog === 'add') {
       const profile = {id: crypto.randomUUID(), name: name.trim(), api: 'mock', token: ''};
       persist([...profiles, profile], profile.id);
@@ -349,7 +362,7 @@ export function Settings() {
           }}
           footer={() => (
             <>
-              <Button onPress={() => setDialog(null)}>{t('close')}</Button>
+              <Button onPress={() => setDialog(null)}>{t('ui.cancel')}</Button>
               <Button accent={dialog !== 'delete'} negative={dialog === 'delete'} isDisabled={dialog !== 'delete' && !name.trim()} onPress={confirmProfile}>
                 {t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
               </Button>

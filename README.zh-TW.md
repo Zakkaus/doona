@@ -20,7 +20,7 @@
 ## 狀態
 
 在 honk 發布 `/api/v1` 之前，doona 僅供契約驗證與示範，不承諾與已發布的後端相容。
-目標契約為 `daeuniverse/api-standardize` 的 `ui-findings` 分支，固定提交為 `8bd9871`，記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。
+目標契約為 `daeuniverse/api-standardize` 的 fork 分支 `doona-pin`，固定提交為 `868768d`（合併 PR #4、#5、#6、#7），記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。
 預設使用模擬後端；截圖展示的也是模擬資料。
 
 ## 執行環境

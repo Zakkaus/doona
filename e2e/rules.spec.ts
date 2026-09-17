@@ -12,7 +12,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   const ids = await panel.getByRole('rowheader').allTextContents();
   expect(ids.length).toBe(allCount);
   const sourceRows = await Promise.all(
-    ['kernel', 'Recomputed', 'Unknown'].map(async source => ({
+    ['Kernel', 'Recomputed', 'Unknown'].map(async source => ({
       source,
       texts: await rows.filter({has: page.locator('.rp-badge', {hasText: new RegExp(`^${source}$`)})}).allTextContents()
     }))

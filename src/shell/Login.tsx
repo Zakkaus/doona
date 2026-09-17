@@ -1,11 +1,13 @@
 import {useState} from 'react';
+import {Link} from 'react-aria-components';
 import {useT} from '../i18n';
 import {readProfiles, writeProfiles} from '../features/settings/settings';
 import {Button, TextField} from '../ui/ui';
 
 // What a backend that wants a token gets instead of a wall of errors: one field, one button. The token goes
-// into the active profile and the page restarts against the backend, the same way settings saves it.
-export function Login({backend}: {backend: string}) {
+// into the active profile and the page restarts against the backend, the same way settings saves it. A token
+// the backend has already turned away is said so, instead of showing the same empty form again.
+export function Login({backend, rejected}: {backend: string; rejected: boolean}) {
   const t = useT();
   const [token, setToken] = useState('');
   const [shown, setShown] = useState(false);
@@ -24,6 +26,7 @@ export function Login({backend}: {backend: string}) {
     >
       <h2 className="rp-h3">{t('login.title')}</h2>
       <span className="rp-label">{t('login.note', {backend})}</span>
+      {rejected && <p role="alert">{t('login.rejected')}</p>}
       <TextField
         label={t('login.token')}
         name="token"
@@ -41,9 +44,9 @@ export function Login({backend}: {backend: string}) {
         <Button accent type="submit" isDisabled={!token.trim()}>
           {t('login.submit')}
         </Button>
-        <a className="rp-link" href="#/settings">
+        <Link className="rp-link" href="#/settings">
           {t('login.settings')}
-        </a>
+        </Link>
       </div>
     </form>
   );

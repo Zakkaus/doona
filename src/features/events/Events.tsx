@@ -2,7 +2,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {useState} from 'react';
 import {useEventFeed} from '../../api/store';
 import {eventKindLabels, eventKinds, eventSummary, localTime} from '../../api/selectors';
-import {Button, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, downloadFile} from '../../ui/ui';
+import {Button, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, downloadFile, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 
 export function Events() {
@@ -30,13 +30,7 @@ export function Events() {
         <Button
           small
           isDisabled={!shown.length}
-          onPress={() =>
-            downloadFile(
-              `doona-events-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`,
-              JSON.stringify(shown, null, 2) + '\n',
-              'application/json'
-            )
-          }
+          onPress={() => downloadFile(exportName('doona-events', 'json'), JSON.stringify(shown, null, 2) + '\n', 'application/json')}
         >
           <Download />
           {t('event.export')}

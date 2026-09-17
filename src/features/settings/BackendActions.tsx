@@ -1,79 +1,33 @@
-import {useState} from 'react';
-import {getApi} from '../../api';
-import {
-  useCapabilities,
-  useConnectionClose,
-  useConnections,
-  useGeodata,
-  useGroups,
-  useProviderRefresh,
-  useProviders,
-  useRuntime,
-  useRuntimeMode,
-  useRuntimeOperations
-} from '../../api/store';
+import {useCapabilities, useConnections, useDnsFlush, useGeodata, useGroups, useProviderRefresh, useProviders, useRuntimeMode} from '../../api/store';
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {Button, DataTable, ErrorMessage, ModalDialog, Segmented, TextTooltip, errorText, toast} from '../../ui/ui';
-
-const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
-const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
+import {Button, DataTable, ErrorMessage, TextTooltip, errorText, toast} from '../../ui/ui';
+import {ModeSwitch} from '../activity/ModeSwitch';
+import {LifecycleActions} from '../overview/Lifecycle';
+import {CloseAllButton} from '../connections/CloseAll';
+import {FlushCacheButton} from '../dns/FlushCache';
+import {useState} from 'react';
 
 // One place for the one-shot backend actions the contract offers: reload, suspend or resume, the outbound mode,
-// the DNS cache, subscriptions, connections and the geodata files. Each action lives on its own page too; this
-// card only gathers them, and every button is gated on the capability that backs it.
+// the DNS cache, subscriptions, connections and the geodata files. Each control is the same component the
+// action's own page uses; every one is gated on the capability that backs it.
 export function BackendActionsCard() {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const api = getApi();
-  const capabilities = useCapabilities();
-  const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
-  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
-  const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available !== false);
+  const resources = useCapabilities().data?.resources;
+  const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available === true);
   const groups = useGroups();
   const providers = useProviders(resources?.providers.available !== false);
   const refresh = useProviderRefresh(providers.refetch);
   const connections = useConnections(undefined);
-  const closing = useConnectionClose(connections.refetch);
+  const flushing = useDnsFlush();
   const geodata = useGeodata(resources?.geodata.available ?? false);
-  const [flushing, setFlushing] = useState(false);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const fail = (error: unknown) => toast('negative', errorText(error));
-  const mode = runtimeMode.data?.mode ?? 'rule';
   const target = runtimeMode.data?.target ?? groups.data?.[0]?.id ?? '';
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const live = (connections.data ? [...connections.data.tcp, ...connections.data.udp] : []).map(c => c.id);
-
-  const runOperation = async (kind: 'reload' | 'suspend' | 'resume') => {
-    try {
-      const result = await operations.run(kind);
-      if (result)
-        toast(
-          result.status === 'succeeded' ? 'positive' : 'negative',
-          t('ov.operationResult', {
-            action: t(operationLabels[kind]),
-            status: t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed'),
-            id: result.operation_id
-          })
-        );
-    } catch (error) {
-      toast('negative', t('ov.operationError', {error: errorText(error)}));
-    }
-  };
-  const flush = async () => {
-    setFlushing(true);
-    try {
-      const result = await api.flushDnsCache();
-      toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-    } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: errorText(error)}));
-    } finally {
-      setFlushing(false);
-    }
-  };
   // Subscriptions refresh one after another: the backend keeps one refresh per provider in flight anyway.
   const refreshAll = async () => {
     setRefreshingAll(true);
@@ -97,96 +51,28 @@ export function BackendActionsCard() {
         {t('settings.actions')}
       </h2>
       <span className="rp-label">{t('settings.actionsNote')}</span>
-      <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
-        {(['reload', 'suspend', 'resume'] as const)
-          .filter(kind => operations.canRun(kind) || operations.busy === kind)
-          .map(kind => (
-            <Button key={kind} secondary isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void runOperation(kind)}>
-              {t(operationLabels[kind])}
-            </Button>
-          ))}
-        {resources?.runtime_mode?.available && (
-          <Segmented
-            label={t('act.mode')}
-            value={mode}
-            onChange={next => {
-              void runtimeMode
-                .change(next === 'global' ? {mode: 'global', target} : {mode: next as 'rule' | 'direct'})
-                .then(result => toast('positive', t('act.modeChanged', {mode: t(modeLabels[result.mode])})), fail);
-            }}
-            items={[
-              ['rule', t('mode.rule')],
-              ['global', t('mode.global')],
-              ['direct', t('mode.direct')]
-            ]}
-          />
-        )}
+        <LifecycleActions />
+        {resources?.runtime_mode?.available && <ModeSwitch target={target} />}
       </div>
       <div className="rp-toolbar">
         {resources?.dns_cache.available && resources.dns_cache.flush && (
-          <ModalDialog
-            alert
-            narrow
-            title={t('dns.flushAll')}
-            trigger={
-              <Button negative quiet isPending={flushing} isDisabled={flushing}>
-                {t('dns.flushAll')}
-              </Button>
-            }
-            footer={close => (
-              <>
-                <Button onPress={close}>{t('ui.cancel')}</Button>
-                <Button
-                  negative
-                  onPress={() => {
-                    close();
-                    void flush();
-                  }}
-                >
-                  {t('dns.flushAll')}
-                </Button>
-              </>
-            )}
-          >
-            <p>{t('settings.flushConfirm')}</p>
-          </ModalDialog>
+          <FlushCacheButton
+            count={null}
+            busy={flushing.busy}
+            onFlush={() => {
+              void flushing.flush().then(result => {
+                if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+              }, fail);
+            }}
+          />
         )}
         {resources?.providers.can_refresh && (
           <Button secondary isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
             {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
           </Button>
         )}
-        {resources?.connections.can_close && (
-          <ModalDialog
-            title={t('conn.closeAll')}
-            narrow
-            alert
-            trigger={
-              <Button negative quiet isDisabled={!live.length || !!closing.busy} isPending={closing.busy === 'all'}>
-                {t('conn.closeAll')}
-              </Button>
-            }
-            footer={close => (
-              <>
-                <Button onPress={close}>{t('ui.cancel')}</Button>
-                <Button
-                  negative
-                  onPress={() => {
-                    close();
-                    void closing
-                      .closeAll(live)
-                      .then(tally => toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped})), fail);
-                  }}
-                >
-                  {t('conn.closeAll')}
-                </Button>
-              </>
-            )}
-          >
-            <span className="rp-label">{t('conn.closeAllHelp', {n: live.length})}</span>
-          </ModalDialog>
-        )}
+        {resources?.connections.can_close && <CloseAllButton ids={live} refetch={connections.refetch} />}
         {resources?.geodata.can_update && (
           <Button
             secondary

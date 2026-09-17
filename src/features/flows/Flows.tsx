@@ -7,6 +7,7 @@ import {OutboundMark} from '../policies/Flag';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
+import {within} from '../../shell/route';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import Close from '../../ui/icons/Close';
@@ -22,16 +23,6 @@ const stages: Record<string, Key> = {
   reroute: 'flow.stage.reroute'
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
-
-// A query change that keeps the rules tab the reader is on.
-function within(query: string, patch: Record<string, string | null>): string {
-  const next = new URLSearchParams(query);
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === null) next.delete(key);
-    else next.set(key, value);
-  }
-  return next.toString();
-}
 
 // The config as a picture: every retained flow drawn through rules, outbounds and selected nodes. A click pins
 // one item and dims the rest; the pinned path can be followed into the flow records.
@@ -83,12 +74,10 @@ export function FlowRecords({go, query}: PageProps) {
   const detail = useFlow(id);
   const flow = detail.data;
   const select = (value: string | null) => go('rules', within(query, {id: value}));
-  const groups = useGroups();
-  const nodes = useNodes();
-  const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  const pinnedLabel = pinned ? (map.nodes.find(node => node.id === pinned)?.label ?? pinned.slice(pinned.indexOf(':') + 1)) : null;
+  // A pinned map item is `stage:label`; the label is all the chip needs.
+  const pinnedLabel = pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
   const all = resource.data?.flows ?? [];
   const shown = (pinned ? flowsThrough(all, pinned) : all).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
   return (

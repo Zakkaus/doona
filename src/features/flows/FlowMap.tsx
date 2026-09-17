@@ -98,7 +98,6 @@ export function FlowMap({
                   alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
                   unavailable={nodeHealth?.state === 'unavailable'}
                   description={lane.node.configured && !lane.node.count ? t('flow.laneSelected') : t('flow.laneFlows', {n: n(lane.node.count)})}
-                  labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
                   selected={pinned === lane.node.node.id}
                   onPress={() => onPin(pinned === lane.node!.node.id ? null : lane.node!.node.id)}
                 />
@@ -110,7 +109,6 @@ export function FlowMap({
                   icon={<OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />}
                   description={t('flow.builtin')}
                   unavailable={false}
-                  labels={{timeout: t('policy.unavailable'), nested: t('policy.group'), cur: t('policy.current')}}
                   selected={pinned === lane.outbound.id}
                   onPress={() => onPin(pinned === lane.outbound.id ? null : lane.outbound.id)}
                 />

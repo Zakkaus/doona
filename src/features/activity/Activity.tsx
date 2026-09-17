@@ -18,14 +18,22 @@ import {
   useTrafficHistory,
   useRuntimeMode
 } from '../../api/store';
-import {connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, sourceIp, trafficSeries} from '../../api/selectors';
+import {
+  connectionRows,
+  eventSummary,
+  lifecycleStates,
+  localTime,
+  outboundLabel,
+  outboundUsage,
+  preferredHealth,
+  sourceIp,
+  trafficSeries
+} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Button, CardLink, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
-import type {Key} from '../../i18n/messages';
-
-const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
+import {Badge, Button, CardLink, MenuButton, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
 import {NodeMenu} from '../policies/Nodes';
+import {ModeSwitch} from './ModeSwitch';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
 
@@ -90,20 +98,13 @@ export function Activity({go}: {go: (page: string) => void}) {
   const groups = groupsResource.data;
   const target = groups.some(g => g.id === (chosenTarget || runtimeMode.data?.target)) ? chosenTarget || runtimeMode.data!.target! : (groups[0]?.id ?? '');
   const targetName = groups.find(g => g.id === target)?.name ?? '—';
-  const switchMode = (next: string) => {
-    if (next !== 'rule' && next !== 'direct' && next !== 'global') return;
-    void runtimeMode.change(next === 'global' ? {mode: 'global', target} : {mode: next}).then(
-      result => toast('positive', t('act.modeChanged', {mode: t(modeLabels[result.mode])})),
-      (error: unknown) => toast('negative', errorText(error))
-    );
-  };
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
     {label: t('act.upload'), color: p.cat[3], values: series.up}
   ];
   const OUT = usage.rows.map((r, i) => ({
-    name: r.name,
+    name: outboundLabel(r.name, t),
     value: r.percent === null ? null : Math.round(r.percent),
     text: formatBytes(r.bytes),
     color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
@@ -118,16 +119,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Shuffle />
               {t('act.mode')}
             </span>
-            <Segmented
-              label={t('act.mode')}
-              value={mode}
-              onChange={switchMode}
-              items={[
-                ['rule', t('mode.rule')],
-                ['global', t('mode.global')],
-                ['direct', t('mode.direct')]
-              ]}
-            />
+            <ModeSwitch target={target} />
           </div>
         </div>
         <div className="rp-card">
@@ -207,13 +199,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           <span className="rp-tile-head rp-tint-c5">
             <Clock />
             {t('act.latency')}
-            <NodeMenu
-              label={t('act.node')}
-              value={nodeName}
-              onChange={setNodeName}
-              nodes={NODES}
-              labels={{timeout: t('act.timeout'), filter: t('act.filterNodes'), loading: t('act.loading')}}
-            />
+            <NodeMenu label={t('act.node')} value={nodeName} onChange={setNodeName} nodes={NODES} />
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">

@@ -3,10 +3,20 @@ import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
-import type {HealthObservation} from '../../api/model';
+import type {Group, HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import type {PageProps} from '../types';
+import type {Key} from '../../i18n/messages';
+
+const policyKinds: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
 
 function PolicyCard({
   id,
@@ -24,29 +34,17 @@ function PolicyCard({
   onLoaded: (id: string) => void;
 }) {
   const t = useT();
-  const labels = {
-    timeout: t('policy.unavailable'),
-    nested: t('policy.group'),
-    cur: t('policy.current'),
-    filter: t('policy.filter'),
-    region: t('policy.region'),
-    allRegions: t('policy.allRegions'),
-    sort: t('policy.sort'),
-    byLatency: t('policy.byLatency'),
-    byName: t('policy.byName'),
-    aliveOnly: t('policy.aliveOnly'),
-    none: t('policy.none'),
-    count: (n: number, down: number) => (down ? t('policy.membersDown', {n, down}) : t('policy.members', {n}))
-  };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
+  // A failed control toasts once; a failed load shows inline and does not repeat on every poll.
   useEffect(() => {
-    if (control.error) toast('negative', errorText(control.error));
-  }, [control.error]);
+    if (control.actionError) toast('negative', errorText(control.actionError));
+  }, [control.actionError]);
   const g = control.data;
-  const loaded = !!g;
+  // Settled either way: the scroll to a linked card waits for every card to have its final height.
+  const settled = !!g || !!control.error;
   useEffect(() => {
-    if (loaded) onLoaded(id);
-  }, [loaded, id, onLoaded]);
+    if (settled) onLoaded(id);
+  }, [settled, id, onLoaded]);
   const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), leaf: leaves.get(m.id)})) ?? [], [g, health, leaves]);
   const tcp = g?.runtime.selection.tcp?.member_id;
   const udp = g?.runtime.selection.udp?.member_id;
@@ -70,7 +68,7 @@ function PolicyCard({
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3">{g.name}</h3>
-              <Badge>{g.policy.kind}</Badge>
+              <Badge>{t(policyKinds[g.policy.kind])}</Badge>
               <Light small tone="ok">
                 {t('policy.healthy', {n: healthy})}
               </Light>
@@ -157,7 +155,6 @@ function PolicyCard({
             )}
           </div>
           <NodeGrid
-            labels={labels}
             nodes={members}
             selected={selected}
             cur={selected}

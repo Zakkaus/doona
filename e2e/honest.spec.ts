@@ -1,7 +1,7 @@
 import {detail, expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
-test('native activity uses API version and events without demo mode controls', async ({page}) => {
+test('native activity shows the API version and follows runtime events', async ({page}) => {
   const version = await createMockApi().version();
   await page.clock.install();
   await page.goto('/#/activity');
@@ -9,12 +9,8 @@ test('native activity uses API version and events without demo mode controls', a
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
-  await expect(page.locator('.rp-tile-val .rp-delta')).toHaveCount(0);
   await page.goto('/#/connections?id=2');
   await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
-  await expect(detail(page).locator('.rp-btn.accent')).toHaveCount(0);
-  await page.goto('/#/events');
-  await expect(page.getByRole('tab')).toHaveCount(0);
 });
 
 test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {

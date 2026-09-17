@@ -2,9 +2,12 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
-    'policy.unavailable': '無法使用',
-    'policy.group': '群組',
-    'policy.current': '目前',
+    'policy.kind.selector': '手動選擇',
+    'policy.kind.urltest': '延遲優先',
+    'policy.kind.loadbalance': '負載平衡',
+    'policy.kind.fallback': '故障轉移',
+    'policy.kind.random': '隨機',
+    'policy.kind.score': '評分',
     'policy.filter': '篩選節點',
     'policy.region': '地區',
     'policy.allRegions': '全部地區',
@@ -47,9 +50,12 @@ export const messages = defineMessages({
     'policy.probeUnchanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇未變更'
   },
   'zh-CN': {
-    'policy.unavailable': '不可用',
-    'policy.group': '组',
-    'policy.current': '当前',
+    'policy.kind.selector': '手动选择',
+    'policy.kind.urltest': '延迟优先',
+    'policy.kind.loadbalance': '负载均衡',
+    'policy.kind.fallback': '故障转移',
+    'policy.kind.random': '随机',
+    'policy.kind.score': '评分',
     'policy.filter': '筛选节点',
     'policy.region': '地区',
     'policy.allRegions': '全部地区',
@@ -92,9 +98,12 @@ export const messages = defineMessages({
     'policy.probeUnchanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择未更改'
   },
   en: {
-    'policy.unavailable': 'Unavailable',
-    'policy.group': 'Group',
-    'policy.current': 'Current',
+    'policy.kind.selector': 'Manual',
+    'policy.kind.urltest': 'Lowest latency',
+    'policy.kind.loadbalance': 'Load balance',
+    'policy.kind.fallback': 'Fallback',
+    'policy.kind.random': 'Random',
+    'policy.kind.score': 'Score',
     'policy.filter': 'Filter nodes',
     'policy.region': 'Region',
     'policy.allRegions': 'All regions',

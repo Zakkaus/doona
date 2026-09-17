@@ -1,9 +1,9 @@
-import {useEffect, useMemo, useState} from 'react';
-import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
+import {useMemo, useState} from 'react';
+import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
-import {formatBytes} from '../../api/u64';
+import {addU64, formatBytes} from '../../api/u64';
 import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
 import {
   Badge,
@@ -41,7 +41,8 @@ const latencyOf = (node: Node) => {
 // searchable, filterable and sortable. With can_manage, subscriptions and share links are added and removed here.
 export function Nodes({go, query}: PageProps) {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const n = (value: number) => formatNumber(value, locale);
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(resources?.providers.available !== false);
@@ -64,6 +65,13 @@ export function Nodes({go, query}: PageProps) {
     go('nodes', next.toString());
   };
   const [search, setSearch] = useState(() => params.get('q') ?? '');
+  // A search-dialog jump always carries q; a typed filter survives a provider switch, which drops it.
+  const [lastQuery, setLastQuery] = useState(query);
+  if (lastQuery !== query) {
+    setLastQuery(query);
+    const next = params.get('q');
+    if (next !== null) setSearch(next);
+  }
   const [group, setGroup] = useState('');
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
@@ -71,6 +79,7 @@ export function Nodes({go, query}: PageProps) {
     {kind: 'provider'} | {kind: 'node'} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node} | null
   >(null);
   const [form, setForm] = useState({name: '', value: ''});
+  const inlineId = list.find(item => item.kind === 'inline')?.id ?? null;
   const owned = useMemo(() => (nodes.data ?? []).filter(node => (provider ? node.provider_id === provider.id : true)), [nodes.data, provider]);
   const groups = useMemo(() => [...new Set(owned.flatMap(node => node.group_ids))].sort(collator.compare), [owned]);
   const protocols = useMemo(() => [...new Set(owned.map(node => node.protocol ?? ''))].filter(Boolean).sort(collator.compare), [owned]);
@@ -87,17 +96,11 @@ export function Nodes({go, query}: PageProps) {
     };
     return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
   }, [owned, search, group, protocol, sort]);
-  useEffect(() => {
-    if (nodes.error) toast('negative', errorText(nodes.error));
-  }, [nodes.error]);
-  const usage = (item: Provider) => {
-    if (!item.traffic) return null;
-    const used = (BigInt(item.traffic.upload_bytes ?? '0') + BigInt(item.traffic.download_bytes ?? '0')).toString();
-    return {used, total: item.traffic.total_bytes};
-  };
+  const usage = (item: Provider) =>
+    item.traffic ? {used: addU64(item.traffic.upload_bytes, item.traffic.download_bytes), total: item.traffic.total_bytes} : null;
   const canManageProviders = !!resources?.providers.can_manage;
   const canManageNodes = !!resources?.nodes.can_manage;
-  const canProbe = resources?.probes.available && resources.probes.targets?.includes('node');
+  const canProbe = probe.canProbe;
   const open = (next: NonNullable<typeof dialog>) => {
     setForm({name: '', value: ''});
     setDialog(next);
@@ -129,7 +132,7 @@ export function Nodes({go, query}: PageProps) {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
-      <ErrorMessage error={providers.error} />
+      <ErrorMessage error={providers.error ?? nodes.error} />
       {canManageProviders && (
         <div className="rp-toolbar">
           <span className="rp-grow" />
@@ -155,7 +158,7 @@ export function Nodes({go, query}: PageProps) {
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
           {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
           {id: 'status', label: t('ui.state'), minWidth: 110, grow: 0},
-          {id: 'actions', label: '', minWidth: canManageProviders ? 120 : 96, grow: 0}
+          {id: 'actions', label: t('ui.actions'), minWidth: canManageProviders ? 120 : 96, grow: 0}
         ]}
         render={item => {
           const used = usage(item);
@@ -176,6 +179,7 @@ export function Nodes({go, query}: PageProps) {
                 <Button
                   small
                   quiet
+                  icon
                   isPending={refresh.busy === item.id}
                   isDisabled={!!refresh.busy}
                   label={t('nodes.refresh', {name: item.name})}
@@ -244,7 +248,7 @@ export function Nodes({go, query}: PageProps) {
           {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true},
           {id: 'latency', label: t('nodes.latency'), minWidth: 110, grow: 0, align: 'end', sortable: true},
           {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1},
-          {id: 'actions', label: '', minWidth: canManageNodes ? 96 : 56, grow: 0}
+          {id: 'actions', label: t('ui.actions'), minWidth: canManageNodes ? 96 : 56, grow: 0}
         ]}
         render={(node: Node) => {
           const health = preferredHealth(node);
@@ -257,14 +261,15 @@ export function Nodes({go, query}: PageProps) {
             health?.state === 'healthy' && health.latency_ms != null ? (
               <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: health.latency_ms})}</span>
             ) : (
-              <span className="ms err">{health?.state === 'unavailable' ? t('policy.unavailable') : '—'}</span>
+              <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
             ),
-            <TextTooltip>{node.group_ids.join(', ') || '—'}</TextTooltip>,
+            <TextTooltip>{node.group_ids.length ? formatList(lang, node.group_ids) : '—'}</TextTooltip>,
             <span className="rp-chain">
               {canProbe && (
                 <Button
                   small
                   quiet
+                  icon
                   isPending={probe.busy === node.id}
                   isDisabled={!!probe.busy}
                   label={t('nodes.probe', {name: node.name})}
@@ -282,7 +287,7 @@ export function Nodes({go, query}: PageProps) {
                   <SpeedFast />
                 </Button>
               )}
-              {canManageNodes && node.provider_id === 'inline' && (
+              {canManageNodes && node.provider_id === inlineId && (
                 <Button
                   small
                   quiet
