@@ -1,4 +1,4 @@
-import {expect, routes, test} from './fixtures';
+import {expect, isLive, offered, routes, test} from './fixtures';
 
 for (const scheme of ['light', 'dark']) {
   test.describe(scheme, () => {
@@ -6,6 +6,7 @@ for (const scheme of ['light', 'dark']) {
     for (const route of routes) {
       test(route, async ({page}) => {
         await page.goto(`/#/${route}`);
+        test.skip(!(await offered(page, route)), 'not offered by this backend');
         await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
         await expect(page.locator('.rp-content')).toBeVisible();
         const nav = page.locator(`.rp-nav[href="#/${route}"]`);
@@ -21,6 +22,7 @@ for (const width of [1024, 1280, 1440]) {
     await page.setViewportSize({width, height: 1400});
     for (const route of ['dns', 'rules', 'connections', 'events', 'overview']) {
       await page.goto(`/#/${route}`);
+      if (!(await offered(page, route))) continue;
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
       if (route === 'rules') {
@@ -28,7 +30,12 @@ for (const width of [1024, 1280, 1440]) {
         await page.getByRole('button', {name: 'Run trace', exact: true}).click();
         await expect(page.getByRole('grid', {name: 'Rule evaluation 1'})).toBeVisible();
       }
-      await expect(page.getByRole('grid').or(page.getByRole('treegrid')).first()).toBeVisible();
+      const grids = page.getByRole('grid').or(page.getByRole('treegrid'));
+      await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
+      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+      // A live backend with nothing to list shows an empty state instead of a table.
+      if (isLive && !(await grids.count())) continue;
+      await expect(grids.first()).toBeVisible();
       await page.evaluate(() => document.fonts.ready.then(() => undefined));
       const tables = page.locator('.rp-table');
       for (const table of await tables.all()) {
@@ -55,6 +62,7 @@ for (const width of [1024, 1280, 1440]) {
 test('narrow tables retain readable columns and stop scrolling after a desktop resize', async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/dns?tab=cache');
+  test.skip(!(await offered(page, 'dns')), 'not offered by this backend');
   const table = page.locator('.rp-table');
   const domain = table.getByRole('rowheader').first();
   await expect(domain).toBeVisible();

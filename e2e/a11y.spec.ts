@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, routes, test} from './fixtures';
+import {expect, offered, routes, test} from './fixtures';
 
 // Dawn contrast remains a palette decision; other violations must fail this gate.
 const KNOWN: Record<string, string> = {
@@ -9,6 +9,7 @@ const KNOWN: Record<string, string> = {
 for (const route of routes) {
   test(route, async ({page}, testInfo) => {
     await page.goto(`/#/${route}`);
+    test.skip(!(await offered(page, route)), 'not offered by this backend');
     await expect(page.locator('.rp-content')).toBeVisible();
     await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
