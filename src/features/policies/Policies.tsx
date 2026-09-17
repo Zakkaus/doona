@@ -5,7 +5,6 @@ import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
-import {OutboundMark} from './Flag';
 import {NodeGrid} from './Nodes';
 
 function PolicyCard({
@@ -63,7 +62,6 @@ function PolicyCard({
         <>
           <div className="rp-row">
             <span className="rp-cluster">
-              <OutboundMark name={leaves.get(g.id) ?? null} />
               <h3 className="rp-h3">{g.name}</h3>
               <Badge>{g.policy.kind}</Badge>
               <Light small tone="ok">
