@@ -76,18 +76,18 @@ A backend built against an earlier contract pin (honk's first release stops at r
 
 ## Settings
 
-With no saved backend, opening the root page shows Settings; direct page links remain usable. Enter an HTTP(S) server root or reverse-proxy prefix, without `/api/v1`, credentials, a query or a fragment. An empty URL or `mock` selects the built-in demo.
+On a first visit with nothing saved, doona asks the origin it was served from (or the reverse-proxy prefix in front of `/ui/`) for `/api`; a contract answer or a bearer challenge makes that backend the saved profile, and a token prompt follows when one is required. Without such an answer, opening the root page shows Settings; direct page links remain usable. Enter an HTTP(S) server root or reverse-proxy prefix, without `/api/v1`, credentials, a query or a fragment. An empty URL or `mock` selects the built-in demo.
 
 Values live in this browser's `localStorage`, scoped to the site's origin:
 
-| Field         | Storage key       | Values                                                      |
-| ------------- | ----------------- | ----------------------------------------------------------- |
-| Server URL    | `doona-api`       | Server root or proxy prefix; empty or `mock` for demo data  |
-| Token         | `doona-api-token` | Bearer token; sent in the Authorization header, not the URL |
-| Language      | `doona-lang`      | `zh-TW` (default), `zh-CN`, `en`                            |
-| Colour scheme | `doona-scheme`    | `system` (default), `light`, `dark`                         |
-| Palette       | `doona-palette`   | Default: `rose-pine/moon`                                   |
-| Wordmark      | `doona-wordmark`  | `gradient` (default), `plain`                               |
+| Field         | Storage key      | Values                                                                                                                                                                  |
+| ------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backends      | `doona-profiles` | JSON list of `{id, name, api, token}`; `api` is a server root or proxy prefix, empty or `mock` for demo data; the token goes in the Authorization header, never the URL |
+| Active one    | `doona-profile`  | `id` of the selected backend; the older `doona-api` and `doona-api-token` keys migrate into a profile once                                                              |
+| Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                        |
+| Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                     |
+| Palette       | `doona-palette`  | Default: `rose-pine/moon`                                                                                                                                               |
+| Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                           |
 
 Test Connection checks native API discovery at `/api`; saving backend settings reloads the page. The token persists in browser storage. See [SECURITY.md](SECURITY.md) for security reporting.
 

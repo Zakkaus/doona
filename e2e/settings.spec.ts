@@ -16,6 +16,22 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await expect(page.locator('.rp-toolbar input')).toHaveValue('192.168.1.2');
 });
 
+browserTest('a first visit under a backend takes that backend and asks for its token', async ({page}) => {
+  const challenge = {
+    status: 401,
+    headers: {'www-authenticate': 'Bearer'},
+    json: {error: {code: 'authentication_required', message: 'Valid bearer credentials are required.', details: null}, request_id: 'first-visit'}
+  };
+  await page.route('**/api', route => route.fulfill(challenge));
+  await page.route('**/api/v1/**', route => route.fulfill(challenge));
+  await page.goto('/');
+  await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.rp-login')).toContainText(new URL(page.url()).host);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles') ?? '[]').map((item: {api: string}) => item.api))).toEqual([
+    new URL(page.url()).origin
+  ]);
+});
+
 test('saving mock and a token reloads and restores the default activity route', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill(' mock ');

@@ -125,3 +125,31 @@ export function readSettings(storage?: StoragePort): Settings {
 export function shouldOpenSettings(api: string | null, hash: string): boolean {
   return api === null && (hash === '' || hash === '#' || hash === '#/');
 }
+
+// Served by the backend itself, doona finds its API without a settings round: the root is the origin, or the
+// reverse-proxy prefix in front of /ui/. A first visit with nothing stored asks that root's discovery document;
+// a contract answer, or a bearer challenge from a backend that guards discovery too, becomes the hosted profile.
+export function hostedRoot(loc: {origin: string; pathname: string}): string {
+  const prefix = /^(.*?)\/ui(?:\/|$)/.exec(loc.pathname)?.[1] ?? '';
+  return loc.origin + prefix;
+}
+
+export async function detectHostedBackend(
+  storage: StoragePort = localStorage,
+  loc: {origin: string; pathname: string; protocol: string; host: string} = location,
+  fetcher: typeof fetch = fetch
+): Promise<boolean> {
+  try {
+    if (storage.getItem('doona-profiles') !== null || storage.getItem('doona-api') !== null || !/^https?:$/.test(loc.protocol)) return false;
+    const api = hostedRoot(loc);
+    const response = await fetcher(`${api}/api`, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(3000)});
+    const json = response.headers.get('content-type')?.includes('application/json') ?? false;
+    const challenged = response.status === 401 && /bearer/i.test(response.headers.get('www-authenticate') ?? '');
+    const discovered = response.status === 200 && json && (await response.json())?.api_major === 1;
+    if (!challenged && !discovered) return false;
+    writeProfiles({profiles: [{id: 'hosted', name: loc.host, api, token: ''}], activeId: 'hosted'}, storage);
+    return true;
+  } catch {
+    return false;
+  }
+}

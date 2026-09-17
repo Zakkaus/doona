@@ -9,12 +9,23 @@ export const routes = ['activity', 'overview', 'connections', 'dns', 'policies',
 const env = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env ?? {};
 const live = env.DOONA_API ? {'doona-api': env.DOONA_API, 'doona-api-token': env.DOONA_TOKEN ?? ''} : {};
 
+// A live backend hides the pages it has no capability for and may have nothing to list; the mock offers every page.
+export const isLive = !!env.DOONA_API;
+export const offered = async (page: Page, route: string) => {
+  if (!isLive) return true;
+  // The navigation lists every page until the capabilities arrive.
+  await expect(page.locator('nav.rp-side')).not.toHaveAttribute('aria-busy', 'true');
+  return (await page.locator(`.rp-nav[href="#/${route}"]`).count()) > 0;
+};
+
 export const test = base.extend<{storage: Record<string, string>}>({
   storage: [{}, {option: true}],
   page: async ({page, storage}, use) => {
     const errors: string[] = [];
     page.on('console', message => {
-      if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+      // The first-visit discovery request is expected to 404 on a static host.
+      const discovery = /\/api$/.test(message.location().url) && message.text().includes('404');
+      if (message.type() === 'error' && !discovery) errors.push(`console: ${message.text()}`);
     });
     page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
     // Seeds run on every navigation, so they only fill keys the page has not written itself:

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {normalizeApi, normalizeProfiles, readProfiles, readSettings, shouldOpenSettings, writeProfiles} from './settings';
+import {detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, readSettings, shouldOpenSettings, writeProfiles} from './settings';
 
 describe('backend URL normalization', () => {
   it.each([
@@ -124,5 +124,49 @@ describe('first-run routing', () => {
     for (const api of ['', 'mock', 'https://honk.example']) {
       for (const hash of ['', '#/']) expect(shouldOpenSettings(api, hash)).toBe(false);
     }
+  });
+});
+
+describe('hosted backend detection', () => {
+  const at = (pathname: string, origin = 'http://127.0.0.1:9527') => ({origin, pathname, protocol: 'http:', host: '127.0.0.1:9527'});
+  const answer = (status: number, headers: Record<string, string>, body?: unknown) =>
+    (async () => new Response(body === undefined ? null : JSON.stringify(body), {status, headers})) as unknown as typeof fetch;
+
+  it.each([
+    ['/ui/', ''],
+    ['/ui', ''],
+    ['/ui/index.html', ''],
+    ['/honk/ui/', '/honk'],
+    ['/', ''],
+    ['/doona/', '']
+  ])('derives the API root from %s', (pathname, prefix) => {
+    expect(hostedRoot(at(pathname))).toBe('http://127.0.0.1:9527' + prefix);
+  });
+
+  it('stores a hosted profile when discovery answers or challenges', async () => {
+    for (const fetcher of [answer(200, {'content-type': 'application/json'}, {api_major: 1}), answer(401, {'www-authenticate': 'Bearer'})]) {
+      const storage = storageFrom();
+      expect(await detectHostedBackend(storage, at('/honk/ui/'), fetcher)).toBe(true);
+      expect(readSettings(storage).api).toBe('http://127.0.0.1:9527/honk');
+      expect(readProfiles(storage).profiles[0]?.name).toBe('127.0.0.1:9527');
+    }
+  });
+
+  it('leaves the mock for a static host, a failed request, or an existing choice', async () => {
+    const calls: string[] = [];
+    const html = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response('<!doctype html>', {status: 404, headers: {'content-type': 'text/html'}});
+    }) as unknown as typeof fetch;
+    expect(await detectHostedBackend(storageFrom(), at('/doona/'), html)).toBe(false);
+    expect(calls).toEqual(['http://127.0.0.1:9527/api']);
+    const failing = (async () => {
+      throw new TypeError('offline');
+    }) as unknown as typeof fetch;
+    expect(await detectHostedBackend(storageFrom(), at('/ui/'), failing)).toBe(false);
+    const chosen = storageFrom([['doona-profiles', '[]']]);
+    expect(await detectHostedBackend(chosen, at('/ui/'), answer(200, {'content-type': 'application/json'}, {api_major: 1}))).toBe(false);
+    expect(readProfiles(chosen).profiles).toEqual([]);
+    expect(await detectHostedBackend(storageFrom(), {...at('/ui/'), protocol: 'file:'}, answer(200, {}, {}))).toBe(false);
   });
 });
