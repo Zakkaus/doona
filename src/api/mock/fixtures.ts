@@ -265,36 +265,18 @@ export const runtimeSettings: RuntimeSettings = {
 };
 
 // The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
-type ConfigRule = {id: string; n: number; cond: string; target: string; must: boolean; source: string; note: string; editable: boolean; generated?: boolean};
+// The routing rules the demo's trace and flow evidence refer to, in config order.
+type ConfigRule = {id: string; cond: string; target: string; must: boolean};
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const rules: ConfigRule[] = [
-  {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
-  {
-    id: 'r2',
-    n: 2,
-    cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)',
-    target: 'direct',
-    must: true,
-    source: 'config.dae:39',
-    note: '',
-    editable: true
-  },
-  {id: 'r3', n: 3, cond: 'dip(geoip: private)', target: 'direct', must: true, source: 'config.dae:40', note: 'LAN', editable: true},
-  {id: 'r4', n: 4, cond: 'domain(geosite: cn)', target: 'direct', must: false, source: 'config.dae:41', note: '', editable: true},
-  {id: 'r5', n: 5, cond: 'domain(geosite: telegram)', target: 'proxy', must: false, source: 'config.dae:42', note: '', editable: true},
-  {id: 'r6', n: 6, cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false, source: 'rules.dae:3', note: '電視', editable: true},
-  {id: 'r7', n: 7, cond: 'domain(geosite: discord)', target: 'proxy', must: false, source: 'rules.dae:7', note: '', editable: true},
-  {
-    id: 'r8',
-    n: 8,
-    cond: 'sip(10.0.0.0/24) && dport(25)',
-    target: 'block',
-    must: false,
-    source: '生成，subscription policy',
-    note: '',
-    editable: false,
-    generated: true
-  }
+  {id: 'r1', cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false},
+  {id: 'r2', cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true},
+  {id: 'r3', cond: 'dip(geoip: private)', target: 'direct', must: true},
+  {id: 'r4', cond: 'domain(geosite: cn)', target: 'direct', must: false},
+  {id: 'r5', cond: 'domain(geosite: telegram)', target: 'proxy', must: false},
+  {id: 'r6', cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false},
+  {id: 'r7', cond: 'domain(geosite: discord)', target: 'proxy', must: false},
+  {id: 'r8', cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false}
 ];
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 
@@ -332,13 +314,13 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[], icon: string | null = null): Group {
+function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
   for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
   return {
     id: name,
     name,
-    icon,
+    icon: null,
     config_revision: '40',
     policy: {kind, native: kind},
     members: members.map(id => ({id, name: id, kind: nodes.some(n => n.id === id) ? 'node' : 'group'})),
@@ -647,7 +629,7 @@ node {
 group {
   proxy { policy: fixed(0) }
   resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }
-  gaming { filter: name(jp-01, hk-02) policy: min }
+  gaming { filter: name(jp-01, hk-02) policy: min_last_delay }
   skylink { filter: subtag(sub-c) policy: min_moving_avg }
 }
 
@@ -663,8 +645,8 @@ dns {
 
 routing {
   domain(suffix: doubleclick.net) -> block
-  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> must_direct
-  dip(geoip: private) -> must_direct
+  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)
+  dip(geoip: private) -> direct(must)
   domain(geosite: cn) -> direct
   domain(geosite: telegram) -> proxy
   include rules.dae

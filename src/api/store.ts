@@ -10,7 +10,6 @@ import type {
   FlowList,
   GroupSelectionRequest,
   Node,
-  OperationAccepted,
   Runtime,
   RuntimeSettings,
   RuntimeSettingsPatch
@@ -25,11 +24,13 @@ import type {
   RuntimeMode,
   RuntimeModeRequest,
   ProviderCreate,
+  ProviderList,
+  ProbeRequest,
   NodeCreate
 } from './model';
 import {ApiError} from './error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
-import {shouldRefetch, type ResourceName} from './invalidation';
+import {shouldRefetch} from './invalidation';
 
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -120,7 +121,6 @@ export function useEventFeed() {
 type Resource<T> = {
   key: ResourceKey;
   fetch: (signal: AbortSignal) => Promise<T>;
-  invalidateAs?: ResourceName;
   acceptEvent?: (event: ApiEvent) => boolean;
 };
 
@@ -130,7 +130,7 @@ export function useResource<T>(
 ) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
-  const invalidateAs = resource.invalidateAs ?? resource.key[0];
+  const lane = resource.key[0];
   const [key, setKey] = useState(() => ({api, name, every, enabled, deps}));
   const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
   // Match React's dependency comparison without serializing API object identities.
@@ -180,8 +180,8 @@ export function useResource<T>(
     };
     let listeners = refreshers.get(key.api);
     if (!listeners) refreshers.set(key.api, (listeners = new Set()));
-    // Reuse reconnect invalidation without publishing a synthetic server event.
-    const invalidate = () => (shouldRefetch(invalidateAs, {event: 'stream.ready'}, true) ? refresh.current() : undefined);
+    // Every resource refetches on a manual refresh, the same way it does when the event stream reconnects.
+    const invalidate = () => refresh.current();
     listeners.add(invalidate);
     load();
     const timer = key.every > 0 ? setInterval(refresh.current, key.every) : undefined;
@@ -192,9 +192,9 @@ export function useResource<T>(
       clearInterval(timer);
       refresh.current = () => undefined;
     };
-  }, [key, invalidateAs]);
+  }, [key]);
   useEvents((event, reconnected) => {
-    if (shouldRefetch(resource.invalidateAs ?? resource.key[0], event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
+    if (shouldRefetch(lane, event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
   });
   return {...state, refetch};
 }
@@ -235,21 +235,41 @@ export function useMemoryHistory(capabilities: Capabilities | undefined) {
     {deps: [api, window_seconds, max_points], enabled: limits?.available === true}
   );
 }
+// Walks a cursor-paged list to its end. A cursor the backend no longer honours (400 for an unknown or expired
+// cursor, 410 for a gone snapshot) restarts the walk once from the head, which is what the contract asks for.
+async function walk<P extends {next_cursor: string | null}, T>(
+  page: (cursor: string | undefined) => Promise<P>,
+  take: (acc: T | undefined, p: P) => T
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      let acc: T | undefined;
+      let cursor: string | undefined;
+      do {
+        const result = await page(cursor);
+        acc = take(acc, result);
+        cursor = result.next_cursor ?? undefined;
+      } while (cursor);
+      return acc!;
+    } catch (error) {
+      if (attempt === 0 && error instanceof ApiError && (error.status === 410 || (error.status === 400 && error.code === 'invalid_request'))) continue;
+      throw error;
+    }
+  }
+}
+// The page size a resource advertises, capped at the wire ceiling.
+const pageSize = (max: number | undefined) => Math.min(1000, max ?? 1000);
+
 export function useNodes() {
   const api = getApi();
   return useResource(
     {
       key: ['nodes'],
-      fetch: async signal => {
-        const nodes: Node[] = [];
-        let cursor: string | undefined;
-        do {
-          const result = await api.nodes({cursor, limit: 1000}, signal);
-          nodes.push(...result.nodes);
-          cursor = result.next_cursor ?? undefined;
-        } while (cursor);
-        return nodes;
-      }
+      fetch: signal =>
+        walk(
+          cursor => api.nodes({cursor, limit: 1000}, signal),
+          (acc: Node[] | undefined, page) => [...(acc ?? []), ...page.nodes]
+        )
     },
     {deps: [api], every: 30000}
   );
@@ -373,22 +393,17 @@ export function useRoutingTrace() {
 
 export function useFlows(connection_id?: string) {
   const api = getApi();
+  const limit = pageSize(useCapabilities().data?.resources.flows.max_page_size);
   return useResource(
     {
       key: ['flows', {connection_id}],
-      fetch: async signal => {
-        let cursor: string | undefined;
-        let snapshot: FlowList | undefined;
-        do {
-          const result = await api.flows({network: 'all', state: 'all', connection_id, cursor, limit: 1000}, signal);
-          if (snapshot) snapshot.flows.push(...result.flows);
-          else snapshot = result;
-          cursor = result.next_cursor ?? undefined;
-        } while (cursor);
-        return snapshot;
-      }
+      fetch: signal =>
+        walk(
+          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit}, signal),
+          (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
+        )
     },
-    {deps: [api, connection_id]}
+    {deps: [api, connection_id, limit]}
   );
 }
 
@@ -443,7 +458,9 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   }
   return {
     ...resource,
-    error: error ?? resource.error,
+    // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
+    error: resource.error,
+    actionError: error,
     network,
     setNetwork,
     busy,
@@ -451,20 +468,9 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     clearOverride: () => run('selection', signal => api.clearGroupOverride(id, network, signal)),
     probe: () =>
       run('probe', async signal => {
-        if (!resource.data?.capabilities.probe_transports.includes('tcp')) throw new Error('TCP probes are not supported');
-        const accepted = await api.startProbe(
-          {
-            target: {type: 'group', group_id: id},
-            kind: 'tcp_connect',
-            purpose: 'data',
-            transport: ['tcp'],
-            warmth: 'warm',
-            // Probe whatever the backend can reach; a v6-only node is not a failure.
-            ip_version: capabilities?.resources.probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
-            members: 'direct'
-          },
-          signal
-        );
+        const request = tcpProbe(capabilities, {type: 'group', group_id: id});
+        if (!request || !resource.data?.capabilities.probe_transports.includes('tcp')) throw new Error('TCP probes are not supported');
+        const accepted = await api.startProbe(request, signal);
         const result = await api.pollOperation(accepted, signal);
         if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
         return result.result;
@@ -497,23 +503,27 @@ export function useDatapath(enabled = true) {
 }
 // Runtime-adjustable settings: read with the usual poll, written as one merge PATCH; the response replaces
 // the cached copy so the form reflects what the backend actually kept.
+// A write's reply stands in for the polled value until a newer poll arrives, so the form does not flash back to
+// the old values. The reply is tied to the backend it came from; switching backends forgets it.
+const newest = <T extends {observed_at: string}>(written: T | null, polled: T | undefined) =>
+  written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {deps: [api], enabled});
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<RuntimeSettings | null>(null);
+  const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);
   async function save(patch: RuntimeSettingsPatch): Promise<RuntimeSettings> {
     setBusy(true);
     try {
       const next = await api.patchRuntimeSettings(patch);
-      setSaved(next);
+      setSaved({api, value: next});
       resource.refetch();
       return next;
     } finally {
       setBusy(false);
     }
   }
-  return {...resource, data: saved && (!resource.data || saved.observed_at >= resource.data.observed_at) ? saved : resource.data, busy, save};
+  return {...resource, data: newest(saved?.api === api ? saved.value : null, resource.data), busy, save};
 }
 // The engine's log stream, newest first, bounded; filters restart the stream from the ring. Paused keeps the
 // stream open but stops appending, so the list can be read.
@@ -561,24 +571,36 @@ export function useRuntimeMode(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['runtimeMode'], fetch: signal => api.runtimeMode(signal)}, {deps: [api], enabled});
   const [busy, setBusy] = useState(false);
-  const [set, setSet] = useState<RuntimeMode | null>(null);
+  const [set, setSet] = useState<{api: Api; value: RuntimeMode} | null>(null);
+  const override = set?.api === api ? set.value : null;
   async function change(request: RuntimeModeRequest): Promise<RuntimeMode> {
     setBusy(true);
     try {
       const next = await api.setRuntimeMode(request);
-      setSet(next);
+      setSet({api, value: next});
       resource.refetch();
       return next;
     } finally {
       setBusy(false);
     }
   }
-  return {...resource, data: set && (!resource.data || set.observed_at >= resource.data.observed_at) ? set : resource.data, busy, change};
+  return {...resource, data: newest(override, resource.data), busy, change};
 }
 // Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {
   const api = getApi();
-  return useResource({key: ['providers'], fetch: signal => api.providers(signal)}, {deps: [api], enabled});
+  const limit = pageSize(useCapabilities().data?.resources.providers.max_page_size);
+  return useResource(
+    {
+      key: ['providers'],
+      fetch: signal =>
+        walk(
+          cursor => api.providers({cursor, limit}, signal),
+          (acc: ProviderList | undefined, page) => (acc ? {...acc, providers: [...acc.providers, ...page.providers]} : page)
+        )
+    },
+    {deps: [api, limit], enabled}
+  );
 }
 export function useProviderRefresh(refetch: () => void) {
   const api = getApi();
@@ -622,24 +644,34 @@ export function useNodeManage(refetch: () => void) {
     removeNode: (id: string) => run(id, () => api.deleteNode(id))
   };
 }
+// The one probe shape the UI sends: a warm TCP connect for data, over whatever IP versions the backend reaches
+// (a v6-only node is not a failure). Null when the backend does not advertise that probe.
+export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
+  const probes = capabilities?.resources.probes;
+  if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
+    return null;
+  return {
+    target,
+    kind: 'tcp_connect',
+    purpose: 'data',
+    transport: ['tcp'],
+    warmth: 'warm',
+    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
+    members: 'direct'
+  };
+}
 // One TCP probe of one node, for the node table; the group card probes whole groups.
 export function useNodeProbe(refetch: () => void) {
   const api = getApi();
   const capabilities = useCapabilities();
   const [busy, setBusy] = useState<string | null>(null);
+  const canProbe = tcpProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
   async function probe(nodeId: string) {
-    if (busy) return undefined;
+    const request = tcpProbe(capabilities.data, {type: 'node', node_id: nodeId});
+    if (busy || !request) return undefined;
     setBusy(nodeId);
     try {
-      const accepted = await api.startProbe({
-        target: {type: 'node', node_id: nodeId},
-        kind: 'tcp_connect',
-        purpose: 'data',
-        transport: ['tcp'],
-        warmth: 'warm',
-        ip_version: capabilities.data?.resources.probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
-        members: 'direct'
-      });
+      const accepted = await api.startProbe(request);
       const result = await api.pollOperation(accepted);
       refetch();
       if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
@@ -648,7 +680,22 @@ export function useNodeProbe(refetch: () => void) {
       setBusy(null);
     }
   }
-  return {busy, probe};
+  return {busy, canProbe, probe};
+}
+// Flushing the whole DNS cache, for pages that do not carry the DNS page's full control set.
+export function useDnsFlush() {
+  const api = getApi();
+  const [busy, setBusy] = useState(false);
+  async function flush() {
+    if (busy) return undefined;
+    setBusy(true);
+    try {
+      return await api.flushDnsCache();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return {busy, flush};
 }
 export function useGeodata(enabled = true) {
   const api = getApi();
@@ -679,15 +726,16 @@ export function useConfig(enabled = true) {
 export function useConfigEditor(refetch: () => void) {
   const api = getApi();
   const [busy, setBusy] = useState<'validate' | 'save' | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  async function run<T>(kind: NonNullable<typeof busy>, action: () => Promise<T>): Promise<T | undefined> {
+  // The last failure and the source it concerned, so only that source's card shows a rejected save's diagnostics.
+  const [failure, setFailure] = useState<{error: Error; sourceId: string | null} | null>(null);
+  async function run<T>(kind: NonNullable<typeof busy>, sourceId: string | null, action: () => Promise<T>): Promise<T | undefined> {
     if (busy) return;
     setBusy(kind);
-    setError(null);
+    setFailure(null);
     try {
       return await action();
     } catch (reason) {
-      setError(reason instanceof Error ? reason : new Error(String(reason)));
+      setFailure({error: reason instanceof Error ? reason : new Error(String(reason)), sourceId});
       return undefined;
     } finally {
       setBusy(null);
@@ -695,10 +743,12 @@ export function useConfigEditor(refetch: () => void) {
   }
   return {
     busy,
-    error,
-    validate: (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> => run('validate', () => api.validateConfig(request)),
+    error: failure?.error ?? null,
+    errorSource: failure?.sourceId ?? null,
+    validate: (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> =>
+      run('validate', request.sources.length === 1 ? (request.sources[0].id ?? null) : null, () => api.validateConfig(request)),
     save: (sourceId: string, content: string, sha256: string) =>
-      run('save', async () => {
+      run('save', sourceId, async () => {
         const accepted = await api.replaceConfigSource(sourceId, content, '"' + sha256 + '"');
         const result = await api.pollOperation(accepted);
         refetch();
@@ -717,9 +767,10 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const name = query.name?.trim() || undefined;
   const type = query.type && query.type !== 'all' ? query.type : undefined;
   const src = query.src?.trim() || undefined;
+  const limit = Math.min(200, pageSize(useCapabilities().data?.resources.dns_log.max_page_size));
   return useResource(
-    {key: ['dnsLog', {name, type, src}], fetch: signal => api.dnsLog({name, type: type as never, src, limit: 200}, signal)},
-    {deps: [api, name, type, src], enabled}
+    {key: ['dnsLog', {name, type, src}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)},
+    {deps: [api, name, type, src, limit], enabled}
   );
 }
 export function useDnsCache(enabled = true) {
@@ -727,17 +778,11 @@ export function useDnsCache(enabled = true) {
   return useResource(
     {
       key: ['dnsCache'],
-      fetch: async signal => {
-        let cursor: string | undefined;
-        let snapshot: DnsCacheList | undefined;
-        do {
-          const result = await api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal);
-          if (snapshot) snapshot.entries.push(...result.entries);
-          else snapshot = result;
-          cursor = result.next_cursor ?? undefined;
-        } while (cursor);
-        return snapshot!;
-      }
+      fetch: signal =>
+        walk(
+          cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),
+          (acc: DnsCacheList | undefined, page) => (acc ? {...acc, entries: [...acc.entries, ...page.entries]} : page)
+        )
     },
     {deps: [api], enabled}
   );
@@ -747,7 +792,6 @@ type RuntimeAction = 'reload' | 'suspend' | 'resume';
 export function useRuntimeOperations(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
   const api = getApi();
   const [busy, setBusy] = useState<RuntimeAction | null>(null);
-  const [operation, setOperation] = useState<OperationAccepted | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const active = useRef<AbortController | null>(null);
   useEffect(
@@ -770,7 +814,6 @@ export function useRuntimeOperations(runtime: Runtime | undefined, capabilities:
     setError(null);
     try {
       const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(controller.signal);
-      setOperation(accepted);
       const terminal = await api.pollOperation(accepted, controller.signal);
       if (controller.signal.aborted) return;
       refetch();
@@ -786,11 +829,10 @@ export function useRuntimeOperations(runtime: Runtime | undefined, capabilities:
       if (active.current === controller) {
         active.current = null;
         setBusy(null);
-        setOperation(null);
       }
     }
   }
-  return {busy, operation, error, canRun, run};
+  return {busy, error, canRun, run};
 }
 
 export function useDnsControl() {

@@ -220,7 +220,7 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
           step.data.rules
             .filter(rule => rule.result === 'matched')
             .map(rule => rule.expression ?? rule.rule_id)
-            .join('；') || '—'
+            .join(' · ') || '—'
         ],
         ['ui.outbound', text(step.data.outbound)],
         ['flow.f.must', yesNo(step.data.must)]
@@ -362,18 +362,20 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
       : [])
   ];
 }
-export function memoryFields(memory: RuntimeMemory, label: LabelFn): Array<[string, string]> {
+// The memory figures as rows; `omit` drops the ones a page shows another way (the cgroup bar on the overview).
+export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] = []): Array<[string, string]> {
   const percent = pctU64(memory.cgroup?.current_bytes ?? null, memory.cgroup?.limit_bytes ?? null);
-  return [
-    [label('ov.f.rss'), formatBytes(memory.process?.rss_bytes ?? null)],
-    [label('ov.f.cgroupCurrent'), formatBytes(memory.cgroup?.current_bytes ?? null)],
-    [label('ov.f.cgroupLimit'), formatBytes(memory.cgroup?.limit_bytes ?? null)],
-    [label('ov.f.cgroupPercent'), percent === null ? '—' : Math.round(percent) + '%'],
-    [label('ov.f.oomHigh'), memory.cgroup?.events?.high ?? '—'],
-    [label('ov.f.oom'), memory.cgroup?.events?.oom ?? '—'],
-    [label('ov.f.oomKill'), memory.cgroup?.events?.oom_kill ?? '—'],
-    [label('ov.f.ebpfBytes'), formatBytes(memory.kernel?.ebpf_bytes ?? null)]
+  const rows: Array<[Key, string]> = [
+    ['ov.f.rss', formatBytes(memory.process?.rss_bytes ?? null)],
+    ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null)],
+    ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null)],
+    ['ov.f.cgroupPercent', percent === null ? '—' : Math.round(percent) + '%'],
+    ['ov.f.oomHigh', memory.cgroup?.events?.high ?? '—'],
+    ['ov.f.oom', memory.cgroup?.events?.oom ?? '—'],
+    ['ov.f.oomKill', memory.cgroup?.events?.oom_kill ?? '—'],
+    ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null)]
   ];
+  return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
 }
 /** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
 const durationUnits = new Map<string, Intl.NumberFormat>();

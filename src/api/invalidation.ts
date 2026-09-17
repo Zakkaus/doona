@@ -34,7 +34,21 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll
   'flow.gap': {now: ['flows', 'flow'], poll: []},
   'operation.updated': {now: ['runtime'], poll: []},
   'generation.changed': {
-    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'datapath', 'flows', 'flow'],
+    now: [
+      'capabilities',
+      'runtime',
+      'runtimeSettings',
+      'runtimeMode',
+      'config',
+      'groups',
+      'group',
+      'nodes',
+      'providers',
+      'geodata',
+      'datapath',
+      'flows',
+      'flow'
+    ],
     poll: ['dnsCache']
   }
 };

@@ -1,36 +1,16 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../model';
 import {ApiError} from '../error';
+import {sha256} from '../hash';
+import * as vocab from '../daeVocab';
 
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string};
 type Stored = ConfigSource & {content: string};
 
 const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response']);
-const builtinOutbounds = new Set(['direct', 'block', 'must_direct', 'must_block']);
-const globalKeys = new Set([
-  'tproxy_port',
-  'log_level',
-  'lan_interface',
-  'wan_interface',
-  'allow_insecure',
-  'auto_config_kernel_parameter',
-  'tcp_check_url',
-  'udp_check_dns',
-  'check_interval',
-  'check_tolerance',
-  'dial_mode',
-  'disable_waiting_network',
-  'enable_local_tcp_fast_redirect',
-  'sniffing_timeout',
-  'tls_implementation',
-  'so_mark_reserved_upper',
-  'pprof_port'
-]);
+const builtinOutbounds = new Set(vocab.builtinOutbounds);
+const globalKeys = new Set(vocab.globalKeys);
 
-export async function sha256(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
-export const lineCount = (text: string) => (text === '' ? 0 : text.replace(/\n$/, '').split('\n').length);
+const lineCount = (text: string) => (text === '' ? 0 : text.replace(/\n$/, '').split('\n').length);
 export async function stored(draft: Draft): Promise<Stored> {
   return {...draft, content_sha256: await sha256(draft.content), bytes: new TextEncoder().encode(draft.content).length, line_count: lineCount(draft.content)};
 }
@@ -77,8 +57,10 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
         at(line, 1, 'error', 'not_a_rule', 'Expected "<condition> -> <outbound>", "include <file>" or "fallback: <outbound>"');
         return;
       }
-      if (mode === 'full' && !builtinOutbounds.has(target) && !groups.has(target))
-        at(line, code.length - target.length + 1, 'error', 'unknown_outbound', `No group named "${target}"`);
+      // `name(must)` and `name(mark: 0x800)` address the same outbound as `name`.
+      const outbound = target.replace(/\(.*\)$/, '');
+      if (mode === 'full' && !builtinOutbounds.has(target) && !builtinOutbounds.has(outbound) && !groups.has(outbound))
+        at(line, code.length - target.length + 1, 'error', 'unknown_outbound', `No group named "${outbound}"`);
       if (rule && !/\w\(/.test(rule[1])) at(line, 1, 'warning', 'bare_condition', 'Condition has no function call; it will never match');
     }
   });

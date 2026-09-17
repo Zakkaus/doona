@@ -56,7 +56,6 @@ describe('native transport', () => {
     await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({
       operation_id: 'op-1',
       kind: 'group_update',
-      location: acceptedBody.href,
       retryAfter: 2
     });
     await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
@@ -71,7 +70,6 @@ describe('native transport', () => {
     vi.stubGlobal('fetch', request);
     const api = createApi('https://honk.test');
     const accepted = await api.startReload();
-    expect(accepted.location).toBe(acceptedBody.href);
     const result = api.pollOperation(accepted);
     await vi.advanceTimersByTimeAsync(1999);
     expect(request).toHaveBeenCalledTimes(1);

@@ -37,6 +37,7 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch,
   ProviderList,
+  ProviderQuery,
   Provider,
   Node,
   ProviderCreate,
@@ -46,7 +47,6 @@ import type {
   RuntimeModeRequest,
   LogOptions,
   EffectiveConfig,
-  ConfigSource,
   ConfigValidationRequest,
   ConfigValidationResult
 } from './model';
@@ -80,7 +80,7 @@ export interface Api {
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
   runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
   setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
-  providers(signal?: AbortSignal): Promise<ProviderList>;
+  providers(query?: ProviderQuery, signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
   createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;
   deleteProvider(providerId: string, signal?: AbortSignal): Promise<DeleteCount>;
@@ -89,7 +89,6 @@ export interface Api {
   geodata(signal?: AbortSignal): Promise<GeoData>;
   updateGeodata(signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
-  configSource(sourceId: string, signal?: AbortSignal): Promise<ConfigSource>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;
   replaceConfigSource(sourceId: string, content: string, ifMatch: string, signal?: AbortSignal): Promise<OperationAccepted>;
   patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
@@ -104,5 +103,4 @@ export interface Api {
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
   subscribeLogs(options: LogOptions): Promise<void>;
-  /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
 }

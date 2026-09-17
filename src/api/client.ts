@@ -5,9 +5,9 @@ import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecor
 import {ApiError, responseError} from './error';
 import {readSse} from './sse';
 import {wait} from './wait';
+import {eventKinds} from './selectors';
 
 export {ApiError} from './error';
-const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
@@ -15,9 +15,8 @@ function data<T>(result: {data?: T; response: Response}): T {
   return result.data;
 }
 
-function accepted(result: {data?: Omit<OperationAccepted, 'location' | 'retryAfter'>; response: Response}): OperationAccepted {
-  const body = data(result);
-  return {...body, location: result.response.headers.get('Location') ?? body.href, retryAfter: retryAfter(result.response)};
+function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; response: Response}): OperationAccepted {
+  return {...data(result), retryAfter: retryAfter(result.response)};
 }
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
@@ -50,36 +49,55 @@ export function createApi(base: string, token?: string): Api {
       delay = retryAfter(response);
     }
   }
-  async function subscribeEvents({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
+  // One loop for both SSE feeds: connect with Last-Event-ID, hand frames to `onFrame`, pause Retry-After
+  // between attempts. A 409 cursor expiry restarts from the head; a definitive 4xx ends the stream; anything
+  // else (network failure, 5xx, a malformed frame) is retried with backoff up to 30 s, since the backend or the
+  // link may just be restarting.
+  async function subscribeStream(
+    url: URL,
+    lastEventId: string | undefined,
+    signal: AbortSignal | undefined,
+    onConnectionChange: ((ready: boolean) => void) | undefined,
+    onFrame: (event: string, data: string, cursor: string) => void
+  ): Promise<void> {
     let cursor = lastEventId;
-    const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
-    if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
+    let backoff = 1;
     try {
       while (!signal?.aborted) {
         onConnectionChange?.(false);
-        const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
-        const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
-        if (!response.ok) {
-          const error = await responseError(response);
-          if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
-            cursor = undefined;
-            continue;
+        try {
+          const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
+          const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
+          if (!response.ok) {
+            const error = await responseError(response);
+            if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
+              cursor = undefined;
+              continue;
+            }
+            throw error;
           }
-          throw error;
+          if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
+          await readSse(
+            response.body,
+            frame => {
+              if (frame.id !== undefined) cursor = frame.id;
+              if (frame.event === 'stream.ready') {
+                backoff = 1;
+                onConnectionChange?.(true);
+              }
+              if (frame.data) onFrame(frame.event, frame.data, cursor ?? '');
+            },
+            signal
+          );
+          onConnectionChange?.(false);
+          await wait(retryAfter(response), signal);
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429) throw error;
+          onConnectionChange?.(false);
+          await wait(backoff, signal);
+          backoff = Math.min(backoff * 2, 30);
         }
-        if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
-        await readSse(
-          response.body,
-          frame => {
-            if (frame.id !== undefined) cursor = frame.id;
-            if (!frame.data || !eventKinds.includes(frame.event as EventKind)) return;
-            if (frame.event === 'stream.ready') onConnectionChange?.(true);
-            onEvent({id: cursor ?? '', event: frame.event, data: JSON.parse(frame.data)} as ApiEvent);
-          },
-          signal
-        );
-        onConnectionChange?.(false);
-        await wait(retryAfter(response), signal);
       }
     } catch (error) {
       if (!signal?.aborted) throw error;
@@ -87,44 +105,20 @@ export function createApi(base: string, token?: string): Api {
       onConnectionChange?.(false);
     }
   }
-  // The log stream follows the event stream's rules: stream.ready first, Last-Event-ID to resume, 409 when
-  // the cursor is gone, a Retry-After pause between attempts.
-  async function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
-    let cursor = lastEventId;
+  function subscribeEvents({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
+    const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
+    if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
+    return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
+      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data: JSON.parse(data)} as ApiEvent);
+    });
+  }
+  function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
     const url = new URL(baseUrl + '/api/v1/logs', globalThis.location?.href);
     if (level) url.searchParams.set('level', level);
     if (target) url.searchParams.set('target', target);
-    try {
-      while (!signal?.aborted) {
-        onConnectionChange?.(false);
-        const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
-        const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
-        if (!response.ok) {
-          const error = await responseError(response);
-          if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
-            cursor = undefined;
-            continue;
-          }
-          throw error;
-        }
-        if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
-        await readSse(
-          response.body,
-          frame => {
-            if (frame.id !== undefined) cursor = frame.id;
-            if (frame.event === 'stream.ready') onConnectionChange?.(true);
-            if (frame.event === 'log' && frame.data) onRecord({id: cursor ?? '', ...(JSON.parse(frame.data) as LogRecord)});
-          },
-          signal
-        );
-        onConnectionChange?.(false);
-        await wait(retryAfter(response), signal);
-      }
-    } catch (error) {
-      if (!signal?.aborted) throw error;
-    } finally {
-      onConnectionChange?.(false);
-    }
+    return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
+      if (event === 'log') onRecord({id: cursor, ...(JSON.parse(data) as LogRecord)});
+    });
   }
   return {
     discovery: async signal => data(await client.GET('/api', {signal})),
@@ -167,7 +161,7 @@ export function createApi(base: string, token?: string): Api {
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
     runtimeMode: async signal => data(await client.GET('/api/v1/runtime/mode', {signal})),
     setRuntimeMode: async (body, signal) => data(await client.PUT('/api/v1/runtime/mode', {body, signal})),
-    providers: async signal => data(await client.GET('/api/v1/providers', {params: {query: {limit: 1000}}, signal})),
+    providers: async (query, signal) => data(await client.GET('/api/v1/providers', {params: {query}, signal})),
     refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, signal})),
     createProvider: async (body, signal) => data(await client.POST('/api/v1/providers', {body, signal})),
     deleteProvider: async (id, signal) => data(await client.DELETE('/api/v1/providers/{id}', {params: {path: {id}}, signal})),
@@ -176,7 +170,6 @@ export function createApi(base: string, token?: string): Api {
     geodata: async signal => data(await client.GET('/api/v1/geodata', {signal})),
     updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {signal})),
     config: async signal => data(await client.GET('/api/v1/config', {signal})),
-    configSource: async (source_id, signal) => data(await client.GET('/api/v1/config/sources/{source_id}', {params: {path: {source_id}}, signal})),
     validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
     replaceConfigSource: async (source_id, content, ifMatch, signal) =>
       accepted(await client.PUT('/api/v1/config/sources/{source_id}', {params: {path: {source_id}, header: {'If-Match': ifMatch}}, body: {content}, signal})),

@@ -38,7 +38,7 @@ export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> &
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
 export type ErrorResponse = Schema['ErrorResponse'];
-export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};
+export type OperationAccepted = Schema['OperationAccepted'] & {retryAfter: number};
 // The generator narrows the open OperationCommon.result object to Record<string, never>.
 type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {
   kind: K;
@@ -70,6 +70,7 @@ export type RuntimeMode = Schema['RuntimeMode'];
 export type RuntimeModeRequest = Schema['RuntimeModeRequest'];
 export type Provider = Schema['Provider'];
 export type ProviderList = Schema['ProviderList'];
+export type ProviderQuery = operations['listProviders']['parameters']['query'];
 export type ProviderCreate = Schema['ProviderCreate'];
 export type NodeCreate = Schema['NodeCreate'];
 export type GeoData = Schema['GeoData'];

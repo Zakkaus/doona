@@ -139,7 +139,7 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
   for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const)
     if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'invalid_config', 'Invalid group configuration value');
   if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))
-    throw new ApiError(422, 'invalid_member', 'Default member is not in this group');
+    throw new ApiError(422, 'unsupported_value', 'Default member is not in this group');
   if (config.check_url !== null) {
     let url: URL;
     try {
