@@ -1,7 +1,7 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
-import {iconForName, iconSource, iconUrl, useIconOverrides, useIconPack, type Brand} from './brand';
+import {iconForName, iconSource, useIconOverrides} from './brand';
 import {
   Button as RButton,
   Link as RLink,
@@ -1086,29 +1086,14 @@ export function csvLine(values: Array<string | number | null | undefined>): stri
 
 // A group's or node's own icon: the user's mapping, else the one the configuration names; null otherwise.
 export function useNamedIcon(name: string, icon?: string | null): string | null {
-  const pack = useIconPack();
   const overrides = useIconOverrides();
   const value = iconForName(name, icon, overrides);
-  return value ? iconSource(pack, value) : null;
+  return value ? iconSource(value) : null;
 }
 export function NamedIcon({name, icon, fallback}: {name: string; icon?: string | null; fallback?: ReactNode}) {
   const src = useNamedIcon(name, icon);
   if (!src) return fallback ?? null;
   return <img className="flag brand" src={src} alt="" loading="lazy" onError={event => (event.currentTarget.hidden = true)} />;
-}
-// A service's icon from the configured pack, the flag's size; nothing when no pack is set or the pack lacks it.
-export function BrandIcon({brand, size}: {brand: Brand | null; size?: 'lg'}) {
-  const pack = useIconPack();
-  if (!pack || !brand) return null;
-  return (
-    <img
-      className={size ? 'flag brand ' + size : 'flag brand'}
-      src={iconUrl(pack, brand)}
-      alt=""
-      loading="lazy"
-      onError={event => (event.currentTarget.hidden = true)}
-    />
-  );
 }
 
 export function useMediaQuery(query: string) {

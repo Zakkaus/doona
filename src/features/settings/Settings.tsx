@@ -7,7 +7,6 @@ import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
-import {builtinPack, setIconPack, useIconPack} from '../../ui/brand';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {CustomIcons} from './CustomIcons';
 
@@ -283,7 +282,6 @@ export function Settings() {
         </div>
       </section>
       <CustomIconsCard />
-      <IconPackCard />
       <section className="rp-card" aria-labelledby="settings-about">
         <h2 className="rp-h3" id="settings-about">
           {t('settings.about')}
@@ -328,46 +326,6 @@ export function Settings() {
   );
 }
 
-// Brand icons are optional and third-party: the choice is a preset or a prefix, and the card says what it sends where.
-function IconPackCard() {
-  const t = useT();
-  const pack = useIconPack();
-  const preset = pack === builtinPack ? builtinPack : pack ? 'custom' : '';
-  const [custom, setCustom] = useState(preset === 'custom' ? pack : '');
-  return (
-    <section className="rp-card" aria-labelledby="settings-icons">
-      <h2 className="rp-h3" id="settings-icons">
-        {t('settings.icons')}
-      </h2>
-      <div className="rp-toolbar">
-        <LabeledSelect
-          label={t('settings.iconPack')}
-          value={preset}
-          onChange={value => setIconPack(value === 'custom' ? custom || 'https://' : value)}
-          items={[
-            {id: builtinPack, label: t('settings.iconsBuiltin')},
-            {id: '', label: t('settings.iconsOff')},
-            {id: 'custom', label: t('settings.iconsCustom')}
-          ]}
-        />
-        {preset === 'custom' && (
-          <TextField
-            side
-            label={t('settings.iconPrefix')}
-            value={custom}
-            width={360}
-            placeholder="https://example.org/icons/"
-            onChange={value => {
-              setCustom(value);
-              if (/^https?:\/\/\S+\/$/.test(value)) setIconPack(value);
-            }}
-          />
-        )}
-      </div>
-      <span className="rp-label">{t('settings.iconsNote')}</span>
-    </section>
-  );
-}
 function CustomIconsCard() {
   const t = useT();
   return (

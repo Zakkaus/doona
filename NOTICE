@@ -28,14 +28,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Brand icons
-The PNG artwork in public/brands is collected from community icon sets for proxy clients:
-Koolson/Qure, Orz-3/mini, lige47/QuanX-icon-rule and Semporia/Hand-Painted-icon
-(https://github.com/Koolson/Qure, https://github.com/Orz-3/mini,
-https://github.com/lige47/QuanX-icon-rule, https://github.com/Semporia/Hand-Painted-icon).
-Services those sets lack use the site's own favicon, fetched through Google's or DuckDuckGo's favicon
-service at build time; regions use flag-icons flags rasterised at build time. The pack repositories state no licence; the logos remain the trademarks of
-their owners and are shown only to identify the service a rule or connection refers to. tools/icons/packs.json and
-src/ui/brands.json record where each file came from. Deleting public/brands removes them; the
-UI then shows no icons and works unchanged.

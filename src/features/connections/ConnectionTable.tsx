@@ -5,8 +5,7 @@ import {OutboundMark} from '../policies/Flag';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, BrandIcon, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
-import {brandFor} from '../../ui/brand';
+import {Badge, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
 // Match the native table's measured row and collapsed-border header heights.
@@ -59,12 +58,7 @@ export function ConnectionTable({
   }, [ref, selectedIndex]);
   const renderConnection = (c: Connection) => {
     const cells: Record<string, React.ReactNode> = {
-      dst: (
-        <span className="rp-chain">
-          <BrandIcon brand={brandFor(c.domain || c.dst)} />
-          <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>
-        </span>
-      ),
+      dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
       chain: (
         <span className="rp-chain">

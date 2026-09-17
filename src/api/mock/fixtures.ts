@@ -308,6 +308,12 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
   };
 }
+// A configured group icon for the demo: a plain 16px gamepad drawn inline, so nothing is bundled or fetched.
+const gamingIcon =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="8" rx="4" fill="#907aa9"/><path d="M4 6.5v3M2.5 8h3" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="7" r="0.9" fill="#fff"/><circle cx="12.5" cy="9" r="0.9" fill="#fff"/></svg>'
+  );
 // What an automatic policy would pick on its own: the healthy member with the lowest latency, else the first.
 export function policyPick(group: Group): string {
   const ranked = group.runtime.health
@@ -364,7 +370,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
     group('resilient', 'score', ['hk-01', 'sg-01', 'us-01'], 'sg-01', nodes),
-    group('gaming', 'urltest', ['jp-01', 'hk-02'], 'hk-02', nodes, 'brands/steam.png')
+    group('gaming', 'urltest', ['jp-01', 'hk-02'], 'hk-02', nodes, gamingIcon)
   ];
   const regions: Array<[string, number]> = [
     ['香港', 60],

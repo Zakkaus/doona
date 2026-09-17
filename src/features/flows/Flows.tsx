@@ -4,22 +4,7 @@ import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
 import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
 import {OutboundMark} from '../policies/Flag';
-import {
-  Badge,
-  BrandIcon,
-  Button,
-  DataTable,
-  DetailPanel,
-  ErrorMessage,
-  Loading,
-  TextTooltip,
-  Kv,
-  LabeledSelect,
-  Segmented,
-  panelQuery,
-  useMediaQuery
-} from '../../ui/ui';
-import {brandFor} from '../../ui/brand';
+import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
@@ -160,10 +145,7 @@ export function FlowRecords({go, query}: PageProps) {
             {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4}
           ]}
           render={f => [
-            <span className="rp-chain">
-              <BrandIcon brand={brandFor(f.input?.domain || f.input?.dst)} />
-              <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>
-            </span>,
+            <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
             <span className="rp-chain">
               <OutboundMark name={f.outbound === 'direct' || f.outbound === 'block' ? f.outbound : (f.chain.at(-1) ?? null)} />
               <TextTooltip>{chainLabel(f, t)}</TextTooltip>

@@ -1,7 +1,7 @@
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {Button, TextField, toast} from '../../ui/ui';
-import {iconSource, setIconOverrides, useIconOverrides, useIconPack} from '../../ui/brand';
+import {iconSource, setIconOverrides, useIconOverrides} from '../../ui/brand';
 import Close from '../../ui/icons/Close';
 
 const uploadSize = 64;
@@ -20,16 +20,14 @@ async function toDataUrl(file: File): Promise<string> {
   return canvas.toDataURL('image/png');
 }
 
-// The user's own group and node icons, kept in this browser: a name and an http(s) URL, a bundled brand id,
-// or an uploaded image. Mirrors the custom-icon list Clash Meta dashboards offer.
+// The user's own group and node icons, kept in this browser: a name and an http(s) URL or an uploaded image. Mirrors the custom-icon list Clash Meta dashboards offer.
 export function CustomIcons() {
   const t = useT();
-  const pack = useIconPack();
   const overrides = useIconOverrides();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const file = useRef<HTMLInputElement>(null);
-  const valid = name.trim() !== '' && iconSource(pack || 'builtin', icon.trim()) !== null;
+  const valid = name.trim() !== '' && iconSource(icon.trim()) !== null;
   const add = () => {
     const entry = {name: name.trim(), icon: icon.trim()};
     setIconOverrides([...overrides.filter(item => item.name !== entry.name), entry]);
@@ -44,9 +42,9 @@ export function CustomIcons() {
           label={t('settings.iconValue')}
           value={icon}
           width={360}
-          placeholder="https://… / netflix / data:image/png;base64,…"
+          placeholder="https://…"
           onChange={setIcon}
-          isInvalid={icon.trim() !== '' && iconSource(pack || 'builtin', icon.trim()) === null}
+          isInvalid={icon.trim() !== '' && iconSource(icon.trim()) === null}
           description={t('settings.iconValueHelp')}
         />
         <Button onPress={() => file.current?.click()}>{t('settings.iconUpload')}</Button>
@@ -69,7 +67,7 @@ export function CustomIcons() {
       {overrides.length > 0 && (
         <div className="rp-list">
           {overrides.map(item => {
-            const src = iconSource(pack || 'builtin', item.icon);
+            const src = iconSource(item.icon);
             return (
               <div className="rp-row" key={item.name}>
                 <span className="rp-chain">
