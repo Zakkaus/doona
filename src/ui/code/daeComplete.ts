@@ -27,7 +27,7 @@ const conditions = ['domain', 'dip', 'sip', 'dport', 'sport', 'l4proto', 'ipvers
   type: 'function',
   apply: label + '('
 }));
-const matchers = ['geosite', 'geoip', 'suffix', 'full', 'keyword', 'regex'].map(label => ({label, type: 'constant', apply: label + ': '}));
+const matchers = ['geosite', 'geoip', 'suffix', 'full', 'keyword', 'regex'].map(label => ({label, type: 'constant', apply: label + ':'}));
 const policies = ['fixed', 'min', 'min_avg10', 'min_moving_avg', 'random'].map(label => ({label, type: 'constant'}));
 const builtins = ['direct', 'block', 'must_direct', 'must_block'].map(label => ({label, type: 'keyword'}));
 const routingWords = [

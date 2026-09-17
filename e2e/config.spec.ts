@@ -76,18 +76,22 @@ test.describe('without configuration readback', () => {
   });
 });
 
-test('the quick setup writes a main source from a subscription URL', async ({page}) => {
+test('the quick setup rewrites subscriptions and groups and keeps the rules', async ({page}) => {
   await page.goto('/#/config?tab=setup');
-  const dialog = page.getByRole('region', {name: 'Quick setup'});
-  const apply = dialog.getByRole('button', {name: 'Overwrite and reload', exact: true});
-  await expect(apply).toBeDisabled();
-  await dialog.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
-  await dialog.getByLabel('Group name', {exact: true}).fill('airport');
-  await expect(dialog.locator('.cm-content')).toContainText("sub: 'https://example.org/sub?token=abc&type=v2ray'");
-  await expect(dialog.locator('.cm-content')).toContainText('fallback: airport');
-  await apply.click();
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  // The form starts from the main source: one subscription, four groups.
+  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://<redacted>');
+  await expect(card.getByLabel('Group name', {exact: true})).toHaveCount(4);
+  await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
+  await card.getByRole('button', {name: 'Add a group', exact: true}).click();
+  await card.getByLabel('Group name', {exact: true}).nth(4).fill('spare');
+  await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
+  await expect(card.locator('.cm-content')).toContainText('spare { policy: min_moving_avg }');
+  await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
-  await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('airport { filter: subtag(sub) policy: min_moving_avg }');
+  const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
+  await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
+  await expect(main).toContainText('spare { policy: min_moving_avg }');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });

@@ -144,6 +144,15 @@ export function Config({go, query}: PageProps) {
           value={tab}
           onChange={next => navigate(within(query, {tab: next}))}
           items={[
+            ...(mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined
+              ? [
+                  {
+                    id: 'setup',
+                    label: t('config.wizard'),
+                    content: <Wizard main={mainSource} editor={editor} onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))} />
+                  }
+                ]
+              : []),
             {
               id: 'source',
               label: t('config.tabSource'),
@@ -200,15 +209,6 @@ export function Config({go, query}: PageProps) {
                 </>
               )
             },
-            ...(mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined
-              ? [
-                  {
-                    id: 'setup',
-                    label: t('config.wizard'),
-                    content: <Wizard main={mainSource} editor={editor} onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))} />
-                  }
-                ]
-              : []),
             {
               id: 'validate',
               label: t('config.tabValidate'),
