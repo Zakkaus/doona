@@ -20,6 +20,8 @@ import type {
   ProbeRequest,
   ConnectionList,
   ConnectionQuery,
+  BulkCloseQuery,
+  BulkCloseResult,
   FlowList,
   FlowDetail,
   FlowQuery,
@@ -78,6 +80,8 @@ export interface Api {
   dnsLog(query?: DnsLogQuery, signal?: AbortSignal): Promise<DnsLogList>;
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
+  /** Closes every closable connection the filters select; unfiltered needs all=true. */
+  closeConnections(query: BulkCloseQuery, signal?: AbortSignal): Promise<BulkCloseResult>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
   runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
   setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;

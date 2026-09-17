@@ -26,6 +26,8 @@ import type {
   ProviderCreate,
   ProviderList,
   ProbeRequest,
+  BulkCloseQuery,
+  BulkCloseResult,
   NodeCreate
 } from './model';
 import {ApiError} from './error';
@@ -301,13 +303,15 @@ export function useConnectionClose(refetch: () => void) {
       setBusy(null);
     }
   }
-  // One request per connection, in order; a 409 is a connection the backend does not own and counts as skipped.
-  async function closeAll(ids: string[]): Promise<{closed: number; skipped: number}> {
+  // Bulk close for a selection the contract can express (network and source IP); anything narrower (a text
+  // or outbound filter) closes one by one, where a 409 is a connection the backend does not own.
+  async function closeAll(selection: {query: BulkCloseQuery} | {ids: string[]}): Promise<BulkCloseResult> {
     if (busy) return {closed: 0, skipped: 0};
     setBusy('all');
     const tally = {closed: 0, skipped: 0};
     try {
-      for (const id of ids) {
+      if ('query' in selection) return await api.closeConnections(selection.query);
+      for (const id of selection.ids) {
         try {
           await api.closeConnection(id);
           tally.closed += 1;

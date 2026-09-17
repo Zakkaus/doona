@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
-import {outboundLabel, preferredHealth} from '../../api/selectors';
+import {outboundLabel, policyKindLabels, preferredHealth} from '../../api/selectors';
 import {Button, Chips, Light, NodeTile} from '../../ui/ui';
 import {OutboundMark} from '../policies/Mark';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
@@ -31,7 +31,7 @@ export function FlowMap({
   // A row shows a handful of rules; the rest unfold on demand so a big config stays one screen.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const shownRules = 6;
-  const policy = useMemo(() => new Map(groups.map(group => [group.name, group.policy.kind])), [groups]);
+  const policy = useMemo(() => new Map(groups.map(group => [group.name, t(policyKindLabels[group.policy.kind])])), [groups, t]);
   const health = useMemo(() => new Map(nodes.map(node => [node.name, preferredHealth(node)])), [nodes]);
   const label = (node: MapNode) => (node.unknown ? t('flow.mapUnknown') : node.label);
   const n = (value: number) => formatNumber(value, locale);

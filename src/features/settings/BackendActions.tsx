@@ -87,7 +87,7 @@ export function BackendActionsCard() {
             {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
           </Button>
         )}
-        {resources?.connections.can_close && <CloseAllButton ids={live} closing={closing} />}
+        {resources?.connections.can_close && <CloseAllButton count={live.length} selection={{query: {all: true}}} closing={closing} />}
         {resources?.geodata.can_update && (
           <Button
             secondary

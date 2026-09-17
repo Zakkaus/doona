@@ -162,6 +162,7 @@ export function createApi(base: string, token?: string): Api {
     closeConnection: async (connection_id, signal) => {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
     },
+    closeConnections: async (query, signal) => data(await client.DELETE('/api/v1/connections', {params: {query}, signal})),
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
     runtimeMode: async signal => data(await client.GET('/api/v1/runtime/mode', {signal})),
     setRuntimeMode: async (body, signal) => data(await client.PUT('/api/v1/runtime/mode', {body, signal})),

@@ -21,6 +21,7 @@ import type {
   Version
 } from '../model';
 import {createFlow, flowFields, type ConnectionSeed} from './flows';
+import {rules, type ConfigRule} from './rules';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
 const now = Date.now();
@@ -265,21 +266,11 @@ export const runtimeSettings: RuntimeSettings = {
   flows: {max_flows: 4096, retention_seconds: 300}
 };
 
-// The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
-// The routing rules the demo's trace and flow evidence refer to, in config order.
-type ConfigRule = {id: string; cond: string; target: string; must: boolean};
+// The demo routing dictionary the mock's trace evaluates and its flows refer to; /rules reads the same lines
+// back off the config text with their ids.
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
-export const rules: ConfigRule[] = [
-  {id: 'r1', cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false},
-  {id: 'r2', cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true},
-  {id: 'r3', cond: 'dip(geoip: private)', target: 'direct', must: true},
-  {id: 'r4', cond: 'domain(geosite: cn)', target: 'direct', must: false},
-  {id: 'r5', cond: 'domain(geosite: telegram)', target: 'proxy', must: false},
-  {id: 'r6', cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false},
-  {id: 'r7', cond: 'domain(geosite: discord)', target: 'proxy', must: false},
-  {id: 'r8', cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false}
-];
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
+export {rules};
 
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {

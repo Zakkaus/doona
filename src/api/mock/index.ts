@@ -667,6 +667,30 @@ export function createMockApi(): Api {
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
     },
+    closeConnections: async (query, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.connections.can_close) throw new ApiError(404, 'capability_not_supported', 'Closing connections is unavailable');
+      const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
+      const type = query?.type ?? 'all';
+      if (type === 'all' && !src && !query?.all) throw new ApiError(400, 'invalid_request', 'An unfiltered close needs all=true');
+      const lists: Array<'tcp' | 'udp'> = type === 'tcp' ? ['tcp'] : type === 'udp' ? ['udp'] : ['tcp', 'udp'];
+      const selected = lists.flatMap(network => connections[network].filter(c => !src || sourceIp(c.src) === src).map(c => ({network, c})));
+      const max = capabilities.resources.connections.max_bulk_close ?? 1000;
+      if (selected.length > max) throw new ApiError(413, 'request_too_large', `More than ${max} connections match`);
+      let closed = 0;
+      let skipped = 0;
+      for (const {network, c} of selected) {
+        if (c.observed_by === 'ebpf') {
+          skipped += 1;
+          continue;
+        }
+        closeLive(c, 'closed_by_request');
+        connections[network].splice(connections[network].indexOf(c), 1);
+        closed += 1;
+      }
+      return {closed, skipped};
+    },
     runtimeMode: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');

@@ -150,7 +150,19 @@ export function Connections({go, query}: PageProps) {
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
         <span className="rp-grow" />
-        {canClose && <CloseAllButton ids={shown.map(c => c.id)} closing={closing} onStart={() => select(null)} />}
+        {canClose && (
+          <CloseAllButton
+            count={shown.length}
+            // Network and source-IP filters are the bulk endpoint's own; a text or outbound filter is not.
+            selection={
+              out === 'all' && (src || !needle)
+                ? {query: {type: network as 'all' | 'tcp' | 'udp', src: src ?? undefined, all: true}}
+                : {ids: shown.map(c => c.id)}
+            }
+            closing={closing}
+            onStart={() => select(null)}
+          />
+        )}
         <Button
           isDisabled={!shown.length}
           onPress={() =>

@@ -57,6 +57,15 @@ export function sourceIp(src: string | undefined): string | undefined {
   return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
 }
 
+// Group policy kinds in the user's language.
+export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
 // Built-in outbounds read in the user's language; group and node names stay as configured.
 // The node a group currently exits through, following nested groups by their TCP selection; undefined when the
 // chain is broken or cycles. Summaries carry member ids only, so node names come from the node list.

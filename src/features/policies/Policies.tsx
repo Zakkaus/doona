@@ -2,21 +2,11 @@ import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
-import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
-import type {Group, HealthObservation} from '../../api/model';
+import {groupConfigFields, groupLeaf, policyKindLabels, preferredHealth, probeSummary} from '../../api/selectors';
+import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import type {PageProps} from '../types';
-import type {Key} from '../../i18n/messages';
-
-const policyKinds: Record<Group['policy']['kind'], Key> = {
-  selector: 'policy.kind.selector',
-  urltest: 'policy.kind.urltest',
-  loadbalance: 'policy.kind.loadbalance',
-  fallback: 'policy.kind.fallback',
-  random: 'policy.kind.random',
-  score: 'policy.kind.score'
-};
 
 function PolicyCard({
   id,
@@ -68,7 +58,7 @@ function PolicyCard({
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3">{g.name}</h3>
-              <Badge>{t(policyKinds[g.policy.kind])}</Badge>
+              <Badge>{t(policyKindLabels[g.policy.kind])}</Badge>
               <Light small tone="ok">
                 {t('policy.healthy', {n: healthy})}
               </Light>

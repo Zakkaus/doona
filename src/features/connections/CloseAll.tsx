@@ -2,10 +2,20 @@ import type {useConnectionClose} from '../../api/store';
 import {useT} from '../../i18n';
 import {Button, ModalDialog, errorText, toast} from '../../ui/ui';
 
-// Closes every listed connection one request at a time, behind a confirmation; the tally names what the
-// backend did not own and therefore skipped. The page owns `closing`, so its row buttons and this one
-// share one busy state.
-export function CloseAllButton({ids, closing, onStart}: {ids: string[]; closing: ReturnType<typeof useConnectionClose>; onStart?: () => void}) {
+// Closes the listed connections behind a confirmation; the tally names what the backend did not own and
+// therefore skipped. The page owns `closing`, so its row buttons and this one share one busy state, and it
+// says whether its selection is one the bulk endpoint can express or a list to close one by one.
+export function CloseAllButton({
+  count,
+  selection,
+  closing,
+  onStart
+}: {
+  count: number;
+  selection: Parameters<ReturnType<typeof useConnectionClose>['closeAll']>[0];
+  closing: ReturnType<typeof useConnectionClose>;
+  onStart?: () => void;
+}) {
   const t = useT();
   return (
     <ModalDialog
@@ -13,7 +23,7 @@ export function CloseAllButton({ids, closing, onStart}: {ids: string[]; closing:
       narrow
       alert
       trigger={
-        <Button negative quiet isDisabled={!ids.length || !!closing.busy} isPending={closing.busy === 'all'}>
+        <Button negative quiet isDisabled={!count || !!closing.busy} isPending={closing.busy === 'all'}>
           {t('conn.closeAll')}
         </Button>
       }
@@ -25,7 +35,7 @@ export function CloseAllButton({ids, closing, onStart}: {ids: string[]; closing:
             onPress={() => {
               close();
               onStart?.();
-              void closing.closeAll(ids).then(
+              void closing.closeAll(selection).then(
                 tally => toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped})),
                 (error: unknown) => toast('negative', t('conn.closeFailed', {error: errorText(error)}))
               );
@@ -36,7 +46,7 @@ export function CloseAllButton({ids, closing, onStart}: {ids: string[]; closing:
         </>
       )}
     >
-      <span className="rp-label">{t('conn.closeAllHelp', {n: ids.length})}</span>
+      <span className="rp-label">{t('conn.closeAllHelp', {n: count})}</span>
     </ModalDialog>
   );
 }
