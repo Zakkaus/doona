@@ -3,9 +3,9 @@ import {expect, routes, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 test('Disclosure toggles with Enter and Space and keeps focus on its trigger', async ({page}) => {
-  await page.goto('/#/policies');
+  await page.goto('/#/rules?tab=trace');
   const disclosure = page.locator('.rp-disclosure').first();
-  const trigger = disclosure.getByRole('button', {name: 'Config', exact: true});
+  const trigger = disclosure.getByRole('button', {name: 'Advanced', exact: true});
   const panel = disclosure.getByRole('group', {includeHidden: true});
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(panel).toBeHidden();

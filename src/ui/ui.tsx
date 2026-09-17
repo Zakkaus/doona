@@ -1113,7 +1113,19 @@ export function useMediaQuery(query: string) {
 
 // Detail beside a list: a non-modal side panel when the page is wide, a dismissable drawer otherwise.
 // Place it as the last child of a `.rp-with-panel` container; the container lays the list and panel out.
-export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {
+export function DetailPanel({
+  open,
+  title,
+  onClose,
+  children,
+  wide: wider
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  wide?: boolean;
+}) {
   const t = useT();
   const wide = useMediaQuery(panelQuery);
   useEffect(() => {
@@ -1135,7 +1147,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   );
   if (wide)
     return (
-      <aside className="rp-panel rp-card" aria-label={title}>
+      <aside className={cx('rp-panel rp-card', wider && 'wide')} aria-label={title}>
         {head}
         {children}
       </aside>
@@ -1143,7 +1155,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   return (
     <ModalOverlay className="rp-underlay rp-drawer-underlay" isDismissable isOpen onOpenChange={o => !o && onClose()}>
       <Modal>
-        <Dialog className="rp-dialog rp-drawer" aria-label={title}>
+        <Dialog className={cx('rp-dialog rp-drawer', wider && 'wide')} aria-label={title}>
           {head}
           {children}
         </Dialog>
