@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {createApi, ApiError} from './client';
+import {createApi} from './client';
+import {ApiError} from './error';
 import type {ApiEvent} from './model';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};

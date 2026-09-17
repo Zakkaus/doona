@@ -46,6 +46,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll
       'nodes',
       'providers',
       'geodata',
+      'rules',
       'datapath',
       'flows',
       'flow'

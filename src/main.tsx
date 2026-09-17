@@ -3,7 +3,7 @@ import {StrictMode} from 'react';
 import './fonts.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
-import {detectHostedBackend} from './features/settings/settings';
+import {detectHostedBackend} from './api/profiles';
 
 stampAppearance();
 // One discovery request on a first visit, so a copy hosted by the backend opens against it.

@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, readSettings, shouldOpenSettings, writeProfiles} from './settings';
+import {detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../../api/profiles';
+import {readSettings, shouldOpenSettings} from './settings';
 
 describe('backend URL normalization', () => {
   it.each([

@@ -370,3 +370,17 @@ it('uses fallback when every earlier predicate is false', async () => {
   expect(evaluation.rules.slice(0, -1).every(r => r.result === 'not_matched')).toBe(true);
   expect(evaluation.rules.at(-1)).toMatchObject({rule_id: 'fallback', result: 'matched'});
 });
+
+it('serves the base profile from storage and refuses its unavailable resources', async () => {
+  vi.stubGlobal('localStorage', {getItem: (key: string) => (key === 'doona-mock-profile' ? 'base' : null)});
+  try {
+    const base = await createMockApi().capabilities();
+    expect(base.profiles).toEqual(['base']);
+    expect(base.resources.runtime_outbounds.available).toBe(false);
+    expect(base.resources.traffic_history.available).toBe(false);
+    await expect(createMockApi().runtimeOutbounds()).rejects.toMatchObject({status: 404});
+    await expect(createMockApi().trafficHistory()).rejects.toMatchObject({status: 404});
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

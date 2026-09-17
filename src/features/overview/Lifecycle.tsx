@@ -15,15 +15,7 @@ export function LifecycleActions({runtime, capabilities}: {runtime: ReturnType<t
   const run = async (kind: 'reload' | 'suspend' | 'resume') => {
     try {
       const result = await operations.run(kind);
-      if (result)
-        toast(
-          result.status === 'succeeded' ? 'positive' : 'negative',
-          t('ov.operationResult', {
-            action: t(operationLabels[kind]),
-            status: t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed'),
-            id: result.operation_id
-          })
-        );
+      if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
     } catch (error) {
       toast('negative', t('ov.operationError', {error: errorText(error)}));
     }

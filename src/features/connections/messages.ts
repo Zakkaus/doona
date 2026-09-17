@@ -2,6 +2,17 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'conn.chain': '鏈',
+    'conn.rule': '規則',
+    'conn.recomputed': '重算',
+    'conn.state.observed': '觀測中',
+    'conn.state.routing': '路由中',
+    'conn.state.dialing': '撥號中',
+    'conn.state.active': '進行中',
+    'conn.state.closed': '已關閉',
+    'conn.state.blocked': '已封鎖',
+    'conn.state.failed': '失敗',
+    'conn.state.unknown': '未知',
     'conn.columns': '欄位',
     'conn.group': '分組',
     'conn.byClient': '依客戶端',
@@ -35,6 +46,17 @@ export const messages = defineMessages({
     'conn.f.started': '開始時間'
   },
   'zh-CN': {
+    'conn.chain': '链',
+    'conn.rule': '规则',
+    'conn.recomputed': '重算',
+    'conn.state.observed': '观测中',
+    'conn.state.routing': '路由中',
+    'conn.state.dialing': '拨号中',
+    'conn.state.active': '进行中',
+    'conn.state.closed': '已关闭',
+    'conn.state.blocked': '已封锁',
+    'conn.state.failed': '失败',
+    'conn.state.unknown': '未知',
     'conn.columns': '列',
     'conn.group': '分组',
     'conn.byClient': '按客户端',
@@ -68,6 +90,17 @@ export const messages = defineMessages({
     'conn.f.started': '开始时间'
   },
   en: {
+    'conn.chain': 'Chain',
+    'conn.rule': 'Rule',
+    'conn.recomputed': 'Recomputed',
+    'conn.state.observed': 'Observed',
+    'conn.state.routing': 'Routing',
+    'conn.state.dialing': 'Dialing',
+    'conn.state.active': 'Active',
+    'conn.state.closed': 'Closed',
+    'conn.state.blocked': 'Blocked',
+    'conn.state.failed': 'Failed',
+    'conn.state.unknown': 'Unknown',
     'conn.columns': 'Columns',
     'conn.group': 'Group by',
     'conn.byClient': 'By client',

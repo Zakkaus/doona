@@ -1,6 +1,6 @@
-import {useT, useLang, LOCALE} from '../../i18n';
+import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useState} from 'react';
-import {useEventFeed} from '../../api/store';
+import {EVENT_FEED_LIMIT, useEventFeed} from '../../api/store';
 import {eventKindLabels, eventKinds, eventSummary, localTime} from '../../api/selectors';
 import {Button, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, downloadFile, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
@@ -25,7 +25,7 @@ export function Events() {
           {feed.available === false ? t('event.unavailable') : feed.connected ? t('event.connected') : t('event.reconnecting')}
         </Light>
         {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
-        <span className="rp-label">{t('event.limit')}</span>
+        <span className="rp-label">{t('event.limit', {n: formatNumber(EVENT_FEED_LIMIT, locale)})}</span>
         <span className="rp-grow" />
         <Button
           small

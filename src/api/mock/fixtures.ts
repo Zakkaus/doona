@@ -87,17 +87,18 @@ export const runtime: Runtime = {
   instance_id: instanceId,
   lifecycle: {state: 'running', started_at: ago(273600), uptime_seconds: '273600'},
   generation: {active_id: '40', config_revision: '40', state: 'active', activated_at: observedAt},
+  // The same degraded datapath /datapath reports in full: one delayed map sample, everything else attached.
   datapath: {
     kind: 'ebpf',
-    state: 'active',
+    state: 'degraded',
     visibility: 'full',
     ebpf: {
       backend: 'real',
       programs: 'loaded',
       hooks: 'attached',
       routing: {state: 'published', generation_id: '40'},
-      health: 'healthy',
-      last_error: null,
+      health: 'degraded',
+      last_error: 'Routing map sample delayed',
       checked_at: observedAt
     }
   },
@@ -120,8 +121,6 @@ export const datapath: Datapath = {
   visibility: 'full',
   ebpf: {
     ...runtime.datapath.ebpf!,
-    health: 'degraded',
-    last_error: 'Routing map sample delayed',
     attachments: ['lan0', 'wan0'].flatMap(iface =>
       (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, interface: iface, direction, state: 'attached' as const}))
     ),
@@ -301,11 +300,11 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     error: latency === null ? 'timeout' : null
   };
 }
-function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string): Node {
+function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string, protocol: Node['protocol'] = 'shadowsocks'): Node {
   return {
     id: name,
     name,
-    protocol: 'shadowsocks',
+    protocol,
     subscription_tag: source,
     provider_id: source === 'inline' ? 'inline' : source,
     group_ids: [],
@@ -359,11 +358,12 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
 }
 export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const nodes = [
-    node('hk-01', 84, 91, true, 'inline'),
-    node('hk-02', 91, 88, true, 'inline'),
-    node('sg-01', 63, 70, false, 'inline'),
-    node('jp-01', null, null, false, 'inline'),
-    node('us-01', 188, 201, true, 'inline')
+    // The inline nodes match the links in the mock's config.dae.
+    node('hk-01', 84, 91, true, 'inline', 'vless'),
+    node('hk-02', 91, 88, true, 'inline', 'vless'),
+    node('sg-01', 63, 70, false, 'inline', 'trojan'),
+    node('jp-01', null, null, false, 'inline', 'vless'),
+    node('us-01', 188, 201, true, 'inline', 'trojan')
   ];
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),

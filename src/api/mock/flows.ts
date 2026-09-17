@@ -220,6 +220,14 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
       stage: 'connection',
       data: {state: 'active', reason: 'reply_received', milestone: 'first_reply', attempt_id: direct ? null : 'attempt-1', reply_received: true, error: null}
     });
+  // A retained closed flow ends with its terminal step, the way closeLive records one.
+  if (connection.state === 'closed')
+    steps.push({
+      ...common,
+      seq: steps.length + 1,
+      stage: 'connection',
+      data: {state: 'closed', milestone: 'terminal', reason: 'peer_closed', attempt_id: null, reply_received: null, error: null}
+    });
   const timed = steps.map((step, i) => ({
     ...step,
     elapsed_us: i * 1200,
@@ -237,7 +245,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     ...flowFields(input, timed),
     observed_by: connection.observed_by,
     started_at: connection.started_at,
-    ended_at: blocked ? timed[timed.length - 1].observed_at : null,
+    ended_at: blocked || connection.state === 'closed' ? timed[timed.length - 1].observed_at : null,
     input
   };
   return direct

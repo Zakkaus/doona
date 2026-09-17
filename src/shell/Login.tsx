@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {Link} from 'react-aria-components';
 import {useT} from '../i18n';
-import {readProfiles, writeProfiles} from '../features/settings/settings';
+import {readProfiles, writeProfiles} from '../api/profiles';
 import {Button, TextField} from '../ui/ui';
 
 // What a backend that wants a token gets instead of a wall of errors: one field, one button. The token goes

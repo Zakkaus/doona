@@ -516,7 +516,7 @@ export function createMockApi(): Api {
       );
       if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
       if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
-      const limit = fixtures.capabilities.resources.groups.max_patch_operations;
+      const limit = capabilities.resources.groups.max_patch_operations;
       if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
       const updated = patchGroupConfig(group, ops);
       updating.add(groupId);
@@ -716,7 +716,7 @@ export function createMockApi(): Api {
       } else if (request.target) throw new ApiError(400, 'invalid_request', `${request.mode} takes no target`);
       mode = {mode: request.mode, target: request.mode === 'global' ? request.target! : null, source: 'runtime'};
       log('info', 'honk::routing', 'Outbound mode changed.', {mode: mode.mode, target: mode.target});
-      publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
+      runtimeUpdated();
       return {observed_at: new Date().toISOString(), ...mode};
     },
     providers: async (query, signal) => {
@@ -978,6 +978,8 @@ export function createMockApi(): Api {
       apply('log');
       apply('dns_log');
       apply('flows');
+      // A smaller ring drops its oldest records at once, not when the next one arrives.
+      if (logRing.length > settings.log.buffered_records) logRing.splice(0, logRing.length - settings.log.buffered_records);
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
       log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});

@@ -1,4 +1,4 @@
-// Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
+// The shell: top bar, side navigation and a rounded main column, in plain CSS and react-aria-components.
 import {Login} from './Login';
 import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
@@ -11,7 +11,7 @@ import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import GitHub from '../ui/icons/GitHub';
-import {LangContext, LANGS, LOCALE, readLang, useT, type Lang, type Translator} from '../i18n';
+import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
 import {
   Button,
   MenuButton,
@@ -35,7 +35,7 @@ import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNo
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable, subpages} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
-import {readSettings, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
+import {readSettings, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
 
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
@@ -68,50 +68,22 @@ const palettes = (t: Translator): Array<{title: string; items: Array<{id: Palett
 ];
 const navGroups = [...new Set(features.flatMap(feature => (feature.nav ? [feature.nav.group] : [])))];
 
-const read = (k: string) => {
-  try {
-    return localStorage.getItem(k);
-  } catch {
-    return null;
-  }
-};
 // Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
 // paint the default palette and every control would then transition to the stored one (a visible flash on load).
 export function stampAppearance() {
-  const scheme = (read('doona-scheme') as Scheme) || 'system';
-  const paletteRaw = read('doona-palette');
-  const palette = paletteRaw && paletteRaw.includes('/') ? paletteRaw : 'rose-pine/moon';
+  const {scheme, palette, wordmark} = readSettings();
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [family, flavour] = palette.split('/');
   const d = document.documentElement.dataset;
   d.scheme = dark ? 'dark' : 'light';
   d.family = family;
   d.flavour = flavour;
-  d.wordmark = (read('doona-wordmark') as Wordmark) || 'gradient';
+  d.wordmark = wordmark;
 }
-function useAppearance() {
-  const [scheme, setScheme] = useState<Scheme>(() => {
-    try {
-      return (localStorage.getItem('doona-scheme') as Scheme) || 'system';
-    } catch {
-      return 'system';
-    }
-  });
-  const [palette, setPalette] = useState<PaletteId>(() => {
-    try {
-      const v = localStorage.getItem('doona-palette') as PaletteId | null;
-      return v && v.includes('/') ? v : 'rose-pine/moon';
-    } catch {
-      return 'rose-pine/moon';
-    }
-  });
-  const [wordmark, setWordmark] = useState<Wordmark>(() => {
-    try {
-      return (localStorage.getItem('doona-wordmark') as Wordmark) || 'gradient';
-    } catch {
-      return 'gradient';
-    }
-  });
+function useAppearance(stored: Settings) {
+  const [scheme, setScheme] = useState<Scheme>(stored.scheme);
+  const [palette, setPalette] = useState<PaletteId>(stored.palette);
+  const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -289,13 +261,18 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
 }
 
 export function Shell() {
-  const [lang, setLang] = useState<Lang>(readLang);
+  // One read of the stored settings at mount; the shell and the frame share it.
+  const [settings] = useState(readSettings);
+  const [lang, setLang] = useState<Lang>(settings.lang);
   useLayoutEffect(() => {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
-  const ap = useAppearance();
-  const [settings] = useState(readSettings);
+  const ap = useAppearance(settings);
   const {route, query, go} = useRoute(settings.api);
+  // A hash no page owns goes to the first page instead of showing it under the wrong address.
+  useEffect(() => {
+    if (!features.some(feature => feature.path === route)) go('activity');
+  }, [route, go]);
   const [searchOpen, setSearchOpen] = useState(false);
   const pickLang = (l: Lang) => {
     setLang(l);
@@ -315,7 +292,17 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+        <Frame
+          settings={settings}
+          lang={lang}
+          pickLang={pickLang}
+          ap={ap}
+          route={route}
+          query={query}
+          go={go}
+          openSearch={() => setSearchOpen(true)}
+          mac={mac}
+        />
         {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
         <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
         <ToastHost />
@@ -338,6 +325,7 @@ function ToastHost() {
 }
 
 function Frame({
+  settings,
   lang,
   pickLang,
   ap,
@@ -347,6 +335,7 @@ function Frame({
   openSearch,
   mac
 }: {
+  settings: Settings;
   lang: Lang;
   pickLang: (l: Lang) => void;
   ap: ReturnType<typeof useAppearance>;
@@ -360,7 +349,6 @@ function Frame({
   const paletteSections = palettes(t);
   const capabilities = useCapabilities();
   const version = useVersion();
-  const [settings] = useState(readSettings);
   const profile = settings.profiles.find(item => item.id === settings.activeId);
   // A group whose pages the backend does not offer disappears with them.
   const nav = navGroups

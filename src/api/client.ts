@@ -8,7 +8,6 @@ import {wait} from './wait';
 import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
 
-export {ApiError} from './error';
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {

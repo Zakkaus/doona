@@ -1,5 +1,5 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
-import {localTime} from '../../api/selectors';
+import {localTime, word} from '../../api/selectors';
 import {useEffect, useMemo} from 'react';
 import {useCapabilities, useRoutingTrace} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
@@ -16,8 +16,7 @@ const outcomes: Record<string, Key> = {
 };
 
 // Everything about routing decisions on one page: the rule list, the config drawn as a map, the retained flow
-// records with their traces, and a simulator for a hypothetical input. The editor joins once the contract
-// carries the config rule list.
+// records with their traces, and a simulator for a hypothetical input.
 export function Rules({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
@@ -54,6 +53,8 @@ function Trace() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
+  // Engine words the flow pages translate read the same here; anything else stays as reported.
+  const phrase = (value: ReturnType<typeof word>) => (typeof value === 'string' ? value : t(value.key, value.params));
   useEffect(() => {
     if (trace.error) toast('negative', errorText(trace.error));
   }, [trace.error]);
@@ -158,8 +159,8 @@ function Trace() {
                 items={[
                   [t('ui.type'), dns.qtype],
                   [t('ui.state'), dns.status],
-                  [t('ui.source'), dns.source],
-                  [t('ui.cache'), dns.cache],
+                  [t('ui.source'), phrase(word(dns.source))],
+                  [t('ui.cache'), phrase(word(dns.cache))],
                   [t('rule.address'), formatList(lang, dns.addresses) || '—'],
                   ...(dns.error ? [[t('ui.error'), dns.error] as [string, string]] : [])
                 ]}

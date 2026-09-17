@@ -66,7 +66,6 @@ export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   random: 'policy.kind.random',
   score: 'policy.kind.score'
 };
-// Built-in outbounds read in the user's language; group and node names stay as configured.
 // The node a group currently exits through, following nested groups by their TCP selection; undefined when the
 // chain is broken or cycles. Summaries carry member ids only, so node names come from the node list.
 export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]): string | undefined {
@@ -80,6 +79,7 @@ export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]
   }
   return id ? byNode.get(id) : undefined;
 }
+// Built-in outbounds read in the user's language; group and node names stay as configured.
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
 }
@@ -171,6 +171,10 @@ const flowWords: Record<string, Key> = {
   reply_received: 'flow.v.replyReceived',
   hit: 'flow.v.hit',
   miss: 'flow.v.miss',
+  stale: 'flow.v.stale',
+  bypass: 'flow.v.bypass',
+  hosts: 'flow.v.hosts',
+  coalesced: 'flow.v.coalesced',
   cache: 'flow.v.cache',
   upstream: 'ui.upstream',
   lan: 'flow.v.lan',
@@ -205,7 +209,7 @@ const inputLabels: Record<string, Key | string> = {
   pid: 'PID'
 };
 // Known engine words become message keys; anything else stays as the engine reported it.
-const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
+export const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
 
 export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
