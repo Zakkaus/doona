@@ -1,5 +1,5 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
+import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode, type TextareaHTMLAttributes} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -622,6 +622,43 @@ export function Kv({items, inline, row}: {items: Array<[string, string]>; inline
         <div key={k}>
           <span className="k">{k}</span>
           <span className="v">{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+// Multi-line text in the input frame; label above, code font, no autocorrect. Used for configuration text.
+export function TextArea({
+  label,
+  value,
+  onChange,
+  isDisabled,
+  ...rest
+}: {label: string; value: string; onChange: (value: string) => void; isDisabled?: boolean} & Pick<TextareaHTMLAttributes<HTMLTextAreaElement>, 'rows'>) {
+  return (
+    <textarea
+      className="rp-textarea"
+      aria-label={label}
+      value={value}
+      disabled={isDisabled}
+      spellCheck={false}
+      autoCapitalize="off"
+      autoCorrect="off"
+      onChange={event => onChange(event.currentTarget.value)}
+      {...rest}
+    />
+  );
+}
+// Read-only source text with line numbers; lines named in `marks` get their level's tint.
+export function SourceView({text, marks, label}: {text: string; marks?: Map<number, 'error' | 'warning' | 'info'>; label: string}) {
+  const lines = text === '' ? [] : text.replace(/\n$/, '').split('\n');
+  return (
+    // A scrollable region needs focus so the keyboard can scroll it.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+    <div className="rp-source" role="region" aria-label={label} tabIndex={0}>
+      {lines.map((line, index) => (
+        <div key={index} data-level={marks?.get(index + 1)}>
+          <span>{line}</span>
         </div>
       ))}
     </div>

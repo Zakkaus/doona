@@ -126,6 +126,11 @@ export function createApi(base: string, token?: string): Api {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
     },
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
+    config: async signal => data(await client.GET('/api/v1/config', {signal})),
+    configSource: async (source_id, signal) => data(await client.GET('/api/v1/config/sources/{source_id}', {params: {path: {source_id}}, signal})),
+    validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
+    replaceConfigSource: async (source_id, content, ifMatch, signal) =>
+      accepted(await client.PUT('/api/v1/config/sources/{source_id}', {params: {path: {source_id}, header: {'If-Match': ifMatch}}, body: {content}, signal})),
     patchRuntimeSettings: async (body, signal) => data(await client.PATCH('/api/v1/runtime/settings', {body, signal})),
     deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),

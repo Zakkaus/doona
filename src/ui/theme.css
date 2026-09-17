@@ -2814,6 +2814,66 @@ button.rp-node[data-focus-visible] {
   font-family: monospace;
 }
 
+/* Source text: numbered lines to read, a plain textarea to edit; both in the input frame and the code font. */
+.rp-source,
+.rp-textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 0;
+  border: 1px solid var(--rp-hl-high);
+  border-radius: 8px;
+  background: var(--rp-base);
+  color: var(--rp-text);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 20px;
+  tab-size: 2;
+}
+.rp-source {
+  max-height: 560px;
+  overflow: auto;
+  counter-reset: line;
+}
+.rp-source > div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  white-space: pre;
+}
+.rp-source > div::before {
+  counter-increment: line;
+  content: counter(line);
+  padding-right: 12px;
+  text-align: end;
+  color: var(--rp-muted);
+  user-select: none;
+}
+.rp-source > div[data-level='error'] {
+  background: color-mix(in srgb, var(--rp-love) 14%, transparent);
+}
+.rp-source > div[data-level='warning'] {
+  background: color-mix(in srgb, var(--rp-gold) 14%, transparent);
+}
+.rp-source > div > span {
+  padding-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-textarea {
+  min-height: 320px;
+  max-height: 70vh;
+  padding: 8px 12px;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+  outline: none;
+}
+.rp-textarea:focus {
+  border-color: var(--rp-pine);
+  box-shadow: 0 0 0 1px var(--rp-pine);
+}
+
 .rp-provenance {
   margin-inline-start: 4px;
   padding: 1px 4px;

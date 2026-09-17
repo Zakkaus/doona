@@ -35,7 +35,11 @@ import type {
   OperationState,
   EventOptions,
   RuntimeSettings,
-  RuntimeSettingsPatch
+  RuntimeSettingsPatch,
+  EffectiveConfig,
+  ConfigSource,
+  ConfigValidationRequest,
+  ConfigValidationResult
 } from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
@@ -65,6 +69,10 @@ export interface Api {
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
+  config(signal?: AbortSignal): Promise<EffectiveConfig>;
+  configSource(sourceId: string, signal?: AbortSignal): Promise<ConfigSource>;
+  validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;
+  replaceConfigSource(sourceId: string, content: string, ifMatch: string, signal?: AbortSignal): Promise<OperationAccepted>;
   patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;

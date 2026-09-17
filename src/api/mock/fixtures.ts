@@ -12,6 +12,7 @@ import type {
   RuntimeMemory,
   RuntimeOutbounds,
   RuntimeSettings,
+  ConfigSource,
   TrafficHistory,
   Version
 } from '../model';
@@ -154,6 +155,8 @@ export const capabilities: Capabilities = {
     nodes: {available: true},
     providers: {available: false},
     rules: {available: false},
+    config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
+    config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: false, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
     runtime_settings: {available: true, fields: ['log.level', 'log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']},
@@ -232,6 +235,8 @@ export const capabilitiesBase: Capabilities = {
     memory_history: {available: false},
     dns_log: {available: false},
     runtime_settings: {available: false},
+    config: {available: false, content: false},
+    config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}
@@ -603,3 +608,76 @@ export const dnsCache: DnsCacheList = {
     {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null}
   ]
 };
+
+// The accepted configuration the mock serves: dae text that names the same groups and rules the rest of the
+// mock uses. Hashes are computed by the mock on first read; an edit replaces the text and bumps the generation.
+const configMain = `global {
+  tproxy_port: 12345
+  log_level: info
+  lan_interface: br-lan
+  wan_interface: auto
+  allow_insecure: false
+  auto_config_kernel_parameter: true
+}
+
+subscription {
+  sub-c: 'https://<redacted>'
+}
+
+node {
+  'hk-01': 'vless://<redacted>'
+  'hk-02': 'vless://<redacted>'
+  'sg-01': 'trojan://<redacted>'
+  'jp-01': 'vless://<redacted>'
+  'us-01': 'trojan://<redacted>'
+}
+
+group {
+  proxy { policy: fixed(0) }
+  resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }
+  gaming { filter: name(jp-01, hk-02) policy: min }
+  skylink { filter: subtag(sub-c) policy: min_moving_avg }
+}
+
+dns {
+  upstream {
+    cloudflare: 'tls://1.1.1.1:853'
+    alidns: 'udp://223.5.5.5:53'
+  }
+  routing {
+    request { qname(geosite: cn) -> alidns; fallback: cloudflare }
+  }
+}
+
+routing {
+  domain(suffix: doubleclick.net) -> block
+  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> must_direct
+  dip(geoip: private) -> must_direct
+  domain(geosite: cn) -> direct
+  domain(geosite: telegram) -> proxy
+  include rules.dae
+  fallback: resilient
+}
+`;
+const configRulesFile = `# Household exceptions, kept apart from config.dae.
+# The TV never leaves through a node.
+mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct
+
+# Chat
+domain(geosite: discord) -> proxy
+sip(10.0.0.0/24) && dport(25) -> block
+`;
+const configSubscription = `'香港 01 · IPLC': 'vless://<redacted>'
+'香港 02 · BGP': 'vless://<redacted>'
+'新加坡 01 · 2x': 'trojan://<redacted>'
+'日本 01 · 2x': 'vless://<redacted>'
+`;
+const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
+skylink { filter: subtag(sub-c) }
+`;
+export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [
+  {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
+  {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},
+  {id: 'src-sub-c', path: '/var/lib/honk/subscriptions/sub-c.dae', kind: 'subscription', writable: false, loaded_at: ago(1800), content: configSubscription},
+  {id: 'src-generated', path: '/var/lib/honk/generated/skylink.dae', kind: 'generated', writable: false, loaded_at: ago(1800), content: configGenerated}
+];
