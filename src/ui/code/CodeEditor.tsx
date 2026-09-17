@@ -1,9 +1,11 @@
 import {useEffect, useRef} from 'react';
-import {EditorState, Compartment} from '@codemirror/state';
+import {EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
 import {
   EditorView,
   keymap,
   lineNumbers,
+  Decoration,
+  type DecorationSet,
   highlightActiveLine,
   highlightActiveLineGutter,
   drawSelection,
@@ -47,6 +49,9 @@ const theme = EditorView.theme({
   '.cm-tooltip.cm-tooltip-lint': {backgroundColor: 'var(--rp-text)', color: 'var(--rp-on-text)', border: 'none', borderRadius: '6px', padding: '2px 0'},
   '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', fontFamily: 'inherit'},
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
+  '.cm-diag-line-error': {backgroundColor: 'color-mix(in srgb, var(--rp-love) 14%, transparent)'},
+  '.cm-diag-line-warning': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 16%, transparent)'},
+  '.cm-diag-line-info': {backgroundColor: 'color-mix(in srgb, var(--rp-foam) 14%, transparent)'},
   '.cm-lintRange-error': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-love)', textUnderlineOffset: '3px'},
   '.cm-lintRange-warning': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-gold)', textUnderlineOffset: '3px'},
   '.cm-lintRange-info': {backgroundImage: 'none', textDecoration: 'underline dotted var(--rp-foam)', textUnderlineOffset: '3px'},
@@ -86,6 +91,39 @@ const daeIndent = indentService.of((context, pos) => {
   const opens = /\{\s*(#.*)?$/.test(previous.text);
   const closes = /^\s*\}/.test(line.text);
   return Math.max(0, base + (opens ? 2 : 0) - (closes ? 2 : 0));
+});
+
+// The whole line of a diagnostic is tinted by its level, so a problem is visible from across the file; the
+// underline then says where on the line.
+const setLineMarks = StateEffect.define<EditorMark[]>();
+const lineDecoration = {
+  error: Decoration.line({class: 'cm-diag-line cm-diag-line-error'}),
+  warning: Decoration.line({class: 'cm-diag-line cm-diag-line-warning'}),
+  info: Decoration.line({class: 'cm-diag-line cm-diag-line-info'})
+};
+const lineMarks = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, transaction) {
+    let next = value.map(transaction.changes);
+    for (const effect of transaction.effects) {
+      if (!effect.is(setLineMarks)) continue;
+      const builder = new RangeSetBuilder<Decoration>();
+      const rank = {error: 0, warning: 1, info: 2};
+      const byLine = new Map<number, EditorMark>();
+      for (const mark of effect.value) {
+        if (mark.line < 1 || mark.line > transaction.state.doc.lines) continue;
+        const current = byLine.get(mark.line);
+        if (!current || rank[mark.level] < rank[current.level]) byLine.set(mark.line, mark);
+      }
+      for (const line of [...byLine.keys()].sort((a, b) => a - b)) {
+        const from = transaction.state.doc.line(line).from;
+        builder.add(from, from, lineDecoration[byLine.get(line)!.level]);
+      }
+      next = builder.finish();
+    }
+    return next;
+  },
+  provide: field => EditorView.decorations.from(field)
 });
 
 function toDiagnostics(state: EditorState, marks: EditorMark[]): Diagnostic[] {
@@ -148,6 +186,7 @@ export function CodeEditor({
           drawSelection(),
           rectangularSelection(),
           highlightActiveLine(),
+          lineMarks,
           highlightSelectionMatches(),
           bracketMatching(),
           closeBrackets(),
@@ -204,7 +243,10 @@ export function CodeEditor({
   }, [value]);
   useEffect(() => {
     const instance = view.current;
-    if (instance) instance.dispatch(setDiagnostics(instance.state, toDiagnostics(instance.state, marks)));
+    if (!instance) return;
+    const spec = setDiagnostics(instance.state, toDiagnostics(instance.state, marks));
+    const effects = Array.isArray(spec.effects) ? spec.effects : spec.effects ? [spec.effects] : [];
+    instance.dispatch({...spec, effects: [...effects, setLineMarks.of(marks)]});
   }, [marks]);
   useEffect(() => {
     const instance = view.current;
