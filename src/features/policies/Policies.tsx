@@ -4,7 +4,7 @@ import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, TextTooltip, errorText, toast} from '../../ui/ui';
 import {OutboundMark} from './Flag';
 import {NodeGrid} from './Nodes';
 
@@ -83,24 +83,41 @@ function PolicyCard({
               {control.busy === 'probe' ? t('policy.probing') : t('policy.probeAll')}
             </Button>
           </div>
-          <Kv
-            row
-            items={[
-              [t('policy.tcpSelection'), tcp ?? '—'],
-              [t('policy.udpSelection'), udp ?? '—'],
-              [t('policy.health'), t('policy.healthCounts', {healthy, unavailable})],
-              [t('ui.revision'), g.config_revision]
-            ]}
-          />
+          <div className="rp-cluster">
+            <Light small tone="ok">
+              {t('policy.healthy', {n: healthy})}
+            </Light>
+            {unavailable > 0 && (
+              <Light small tone="err">
+                {t('policy.down', {n: unavailable})}
+              </Light>
+            )}
+            {(tcp === udp
+              ? [['TCP/UDP', tcp]]
+              : [
+                  ['TCP', tcp],
+                  ['UDP', udp]
+                ]
+            ).map(([network, member]) => (
+              <span className="rp-chain" key={network}>
+                <Badge>{network}</Badge>
+                <OutboundMark name={member ? (leaves.get(member) ?? member) : null} />
+                <TextTooltip>{member ?? '—'}</TextTooltip>
+              </span>
+            ))}
+          </div>
           <Disclosure id={id} title={t('ui.config')}>
             <Kv
               row
-              items={groupConfigFields(g)
-                .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
-                .map(([key, value]) => [
-                  typeof key === 'string' ? t(key) : t(key.key, key.params),
-                  typeof value === 'string' ? value : t(value.key, value.params)
-                ])}
+              items={[
+                [t('ui.revision'), g.config_revision],
+                ...groupConfigFields(g)
+                  .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
+                  .map(([key, value]): [string, string] => [
+                    typeof key === 'string' ? t(key) : t(key.key, key.params),
+                    typeof value === 'string' ? value : t(value.key, value.params)
+                  ])
+              ]}
             />
           </Disclosure>
           <div className="rp-toolbar">
