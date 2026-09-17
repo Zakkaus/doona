@@ -25,7 +25,7 @@ import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
-export type NodeInfo = {name: string; tcp?: number; alive?: boolean; nested?: boolean};
+export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
 export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
 const BIG = 12;
 

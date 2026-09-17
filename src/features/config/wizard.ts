@@ -3,10 +3,10 @@
 // Every other section, and every subscription line the form does not recognise, is kept verbatim; a missing
 // main source is generated whole. No dae parser: sections are cut by brace matching.
 // `raw` is the line as it stands in the file; a line the form has not changed is written back untouched.
-export type Subscription = {name: string; url: string; raw?: string};
+type Subscription = {name: string; url: string; raw?: string};
 export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
 
-export type RuleTemplate = 'dae' | 'whitelist' | 'blacklist' | 'global';
+type RuleTemplate = 'dae' | 'whitelist' | 'blacklist' | 'global';
 // The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
 // drop HTTP/3, which the engine cannot proxy well and which browsers retry over TCP anyway.
 const preset = [
@@ -22,7 +22,7 @@ const china = ['# Mainland China direct', 'domain(geosite:cn) -> direct', 'dip(g
 // Templates in dae's own syntax. Category names are the v2fly geosite/geoip tags as shipped by
 // Loyalsoldier/v2ray-rules-dat, the data set dae fetches by default; the whitelist and blacklist templates are
 // that project's documented routing configurations, line for line. `{group}` is the first group.
-export const templates: Record<RuleTemplate, {rules: string[]; fallback: string}> = {
+const templates: Record<RuleTemplate, {rules: string[]; fallback: string}> = {
   // The routing section of dae's example.dae.
   dae: {rules: [...preset, ...china], fallback: '{group}'},
   // Loyalsoldier whitelist mode: adverts dropped, Chinese services of global vendors and games sold in China

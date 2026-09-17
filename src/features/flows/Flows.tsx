@@ -208,7 +208,7 @@ export function FlowRecords({go, query}: PageProps) {
                             ])}
                           />
                         ) : (
-                          <pre className="rp-flow-raw">
+                          <pre className="rp-flow-raw rp-code">
                             <code>{JSON.stringify(step.data, null, 2)}</code>
                           </pre>
                         )}

@@ -20,7 +20,7 @@ import {
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
-import {ruleDistribution, ruleDistributionSummary} from './distribution';
+import {ruleDistribution} from './distribution';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
 
@@ -255,7 +255,7 @@ function Distribution() {
         .sort((a, b) => ruleOrder(a.id, b.id) || b.count - a.count),
     [resource.data]
   );
-  const summary = resource.data ? ruleDistributionSummary(resource.data) : null;
+  const list = resource.data ?? null;
   const filtered = source === 'all' ? rows : rows.filter(row => row.source === source);
   return (
     <div className="rp-col">
@@ -266,13 +266,13 @@ function Distribution() {
           onChange={setSource}
           items={[['all', t('ui.all')], ...Object.entries(sources).map(([id, label]): [string, string] => [id, t(label)])]}
         />
-        {summary && (
+        {list && (
           <TextTooltip text={t('rule.distributionScope')} className="rp-label">
-            {t('rule.distributionCaption', {n: formatNumber(summary.total, locale)})}
+            {t('rule.distributionCaption', {n: formatNumber(list.flows.length, locale)})}
           </TextTooltip>
         )}
-        {summary && <Coverage data={{coverage: summary.coverage, dropped_records: summary.dropped}} />}
-        {summary && summary.dropped === null && (
+        {list && <Coverage data={list} />}
+        {list && list.dropped_records === null && (
           <Light small tone="warn">
             {t('rule.droppedUnknown')}
           </Light>

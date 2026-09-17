@@ -6,7 +6,7 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  const notifications = page.getByRole('region', {name: 'Notifications'});
+  const notifications = page.getByRole('region', {name: 'Notifications and issues'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
   await page.goto('/#/connections?id=2');
@@ -114,8 +114,8 @@ test('refresh remains pending until completion, refetches non-polling resources,
     release = resolve;
   });
   responses['/version'] = {...version, engine: {name: 'honk-live', version: '1.2.4'}};
-  const refresh = page.getByRole('button', {name: 'Reload data', exact: true});
-  await page.getByRole('button', {name: 'Reload data', exact: true}).click();
+  const refresh = page.getByRole('button', {name: 'Refresh', exact: true});
+  await page.getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect.poll(() => Object.entries(before).every(([path, count]) => counts[path] === count + 1)).toBe(true);
   await page.clock.fastForward(700);
   await expect(refresh).toHaveAttribute('data-pending');
@@ -126,7 +126,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   hold = new Promise<void>(resolve => {
     release = resolve;
   });
-  await page.getByRole('button', {name: 'Reload data', exact: true}).click();
+  await page.getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect(refresh).toHaveAttribute('data-pending');
   await page.clock.fastForward(2100);
   await expect(refresh).toHaveAttribute('data-pending');
@@ -134,7 +134,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.getByRole('alert')).toHaveCount(0);
   brokenRuntime = true;
-  await page.getByRole('button', {name: 'Reload data', exact: true}).click();
+  await page.getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');

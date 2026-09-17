@@ -3,7 +3,7 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../../api';
 import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
-import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
@@ -24,7 +24,6 @@ import {
   toast
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
-import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
@@ -44,16 +43,16 @@ const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.err
 
 // The digest of a text, once computed; undefined until then or when there is no text.
 function useSha256(text: string | undefined): string | undefined {
-  const [hashes, setHashes] = useState<Map<string, string>>(() => new Map());
+  const [hashed, setHashed] = useState<{text: string; hash: string} | null>(null);
   useEffect(() => {
-    if (text === undefined || hashes.has(text)) return;
+    if (text === undefined) return;
     let live = true;
-    void sha256(text).then(hash => live && setHashes(prev => new Map(prev).set(text, hash)));
+    void sha256(text).then(hash => live && setHashed({text, hash}));
     return () => {
       live = false;
     };
-  }, [text, hashes]);
-  return text === undefined ? undefined : hashes.get(text);
+  }, [text]);
+  return hashed !== null && hashed.text === text ? hashed.hash : undefined;
 }
 
 // The accepted configuration: its sources, the diagnostics the engine kept, and one source's text; a
@@ -155,42 +154,40 @@ export function Config({go, query}: PageProps) {
               label: t('config.tabSource'),
               content: (
                 <>
-                  {config.data && (
-                    <div className="rp-toolbar">
-                      <LabeledSelect
-                        side
-                        label={t('config.source')}
-                        value={selectedId ?? ''}
-                        onChange={select}
-                        items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
-                      />
-                      {source && (
-                        <>
-                          <Badge>{t(kinds[source.kind])}</Badge>
-                          <Light small tone={source.writable ? 'ok' : 'muted'}>
-                            {t(source.writable ? 'config.editable' : 'config.readOnly')}
-                          </Light>
-                          <span className="rp-label">
-                            {t('config.sourceFacts', {
-                              lines: n(source.line_count),
-                              size: formatBytes(String(source.bytes)),
-                              time: localTime(source.loaded_at, locale)
-                            })}
-                          </span>
-                        </>
-                      )}
-                      {source?.content !== undefined && (
-                        <>
-                          <span className="rp-grow" />
-                          <Button small onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
-                            <Download />
-                            {t('config.export')}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {source && config.data && (
+                  <div className="rp-toolbar">
+                    <LabeledSelect
+                      side
+                      label={t('config.source')}
+                      value={selectedId ?? ''}
+                      onChange={select}
+                      items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
+                    />
+                    {source && (
+                      <>
+                        <Badge>{t(kinds[source.kind])}</Badge>
+                        <Light small tone={source.writable ? 'ok' : 'muted'}>
+                          {t(source.writable ? 'config.editable' : 'config.readOnly')}
+                        </Light>
+                        <span className="rp-label">
+                          {t('config.sourceFacts', {
+                            lines: n(source.line_count),
+                            size: formatBytes(String(source.bytes)),
+                            time: localTime(source.loaded_at, locale)
+                          })}
+                        </span>
+                      </>
+                    )}
+                    {source?.content !== undefined && (
+                      <>
+                        <span className="rp-grow" />
+                        <Button small onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
+                          <Download />
+                          {t('config.export')}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {source && (
                     <SourceCard
                       key={source.id}
                       source={source}
@@ -291,12 +288,12 @@ function SourceCard({
     () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message})),
     [shown]
   );
+  const text = draft?.text ?? source.content ?? '';
   // Names to complete after "->": the groups in the text being edited, else the running configuration's.
   const outbounds = () => {
     const own = groupNames(text);
     return own.length ? own : groups;
   };
-  const text = draft?.text ?? source.content ?? '';
   const [jump, setJump] = useState<number | null>(null);
   const dirty = editing && draft.text !== source.content;
   useEffect(() => {
@@ -320,22 +317,21 @@ function SourceCard({
       controller.abort();
     };
   }, [api, canValidate, draftText, source.id, source.path]);
-  const validate = async () => {
+  // `announce` also toasts a pass; a save reports only its own outcome.
+  const validate = async (announce: 'always' | 'failure' = 'always') => {
     const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
     if (!result) return false;
     setFound(result.diagnostics);
     // Put the cursor on the first error so the problem is on screen, not below a long file.
     const first = result.diagnostics.find(d => d.level === 'error' && d.line !== null);
     setJump(first ? first.line : null);
-    toast(
-      result.valid ? 'positive' : 'negative',
-      t(result.valid ? 'config.valid' : 'config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)})
-    );
+    if (!result.valid) toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+    else if (announce === 'always') toast('positive', t('config.valid'));
     return result.valid;
   };
   const save = async () => {
     if (draft === null) return;
-    if (canValidate && !(await validate())) return;
+    if (canValidate && !(await validate('failure'))) return;
     const result = await editor.save(source.id, draft.text, draft.base);
     // A rejected save carries its own diagnostics; drop the dry-run list so they show.
     setFound(null);
@@ -432,7 +428,7 @@ function ValidateTab({
   canValidate,
   open
 }: {
-  config: {sources: ConfigSource[]; diagnostics: ConfigDiagnostic[]; generation_id: string};
+  config: EffectiveConfig;
   editor: ReturnType<typeof useConfigEditor>;
   canValidate: boolean;
   open: (sourceId: string, line: number | null) => void;
@@ -478,7 +474,11 @@ function ValidateTab({
             tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
             onPress={() => {
               void editor.validate({sources: candidates.map(item => ({id: item.id, path: item.path, content: item.content!})), mode: 'full'}).then(result => {
-                if (result) setRun(result);
+                // A fresh list has new rows; the old selection would point at a different diagnostic.
+                if (result) {
+                  setRun(result);
+                  setSelected(null);
+                }
               });
             }}
           >
@@ -507,7 +507,7 @@ function ValidateTab({
         onSelect={setSelected}
         empty={t('config.noDiagnostics')}
         cols={[
-          {id: 'level', label: t('config.levelLabel'), minWidth: 96, grow: 0},
+          {id: 'level', label: t('config.level'), minWidth: 96, grow: 0},
           {id: 'where', label: t('config.where'), minWidth: 150, grow: 0},
           {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true},
           {id: 'code', label: t('config.code'), minWidth: 140, drop: 1}

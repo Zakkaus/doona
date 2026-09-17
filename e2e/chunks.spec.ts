@@ -58,7 +58,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
       location.hash = '#/policies';
     });
     await requested;
-    await expect(page.locator('.rp-nav[href=\"#/policies\"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.rp-nav[href="#/policies"]')).toHaveAttribute('aria-current', 'page');
     const fallback = page.locator('.rp-content > .rp-empty');
     await page.clock.runFor(149);
     await expect(fallback).toHaveCount(0);

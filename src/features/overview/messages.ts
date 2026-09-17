@@ -254,7 +254,7 @@ export const messages = defineMessages({
     'ov.f.cgroupCurrent': 'cgroup current',
     'ov.f.cgroupLimit': 'cgroup limit',
     'ov.f.cgroupPercent': 'cgroup usage',
-    'ov.f.oomHigh': 'high events',
+    'ov.f.oomHigh': 'High-watermark events',
     'ov.f.oom': 'OOM events',
     'ov.f.oomKill': 'OOM kills',
     'ov.f.ebpfBytes': 'eBPF kernel memory',

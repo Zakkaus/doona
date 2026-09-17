@@ -167,13 +167,15 @@ function toDiagnostics(state: EditorState, marks: EditorMark[]): Diagnostic[] {
 }
 
 // A CodeMirror editor in the kit's frame: line numbers, dae highlighting, search, bracket matching, and
-// diagnostics shown in the gutter and under the text. `readOnly` turns it into a viewer that still selects,
+// diagnostics listed above and underlined in the text. `readOnly` turns it into a viewer that still selects,
 // copies and searches. `focusLine` scrolls a line into view and puts the cursor on it.
+// A stable default, so a parent without diagnostics does not dispatch an empty set on every render.
+const noMarks: EditorMark[] = [];
 export function CodeEditor({
   value,
   onChange,
   readOnly = false,
-  marks = [],
+  marks = noMarks,
   focusLine,
   label,
   outbounds,

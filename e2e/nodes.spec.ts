@@ -84,3 +84,18 @@ test.describe('long lists', () => {
     expect(await list.count()).toBeLessThan(100);
   });
 });
+
+test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
+  await page.goto('/#/nodes');
+  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
+  await expect(sources).toHaveCount(2);
+  await expect(sources.first()).toContainText('sub-c');
+  const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
+  await expect(nodes.first()).toBeVisible();
+  expect(await nodes.count()).toBeGreaterThan(10);
+  await sources.nth(1).click();
+  await expect(page).toHaveURL(/provider=inline$/);
+  await expect(nodes).toHaveCount(5);
+  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 100 nodes');
+});

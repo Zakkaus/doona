@@ -17,7 +17,7 @@ export const messages = defineMessages({
     'log.clear': '清空',
     'log.export': '匯出',
     'log.message': '訊息',
-    'log.empty': '還沒有日誌。'
+    'log.empty': '尚無日誌。'
   },
   'zh-CN': {
     'log.unavailable': '此后端不提供日志流。',
@@ -35,7 +35,7 @@ export const messages = defineMessages({
     'log.clear': '清空',
     'log.export': '导出',
     'log.message': '消息',
-    'log.empty': '还没有日志。'
+    'log.empty': '暂无日志。'
   },
   en: {
     'log.unavailable': 'This backend does not stream logs.',

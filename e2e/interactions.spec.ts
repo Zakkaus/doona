@@ -121,7 +121,7 @@ test('shared controls distinguish a held press from hover without moving', async
     ['settings', '.rp-selectbtn:not([disabled])'],
     ['settings', '.rp-btn.accent'],
     ['overview', '.rp-btn.secondary'],
-    ['flows', '.rp-nav']
+    ['rules', '.rp-nav']
   ]) {
     await page.goto('/#/' + route);
     const control = page.locator(selector).filter({visible: true}).first();

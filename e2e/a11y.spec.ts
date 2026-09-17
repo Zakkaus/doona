@@ -26,7 +26,6 @@ for (const route of routes) {
       ])
     );
     await testInfo.attach('axe.json', {body: JSON.stringify({route, findings}, null, 2), contentType: 'application/json'});
-    console.log(JSON.stringify({route, rules: Object.fromEntries(results.violations.map(rule => [rule.id, rule.nodes.length]))}));
     const violations = results.violations.filter(rule => !Object.hasOwn(KNOWN, rule.id));
     expect(
       violations.map(rule => rule.id),
