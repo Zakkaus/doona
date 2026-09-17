@@ -47,6 +47,8 @@ export const messages = defineMessages({
     'settings.apply': '套用',
     'settings.runtimeSaved': '後端選項已套用',
     'settings.about': '關於',
+    'settings.install': '安裝為應用程式',
+    'settings.installed': '已安裝到桌面',
     'settings.version': 'doona 版本',
     'settings.contract': '契約提交'
   },
@@ -96,6 +98,8 @@ export const messages = defineMessages({
     'settings.apply': '应用',
     'settings.runtimeSaved': '后端选项已应用',
     'settings.about': '关于',
+    'settings.install': '安装为应用',
+    'settings.installed': '已安装到桌面',
     'settings.version': 'doona 版本',
     'settings.contract': '契约提交'
   },
@@ -145,6 +149,8 @@ export const messages = defineMessages({
     'settings.apply': 'Apply',
     'settings.runtimeSaved': 'Backend options applied',
     'settings.about': 'About',
+    'settings.install': 'Install as an app',
+    'settings.installed': 'Installed',
     'settings.version': 'doona version',
     'settings.contract': 'Contract commit'
   }

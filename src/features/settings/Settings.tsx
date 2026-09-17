@@ -8,6 +8,7 @@ import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
+import {useInstallOffer} from '../../shell/install';
 
 type Appearance = {
   scheme: Scheme;
@@ -29,6 +30,7 @@ type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | 
 
 export function Settings() {
   const t = useT();
+  const install = useInstallOffer();
   const capabilities = useCapabilities();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
@@ -290,9 +292,23 @@ export function Settings() {
             [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT]
           ]}
         />
-        <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
-          {t('github')}
-        </Link>
+        <div className="rp-cluster">
+          <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
+            {t('github')}
+          </Link>
+          {install && (
+            <Button
+              small
+              onPress={() => {
+                void install().then(accepted => {
+                  if (accepted) toast('positive', t('settings.installed'));
+                });
+              }}
+            >
+              {t('settings.install')}
+            </Button>
+          )}
+        </div>
       </section>
       {dialog && (
         <ModalDialog
