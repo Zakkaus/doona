@@ -11,6 +11,7 @@ import type {
   Runtime,
   RuntimeMemory,
   RuntimeOutbounds,
+  RuntimeSettings,
   TrafficHistory,
   Version
 } from '../model';
@@ -151,6 +152,11 @@ export const capabilities: Capabilities = {
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
     memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     nodes: {available: true},
+    providers: {available: false},
+    rules: {available: false},
+    logs: {available: false, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
+    dns_log: {available: true, max_records: 2048, max_page_size: 500},
+    runtime_settings: {available: true, fields: ['log.level', 'log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {
       available: true,
@@ -224,10 +230,22 @@ export const capabilitiesBase: Capabilities = {
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
     memory_history: {available: false},
+    dns_log: {available: false},
+    runtime_settings: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}
   }
+};
+
+// What PATCH /runtime/settings can change; the values start from the configuration and the ceilings are the
+// capabilities above.
+export const runtimeSettings: RuntimeSettings = {
+  observed_at: observedAt,
+  source: 'config',
+  log: {level: 'info', buffered_records: 1024},
+  dns_log: {max_records: 2048},
+  flows: {max_flows: 4096, retention_seconds: 300}
 };
 
 // The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
@@ -371,7 +389,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     nodes.push(...airport);
     groups.push(
       group(
-        'airport',
+        'skylink',
         'selector',
         airport.map(n => n.id),
         airport[0].id,

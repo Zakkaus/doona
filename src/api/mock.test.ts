@@ -165,8 +165,8 @@ it('keeps the latency column on one tuple, with IPv6 only where no IPv4 observat
 it('pages the airport override without losing members', async () => {
   vi.stubGlobal('localStorage', {getItem: () => '12'});
   const api = createMockApi();
-  const first = await api.nodes({group_id: 'airport', limit: 7});
-  const second = await api.nodes({group_id: 'airport', cursor: first.next_cursor!, limit: 7});
+  const first = await api.nodes({group_id: 'skylink', limit: 7});
+  const second = await api.nodes({group_id: 'skylink', cursor: first.next_cursor!, limit: 7});
   expect(new Set([...first.nodes, ...second.nodes].map(n => n.id)).size).toBe(12);
   expect(second.next_cursor).toBeNull();
 });

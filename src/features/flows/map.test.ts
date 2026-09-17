@@ -38,7 +38,7 @@ it('folds the map into one lane per outbound with its rules and selected node', 
   expect(proxy.rules.reduce((sum, rule) => sum + rule.count, 0)).toBe(proxy.outbound.count);
   expect(proxy.node?.node.label).toBe('hk-01');
   // A group nothing used still shows its configured node, marked as configured only.
-  const airport = rows.find(lane => lane.outbound.label === 'airport')!;
+  const airport = rows.find(lane => lane.outbound.label === 'skylink')!;
   expect(airport.rules).toEqual([]);
   expect(airport.node?.configured).toBe(true);
   expect(airport.node?.count).toBe(0);

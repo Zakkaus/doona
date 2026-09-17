@@ -1,6 +1,7 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
+import {iconUrl, useIconPack, type Brand} from './brand';
 import {
   Button as RButton,
   Link as RLink,
@@ -443,6 +444,7 @@ import {
   Input as RInput,
   Table,
   ResizableTableContainer,
+  ColumnResizer,
   TableHeader,
   Column,
   TableBody,
@@ -773,10 +775,11 @@ export function DataTable<T extends {id: string}>({
               id={c.id}
               isRowHeader={c.isRowHeader}
               className={c.align === 'end' ? 'end' : undefined}
-              width={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
+              defaultWidth={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
               minWidth={c.minWidth}
             >
-              {c.label}
+              <span className="rp-th">{c.label}</span>
+              <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
             </Column>
           ))}
         </TableHeader>
@@ -1036,7 +1039,7 @@ export function Chips({
   onChange
 }: {
   label: string;
-  items: Array<{id: string; label: string; count?: string}>;
+  items: Array<{id: string; label: string; count?: string; countLabel?: string; icon?: ReactNode}>;
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
@@ -1053,8 +1056,13 @@ export function Chips({
     >
       {items.map(item => (
         <ToggleButton key={item.id} id={item.id} className="rp-btn small">
+          {item.icon}
           <span className="rp-truncate">{item.label}</span>
-          {item.count !== undefined && <span className="n">{item.count}</span>}
+          {item.count !== undefined && (
+            <span className="n" title={item.countLabel}>
+              {item.count}
+            </span>
+          )}
         </ToggleButton>
       ))}
     </ToggleButtonGroup>
@@ -1074,6 +1082,21 @@ export function downloadFile(name: string, content: string, type: string) {
 }
 export function csvLine(values: Array<string | number | null | undefined>): string {
   return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
+}
+
+// A service's icon from the configured pack, the flag's size; nothing when no pack is set or the pack lacks it.
+export function BrandIcon({brand, size}: {brand: Brand | null; size?: 'lg'}) {
+  const pack = useIconPack();
+  if (!pack || !brand) return null;
+  return (
+    <img
+      className={size ? 'flag brand ' + size : 'flag brand'}
+      src={iconUrl(pack, brand)}
+      alt=""
+      loading="lazy"
+      onError={event => (event.currentTarget.hidden = true)}
+    />
+  );
 }
 
 export function useMediaQuery(query: string) {

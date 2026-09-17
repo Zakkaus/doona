@@ -19,13 +19,13 @@ import {
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
-import {Flag} from './Flag';
+import {Flag, OutboundMark} from './Flag';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
 export type NodeInfo = {name: string; tcp?: number; udp?: number; v6?: boolean; alive?: boolean; nested?: boolean};
-export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
+export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
 export type NodeLabels = {
   timeout: string;
   nested: string;
@@ -177,7 +177,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels
     <NodeTile
       {...props}
       name={n.name}
-      icon={<Flag name={n.name} />}
+      icon={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : <Flag name={n.name} />}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}

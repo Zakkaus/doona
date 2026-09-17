@@ -1,11 +1,12 @@
 import {useEffect, useMemo} from 'react';
-import {Cell, Column, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
+import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
 import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
 import {OutboundMark} from '../policies/Flag';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
+import {Badge, BrandIcon, Loading, TextTooltip, fitColumns, useContentWidth} from '../../ui/ui';
+import {brandFor} from '../../ui/brand';
 
 import {columns, tableRows, type ConnectionView} from './view';
 // Match the native table's measured row and collapsed-border header heights.
@@ -58,7 +59,12 @@ export function ConnectionTable({
   }, [ref, selectedIndex]);
   const renderConnection = (c: Connection) => {
     const cells: Record<string, React.ReactNode> = {
-      dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
+      dst: (
+        <span className="rp-chain">
+          <BrandIcon brand={brandFor(c.domain || c.dst)} />
+          <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>
+        </span>
+      ),
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
       chain: (
         <span className="rp-chain">
@@ -88,7 +94,6 @@ export function ConnectionTable({
   };
   return (
     <div
-      className="rp-table"
       onKeyDownCapture={event => {
         // RAC scopes Home/End to cells unless the row itself has focus.
         if (event.key === 'Home' || event.key === 'End') {
@@ -96,72 +101,77 @@ export function ConnectionTable({
         }
       }}
     >
-      <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
-        <Table
-          ref={ref}
-          aria-label={t('nav.connections')}
-          aria-rowcount={flatRows.length + 1}
-          expandedKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
-          treeColumn={view.group === 'none' ? undefined : cols[0].id}
-          sortDescriptor={view.sort ?? undefined}
-          onSortChange={onSort}
-          disabledKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
-          selectionMode="single"
-          selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-          selectedKeys={selected ? [selected] : []}
-          onSelectionChange={keys => onSelect(keys === 'all' || !keys.size ? null : String([...keys][0]))}
-          disallowEmptySelection
-        >
-          <TableHeader>
-            {cols.map((c, index) => (
-              <Column
-                key={c.id}
-                id={c.id}
-                isRowHeader={index === 0}
-                allowsSorting={c.sortable}
-                width={`${c.minWidth}fr`}
-                minWidth={c.minWidth}
-                className={c.align}
-              >
-                {({sortDirection}) => (
-                  <>
-                    {t(c.label)}
-                    {sortDirection && <span aria-hidden="true">{sortDirection === 'ascending' ? ' ↑' : ' ↓'}</span>}
-                  </>
-                )}
-              </Column>
-            ))}
-          </TableHeader>
-          <TableBody
-            items={items}
-            dependencies={[locale, cols, view.group, loading]}
-            renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+      <ResizableTableContainer className="rp-table">
+        <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
+          <Table
+            ref={ref}
+            aria-label={t('nav.connections')}
+            aria-rowcount={flatRows.length + 1}
+            expandedKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
+            treeColumn={view.group === 'none' ? undefined : cols[0].id}
+            sortDescriptor={view.sort ?? undefined}
+            onSortChange={onSort}
+            disabledKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
+            selectionMode="single"
+            selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
+            selectedKeys={selected ? [selected] : []}
+            onSelectionChange={keys => onSelect(keys === 'all' || !keys.size ? null : String([...keys][0]))}
+            disallowEmptySelection
           >
-            {row => {
-              if ('group' in row)
-                return (
-                  <Row id={row.id} textValue={row.group}>
-                    {cols.map((column, index) => (
-                      <Cell key={column.id} className={column.align}>
-                        <span className="cell">
-                          {index === 0 ? (
-                            <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>
-                          ) : column.id === 'down' ? (
-                            formatBytes(row.download)
-                          ) : column.id === 'state' ? (
-                            t('conn.activeCount', {n: row.active})
-                          ) : null}
-                        </span>
-                      </Cell>
-                    ))}
-                    {row.children.map(renderConnection)}
-                  </Row>
-                );
-              return renderConnection(row.connection);
-            }}
-          </TableBody>
-        </Table>
-      </Virtualizer>
+            <TableHeader>
+              {cols.map((c, index) => (
+                <Column
+                  key={c.id}
+                  id={c.id}
+                  isRowHeader={index === 0}
+                  allowsSorting={c.sortable}
+                  defaultWidth={`${c.minWidth}fr`}
+                  minWidth={c.minWidth}
+                  className={c.align}
+                >
+                  {({sortDirection}) => (
+                    <>
+                      <span className="rp-th">
+                        {t(c.label)}
+                        {sortDirection && <span aria-hidden="true">{sortDirection === 'ascending' ? ' ↑' : ' ↓'}</span>}
+                      </span>
+                      <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: t(c.label)})} />
+                    </>
+                  )}
+                </Column>
+              ))}
+            </TableHeader>
+            <TableBody
+              items={items}
+              dependencies={[locale, cols, view.group, loading]}
+              renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+            >
+              {row => {
+                if ('group' in row)
+                  return (
+                    <Row id={row.id} textValue={row.group}>
+                      {cols.map((column, index) => (
+                        <Cell key={column.id} className={column.align}>
+                          <span className="cell">
+                            {index === 0 ? (
+                              <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>
+                            ) : column.id === 'down' ? (
+                              formatBytes(row.download)
+                            ) : column.id === 'state' ? (
+                              t('conn.activeCount', {n: row.active})
+                            ) : null}
+                          </span>
+                        </Cell>
+                      ))}
+                      {row.children.map(renderConnection)}
+                    </Row>
+                  );
+                return renderConnection(row.connection);
+              }}
+            </TableBody>
+          </Table>
+        </Virtualizer>
+      </ResizableTableContainer>
     </div>
   );
 }

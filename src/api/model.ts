@@ -60,6 +60,12 @@ export type NodeQuery = operations['listNodes']['parameters']['query'];
 export type ConnectionQuery = operations['listConnections']['parameters']['query'];
 export type FlowQuery = operations['listFlows']['parameters']['query'];
 export type DnsCacheQuery = operations['listDnsCache']['parameters']['query'];
+export type DnsLogList = Schema['DnsLogList'];
+export type DnsLogRecord = Schema['DnsLogRecord'];
+export type DnsLogQuery = operations['listDnsLog']['parameters']['query'];
+export type RuntimeSettings = Schema['RuntimeSettings'];
+export type RuntimeSettingsPatch = Schema['RuntimeSettingsPatch'];
+export type RuntimeSettingField = Schema['RuntimeSettingField'];
 export type EventKind = Schema['EventKind'];
 type EventData = {
   'stream.ready': Schema['StreamReadyEvent'];

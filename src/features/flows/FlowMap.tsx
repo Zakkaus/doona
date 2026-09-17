@@ -2,7 +2,8 @@ import {useMemo, useState} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {Button, Chips, Light, NodeTile} from '../../ui/ui';
+import {BrandIcon, Button, Chips, Light, NodeTile} from '../../ui/ui';
+import {brandFor} from '../../ui/brand';
 import {OutboundMark} from '../policies/Flag';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
@@ -47,6 +48,11 @@ export function FlowMap({
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
+                <OutboundMark
+                  name={
+                    kind === 'group' ? (lane.node && !lane.node.node.unknown ? lane.node.node.label : null) : lane.outbound.unknown ? null : lane.outbound.label
+                  }
+                />
                 <strong>{outboundLabel(lane.outbound.unknown ? null : lane.outbound.label, t)}</strong>
               </Light>
               <span className="rp-label">{facts}</span>
@@ -58,7 +64,9 @@ export function FlowMap({
                   items={(expanded.has(lane.outbound.id) ? lane.rules : lane.rules.slice(0, shownRules)).map(rule => ({
                     id: rule.node.id,
                     label: label(rule.node),
-                    count: n(rule.count)
+                    count: n(rule.count),
+                    countLabel: t('flow.laneFlows', {n: n(rule.count)}),
+                    icon: rule.node.unknown ? <OutboundMark name={null} /> : <BrandIcon brand={brandFor(rule.node.label)} />
                   }))}
                   value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
                   onChange={onPin}

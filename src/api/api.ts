@@ -24,6 +24,8 @@ import type {
   FlowDetail,
   FlowQuery,
   DnsCacheList,
+  DnsLogList,
+  DnsLogQuery,
   DnsCacheQuery,
   DnsQueryResponse,
   DnsRecordType,
@@ -31,7 +33,9 @@ import type {
   DeleteMatchingCount,
   OperationAccepted,
   OperationState,
-  EventOptions
+  EventOptions,
+  RuntimeSettings,
+  RuntimeSettingsPatch
 } from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
@@ -56,8 +60,11 @@ export interface Api {
   flows(query?: FlowQuery, signal?: AbortSignal): Promise<FlowList>;
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
+  dnsLog(query?: DnsLogQuery, signal?: AbortSignal): Promise<DnsLogList>;
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
+  runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
+  patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
   routingTrace(request: RoutingTraceRequest, signal?: AbortSignal): Promise<RoutingTraceResponse>;

@@ -1,9 +1,28 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {useMemo, useState} from 'react';
 import Delete from '../../ui/icons/Delete';
-import {useDnsControl} from '../../api/store';
-import {relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, ModalDialog, TextTooltip, Kv, LabeledSelect, Tabs, TextField, errorText, toast} from '../../ui/ui';
+import {useDnsControl, useDnsLog} from '../../api/store';
+import {brandFor} from '../../ui/brand';
+import {localTime, relativeStart} from '../../api/selectors';
+import {
+  Badge,
+  BrandIcon,
+  Button,
+  DataTable,
+  ErrorMessage,
+  Light,
+  ModalDialog,
+  TextTooltip,
+  Kv,
+  LabeledSelect,
+  Tabs,
+  TextField,
+  csvLine,
+  downloadFile,
+  errorText,
+  toast
+} from '../../ui/ui';
+import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
 
 // "How does a name resolve, and is the cache in the way": a query tab and a cache tab over the same domain.
@@ -206,8 +225,10 @@ export function Dns({go, query}: PageProps) {
       />
     </>
   );
+  const logTab = <DnsLog enabled={resources?.dns_log.available === true} initialName={params.get('domain') ?? ''} />;
   const tabs = [
     ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query'), content: queryTab}] : []),
+    ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log'), content: logTab}] : []),
     ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache'), content: cacheTab}] : [])
   ];
   const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'query');
@@ -216,5 +237,105 @@ export function Dns({go, query}: PageProps) {
       {error && <ErrorMessage error={error} />}
       <Tabs label={t('nav.dns')} items={tabs} value={tab} onChange={next => setTab(next)} />
     </div>
+  );
+}
+
+// "What did the resolver do for clients": the ring newest first, narrowed by name, type and client.
+function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string}) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const [name, setName] = useState(initialName);
+  const [type, setType] = useState('all');
+  const [src, setSrc] = useState('');
+  const log = useDnsLog({name, type, src}, enabled);
+  const rows = (log.data?.records ?? []).map(record => ({...record, id: record.id}));
+  return (
+    <>
+      <div className="rp-toolbar">
+        <TextField search label={t('ui.domain')} value={name} onChange={setName} placeholder={t('dns.logFilterHint')} width={240} />
+        <LabeledSelect
+          label={t('ui.type')}
+          side
+          value={type}
+          onChange={setType}
+          items={[{id: 'all', label: t('dns.allTypes')}, ...['A', 'AAAA', 'HTTPS', 'TXT', 'MX'].map(id => ({id, label: id}))]}
+        />
+        <TextField search label={t('ui.source')} value={src} onChange={setSrc} placeholder="10.0.0.12" width={160} />
+        {log.data && <span className="rp-label">{t('dns.logTotal', {n: log.data.total})}</span>}
+        <span className="rp-grow" />
+        <Button
+          isDisabled={!rows.length}
+          onPress={() =>
+            downloadFile(
+              'dns-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv',
+              [
+                csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
+                ...rows.map(r =>
+                  csvLine([
+                    r.id,
+                    r.observed_at,
+                    r.src,
+                    r.question.name,
+                    r.question.type,
+                    r.status,
+                    r.cached ? 'true' : 'false',
+                    r.upstream,
+                    r.route.source,
+                    r.route.rule,
+                    r.elapsed_ms,
+                    r.answers.map(answer => answer.data).join(' ')
+                  ])
+                )
+              ].join('\n') + '\n',
+              'text/csv;charset=utf-8'
+            )
+          }
+        >
+          <Download />
+          {t('dns.exportLog')}
+        </Button>
+      </div>
+      {log.error && <ErrorMessage error={log.error} />}
+      <DataTable
+        label={t('dns.log')}
+        height={520}
+        rows={rows}
+        loading={log.loading && !log.data}
+        empty={enabled ? t('dns.logEmpty') : t('dns.logUnavailable')}
+        cols={[
+          {id: 't', label: t('ui.time'), minWidth: 96, grow: 0},
+          {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true},
+          {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3},
+          {id: 's', label: t('ui.source'), minWidth: 128, drop: 2},
+          {id: 'r', label: t('dns.result'), minWidth: 160, grow: 2},
+          {id: 'u', label: t('ui.upstream'), minWidth: 128, drop: 1},
+          {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4}
+        ]}
+        render={record => [
+          <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
+          <span className="rp-chain">
+            <BrandIcon brand={brandFor(record.question.name)} />
+            <TextTooltip>{record.question.name}</TextTooltip>
+          </span>,
+          record.question.type,
+          <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>,
+          record.status !== 'NOERROR' ? (
+            <Light small tone="err">
+              {record.status}
+            </Light>
+          ) : (
+            <TextTooltip className="rp-code">{record.answers.map(answer => answer.data).join(', ') || '—'}</TextTooltip>
+          ),
+          record.cached ? (
+            <Light small tone="ok">
+              {t('dns.hit')}
+            </Light>
+          ) : (
+            <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
+          ),
+          t('ui.latency', {n: record.elapsed_ms})
+        ]}
+      />
+    </>
   );
 }

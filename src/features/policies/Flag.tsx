@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 // Flag glyphs for the regions geo.ts can recognise, inlined from flag-icons (MIT) so the panel stays offline.
 // Rendered as a small rounded 4:3 tile with a hairline so light flags (Japan, Singapore) keep an edge.
 import {regionOf} from './geo';
@@ -77,23 +78,33 @@ export function Flag({name, className}: {name: string; className?: string}) {
   return <span className={className ?? 'flag'} role="img" aria-label={regionOf(name) ?? ''} dangerouslySetInnerHTML={{__html: svg}} />;
 }
 
-// Built-in outbounds get a mark in the flag's frame, so a chain reads the same whether it ends in a node or not.
+// Built-in outbounds get a mark in the flag's frame, so a chain reads the same whether it ends in a node or
+// not: an arrow straight through for direct, a barred circle for block, a dashed ring for unknown, a diamond
+// for a node without a recognisable region. Groups show the flag of the node they currently exit through.
+export type MarkKind = 'direct' | 'block' | 'unknown' | 'node';
+const stroke = {fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round'} as const;
+const glyphs: Record<MarkKind, ReactNode> = {
+  // straight through
+  direct: <path d="M3 6h10M10 3l3 3-3 3" {...stroke} />,
+  // barred circle
+  block: <path d="M8 2.4a3.6 3.6 0 1 0 0 7.2a3.6 3.6 0 1 0 0-7.2M5.5 3.5l5 5" {...stroke} />,
+  // dashed ring
+  unknown: <circle cx="8" cy="6" r="3.6" {...stroke} strokeDasharray="2 1.6" />,
+  // one node
+  node: <path d="M8 1.8L12.2 6 8 10.2 3.8 6z" fill="currentColor" />
+};
+function Mark({kind, className}: {kind: MarkKind; className?: string}) {
+  return (
+    <span className={(className ?? 'flag') + ' mark'} data-kind={kind} role="img" aria-hidden="true">
+      <svg viewBox="0 0 16 12" width="16" height="12">
+        {glyphs[kind]}
+      </svg>
+    </span>
+  );
+}
 export function OutboundMark({name, className}: {name: string | null; className?: string}) {
-  if (name === 'direct' || name === 'block' || name === null || name === 'unknown') {
-    const kind = name === 'direct' ? 'direct' : name === 'block' ? 'block' : 'unknown';
-    return (
-      <span className={(className ?? 'flag') + ' mark'} data-kind={kind} role="img" aria-hidden="true">
-        {kind === 'direct' ? '⇄' : kind === 'block' ? '⊘' : '?'}
-      </span>
-    );
-  }
-  // A node outside the flag table still gets a mark, so a chain column never has an empty slot.
-  if (!flagSvg(name)) {
-    return (
-      <span className={(className ?? 'flag') + ' mark'} data-kind="node" role="img" aria-hidden="true">
-        ◆
-      </span>
-    );
-  }
+  if (name === 'direct' || name === 'block' || name === null || name === 'unknown')
+    return <Mark kind={name === 'direct' ? 'direct' : name === 'block' ? 'block' : 'unknown'} className={className} />;
+  if (!flagSvg(name)) return <Mark kind="node" className={className} />;
   return <Flag name={name} className={className} />;
 }

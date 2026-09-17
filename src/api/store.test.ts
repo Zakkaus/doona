@@ -178,7 +178,8 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
     'flow',
     'datapath',
     'runtimeMemory',
-    'dnsCache'
+    'dnsCache',
+    'dnsLog'
   ];
   for (const resource of resources) {
     expect(shouldRefetch(resource, event('stream.ready'))).toBe(false);

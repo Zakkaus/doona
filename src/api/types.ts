@@ -193,6 +193,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List provider metadata without credentials
+         * @description Read current subscription, file and inline provider metadata; never fetch a
+         *     subscription while serving a GET. Use the shared snapshot cursor semantics.
+         *     The effective default limit is min(100, resources.providers.max_page_size).
+         *     A limit above the advertised maximum returns 400 invalid_request, as does an
+         *     unknown, expired or invalidated cursor. Restart the page walk without it.
+         */
+        get: operations["listProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example provider-a */
+                id: components["parameters"]["ProviderId"];
+            };
+            cookie?: never;
+        };
+        /** Read one provider's current metadata */
+        get: operations["getProvider"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example provider-a */
+                id: components["parameters"]["ProviderId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a provider refresh
+         * @description Requires resources.providers.can_refresh. This action takes no request body
+         *     and never changes the provider's configured source. Unsupported provider kinds
+         *     or refresh actions return 404 capability_not_supported. Follow the shared
+         *     operation ownership, retention and idempotency rules. Replaying an accepted
+         *     Idempotency-Key returns its original operation before checking for an in-flight
+         *     refresh; a distinct refresh for the same provider returns 409 state_conflict.
+         *     A full bounded queue returns 503 temporarily_unavailable with Retry-After.
+         *     A successful provider_refresh operation returns the refreshed Provider in result;
+         *     failure uses SafeError and leaves the last successfully loaded nodes intact.
+         */
+        post: operations["refreshProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/groups": {
         parameters: {
             query?: never;
@@ -417,6 +492,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the running generation's routing rules
+         * @description Return one coherent, complete rule dictionary for the running routing generation,
+         *     in evaluation order, including its fallback entry. This resource is read-only;
+         *     it neither evaluates traffic nor reads back raw configuration. rule_id is identical
+         *     to the ID used by POST /api/v1/routing/trace and FlowSummary.rule_id for the same
+         *     generation. Join by generation_id and rule_id, never by expression or index alone.
+         *     generation_id is the invalidation cursor, not a pagination token. Refetch after
+         *     generation.changed; old flow evidence must not be joined to a new generation.
+         *     There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
+         *     generation cannot be pinned, return 409 snapshot_unavailable. If the complete
+         *     dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
+         *     rather than silently truncate it. Redact local paths and secret-bearing expression
+         *     values without changing rule identities or order; never expose raw configuration.
+         */
+        get: operations["listRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -434,6 +540,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow bounded resumable engine logs
+         * @description Requires resources.logs.available. Emit stream.ready first on every connection,
+         *     using the shared StreamReadyEvent payload and an opaque replay cursor. On a
+         *     valid resume, deliver retained matching records strictly after Last-Event-ID,
+         *     then live records without an unobserved gap. The ready cursor must not skip
+         *     pending replay; retain the supplied cursor until replay advances it.
+         *     Each log frame carries an opaque id unique within the running instance.
+         *     Duplicate delivery is permitted; deduplicate by id, never by message or ts.
+         *     Cursors are bound to this stream, instance and filters. Unknown, expired,
+         *     previous-instance or changed-filter cursors return 409 event_cursor_expired
+         *     before opening the stream. Drop the cursor and reconnect to establish a new
+         *     baseline; lost history is not recovered. Filtered-out IDs may leave gaps.
+         *     Retain at most resources.logs.max_buffered_records; this is not durable storage.
+         *     Close slow clients when their bounded queue fills; never block engine writers.
+         *     Send heartbeat comments at most 15 seconds apart while idle. Recheck credentials
+         *     on reconnect and terminate streams when authorization is revoked.
+         *     Sanitize messages and fields before buffering: no secrets, credentials, raw
+         *     configuration, stack traces or unredacted local paths. Never forward raw engine output.
+         */
+        get: operations["streamLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runtime/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the runtime-adjustable settings
+         * @description Requires resources.runtime_settings.available. Reports the values the running
+         *     engine uses for the things a panel may tune without a reload: the log level and
+         *     replay ring, the DNS log ring, and flow retention. Ceilings come from the
+         *     matching capability (logs.max_buffered_records, dns_log.max_records,
+         *     flows.max_flows, flows.retention_seconds); a value never exceeds its ceiling.
+         *     source says whether the values still come from the activated configuration
+         *     or were overridden at runtime.
+         */
+        get: operations["getRuntimeSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change runtime-adjustable settings without a reload
+         * @description Requires control and resources.runtime_settings.available; only the fields
+         *     listed in resources.runtime_settings.fields may appear, others return 400
+         *     invalid_request. The body is a merge: an absent field keeps its value. Every
+         *     value is checked against its ceiling before anything changes; an unadvertised
+         *     log level, a ring below 64 records, or a value above the ceiling returns 400
+         *     and changes nothing. Shrinking a ring drops its oldest records and expires
+         *     cursors older than the new floor. The change applies immediately and lasts
+         *     until the process restarts or the next configuration activation resets it; it
+         *     is not written to the configuration file. Follows the shared idempotency rules.
+         */
+        patch: operations["patchRuntimeSettings"];
+        trace?: never;
+    };
     "/api/v1/dns/query": {
         parameters: {
             query?: never;
@@ -443,6 +623,32 @@ export interface paths {
         };
         /** Execute a routed diagnostic DNS query */
         get: operations["queryDns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dns/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the bounded ring of recent resolutions
+         * @description Requires resources.dns_log.available. The engine records every resolution it
+         *     performs for clients (not the diagnostic /dns/query calls) into a ring of at
+         *     most resources.dns_log.max_records; newest first, not durable, cleared on
+         *     restart. A record is one question and its outcome: which client asked, which
+         *     upstream answered or whether the cache did, the answers, the routing decision
+         *     and how long it took. Filters narrow by name (case-insensitive substring),
+         *     record type and client source IP. limit above max_page_size returns 400.
+         */
+        get: operations["listDnsLog"];
         put?: never;
         post?: never;
         delete?: never;
@@ -627,6 +833,12 @@ export interface components {
                 /** @constant */
                 memory_history: "/api/v1/runtime/memory/history";
                 /** @constant */
+                logs: "/api/v1/logs";
+                /** @constant */
+                providers: "/api/v1/providers";
+                /** @constant */
+                rules: "/api/v1/rules";
+                /** @constant */
                 operations: "/api/v1/operations/{id}";
             };
         };
@@ -687,6 +899,12 @@ export interface components {
                     details?: ("attachments" | "maps")[];
                 };
                 nodes: components["schemas"]["AvailableResource"];
+                providers: {
+                    available: boolean;
+                    /** @description Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available. */
+                    can_refresh?: boolean;
+                    max_page_size?: components["schemas"]["SafeUInt"];
+                };
                 groups: {
                     available: boolean;
                     config_patch?: boolean;
@@ -729,6 +947,11 @@ export interface components {
                     per_principal_requests_per_minute?: number;
                     global_requests_per_minute?: number;
                 };
+                rules: {
+                    available: boolean;
+                    /** @description Maximum complete rule dictionary size, including the fallback entry; never a truncation limit. */
+                    max_rules?: components["schemas"]["SafeUInt"];
+                };
                 events: {
                     available: boolean;
                     kinds?: components["schemas"]["EventKind"][];
@@ -736,6 +959,12 @@ export interface components {
                     max_buffered_events?: number;
                     max_clients?: number;
                     heartbeat_seconds?: number;
+                };
+                logs: {
+                    available: boolean;
+                    levels?: components["schemas"]["LogLevel"][];
+                    /** @description Bounded replay buffer capacity, not a durable retention guarantee. */
+                    max_buffered_records?: components["schemas"]["SafeUInt"];
                 };
                 dns_query: {
                     available: boolean;
@@ -749,6 +978,17 @@ export interface components {
                     delete_name?: boolean;
                     flush?: boolean;
                     entry_kinds?: ("positive" | "negative")[];
+                };
+                dns_log: {
+                    available: boolean;
+                    /** @description Ring capacity in records; not a retention guarantee. */
+                    max_records?: components["schemas"]["SafeUInt"];
+                    max_page_size?: components["schemas"]["SafeUInt"];
+                };
+                runtime_settings: {
+                    available: boolean;
+                    /** @description The settings PATCH /runtime/settings accepts on this backend; others return 400. */
+                    fields?: components["schemas"]["RuntimeSettingField"][];
                 };
                 operations: {
                     available: boolean;
@@ -1016,6 +1256,8 @@ export interface components {
             name: string;
             protocol: string | null;
             subscription_tag: string | null;
+            /** @description Provider identity from GET /providers; omitted or null when provenance is unavailable. Never infer it from the node name. */
+            provider_id?: string | null;
             group_ids: string[];
             /** @description Latest observations, unique by (transport, purpose, measurement, ip_version, warmth) within this node. */
             health: components["schemas"]["HealthObservation"][];
@@ -1024,6 +1266,52 @@ export interface components {
             observed_at: components["schemas"]["Timestamp"];
             nodes: components["schemas"]["Node"][];
             next_cursor: string | null;
+        };
+        /** @description Safe metadata only. Names, URLs and last_error must not contain secrets, raw configuration or unredacted local paths. */
+        Provider: {
+            /** @description Opaque provider identity, shared with Node.provider_id; not a URL or display name. */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "subscription" | "file" | "inline";
+            /** @description Display-only source URL with userinfo, query, fragment and secret-bearing path segments removed or redacted. Null for file/inline sources or when safe display is impossible. Never a fetchable credential source. */
+            url_redacted: string | null;
+            node_count: components["schemas"]["SafeUInt"];
+            /** @description Last successful load or refresh, or null if unknown or never loaded. */
+            updated_at: components["schemas"]["NullableTimestamp"];
+            /** @description Provider-reported expiry, or null when unavailable. */
+            expires_at: components["schemas"]["NullableTimestamp"];
+            traffic: null | components["schemas"]["ProviderTraffic"];
+            /**
+             * @description ok has usable current data; stale retains older usable data; error has no usable data after a failure.
+             * @enum {string}
+             */
+            status: "ok" | "stale" | "error";
+            last_error: null | components["schemas"]["SafeError"];
+        };
+        /** @description Provider-reported usage, not runtime counters. Each unavailable quantity is null; traffic itself may be null when no usage metadata exists. */
+        ProviderTraffic: {
+            upload_bytes: components["schemas"]["NullableUInt64"];
+            download_bytes: components["schemas"]["NullableUInt64"];
+            /** @description Provider-reported total traffic allowance, not upload plus download. Null if unknown or unlimited. */
+            total_bytes: components["schemas"]["NullableUInt64"];
+        };
+        ProviderList: {
+            providers: components["schemas"]["Provider"][];
+            next_cursor: string | null;
+        };
+        ProviderRefreshAccepted: components["schemas"]["OperationAccepted"] & {
+            /** @constant */
+            kind?: "provider_refresh";
+        };
+        ProviderRefreshSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "provider_refresh";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["Provider"];
+            error?: null;
         };
         GroupPolicy: {
             /** @enum {string} */
@@ -1771,6 +2059,37 @@ export interface components {
             evaluations: components["schemas"]["RoutingEvaluation"][];
             dns: components["schemas"]["SimulationDnsData"][];
         };
+        /** @description Source location, or null when unavailable or unsafe to disclose. */
+        RuleSource: null | {
+            /** @description Redacted source label; never an absolute local path or credential-bearing URL. */
+            file: string;
+            line: components["schemas"]["SafeUInt"];
+        };
+        RoutingRule: {
+            /** @description Identical to POST /routing/trace rule IDs and FlowSummary.rule_id within the same generation; opaque to clients. */
+            rule_id: string;
+            /** @description Zero-based evaluation order within this generation, not a cross-generation identity. */
+            index: components["schemas"]["SafeUInt"];
+            /** @description Safe display expression, not raw configuration or an editable source representation. */
+            expression: string;
+            /** @description Rule outbound, not a resolved leaf node or a claim of a successful dial. */
+            outbound: string;
+            must: boolean;
+            source: components["schemas"]["RuleSource"];
+            /** @enum {string} */
+            kind: "rule" | "fallback";
+        };
+        /** @description Same outbound and source as the fallback entry in rules; the entry carries its rule_id. */
+        RuleFallback: {
+            outbound: string;
+            source: components["schemas"]["RuleSource"];
+        };
+        RuleList: {
+            generation_id: string;
+            /** @description Complete evaluation order with unique rule_id and index values, including exactly one final fallback entry. */
+            rules: components["schemas"]["RoutingRule"][];
+            fallback: components["schemas"]["RuleFallback"];
+        };
         DnsRecordType: string;
         DnsAnswer: {
             name: string;
@@ -1828,6 +2147,29 @@ export interface components {
             total: components["schemas"]["SafeUInt"];
             next_cursor: string | null;
         };
+        DnsLogRecord: {
+            /** @description Opaque, unique within the running instance; the cursor is derived from it. */
+            id: string;
+            observed_at: components["schemas"]["Timestamp"];
+            /** @description Client socket address, IPv6 in brackets; null when the resolver itself asked. */
+            src: string | null;
+            question: components["schemas"]["DnsQuestion"];
+            /** @description RCODE name such as NOERROR or NXDOMAIN, or an engine outcome such as TIMEOUT. */
+            status: string;
+            cached: boolean;
+            /** @description The upstream that answered, null on a cache hit or failure before sending. */
+            upstream: string | null;
+            route: components["schemas"]["DnsRoute"];
+            elapsed_ms: number;
+            answers: components["schemas"]["DnsAnswer"][];
+        };
+        DnsLogList: {
+            observed_at: components["schemas"]["Timestamp"];
+            /** @description Records in the ring at observed_at, before filters. */
+            total: components["schemas"]["SafeUInt"];
+            next_cursor: string | null;
+            records: components["schemas"]["DnsLogRecord"][];
+        };
         DeleteCount: {
             deleted: number;
         };
@@ -1836,7 +2178,7 @@ export interface components {
             deleted: number;
         };
         /** @enum {string} */
-        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update";
+        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update" | "provider_refresh";
         OperationAccepted: {
             operation_id: string;
             kind: components["schemas"]["OperationKind"];
@@ -1844,7 +2186,7 @@ export interface components {
             status: "queued";
             href: string;
         };
-        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"];
+        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"] | components["schemas"]["ProviderRefreshSucceededOperation"];
         QueuedOperation: components["schemas"]["OperationCommon"] & {
             /** @constant */
             status?: "queued";
@@ -1928,6 +2270,59 @@ export interface components {
         };
         /** @enum {string} */
         EventKind: "stream.ready" | "runtime.updated" | "flow.updated" | "flow.gap" | "operation.updated" | "generation.changed";
+        /** @enum {string} */
+        LogLevel: "trace" | "debug" | "info" | "warn" | "error";
+        LogRecord: {
+            ts: components["schemas"]["Timestamp"];
+            level: components["schemas"]["LogLevel"];
+            /** @description Engine module name, not a network destination. */
+            target: string;
+            /** @description Sanitized operator message; no secrets or raw configuration. */
+            message: string;
+            /** @description Sanitized structured fields, or null when unavailable; the message safety rules apply recursively. */
+            fields: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** @enum {string} */
+        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds";
+        RuntimeSettings: {
+            observed_at: components["schemas"]["Timestamp"];
+            /**
+             * @description config while every value comes from the activated configuration; runtime once any PATCH overrode one.
+             * @enum {string}
+             */
+            source: "config" | "runtime";
+            log: {
+                /** @description The minimum severity the engine emits; the stream's level filter cannot go below it. */
+                level: components["schemas"]["LogLevel"];
+                /** @description Log replay ring capacity, at most logs.max_buffered_records. */
+                buffered_records: components["schemas"]["SafeUInt"];
+            };
+            dns_log: {
+                /** @description DNS log ring capacity, at most dns_log.max_records. */
+                max_records: components["schemas"]["SafeUInt"];
+            };
+            flows: {
+                /** @description Retained flows, at most flows.max_flows. */
+                max_flows: components["schemas"]["SafeUInt"];
+                /** @description How long a terminal flow stays, at most flows.retention_seconds. */
+                retention_seconds: components["schemas"]["SafeUInt"];
+            };
+        };
+        RuntimeSettingsPatch: {
+            log?: {
+                level?: components["schemas"]["LogLevel"];
+                buffered_records?: components["schemas"]["SafeUInt"];
+            };
+            dns_log?: {
+                max_records?: components["schemas"]["SafeUInt"];
+            };
+            flows?: {
+                max_flows?: components["schemas"]["SafeUInt"];
+                retention_seconds?: components["schemas"]["SafeUInt"];
+            };
+        };
         StreamReadyEvent: {
             instance_id: string;
             observed_at: components["schemas"]["Timestamp"];
@@ -2008,30 +2403,46 @@ export interface components {
         /** @description Malformed parameters or request shape */
         BadRequest: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description Credentials are missing or invalid */
         Unauthorized: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description Authenticated caller lacks the required permission */
         Forbidden: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description Resource/action unavailable, absent, expired, or concealed */
         NotFound: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description State, idempotency, cursor, or coherent-snapshot conflict */
         Conflict: {
@@ -2119,6 +2530,17 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
+        /** @description Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and establish a new baseline. */
+        EventCursorExpired: {
+            headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
     };
     parameters: {
         0: "tcp" | "udp" | "all";
@@ -2135,9 +2557,9 @@ export interface components {
          * @description Opaque cursor bound to the resource, running adapter instance, filters,
          *     and retained snapshot. Restart, changed filters, or snapshot expiry or
          *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-         *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
-         *     that is unknown or no longer valid. Discard it and restart the page walk
-         *     without a cursor; never silently continue against a new snapshot.
+         *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+         *     for a cursor that is unknown or no longer valid. Discard it and restart
+         *     the page walk without a cursor; never silently continue against a new snapshot.
          */
         Cursor: string;
         /** @example group-proxy */
@@ -2155,6 +2577,8 @@ export interface components {
         IdempotencyKey: string;
         /** @example instance-7:123 */
         LastEventId: string;
+        /** @example provider-a */
+        ProviderId: string;
     };
     requestBodies: never;
     headers: {
@@ -2451,9 +2875,9 @@ export interface operations {
                  * @description Opaque cursor bound to the resource, running adapter instance, filters,
                  *     and retained snapshot. Restart, changed filters, or snapshot expiry or
                  *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
-                 *     that is unknown or no longer valid. Discard it and restart the page walk
-                 *     without a cursor; never silently continue against a new snapshot.
+                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+                 *     for a cursor that is unknown or no longer valid. Discard it and restart
+                 *     the page walk without a cursor; never silently continue against a new snapshot.
                  */
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -2478,6 +2902,133 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listProviders: {
+        parameters: {
+            query?: {
+                /** @example 100 */
+                limit?: components["parameters"]["Limit1000"];
+                /**
+                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
+                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
+                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
+                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+                 *     for a cursor that is unknown or no longer valid. Discard it and restart
+                 *     the page walk without a cursor; never silently continue against a new snapshot.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider page */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example provider-a */
+                id: components["parameters"]["ProviderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider metadata; reading does not refresh it */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    refreshProvider: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @example provider-a */
+                id: components["parameters"]["ProviderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider refresh accepted */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderRefreshAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another refresh for this provider is queued or running, or an idempotency key conflicts */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description Provider refresh queue is full */
+            503: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     listGroups: {
@@ -2855,9 +3406,9 @@ export interface operations {
                  * @description Opaque cursor bound to the resource, running adapter instance, filters,
                  *     and retained snapshot. Restart, changed filters, or snapshot expiry or
                  *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
-                 *     that is unknown or no longer valid. Discard it and restart the page walk
-                 *     without a cursor; never silently continue against a new snapshot.
+                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+                 *     for a cursor that is unknown or no longer valid. Discard it and restart
+                 *     the page walk without a cursor; never silently continue against a new snapshot.
                  */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */
@@ -2965,6 +3516,43 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ordered rules and fallback from one running generation */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The running routing generation could not be pinned coherently */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            503: components["responses"]["Unavailable"];
+        };
+    };
     streamEvents: {
         parameters: {
             query?: {
@@ -2999,8 +3587,107 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Last-Event-ID cannot be replayed (event_cursor_expired); sent before any 200 stream opens. Drop the cursor, reconnect without it and resnapshot. */
-            409: {
+            409: components["responses"]["EventCursorExpired"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    streamLogs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Minimum severity, ordered trace < debug < info < warn < error. Omit for all advertised levels; an unadvertised level returns 400 invalid_request.
+                 * @example info
+                 */
+                level?: components["schemas"]["LogLevel"];
+                /**
+                 * @description Case-sensitive literal module prefix; omit for all targets.
+                 * @example honk::routing
+                 */
+                target?: string;
+            };
+            header?: {
+                /** @example instance-7:123 */
+                "Last-Event-ID"?: components["parameters"]["LastEventId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Log stream; stream.ready precedes replay and live log frames. Heartbeat comments have no id or data. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["EventCursorExpired"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRuntimeSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current runtime settings */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchRuntimeSettings: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Settings after the change */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeSettings"];
+                };
+            };
+            /** @description A field outside resources.runtime_settings.fields, an unadvertised level, or a value outside its range */
+            400: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
@@ -3010,8 +3697,9 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            429: components["responses"]["RateLimited"];
-            503: components["responses"]["Unavailable"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     queryDns: {
@@ -3062,6 +3750,49 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listDnsLog: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Case-insensitive substring of the question name.
+                 * @example telegram
+                 */
+                name?: string;
+                /** @example A */
+                type?: components["schemas"]["DnsRecordType"];
+                /**
+                 * @description Client source IP literal, IPv4 or IPv6.
+                 * @example 10.0.0.12
+                 */
+                src?: string;
+                /** @example 200 */
+                limit?: components["schemas"]["SafeUInt"];
+                /** @description Opaque cursor from a previous page; older records follow it. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recent resolutions, newest first */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DnsLogList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listDnsCache: {
         parameters: {
             query?: {
@@ -3075,9 +3806,9 @@ export interface operations {
                  * @description Opaque cursor bound to the resource, running adapter instance, filters,
                  *     and retained snapshot. Restart, changed filters, or snapshot expiry or
                  *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes and GET /dns/cache return 400 invalid_request for a cursor
-                 *     that is unknown or no longer valid. Discard it and restart the page walk
-                 *     without a cursor; never silently continue against a new snapshot.
+                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
+                 *     for a cursor that is unknown or no longer valid. Discard it and restart
+                 *     the page walk without a cursor; never silently continue against a new snapshot.
                  */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */

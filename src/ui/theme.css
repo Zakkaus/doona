@@ -829,6 +829,8 @@ body:lang(zh-CN) {
 }
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rp-hl-high) transparent;
 }
 button,
 input {
@@ -1364,11 +1366,12 @@ input {
 .rp-btn.sm.icon {
   width: 32px;
 }
+/* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
+   destructive ones, secondary outlined. */
 .rp-btn.accent,
 .rp-btn.primary,
 .rp-btn.negative,
 .rp-btn.secondary {
-  border-radius: 999px;
   padding: 0 12px;
 }
 .rp-btn.secondary {
@@ -1566,11 +1569,6 @@ input {
   display: block;
 }
 .flag.mark {
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 700;
   color: var(--rp-on-accent);
   background: var(--rp-muted);
 }
@@ -1582,7 +1580,23 @@ input {
 }
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
-  font-size: 8px;
+}
+/* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
+.flag.brand {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: none;
+  object-fit: contain;
+}
+.rp-chips .flag.brand {
+  width: 18px;
+  height: 18px;
+}
+.rp-chain > .flag,
+.rp-chips .flag,
+.rp-light > .flag {
+  translate: 0 0.5px;
 }
 .rp-tip {
   background: var(--rp-text);
@@ -1590,6 +1604,8 @@ input {
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 6px;
+  /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
+  z-index: 10;
 }
 .rp-light {
   display: inline-flex;
@@ -1912,6 +1928,10 @@ input {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+/* Fields with descriptions differ in height; align them by their labels instead of their middles. */
+.rp-toolbar.top {
+  align-items: flex-start;
 }
 .rp-between {
   display: flex;
@@ -2269,10 +2289,43 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
   position: sticky;
   top: 0;
+  /* Above row content that forms its own stacking context (translated flag marks). */
+  z-index: 1;
   outline: none;
 }
 .rp-table [role='row'][data-selected] {
   background: var(--rp-selected);
+}
+/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
+.rp-table [role='columnheader'] {
+  position: sticky;
+}
+.rp-th {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.rp-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  box-sizing: border-box;
+  border-right: 2px solid transparent;
+  outline: none;
+}
+.rp-resizer[data-hovered],
+.rp-resizer[data-resizing],
+.rp-resizer[data-focus-visible] {
+  border-right-color: var(--rp-pine);
+}
+.rp-table [role='columnheader'][data-resizing] {
+  color: var(--rp-pine);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);

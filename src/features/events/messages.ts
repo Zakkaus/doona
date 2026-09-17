@@ -2,6 +2,7 @@ import {defineMessages} from '../../i18n';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'event.export': '匯出 JSON',
     'event.kind': '種類',
     'event.allKinds': '所有種類',
     'event.k.streamReady': '串流就緒',
@@ -24,6 +25,7 @@ export const messages = defineMessages({
     'event.gap': '{id}／{reason}／捨棄記錄 {n}'
   },
   'zh-CN': {
+    'event.export': '导出 JSON',
     'event.kind': '种类',
     'event.allKinds': '所有种类',
     'event.k.streamReady': '流就绪',
@@ -46,6 +48,7 @@ export const messages = defineMessages({
     'event.gap': '{id}／{reason}／丢弃记录 {n}'
   },
   en: {
+    'event.export': 'Export JSON',
     'event.kind': 'Kind',
     'event.allKinds': 'All kinds',
     'event.k.streamReady': 'Stream ready',

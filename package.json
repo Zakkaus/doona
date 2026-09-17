@@ -28,10 +28,11 @@
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p e2e",
     "check:gen": "tools/check-gen.sh",
     "check:i18n": "node tools/check-i18n.mjs",
+    "check:icons": "node tools/icons/check.mjs --icons",
     "check:size": "node tools/check-size.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
-    "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
+    "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm check:icons && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
     "js": 410000,

@@ -15,7 +15,9 @@ export type ResourceName =
   | 'flow'
   | 'datapath'
   | 'runtimeMemory'
-  | 'dnsCache';
+  | 'dnsCache'
+  | 'dnsLog'
+  | 'runtimeSettings';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
@@ -24,7 +26,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll
   'flow.updated': {now: ['flows', 'flow', 'connections'], poll: []},
   'flow.gap': {now: ['flows', 'flow'], poll: []},
   'operation.updated': {now: ['runtime'], poll: []},
-  'generation.changed': {now: ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'], poll: ['dnsCache']}
+  'generation.changed': {now: ['capabilities', 'runtime', 'runtimeSettings', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'], poll: ['dnsCache']}
 };
 
 export function shouldRefetch(resource: ResourceName, event: Pick<ApiEvent, 'event'>, reconnected = false): boolean {

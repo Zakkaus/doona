@@ -1,5 +1,15 @@
 import type {Api} from '../api';
-import type {ApiEvent, EventOptions, GroupSelectionResult, Operation, OperationAccepted, OperationState} from '../model';
+import type {
+  ApiEvent,
+  DnsLogRecord,
+  EventOptions,
+  FlowDetail,
+  GroupSelectionResult,
+  Operation,
+  OperationAccepted,
+  OperationState,
+  RuntimeSettingsPatch
+} from '../model';
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import * as fixtures from './fixtures';
@@ -18,6 +28,32 @@ function found<T>(value: T | undefined, kind: string): T {
   return value;
 }
 
+// Every flow with a name resolved once: the record says who asked, what answered and how long it took.
+function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
+  return [...flows]
+    .filter(flow => flow.input.domain)
+    .sort((a, b) => Date.parse(b.started_at ?? '') - Date.parse(a.started_at ?? ''))
+    .map((flow, i) => {
+      const name = flow.input.domain!.replace(/\.$/, '') + '.';
+      const cached = i % 3 === 1;
+      const failed = !cached && i % 11 === 7;
+      const type = flow.network === 'udp' && i % 2 ? 'AAAA' : 'A';
+      const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
+      return {
+        id: 'dl-' + String(i + 1).padStart(6, '0'),
+        observed_at: new Date(Date.parse(flow.started_at ?? new Date().toISOString()) - 40).toISOString(),
+        src: flow.input.src ?? null,
+        question: {name, type},
+        status: failed ? 'TIMEOUT' : 'NOERROR',
+        cached,
+        upstream: cached || failed ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : 'tls://1.1.1.1',
+        route: flow.outbound === 'direct' ? {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'} : {source: 'default', rule: null},
+        elapsed_ms: cached ? 0 : failed ? 5000 : 12 + ((i * 7) % 60),
+        answers: failed || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
+      };
+    });
+}
+
 export function createMockApi(): Api {
   let count = 100;
   let big = false;
@@ -27,6 +63,7 @@ export function createMockApi(): Api {
     if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
   } catch {}
   let capabilities = fixtures.capabilities;
+  const settings = structuredClone(fixtures.runtimeSettings);
   try {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
@@ -143,6 +180,9 @@ export function createMockApi(): Api {
           runtime_outbounds: '/api/v1/runtime/outbounds',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
+          logs: '/api/v1/logs',
+          providers: '/api/v1/providers',
+          rules: '/api/v1/rules',
           operations: '/api/v1/operations/{id}'
         }
       };
@@ -444,6 +484,23 @@ export function createMockApi(): Api {
       const result = page(entries, query?.cursor, query?.limit);
       return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
     },
+    dnsLog: async (query, signal) => {
+      signal?.throwIfAborted();
+      const limits = capabilities.resources.dns_log;
+      if (!limits.available) throw new ApiError(404, 'not_found', 'DNS log unavailable');
+      if (query?.limit !== undefined && query.limit > limits.max_page_size!)
+        throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
+      const needle = query?.name?.toLowerCase();
+      const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      const records = dnsLogRecords(flows).filter(
+        r =>
+          (!needle || r.question.name.toLowerCase().includes(needle)) &&
+          (!query?.type || r.question.type === query.type) &&
+          (!src || (r.src !== null && sourceIp(r.src) === src))
+      );
+      const result = page(records, query?.cursor, query?.limit ?? 200);
+      return {observed_at: new Date().toISOString(), total: records.length, next_cursor: result.next_cursor, records: structuredClone(result.items)};
+    },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();
       const name = domain.trim().toLowerCase().replace(/\.$/, '') + '.';
@@ -480,6 +537,45 @@ export function createMockApi(): Api {
         return;
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
+    runtimeSettings: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      return structuredClone(settings);
+    },
+    // Merge semantics: every value is checked against its ceiling before anything changes.
+    patchRuntimeSettings: async (patch, signal) => {
+      signal?.throwIfAborted();
+      const resources = capabilities.resources;
+      if (!resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      const allowed = new Set(resources.runtime_settings.fields ?? []);
+      const ceilings = {
+        'log.buffered_records': resources.logs.max_buffered_records ?? 0,
+        'dns_log.max_records': resources.dns_log.max_records ?? 0,
+        'flows.max_flows': resources.flows.max_flows ?? 0,
+        'flows.retention_seconds': resources.flows.retention_seconds ?? 0
+      };
+      const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+      const fields = Object.entries(patch).flatMap(([section, values]) =>
+        Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const)
+      );
+      for (const [field, value] of fields) {
+        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (field === 'log.level') {
+          if (!(resources.logs.levels ?? []).includes(value as never)) throw invalid(`${value} is not an advertised log level`);
+          continue;
+        }
+        const ceiling = ceilings[field as keyof typeof ceilings];
+        const floor = field === 'flows.retention_seconds' ? 1 : 64;
+        if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
+      }
+      const apply = <S extends keyof RuntimeSettingsPatch>(section: S) => Object.assign(settings[section], patch[section] ?? {});
+      apply('log');
+      apply('dns_log');
+      apply('flows');
+      settings.source = 'runtime';
+      settings.observed_at = new Date().toISOString();
+      return structuredClone(settings);
     },
     deleteDnsEntry: async (entryId, signal) => {
       signal?.throwIfAborted();
