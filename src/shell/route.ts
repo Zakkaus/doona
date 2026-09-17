@@ -7,7 +7,14 @@ type Route = {route: string; query: string};
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
-  return {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
+  const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
+  return route.route === 'flows' ? legacyFlows(route.query) : route;
+}
+// The flow map and records moved under rules; old links keep working.
+function legacyFlows(query: string): Route {
+  const params = new URLSearchParams(query);
+  params.set('tab', params.has('id') || params.has('connection_id') || params.has('path') ? 'flows' : 'map');
+  return {route: 'rules', query: params.toString()};
 }
 
 export function buildHash(route: string, query?: string): string {
@@ -25,6 +32,10 @@ const go: Go = (route, query) => {
 
 function currentHash(api: string | null): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(null, '', buildHash('settings'));
+  else if (/^#\/?flows(\?|$)/.test(location.hash)) {
+    const {route, query} = parseHash(location.hash);
+    history.replaceState(null, '', buildHash(route, query));
+  }
   return location.hash;
 }
 

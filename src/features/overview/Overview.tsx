@@ -13,7 +13,7 @@ const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: '
 // The optional resources a backend may leave out; the always-present ones are not worth a row.
 const resourceLabels = {
   connections: 'nav.connections',
-  flows: 'nav.flows',
+  flows: 'rule.flows',
   routing_trace: 'ov.r.routingTrace',
   dns_query: 'ov.r.dnsQuery',
   dns_cache: 'ov.r.dnsCache',

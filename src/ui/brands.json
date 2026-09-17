@@ -2697,7 +2697,7 @@
   {
     "id": "tencent",
     "label": "Tencent",
-    "source": "lige47-cn/Tencent",
+    "source": "qure-color/QQ",
     "geosite": ["tencent", "tencent-dev"],
     "domain": ["tencent.com"]
   },

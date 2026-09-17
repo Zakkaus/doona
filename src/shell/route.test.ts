@@ -6,10 +6,13 @@ describe('hash routing', () => {
     ['', 'activity', ''],
     ['#', 'activity', ''],
     ['#/', 'activity', ''],
-    ['#/flows', 'flows', ''],
-    ['#/flows?id=a&x=1', 'flows', 'id=a&x=1'],
-    ['#flows?id=a', 'flows', 'id=a'],
-    ['#/flows?next=/connections?src=192.168.1.2', 'flows', 'next=/connections?src=192.168.1.2'],
+    ['#/rules', 'rules', ''],
+    ['#/rules?id=a&x=1', 'rules', 'id=a&x=1'],
+    ['#rules?id=a', 'rules', 'id=a'],
+    ['#/rules?next=/connections?src=192.168.1.2', 'rules', 'next=/connections?src=192.168.1.2'],
+    ['#/flows', 'rules', 'tab=map'],
+    ['#/flows?id=flow-1', 'rules', 'id=flow-1&tab=flows'],
+    ['#/flows?connection_id=1', 'rules', 'connection_id=1&tab=flows'],
     ['#/?id=a', 'activity', 'id=a'],
     ['#/unknown?id=a', 'unknown', 'id=a']
   ])('parses %s', (hash, route, query) => {
@@ -18,8 +21,8 @@ describe('hash routing', () => {
 
   it.each<[string, string?]>([
     ['activity', undefined],
-    ['flows', ''],
-    ['flows', 'id=a&x=1'],
+    ['rules', ''],
+    ['rules', 'id=a&x=1'],
     ['connections', 'q=example?src=a%26b']
   ])('round-trips %s with query %s', (route, query) => {
     expect(buildHash(route, query)).toBe('#/' + route + (query ? '?' + query : ''));
@@ -27,12 +30,12 @@ describe('hash routing', () => {
   });
 
   it('updates both snapshots when only the query changes', () => {
-    let state = parseHash('#/flows');
-    state = updateRoute(state, '#/flows?id=a');
-    expect(state).toEqual({route: 'flows', query: 'id=a'});
-    state = updateRoute(state, '#/flows?id=b');
-    expect(state).toEqual({route: 'flows', query: 'id=b'});
-    state = updateRoute(state, '#/flows?id=a');
-    expect(state).toEqual({route: 'flows', query: 'id=a'});
+    let state = parseHash('#/rules');
+    state = updateRoute(state, '#/rules?id=a');
+    expect(state).toEqual({route: 'rules', query: 'id=a'});
+    state = updateRoute(state, '#/rules?id=b');
+    expect(state).toEqual({route: 'rules', query: 'id=b'});
+    state = updateRoute(state, '#/rules?id=a');
+    expect(state).toEqual({route: 'rules', query: 'id=a'});
   });
 });

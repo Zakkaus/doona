@@ -196,7 +196,11 @@ export function Connections({go, query}: PageProps) {
               </Light>
               <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), value])} />
               <div className="rp-cluster">
-                <Button onPress={() => go('flows', cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id))}>
+                <Button
+                  onPress={() =>
+                    go('rules', 'tab=flows&' + (cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id)))
+                  }
+                >
                   {t('conn.viewFlow')}
                 </Button>
                 {cur.src && (

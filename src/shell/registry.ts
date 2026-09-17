@@ -15,7 +15,6 @@ import SettingsIcon from '../ui/icons/Settings';
 
 const Overview = lazy(() => import('../features/overview/Overview').then(m => ({default: m.Overview})));
 const Connections = lazy(() => import('../features/connections/Connections').then(m => ({default: m.Connections})));
-const Flows = lazy(() => import('../features/flows/Flows').then(m => ({default: m.Flows})));
 const Policies = lazy(() => import('../features/policies/Policies').then(m => ({default: m.Policies})));
 const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
 const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
@@ -49,14 +48,6 @@ export const features: Feature[] = [
     nav: {group: 'grp.network', titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
     Page: Connections,
     requires: {resources: ['connections']}
-  },
-  {
-    id: 'flows',
-    path: 'flows',
-    shortcut: 'f',
-    nav: {group: 'grp.network', titleKey: 'nav.flows', hintKey: 'hint.flows', Icon: ListBulleted},
-    Page: Flows,
-    requires: {resources: ['flows']}
   },
   {
     id: 'policies',

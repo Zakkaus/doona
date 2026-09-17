@@ -4,6 +4,7 @@ import {useEffect, useMemo} from 'react';
 import {useCapabilities, useRoutingTrace} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
+import {FlowRecords, RoutingMap} from '../flows/Flows';
 import type {PageProps} from '../types';
 import type {Key} from '../../i18n/messages';
 
@@ -14,15 +15,23 @@ const outcomes: Record<string, Key> = {
   indeterminate: 'rule.result.indeterminate'
 };
 
-// The rules: a list of what decided the retained flows, and a simulator for a hypothetical input.
-// The config list and the editor join once the contract carries them.
+// Everything about routing decisions on one page: the rule list, the config drawn as a map, the retained flow
+// records with their traces, and a simulator for a hypothetical input. The editor joins once the contract
+// carries the config rule list.
 export function Rules({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const params = useMemo(() => new URLSearchParams(query), [query]);
+  const flows = resources?.flows.available !== false;
   const tabs = [
-    ...(resources?.flows.available !== false ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList />}] : []),
+    ...(flows
+      ? [
+          {id: 'list', label: t('rule.listTitle'), content: <RuleList />},
+          {id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />},
+          {id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}
+        ]
+      : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];
   const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'list');

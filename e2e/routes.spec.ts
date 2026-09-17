@@ -19,7 +19,7 @@ for (const scheme of ['light', 'dark']) {
 for (const width of [1024, 1280, 1440]) {
   test(`desktop tables fit their scrollports at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1400});
-    for (const route of ['dns', 'flows', 'rules', 'connections', 'events', 'overview']) {
+    for (const route of ['dns', 'rules', 'connections', 'events', 'overview']) {
       await page.goto(`/#/${route}`);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
