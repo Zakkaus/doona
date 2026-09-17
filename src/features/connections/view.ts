@@ -16,7 +16,7 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 5}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
-export type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null; outbounds: string[]};
+export type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
 export type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = 'doona-connections-view';
 
@@ -84,7 +84,6 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
     group,
     children,
     active: children.filter(c => c.state === 'active').length,
-    download: addU64(...children.map(c => c.download_bytes)),
-    outbounds: [...new Set(children.flatMap(c => (c.outbound ? [c.outbound] : [])))]
+    download: addU64(...children.map(c => c.download_bytes))
   }));
 }

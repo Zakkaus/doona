@@ -18,10 +18,12 @@ import {
   errorText,
   panelQuery,
   toast,
-  useMediaQuery
+  useMediaQuery,
+  exportName
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
+import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {columns, readView, viewKey, type ConnectionView} from './view';
@@ -48,11 +50,13 @@ export function Connections({go, query}: PageProps) {
   const [network, setNetwork] = useState('all');
   const [out, setOut] = useState('all');
   const sel = q.get('id');
-  const [lastQuery, setLastQuery] = useState(query);
-  if (lastQuery !== query) {
-    setLastQuery(query);
-    const next = q.get('q') ?? q.get('src');
-    if (next !== null) setText(next);
+  // A filter arriving in the URL (a search hit, a client link) replaces the typed one; selecting a row keeps
+  // the same q/src and must not reset what the person typed since.
+  const linked = q.get('q') ?? q.get('src');
+  const [lastLinked, setLastLinked] = useState(linked);
+  if (lastLinked !== linked) {
+    setLastLinked(linked);
+    if (linked !== null) setText(linked);
   }
   const select = (id: string | null) => {
     const params = new URLSearchParams(query);
@@ -146,11 +150,12 @@ export function Connections({go, query}: PageProps) {
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
         <span className="rp-grow" />
+        {canClose && <CloseAllButton ids={shown.map(c => c.id)} closing={closing} onStart={() => select(null)} />}
         <Button
           isDisabled={!shown.length}
           onPress={() =>
             downloadFile(
-              'connections-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv',
+              exportName('connections', 'csv'),
               [
                 csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
                 ...shown.map(c =>

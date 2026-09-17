@@ -15,16 +15,25 @@ import {
   useRuntime,
   useRuntimeMemory,
   useRuntimeOutbounds,
-  useTrafficHistory
+  useTrafficHistory,
+  useRuntimeMode
 } from '../../api/store';
-import {connectionRows, eventSummary, lifecycleStates, localTime, outboundUsage, preferredHealth, sourceIp, trafficSeries} from '../../api/selectors';
+import {
+  connectionRows,
+  eventSummary,
+  lifecycleStates,
+  localTime,
+  outboundLabel,
+  outboundUsage,
+  preferredHealth,
+  sourceIp,
+  trafficSeries
+} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Button, CardLink, Segmented, MenuButton, Light, Bar, ErrorMessage, Loading, TextTooltip, toast} from '../../ui/ui';
-import type {Key} from '../../i18n/messages';
-
-const modeLabels: Record<string, Key> = {rule: 'mode.rule', global: 'mode.global', direct: 'mode.direct'};
+import {Badge, Button, CardLink, MenuButton, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
 import {NodeMenu} from '../policies/Nodes';
+import {ModeSwitch} from './ModeSwitch';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
 
@@ -53,7 +62,8 @@ export function Activity({go}: {go: (page: string) => void}) {
     () =>
       (nodesResource.data ?? []).map(n => {
         const health = preferredHealth(n);
-        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive: health?.state === 'healthy', unavailable: health?.state === 'unavailable'};
+        const alive = health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined;
+        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive, unavailable: health?.state === 'unavailable'};
       }),
     [nodesResource.data]
   );
@@ -75,8 +85,9 @@ export function Activity({go}: {go: (page: string) => void}) {
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
-  // The quick row keeps its choice locally until the contract carries an outbound mode and a global target.
-  const [mode, setMode] = useState('rule');
+  // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
+  const runtimeMode = useRuntimeMode(capabilities.data?.resources.runtime_mode?.available !== false);
+  const mode = runtimeMode.data?.mode ?? 'rule';
   const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
   const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
@@ -86,14 +97,15 @@ export function Activity({go}: {go: (page: string) => void}) {
   if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const groups = groupsResource.data;
-  const target = groups.some(g => g.name === chosenTarget) ? chosenTarget : (groups[0]?.name ?? '—');
+  const target = groups.some(g => g.id === (chosenTarget || runtimeMode.data?.target)) ? chosenTarget || runtimeMode.data!.target! : (groups[0]?.id ?? '');
+  const targetName = groups.find(g => g.id === target)?.name ?? '—';
   const usage = outboundUsage(outbounds.data);
   const traffic = [
     {label: t('act.download'), color: p.cat[0], values: series.down},
     {label: t('act.upload'), color: p.cat[3], values: series.up}
   ];
   const OUT = usage.rows.map((r, i) => ({
-    name: r.name,
+    name: outboundLabel(r.name, t),
     value: r.percent === null ? null : Math.round(r.percent),
     text: formatBytes(r.bytes),
     color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
@@ -108,19 +120,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Shuffle />
               {t('act.mode')}
             </span>
-            <Segmented
-              label={t('act.mode')}
-              value={mode}
-              onChange={k => {
-                setMode(k);
-                toast('positive', t('act.modeChanged', {mode: t(modeLabels[k])}));
-              }}
-              items={[
-                ['rule', t('mode.rule')],
-                ['global', t('mode.global')],
-                ['direct', t('mode.direct')]
-              ]}
-            />
+            <ModeSwitch target={target} />
           </div>
         </div>
         <div className="rp-card">
@@ -129,8 +129,17 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Filter />
               {t('act.global')}
             </span>
-            <MenuButton quiet label={t('act.global')} value={target} onChange={setTarget} items={groups.map(g => ({id: g.name, label: g.name}))}>
-              {target}
+            <MenuButton
+              quiet
+              label={t('act.global')}
+              value={target}
+              onChange={id => {
+                setTarget(id);
+                if (mode === 'global') void runtimeMode.change({mode: 'global', target: id}).catch((error: unknown) => toast('negative', errorText(error)));
+              }}
+              items={groups.map(g => ({id: g.id, label: g.name}))}
+            >
+              {targetName}
             </MenuButton>
           </div>
         </div>
@@ -191,19 +200,13 @@ export function Activity({go}: {go: (page: string) => void}) {
           <span className="rp-tile-head rp-tint-c5">
             <Clock />
             {t('act.latency')}
-            <NodeMenu
-              label={t('act.node')}
-              value={nodeName}
-              onChange={setNodeName}
-              nodes={NODES}
-              labels={{timeout: t('act.timeout'), filter: t('act.filterNodes'), loading: t('act.loading')}}
-            />
+            <NodeMenu label={t('act.node')} value={nodeName} onChange={setNodeName} nodes={NODES} />
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: node.tcp})) : '—'}</span>
             </span>
-            <Light small tone={node?.alive ? 'ok' : 'err'}>
+            <Light small tone={node?.alive ? 'ok' : node?.unavailable ? 'err' : 'muted'}>
               {node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}
             </Light>
           </div>

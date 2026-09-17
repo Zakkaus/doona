@@ -50,7 +50,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
   await page.goto('/#/config?tab=validate');
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(3);
   await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
   await expect(rows).toHaveCount(1);
@@ -76,22 +76,64 @@ test.describe('without configuration readback', () => {
   });
 });
 
-test('the quick setup rewrites subscriptions and groups and keeps the rules', async ({page}) => {
+test('the quick setup rewrites subscriptions and keeps groups and rules', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
-  // The form starts from the main source: one subscription, four groups.
-  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://<redacted>');
-  await expect(card.getByLabel('Group name', {exact: true})).toHaveCount(4);
+  // The form starts from the main source: one subscription; the groups are left as written.
+  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
+  await expect(card).toContainText('Templates route to proxy');
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
-  await card.getByRole('button', {name: 'Add a group', exact: true}).click();
-  await card.getByLabel('Group name', {exact: true}).nth(4).fill('spare');
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
-  await expect(card.locator('.cm-content')).toContainText('spare { policy: min_moving_avg }');
   await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
   const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
   await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
-  await expect(main).toContainText('spare { policy: min_moving_avg }');
+  await expect(main).toContainText('gaming { filter: name(jp-01, hk-02) policy: min_last_delay }');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
+});
+
+test('the quick setup guards unsaved changes like the editor', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('tab', {name: 'Sources'}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page).toHaveURL(/tab=setup$/);
+  await page.getByRole('tab', {name: 'Sources'}).click();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/tab=source$/);
+});
+
+test('the quick setup writes a rule template into routing', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Whitelist/}).click();
+  const preview = card.locator('.cm-content');
+  await expect(preview).toContainText('domain(geosite:category-ads-all) -> block');
+  await expect(preview).toContainText('geosite:category-games@cn) -> direct');
+  await expect(preview).toContainText('domain(geosite:geolocation-!cn) -> proxy');
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
+  await expect(preview).toContainText('fallback: direct');
+});
+
+test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
+  await page.goto('/#/nodes');
+  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
+  await expect(sources).toHaveCount(2);
+  await expect(sources.first()).toContainText('sub-c');
+  const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
+  await expect(nodes.first()).toBeVisible();
+  expect(await nodes.count()).toBeGreaterThan(10);
+  await sources.nth(1).click();
+  await expect(page).toHaveURL(/provider=inline$/);
+  await expect(nodes).toHaveCount(5);
+  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 100 nodes');
 });

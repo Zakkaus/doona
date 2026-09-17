@@ -36,8 +36,17 @@ import type {
   EventOptions,
   RuntimeSettings,
   RuntimeSettingsPatch,
+  ProviderList,
+  ProviderQuery,
+  Provider,
+  Node,
+  ProviderCreate,
+  NodeCreate,
+  GeoData,
+  RuntimeMode,
+  RuntimeModeRequest,
+  LogOptions,
   EffectiveConfig,
-  ConfigSource,
   ConfigValidationRequest,
   ConfigValidationResult
 } from './model';
@@ -69,8 +78,17 @@ export interface Api {
   dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
+  runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
+  setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
+  providers(query?: ProviderQuery, signal?: AbortSignal): Promise<ProviderList>;
+  refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
+  createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;
+  deleteProvider(providerId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  createNode(request: NodeCreate, signal?: AbortSignal): Promise<Node>;
+  deleteNode(nodeId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  geodata(signal?: AbortSignal): Promise<GeoData>;
+  updateGeodata(signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
-  configSource(sourceId: string, signal?: AbortSignal): Promise<ConfigSource>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;
   replaceConfigSource(sourceId: string, content: string, ifMatch: string, signal?: AbortSignal): Promise<OperationAccepted>;
   patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
@@ -84,5 +102,5 @@ export interface Api {
   pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState>;
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;
-  /** Mock-only generation dictionary; native servers have no rule-list endpoint. */
+  subscribeLogs(options: LogOptions): Promise<void>;
 }

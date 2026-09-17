@@ -100,14 +100,14 @@ function evaluate(input: RoutingTraceInput): Evaluation {
     rules
   };
 }
-export function routingTrace({input, resolve}: RoutingTraceRequest): RoutingTraceResponse {
-  if (!input.domain && !input.dst_ip) throw new ApiError(400, 'invalid_input', 'A domain or destination IP is required');
+export function routingTrace({input, resolve}: RoutingTraceRequest, generationId: string): RoutingTraceResponse {
+  if (!input.domain && !input.dst_ip) throw new ApiError(400, 'invalid_request', 'A domain or destination IP is required');
   if (resolve === 'live' && (!input.domain || input.dst_ip))
     throw new ApiError(400, 'invalid_input', 'Live resolution requires a domain and no destination IP');
   const response: RoutingTraceResponse = {
     mode: 'simulation',
     instance_id: instanceId,
-    generation_id: configRules.generation_id,
+    generation_id: generationId,
     observed_at: new Date().toISOString(),
     evaluations: [],
     dns: []

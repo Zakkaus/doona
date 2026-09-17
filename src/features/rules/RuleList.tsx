@@ -59,7 +59,7 @@ export function RuleList() {
       <DataTable
         label={t('rule.listTitle')}
         loading={resource.loading && !resource.data}
-        rows={filtered.map(row => ({...row, id: row.key}))}
+        rows={filtered.map(row => ({...row, ruleId: row.id, id: row.key}))}
         empty={t('rule.distributionEmpty')}
         cols={[
           {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2},
@@ -69,7 +69,7 @@ export function RuleList() {
           {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3}
         ]}
         render={row => [
-          row.id ?? '—',
+          row.ruleId ?? '—',
           <TextTooltip className={row.expression ? 'rp-code' : undefined}>{row.expression ?? t('rule.unknownRule')}</TextTooltip>,
           <Badge>{t(sources[row.source])}</Badge>,
           formatNumber(row.count, locale),

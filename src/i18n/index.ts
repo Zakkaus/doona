@@ -1,4 +1,4 @@
-import {createContext, useContext} from 'react';
+import {createContext, useContext, useMemo} from 'react';
 import {table, type Key} from './messages';
 
 export type Lang = 'zh-TW' | 'zh-CN' | 'en';
@@ -44,9 +44,10 @@ export function translate(lang: Lang, key: Key, params?: Params): string {
   }
   return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name])) : text;
 }
+// One translator per language, so effects and memos that list `t` do not re-run every render.
 export function useT(): Translator {
   const lang = useLang();
-  return (key: Key, params?: Params) => translate(lang, key, params);
+  return useMemo(() => (key: Key, params?: Params) => translate(lang, key, params), [lang]);
 }
 
 const lists = new Map<Lang, Intl.ListFormat>();

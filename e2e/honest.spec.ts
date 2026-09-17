@@ -1,7 +1,7 @@
 import {detail, expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
-test('native activity uses API version and events without demo mode controls', async ({page}) => {
+test('native activity shows the API version and follows runtime events', async ({page}) => {
   const version = await createMockApi().version();
   await page.clock.install();
   await page.goto('/#/activity');
@@ -9,12 +9,8 @@ test('native activity uses API version and events without demo mode controls', a
   const notifications = page.getByRole('region', {name: 'Notifications'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
-  await expect(page.locator('.rp-tile-val .rp-delta')).toHaveCount(0);
   await page.goto('/#/connections?id=2');
   await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
-  await expect(detail(page).locator('.rp-btn.accent')).toHaveCount(0);
-  await page.goto('/#/events');
-  await expect(page.getByRole('tab')).toHaveCount(0);
 });
 
 test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {
@@ -56,11 +52,16 @@ test('search reads live connection addresses, node and group names, and availabl
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/id=/);
   await expect(detail(page)).toHaveCount(0);
-  for (const query of ['Live node', 'Live group', 'Settings']) {
+  const targets: Array<[string, RegExp]> = [
+    ['Live node', /#\/nodes\?provider=inline&q=Live%20node$/],
+    ['Live group', /#\/policies\?group=proxy$/],
+    ['Settings', /#\/settings$/]
+  ];
+  for (const [query, url] of targets) {
     await page.keyboard.press('Control+K');
     await dialog.getByRole('searchbox').fill(query);
-    await dialog.getByRole('option', {name: query, exact: true}).click();
-    await expect(page).toHaveURL(query === 'Settings' ? /#\/settings$/ : /#\/policies$/);
+    await dialog.getByRole('option', {name: new RegExp('^' + query)}).click();
+    await expect(page).toHaveURL(url);
   }
 });
 
@@ -75,6 +76,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/runtime': await api.runtime(),
     '/runtime/memory': await api.runtimeMemory(),
     '/runtime/memory/history': await api.memoryHistory(),
+    '/runtime/mode': await api.runtimeMode(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections(),

@@ -22,10 +22,12 @@ export function RuntimeSettingsCard() {
   const fields = new Set<RuntimeSettingField>(capabilities?.runtime_settings.fields ?? []);
   const settings = useRuntimeSettings(available);
   const baseline = settings.data;
-  // Edits are kept apart from the baseline and dropped once the backend reports a newer one.
+  // Edits are kept apart from the baseline and dropped once the backend reports different values; a poll that
+  // only restamps observed_at keeps them.
   type Edits = {at: string; level?: string; values: Partial<Record<Numeric, string>>};
+  const stamp = baseline ? JSON.stringify([baseline.log, baseline.dns_log, baseline.flows]) : '';
   const [draft, setDraft] = useState<Edits>({at: '', values: {}});
-  const edits = baseline && draft.at === baseline.observed_at ? draft : {at: baseline?.observed_at ?? '', values: {}};
+  const edits = baseline && draft.at === stamp ? draft : {at: stamp, values: {}};
   const level = edits.level ?? baseline?.log.level ?? '';
   const values = Object.fromEntries(numericFields.map(field => [field, edits.values[field] ?? (baseline ? String(at(baseline, field)) : '')])) as Record<
     Numeric,

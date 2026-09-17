@@ -102,13 +102,13 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
   for (const [key, value] of Object.entries(group.config)) document['/config/' + key] = value;
   const mutable = (path: string) => group.capabilities.mutable_config.some(key => path === (key === 'policy' ? '/policy' : '/config/' + key));
   const missing = (path: string) => {
-    if (!(path in document)) throw new ApiError(422, 'invalid_patch', 'Patch path does not exist');
+    if (!(path in document)) throw new ApiError(422, 'unsupported_value', 'Patch path does not exist');
   };
   for (const op of ops) {
-    if (!mutable(op.path) || ('from' in op && !mutable(op.from))) throw new ApiError(422, 'immutable_field', 'Group field is not mutable');
+    if (!mutable(op.path) || ('from' in op && !mutable(op.from))) throw new ApiError(422, 'unsupported_value', 'Group field is not mutable');
     if (op.op !== 'add' && op.op !== 'copy' && op.op !== 'move') missing(op.path);
     if (op.op === 'test') {
-      if (JSON.stringify(document[op.path]) !== JSON.stringify(op.value)) throw new ApiError(409, 'patch_test_failed', 'Patch test failed');
+      if (JSON.stringify(document[op.path]) !== JSON.stringify(op.value)) throw new ApiError(409, 'state_conflict', 'Patch test failed');
     } else if (op.op === 'remove') delete document[op.path];
     else if ('from' in op) {
       missing(op.from);
@@ -126,28 +126,28 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     !('native' in policy) ||
     typeof policy.native !== 'string'
   )
-    throw new ApiError(422, 'invalid_policy', 'Invalid group policy');
+    throw new ApiError(422, 'unsupported_value', 'Invalid group policy');
   const config = Object.fromEntries(
     Object.keys(group.config).map(key => [key, document['/config/' + key] ?? (key === 'interrupt_connections' ? false : null)])
   ) as Group['config'];
   for (const key of ['check_interval', 'tolerance', 'idle_timeout'] as const) {
     const value = config[key];
     if (value !== null && (!Number.isSafeInteger(value) || value < (key === 'check_interval' ? 1 : 0)))
-      throw new ApiError(422, 'invalid_config', 'Invalid group interval or tolerance');
+      throw new ApiError(422, 'unsupported_value', 'Invalid group interval or tolerance');
   }
-  if (typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'invalid_config', 'Invalid interruption setting');
+  if (typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'unsupported_value', 'Invalid interruption setting');
   for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const)
-    if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'invalid_config', 'Invalid group configuration value');
+    if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'unsupported_value', 'Invalid group configuration value');
   if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))
-    throw new ApiError(422, 'invalid_member', 'Default member is not in this group');
+    throw new ApiError(422, 'unsupported_value', 'Default member is not in this group');
   if (config.check_url !== null) {
     let url: URL;
     try {
       url = new URL(config.check_url);
     } catch {
-      throw new ApiError(422, 'invalid_url', 'Invalid check URL');
+      throw new ApiError(422, 'unsupported_value', 'Invalid check URL');
     }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new ApiError(422, 'invalid_url', 'Invalid check URL');
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new ApiError(422, 'unsupported_value', 'Invalid check URL');
   }
   return {policy: policy as Group['policy'], config};
 }

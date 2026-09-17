@@ -22,9 +22,6 @@ function record(memory: RuntimeMemory | undefined): MemorySample[] {
   if (memory) history = appendMemorySample(history, memory);
   return history;
 }
-export function resetMemorySamples() {
-  history = [];
-}
 export function useMemorySamples(memory: RuntimeMemory | undefined) {
   const [observed, setObserved] = useState(memory);
   const [samples, setSamples] = useState<MemorySample[]>(() => record(memory));

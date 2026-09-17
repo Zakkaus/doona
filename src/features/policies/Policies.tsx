@@ -1,45 +1,50 @@
 import {useT} from '../../i18n';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
-import type {HealthObservation} from '../../api/model';
+import type {Group, HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
+import type {PageProps} from '../types';
+import type {Key} from '../../i18n/messages';
+
+const policyKinds: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
 
 function PolicyCard({
   id,
   health,
   leaves,
   refreshGroups,
-  refreshNodes
+  refreshNodes,
+  onLoaded
 }: {
   id: string;
   health: Map<string, HealthObservation | undefined>;
   leaves: Map<string, string | undefined>;
   refreshGroups: () => void;
   refreshNodes: () => void;
+  onLoaded: (id: string) => void;
 }) {
   const t = useT();
-  const labels = {
-    timeout: t('policy.unavailable'),
-    nested: t('policy.group'),
-    cur: t('policy.current'),
-    filter: t('policy.filter'),
-    region: t('policy.region'),
-    allRegions: t('policy.allRegions'),
-    sort: t('policy.sort'),
-    byLatency: t('policy.byLatency'),
-    byName: t('policy.byName'),
-    aliveOnly: t('policy.aliveOnly'),
-    none: t('policy.none'),
-    count: (n: number, down: number) => (down ? t('policy.membersDown', {n, down}) : t('policy.members', {n}))
-  };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
+  // A failed control toasts once; a failed load shows inline and does not repeat on every poll.
   useEffect(() => {
-    if (control.error) toast('negative', errorText(control.error));
-  }, [control.error]);
+    if (control.actionError) toast('negative', errorText(control.actionError));
+  }, [control.actionError]);
   const g = control.data;
+  // Settled either way: the scroll to a linked card waits for every card to have its final height.
+  const settled = !!g || !!control.error;
+  useEffect(() => {
+    if (settled) onLoaded(id);
+  }, [settled, id, onLoaded]);
   const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), leaf: leaves.get(m.id)})) ?? [], [g, health, leaves]);
   const tcp = g?.runtime.selection.tcp?.member_id;
   const udp = g?.runtime.selection.udp?.member_id;
@@ -52,7 +57,7 @@ function PolicyCard({
   const healthy = members.filter(m => m.health?.state === 'healthy').length;
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
   return (
-    <section className="rp-card" aria-label={g?.name ?? id}>
+    <section className="rp-card" id={'group-' + id} aria-label={g?.name ?? id}>
       <ErrorMessage error={control.error} />
       {!g ? (
         control.error ? null : (
@@ -63,7 +68,7 @@ function PolicyCard({
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3">{g.name}</h3>
-              <Badge>{g.policy.kind}</Badge>
+              <Badge>{t(policyKinds[g.policy.kind])}</Badge>
               <Light small tone="ok">
                 {t('policy.healthy', {n: healthy})}
               </Light>
@@ -76,8 +81,8 @@ function PolicyCard({
             <Button
               small
               isPending={control.busy === 'probe'}
-              isDisabled={!!control.busy || !g.capabilities.probe_transports.includes('tcp')}
-              tip={!g.capabilities.probe_transports.includes('tcp') ? t('policy.noProbe') : undefined}
+              isDisabled={!!control.busy || !control.canProbe}
+              tip={!control.canProbe ? t('policy.noProbe') : undefined}
               onPress={() => {
                 void control.probe().then(result => {
                   if (result) {
@@ -150,7 +155,6 @@ function PolicyCard({
             )}
           </div>
           <NodeGrid
-            labels={labels}
             nodes={members}
             selected={selected}
             cur={selected}
@@ -181,10 +185,19 @@ function PolicyCard({
     </section>
   );
 }
-export function Policies() {
+export function Policies({query}: PageProps) {
   const t = useT();
   const groups = useGroups();
   const nodes = useNodes();
+  // `?group=` (from search) brings that card into view once every card has its full height, so the cards above
+  // it no longer grow after the scroll.
+  const focus = new URLSearchParams(query).get('group');
+  const [loadedIds, setLoadedIds] = useState<ReadonlySet<string>>(new Set());
+  const onLoaded = useCallback((id: string) => setLoadedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id))), []);
+  const ready = !!groups.data && groups.data.every(g => loadedIds.has(g.id));
+  useEffect(() => {
+    if (focus && ready) document.getElementById('group-' + focus)?.scrollIntoView({block: 'start'});
+  }, [focus, ready]);
   const health = useMemo(() => new Map((nodes.data ?? []).map(n => [n.id, preferredHealth(n)])), [nodes.data]);
   // Every group's current exit node, so headers and nested member tiles carry the flag the traffic actually leaves under.
   const leaves = useMemo(() => new Map((groups.data ?? []).map(g => [g.id, groupLeaf(g.id, groups.data ?? [], nodes.data ?? [])])), [groups.data, nodes.data]);
@@ -196,7 +209,7 @@ export function Policies() {
       {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
       <DisclosureGroup>
         {groups.data?.map(g => (
-          <PolicyCard key={g.id} id={g.id} health={health} leaves={leaves} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />
+          <PolicyCard key={g.id} id={g.id} health={health} leaves={leaves} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} onLoaded={onLoaded} />
         ))}
       </DisclosureGroup>
     </div>

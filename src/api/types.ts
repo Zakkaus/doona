@@ -283,6 +283,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runtime/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the outbound mode
+         * @description The engine's outbound mode: rule follows the configuration, direct
+         *     sends every flow straight out as if the routing section were only
+         *     `fallback: direct`, global sends every flow through one outbound. Runtime
+         *     state, never written to the configuration; the next activation returns
+         *     to rule. Requires resources.runtime_mode.available.
+         */
+        get: operations["getRuntimeMode"];
+        /**
+         * Switch the outbound mode without a reload
+         * @description Requires control and resources.runtime_mode.available; mode must be one
+         *     of resources.runtime_mode.modes. global needs target, the id of a group
+         *     or node every flow then leaves through; rule and direct take no target.
+         *     Presets the engine treats as must (LAN, multicast, the network manager)
+         *     keep applying in every mode. The change applies immediately, interrupts
+         *     nothing already established, and is dropped by the next activation.
+         *     Follows the shared idempotency rules.
+         */
+        put: operations["setRuntimeMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/datapath": {
         parameters: {
             query?: never;
@@ -310,7 +344,18 @@ export interface paths {
         /** List nodes and latest typed health samples */
         get: operations["listNodes"];
         put?: never;
-        post?: never;
+        /**
+         * Add an inline node from a share link
+         * @description Requires resources.nodes.can_manage; otherwise returns 404
+         *     capability_not_supported. The backend parses the link with the engine's own
+         *     share-link support, writes it into the node section of its managed main
+         *     source under the given name, advances the configuration revision and emits
+         *     generation.changed. The link is stored, never returned. A link the engine
+         *     cannot parse returns 422 unprocessable with the engine's reason in message;
+         *     a name already in use returns 409 state_conflict. The node belongs to the
+         *     inline provider and to every group whose filter matches it after reload.
+         */
+        post: operations["createNode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -334,7 +379,21 @@ export interface paths {
          */
         get: operations["listProviders"];
         put?: never;
-        post?: never;
+        /**
+         * Add a subscription provider to the managed configuration
+         * @description Requires resources.providers.can_manage; otherwise returns 404
+         *     capability_not_supported. Only kind subscription can be created here: file and
+         *     inline providers are authored in the configuration sources. The backend writes
+         *     the provider into the subscription section of its managed main source,
+         *     advances the configuration revision and emits generation.changed, so a
+         *     configuration editor holding the previous revision receives 412 on its next
+         *     write. The provider is created unfetched: node_count 0, updated_at null and
+         *     status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
+         *     never returned; the response carries url_redacted. A name already in use
+         *     returns 409 state_conflict; a URL that is not http(s) returns 422
+         *     unprocessable.
+         */
+        post: operations["createProvider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -355,7 +414,17 @@ export interface paths {
         get: operations["getProvider"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Remove a subscription or file provider from the managed configuration
+         * @description Requires resources.providers.can_manage; otherwise returns 404
+         *     capability_not_supported, as does an inline provider, which is the node
+         *     section itself. Removes the provider's line from the managed main source and
+         *     its nodes from the running groups, advances the configuration revision and
+         *     emits generation.changed. Idempotent: an unknown id returns deleted 0. A
+         *     provider that is the only member source of a group is still removed; the
+         *     group is then empty.
+         */
+        delete: operations["deleteProvider"];
         options?: never;
         head?: never;
         patch?: never;
@@ -386,6 +455,90 @@ export interface paths {
          *     failure uses SafeError and leaves the last successfully loaded nodes intact.
          */
         post: operations["refreshProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example node-hk-03 */
+                id: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove an inline node from the managed configuration
+         * @description Requires resources.nodes.can_manage; otherwise returns 404
+         *     capability_not_supported, as does a node that came from a subscription or
+         *     file provider: those are removed by refreshing or deleting their provider.
+         *     Removes the node's line from the node section of the managed main source and
+         *     the node from the running groups, advances the configuration revision and
+         *     emits generation.changed. Idempotent: an unknown id returns deleted 0.
+         */
+        delete: operations["deleteNode"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geodata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the geosite and geoip assets the engine loaded
+         * @description Requires resources.geodata.available; otherwise returns 404
+         *     capability_not_supported. One entry per asset kind in
+         *     resources.geodata.assets, describing the file the running datapath was
+         *     built from: its digest, size and modification time, and the download source
+         *     POST /geodata/update fetches, redacted like a provider URL. Reading never
+         *     touches the network.
+         */
+        get: operations["getGeoData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geodata/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a download of the geosite and geoip assets
+         * @description Requires resources.geodata.can_update; otherwise returns 404
+         *     capability_not_supported. Takes no request body and never changes the
+         *     configured sources. The backend downloads every asset from its source into a
+         *     temporary file, verifies it parses, replaces the loaded file and reloads the
+         *     datapath once, emitting generation.changed; an asset that fails to download
+         *     or parse leaves the loaded file in place and fails the operation. Follow the
+         *     shared operation ownership, retention and idempotency rules. Replaying an
+         *     accepted Idempotency-Key returns its original operation; a distinct update
+         *     while one is queued or running returns 409 state_conflict. A full bounded
+         *     queue returns 503 temporarily_unavailable with Retry-After. A successful
+         *     geodata_update operation returns the new GeoData in result; failure uses
+         *     SafeError.
+         */
+        post: operations["updateGeoData"];
         delete?: never;
         options?: never;
         head?: never;
@@ -968,6 +1121,10 @@ export interface components {
                 /** @constant */
                 rules: "/api/v1/rules";
                 /** @constant */
+                runtime_mode: "/api/v1/runtime/mode";
+                /** @constant */
+                geodata: "/api/v1/geodata";
+                /** @constant */
                 operations: "/api/v1/operations/{id}";
             };
         };
@@ -1050,16 +1207,27 @@ export interface components {
                     /** @description Maximum returned samples per history request. */
                     max_points?: components["schemas"]["SafeUInt"];
                 };
+                runtime_mode: {
+                    available: boolean;
+                    /** @description The modes PUT /runtime/mode accepts; rule is always one of them. */
+                    modes?: components["schemas"]["OutboundMode"][];
+                };
                 datapath: {
                     available: boolean;
                     kinds?: components["schemas"]["DatapathKind"][];
                     details?: ("attachments" | "maps")[];
                 };
-                nodes: components["schemas"]["AvailableResource"];
+                nodes: {
+                    available: boolean;
+                    /** @description POST /nodes and DELETE /nodes/{id} are implemented for inline nodes; the backend owns a writable main source. */
+                    can_manage?: boolean;
+                };
                 providers: {
                     available: boolean;
                     /** @description Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available. */
                     can_refresh?: boolean;
+                    /** @description POST /providers and DELETE /providers/{id} are implemented for subscription providers; the backend owns a writable main source. */
+                    can_manage?: boolean;
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
                 groups: {
@@ -1146,6 +1314,13 @@ export interface components {
                     available: boolean;
                     /** @description The settings PATCH /runtime/settings accepts on this backend; others return 400. */
                     fields?: components["schemas"]["RuntimeSettingField"][];
+                };
+                geodata: {
+                    available: boolean;
+                    /** @description POST /geodata/update is implemented. Requires operations.available and configured asset sources. */
+                    can_update?: boolean;
+                    /** @description The asset kinds GET /geodata reports on this backend. */
+                    assets?: components["schemas"]["GeoAssetKind"][];
                 };
                 operations: {
                     available: boolean;
@@ -1387,6 +1562,24 @@ export interface components {
             /** @description Visible active TCP and UDP connections at sampled_at, or null when unavailable. */
             connections: components["schemas"]["NullableSafeUInt"];
         };
+        RuntimeMode: {
+            observed_at: components["schemas"]["Timestamp"];
+            mode: components["schemas"]["OutboundMode"];
+            /** @description The group or node id every flow leaves through in global mode; null otherwise. */
+            target: string | null;
+            /**
+             * @description config until a PUT changed the mode in this generation, runtime afterwards.
+             * @enum {string}
+             */
+            source: "config" | "runtime";
+        };
+        /** @enum {string} */
+        OutboundMode: "rule" | "direct" | "global";
+        RuntimeModeRequest: {
+            mode: components["schemas"]["OutboundMode"];
+            /** @description Required with global; rejected with rule and direct. */
+            target?: string;
+        };
         /**
          * @description Samples lie in (observed_at - window_seconds, observed_at], oldest first,
          *     with the same retention, thinning and gap rules as TrafficHistory.
@@ -1558,6 +1751,49 @@ export interface components {
             status?: "succeeded";
             finished_at?: components["schemas"]["Timestamp"];
             result?: components["schemas"]["Provider"];
+            error?: null;
+        };
+        ProviderCreate: {
+            /** @description The subscription tag as written in the configuration; unique among providers. */
+            name: string;
+            /** @constant */
+            kind: "subscription";
+            /** @description Fetched by the engine on refresh; stored in the managed main source and never returned. */
+            url: string;
+        };
+        NodeCreate: {
+            /** @description The node name as written in the configuration; unique among inline nodes. */
+            name: string;
+            /** @description A share link in a scheme the engine parses (for example vless, vmess, trojan, ss); stored in the managed main source and never returned. */
+            link: string;
+        };
+        /** @enum {string} */
+        GeoAssetKind: "geosite" | "geoip";
+        GeoAsset: {
+            kind: components["schemas"]["GeoAssetKind"];
+            /** @description Digest of the loaded file. */
+            sha256: string;
+            size_bytes: components["schemas"]["UInt64"];
+            /** @description Modification time of the loaded file, or null when the filesystem does not report one. */
+            modified_at: components["schemas"]["NullableTimestamp"];
+            /** @description Display-only download source with userinfo, query and fragment removed; null when the backend has no source for this asset. */
+            source_redacted: string | null;
+        };
+        GeoData: {
+            observed_at: components["schemas"]["Timestamp"];
+            assets: components["schemas"]["GeoAsset"][];
+        };
+        GeoDataUpdateAccepted: components["schemas"]["OperationAccepted"] & {
+            /** @constant */
+            kind?: "geodata_update";
+        };
+        GeoDataUpdateSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "geodata_update";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["GeoData"];
             error?: null;
         };
         GroupPolicy: {
@@ -2436,7 +2672,7 @@ export interface components {
             deleted: number;
         };
         /** @enum {string} */
-        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update" | "provider_refresh";
+        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update" | "provider_refresh" | "geodata_update";
         OperationAccepted: {
             operation_id: string;
             kind: components["schemas"]["OperationKind"];
@@ -2444,7 +2680,7 @@ export interface components {
             status: "queued";
             href: string;
         };
-        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"] | components["schemas"]["ProviderRefreshSucceededOperation"];
+        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"] | components["schemas"]["ProviderRefreshSucceededOperation"] | components["schemas"]["GeoDataUpdateSucceededOperation"];
         QueuedOperation: components["schemas"]["OperationCommon"] & {
             /** @constant */
             status?: "queued";
@@ -2848,6 +3084,8 @@ export interface components {
         LastEventId: string;
         /** @example provider-a */
         ProviderId: string;
+        /** @example node-hk-03 */
+        NodeId: string;
     };
     requestBodies: never;
     headers: {
@@ -3443,6 +3681,65 @@ export interface operations {
             429: components["responses"]["RateLimited"];
         };
     };
+    getRuntimeMode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current outbound mode */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeMode"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setRuntimeMode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeModeRequest"];
+            };
+        };
+        responses: {
+            /** @description Mode after the change */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeMode"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
     getDatapath: {
         parameters: {
             query?: {
@@ -3511,6 +3808,83 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    createNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeCreate"];
+            };
+        };
+        responses: {
+            /** @description Node written to the managed configuration */
+            201: {
+                headers: {
+                    /** @description The new node in the node list. */
+                    Location: string;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description A node with this name exists */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body exceeds limits.max_json_body_bytes */
+            413: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body is not application/json */
+            415: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The engine cannot parse the link */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            503: components["responses"]["Unavailable"];
+        };
+    };
     listProviders: {
         parameters: {
             query?: {
@@ -3549,6 +3923,83 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    createProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderCreate"];
+            };
+        };
+        responses: {
+            /** @description Provider written to the managed configuration */
+            201: {
+                headers: {
+                    /** @description The new provider's URL. */
+                    Location: string;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description A provider with this name exists */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body exceeds limits.max_json_body_bytes */
+            413: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body is not application/json */
+            415: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The URL is not an http(s) URL */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getProvider: {
         parameters: {
             query?: never;
@@ -3576,6 +4027,35 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    deleteProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example provider-a */
+                id: components["parameters"]["ProviderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Idempotent deletion result */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["Unavailable"];
         };
     };
     refreshProvider: {
@@ -3636,6 +4116,104 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+        };
+    };
+    deleteNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example node-hk-03 */
+                id: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Idempotent deletion result */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getGeoData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Loaded assets */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeoData"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateGeoData: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Geodata update accepted */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeoDataUpdateAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description An update is queued or running, or an idempotency key conflicts */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
         };
     };
     listGroups: {

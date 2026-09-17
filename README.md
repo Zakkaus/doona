@@ -19,7 +19,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 ## Status
 
-doona is a contract and demo preview until honk ships `/api/v1`, not a claim of compatibility with a released backend. It targets `daeuniverse/api-standardize`, branch `ui-findings`, commit `8bd9871`, pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). The mock backend is the default; the screenshots show mock data.
+doona is a contract and demo preview until honk ships `/api/v1`, not a claim of compatibility with a released backend. It targets `daeuniverse/api-standardize`, fork branch `doona-pin`, commit `868768d` (PR #4, #5, #6 and #7 merged), pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). The mock backend is the default; the screenshots show mock data.
 
 ## Requirements
 
@@ -143,4 +143,4 @@ Local archive versions come from `package.json`; release builds use the Git desc
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0 and flag-icons under MIT. The duck logo is the maintainer's artwork.
+[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0. The duck logo is the maintainer's artwork.

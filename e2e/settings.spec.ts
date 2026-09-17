@@ -1,3 +1,4 @@
+import {test as browserTest} from '@playwright/test';
 import {expect, test} from './fixtures';
 import {translate} from '../src/i18n';
 
@@ -7,7 +8,7 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(4);
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(5);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
@@ -55,4 +56,25 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await expect(page.locator('form').getByRole('status')).toContainText('API v1');
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
+});
+
+// A raw browser test: 401 and 404 responses log console errors by design here.
+browserTest('a backend that answers 401 gets a token form instead of the page', async ({page}) => {
+  let authorization: string | null = null;
+  await page.route('**/api/v1/**', async route => {
+    authorization = route.request().headers()['authorization'] ?? null;
+    if (!authorization)
+      return route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'r1'}});
+    return route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'nope', details: null}, request_id: 'r2'}});
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-lang', 'en');
+  });
+  await page.goto('/#/activity');
+  await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
+  await page.getByLabel('Token', {exact: true}).fill('secret-1');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  await expect.poll(() => authorization).toBe('Bearer secret-1');
+  await expect(page.getByRole('heading', {name: 'Token required'})).toHaveCount(0);
 });

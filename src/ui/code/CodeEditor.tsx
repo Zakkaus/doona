@@ -1,4 +1,6 @@
 import {useEffect, useRef} from 'react';
+import {useT, type Translator} from '../../i18n';
+import type {Key} from '../../i18n/messages';
 import {EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
 import {
   EditorView,
@@ -20,6 +22,34 @@ import {tags} from '@lezer/highlight';
 import {dae} from './dae';
 import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
+
+// CodeMirror's search and go-to-line panels ship English phrases; these are their keys in the catalogue.
+const cmPhrases: Array<[string, Key]> = [
+  ['Find', 'cm.find'],
+  ['Replace', 'cm.replace'],
+  ['next', 'cm.next'],
+  ['previous', 'cm.previous'],
+  ['all', 'cm.all'],
+  ['match case', 'cm.matchCase'],
+  ['regexp', 'cm.regexp'],
+  ['by word', 'cm.byWord'],
+  ['replace', 'cm.replaceOne'],
+  ['replace all', 'cm.replaceAll'],
+  ['close', 'close'],
+  ['Go to line', 'cm.gotoLine'],
+  ['go', 'cm.go'],
+  ['current match', 'cm.currentMatch'],
+  ['replaced $ matches', 'cm.replacedMatches'],
+  ['replaced match on line $', 'cm.replacedOnLine'],
+  ['on line', 'cm.onLine'],
+  ['Fold line', 'cm.foldLine'],
+  ['Unfold line', 'cm.unfoldLine'],
+  ['Folded lines', 'cm.foldedLines'],
+  ['Unfolded lines', 'cm.unfoldedLines'],
+  ['to', 'cm.to'],
+  ['Selection deleted', 'cm.selectionDeleted']
+];
+const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(cmPhrases.map(([phrase, key]) => [phrase, t(key)])));
 
 export type EditorMark = {line: number; column?: number | null; level: 'error' | 'warning' | 'info'; message: string};
 
@@ -175,6 +205,8 @@ export function CodeEditor({
     save.current = onSave;
   });
   const editable = useRef(new Compartment());
+  const t = useT();
+  const language = useRef(new Compartment());
   useEffect(() => {
     const instance = new EditorView({
       parent: host.current!,
@@ -219,6 +251,7 @@ export function CodeEditor({
             indentWithTab
           ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+          language.current.of(phrasesFor(t)),
           EditorView.contentAttributes.of({'aria-label': label}),
           EditorView.updateListener.of(update => {
             if (update.docChanged) change.current?.(update.state.doc.toString());
@@ -239,6 +272,9 @@ export function CodeEditor({
     if (!instance) return;
     instance.dispatch({effects: editable.current.reconfigure([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)])});
   }, [readOnly]);
+  useEffect(() => {
+    view.current?.dispatch({effects: language.current.reconfigure(phrasesFor(t))});
+  }, [t]);
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;

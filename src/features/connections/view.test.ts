@@ -15,9 +15,9 @@ it('groups by client address without losing IPv6 hosts or UInt64 precision', () 
     {hidden: [], sort: null, group: 'source'},
     'en-US'
   );
-  expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download, row.outbounds] : row.id))).toEqual([
-    ['2001:db8::1', 2, 2, 9007199254741000n, ['proxy', 'direct']],
-    ['10.0.0.7', 2, 1, null, ['proxy']]
+  expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download] : row.id))).toEqual([
+    ['2001:db8::1', 2, 2, 9007199254741000n],
+    ['10.0.0.7', 2, 1, null]
   ]);
 });
 

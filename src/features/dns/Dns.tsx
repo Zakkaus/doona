@@ -9,7 +9,6 @@ import {
   DataTable,
   ErrorMessage,
   Light,
-  ModalDialog,
   TextTooltip,
   Kv,
   LabeledSelect,
@@ -18,10 +17,12 @@ import {
   csvLine,
   downloadFile,
   errorText,
-  toast
+  toast,
+  exportName
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
+import {FlushCacheButton} from './FlushCache';
 
 // "How does a name resolve, and is the cache in the way": a query tab and a cache tab over the same domain.
 export function Dns({go, query}: PageProps) {
@@ -157,34 +158,12 @@ export function Dns({go, query}: PageProps) {
           </Button>
         )}
         <span className="rp-grow" />
-        <ModalDialog
-          alert
-          narrow
-          title={t('dns.flushAll')}
-          trigger={
-            <Button negative isPending={dns.busy === 'flush'} isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush}>
-              {t('dns.flushAll')}
-            </Button>
-          }
-          footer={close => (
-            <>
-              <Button secondary onPress={close}>
-                {t('ui.cancel')}
-              </Button>
-              <Button
-                negative
-                onPress={() => {
-                  close();
-                  void flush();
-                }}
-              >
-                {t('dns.flushAll')}
-              </Button>
-            </>
-          )}
-        >
-          <p>{t('dns.flushConfirm', {n: dns.cache.data?.total ?? 0})}</p>
-        </ModalDialog>
+        <FlushCacheButton
+          count={dns.cache.data?.total ?? 0}
+          busy={dns.busy === 'flush'}
+          isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush}
+          onFlush={() => void flush()}
+        />
       </div>
       <DataTable
         label={t('ui.cache')}
@@ -239,6 +218,8 @@ export function Dns({go, query}: PageProps) {
 }
 
 // "What did the resolver do for clients": the ring newest first, narrowed by name, type and client.
+// The record types the log can be narrowed to; the log has no capability of its own for this list.
+const logTypes = ['A', 'AAAA', 'HTTPS', 'TXT', 'MX', 'SRV', 'PTR'];
 function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -256,7 +237,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
           side
           value={type}
           onChange={setType}
-          items={[{id: 'all', label: t('dns.allTypes')}, ...['A', 'AAAA', 'HTTPS', 'TXT', 'MX'].map(id => ({id, label: id}))]}
+          items={[{id: 'all', label: t('dns.allTypes')}, ...logTypes.map(id => ({id, label: id}))]}
         />
         <TextField search label={t('ui.source')} value={src} onChange={setSrc} placeholder="10.0.0.12" width={160} />
         {log.data && <span className="rp-label">{t('dns.logTotal', {n: log.data.total})}</span>}
@@ -265,7 +246,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
           isDisabled={!rows.length}
           onPress={() =>
             downloadFile(
-              'dns-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv',
+              exportName('dns-log', 'csv'),
               [
                 csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
                 ...rows.map(r =>

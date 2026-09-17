@@ -35,6 +35,7 @@ export const messages = defineMessages({
     'dns.logUnavailable': '此後端不提供解析記錄',
     'dns.cacheFilter': '域名：{domain} ✕',
     'dns.flushConfirm': '將清除全部 {n} 筆快取記錄，無法復原。',
+    'dns.flushConfirmAll': '將清除全部快取記錄，無法復原。',
     'dns.flushAll': '清除全部快取',
     'dns.answer': '{name} {type} · TTL {ttl} 秒 · {data}'
   },
@@ -72,6 +73,7 @@ export const messages = defineMessages({
     'dns.logUnavailable': '此后端不提供解析记录',
     'dns.cacheFilter': '域名：{domain} ✕',
     'dns.flushConfirm': '将清除全部 {n} 条缓存记录，无法恢复。',
+    'dns.flushConfirmAll': '将清除全部缓存记录，无法恢复。',
     'dns.flushAll': '清除全部缓存',
     'dns.answer': '{name} {type} · TTL {ttl} 秒 · {data}'
   },
@@ -112,6 +114,7 @@ export const messages = defineMessages({
     'dns.logUnavailable': 'This backend keeps no resolution log',
     'dns.cacheFilter': 'Domain: {domain} ✕',
     'dns.flushConfirm': 'This removes all {n} cache entries and cannot be undone.',
+    'dns.flushConfirmAll': 'Clears every cache record; this cannot be undone.',
     'dns.flushAll': 'Clear all cache',
     'dns.answer': '{name} {type} · TTL {ttl} s · {data}'
   }

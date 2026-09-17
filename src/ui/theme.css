@@ -1,20 +1,5 @@
 /* Palettes: Rosé Pine (Dawn/Moon), Catppuccin (Latte/Mocha), Nord (light/dark). data-palette picks the family,
    data-scheme picks light or dark; every component reads the same --rp-* roles. */
-:root {
-  --iconPrimary: currentColor;
-  color-scheme: light;
-  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --rp-underlay: rgba(0, 0, 0, 0.32);
-  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12);
-  --rp-popover-border: transparent;
-}
-:root[data-scheme='dark'] {
-  color-scheme: dark;
-  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --rp-underlay: rgba(0, 0, 0, 0.55);
-  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36);
-  --rp-popover-border: var(--rp-hl-med);
-}
 
 :root,
 :root[data-family='rose-pine'] {
@@ -439,54 +424,7 @@
    fades on the far side (a gradient border, not a white outline), an inner glow, a diagonal sheen, faint grain, and a
    long soft shadow. Chrome sits on the wallpaper; the content area is a faint sheet with no blur of its own, so the
    cards inside blur the wallpaper directly. Accents are Apple's system colours. */
-:root[data-family='glass'] {
-  --rp-base: rgba(255, 255, 255, 0.3);
-  --rp-surface: rgba(255, 255, 255, 0.4);
-  --rp-overlay: rgba(255, 255, 255, 0.42);
-  --rp-muted: #8e8e93;
-  --rp-subtle: #48484a;
-  --rp-text: #1c1c1e;
-  --rp-love: #ff3b30;
-  --rp-gold: #ff9500;
-  --rp-rose: #ff9f0a;
-  --rp-pine: #007aff;
-  --rp-foam: #34c759;
-  --rp-iris: #af52de;
-  --rp-c1: #007aff;
-  --rp-c2: #34c759;
-  --rp-c3: #af52de;
-  --rp-c4: #ff9500;
-  --rp-c5: #5ac8fa;
-  --rp-c6: #ff2d55;
-  --rp-c7: #ffcc00;
-  --rp-c8: #ff3b30;
-  --rp-hl-low: rgba(255, 255, 255, 0.3);
-  --rp-hl-med: rgba(255, 255, 255, 0.55);
-  --rp-hl-high: rgba(60, 60, 67, 0.28);
-  --rp-on-accent: #ffffff;
-  --rp-on-text: #ffffff;
-  --rp-line: rgba(60, 60, 67, 0.14);
-  --rp-shadow: 0 8px 32px rgba(31, 38, 135, 0.16);
-  --rp-shadow-lg: 0 24px 64px rgba(31, 38, 135, 0.3);
-  --rp-glass: rgba(255, 255, 255, 0.32);
-  --rp-glass-strong: rgba(255, 255, 255, 0.58);
-  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0.55) 100%);
-  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0) 60%);
-  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 28px rgba(255, 255, 255, 0.22);
-  --rp-ctl: rgba(255, 255, 255, 0.38);
-  --rp-ctl-border: rgba(255, 255, 255, 0.55);
-  --rp-track: rgba(60, 60, 67, 0.1);
-  --rp-grain-opacity: 0.25;
-  --rp-underlay: rgba(20, 20, 30, 0.3);
-  --rp-bg:
-    radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
-    radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
-    radial-gradient(circle 360px at 82% 80%, rgba(255, 196, 110, 0.8) 0 22%, rgba(255, 196, 110, 0) 70%),
-    radial-gradient(circle 300px at 16% 86%, rgba(110, 220, 190, 0.8) 0 20%, rgba(110, 220, 190, 0) 70%),
-    radial-gradient(circle 220px at 52% 58%, rgba(180, 150, 255, 0.7) 0 20%, rgba(180, 150, 255, 0) 70%),
-    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.55) 46%, rgba(255, 255, 255, 0.55) 49%, transparent 61%),
-    linear-gradient(135deg, #dfeeff 0%, #f3ddff 32%, #ffe6d6 64%, #dcf6ec 100%);
-}
+
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.05);
   --rp-surface: rgba(24, 24, 32, 0.45);
@@ -536,6 +474,52 @@
     linear-gradient(135deg, #090d24 0%, #1c0f38 32%, #1b1230 64%, #05201c 100%);
 }
 :root[data-family='glass'] {
+  --rp-base: rgba(255, 255, 255, 0.3);
+  --rp-surface: rgba(255, 255, 255, 0.4);
+  --rp-overlay: rgba(255, 255, 255, 0.42);
+  --rp-muted: #8e8e93;
+  --rp-subtle: #48484a;
+  --rp-text: #1c1c1e;
+  --rp-love: #ff3b30;
+  --rp-gold: #ff9500;
+  --rp-rose: #ff9f0a;
+  --rp-pine: #007aff;
+  --rp-foam: #34c759;
+  --rp-iris: #af52de;
+  --rp-c1: #007aff;
+  --rp-c2: #34c759;
+  --rp-c3: #af52de;
+  --rp-c4: #ff9500;
+  --rp-c5: #5ac8fa;
+  --rp-c6: #ff2d55;
+  --rp-c7: #ffcc00;
+  --rp-c8: #ff3b30;
+  --rp-hl-low: rgba(255, 255, 255, 0.3);
+  --rp-hl-med: rgba(255, 255, 255, 0.55);
+  --rp-hl-high: rgba(60, 60, 67, 0.28);
+  --rp-on-accent: #ffffff;
+  --rp-on-text: #ffffff;
+  --rp-line: rgba(60, 60, 67, 0.14);
+  --rp-shadow: 0 8px 32px rgba(31, 38, 135, 0.16);
+  --rp-shadow-lg: 0 24px 64px rgba(31, 38, 135, 0.3);
+  --rp-glass: rgba(255, 255, 255, 0.32);
+  --rp-glass-strong: rgba(255, 255, 255, 0.58);
+  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0.55) 100%);
+  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0) 60%);
+  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 28px rgba(255, 255, 255, 0.22);
+  --rp-ctl: rgba(255, 255, 255, 0.38);
+  --rp-ctl-border: rgba(255, 255, 255, 0.55);
+  --rp-track: rgba(60, 60, 67, 0.1);
+  --rp-grain-opacity: 0.25;
+  --rp-underlay: rgba(20, 20, 30, 0.3);
+  --rp-bg:
+    radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(255, 196, 110, 0.8) 0 22%, rgba(255, 196, 110, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(110, 220, 190, 0.8) 0 20%, rgba(110, 220, 190, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(180, 150, 255, 0.7) 0 20%, rgba(180, 150, 255, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.55) 46%, rgba(255, 255, 255, 0.55) 49%, transparent 61%),
+    linear-gradient(135deg, #dfeeff 0%, #f3ddff 32%, #ffe6d6 64%, #dcf6ec 100%);
   --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 :root[data-family='glass'] body {
@@ -637,7 +621,8 @@
 :root[data-family='glass'] .rp-card {
   border-radius: 20px;
 }
-:root[data-family='glass'] .rp-popover::after {
+:root[data-family='glass'] .rp-popover::after,
+:root[data-family='glass'] .rp-dialog::after {
   inset: 0;
 }
 :root[data-family='glass'] .rp-popover,
@@ -678,23 +663,21 @@
 :root[data-family='glass'] .rp-btn.secondary {
   background: transparent;
 }
-:root[data-family='glass'] .rp-btn.accent,
-:root[data-family='glass'] .rp-btn.primary {
+:root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-pine);
   border-color: transparent;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 4px 12px rgba(0, 122, 255, 0.35);
 }
-:root[data-family='glass'] .rp-btn.accent[data-hovered],
-:root[data-family='glass'] .rp-btn.primary[data-hovered] {
+:root[data-family='glass'] .rp-btn.accent[data-hovered] {
   background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
 }
-:root[data-family='glass'] .rp-btn.accent[data-pressed],
-:root[data-family='glass'] .rp-btn.primary[data-pressed] {
+:root[data-family='glass'] .rp-btn.accent[data-pressed] {
   background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
 }
-:root[data-family='glass'] .rp-seg {
+:root[data-family='glass'] .rp-seg,
+:root[data-family='glass'] .rp-tabbar {
   background: var(--rp-track);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
@@ -704,7 +687,8 @@
   border-color: transparent;
   box-shadow: none;
 }
-:root[data-family='glass'] .rp-seg .rp-btn[data-selected] {
+:root[data-family='glass'] .rp-seg .rp-btn[data-selected],
+:root[data-family='glass'] .rp-tab[data-selected] {
   color: var(--rp-text);
 }
 :root[data-family='glass'] .rp-slider {
@@ -798,9 +782,7 @@
   opacity: 0;
   transform: rotate(-90deg) scale(0.5);
 }
-.rp-dialog {
-  position: relative;
-}
+
 .rp-empty {
   padding: 24px;
   text-align: center;
@@ -990,10 +972,7 @@ input {
   background: var(--rp-hl-low);
   color: var(--rp-text);
 }
-.rp-nav[aria-current='page'] {
-  color: var(--rp-pine);
-  font-weight: 600;
-}
+
 .rp-nav-slider {
   position: absolute;
   left: 12px;
@@ -1006,8 +985,6 @@ input {
     height 200ms var(--rp-ease-out),
     background-color 200ms var(--rp-ease);
   pointer-events: none;
-}
-.rp-nav-slider {
   clip-path: inset(8px 0);
 }
 .rp-version {
@@ -1122,6 +1099,9 @@ input {
   gap: 12px;
   min-width: 0;
   overflow: hidden;
+}
+.rp-login {
+  max-width: 480px;
 }
 .rp-row {
   display: flex;
@@ -1282,6 +1262,7 @@ input {
   color: var(--rp-group, currentColor);
 }
 .rp-nav[aria-current='page'] {
+  font-weight: 600;
   color: var(--rp-group, var(--rp-pine));
 }
 .rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
@@ -1296,23 +1277,11 @@ input {
 .rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c4);
 }
-.rp-nav[data-hovered] {
-  color: var(--rp-text);
-}
 :root:not([data-wordmark='plain']) .rp-brand span {
   background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.rp-h1 {
-  color: var(--rp-text);
-}
-.rp-table [role='columnheader'] {
-  color: var(--rp-pine);
-}
-.rp-light.info::before {
-  background: var(--rp-foam);
 }
 .rp-delta.good {
   color: var(--rp-pine);
@@ -1357,23 +1326,12 @@ input {
   background: var(--rp-hl-low);
 }
 .rp-btn.sm {
-  height: 32px;
   padding: 0 8px;
   font-size: 12px;
   line-height: 16px;
-  border-radius: 8px;
-}
-.rp-btn.sm.icon {
-  width: 32px;
 }
 /* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
    destructive ones, secondary outlined. */
-.rp-btn.accent,
-.rp-btn.primary,
-.rp-btn.negative,
-.rp-btn.secondary {
-  padding: 0 12px;
-}
 .rp-btn.secondary {
   background: transparent;
   border-color: var(--rp-hl-high);
@@ -1384,12 +1342,6 @@ input {
 }
 .rp-btn.secondary[data-pressed] {
   background: var(--rp-hl-high);
-}
-.rp-btn.sm.accent,
-.rp-btn.sm.primary,
-.rp-btn.sm.negative,
-.rp-btn.sm.secondary {
-  padding: 0 8px;
 }
 .rp-btn.icon {
   width: 32px;
@@ -1406,26 +1358,7 @@ input {
 .rp-btn.accent[data-pressed] {
   background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
 }
-.rp-seg {
-  display: inline-flex;
-  gap: 4px;
-  max-width: 100%;
-  background: var(--rp-overlay);
-  border-radius: 10px;
-  padding: 2px;
-}
-.rp-seg .rp-btn {
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: 0 8px;
-}
-.rp-seg .rp-btn {
-  height: 32px;
-  background: transparent;
-  color: var(--rp-subtle);
-  border-radius: 8px;
-  border: 2px solid transparent;
-}
+
 .rp-seg .rp-btn[data-hovered] {
   color: var(--rp-text);
 }
@@ -1451,9 +1384,10 @@ input {
   border-color: var(--rp-pine);
 }
 .rp-seg .rp-btn[data-selected] {
-  background: var(--rp-surface);
+  /* The slider draws the selection; the button itself stays flat. */
+  background: transparent;
+  border-color: transparent;
   color: var(--rp-pine);
-  border-color: var(--rp-pine);
 }
 .rp-sec-h {
   font-size: 12px;
@@ -1581,32 +1515,13 @@ input {
 .flag.mark[data-kind='node'] {
   background: var(--rp-pine);
 }
-/* Brand icons are square; they share the flag's height so a chain or chip reads at one size. */
-.flag.brand {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  box-shadow: none;
-  object-fit: contain;
-}
-.rp-chips .flag.brand {
-  width: 18px;
-  height: 18px;
-}
+/* Marks sit on the text baseline of the chain, chip or light they lead. */
 .rp-chain > .flag,
 .rp-chips .flag,
 .rp-light > .flag {
   translate: 0 0.5px;
 }
-.rp-tip {
-  background: var(--rp-text);
-  color: var(--rp-on-text);
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
-  z-index: 10;
-}
+
 .rp-light {
   display: inline-flex;
   align-items: center;
@@ -1639,7 +1554,8 @@ input {
   --dot: var(--rp-love);
 }
 .rp-light.info {
-  --dot: var(--rp-iris);
+  /* Foam is the info colour everywhere (toasts too); it shares the dot with ok, which text tells apart. */
+  --dot: var(--rp-foam);
 }
 .rp-light.neutral {
   --dot: var(--rp-subtle);
@@ -1680,54 +1596,13 @@ input {
   background: var(--rp-hl-med);
   overflow: hidden;
 }
-.rp-bar .fill {
-  height: 100%;
-  border-radius: 2px;
-}
-.rp-bar.pressable {
-  font: inherit;
-  color: inherit;
-  text-align: start;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  padding: 6px 8px;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background 150ms var(--rp-ease),
-    opacity 150ms var(--rp-ease);
-}
-.rp-bar.pressable[data-selected] {
-  background: var(--rp-selected);
-}
-.rp-bar.pressable[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
-  outline-offset: 2px;
-}
-.rp-bar[data-dim] {
-  opacity: 0.4;
-}
+
 .rp-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.rp-dev {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  color: var(--rp-subtle);
-}
-.rp-hr {
-  height: 0;
-  border: 0;
-  border-top: 1px solid var(--rp-hl-med);
-  margin: 0;
-}
+
 .rp-legend {
   display: flex;
   gap: 16px;
@@ -1829,10 +1704,13 @@ input {
   background: var(--rp-hl-low);
 }
 .rp-dialog {
+  position: relative;
   background: var(--rp-surface);
   border-radius: 16px;
   padding: 24px 32px;
   width: min(720px, 90vw);
+  max-height: calc(100vh - 12vh - 24px);
+  overflow: hidden auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1855,7 +1733,6 @@ input {
   align-items: center;
   gap: 8px;
   height: 32px;
-  min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--rp-hl-high);
   border-radius: 8px;
@@ -1869,8 +1746,8 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -1886,7 +1763,7 @@ input {
 .rp-input input {
   flex: 1;
   min-width: 0;
-  min-height: 32px;
+  align-self: stretch;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1905,9 +1782,6 @@ input {
   line-height: 16px;
   color: var(--rp-muted);
   padding: 8px 12px 4px;
-}
-.rp-placeholder {
-  color: var(--rp-subtle);
 }
 
 /* Kit additions for the remaining pages */
@@ -1947,25 +1821,14 @@ input {
   min-width: 0;
 }
 .rp-col > .rp-btn,
-.rp-card > .rp-btn {
+.rp-card > .rp-btn,
+.rp-col > .rp-tipwrap,
+.rp-card > .rp-tipwrap,
+.rp-col > .rp-tipwrap > .rp-btn,
+.rp-card > .rp-tipwrap > .rp-btn {
   align-self: flex-start;
 }
-.rp-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (min-width: 1280px) {
-  .rp-split:not(.rp-split-wide) {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
-@media (min-width: 1440px) {
-  .rp-split-wide {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
+
 .rp-h3 {
   margin: 0;
   font-size: 16px;
@@ -2025,16 +1888,7 @@ input {
 .rp-btn.negative[data-pressed] {
   background: color-mix(in srgb, var(--rp-love) 20%, transparent);
 }
-.rp-btn.primary {
-  background: var(--rp-pine);
-  color: var(--rp-on-accent);
-}
-.rp-btn.primary[data-hovered] {
-  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
-}
-.rp-btn.primary[data-pressed] {
-  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
-}
+
 .rp-btn[data-disabled] {
   cursor: default;
   pointer-events: none;
@@ -2049,8 +1903,7 @@ input {
   background: transparent;
   border-color: var(--rp-hl-med);
 }
-.rp-btn.accent[data-disabled],
-.rp-btn.primary[data-disabled] {
+.rp-btn.accent[data-disabled] {
   background: var(--rp-hl-med);
   color: var(--rp-muted);
 }
@@ -2066,27 +1919,9 @@ input {
   flex: 1;
 }
 /* Node tiles */
-.rp-node {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  height: 56px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background: var(--rp-overlay);
-  color: var(--rp-text);
-  text-align: start;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  font: inherit;
-}
+
 button.rp-node {
   cursor: pointer;
-}
-button.rp-node[data-hovered] {
-  background: var(--rp-hl-med);
 }
 button.rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
@@ -2150,9 +1985,6 @@ button.rp-node[data-focus-visible] {
   cursor: default;
   outline: none;
 }
-.rp-nodegrid .rp-node[data-hovered] {
-  background: var(--rp-hl-med);
-}
 .rp-nodegrid .rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
   outline-offset: -2px;
@@ -2166,26 +1998,11 @@ button.rp-node[data-focus-visible] {
   margin: 4px 4px 8px;
   width: 240px;
 }
-.rp-more {
-  color: var(--rp-subtle);
-}
-.rp-spinner {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--rp-hl-high);
-  border-top-color: var(--rp-pine);
-  animation: rp-spin 800ms linear infinite;
-}
+
 .rp-muted {
   color: var(--rp-muted);
 }
-.rp-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
+
 .rp-switch .track {
   width: 32px;
   height: 16px;
@@ -2227,9 +2044,6 @@ button.rp-node[data-focus-visible] {
   font-size: 12px;
   line-height: 16px;
   color: var(--rp-subtle);
-}
-.rp-field .rp-input {
-  height: 32px;
 }
 .rp-selectbtn {
   display: inline-flex;
@@ -2290,7 +2104,7 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
   position: sticky;
   top: 0;
-  /* Above row content that forms its own stacking context (translated flag marks). */
+  /* Above row content that forms its own stacking context (translated marks). */
   z-index: 1;
   outline: none;
 }
@@ -2298,9 +2112,6 @@ button.rp-node[data-focus-visible] {
   background: var(--rp-selected);
 }
 /* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
-.rp-table [role='columnheader'] {
-  position: sticky;
-}
 .rp-th {
   display: inline-block;
   max-width: 100%;
@@ -2380,25 +2191,7 @@ button.rp-node[data-focus-visible] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.rp-kw {
-  color: var(--rp-love);
-}
-.rp-out {
-  color: var(--rp-pine);
-  font-weight: 600;
-}
-.rp-alert {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--rp-love);
-}
-.rp-p {
-  margin: 0;
-  line-height: 20px;
-}
+
 .rp-dialog .foot {
   display: flex;
   justify-content: flex-end;
@@ -2419,48 +2212,7 @@ button.rp-node[data-focus-visible] {
   flex-direction: column;
   gap: 12px;
 }
-.rp-cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-@media (min-width: 1280px) {
-  .rp-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-.rp-check {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: center;
-  gap: 16px;
-}
-@media (min-width: 1024px) {
-  .rp-check {
-    grid-template-columns: 200px minmax(0, 1fr) auto;
-  }
-}
-.rp-pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.rp-fail {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--rp-hl-med);
-}
-.rp-group-btns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.rp-table .rp-group-btns {
-  flex-wrap: nowrap;
-}
+
 .rp-table [role='gridcell']:has(.rp-btn) {
   overflow: visible;
 }
@@ -2482,17 +2234,7 @@ button.rp-node[data-focus-visible] {
 }
 
 /* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
-:root {
-  --rp-on-accent: var(--rp-surface);
-  --rp-on-text: var(--rp-surface);
-  --rp-line: var(--rp-hl-low);
-  --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
-  --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
-  --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
-  --rp-duration: 150ms;
-  --rp-duration-panel: 200ms;
-  --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
-}
+
 .rp-btn,
 .rp-nav,
 .rp-item,
@@ -2505,7 +2247,6 @@ button.rp-node[data-focus-visible] {
 .rp-input .clear,
 .rp-table [role='row'],
 .rp-switch,
-.rp-check,
 .rp-badge {
   transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
   transition-duration: var(--rp-duration);
@@ -2513,16 +2254,44 @@ button.rp-node[data-focus-visible] {
 }
 /* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
 :root {
+  --iconPrimary: currentColor;
+  color-scheme: light;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --rp-underlay: rgba(0, 0, 0, 0.32);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12);
+  --rp-popover-border: transparent;
+  --rp-on-accent: var(--rp-surface);
+  --rp-on-text: var(--rp-surface);
+  --rp-line: var(--rp-hl-low);
+  --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
+  --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
+  --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
+  --rp-duration: 150ms;
+  --rp-duration-panel: 200ms;
+  --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
 }
 :root[data-scheme='dark'] {
+  color-scheme: dark;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --rp-underlay: rgba(0, 0, 0, 0.55);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36);
+  --rp-popover-border: var(--rp-hl-med);
   --rp-ink-mix: #fff;
 }
 .rp-bar .fill {
+  height: 100%;
+  border-radius: 2px;
   transition: width 200ms var(--rp-ease-out);
 }
 /* Segmented control: the selection slides between items (200ms, ease-out). */
 .rp-seg {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  background: var(--rp-overlay);
+  border-radius: 10px;
+  padding: 2px;
   position: relative;
 }
 .rp-slider {
@@ -2540,12 +2309,16 @@ button.rp-node[data-focus-visible] {
   pointer-events: none;
 }
 .rp-seg .rp-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 8px;
+  height: 32px;
+  background: transparent;
+  color: var(--rp-subtle);
+  border-radius: 8px;
+  border: 2px solid transparent;
   position: relative;
   z-index: 1;
-}
-.rp-seg .rp-btn[data-selected] {
-  background: transparent;
-  border-color: transparent;
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,
@@ -2754,13 +2527,11 @@ button.rp-node[data-focus-visible] {
   min-height: 0;
   translate: 0 calc(var(--i) * -10px);
   scale: calc(1 - var(--i) * 0.06);
-  opacity: 1;
+  /* The fourth card back (--i 3) is fully faded; the ones in front stay opaque. */
+  opacity: clamp(0, 3 - var(--i), 1);
 }
 .rp-toast.background > * {
   visibility: hidden;
-}
-.rp-toast.background[style*='--i: 3'] {
-  opacity: 0;
 }
 .rp-toasts:not(.expanded) .rp-toast-list {
   cursor: default;
@@ -2798,6 +2569,20 @@ button.rp-node[data-focus-visible] {
   }
 }
 .rp-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 56px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+  text-align: start;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
   transition:
     background-color 150ms var(--rp-ease),
     border-color 150ms var(--rp-ease);
@@ -2850,18 +2635,6 @@ button.rp-node[data-focus-visible] {
   flex-shrink: 0;
 }
 
-.rp-grid-pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (min-width: 1280px) {
-  .rp-grid-pair {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .rp-table > div[role='treegrid'] {
   width: 100%;
   height: 100%;
@@ -2907,6 +2680,14 @@ button.rp-node[data-focus-visible] {
   vertical-align: middle;
 }
 .rp-tip {
+  /* Tooltips are portaled without a z-index
+  background: var(--rp-text);
+  color: var(--rp-on-text);
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  sticky table headers must not cover them. */
+  z-index: 10;
   max-width: min(480px, calc(100vw - 24px));
   white-space: normal;
   overflow-wrap: anywhere;
@@ -2918,10 +2699,22 @@ button.rp-node[data-focus-visible] {
   min-width: 0;
 }
 .rp-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--rp-love);
   margin: 0;
   overflow-wrap: anywhere;
 }
 .rp-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--rp-hl-high);
+  border-top-color: var(--rp-pine);
+  animation: rp-spin 800ms linear infinite;
   display: inline-block;
   flex: none;
   vertical-align: middle;
@@ -2936,6 +2729,10 @@ button.rp-node[data-focus-visible] {
   display: none;
 }
 .rp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
   min-height: 32px;
 }
 :where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
@@ -2946,10 +2743,6 @@ button.rp-node[data-focus-visible] {
 }
 .rp-node[data-hovered]:not([data-disabled]) {
   background-color: var(--rp-hl-med);
-}
-.rp-node[data-selected],
-.rp-node.cur {
-  background-color: var(--rp-selected);
 }
 .rp-btn.quiet[data-pressed] {
   background-color: var(--rp-hl-high);
@@ -2976,9 +2769,19 @@ button.rp-node[data-focus-visible] {
   max-width: 100%;
 }
 [data-focus-visible],
-.rp-truncate:focus-visible {
+.rp-truncate:focus-visible,
+.rp-tipwrap:focus-visible {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
+}
+/* A disabled button cannot take focus or hover, so its tip hangs off this wrapper; around an enabled button
+   the wrapper has no box, so layout and the direct-child rules see the button itself. */
+.rp-tipwrap {
+  display: inline-flex;
+  border-radius: 8px;
+}
+.rp-tipwrap[data-passive] {
+  display: contents;
 }
 /* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
 .rp-input:focus-within {
@@ -3010,9 +2813,6 @@ button.rp-node[data-focus-visible] {
   margin-left: -8px;
 }
 @media (max-width: 600px) {
-  .rp-row {
-    flex-wrap: wrap;
-  }
   .rp-field {
     max-width: 100%;
   }

@@ -4,7 +4,24 @@ import type {ComponentProps} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
 
 export type Series = {label: string; color: string; values: Array<number | null>};
-const VARS = ['base', 'surface', 'overlay', 'muted', 'subtle', 'text', 'love', 'gold', 'rose', 'pine', 'foam', 'iris', 'hl-low', 'hl-med', 'hl-high'] as const;
+const VARS = [
+  'base',
+  'surface',
+  'overlay',
+  'muted',
+  'subtle',
+  'text',
+  'on-text',
+  'love',
+  'gold',
+  'rose',
+  'pine',
+  'foam',
+  'iris',
+  'hl-low',
+  'hl-med',
+  'hl-high'
+] as const;
 export type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
 function read(): Palette {
   const cs = getComputedStyle(document.documentElement);
@@ -47,7 +64,7 @@ const niceStep = (range: number) => {
   const s = n <= 1 ? 0.2 : n <= 2 ? 0.5 : n <= 5 ? 1 : 2;
   return s * p;
 };
-const tip = (p: Palette) => ({backgroundColor: p.text, color: p.surface, border: 'none', borderRadius: 8, fontSize: 12, padding: '8px 12px'});
+const tip = (p: Palette) => ({backgroundColor: p.text, color: p['on-text'], border: 'none', borderRadius: 8, fontSize: 12, padding: '8px 12px'});
 
 export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null | undefined) => string}) {
   return (
@@ -142,7 +159,7 @@ const LazyAreaChart = lazy(() =>
               />
               <Tooltip
                 contentStyle={tip(p)}
-                itemStyle={{color: p.surface}}
+                itemStyle={{color: p['on-text']}}
                 labelFormatter={value => date.format(Number(value))}
                 formatter={v => fmt(Number(v))}
                 cursor={{stroke: p.subtle, strokeDasharray: '3 3'}}
@@ -263,7 +280,7 @@ const LazyDonut = lazy(() =>
             </Pie>
             <Tooltip
               contentStyle={tip(p)}
-              itemStyle={{color: p.surface}}
+              itemStyle={{color: p['on-text']}}
               formatter={(v, name, item) => {
                 const payload: unknown = item.payload;
                 const bytes = payload && typeof payload === 'object' && 'text' in payload && typeof payload.text === 'string' ? payload.text : '';

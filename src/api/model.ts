@@ -38,7 +38,7 @@ export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> &
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
 export type ErrorResponse = Schema['ErrorResponse'];
-export type OperationAccepted = Schema['OperationAccepted'] & {location: string; retryAfter: number};
+export type OperationAccepted = Schema['OperationAccepted'] & {retryAfter: number};
 // The generator narrows the open OperationCommon.result object to Record<string, never>.
 type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {
   kind: K;
@@ -53,6 +53,8 @@ export type Operation =
   | SucceededOperation<'reload', Schema['ReloadResult']>
   | SucceededOperation<'probe', Schema['ProbeResult']>
   | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
+  | SucceededOperation<'provider_refresh', Schema['Provider']>
+  | SucceededOperation<'geodata_update', Schema['GeoData']>
   | SucceededOperation<'suspend', {runtime_state: 'suspended' | null}>
   | SucceededOperation<'resume', {runtime_state: 'running' | null}>;
 export type OperationState = Operation & {retryAfter?: number};
@@ -64,6 +66,15 @@ export type DnsLogList = Schema['DnsLogList'];
 export type DnsLogRecord = Schema['DnsLogRecord'];
 export type DnsLogQuery = operations['listDnsLog']['parameters']['query'];
 export type RuntimeSettings = Schema['RuntimeSettings'];
+export type RuntimeMode = Schema['RuntimeMode'];
+export type RuntimeModeRequest = Schema['RuntimeModeRequest'];
+export type Provider = Schema['Provider'];
+export type ProviderList = Schema['ProviderList'];
+export type ProviderQuery = operations['listProviders']['parameters']['query'];
+export type ProviderCreate = Schema['ProviderCreate'];
+export type NodeCreate = Schema['NodeCreate'];
+export type GeoData = Schema['GeoData'];
+export type GeoAsset = Schema['GeoAsset'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'];
@@ -81,6 +92,16 @@ type EventData = {
   'generation.changed': Schema['GenerationChangedEvent'];
 };
 export type ApiEvent = {[K in EventKind]: {id: string; event: K; data: EventData[K]}}[EventKind];
+export type LogRecord = Schema['LogRecord'];
+export type LogLevel = Schema['LogLevel'];
+export type LogOptions = {
+  level?: LogLevel;
+  target?: string;
+  lastEventId?: string;
+  signal?: AbortSignal;
+  onRecord: (record: LogRecord & {id: string}) => void;
+  onConnectionChange?: (connected: boolean) => void;
+};
 export type EventOptions = {
   kinds?: EventKind[];
   lastEventId?: string;

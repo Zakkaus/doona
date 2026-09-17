@@ -182,14 +182,16 @@ it('advances reload operations and emits invalidations until aborted', async () 
   const stream = api.subscribeEvents({signal: controller.signal, onEvent: event => events.push(event)});
   expect(events.map(e => e.event)).toEqual(['stream.ready']);
   await vi.advanceTimersByTimeAsync(1000);
-  await expect(terminal).resolves.toMatchObject({status: 'succeeded', result: {active_generation_id: '40'}});
+  // A reload activates a new generation: the result names it and generation.changed is published.
+  await expect(terminal).resolves.toMatchObject({status: 'succeeded', result: {active_generation_id: '41'}});
   expect((await api.runtime()).last_reload).toMatchObject({operation_id: accepted.operation_id, status: 'succeeded'});
+  expect((await api.runtime()).generation.active_id).toBe('41');
   await vi.advanceTimersByTimeAsync(4000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  expect(events.map(e => e.event)).toEqual(['stream.ready', 'generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
   controller.abort();
   await stream;
   await vi.advanceTimersByTimeAsync(5000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  expect(events.map(e => e.event)).toEqual(['stream.ready', 'generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
 });
 
 it('selects both networks with an independent revision and preserves configuration', async () => {

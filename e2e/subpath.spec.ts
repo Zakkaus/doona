@@ -1,6 +1,6 @@
 import {expect, test} from './fixtures';
 
-// The icon pack is the one thing allowed off-origin; it stays off here so every request is the app's own.
+// Every request under a sub-path prefix must be the app's own: assets, fonts, the manifest and its icons.
 test.use({storage: {'doona-api': 'mock', 'doona-lang': 'zh-TW'}});
 
 test('deep links, fonts and the installed app stay under /ui/', async ({page}) => {

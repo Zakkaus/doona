@@ -1,13 +1,12 @@
-// The quick setup edits the two sections a person fills in by hand most: `subscription` and `group`. Both are
-// one entry per line, so they are read and written line by line; every other section is kept verbatim, and a
-// missing main source is generated whole from a template. No dae parser: sections are cut by brace matching.
-export type Subscription = {name: string; url: string};
-// `raw` is the line as it stands in the file; it is written back untouched until the form changes the group,
-// so filters and policies the form cannot express survive a round trip.
-export type GroupSpec = {name: string; policy: 'auto' | 'manual'; subscriptions: string[]; raw?: string};
-export type WizardState = {subscriptions: Subscription[]; groups: GroupSpec[]; rules: 'keep' | RuleTemplate; lanInterface: string};
+// The quick setup edits `subscription` (one entry per line) and swaps `routing` for a template; `group` is
+// only read, to find the group the templates route to, and a main source without one gets a single `proxy`.
+// Every other section, and every subscription line the form does not recognise, is kept verbatim; a missing
+// main source is generated whole. No dae parser: sections are cut by brace matching.
+// `raw` is the line as it stands in the file; a line the form has not changed is written back untouched.
+export type Subscription = {name: string; url: string; raw?: string};
+export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
 
-export type RuleTemplate = 'domestic' | 'global' | 'fine' | 'overseas';
+export type RuleTemplate = 'dae' | 'whitelist' | 'blacklist' | 'global';
 // The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
 // drop HTTP/3, which the engine cannot proxy well and which browsers retry over TCP anyway.
 const preset = [
@@ -19,30 +18,34 @@ const preset = [
   'l4proto(udp) && dport(443) -> block'
 ];
 const ads = ['# Advertising', 'domain(geosite:category-ads-all) -> block'];
-const china = ['# Mainland China direct', 'dip(geoip:cn) -> direct', 'domain(geosite:cn) -> direct'];
-// Templates, in dae's own syntax and category names (v2fly geosite/geoip). `{group}` is the first group.
+const china = ['# Mainland China direct', 'domain(geosite:cn) -> direct', 'dip(geoip:cn) -> direct'];
+// Templates in dae's own syntax. Category names are the v2fly geosite/geoip tags as shipped by
+// Loyalsoldier/v2ray-rules-dat, the data set dae fetches by default; the whitelist and blacklist templates are
+// that project's documented routing configurations, line for line. `{group}` is the first group.
 export const templates: Record<RuleTemplate, {rules: string[]; fallback: string}> = {
-  // Adverts dropped, mainland China direct, everything else through the group.
-  domestic: {rules: [...preset, ...ads, ...china], fallback: '{group}'},
-  // Everything except the presets through the group.
-  global: {rules: [...preset], fallback: '{group}'},
-  // The ACL4SSR shape: Chinese services of global vendors direct, well-known global services named, then the
-  // China catch-all, then the group.
-  fine: {
+  // The routing section of dae's example.dae.
+  dae: {rules: [...preset, ...china], fallback: '{group}'},
+  // Loyalsoldier whitelist mode: adverts dropped, Chinese services of global vendors and games sold in China
+  // direct, known overseas destinations through the group, mainland China direct, the rest through the group.
+  whitelist: {
     rules: [
       ...preset,
       ...ads,
-      '# Chinese services of global vendors direct',
-      'domain(geosite:apple-cn, geosite:google-cn, geosite:tld-cn) -> direct',
-      '# Well-known overseas services through the group',
-      'domain(geosite:telegram, geosite:youtube, geosite:netflix, geosite:openai, geosite:github) -> {group}',
+      '# Chinese services of global vendors and games sold in China direct',
+      'domain(geosite:private, geosite:apple-cn, geosite:google-cn, geosite:tld-cn, geosite:category-games@cn) -> direct',
+      '# Known overseas destinations through the group',
       'domain(geosite:geolocation-!cn) -> {group}',
       ...china
     ],
     fallback: '{group}'
   },
-  // Only known overseas destinations through the group; anything unrecognised stays direct.
-  overseas: {rules: [...preset, ...ads, '# Only known overseas sites through the group', 'domain(geosite:geolocation-!cn) -> {group}'], fallback: 'direct'}
+  // Loyalsoldier blacklist mode: adverts dropped, the GFW list and Telegram through the group, the rest direct.
+  blacklist: {
+    rules: [...preset, ...ads, '# The GFW list and Telegram through the group', 'domain(geosite:gfw) -> {group}', 'dip(geoip:telegram) -> {group}'],
+    fallback: 'direct'
+  },
+  // Everything except the presets through the group.
+  global: {rules: [...preset], fallback: '{group}'}
 };
 
 const ident = (value: string) => value.trim().replace(/[^\w-]/g, '-');
@@ -57,59 +60,46 @@ function sections(lines: string[]): Section[] {
   lines.forEach((raw, index) => {
     const code = raw.replace(/#.*$/, '');
     if (!open) {
-      const match = /^([A-Za-z_][\w.-]*)\s*\{\s*$/.exec(code.trim());
-      if (match) open = {name: match[1], start: index, depth: 1};
-      return;
+      const match = /^([A-Za-z_][\w.-]*)\s*\{/.exec(code.trim());
+      if (!match) return;
+      open = {name: match[1], start: index, depth: 0};
     }
     open.depth += (code.match(/\{/g) ?? []).length - (code.match(/\}/g) ?? []).length;
     if (open.depth === 0) {
-      out.push({name: open.name, start: open.start, end: index, body: lines.slice(open.start + 1, index)});
+      // A section written on one line (`node { 'a': '...' }`) has its body between the braces of that line.
+      const body = open.start === index ? [code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'))] : lines.slice(open.start + 1, index);
+      out.push({name: open.name, start: open.start, end: index, body});
       open = null;
     }
   });
   return out;
 }
 
-// What the current text says, for the form.
+// What the current text says, for the form: the recognised `tag: 'url'` lines, the first group's name.
 export function readState(text: string): WizardState {
   const lines = text.split('\n');
   const found = sections(lines);
   const subscriptions: Subscription[] = [];
   for (const line of found.find(s => s.name === 'subscription')?.body ?? []) {
-    const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'/.exec(line);
-    if (match) subscriptions.push({name: match[1] ?? match[2], url: match[3]});
+    const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(line.replace(/#.*$/, ''));
+    // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
+    if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
+    else if (line.trim()) subscriptions.push({name: '', url: '', raw: line});
   }
-  const groups: GroupSpec[] = [];
-  for (const line of found.find(s => s.name === 'group')?.body ?? []) {
-    const match = /^\s*([\w-]+)\s*\{(.*)\}\s*$/.exec(line);
-    if (!match) continue;
-    const tags =
-      /subtag\(([^)]*)\)/
-        .exec(match[2])?.[1]
-        .split(',')
-        .map(s => s.trim()) ?? [];
-    groups.push({name: match[1], policy: /policy:\s*fixed/.test(match[2]) ? 'manual' : 'auto', subscriptions: tags, raw: line});
-  }
+  // The first group's name, whatever characters it uses; comment lines are skipped.
+  const groupBody = (found.find(s => s.name === 'group')?.body ?? []).map(line => line.replace(/#.*$/, ''));
+  const group = groupBody.map(line => /^[ \t]*([^\s{}]+)[ \t]*\{/.exec(line)?.[1]).find(name => name) ?? null;
   const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
-  return {subscriptions, groups, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
+  return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
 }
 
 function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(s => `  ${ident(s.name) || 'sub'}: ${quote(s.url.trim())}`), '}'];
+  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${ident(s.name) || 'sub'}: ${quote(s.url.trim())}`), '}'];
 }
-function groupBlock(state: WizardState): string[] {
-  return [
-    'group {',
-    ...state.groups.map(g => {
-      if (g.raw !== undefined) return g.raw;
-      const filter = g.subscriptions.length ? `filter: subtag(${g.subscriptions.map(ident).join(', ')}) ` : '';
-      return `  ${ident(g.name) || 'proxy'} { ${filter}policy: ${g.policy === 'auto' ? 'min_moving_avg' : 'fixed(0)'} }`;
-    }),
-    '}'
-  ];
-}
+export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
-  const first = ident(state.groups[0]?.name ?? 'proxy') || 'proxy';
+  // The name as written: the templates must route to the group the file already has.
+  const first = state.group ?? defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
@@ -120,7 +110,10 @@ const dnsBlock = [
   "    alidns: 'udp://223.5.5.5:53'",
   '  }',
   '  routing {',
-  '    request { qname(geosite:cn) -> alidns; fallback: cloudflare }',
+  '    request {',
+  '      qname(geosite:cn) -> alidns',
+  '      fallback: cloudflare',
+  '    }',
   '  }',
   '}'
 ];
@@ -137,8 +130,9 @@ function globalBlock(state: WizardState): string[] {
   ];
 }
 
-// The text to write: the current text with subscription and group replaced (and routing/dns when a template is
-// chosen), or a whole file when there is no text to keep.
+const groupBlock = ['group {', `  ${defaultGroup} { policy: min_moving_avg }`, '}'];
+// The text to write: the current text with subscription replaced (and routing when a template is chosen), a
+// group section added when there is none, or a whole file when there is no text to keep.
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
     return [
@@ -146,23 +140,22 @@ export function writeState(current: string, state: WizardState): string {
       '',
       ...subscriptionBlock(state),
       '',
-      ...groupBlock(state),
+      ...groupBlock,
       '',
       ...dnsBlock,
       '',
-      ...routingBlock(state, state.rules === 'keep' ? 'domestic' : state.rules),
+      ...routingBlock(state, state.rules === 'keep' ? 'whitelist' : state.rules),
       ''
     ].join('\n');
   }
   const lines = current.replace(/\n$/, '').split('\n');
-  const replacements = new Map<string, string[]>([
-    ['subscription', subscriptionBlock(state)],
-    ['group', groupBlock(state)]
-  ]);
+  const found = sections(lines);
+  const replacements = new Map<string, string[]>([['subscription', subscriptionBlock(state)]]);
+  // A group section is added only when the source has none at all; an existing one is never rewritten.
+  if (!found.some(section => section.name === 'group')) replacements.set('group', groupBlock);
   if (state.rules !== 'keep') replacements.set('routing', routingBlock(state, state.rules));
   const out: string[] = [];
   const done = new Set<string>();
-  const found = sections(lines);
   let index = 0;
   for (const section of found) {
     out.push(...lines.slice(index, section.start));

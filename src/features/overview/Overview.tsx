@@ -1,15 +1,15 @@
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../api/store';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
 import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, toast, errorText, ErrorMessage, Loading} from '../../ui/ui';
+import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {usePalette} from '../../ui/Charts';
+import {LifecycleActions} from './Lifecycle';
 import {formatBytes, parseU64, pctU64} from '../../api/u64';
 import {formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {Capabilities} from '../../api/model';
 
-const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
 // The optional resources a backend may leave out; the always-present ones are not worth a row.
 const resourceLabels = {
   connections: 'nav.connections',
@@ -21,7 +21,13 @@ const resourceLabels = {
   probes: 'ov.r.probes',
   traffic_history: 'ov.r.trafficHistory',
   memory_history: 'ov.r.memoryHistory',
-  runtime_outbounds: 'ov.r.outbounds'
+  runtime_outbounds: 'ov.r.outbounds',
+  runtime_mode: 'act.mode',
+  logs: 'nav.logs',
+  providers: 'nodes.providers',
+  config: 'nav.config',
+  runtime_settings: 'settings.runtime',
+  geodata: 'settings.geodata'
 } as const satisfies Record<string, Key>;
 function resourceRows(capabilities: Capabilities): Array<[keyof typeof resourceLabels, boolean]> {
   return (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>).map(key => [key, capabilities.resources[key].available !== false]);
@@ -36,7 +42,6 @@ export function Overview() {
   const runtime = useRuntime(!!resources?.runtime.available);
   const datapath = useDatapath(!!resources?.datapath.available);
   const memory = useRuntimeMemory(!!resources?.runtime_memory.available);
-  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const version = useVersion();
   const palette = usePalette();
   const state = runtime.data?.lifecycle.state;
@@ -44,22 +49,6 @@ export function Overview() {
   const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
   const reload = runtime.data?.last_reload;
   const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
-  async function run(kind: 'reload' | 'suspend' | 'resume') {
-    try {
-      const result = await operations.run(kind);
-      if (result)
-        toast(
-          result.status === 'succeeded' ? 'positive' : 'negative',
-          t('ov.operationResult', {
-            action: t(operationLabels[kind]),
-            status: t(result.status === 'succeeded' ? 'ov.succeeded' : 'ov.failed'),
-            id: result.operation_id
-          })
-        );
-    } catch (error) {
-      toast('negative', t('ov.operationError', {error: errorText(error)}));
-    }
-  }
   return (
     <div className="rp-page">
       {capabilities.error && <ErrorMessage error={capabilities.error} />}
@@ -89,7 +78,7 @@ export function Overview() {
             isDisabled={!runtime.data}
             onPress={() =>
               downloadFile(
-                'doona-state-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json',
+                exportName('doona-state', 'json'),
                 JSON.stringify(
                   {
                     exported_at: new Date().toISOString(),
@@ -109,17 +98,10 @@ export function Overview() {
             <Download />
             {t('ov.export')}
           </Button>
-          {(['reload', 'suspend', 'resume'] as const)
-            .filter(kind => operations.canRun(kind) || operations.busy === kind)
-            .map(kind => (
-              <Button key={kind} secondary isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void run(kind)}>
-                {t(operationLabels[kind])}
-              </Button>
-            ))}
+          <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
         </div>
       </div>
       {runtime.error && <ErrorMessage error={runtime.error} />}
-      {operations.error && <ErrorMessage error={operations.error} />}
       <div className="rp-g3">
         <section className="rp-card" aria-labelledby="overview-engine">
           <h3 className="rp-h3" id="overview-engine">
@@ -192,11 +174,7 @@ export function Overview() {
                   color={cgroupPercent > 90 ? palette.love : cgroupPercent > 75 ? palette.gold : palette.cat[0]}
                 />
               )}
-              <Kv
-                items={memoryFields(memory.data, t).filter(
-                  ([label]) => label !== t('ov.f.cgroupPercent') && label !== t('ov.f.cgroupCurrent') && label !== t('ov.f.cgroupLimit')
-                )}
-              />
+              <Kv items={memoryFields(memory.data, t, ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit'])} />
             </>
           ) : capabilities.loading || memory.loading ? (
             <Loading />

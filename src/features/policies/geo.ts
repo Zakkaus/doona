@@ -1,5 +1,5 @@
-// Region guessed from a node name: common airport/ISO codes, English names and Chinese names. Purely cosmetic; the
-// flag is a regional-indicator emoji so it needs no assets. Unknown names get no flag.
+// Region guessed from a node name: common airport/ISO codes, English names and Chinese names. Used only to
+// group and filter node lists by region; unknown names fall into their own bucket.
 const TABLE: Array<[string, string[]]> = [
   ['HK', ['hk', 'hkg', 'hongkong', 'hong kong', '香港', '港']],
   ['TW', ['tw', 'tpe', 'taiwan', 'taipei', '台灣', '台湾', '臺灣', '台北']],
@@ -56,9 +56,7 @@ const TABLE: Array<[string, string[]]> = [
   ['MO', ['mo', 'mac', 'macau', 'macao', '澳門', '澳门']],
   ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
 ];
-// flagOf is kept for text-only places (toasts, logs); the panels draw SVG flags from Flag.tsx.
 const ASCII = /[a-z0-9]+/g;
-const flag = (iso: string) => String.fromCodePoint(...[...iso].map(c => 0x1f1e6 + c.charCodeAt(0) - 65));
 
 export function regionOf(name: string): string | null {
   const lower = name.toLowerCase();
@@ -71,8 +69,4 @@ export function regionOf(name: string): string | null {
     }
   }
   return null;
-}
-export function flagOf(name: string): string | null {
-  const r = regionOf(name);
-  return r ? flag(r) : null;
 }

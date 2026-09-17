@@ -5,9 +5,13 @@ import type {
   EventOptions,
   FlowDetail,
   GroupSelectionResult,
+  LogOptions,
+  LogRecord,
+  Node,
   Operation,
   OperationAccepted,
   OperationState,
+  Provider,
   RuntimeSettingsPatch
 } from '../model';
 import {ApiError} from '../error';
@@ -16,16 +20,17 @@ import * as fixtures from './fixtures';
 import {ipLiteral, sourceIp} from '../selectors';
 import {patchGroupConfig, probeResult, resolveLeaf} from './control';
 import {routingTrace} from './routing';
-import {diagnose, groupsIn, stored, validate} from './config';
+import {diagnose, stored, validate} from './config';
 
 function page<T>(items: T[], cursor?: string, limit = 1000) {
   const start = cursor ? Number(cursor) : 0;
-  if (!Number.isSafeInteger(start) || start < 0 || start > items.length) throw new ApiError(400, 'invalid_cursor', 'Invalid mock cursor');
+  if (!Number.isSafeInteger(start) || start < 0 || start > items.length) throw new ApiError(400, 'invalid_request', 'Unknown or expired cursor');
   const end = start + limit;
   return {items: items.slice(start, end), next_cursor: end < items.length ? String(end) : null};
 }
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function found<T>(value: T | undefined, kind: string): T {
-  if (value === undefined) throw new ApiError(404, 'not_found', `${kind} not found`);
+  if (value === undefined) throw new ApiError(404, 'resource_not_found', `${kind} not found`);
   return value;
 }
 
@@ -69,12 +74,17 @@ export function createMockApi(): Api {
   let sources: Awaited<ReturnType<typeof stored>>[] | null = null;
   const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
   let configRevision = 40;
+  const providers = structuredClone(fixtures.providers);
+  const geodata = structuredClone(fixtures.geodata);
+  // The outbound mode: runtime state the next activation resets.
+  let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   try {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
+  for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
@@ -94,6 +104,59 @@ export function createMockApi(): Api {
     history.push(event);
     if (history.length > 1024) history.shift();
     listeners.forEach(listener => listener(event));
+  }
+  // A new generation: the revision moves, the outbound mode and the runtime settings fall back to the
+  // configuration, listeners hear it.
+  function advance(): string {
+    configRevision += 1;
+    mode = {mode: 'rule', target: null, source: 'config'};
+    Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
+    log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
+    const generation = String(configRevision);
+    runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
+    publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+    return generation;
+  }
+  // Management writes land in the main source's text too, so the config page shows what the API did. The demo's
+  // main text carries placeholder credentials in the clear, the way the file on disk would.
+  async function editMain(edit: (text: string) => string) {
+    const main = (await loadSources()).find(item => item.id === 'src-main');
+    if (!main) return;
+    Object.assign(main, await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()}));
+  }
+  function dropNode(id: string) {
+    const index = nodes.findIndex(n => n.id === id);
+    if (index < 0) return;
+    nodes.splice(index, 1);
+    for (const group of groups) {
+      group.members = group.members.filter(m => m.id !== id);
+      group.runtime.health = group.runtime.health.filter(h => h.member_id !== id);
+    }
+  }
+  // Ends a live connection the userspace datapath owns: the row, its outbound counter and its recorded flow.
+  function closeLive(connection: (typeof connections.tcp)[number], reason: string) {
+    if (connection.state === 'active') {
+      const counter = outbounds.outbounds.find(row => row.name === connection.outbound);
+      if (counter) counter.active_connections--;
+    }
+    connection.state = 'closed';
+    connection.upload_bytes_per_second = connection.download_bytes_per_second = '0';
+    const flow = flows.find(f => f.connection_id === connection.id);
+    if (!flow) return;
+    const observed_at = new Date().toISOString();
+    const last = flow.trace.steps[flow.trace.steps.length - 1];
+    flow.state = 'closed';
+    flow.ended_at = observed_at;
+    flow.revision++;
+    flow.trace.steps.push({
+      seq: (last?.seq ?? 0) + 1,
+      observed_at,
+      elapsed_us: Math.max(last?.elapsed_us ?? 0, (Date.now() - Date.parse(flow.started_at!)) * 1000),
+      generation_id: String(configRevision),
+      evidence: 'observed',
+      stage: 'connection',
+      data: {state: 'closed', milestone: 'terminal', reason, attempt_id: null, reply_received: null, error: null}
+    });
   }
   function runtimeUpdated() {
     runtime.observed_at = new Date().toISOString();
@@ -135,12 +198,60 @@ export function createMockApi(): Api {
       runtimeUpdated();
     }, 1000);
     const href = '/api/v1/operations/' + operation_id;
-    return {operation_id, kind, status: 'queued', href, location: href, retryAfter: 1};
+    return {operation_id, kind, status: 'queued', href, retryAfter: 1};
   }
   const operation = async (id: string, signal?: AbortSignal): Promise<OperationState> => {
     signal?.throwIfAborted();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
+  // Logs: a bounded ring the stream replays from, fed by what the mock does plus a quiet background trickle.
+  const levels: LogRecord['level'][] = ['trace', 'debug', 'info', 'warn', 'error'];
+  const logRing: Array<LogRecord & {id: string}> = [];
+  const logListeners = new Set<(record: LogRecord & {id: string}) => void>();
+  let logSequence = 0;
+  const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null) => {
+    const record = {id: `${fixtures.instanceId}:logs:${++logSequence}`, ts: new Date().toISOString(), level, target, message, fields};
+    logRing.push(record);
+    if (logRing.length > settings.log.buffered_records) logRing.splice(0, logRing.length - settings.log.buffered_records);
+    logListeners.forEach(listener => listener(record));
+  };
+  const trickle = [
+    () => log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)}),
+    () => log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12}),
+    () => log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: 3, unavailable: 0}),
+    () => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}),
+    () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
+  ];
+  for (const record of fixtures.logSeed) log(record.level, record.target, record.message, record.fields ?? null);
+  let logTimer: ReturnType<typeof setInterval> | undefined;
+  async function logs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
+    if (signal?.aborted) return;
+    if (!capabilities.resources.logs.available) throw new ApiError(404, 'capability_not_supported', 'Logs are unavailable');
+    const floor = level ? levels.indexOf(level) : 0;
+    const emit = (record: LogRecord & {id: string}) => {
+      if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target))) onRecord(structuredClone(record));
+    };
+    const cursor = lastEventId?.startsWith(fixtures.instanceId + ':logs:') ? Number(lastEventId.split(':')[2]) : 0;
+    onConnectionChange?.(true);
+    for (const record of logRing) if (Number(record.id.split(':')[2]) > cursor) emit(record);
+    logListeners.add(emit);
+    if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), 2500);
+    await new Promise<void>(resolve => {
+      signal?.addEventListener(
+        'abort',
+        () => {
+          logListeners.delete(emit);
+          if (!logListeners.size) {
+            clearInterval(logTimer);
+            logTimer = undefined;
+          }
+          onConnectionChange?.(false);
+          resolve();
+        },
+        {once: true}
+      );
+    });
+  }
   async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     if (signal?.aborted) return;
     const emit = (event: ApiEvent) => {
@@ -189,8 +300,10 @@ export function createMockApi(): Api {
           config_validate: '/api/v1/config/validate',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
+          runtime_mode: '/api/v1/runtime/mode',
           logs: '/api/v1/logs',
           providers: '/api/v1/providers',
+          geodata: '/api/v1/geodata',
           rules: '/api/v1/rules',
           operations: '/api/v1/operations/{id}'
         }
@@ -212,13 +325,13 @@ export function createMockApi(): Api {
     },
     runtimeOutbounds: async signal => {
       signal?.throwIfAborted();
-      if (!capabilities.resources.runtime_outbounds.available) throw new ApiError(404, 'not_found', 'Outbound counters unavailable');
+      if (!capabilities.resources.runtime_outbounds.available) throw new ApiError(404, 'capability_not_supported', 'Outbound counters unavailable');
       return structuredClone(outbounds);
     },
     trafficHistory: async (query, signal) => {
       signal?.throwIfAborted();
       const limits = capabilities.resources.traffic_history;
-      if (!limits.available) throw new ApiError(404, 'not_found', 'Traffic history unavailable');
+      if (!limits.available) throw new ApiError(404, 'capability_not_supported', 'Traffic history unavailable');
       const window_seconds = query?.window_seconds ?? limits.max_window_seconds!;
       const max_points = query?.max_points ?? limits.max_points!;
       if (
@@ -243,7 +356,7 @@ export function createMockApi(): Api {
     memoryHistory: async (query, signal) => {
       signal?.throwIfAborted();
       const limits = capabilities.resources.memory_history;
-      if (!limits.available) throw new ApiError(404, 'not_found', 'Memory history unavailable');
+      if (!limits.available) throw new ApiError(404, 'capability_not_supported', 'Memory history unavailable');
       const window_seconds = query?.window_seconds ?? limits.max_window_seconds!;
       const max_points = query?.max_points ?? limits.max_points!;
       if (
@@ -327,7 +440,7 @@ export function createMockApi(): Api {
       );
       // A selector takes the choice; an automatic policy takes it as a pin that stands until cleared.
       const override = !group.capabilities.can_select && group.capabilities.can_override;
-      if (!group.capabilities.can_select && !override) throw new ApiError(422, 'selection_not_supported', 'Group does not support manual selection');
+      if (!group.capabilities.can_select && !override) throw new ApiError(404, 'capability_not_supported', 'Group does not support manual selection');
       found(
         group.members.find(m => m.id === request.member_id),
         'Group member'
@@ -345,29 +458,7 @@ export function createMockApi(): Api {
         for (const connection of connections[network]) {
           if (connection.outbound !== groupId || !['active', 'dialing', 'routing'].includes(connection.state)) continue;
           interrupted = true;
-          if (connection.state === 'active') {
-            const counter = outbounds.outbounds.find(row => row.name === connection.outbound);
-            if (counter) counter.active_connections--;
-          }
-          connection.state = 'closed';
-          connection.upload_bytes_per_second = connection.download_bytes_per_second = '0';
-          const flow = flows.find(f => f.connection_id === connection.id);
-          if (flow) {
-            const observed_at = new Date().toISOString();
-            const last = flow.trace.steps[flow.trace.steps.length - 1];
-            flow.state = 'closed';
-            flow.ended_at = observed_at;
-            flow.revision++;
-            flow.trace.steps.push({
-              seq: (last?.seq ?? 0) + 1,
-              observed_at,
-              elapsed_us: Math.max(last?.elapsed_us ?? 0, (Date.now() - Date.parse(flow.started_at!)) * 1000),
-              generation_id: '40',
-              evidence: 'observed',
-              stage: 'connection',
-              data: {state: 'closed', milestone: 'terminal', reason: 'group_selection_changed', attempt_id: null, reply_received: null, error: null}
-            });
-          }
+          closeLive(connection, 'group_selection_changed');
         }
       }
       const revision = (revisions.get(groupId) ?? 0n) + 1n;
@@ -414,10 +505,10 @@ export function createMockApi(): Api {
         groups.find(g => g.id === groupId),
         'Group'
       );
-      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'revision_mismatch', 'Group configuration revision changed');
-      if (updating.has(groupId)) throw new ApiError(409, 'update_pending', 'Group update is pending');
+      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
+      if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
       const limit = fixtures.capabilities.resources.groups.max_patch_operations;
-      if (limit !== undefined && ops.length > limit) throw new ApiError(422, 'too_many_operations', 'Too many patch operations');
+      if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
       const updated = patchGroupConfig(group, ops);
       updating.add(groupId);
       return enqueue('group_update', () => {
@@ -449,9 +540,9 @@ export function createMockApi(): Api {
         (request.kind !== 'dns' && (request.purpose !== 'data' || request.transport.some(t => t !== 'tcp'))) ||
         (request.kind === 'dns' && request.purpose !== 'dns')
       )
-        throw new ApiError(422, 'invalid_probe', 'Unsupported probe dimensions');
+        throw new ApiError(422, 'unsupported_value', 'Unsupported probe dimensions');
       if (group && Array.isArray(request.members) && request.members.some(id => !group.members.some(m => m.id === id)))
-        throw new ApiError(422, 'invalid_member', 'Probe member is not in this group');
+        throw new ApiError(422, 'unsupported_value', 'Probe member is not in this group');
       const input = structuredClone(request);
       return enqueue('probe', () => probeResult(input, nodes, groups, new Date().toISOString()));
     },
@@ -510,8 +601,8 @@ export function createMockApi(): Api {
     },
     routingTrace: async (request, signal) => {
       signal?.throwIfAborted();
-      if (!capabilities.resources.routing_trace.available) throw new ApiError(501, 'not_supported', 'Routing trace is unavailable');
-      return routingTrace(request);
+      if (!capabilities.resources.routing_trace.available) throw new ApiError(404, 'capability_not_supported', 'Routing trace is unavailable');
+      return routingTrace(request, String(configRevision));
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
@@ -523,7 +614,7 @@ export function createMockApi(): Api {
     dnsLog: async (query, signal) => {
       signal?.throwIfAborted();
       const limits = capabilities.resources.dns_log;
-      if (!limits.available) throw new ApiError(404, 'not_found', 'DNS log unavailable');
+      if (!limits.available) throw new ApiError(404, 'capability_not_supported', 'DNS log unavailable');
       if (query?.limit !== undefined && query.limit > limits.max_page_size!)
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
@@ -569,10 +660,148 @@ export function createMockApi(): Api {
         if (index < 0) continue;
         // Only the userspace datapath can cancel what it owns; kernel-observed entries stay.
         if (list[index].observed_by === 'ebpf') throw new ApiError(409, 'state_conflict', 'Connection is not owned by the userspace datapath');
+        closeLive(list[index], 'closed_by_request');
         list.splice(index, 1);
         return;
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
+    runtimeMode: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
+      return {observed_at: new Date().toISOString(), ...mode};
+    },
+    setRuntimeMode: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
+      if (!capabilities.resources.runtime_mode.modes?.includes(request.mode))
+        throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
+      if (request.mode === 'global') {
+        if (!request.target) throw new ApiError(400, 'invalid_request', 'global needs a target');
+        if (!groups.some(g => g.id === request.target) && !nodes.some(n => n.id === request.target))
+          throw new ApiError(422, 'unsupported_value', `No group or node named ${request.target}`);
+      } else if (request.target) throw new ApiError(400, 'invalid_request', `${request.mode} takes no target`);
+      mode = {mode: request.mode, target: request.mode === 'global' ? request.target! : null, source: 'runtime'};
+      log('info', 'honk::routing', 'Outbound mode changed.', {mode: mode.mode, target: mode.target});
+      publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
+      return {observed_at: new Date().toISOString(), ...mode};
+    },
+    providers: async (query, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.available) throw new ApiError(404, 'capability_not_supported', 'Providers are unavailable');
+      const max = capabilities.resources.providers.max_page_size ?? 1000;
+      if (query?.limit !== undefined && query.limit > max) throw new ApiError(400, 'invalid_request', `limit exceeds max_page_size ${max}`);
+      const result = page(providers, query?.cursor, query?.limit ?? Math.min(100, max));
+      return {providers: structuredClone(result.items), next_cursor: result.next_cursor};
+    },
+    // A refresh re-reads the source; the demo keeps the node set and moves the timestamps.
+    refreshProvider: async (providerId, signal) => {
+      signal?.throwIfAborted();
+      const provider = found(
+        providers.find(item => item.id === providerId),
+        'Provider'
+      );
+      if (!capabilities.resources.providers.can_refresh || provider.kind !== 'subscription')
+        throw new ApiError(404, 'capability_not_supported', 'This provider cannot be refreshed');
+      if (updating.has('refresh:' + providerId)) throw new ApiError(409, 'state_conflict', 'A refresh for this provider is already queued or running');
+      updating.add('refresh:' + providerId);
+      return enqueue('provider_refresh', () => {
+        updating.delete('refresh:' + providerId);
+        provider.updated_at = new Date().toISOString();
+        provider.status = 'ok';
+        provider.last_error = null;
+        return structuredClone(provider);
+      });
+    },
+    createProvider: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.can_manage) throw new ApiError(404, 'capability_not_supported', 'Provider management is unavailable');
+      if (!/^https?:\/\//.test(request.url)) throw new ApiError(422, 'unsupported_value', 'The subscription URL must start with http:// or https://');
+      if (providers.some(item => item.name === request.name)) throw new ApiError(409, 'state_conflict', `A provider named ${request.name} already exists`);
+      const url = URL.parse(request.url);
+      if (!url) throw new ApiError(422, 'unsupported_value', 'The subscription URL cannot be parsed');
+      const provider: Provider = {
+        id: request.name,
+        name: request.name,
+        kind: 'subscription',
+        url_redacted: url.origin + url.pathname + (url.search ? '?[redacted]' : ''),
+        node_count: 0,
+        updated_at: null,
+        expires_at: null,
+        traffic: null,
+        status: 'stale',
+        last_error: null
+      };
+      providers.push(provider);
+      await editMain(text => text.replace(/^(subscription \{\n)/m, `$1  ${request.name}: '${request.url.replace(/'/g, '')}'\n`));
+      log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
+      advance();
+      return structuredClone(provider);
+    },
+    deleteProvider: async (providerId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.can_manage) throw new ApiError(404, 'capability_not_supported', 'Provider management is unavailable');
+      const index = providers.findIndex(item => item.id === providerId);
+      if (index < 0) return {deleted: 0};
+      if (providers[index].kind === 'inline') throw new ApiError(404, 'capability_not_supported', 'The inline provider is the node section itself');
+      const [provider] = providers.splice(index, 1);
+      for (const node of nodes.filter(n => n.provider_id === provider.id)) dropNode(node.id);
+      await editMain(text => text.replace(new RegExp(`^\\s*${escapeRegExp(provider.name)}:.*\\n`, 'm'), ''));
+      log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
+      advance();
+      return {deleted: 1};
+    },
+    createNode: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.can_manage) throw new ApiError(404, 'capability_not_supported', 'Node management is unavailable');
+      const scheme = /^([a-z][a-z0-9+.-]*):\/\/\S+$/i.exec(request.link.trim())?.[1]?.toLowerCase();
+      if (!scheme || !fixtures.linkSchemes.includes(scheme)) throw new ApiError(422, 'unsupported_value', `Unsupported share link scheme "${scheme ?? ''}"`);
+      if (nodes.some(n => n.name === request.name)) throw new ApiError(409, 'state_conflict', `An inline node named ${request.name} already exists`);
+      const node: Node = {id: request.name, name: request.name, protocol: scheme, subscription_tag: null, provider_id: 'inline', group_ids: [], health: []};
+      nodes.push(node);
+      const inline = providers.find(item => item.id === 'inline');
+      if (inline) inline.node_count += 1;
+      await editMain(text => text.replace(/^(node \{\n)/m, `$1  '${request.name.replace(/'/g, '')}': '${request.link.trim().replace(/'/g, '')}'\n`));
+      log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
+      advance();
+      return structuredClone(node);
+    },
+    deleteNode: async (nodeId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.can_manage) throw new ApiError(404, 'capability_not_supported', 'Node management is unavailable');
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return {deleted: 0};
+      if (node.provider_id !== 'inline')
+        throw new ApiError(404, 'capability_not_supported', 'Only inline nodes can be deleted; refresh or delete the provider instead');
+      dropNode(node.id);
+      const inline = providers.find(item => item.id === 'inline');
+      if (inline) inline.node_count = Math.max(0, inline.node_count - 1);
+      await editMain(text => text.replace(new RegExp(`^\\s*'${escapeRegExp(node.name)}':.*\\n`, 'm'), ''));
+      log('info', 'honk::config', 'Node removed.', {node: node.name});
+      advance();
+      return {deleted: 1};
+    },
+    geodata: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.geodata.available) throw new ApiError(404, 'capability_not_supported', 'Geodata is unavailable');
+      return {...structuredClone(geodata), observed_at: new Date().toISOString()};
+    },
+    updateGeodata: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.geodata.can_update) throw new ApiError(404, 'capability_not_supported', 'Geodata update is unavailable');
+      if ([...operations.values()].some(op => op.kind === 'geodata_update' && (op.status === 'queued' || op.status === 'running')))
+        throw new ApiError(409, 'state_conflict', 'A geodata update is already queued or running');
+      return enqueue('geodata_update', () => {
+        const now = new Date().toISOString();
+        for (const asset of geodata.assets) {
+          asset.modified_at = now;
+          asset.sha256 = Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+          asset.size_bytes = String(Number(asset.size_bytes) + Math.floor(Math.random() * 65536));
+        }
+        log('info', 'honk::geodata', 'Geodata updated; reloading.', {assets: geodata.assets.map(a => a.kind)});
+        advance();
+        return {...structuredClone(geodata), observed_at: now};
+      });
     },
     config: async signal => {
       signal?.throwIfAborted();
@@ -590,15 +819,6 @@ export function createMockApi(): Api {
         ],
         secrets_redacted: true
       };
-    },
-    configSource: async (sourceId, signal) => {
-      signal?.throwIfAborted();
-      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
-      const source = found(
-        (await loadSources()).find(item => item.id === sourceId),
-        'Configuration source'
-      );
-      return capabilities.resources.config.content ? {...source} : {...source, content: undefined};
     },
     validateConfig: async (request, signal) => {
       signal?.throwIfAborted();
@@ -619,18 +839,15 @@ export function createMockApi(): Api {
       if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
-      const main = sourceId === 'src-main' ? content : list[0].content;
-      const known = new Set([...groupsIn(main), ...groups.map(g => g.name)]);
-      const diagnostics = list.filter(ruleFile).flatMap(item => diagnose(item.id, item.id === sourceId ? content : item.content, known, 'full'));
-      if (diagnostics.some(item => item.level === 'error'))
-        throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics});
+      // The same full validation the validate endpoint runs, over every rule file with the candidate in place.
+      const candidate = list.filter(ruleFile).map(item => ({id: item.id, path: item.path, content: item.id === sourceId ? content : item.content}));
+      const check = validate({sources: candidate, mode: 'full'}, String(configRevision), new Set(groups.map(g => g.name)));
+      if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
       Object.assign(source, next);
+      log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
-        configRevision += 1;
-        const generation = String(configRevision);
-        runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
-        publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+        const generation = advance();
         return {active_generation_id: generation, datapath_generation_id: generation};
       });
     },
@@ -671,6 +888,7 @@ export function createMockApi(): Api {
       apply('flows');
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
+      log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});
       return structuredClone(settings);
     },
     deleteDnsEntry: async (entryId, signal) => {
@@ -688,7 +906,10 @@ export function createMockApi(): Api {
     },
     startReload: async signal => {
       signal?.throwIfAborted();
-      return enqueue('reload', () => ({active_generation_id: '40', datapath_generation_id: '40'}));
+      return enqueue('reload', () => {
+        const generation = advance();
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
     },
     startSuspend: async signal => {
       signal?.throwIfAborted();
@@ -714,6 +935,7 @@ export function createMockApi(): Api {
         delay = current.retryAfter ?? 1;
       }
     },
-    subscribeEvents: events
+    subscribeEvents: events,
+    subscribeLogs: logs
   };
 }

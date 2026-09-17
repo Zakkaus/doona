@@ -14,6 +14,9 @@ import type {
   RuntimeSettings,
   ConfigSource,
   ConfigDiagnostic,
+  Provider,
+  GeoData,
+  LogRecord,
   TrafficHistory,
   Version
 } from '../model';
@@ -153,12 +156,14 @@ export const capabilities: Capabilities = {
     runtime_outbounds: {available: true},
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
     memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
-    nodes: {available: true},
-    providers: {available: false},
+    runtime_mode: {available: true, modes: ['rule', 'direct', 'global']},
+    nodes: {available: true, can_manage: true},
+    providers: {available: true, can_refresh: true, can_manage: true, max_page_size: 1000},
+    geodata: {available: true, can_update: true, assets: ['geosite', 'geoip']},
     rules: {available: false},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
-    logs: {available: false, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
+    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
     runtime_settings: {available: true, fields: ['log.level', 'log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']},
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
@@ -234,8 +239,13 @@ export const capabilitiesBase: Capabilities = {
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
     memory_history: {available: false},
+    runtime_mode: {available: false},
+    logs: {available: false},
     dns_log: {available: false},
     runtime_settings: {available: false},
+    geodata: {available: false},
+    nodes: {available: true, can_manage: false},
+    providers: {available: true, can_refresh: true, can_manage: false, max_page_size: 1000},
     config: {available: false, content: false},
     config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
@@ -255,36 +265,18 @@ export const runtimeSettings: RuntimeSettings = {
 };
 
 // The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
-type ConfigRule = {id: string; n: number; cond: string; target: string; must: boolean; source: string; note: string; editable: boolean; generated?: boolean};
+// The routing rules the demo's trace and flow evidence refer to, in config order.
+type ConfigRule = {id: string; cond: string; target: string; must: boolean};
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const rules: ConfigRule[] = [
-  {id: 'r1', n: 1, cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false, source: 'config.dae:38', note: '廣告', editable: true},
-  {
-    id: 'r2',
-    n: 2,
-    cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)',
-    target: 'direct',
-    must: true,
-    source: 'config.dae:39',
-    note: '',
-    editable: true
-  },
-  {id: 'r3', n: 3, cond: 'dip(geoip: private)', target: 'direct', must: true, source: 'config.dae:40', note: 'LAN', editable: true},
-  {id: 'r4', n: 4, cond: 'domain(geosite: cn)', target: 'direct', must: false, source: 'config.dae:41', note: '', editable: true},
-  {id: 'r5', n: 5, cond: 'domain(geosite: telegram)', target: 'proxy', must: false, source: 'config.dae:42', note: '', editable: true},
-  {id: 'r6', n: 6, cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false, source: 'rules.dae:3', note: '電視', editable: true},
-  {id: 'r7', n: 7, cond: 'domain(geosite: discord)', target: 'proxy', must: false, source: 'rules.dae:7', note: '', editable: true},
-  {
-    id: 'r8',
-    n: 8,
-    cond: 'sip(10.0.0.0/24) && dport(25)',
-    target: 'block',
-    must: false,
-    source: '生成，subscription policy',
-    note: '',
-    editable: false,
-    generated: true
-  }
+  {id: 'r1', cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false},
+  {id: 'r2', cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true},
+  {id: 'r3', cond: 'dip(geoip: private)', target: 'direct', must: true},
+  {id: 'r4', cond: 'domain(geosite: cn)', target: 'direct', must: false},
+  {id: 'r5', cond: 'domain(geosite: telegram)', target: 'proxy', must: false},
+  {id: 'r6', cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false},
+  {id: 'r7', cond: 'domain(geosite: discord)', target: 'proxy', must: false},
+  {id: 'r8', cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false}
 ];
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 
@@ -310,6 +302,7 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     name,
     protocol: 'shadowsocks',
     subscription_tag: source,
+    provider_id: source === 'inline' ? 'inline' : source,
     group_ids: [],
     health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
   };
@@ -321,13 +314,13 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[], icon: string | null = null): Group {
+function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
   for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
   return {
     id: name,
     name,
-    icon,
+    icon: null,
     config_revision: '40',
     policy: {kind, native: kind},
     members: members.map(id => ({id, name: id, kind: nodes.some(n => n.id === id) ? 'node' : 'group'})),
@@ -361,11 +354,11 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
 }
 export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const nodes = [
-    node('hk-01', 84, 91, true, 'sub-a'),
-    node('hk-02', 91, 88, true, 'sub-a'),
-    node('sg-01', 63, 70, false, 'sub-a'),
-    node('jp-01', null, null, false, 'sub-b'),
-    node('us-01', 188, 201, true, 'sub-b')
+    node('hk-01', 84, 91, true, 'inline'),
+    node('hk-02', 91, 88, true, 'inline'),
+    node('sg-01', 63, 70, false, 'inline'),
+    node('jp-01', null, null, false, 'inline'),
+    node('us-01', 188, 201, true, 'inline')
   ];
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
@@ -622,21 +615,21 @@ const configMain = `global {
 }
 
 subscription {
-  sub-c: 'https://<redacted>'
+  sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'
 }
 
 node {
-  'hk-01': 'vless://<redacted>'
-  'hk-02': 'vless://<redacted>'
-  'sg-01': 'trojan://<redacted>'
-  'jp-01': 'vless://<redacted>'
-  'us-01': 'trojan://<redacted>'
+  'hk-01': 'vless://demo@hk-01.example.net:443?security=tls#hk-01'
+  'hk-02': 'vless://demo@hk-02.example.net:443?security=tls#hk-02'
+  'sg-01': 'trojan://demo@sg-01.example.net:443#sg-01'
+  'jp-01': 'vless://demo@jp-01.example.net:443?security=tls#jp-01'
+  'us-01': 'trojan://demo@us-01.example.net:443#us-01'
 }
 
 group {
   proxy { policy: fixed(0) }
   resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }
-  gaming { filter: name(jp-01, hk-02) policy: min }
+  gaming { filter: name(jp-01, hk-02) policy: min_last_delay }
   skylink { filter: subtag(sub-c) policy: min_moving_avg }
 }
 
@@ -652,8 +645,8 @@ dns {
 
 routing {
   domain(suffix: doubleclick.net) -> block
-  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> must_direct
-  dip(geoip: private) -> must_direct
+  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)
+  dip(geoip: private) -> direct(must)
   domain(geosite: cn) -> direct
   domain(geosite: telegram) -> proxy
   include rules.dae
@@ -707,9 +700,81 @@ export const configNotes: ConfigDiagnostic[] = [
     message: 'Subscription fetched 30 minutes ago; nodes come from the cache'
   }
 ];
-export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [
+// Where nodes come from: the subscription the config names, and the nodes written by hand in config.dae.
+export const providers: Provider[] = [
+  {
+    id: 'sub-c',
+    name: 'sub-c',
+    kind: 'subscription',
+    url_redacted: 'https://sub.example.net/api/v1/client/subscribe?token=<redacted>',
+    node_count: 100,
+    updated_at: ago(1800),
+    expires_at: new Date(now + 23 * 86400 * 1000).toISOString(),
+    traffic: {upload_bytes: '48318382080', download_bytes: '412316860416', total_bytes: '1099511627776'},
+    status: 'ok',
+    last_error: null
+  },
+  {
+    id: 'inline',
+    name: 'config.dae',
+    kind: 'inline',
+    url_redacted: null,
+    node_count: 5,
+    updated_at: ago(3600),
+    expires_at: null,
+    traffic: null,
+    status: 'ok',
+    last_error: null
+  }
+];
+// Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
+export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity'];
+// The geosite and geoip files the demo datapath was built from.
+export const geodata: GeoData = {
+  observed_at: observedAt,
+  assets: [
+    {
+      kind: 'geosite',
+      sha256: '3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c',
+      size_bytes: '4718592',
+      modified_at: ago(3 * 86400),
+      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+    },
+    {
+      kind: 'geoip',
+      sha256: '9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e',
+      size_bytes: '6291456',
+      modified_at: ago(3 * 86400),
+      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+    }
+  ]
+};
+// What the engine logged while starting: the replay ring's first records.
+export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {fields?: LogRecord['fields']}> = [
+  {level: 'info', target: 'honk::main', message: 'honk 0.9.3 starting.', fields: {pid: 4120}},
+  {level: 'info', target: 'honk::config', message: 'Configuration accepted.', fields: {sources: 4, generation_id: '40'}},
+  {level: 'info', target: 'honk::subscription', message: 'Subscription loaded.', fields: {provider: 'sub-c', nodes: 100}},
+  {level: 'warn', target: 'honk::subscription', message: 'Subscription served from cache.', fields: {provider: 'sub-c', age_seconds: 1800}},
+  {level: 'info', target: 'honk::datapath', message: 'Kernel datapath attached.', fields: {interface: 'br-lan'}},
+  {level: 'info', target: 'honk::dns', message: 'DNS listener bound.', fields: {bind: '127.0.0.1:5353'}},
+  {level: 'info', target: 'honk::routing', message: 'Routing generation published.', fields: {generation_id: '40'}},
+  {level: 'error', target: 'honk::group', message: 'Health check failed.', fields: {node: 'jp-01', error: 'connect timeout'}},
+  {level: 'info', target: 'honk::api', message: 'Native API listening.', fields: {listen: '127.0.0.1:9090'}}
+];
+// The demo's sources. The main config carries placeholder credentials in the clear, so it hashes to its own
+// digest and can be edited; the fetched subscription is served redacted, with the digest of the text on disk,
+// which is how a real backend hands out a file it will not let a client write back.
+export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},
-  {id: 'src-sub-c', path: '/var/lib/honk/subscriptions/sub-c.dae', kind: 'subscription', writable: false, loaded_at: ago(1800), content: configSubscription},
+  {
+    id: 'src-sub-c',
+    path: '/var/lib/honk/subscriptions/sub-c.dae',
+    kind: 'subscription',
+    writable: false,
+    loaded_at: ago(1800),
+    content: configSubscription,
+    onDisk: configSubscription.replaceAll('<redacted>', 'demo@edge.example.net:443')
+  },
   {id: 'src-generated', path: '/var/lib/honk/generated/skylink.dae', kind: 'generated', writable: false, loaded_at: ago(1800), content: configGenerated}
 ];

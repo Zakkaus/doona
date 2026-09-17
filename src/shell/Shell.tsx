@@ -1,4 +1,6 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
+import {Login} from './Login';
+import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {I18nProvider, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
 import Close from '../ui/icons/Close';
@@ -29,9 +31,9 @@ import {
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
-import {refetchAll, useCapabilities, useConnections, useGroups, useNodes, useVersion} from '../api/store';
+import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useVersion} from '../api/store';
 import {chainLabel, connectionRows} from '../api/selectors';
-import {features, navAvailable} from './registry';
+import {features, navAvailable, subpages} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
 import {readSettings, type PaletteId, type Scheme, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
@@ -167,29 +169,71 @@ function SchemeIcon({dark}: {dark: boolean}) {
 function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
   const [q, setQ] = useState('');
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
   const connections = useConnections();
   const nodes = useNodes();
   const groups = useGroups();
-  const capabilities = useCapabilities();
+  const providers = useProviders(resources?.providers.available !== false);
+  const config = useConfig(resources?.config.available === true);
   const needle = q.trim().toLowerCase();
   const limit = needle ? 8 : 5;
+  const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
+  const available = (path: string) => navAvailable(path, capabilities.data);
+  // Pages and their tabs and cards, so a tab or card name lands on the right place, not just the page.
+  const places = [
+    ...features
+      .filter(feature => feature.nav && available(feature.path))
+      .map(feature => ({id: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
+    ...subpages
+      .filter(item => available(item.path))
+      .map(item => ({
+        id: item.path + '?' + item.query,
+        query: item.query,
+        title: t(item.titleKey),
+        parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)
+      }))
+  ];
   const hits = {
     conns: connectionRows(connections.data)
-      .filter(c => [c.domain, c.dst, c.src].some(value => value?.toLowerCase().includes(needle)))
+      .filter(c => match(c.domain, c.dst, c.src))
       .slice(0, limit),
-    nodes: (nodes.data ?? []).filter(n => n.name.toLowerCase().includes(needle)).slice(0, limit),
-    groups: (groups.data ?? []).filter(g => g.name.toLowerCase().includes(needle)).slice(0, limit),
-    pages: features
-      .filter(feature => feature.nav && navAvailable(feature.path, capabilities.data) && t(feature.nav.titleKey).toLowerCase().includes(needle))
-      .slice(0, limit)
+    nodes: (nodes.data ?? []).filter(n => match(n.name)).slice(0, limit),
+    groups: (groups.data ?? []).filter(g => match(g.name)).slice(0, limit),
+    providers: (providers.data?.providers ?? []).filter(p => match(p.name)).slice(0, limit),
+    sources: (config.data?.sources ?? []).filter(source => match(source.path)).slice(0, limit),
+    pages: places.filter(place => match(place.title, place.parent && place.parent + ' ' + place.title)).slice(0, limit)
   };
   const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
+  const total = Object.values(hits).reduce((sum, list) => sum + list.length, 0);
   const pick = (k: string) => {
-    if (k.startsWith('conn:')) go('connections', 'id=' + encodeURIComponent(k.slice(5)));
-    else if (k.startsWith('page:')) go(k.slice(5));
-    else go('policies');
+    const [kind, ...rest] = k.split(':');
+    const id = rest.join(':');
+    if (kind === 'conn') go('connections', 'id=' + encodeURIComponent(id));
+    else if (kind === 'node') {
+      const node = nodes.data?.find(n => n.id === id);
+      go('nodes', (node?.provider_id ? 'provider=' + encodeURIComponent(node.provider_id) + '&' : '') + 'q=' + encodeURIComponent(node?.name ?? id));
+    } else if (kind === 'group') go('policies', 'group=' + encodeURIComponent(id));
+    else if (kind === 'provider') go('nodes', 'provider=' + encodeURIComponent(id));
+    else if (kind === 'source') go('config', 'tab=source&source=' + encodeURIComponent(id));
+    else {
+      const [path, query] = id.split('?');
+      go(path, query);
+    }
     onClose();
   };
+  const section = (id: string, title: string, items: Array<{key: string; label: string; desc?: string}>) =>
+    items.length > 0 && (
+      <ListBoxSection id={id}>
+        <Header className="rp-section-h">{title}</Header>
+        {items.map(item => (
+          <ListBoxItem key={item.key} id={item.key} className="rp-item plain" textValue={item.label}>
+            <span>{item.label}</span>
+            {item.desc && <span className="desc">{item.desc}</span>}
+          </ListBoxItem>
+        ))}
+      </ListBoxSection>
+    );
   return (
     <ModalDialog
       title={t('search')}
@@ -207,48 +251,37 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
         </Button>
       </div>
       {error && <ErrorMessage error={error} />}
-      {hits.conns.length + hits.nodes.length + hits.groups.length + hits.pages.length === 0 && <div className="rp-empty">{t('search.none')}</div>}
+      {total === 0 && <div className="rp-empty">{t('search.none')}</div>}
       <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
-        {hits.conns.length > 0 && (
-          <ListBoxSection id="conns">
-            <Header className="rp-section-h">{t('nav.connections')}</Header>
-            {hits.conns.map(c => (
-              <ListBoxItem key={c.id} id={'conn:' + c.id} className="rp-item plain" textValue={c.domain || c.dst || c.src || c.id}>
-                <span>{c.domain || c.dst || c.src || c.id}</span>
-                <span className="desc">{chainLabel(c, t)}</span>
-              </ListBoxItem>
-            ))}
-          </ListBoxSection>
+        {section(
+          'pages',
+          t('search.pages'),
+          hits.pages.map(place => ({key: 'page:' + place.id, label: place.title, desc: place.parent || undefined}))
         )}
-        {hits.nodes.length > 0 && (
-          <ListBoxSection id="nodes">
-            <Header className="rp-section-h">{t('search.nodes')}</Header>
-            {hits.nodes.map(n => (
-              <ListBoxItem key={n.id} id={'node:' + n.id} className="rp-item plain" textValue={n.name}>
-                {n.name}
-              </ListBoxItem>
-            ))}
-          </ListBoxSection>
+        {section(
+          'conns',
+          t('nav.connections'),
+          hits.conns.map(c => ({key: 'conn:' + c.id, label: c.domain || c.dst || c.src || c.id, desc: chainLabel(c, t)}))
         )}
-        {hits.groups.length > 0 && (
-          <ListBoxSection id="groups">
-            <Header className="rp-section-h">{t('search.groups')}</Header>
-            {hits.groups.map(g => (
-              <ListBoxItem key={g.id} id={'group:' + g.id} className="rp-item plain" textValue={g.name}>
-                {g.name}
-              </ListBoxItem>
-            ))}
-          </ListBoxSection>
+        {section(
+          'nodes',
+          t('search.nodes'),
+          hits.nodes.map(n => ({key: 'node:' + n.id, label: n.name, desc: n.group_ids.join(', ') || undefined}))
         )}
-        {hits.pages.length > 0 && (
-          <ListBoxSection id="pages">
-            <Header className="rp-section-h">{t('search.pages')}</Header>
-            {hits.pages.map(page => (
-              <ListBoxItem key={page.path} id={'page:' + page.path} className="rp-item plain" textValue={t(page.nav!.titleKey)}>
-                {t(page.nav!.titleKey)}
-              </ListBoxItem>
-            ))}
-          </ListBoxSection>
+        {section(
+          'groups',
+          t('search.groups'),
+          hits.groups.map(g => ({key: 'group:' + g.id, label: g.name, desc: g.policy.native}))
+        )}
+        {section(
+          'providers',
+          t('search.providers'),
+          hits.providers.map(p => ({key: 'provider:' + p.id, label: p.name, desc: t('search.nodeCount', {n: p.node_count})}))
+        )}
+        {section(
+          'sources',
+          t('search.sources'),
+          hits.sources.map(source => ({key: 'source:' + source.id, label: source.path, desc: source.kind}))
         )}
       </ListBox>
     </ModalDialog>
@@ -273,11 +306,12 @@ export function Shell() {
     }
   };
   const mac = navigator.platform.startsWith('Mac');
-  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé"); otherwise the first open fetches one and the whole page relays out.
+  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé") in the face the language
+  // renders with; otherwise the first open fetches one and the whole page relays out.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    for (const w of [400, 500, 700]) document.fonts?.load(`${w} 14px 'Noto Sans TC'`, sample).catch(() => {});
-  }, []);
+    document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
+  }, [lang]);
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
@@ -300,7 +334,7 @@ function ToastHost() {
       }
     } catch {}
   }, [t]);
-  return <Toasts labels={{close: t('close'), showAll: n => t('toast.showAllCount', {n}), collapse: t('toast.collapse'), clearAll: t('toast.clearAll')}} />;
+  return <Toasts />;
 }
 
 function Frame({
@@ -344,6 +378,8 @@ function Frame({
   }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
+  // A 401 or 403 from the capability probe means the backend wants a token; the page yields to the login form.
+  const needsToken = capabilities.error instanceof ApiError && (capabilities.error.status === 401 || capabilities.error.status === 403);
   const titleKey = feature.nav?.titleKey ?? 'nav.activity';
   return (
     <div className="rp-shell">
@@ -444,7 +480,7 @@ function Frame({
         <div className="rp-side-grow" />
         <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
           <GitHub />
-          {version.data && !version.loading ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
+          {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
           {settings.profiles.length > 1 && <TextTooltip text={profile?.name}>{profile?.name}</TextTooltip>}
         </Button>
       </nav>
@@ -478,9 +514,13 @@ function Frame({
           </div>
           <ErrorMessage error={capabilities.error ? null : version.error} />
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            <Suspense key={feature.id} fallback={<Loading />}>
-              <Page go={go} query={query} />
-            </Suspense>
+            {needsToken && feature.id !== 'settings' ? (
+              <Login backend={profile?.name ?? profile?.api ?? ''} rejected={!!profile?.token} />
+            ) : (
+              <Suspense key={feature.id} fallback={<Loading />}>
+                <Page go={go} query={query} />
+              </Suspense>
+            )}
           </SettingsContext.Provider>
         </div>
       </main>

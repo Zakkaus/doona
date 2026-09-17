@@ -8,6 +8,9 @@ import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
+import {BackendActionsCard} from './BackendActions';
+import {useInstallOffer} from '../../shell/install';
+import type {PageProps} from '../types';
 
 type Appearance = {
   scheme: Scheme;
@@ -27,13 +30,45 @@ export const SettingsContext = createContext<{
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
-export function Settings() {
+// `#/settings?api=<base>&token=<token>` fills the backend form so one link pairs a device; nothing is saved
+// until the person presses Save, and the address bar is scrubbed so the token is not left in history.
+function readPairing(query: string): {api: string; token: string} | null {
+  const params = new URLSearchParams(query);
+  const api = params.get('api');
+  return api ? {api, token: params.get('token') ?? ''} : null;
+}
+
+export function Settings({query}: PageProps) {
   const t = useT();
+  const install = useInstallOffer();
   const capabilities = useCapabilities();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
   const [token, setToken] = useState(saved.token);
+  const [paired, setPaired] = useState(false);
+  // The query is read whenever it changes, so links work while the page is already open: a pairing link fills
+  // the form during render, the address bar and the card scroll follow in an effect.
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  if (lastQuery !== query) {
+    setLastQuery(query);
+    const pair = readPairing(query);
+    if (pair) {
+      setPaired(true);
+      setApi(pair.api);
+      setToken(pair.token);
+    }
+  }
+  useEffect(() => {
+    const params = new URLSearchParams(query);
+    if (params.has('api')) {
+      params.delete('api');
+      params.delete('token');
+      history.replaceState(null, '', location.pathname + location.search + '#/settings' + (params.size ? '?' + params : ''));
+    }
+    const card = params.get('card');
+    if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
+  }, [query]);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
   const [name, setName] = useState('');
@@ -100,7 +135,13 @@ export function Settings() {
       return;
     }
     const profiles = dialog === 'add' && !active ? [] : editedProfiles();
-    if (!profiles || !name.trim()) return;
+    if (!profiles) {
+      // The form's URL is invalid, so the current profile cannot be carried over; say so behind the dialog.
+      setDialog(null);
+      toast('negative', t('settings.invalidUrl'));
+      return;
+    }
+    if (!name.trim()) return;
     if (dialog === 'add') {
       const profile = {id: crypto.randomUUID(), name: name.trim(), api: 'mock', token: ''};
       persist([...profiles, profile], profile.id);
@@ -161,6 +202,7 @@ export function Settings() {
   return (
     <div className="rp-col">
       {saved.api === null && <div className="rp-label">{t('settings.firstRun')}</div>}
+      {paired && <div className="rp-label">{t('settings.paired')}</div>}
       <section className="rp-card" aria-labelledby="settings-backend">
         <h2 className="rp-h3" id="settings-backend">
           {t('settings.backend')}
@@ -252,6 +294,7 @@ export function Settings() {
         </form>
       </section>
       <RuntimeSettingsCard />
+      <BackendActionsCard />
       <section className="rp-card" aria-labelledby="settings-appearance">
         <h2 className="rp-h3" id="settings-appearance">
           {t('settings.appearance')}
@@ -290,9 +333,23 @@ export function Settings() {
             [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT]
           ]}
         />
-        <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
-          {t('github')}
-        </Link>
+        <div className="rp-cluster">
+          <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
+            {t('github')}
+          </Link>
+          {install && (
+            <Button
+              small
+              onPress={() => {
+                void install().then(accepted => {
+                  if (accepted) toast('positive', t('settings.installed'));
+                });
+              }}
+            >
+              {t('settings.install')}
+            </Button>
+          )}
+        </div>
       </section>
       {dialog && (
         <ModalDialog
@@ -305,7 +362,7 @@ export function Settings() {
           }}
           footer={() => (
             <>
-              <Button onPress={() => setDialog(null)}>{t('close')}</Button>
+              <Button onPress={() => setDialog(null)}>{t('ui.cancel')}</Button>
               <Button accent={dialog !== 'delete'} negative={dialog === 'delete'} isDisabled={dialog !== 'delete' && !name.trim()} onPress={confirmProfile}>
                 {t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
               </Button>

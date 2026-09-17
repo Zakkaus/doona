@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
 
@@ -15,6 +15,16 @@ function legacyFlows(query: string): Route {
   const params = new URLSearchParams(query);
   params.set('tab', params.has('id') || params.has('connection_id') || params.has('path') ? 'flows' : 'map');
   return {route: 'rules', query: params.toString()};
+}
+
+// A query string with some keys set or removed, for links that keep the rest of the page's state.
+export function within(query: string, patch: Record<string, string | null>): string {
+  const next = new URLSearchParams(query);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+  }
+  return next.toString();
 }
 
 export function buildHash(route: string, query?: string): string {
@@ -49,6 +59,5 @@ export function useRoute(api: string | null) {
     addEventListener('hashchange', on);
     return () => removeEventListener('hashchange', on);
   }, [api]);
-  const params = useMemo(() => new URLSearchParams(loc.query), [loc.query]);
-  return {...loc, params, go};
+  return {...loc, go};
 }
