@@ -951,7 +951,7 @@ input {
 .rp-group {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   margin: 0 0 4px;
 }
 .rp-side > div + div {
@@ -1392,7 +1392,7 @@ input {
 .rp-sec-h {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   padding: 8px 8px 2px 32px;
 }
 .rp-popover [role='menu'],
@@ -1777,7 +1777,7 @@ input {
 .rp-section-h {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   padding: 8px 12px 4px;
 }
 
@@ -1847,7 +1847,7 @@ input {
   display: block;
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
 }
 .rp-kv .v {
   display: block;
