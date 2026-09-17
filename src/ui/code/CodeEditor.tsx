@@ -1,4 +1,5 @@
 import {useEffect, useRef} from 'react';
+import {useLang, type Lang} from '../../i18n';
 import {EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
 import {
   EditorView,
@@ -20,6 +21,61 @@ import {tags} from '@lezer/highlight';
 import {dae} from './dae';
 import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
+
+// The English phrases CodeMirror's search and go-to-line panels ship with, in the panel's language.
+const phrases: Record<Exclude<Lang, 'en'>, Record<string, string>> = {
+  'zh-TW': {
+    Find: '尋找',
+    Replace: '取代',
+    next: '下一個',
+    previous: '上一個',
+    all: '全部',
+    'match case': '區分大小寫',
+    regexp: '正規表示式',
+    'by word': '整字',
+    replace: '取代',
+    'replace all': '全部取代',
+    close: '關閉',
+    'Go to line': '前往行',
+    go: '前往',
+    'current match': '目前符合',
+    'replaced $ matches': '已取代 $ 處',
+    'replaced match on line $': '已取代第 $ 行的符合',
+    'on line': '於第',
+    'Fold line': '摺疊此行',
+    'Unfold line': '展開此行',
+    'Folded lines': '已摺疊的行',
+    'Unfolded lines': '已展開的行',
+    to: '至',
+    'Selection deleted': '已刪除選取範圍'
+  },
+  'zh-CN': {
+    Find: '查找',
+    Replace: '替换',
+    next: '下一个',
+    previous: '上一个',
+    all: '全部',
+    'match case': '区分大小写',
+    regexp: '正则表达式',
+    'by word': '整词',
+    replace: '替换',
+    'replace all': '全部替换',
+    close: '关闭',
+    'Go to line': '跳转到行',
+    go: '跳转',
+    'current match': '当前匹配',
+    'replaced $ matches': '已替换 $ 处',
+    'replaced match on line $': '已替换第 $ 行的匹配',
+    'on line': '于第',
+    'Fold line': '折叠此行',
+    'Unfold line': '展开此行',
+    'Folded lines': '已折叠的行',
+    'Unfolded lines': '已展开的行',
+    to: '至',
+    'Selection deleted': '已删除选区'
+  }
+};
+const phrasesFor = (lang: Lang) => (lang === 'en' ? [] : EditorState.phrases.of(phrases[lang]));
 
 export type EditorMark = {line: number; column?: number | null; level: 'error' | 'warning' | 'info'; message: string};
 
@@ -175,6 +231,8 @@ export function CodeEditor({
     save.current = onSave;
   });
   const editable = useRef(new Compartment());
+  const lang = useLang();
+  const language = useRef(new Compartment());
   useEffect(() => {
     const instance = new EditorView({
       parent: host.current!,
@@ -219,6 +277,7 @@ export function CodeEditor({
             indentWithTab
           ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+          language.current.of(phrasesFor(lang)),
           EditorView.contentAttributes.of({'aria-label': label}),
           EditorView.updateListener.of(update => {
             if (update.docChanged) change.current?.(update.state.doc.toString());
@@ -239,6 +298,9 @@ export function CodeEditor({
     if (!instance) return;
     instance.dispatch({effects: editable.current.reconfigure([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)])});
   }, [readOnly]);
+  useEffect(() => {
+    view.current?.dispatch({effects: language.current.reconfigure(phrasesFor(lang))});
+  }, [lang]);
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;

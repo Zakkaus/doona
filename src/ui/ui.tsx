@@ -1,5 +1,5 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode} from 'react';
+import {useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactElement, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -27,7 +27,30 @@ import {
   TabList,
   Tab,
   TabPanel,
-  type Key
+  Switch as RSwitch,
+  TextField as RTextField,
+  SearchField as RSearchField,
+  Text,
+  Label,
+  Input as RInput,
+  Table,
+  ResizableTableContainer,
+  ColumnResizer,
+  TableHeader,
+  Column,
+  TableBody,
+  Row,
+  Cell,
+  Virtualizer,
+  TableLayout,
+  DialogTrigger,
+  Modal,
+  ModalOverlay,
+  Dialog,
+  Heading,
+  type Key,
+  type Selection,
+  type SortDescriptor
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
@@ -69,7 +92,7 @@ export function useSlider(value: string, selector = '[data-selected]') {
   return [ref, pos] as const;
 }
 
-// accent / primary / secondary / negative are S2 Button variants (pills); the rest is an ActionButton (radius 8).
+// accent / secondary / negative are S2 Button variants (pills); the rest is an ActionButton (radius 8).
 export function Button({
   children,
   onPress,
@@ -77,7 +100,6 @@ export function Button({
   small,
   icon,
   accent,
-  primary,
   secondary,
   negative,
   label,
@@ -94,7 +116,6 @@ export function Button({
   small?: boolean;
   icon?: boolean;
   accent?: boolean;
-  primary?: boolean;
   secondary?: boolean;
   negative?: boolean;
   label?: string;
@@ -113,7 +134,6 @@ export function Button({
         small && 'sm',
         icon && 'icon',
         accent && 'accent',
-        primary && 'primary',
         secondary && 'secondary',
         negative && 'negative',
         className
@@ -129,13 +149,24 @@ export function Button({
     </RButton>
   );
   const text = label ?? tip;
-  return text ? (
+  if (!text) return btn;
+  // A disabled native button takes no focus and no pointer events, so the tip (usually the reason it is
+  // disabled) hangs off a focusable wrapper instead; enabled buttons keep the plain DOM.
+  return isDisabled ? (
+    <TooltipTrigger delay={400}>
+      <Focusable>
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop */}
+        <span className="rp-tipwrap" tabIndex={0}>
+          {btn}
+        </span>
+      </Focusable>
+      <Tip>{text}</Tip>
+    </TooltipTrigger>
+  ) : (
     <TooltipTrigger delay={400}>
       <Tip>{text}</Tip>
       {btn}
     </TooltipTrigger>
-  ) : (
-    btn
   );
 }
 export function Tip({children}: {children: ReactNode}) {
@@ -259,7 +290,7 @@ export function Segmented({items, value, onChange, label}: {items: Array<[string
     </ToggleButtonGroup>
   );
 }
-type Item = {id: string; label: string; desc?: string; icon?: ReactNode; tone?: 'ok' | 'warn' | 'err'};
+type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
 // Label with an optional leading icon (a flag, a swatch); shared by menu items and the rendered value of a select.
 const ItemLabel = ({i}: {i: Item}) => (
   <span className="rp-il">
@@ -269,13 +300,46 @@ const ItemLabel = ({i}: {i: Item}) => (
 );
 // S2 marks the selected item with a checkmark in a leading column, not with a background.
 export const Check = () => <Checkmark className="rp-check-mark" />;
-const item = (i: Item) => (
-  <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}>
+// One item body for menus and selects: the check column, the label, an optional description.
+const ItemBody = ({i}: {i: Item}) => (
+  <>
     <Check />
     <ItemLabel i={i} />
-    {i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}
+    {i.desc && <span className="desc">{i.desc}</span>}
+  </>
+);
+const item = (i: Item) => (
+  <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}>
+    <ItemBody i={i} />
   </MenuItem>
 );
+// The select body shared by InlineSelect and LabeledSelect; `className` picks the trigger's clothes.
+function SelectBody({items, value, onChange, label, isDisabled, className}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string}) {
+  return (
+    <Select
+      aria-label={label}
+      selectedKey={value}
+      onSelectionChange={(k: Key | null) => {
+        if (k != null) onChange(String(k));
+      }}
+      isDisabled={isDisabled}
+    >
+      <RButton className={className}>
+        <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
+        <ChevronDown />
+      </RButton>
+      <Popover className="rp-popover" placement="bottom start">
+        <ListBox items={items}>
+          {i => (
+            <ListBoxItem id={i.id} className="rp-item" textValue={i.label}>
+              <ItemBody i={i} />
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Popover>
+    </Select>
+  );
+}
 type Picked = {value: string; onChange: (k: string) => void};
 const pick = (on: (k: string) => void) => (k: 'all' | Set<Key>) => {
   if (k === 'all') return;
@@ -354,111 +418,25 @@ export function MenuButton({
   );
 }
 export function InlineSelect({items, value, onChange, label}: {items: Item[]; value: string; onChange: (k: string) => void; label: string}) {
-  return (
-    <Select
-      aria-label={label}
-      selectedKey={value}
-      onSelectionChange={(k: Key | null) => {
-        if (k != null) onChange(String(k));
-      }}
-    >
-      <RButton className="rp-select">
-        <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
-        <ChevronDown />
-      </RButton>
-      <Popover className="rp-popover" placement="bottom start">
-        <ListBox items={items}>
-          {i => (
-            <ListBoxItem id={i.id} className="rp-item" textValue={i.label}>
-              <Check />
-              <ItemLabel i={i} />
-              {i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}
-            </ListBoxItem>
-          )}
-        </ListBox>
-      </Popover>
-    </Select>
-  );
+  return <SelectBody items={items} value={value} onChange={onChange} label={label} className="rp-select" />;
 }
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-// A ranked row: label, value, a thin fill. With `onPress` it is a toggle in the same clothes, for lists
-// where picking a row narrows something else (the flow map pins a path this way).
-export function Bar({
-  label,
-  value,
-  pct,
-  color,
-  icon,
-  selected,
-  dim,
-  onPress,
-  ...rest
-}: {
-  label: ReactNode;
-  value: string;
-  pct: number;
-  color: string;
-  icon?: ReactNode;
-  selected?: boolean;
-  dim?: boolean;
-  onPress?: (selected: boolean) => void;
-} & Record<`data-${string}`, string | undefined>) {
-  const body = (
-    <>
+// A ranked row: label, value, a thin fill.
+export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
+  return (
+    <div className="rp-bar">
       <div className="top">
-        <span className="l">
-          {icon && <span className="ic">{icon}</span>}
-          {typeof label === 'string' ? <TextTooltip>{label}</TextTooltip> : label}
-        </span>
+        <span className="l">{typeof label === 'string' ? <TextTooltip>{label}</TextTooltip> : label}</span>
         <span className="v">{value}</span>
       </div>
       <div className="track" aria-hidden="true">
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />
       </div>
-    </>
-  );
-  if (onPress)
-    return (
-      <ToggleButton className="rp-bar pressable" isSelected={!!selected} onChange={onPress} data-dim={dim ? '' : undefined} {...rest}>
-        {body}
-      </ToggleButton>
-    );
-  return (
-    <div className="rp-bar" data-dim={dim ? '' : undefined} {...rest}>
-      {body}
     </div>
   );
 }
-
-// ---- Additions for the remaining pages ----
-import {useEffect, type ReactElement} from 'react';
-import {
-  Switch as RSwitch,
-  TextField as RTextField,
-  SearchField as RSearchField,
-  Text,
-  Label,
-  Input as RInput,
-  Table,
-  ResizableTableContainer,
-  ColumnResizer,
-  TableHeader,
-  Column,
-  TableBody,
-  Row,
-  Cell,
-  Virtualizer,
-  TableLayout,
-  DialogTrigger,
-  Modal,
-  ModalOverlay,
-  Dialog,
-  Heading,
-  type Selection,
-  type SortDescriptor
-} from 'react-aria-components';
 
 export function Switch({
   children,
@@ -564,32 +542,7 @@ export function LabeledSelect({
   side?: boolean;
   bare?: boolean;
 }) {
-  const sel = (
-    <Select
-      aria-label={label}
-      selectedKey={value}
-      onSelectionChange={(k: Key | null) => {
-        if (k != null) onChange(String(k));
-      }}
-      isDisabled={isDisabled}
-    >
-      <RButton className="rp-selectbtn">
-        <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
-        <ChevronDown />
-      </RButton>
-      <Popover className="rp-popover" placement="bottom start">
-        <ListBox items={items}>
-          {i => (
-            <ListBoxItem id={i.id} className="rp-item" textValue={i.label}>
-              <Check />
-              <ItemLabel i={i} />
-              {i.desc && <span className={cx('desc', i.tone)}>{i.desc}</span>}
-            </ListBoxItem>
-          )}
-        </ListBox>
-      </Popover>
-    </Select>
-  );
+  const sel = <SelectBody items={items} value={value} onChange={onChange} label={label} isDisabled={isDisabled} className="rp-selectbtn" />;
   if (bare) return sel;
   if (side)
     return (
@@ -634,8 +587,6 @@ export type NodeTileProps = {
   name: string;
   icon?: ReactNode;
   tcp?: number;
-  udp?: number;
-  v6?: boolean;
   alive?: boolean;
   unavailable?: boolean;
   description?: string;
@@ -645,15 +596,12 @@ export type NodeTileProps = {
   onPress?: () => void;
   isDisabled?: boolean;
   bodyOnly?: boolean;
-  labels: {timeout: string; nested: string; cur: string};
 };
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
 export function NodeTile({
   name,
   icon,
   tcp,
-  udp,
-  v6,
   alive = true,
   unavailable = !alive || tcp == null,
   description,
@@ -662,8 +610,7 @@ export function NodeTile({
   cur,
   onPress,
   isDisabled,
-  bodyOnly,
-  labels
+  bodyOnly
 }: NodeTileProps) {
   const t = useT();
   const body = (
@@ -674,16 +621,16 @@ export function NodeTile({
           <TextTooltip>{name}</TextTooltip>
         </span>
         {nested ? (
-          <Badge>{labels.nested}</Badge>
+          <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
           <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: tcp})}</span>
         ) : (
-          <span className={cx('ms', unavailable && 'err')}>{unavailable ? labels.timeout : '—'}</span>
+          <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
         )}
       </span>
       <span className="s">
-        {description ?? (nested || !alive ? ' ' : [t('ui.udpLatency', {n: String(udp)}), v6 && t('ui.ipv6')].filter(Boolean).join(' · '))}
-        {cur && !onPress && <span className="cur">{labels.cur}</span>}
+        {description ?? ' '}
+        {cur && !onPress && <span className="cur">{t('ui.current')}</span>}
       </span>
     </>
   );
@@ -730,8 +677,11 @@ export function useContentWidth<E extends HTMLElement>() {
   return [ref, width] as const;
 }
 // Long lists are virtualised: only the visible rows are in the DOM, so a rule list of thousands stays light.
-// Short ones render whole, which keeps every row reachable to assistive technology and find-in-page.
-const tableLayout = {rowHeight: 40, headingHeight: 41};
+// Short ones render whole, which keeps every row reachable to assistive technology and find-in-page. A list
+// that once reached the threshold stays virtualised for the life of the table, so a growing feed or a filter
+// typed around the threshold does not remount the grid and lose focus, scroll and column widths.
+// Row and header heights match theme.css (8px padding twice, 20px line, 1px border).
+export const tableLayout = {rowHeight: 40, headingHeight: 37};
 const virtualiseFrom = 200;
 export function DataTable<T extends {id: string}>({
   label,
@@ -769,6 +719,8 @@ export function DataTable<T extends {id: string}>({
   const index = new Map(cols.map((column, i) => [column.id, i]));
   // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
   const fitted = Math.min(height, tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
+  const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);
+  if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const table = (
     <Table
       aria-label={label}
@@ -828,7 +780,7 @@ export function DataTable<T extends {id: string}>({
   );
   return (
     <ResizableTableContainer ref={ref} className="rp-table" style={{height: fitted}}>
-      {rows.length >= virtualiseFrom ? (
+      {virtual ? (
         <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
           {table}
         </Virtualizer>
@@ -935,7 +887,8 @@ export const toast = (kind: ToastKind, msg: string) => {
   publish();
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
-export function Toasts({labels}: {labels: {close: string; showAll: (n: number) => string; collapse: string; clearAll: string}}) {
+export function Toasts() {
+  const tr = useT();
   const [items, setItems] = useState(queue);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
@@ -965,7 +918,7 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
   const ordered = [...items].reverse();
   return (
     <>
-      {expanded && <RButton className="rp-toast-underlay" aria-label={labels.collapse} onPress={() => setExpanded(false)} />}
+      {expanded && <RButton className="rp-toast-underlay" aria-label={tr('toast.collapse')} onPress={() => setExpanded(false)} />}
       <div
         className={cx('rp-toasts', expanded && 'expanded')}
         role="region"
@@ -978,10 +931,10 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
         {expanded && (
           <div className="rp-toast-controls">
             <RButton className="rp-btn sm" onPress={clearAll}>
-              {labels.clearAll}
+              {tr('toast.clearAll')}
             </RButton>
             <RButton className="rp-btn sm" onPress={() => setExpanded(false)}>
-              {labels.collapse}
+              {tr('toast.collapse')}
             </RButton>
           </div>
         )}
@@ -1005,11 +958,11 @@ export function Toasts({labels}: {labels: {close: string; showAll: (n: number) =
                   </span>
                   {!expanded && idx === 0 && live.length > 1 && (
                     <RButton className="rp-btn sm quiet more" onPress={() => setExpanded(true)}>
-                      {labels.showAll(live.length)}
+                      {tr('toast.showAllCount', {n: live.length})}
                     </RButton>
                   )}
                 </div>
-                <RButton className="rp-btn quiet icon close" aria-label={labels.close} onPress={() => dismiss(t.id)}>
+                <RButton className="rp-btn quiet icon close" aria-label={tr('close')} onPress={() => dismiss(t.id)}>
                   <Close />
                 </RButton>
               </div>
@@ -1085,7 +1038,7 @@ export function Chips({
       }}
     >
       {items.map(item => (
-        <ToggleButton key={item.id} id={item.id} className="rp-btn small">
+        <ToggleButton key={item.id} id={item.id} className="rp-btn sm">
           {item.icon}
           <span className="rp-truncate">{item.label}</span>
           {item.count !== undefined && (
@@ -1100,6 +1053,11 @@ export function Chips({
 }
 
 // Hands the browser a file to save; the URL is released once the click has been dispatched.
+// One naming for every export: `<prefix>-<local time to the second>.<ext>`, sortable and free of characters
+// file systems reject.
+export function exportName(prefix: string, ext: string): string {
+  return `${prefix}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+}
 export function downloadFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], {type}));
   const link = document.createElement('a');
