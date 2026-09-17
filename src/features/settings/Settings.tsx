@@ -8,7 +8,7 @@ import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
-import {GeodataCard} from './Geodata';
+import {BackendActionsCard} from './BackendActions';
 import {useInstallOffer} from '../../shell/install';
 
 type Appearance = {
@@ -273,7 +273,7 @@ export function Settings() {
         </form>
       </section>
       <RuntimeSettingsCard />
-      <GeodataCard />
+      <BackendActionsCard />
       <section className="rp-card" aria-labelledby="settings-appearance">
         <h2 className="rp-h3" id="settings-appearance">
           {t('settings.appearance')}
