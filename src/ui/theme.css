@@ -2814,67 +2814,13 @@ button.rp-node[data-focus-visible] {
   font-family: monospace;
 }
 
-/* Source text: numbered lines to read, a plain textarea to edit; both in the input frame and the code font. */
-.rp-source,
-.rp-textarea {
-  display: block;
-  width: 100%;
+/* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. */
+.rp-editor {
   min-width: 0;
-  margin: 0;
-  padding: 8px 0;
-  border: 1px solid var(--rp-hl-high);
-  border-radius: 8px;
-  background: var(--rp-base);
-  color: var(--rp-text);
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 13px;
-  line-height: 20px;
-  tab-size: 2;
+  max-width: 100%;
 }
-.rp-source {
-  max-height: 560px;
-  overflow: auto;
-  counter-reset: line;
-}
-.rp-source > div {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  white-space: pre;
-}
-.rp-source > div::before {
-  counter-increment: line;
-  content: counter(line);
-  padding-right: 12px;
-  text-align: end;
-  color: var(--rp-muted);
-  user-select: none;
-}
-.rp-source > div[data-level='error'] {
-  background: color-mix(in srgb, var(--rp-love) 14%, transparent);
-}
-.rp-source > div[data-level='warning'] {
-  background: color-mix(in srgb, var(--rp-gold) 14%, transparent);
-}
-.rp-source > div > span {
-  padding-right: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rp-source .kw {
-  color: var(--rp-love);
-}
-.rp-source .arg {
-  color: var(--rp-pine);
-}
-.rp-source .out {
-  color: var(--rp-pine);
-  font-weight: 700;
-}
-.rp-source .str {
-  color: var(--rp-gold);
-}
-.rp-source .cmt {
-  color: var(--rp-muted);
+.rp-editor .cm-editor {
+  max-width: 100%;
 }
 /* An inline alert keeps a diagnostic on the page: heading, body, tone by border. */
 .rp-inline-alert {
@@ -2899,19 +2845,6 @@ button.rp-node[data-focus-visible] {
 }
 .rp-inline-alert > span {
   color: var(--rp-subtle);
-}
-.rp-textarea {
-  min-height: 320px;
-  max-height: 70vh;
-  padding: 8px 12px;
-  resize: vertical;
-  white-space: pre;
-  overflow: auto;
-  outline: none;
-}
-.rp-textarea:focus {
-  border-color: var(--rp-pine);
-  box-shadow: 0 0 0 1px var(--rp-pine);
 }
 
 .rp-provenance {

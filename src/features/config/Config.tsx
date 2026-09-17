@@ -6,8 +6,9 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, SourceView, TextArea, errorText, toast} from '../../ui/ui';
-import {daeLine} from './dae';
+import {Badge, Button, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, errorText, toast} from '../../ui/ui';
+import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
+import {groupNames} from './names';
 import type {PageProps} from '../types';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -46,7 +47,7 @@ export function Config({go, query}: PageProps) {
   const config = useConfig(resources?.config.available !== false);
   const editor = useConfigEditor(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  const sources = config.data?.sources ?? [];
+  const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
   const select = (id: string | null) => {
@@ -56,6 +57,8 @@ export function Config({go, query}: PageProps) {
     go('config', next.toString());
   };
   const n = (value: number) => formatNumber(value, locale);
+  const focusLine = Number(params.get('line')) || null;
+  const groupList = useMemo(() => groupNames(sources.find(item => item.kind === 'main')?.content ?? ''), [sources]);
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
@@ -125,6 +128,8 @@ export function Config({go, query}: PageProps) {
           canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
           canWrite={resources?.config.writable === true && source.writable}
           editor={editor}
+          groups={groupList}
+          focusLine={focusLine}
         />
       )}
     </div>
@@ -136,13 +141,17 @@ function SourceCard({
   diagnostics,
   canValidate,
   canWrite,
-  editor
+  editor,
+  groups,
+  focusLine
 }: {
   source: ConfigSource;
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
   canWrite: boolean;
   editor: ReturnType<typeof useConfigEditor>;
+  groups: string[];
+  focusLine: number | null;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -159,7 +168,15 @@ function SourceCard({
       ? ((editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [])
       : null;
   const shown = found ?? saveErrors ?? diagnostics;
-  const marks = useMemo(() => new Map(shown.filter(d => d.line !== null).map(d => [d.line!, d.level])), [shown]);
+  const marks = useMemo<EditorMark[]>(
+    () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message})),
+    [shown]
+  );
+  // Names to complete after "->": the groups in the text being edited, else the running configuration's.
+  const outbounds = () => {
+    const own = groupNames(text);
+    return own.length ? own : groups;
+  };
   const text = draft ?? source.content ?? '';
   const validate = async () => {
     const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
@@ -226,10 +243,16 @@ function SourceCard({
       </div>
       {source.content === undefined ? (
         <span className="rp-empty">{t('config.contentHidden')}</span>
-      ) : editing ? (
-        <TextArea label={source.path} value={draft} onChange={setDraft} isDisabled={editor.busy === 'save'} />
       ) : (
-        <SourceView label={source.path} text={source.content} marks={marks} render={daeLine} />
+        <CodeEditor
+          label={source.path}
+          value={text}
+          readOnly={!editing || editor.busy === 'save'}
+          onChange={editing ? setDraft : undefined}
+          marks={marks}
+          focusLine={focusLine}
+          outbounds={outbounds}
+        />
       )}
       {shown.length > 0 && (
         <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
