@@ -58,7 +58,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
       return;
     }
     if (code === '}') {
-      if (!stack.pop()) at(line, 1, 'error', 'unbalanced_brace', 'Closing brace without an open section');
+      if (!stack.pop()) at(line, 1, 'error', 'brace_without_section', 'Closing brace without an open section');
       return;
     }
     const section = bare ? 'routing' : stack[stack.length - 1]?.name;
@@ -82,7 +82,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
       if (rule && !/\w\(/.test(rule[1])) at(line, 1, 'warning', 'bare_condition', 'Condition has no function call; it will never match');
     }
   });
-  for (const left of stack) at(left.line, 1, 'error', 'unbalanced_brace', `Section "${left.name}" is never closed`);
+  for (const left of stack) at(left.line, 1, 'error', 'section_not_closed', `Section "${left.name}" is never closed`);
   return out;
 }
 // Groups a candidate main source defines, for full validation.

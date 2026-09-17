@@ -12,6 +12,7 @@ import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
+import {diagnosticText} from './diagnosticText';
 import type {PageProps} from '../types';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -253,8 +254,8 @@ function SourceCard({
       : null;
   const shown = found ?? saveErrors ?? diagnostics;
   const marks = useMemo<EditorMark[]>(
-    () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message})),
-    [shown]
+    () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: diagnosticText(d, t)})),
+    [shown, t]
   );
   // Names to complete after "->": the groups in the text being edited, else the running configuration's.
   const outbounds = () => {
@@ -362,7 +363,7 @@ function SourceCard({
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
               <Light small tone={tones[item.level]}>
-                {item.line !== null ? t('config.atLine', {line: n(item.line), message: item.message}) : item.message}
+                {item.line !== null ? t('config.atLine', {line: n(item.line), message: diagnosticText(item, t)}) : diagnosticText(item, t)}
               </Light>
             </div>
           ))}
@@ -481,14 +482,14 @@ function ValidateTab({
             {t(levels[item.level])}
           </Light>,
           <span className="rp-code">{item.line !== null ? `${pathOf(item.source_id)}:${item.line}` : pathOf(item.source_id)}</span>,
-          <TextTooltip>{item.message}</TextTooltip>,
+          <TextTooltip>{diagnosticText(item, t)}</TextTooltip>,
           <span className="rp-code">{item.code}</span>
         ]}
       />
       {cur && (
         <div className="rp-cluster">
           <Light small tone={tones[cur.level]}>
-            {cur.line !== null ? t('config.atFile', {file: pathOf(cur.source_id), line: n(cur.line), message: cur.message}) : cur.message}
+            {cur.line !== null ? t('config.atFile', {file: pathOf(cur.source_id), line: n(cur.line), message: diagnosticText(cur, t)}) : diagnosticText(cur, t)}
           </Light>
           <Button small onPress={() => open(cur.source_id, cur.line)}>
             {t('config.openSource')}
