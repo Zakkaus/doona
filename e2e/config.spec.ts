@@ -75,3 +75,20 @@ test.describe('without configuration readback', () => {
     await expect(page.locator('.rp-content')).toContainText('does not expose its configuration');
   });
 });
+
+test('the quick setup writes a main source from a subscription URL', async ({page}) => {
+  await page.goto('/#/config');
+  await page.getByRole('button', {name: 'Quick setup', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  const apply = dialog.getByRole('button', {name: 'Overwrite and reload', exact: true});
+  await expect(apply).toBeDisabled();
+  await dialog.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
+  await dialog.getByLabel('Group name', {exact: true}).fill('airport');
+  await expect(dialog.locator('.cm-content')).toContainText("sub: 'https://example.org/sub?token=abc&type=v2ray'");
+  await expect(dialog.locator('.cm-content')).toContainText('fallback: airport');
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('airport { filter: subtag(sub) policy: min_moving_avg }');
+  await expect(page.locator('.rp-toolbar').first()).toContainText('41');
+});

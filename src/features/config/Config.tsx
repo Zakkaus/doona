@@ -12,6 +12,7 @@ import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
+import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -80,7 +81,8 @@ export function Config({go, query}: PageProps) {
   const select = (id: string | null) => navigate(within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
-  const groupList = useMemo(() => groupNames(sources.find(item => item.kind === 'main')?.content ?? ''), [sources]);
+  const mainSource = sources.find(item => item.kind === 'main') ?? null;
+  const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
@@ -153,6 +155,12 @@ export function Config({go, query}: PageProps) {
                               time: localTime(source.loaded_at, locale)
                             })}
                           </span>
+                        </>
+                      )}
+                      {mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined && (
+                        <>
+                          <span className="rp-grow" />
+                          <Wizard main={mainSource} editor={editor} onDone={() => select(mainSource.id)} />
                         </>
                       )}
                     </div>

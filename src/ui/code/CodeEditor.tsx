@@ -147,7 +147,8 @@ export function CodeEditor({
   focusLine,
   label,
   outbounds,
-  onSave
+  onSave,
+  compact
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -159,6 +160,8 @@ export function CodeEditor({
   outbounds?: () => string[];
   // Mod-S inside the editor; the caller decides what saving means.
   onSave?: () => void;
+  // A shorter viewport for previews inside dialogs.
+  compact?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -255,5 +258,5 @@ export function CodeEditor({
     instance.dispatch({selection: {anchor: line.from}, effects: EditorView.scrollIntoView(line.from, {y: 'center'})});
     instance.focus();
   }, [focusLine]);
-  return <div className="rp-editor" ref={host} />;
+  return <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />;
 }
