@@ -141,7 +141,7 @@ export function Dns({go, query}: PageProps) {
   const cacheTab = (
     <>
       <div className="rp-toolbar">
-        <Kv inline items={[[t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']]} />
+        <Kv row items={[[t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']]} />
         {dns.cache.data &&
           (['positive', 'negative', 'persistent'] as const)
             .filter(key => !dns.cache.data!.coverage[key])

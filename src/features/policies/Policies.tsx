@@ -5,23 +5,7 @@ import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
 import type {GroupSummary, HealthObservation} from '../../api/model';
 import type {PageProps} from '../types';
-import {
-  Badge,
-  Button,
-  DataTable,
-  DetailPanel,
-  ErrorMessage,
-  Kv,
-  Light,
-  Loading,
-  Segmented,
-  Switch,
-  TextTooltip,
-  errorText,
-  panelQuery,
-  toast,
-  useMediaQuery
-} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, Kv, Light, Loading, Segmented, Switch, TextTooltip, errorText, toast} from '../../ui/ui';
 import {OutboundMark} from './Flag';
 import {NodeGrid} from './Nodes';
 
@@ -31,12 +15,14 @@ type Row = GroupSummary & {leaf?: string; healthy: number; unavailable: number};
 // pick from when the group is a selector. Lives in the panel beside the group list.
 function PolicyDetail({
   id,
+  leaf,
   health,
   leaves,
   refreshGroups,
   refreshNodes
 }: {
   id: string;
+  leaf: string | undefined;
   health: Map<string, HealthObservation | undefined>;
   leaves: Map<string, string | undefined>;
   refreshGroups: () => void;
@@ -75,10 +61,13 @@ function PolicyDetail({
   return (
     <>
       <ErrorMessage error={control.error} />
-      <div className="rp-toolbar">
-        <Badge>{g.policy.kind}</Badge>
-        <span className="rp-label">{t('policy.members', {n: members.length})}</span>
-        <span className="rp-grow" />
+      <div className="rp-row">
+        <span className="rp-cluster">
+          <OutboundMark name={leaf ?? null} />
+          <h3 className="rp-h3">{g.name}</h3>
+          <Badge>{g.policy.kind}</Badge>
+          <span className="rp-label">{t('policy.members', {n: members.length})}</span>
+        </span>
         <Button
           small
           isPending={control.busy === 'probe'}
@@ -98,6 +87,7 @@ function PolicyDetail({
         </Button>
       </div>
       <Kv
+        row
         items={[
           [t('policy.tcpSelection'), tcp ?? '—'],
           [t('policy.udpSelection'), udp ?? '—'],
@@ -163,14 +153,15 @@ function PolicyDetail({
   );
 }
 
-// Groups as a list, one row each, with the picked group's members beside it: a config with a group per service
-// stays one screen. Health counts come from the node list, so nested groups are not counted.
+// Groups down the left, the picked group's members on the right, the way a policy screen reads in Surge: a
+// config with a group per service stays one screen and the tiles keep the width they need. The first group is
+// shown until one is picked; the pick is remembered in the URL. Health counts come from the node list, so
+// nested groups are not counted.
 export function Policies({go, query}: PageProps) {
   const t = useT();
   const groups = useGroups();
   const nodes = useNodes();
-  const wide = useMediaQuery(panelQuery);
-  const sel = useMemo(() => new URLSearchParams(query).get('group'), [query]);
+  const picked = useMemo(() => new URLSearchParams(query).get('group'), [query]);
   const select = (id: string | null) => {
     const params = new URLSearchParams(query);
     if (id) params.set('group', id);
@@ -192,45 +183,52 @@ export function Policies({go, query}: PageProps) {
       }),
     [groups.data, nodes.data, health, leaves]
   );
-  const cur = rows.find(row => row.id === sel);
+  const cur = rows.find(row => row.id === picked) ?? rows[0];
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
       <ErrorMessage error={groups.error ?? nodes.error} />
-      <div className="rp-with-panel" data-open={cur ? '' : undefined} data-wide="">
+      <div className="rp-master">
         <DataTable
           label={t('nav.policies')}
           rows={rows}
           loading={groups.loading && !groups.data}
           empty={t('policy.empty')}
-          selected={sel}
-          onSelect={select}
-          selectOnFocus={wide}
+          selected={cur?.id ?? null}
+          onSelect={id => id && select(id)}
+          selectOnFocus
+          height={640}
           cols={[
-            {id: 'name', label: t('policy.group'), minWidth: 200, isRowHeader: true},
-            {id: 'kind', label: t('policy.kind'), minWidth: 110, grow: 0},
-            {id: 'members', label: t('policy.memberCount'), minWidth: 90, grow: 0, align: 'end', drop: 2},
-            {id: 'tcp', label: t('ui.tcp'), minWidth: 120, drop: 3},
-            {id: 'udp', label: t('ui.udp'), minWidth: 120, drop: 1},
-            {id: 'health', label: t('policy.health'), minWidth: 180, drop: 4}
+            {id: 'name', label: t('policy.group'), minWidth: 150, isRowHeader: true},
+            {id: 'health', label: t('policy.health'), minWidth: 80, grow: 0, align: 'end'}
           ]}
           render={row => [
             <span className="rp-chain">
               <OutboundMark name={row.leaf ?? null} />
               <TextTooltip>{row.name}</TextTooltip>
             </span>,
-            <Badge>{row.policy.kind}</Badge>,
-            String(row.member_count),
-            <TextTooltip>{row.selection.tcp_member_id ?? '—'}</TextTooltip>,
-            <TextTooltip>{row.selection.udp_member_id ?? '—'}</TextTooltip>,
             <Light small tone={row.unavailable ? 'warn' : row.healthy ? 'ok' : 'muted'}>
-              {t('policy.healthCounts', {healthy: row.healthy, unavailable: row.unavailable})}
+              <TextTooltip text={t('policy.healthCounts', {healthy: row.healthy, unavailable: row.unavailable})}>
+                {row.unavailable ? `${row.healthy}/${row.healthy + row.unavailable}` : String(row.healthy)}
+              </TextTooltip>
             </Light>
           ]}
         />
-        <DetailPanel wide open={!!cur} title={cur?.name ?? ''} onClose={() => select(null)}>
-          {cur && <PolicyDetail id={cur.id} health={health} leaves={leaves} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} />}
-        </DetailPanel>
+        <section className="rp-card" aria-label={cur?.name ?? t('nav.policies')}>
+          {cur ? (
+            <PolicyDetail
+              key={cur.id}
+              id={cur.id}
+              leaf={cur.leaf}
+              health={health}
+              leaves={leaves}
+              refreshGroups={groups.refetch}
+              refreshNodes={nodes.refetch}
+            />
+          ) : (
+            !groups.loading && <p className="rp-empty">{t('policy.empty')}</p>
+          )}
+        </section>
       </div>
     </div>
   );

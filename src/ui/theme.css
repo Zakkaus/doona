@@ -3086,6 +3086,22 @@ button.rp-node[data-focus-visible] {
   outline: none;
 }
 
+/* ---- Master list beside its detail: a narrow list on the left from 1000px, stacked below that. ---- */
+.rp-master {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .rp-master {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+  .rp-master > .rp-table {
+    position: sticky;
+    top: 16px;
+  }
+}
 /* ---- Detail panel: list on the left, a 360px panel on the right from 1200px; a drawer below that. ---- */
 .rp-with-panel {
   display: grid;
@@ -3096,15 +3112,6 @@ button.rp-node[data-focus-visible] {
 @media (min-width: 1200px) {
   .rp-with-panel[data-open] {
     grid-template-columns: minmax(0, 1fr) 360px;
-  }
-  /* A wide panel holds tiles, not just a key-value list. */
-  .rp-with-panel[data-open][data-wide] {
-    grid-template-columns: minmax(0, 1fr) 440px;
-  }
-}
-@media (min-width: 1440px) {
-  .rp-with-panel[data-open][data-wide] {
-    grid-template-columns: minmax(0, 1fr) 560px;
   }
 }
 .rp-panel {
@@ -3125,9 +3132,6 @@ button.rp-node[data-focus-visible] {
   max-height: none;
   border-radius: 16px 0 0 16px;
   overflow: auto;
-}
-.rp-dialog.rp-drawer.wide {
-  width: min(600px, 100vw);
 }
 .rp-underlay[data-entering] .rp-dialog.rp-drawer {
   animation: rp-drawer-in 250ms var(--rp-ease) both;
