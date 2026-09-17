@@ -76,23 +76,20 @@ test.describe('without configuration readback', () => {
   });
 });
 
-test('the quick setup rewrites subscriptions and groups and keeps the rules', async ({page}) => {
+test('the quick setup rewrites subscriptions and keeps groups and rules', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
-  // The form starts from the main source: one subscription, four groups.
+  // The form starts from the main source: one subscription; the groups are left as written.
   await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://<redacted>');
-  await expect(card.getByLabel('Group name', {exact: true})).toHaveCount(4);
+  await expect(card).toContainText('Templates route to proxy');
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
-  await card.getByRole('button', {name: 'Add a group', exact: true}).click();
-  await card.getByLabel('Group name', {exact: true}).nth(4).fill('spare');
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
-  await expect(card.locator('.cm-content')).toContainText('spare { policy: min_moving_avg }');
   await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
   const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
   await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
-  await expect(main).toContainText('spare { policy: min_moving_avg }');
+  await expect(main).toContainText('gaming { filter: name(jp-01, hk-02) policy: min }');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });
 

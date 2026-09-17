@@ -1,9 +1,10 @@
-// The quick setup edits the two sections a person fills in by hand most: `subscription` and `group`. Both are
-// one entry per line, so they are read and written line by line; every other section is kept verbatim, and a
-// missing main source is generated whole from a template. No dae parser: sections are cut by brace matching.
+// The quick setup edits `subscription` (one entry per line, read and written line by line) and swaps `routing`
+// for a template; `group` is read to find the group templates route to and written back as it stands, or as a
+// single `proxy` when the source has none. Every other section is kept verbatim, and a missing main source is
+// generated whole. No dae parser: sections are cut by brace matching.
 export type Subscription = {name: string; url: string};
-// `raw` is the line as it stands in the file; it is written back untouched until the form changes the group,
-// so filters and policies the form cannot express survive a round trip.
+// `raw` is the line as it stands in the file and is written back untouched, so filters and policies the form
+// does not model survive a round trip.
 export type GroupSpec = {name: string; policy: 'auto' | 'manual'; subscriptions: string[]; raw?: string};
 export type WizardState = {subscriptions: Subscription[]; groups: GroupSpec[]; rules: 'keep' | RuleTemplate; lanInterface: string};
 
