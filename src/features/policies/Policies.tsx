@@ -4,7 +4,7 @@ import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
 import {groupConfigFields, groupLeaf, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, TextTooltip, errorText, toast} from '../../ui/ui';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {OutboundMark} from './Flag';
 import {NodeGrid} from './Nodes';
 
@@ -63,7 +63,14 @@ function PolicyCard({
               <OutboundMark name={leaves.get(g.id) ?? null} />
               <h3 className="rp-h3">{g.name}</h3>
               <Badge>{g.policy.kind}</Badge>
-              <span className="rp-label">{t('policy.members', {n: members.length})}</span>
+              <Light small tone="ok">
+                {t('policy.healthy', {n: healthy})}
+              </Light>
+              {unavailable > 0 && (
+                <Light small tone="err">
+                  {t('policy.down', {n: unavailable})}
+                </Light>
+              )}
             </span>
             <Button
               small
@@ -82,29 +89,6 @@ function PolicyCard({
               <Refresh />
               {control.busy === 'probe' ? t('policy.probing') : t('policy.probeAll')}
             </Button>
-          </div>
-          <div className="rp-cluster">
-            <Light small tone="ok">
-              {t('policy.healthy', {n: healthy})}
-            </Light>
-            {unavailable > 0 && (
-              <Light small tone="err">
-                {t('policy.down', {n: unavailable})}
-              </Light>
-            )}
-            {(tcp === udp
-              ? [['TCP/UDP', tcp]]
-              : [
-                  ['TCP', tcp],
-                  ['UDP', udp]
-                ]
-            ).map(([network, member]) => (
-              <span className="rp-chain" key={network}>
-                <Badge>{network}</Badge>
-                <OutboundMark name={member ? (leaves.get(member) ?? member) : null} />
-                <TextTooltip>{member ?? '—'}</TextTooltip>
-              </span>
-            ))}
           </div>
           <Disclosure id={id} title={t('ui.config')}>
             <Kv
