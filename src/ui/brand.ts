@@ -13,15 +13,23 @@ export type Brand = {
   keyword?: string[];
   address?: string[];
   policy?: string[];
+  expression?: string[];
 };
 const brands = catalogue as Brand[];
-type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'policy';
+type Field = 'geosite' | 'domain' | 'keyword' | 'address' | 'policy' | 'expression';
 function index(field: Field): Map<string, Brand> {
   const map = new Map<string, Brand>();
   for (const brand of brands) for (const value of brand[field] ?? []) map.set(value, brand);
   return map;
 }
-const by = {geosite: index('geosite'), domain: index('domain'), keyword: index('keyword'), address: index('address'), policy: index('policy')};
+const by = {
+  geosite: index('geosite'),
+  domain: index('domain'),
+  keyword: index('keyword'),
+  address: index('address'),
+  policy: index('policy'),
+  expression: index('expression')
+};
 
 // The icons ship with doona; the setting chooses between them, none, or a self-hosted prefix that serves
 // <prefix><id>.png. "off" is stored as the word so the default does not come back on reload.
@@ -99,6 +107,9 @@ export function brandFor(text: string | null | undefined): Brand | null {
   }
   const geoip = /^dip\(geoip:\s*([^)]+)\)/.exec(text);
   if (geoip) return by.geosite.get(geoip[1].trim().toLowerCase()) ?? null;
+  // Rule forms without a match term, such as the "fallback: <outbound>" catch-all.
+  const bare = /^([a-z_]+):\s/.exec(text);
+  if (bare) return by.expression.get(bare[1]) ?? null;
   const host = hostOf(text.trim());
   const address = by.address.get(host);
   if (address) return address;

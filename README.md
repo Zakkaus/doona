@@ -120,7 +120,7 @@ The build writes `dist/`. `pnpm check` runs type, lint, translation, icon-catalo
 
 Run `pnpm test:coverage` from the repository root to print coverage totals and write `coverage/lcov.info`.
 
-Brand icons are catalogued in `src/ui/brands.json` (one entry per service: icon source, which is a file in a community pack or `favicon/<host>`, plus geosite names, domains, keywords, addresses and group policies). After editing it, run `python3 tools/icons/fetch.py` to refresh `public/brands/`; `pnpm check:icons` verifies the catalogue against the pack listings in `tools/icons/lists/` and the files on disk.
+Brand icons are catalogued in `src/ui/brands.json` (one entry per service: icon source, which is a file in a community pack or `favicon/<host>`, plus geosite names, domains, keywords, addresses, group policies and bare rule forms such as `fallback`). After editing it, run `python3 tools/icons/fetch.py` to refresh `public/brands/`; `pnpm check:icons` verifies the catalogue against the pack listings in `tools/icons/lists/` and the files on disk.
 
 Local archive versions come from `package.json`; release builds use the Git description. Archive timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. Set `SOURCE_DATE_EPOCH` when packaging without Git metadata. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 

@@ -13,7 +13,7 @@ it('maps rule expressions, hostnames and addresses to catalogue entries', () => 
   expect(id('domain(keyword: reddit)')).toBe('reddit');
   expect(id('domain(regex: ^cdn\\d+\\.example$)')).toBeNull();
   expect(id('dip(geoip:cn)')).toBe('china-zone');
-  expect(id('fallback: gaming')).toBeNull();
+  expect(id('fallback: gaming')).toBe('rule-fallback');
   expect(id('rr1---sn-ab5l6n7z.googlevideo.com')).toBe('youtube');
   expect(id('apps.apple.com')).toBe('app-store');
   expect(id('proxy')).toBeNull();

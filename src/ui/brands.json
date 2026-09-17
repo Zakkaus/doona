@@ -2541,6 +2541,12 @@
     "domain": ["ruby-lang.org"]
   },
   {
+    "id": "rule-fallback",
+    "label": "Fallback rule",
+    "source": "qure-color/Final",
+    "expression": ["fallback"]
+  },
+  {
     "id": "rust",
     "label": "Rust",
     "source": "favicon/rust-lang.org",
