@@ -10,10 +10,10 @@ import {
   rectangularSelection,
   highlightSpecialChars
 } from '@codemirror/view';
-import {defaultKeymap, history, historyKeymap, indentWithTab} from '@codemirror/commands';
-import {bracketMatching, syntaxHighlighting, HighlightStyle} from '@codemirror/language';
+import {defaultKeymap, history, historyKeymap, indentWithTab, toggleComment} from '@codemirror/commands';
+import {bracketMatching, syntaxHighlighting, HighlightStyle, foldGutter, foldKeymap, indentUnit, indentOnInput, indentService} from '@codemirror/language';
 import {lintGutter, setDiagnostics, type Diagnostic} from '@codemirror/lint';
-import {highlightSelectionMatches, searchKeymap} from '@codemirror/search';
+import {highlightSelectionMatches, searchKeymap, gotoLine} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
 import {dae} from './dae';
 import {daeCompletion} from './daeComplete';
@@ -34,6 +34,8 @@ const theme = EditorView.theme({
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
   '.cm-gutters': {backgroundColor: 'transparent', color: 'var(--rp-muted)', border: 'none'},
+  '.cm-foldGutter .cm-gutterElement': {color: 'var(--rp-muted)', padding: '0 2px'},
+  '.cm-foldPlaceholder': {backgroundColor: 'var(--rp-hl-med)', border: 'none', color: 'var(--rp-subtle)', borderRadius: '4px', padding: '0 6px'},
   '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
   '.cm-activeLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
@@ -81,6 +83,17 @@ const highlight = HighlightStyle.define([
   {tag: tags.punctuation, color: 'var(--rp-subtle)'}
 ]);
 
+// dae nests with braces and two spaces: a line after "{" indents, a line starting with "}" steps back out.
+const daeIndent = indentService.of((context, pos) => {
+  const line = context.lineAt(pos, -1);
+  const previous = line.from > 0 ? context.lineAt(line.from - 1, -1) : null;
+  if (!previous) return 0;
+  const base = /^\s*/.exec(previous.text)![0].length;
+  const opens = /\{\s*(#.*)?$/.test(previous.text);
+  const closes = /^\s*\}/.test(line.text);
+  return Math.max(0, base + (opens ? 2 : 0) - (closes ? 2 : 0));
+});
+
 function toDiagnostics(state: EditorState, marks: EditorMark[]): Diagnostic[] {
   return marks
     .filter(mark => mark.line >= 1 && mark.line <= state.doc.lines)
@@ -101,7 +114,8 @@ export function CodeEditor({
   marks = [],
   focusLine,
   label,
-  outbounds
+  outbounds,
+  onSave
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -111,15 +125,19 @@ export function CodeEditor({
   label: string;
   // Group names to offer after "->"; the caller keeps it current with the text.
   outbounds?: () => string[];
+  // Mod-S inside the editor; the caller decides what saving means.
+  onSave?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
   const change = useRef(onChange);
   const names = useRef(outbounds);
+  const save = useRef(onSave);
   useEffect(() => {
     change.current = onChange;
     names.current = outbounds;
+    save.current = onSave;
   });
   const editable = useRef(new Compartment());
   useEffect(() => {
@@ -128,8 +146,10 @@ export function CodeEditor({
       state: EditorState.create({
         doc: value,
         extensions: [
-          lineNumbers(),
+          // Gutter order is extension order: the diagnostic dot sits left of the line number.
           lintGutter(),
+          lineNumbers(),
+          foldGutter(),
           highlightActiveLineGutter(),
           highlightSpecialChars(),
           history(),
@@ -139,11 +159,31 @@ export function CodeEditor({
           highlightSelectionMatches(),
           bracketMatching(),
           closeBrackets(),
+          indentUnit.of('  '),
+          indentOnInput(),
+          daeIndent,
           daeCompletion(() => names.current?.() ?? []),
           dae,
           syntaxHighlighting(highlight),
           theme,
-          keymap.of([...closeBracketsKeymap, ...completionKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+          keymap.of([
+            {
+              key: 'Mod-s',
+              run: () => {
+                save.current?.();
+                return true;
+              }
+            },
+            {key: 'Mod-/', run: toggleComment},
+            {key: 'Mod-g', run: gotoLine},
+            ...closeBracketsKeymap,
+            ...completionKeymap,
+            ...foldKeymap,
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+            indentWithTab
+          ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
           EditorView.contentAttributes.of({'aria-label': label}),
           EditorView.updateListener.of(update => {

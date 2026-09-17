@@ -1,12 +1,13 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
+import {getApi} from '../../api';
 import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, ModalDialog, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
 import type {ConfigValidationResult} from '../../api/model';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
@@ -63,7 +64,20 @@ export function Config({go, query}: PageProps) {
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
-  const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
+  // Leaving an edit: the browser asks on reload or close; switching source or tab asks with the kit's dialog.
+  const [dirty, setDirty] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    addEventListener('beforeunload', warn);
+    return () => removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  const navigate = (next: string) => {
+    if (dirty) setPending(next);
+    else go('config', next);
+  };
+  const select = (id: string | null) => navigate(within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(sources.find(item => item.kind === 'main')?.content ?? ''), [sources]);
@@ -110,7 +124,7 @@ export function Config({go, query}: PageProps) {
         <Tabs
           label={t('nav.config')}
           value={tab}
-          onChange={next => go('config', within(query, {tab: next}))}
+          onChange={next => navigate(within(query, {tab: next}))}
           items={[
             {
               id: 'source',
@@ -153,6 +167,7 @@ export function Config({go, query}: PageProps) {
                       editor={editor}
                       groups={groupList}
                       focusLine={focusLine}
+                      onDirty={setDirty}
                     />
                   )}
                 </>
@@ -173,6 +188,32 @@ export function Config({go, query}: PageProps) {
           ]}
         />
       )}
+      <ModalDialog
+        title={t('config.discardTitle')}
+        narrow
+        alert
+        isOpen={pending !== null}
+        onOpenChange={open => {
+          if (!open) setPending(null);
+        }}
+        footer={close => (
+          <>
+            <Button onPress={close}>{t('ui.cancel')}</Button>
+            <Button
+              negative
+              onPress={() => {
+                const next = pending;
+                setPending(null);
+                if (next !== null) go('config', next);
+              }}
+            >
+              {t('config.discard')}
+            </Button>
+          </>
+        )}
+      >
+        <p>{t('config.discardHelp')}</p>
+      </ModalDialog>
     </div>
   );
 }
@@ -184,7 +225,8 @@ function SourceCard({
   canWrite,
   editor,
   groups,
-  focusLine
+  focusLine,
+  onDirty
 }: {
   source: ConfigSource;
   diagnostics: ConfigDiagnostic[];
@@ -193,6 +235,7 @@ function SourceCard({
   editor: ReturnType<typeof useConfigEditor>;
   groups: string[];
   focusLine: number | null;
+  onDirty: (dirty: boolean) => void;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -220,6 +263,27 @@ function SourceCard({
   };
   const text = draft ?? source.content ?? '';
   const [jump, setJump] = useState<number | null>(null);
+  const dirty = editing && draft !== source.content;
+  useEffect(() => {
+    onDirty(dirty);
+    return () => onDirty(false);
+  }, [dirty, onDirty]);
+  // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
+  const api = getApi();
+  useEffect(() => {
+    if (!editing || !canValidate || draft === null) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api.validateConfig({sources: [{id: source.id, path: source.path, content: draft}], mode: 'full'}, controller.signal).then(
+        result => setFound(result.diagnostics),
+        () => undefined
+      );
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [api, editing, canValidate, draft, source.id, source.path]);
   const validate = async () => {
     const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
     if (!result) return false;
@@ -279,7 +343,14 @@ function SourceCard({
               >
                 {t('ui.cancel')}
               </Button>
-              <Button small accent isPending={editor.busy === 'save'} isDisabled={!!editor.busy || draft === source.content} onPress={() => void save()}>
+              <Button
+                small
+                accent
+                isPending={editor.busy === 'save'}
+                isDisabled={!!editor.busy || draft === source.content}
+                tip={t('config.saveShortcut')}
+                onPress={() => void save()}
+              >
                 {t('config.save')}
               </Button>
             </>
@@ -311,6 +382,7 @@ function SourceCard({
           marks={marks}
           focusLine={jump ?? focusLine}
           outbounds={outbounds}
+          onSave={editing && dirty && !editor.busy ? () => void save() : undefined}
         />
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>

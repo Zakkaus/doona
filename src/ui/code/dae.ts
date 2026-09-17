@@ -5,6 +5,7 @@ import {StreamLanguage} from '@codemirror/language';
 const sections = /^(global|dns|upstream|routing|request|response|subscription|node|group|include|fallback)\b/;
 export const dae = StreamLanguage.define<{afterArrow: boolean}>({
   name: 'dae',
+  languageData: {commentTokens: {line: '#'}, closeBrackets: {brackets: ['(', '{', "'", '"']}},
   startState: () => ({afterArrow: false}),
   token(stream, state) {
     if (stream.sol()) state.afterArrow = false;
