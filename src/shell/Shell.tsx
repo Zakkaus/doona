@@ -1,4 +1,6 @@
 // Rosé Pine shell: same frame as the S2 panel (top bar, side nav, rounded main), plain CSS and react-aria-components.
+import {Login} from './Login';
+import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {I18nProvider, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
 import Close from '../ui/icons/Close';
@@ -344,6 +346,8 @@ function Frame({
   }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
+  // A 401 or 403 from the capability probe means the backend wants a token; the page yields to the login form.
+  const needsToken = capabilities.error instanceof ApiError && (capabilities.error.status === 401 || capabilities.error.status === 403);
   const titleKey = feature.nav?.titleKey ?? 'nav.activity';
   return (
     <div className="rp-shell">
@@ -478,9 +482,13 @@ function Frame({
           </div>
           <ErrorMessage error={capabilities.error ? null : version.error} />
           <SettingsContext.Provider value={{lang, pickLang, ap, paletteSections}}>
-            <Suspense key={feature.id} fallback={<Loading />}>
-              <Page go={go} query={query} />
-            </Suspense>
+            {needsToken && feature.id !== 'settings' ? (
+              <Login backend={profile?.name ?? profile?.api ?? ''} />
+            ) : (
+              <Suspense key={feature.id} fallback={<Loading />}>
+                <Page go={go} query={query} />
+              </Suspense>
+            )}
           </SettingsContext.Provider>
         </div>
       </main>

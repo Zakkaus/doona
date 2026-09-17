@@ -2,24 +2,10 @@ import {useMemo, useState} from 'react';
 import {useT} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {useConfigEditor} from '../../api/store';
-import {Button, Chips, LabeledSelect, Segmented, Switch, TextField, toast} from '../../ui/ui';
+import {Button, LabeledSelect, Segmented, TextField, toast} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
-import {isSubscriptionUrl, readState, uses, writeState, type GroupSpec, type Use, type WizardState} from './wizard';
-import type {Key} from '../../i18n/messages';
-
-const useLabels: Record<Use, Key> = {
-  overseas: 'config.use.overseas',
-  streaming: 'config.use.streaming',
-  telegram: 'config.use.telegram',
-  ai: 'config.use.ai',
-  games: 'config.use.games',
-  dev: 'config.use.dev',
-  social: 'config.use.social',
-  apple: 'config.use.apple',
-  google: 'config.use.google',
-  microsoft: 'config.use.microsoft'
-};
+import {isSubscriptionUrl, readState, writeState, type GroupSpec, type WizardState} from './wizard';
 
 // Subscriptions and groups as lists, the way daed does it; rules stay text (kept, or swapped for a template).
 // The form starts from what the main source says and writes back only the sections it owns.
@@ -31,8 +17,7 @@ export function Wizard({main, editor, onDone}: {main: ConfigSource; editor: Retu
     return {
       ...read,
       subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}],
-      groups: read.groups.length ? read.groups : [{name: 'proxy', policy: 'auto', subscriptions: ['sub'], uses: ['overseas']}],
-      rules: read.groups.length ? 'keep' : 'generate'
+      groups: read.groups.length ? read.groups : [{name: 'proxy', policy: 'auto', subscriptions: ['sub']}]
     };
   });
   const text = useMemo(() => writeState(current, state), [current, state]);
@@ -96,93 +81,60 @@ export function Wizard({main, editor, onDone}: {main: ConfigSource; editor: Retu
       <h3 className="rp-h3">{t('config.wizardGroups')}</h3>
       <div className="rp-list">
         {state.groups.map((group, index) => (
-          <div className="rp-col" key={index}>
-            <div className="rp-toolbar top">
-              <TextField label={t('config.wizardGroup')} value={group.name} width={140} onChange={name => setGroup(index, {name})} />
-              <LabeledSelect
-                label={t('config.wizardPolicy')}
-                value={group.policy}
-                onChange={policy => setGroup(index, {policy: policy as GroupSpec['policy']})}
-                items={[
-                  {id: 'auto', label: t('config.wizardAuto')},
-                  {id: 'manual', label: t('config.wizardManual')}
-                ]}
-              />
-              <Segmented
-                label={t('config.wizardGroupSubscriptions', {name: group.name})}
-                value={group.subscriptions[0] ?? ''}
-                onChange={name => setGroup(index, {subscriptions: name ? [name] : []})}
-                items={[['', t('config.wizardAllNodes')], ...state.subscriptions.map((s): [string, string] => [s.name, s.name])]}
-              />
-              <Button
-                quiet
-                small
-                label={t('config.wizardRemove', {name: group.name})}
-                isDisabled={state.groups.length === 1}
-                onPress={() => patch({groups: state.groups.filter((_, i) => i !== index)})}
-              >
-                <Close />
-              </Button>
-            </div>
-            <div className="rp-cluster">
-              <span className="rp-label">{t('config.wizardUses', {name: group.name})}</span>
-              <Chips
-                label={t('config.wizardUses', {name: group.name})}
-                values={group.uses}
-                onValuesChange={picked => setGroup(index, {uses: uses.filter(use => picked.includes(use)), raw: group.raw})}
-                items={uses.map(use => ({id: use, label: t(useLabels[use])}))}
-              />
-            </div>
+          <div className="rp-toolbar top" key={index}>
+            <TextField label={t('config.wizardGroup')} value={group.name} width={140} onChange={name => setGroup(index, {name})} />
+            <LabeledSelect
+              label={t('config.wizardPolicy')}
+              value={group.policy}
+              onChange={policy => setGroup(index, {policy: policy as GroupSpec['policy']})}
+              items={[
+                {id: 'auto', label: t('config.wizardAuto')},
+                {id: 'manual', label: t('config.wizardManual')}
+              ]}
+            />
+            <Segmented
+              label={t('config.wizardGroupSubscriptions', {name: group.name})}
+              value={group.subscriptions[0] ?? ''}
+              onChange={name => setGroup(index, {subscriptions: name ? [name] : []})}
+              items={[['', t('config.wizardAllNodes')], ...state.subscriptions.map((s): [string, string] => [s.name, s.name])]}
+            />
+            <Button
+              quiet
+              small
+              label={t('config.wizardRemove', {name: group.name})}
+              isDisabled={state.groups.length === 1}
+              onPress={() => patch({groups: state.groups.filter((_, i) => i !== index)})}
+            >
+              <Close />
+            </Button>
           </div>
         ))}
         <div>
-          <Button
-            small
-            onPress={() => patch({groups: [...state.groups, {name: `group-${state.groups.length + 1}`, policy: 'auto', subscriptions: [], uses: []}]})}
-          >
+          <Button small onPress={() => patch({groups: [...state.groups, {name: `group-${state.groups.length + 1}`, policy: 'auto', subscriptions: []}]})}>
             {t('config.wizardAddGroup')}
           </Button>
         </div>
       </div>
 
       <h3 className="rp-h3">{t('config.wizardTemplate')}</h3>
-      <div className="rp-toolbar">
-        {current.trim() !== '' && (
-          <Segmented
-            label={t('config.wizardTemplate')}
-            value={state.rules}
-            onChange={rules => patch({rules: rules as WizardState['rules']})}
-            items={[
-              ['keep', t('config.wizardKeep')],
-              ['generate', t('config.wizardGenerate')]
-            ]}
-          />
-        )}
-        {state.rules === 'generate' && (
-          <>
-            <Switch isSelected={state.ads} onChange={ads => patch({ads})}>
-              {t('config.wizardAds')}
-            </Switch>
-            <Switch isSelected={state.chinaDirect} onChange={chinaDirect => patch({chinaDirect})}>
-              {t('config.wizardChinaDirect')}
-            </Switch>
-            <LabeledSelect
-              side
-              label={t('config.wizardFallback')}
-              value={state.fallback}
-              onChange={fallback => patch({fallback: fallback as WizardState['fallback']})}
-              items={[
-                {id: 'first', label: t('config.wizardFallbackFirst', {name: state.groups[0]?.name ?? 'proxy'})},
-                {id: 'direct', label: t('config.wizardFallbackDirect')}
-              ]}
-            />
-          </>
-        )}
+      <div className="rp-toolbar top">
+        <LabeledSelect
+          label={t('config.wizardTemplate')}
+          value={state.rules}
+          onChange={rules => patch({rules: rules as WizardState['rules']})}
+          items={[
+            ...(current.trim() ? [{id: 'keep', label: t('config.wizardKeep'), desc: t('config.wizardKeepHelp')}] : []),
+            {id: 'domestic', label: t('config.wizardDomestic'), desc: t('config.wizardDomesticHelp')},
+            {id: 'fine', label: t('config.wizardFine'), desc: t('config.wizardFineHelp')},
+            {id: 'overseas', label: t('config.wizardOverseas'), desc: t('config.wizardOverseasHelp')},
+            {id: 'global', label: t('config.wizardGlobal'), desc: t('config.wizardGlobalHelp')}
+          ]}
+        />
         {!current.trim() && (
           <TextField label={t('config.wizardLan')} value={state.lanInterface} width={140} placeholder="auto" onChange={lanInterface => patch({lanInterface})} />
         )}
       </div>
-      <span className="rp-label">{t(state.rules === 'keep' ? 'config.wizardKeepHelp' : 'config.wizardGenerateHelp')}</span>
+
       <h3 className="rp-h3">{t('config.wizardPreview')}</h3>
       <CodeEditor label={t('config.wizardPreview')} value={text} readOnly compact />
       <div className="rp-toolbar">

@@ -634,7 +634,10 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
-:root[data-family='glass'] .rp-card {
+:root[data-family='glass'] .rp-login {
+  max-width: 480px;
+}
+.rp-card {
   border-radius: 20px;
 }
 :root[data-family='glass'] .rp-popover::after {

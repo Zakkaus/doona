@@ -1035,32 +1035,22 @@ export function Chips({
   label,
   items,
   value,
-  onChange,
-  values,
-  onValuesChange
+  onChange
 }: {
   label: string;
   items: Array<{id: string; label: string; count?: string; countLabel?: string; icon?: ReactNode}>;
-  // Single select: one id or none.
-  value?: string | null;
-  onChange?: (id: string | null) => void;
-  // Multiple select: any number of ids; when given, the group toggles instead of picking one.
-  values?: string[];
-  onValuesChange?: (ids: string[]) => void;
+  value: string | null;
+  onChange: (id: string | null) => void;
 }) {
-  const multiple = values !== undefined;
   return (
     <ToggleButtonGroup
       className="rp-chips"
       aria-label={label}
-      selectionMode={multiple ? 'multiple' : 'single'}
-      selectedKeys={multiple ? values : value ? [value] : []}
+      selectionMode="single"
+      selectedKeys={value ? [value] : []}
       onSelectionChange={keys => {
-        if (multiple) onValuesChange?.([...keys].map(String));
-        else {
-          const next = [...keys][0];
-          onChange?.(next == null ? null : String(next));
-        }
+        const next = [...keys][0];
+        onChange(next == null ? null : String(next));
       }}
     >
       {items.map(item => (

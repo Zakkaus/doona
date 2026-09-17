@@ -4,33 +4,10 @@
 export type Subscription = {name: string; url: string};
 // `raw` is the line as it stands in the file; it is written back untouched until the form changes the group,
 // so filters and policies the form cannot express survive a round trip.
-// What a group is for: destination sets sent through it. The rules are generated from these, in list order.
-export type Use = 'overseas' | 'streaming' | 'telegram' | 'ai' | 'games' | 'dev' | 'social' | 'apple' | 'google' | 'microsoft';
-export const useRules: Record<Use, string> = {
-  overseas: 'domain(geosite:geolocation-!cn)',
-  streaming: 'domain(geosite:netflix, geosite:youtube, geosite:disney, geosite:hbo, geosite:spotify, geosite:primevideo)',
-  telegram: 'domain(geosite:telegram)',
-  ai: 'domain(geosite:openai, geosite:anthropic, geosite:category-ai-chat-!cn)',
-  games: 'domain(geosite:category-games)',
-  dev: 'domain(geosite:github, geosite:docker, geosite:python, geosite:npmjs, geosite:huggingface)',
-  social: 'domain(geosite:twitter, geosite:facebook, geosite:instagram, geosite:reddit, geosite:discord)',
-  apple: 'domain(geosite:apple)',
-  google: 'domain(geosite:google)',
-  microsoft: 'domain(geosite:microsoft)'
-};
-export const uses = Object.keys(useRules) as Use[];
-export type GroupSpec = {name: string; policy: 'auto' | 'manual'; subscriptions: string[]; uses: Use[]; raw?: string};
-export type WizardState = {
-  subscriptions: Subscription[];
-  groups: GroupSpec[];
-  // keep the routing text as written, or generate it from the groups' uses.
-  rules: 'keep' | 'generate';
-  ads: boolean;
-  chinaDirect: boolean;
-  fallback: 'first' | 'direct';
-  lanInterface: string;
-};
+export type GroupSpec = {name: string; policy: 'auto' | 'manual'; subscriptions: string[]; raw?: string};
+export type WizardState = {subscriptions: Subscription[]; groups: GroupSpec[]; rules: 'keep' | RuleTemplate; lanInterface: string};
 
+export type RuleTemplate = 'domestic' | 'global' | 'fine' | 'overseas';
 // The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
 // drop HTTP/3, which the engine cannot proxy well and which browsers retry over TCP anyway.
 const preset = [
@@ -41,6 +18,32 @@ const preset = [
   '# HTTP/3 cannot be proxied; block it so browsers fall back to TCP',
   'l4proto(udp) && dport(443) -> block'
 ];
+const ads = ['# Advertising', 'domain(geosite:category-ads-all) -> block'];
+const china = ['# Mainland China direct', 'dip(geoip:cn) -> direct', 'domain(geosite:cn) -> direct'];
+// Templates, in dae's own syntax and category names (v2fly geosite/geoip). `{group}` is the first group.
+export const templates: Record<RuleTemplate, {rules: string[]; fallback: string}> = {
+  // Adverts dropped, mainland China direct, everything else through the group.
+  domestic: {rules: [...preset, ...ads, ...china], fallback: '{group}'},
+  // Everything except the presets through the group.
+  global: {rules: [...preset], fallback: '{group}'},
+  // The ACL4SSR shape: Chinese services of global vendors direct, well-known global services named, then the
+  // China catch-all, then the group.
+  fine: {
+    rules: [
+      ...preset,
+      ...ads,
+      '# Chinese services of global vendors direct',
+      'domain(geosite:apple-cn, geosite:google-cn, geosite:tld-cn) -> direct',
+      '# Well-known overseas services through the group',
+      'domain(geosite:telegram, geosite:youtube, geosite:netflix, geosite:openai, geosite:github) -> {group}',
+      'domain(geosite:geolocation-!cn) -> {group}',
+      ...china
+    ],
+    fallback: '{group}'
+  },
+  // Only known overseas destinations through the group; anything unrecognised stays direct.
+  overseas: {rules: [...preset, ...ads, '# Only known overseas sites through the group', 'domain(geosite:geolocation-!cn) -> {group}'], fallback: 'direct'}
+};
 
 const ident = (value: string) => value.trim().replace(/[^\w-]/g, '-');
 const quote = (value: string) => "'" + value.replace(/'/g, '') + "'";
@@ -85,10 +88,10 @@ export function readState(text: string): WizardState {
         .exec(match[2])?.[1]
         .split(',')
         .map(s => s.trim()) ?? [];
-    groups.push({name: match[1], policy: /policy:\s*fixed/.test(match[2]) ? 'manual' : 'auto', subscriptions: tags, uses: [], raw: line});
+    groups.push({name: match[1], policy: /policy:\s*fixed/.test(match[2]) ? 'manual' : 'auto', subscriptions: tags, raw: line});
   }
   const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
-  return {subscriptions, groups, rules: 'keep', ads: true, chinaDirect: true, fallback: 'first', lanInterface: lan && lan !== 'auto' ? lan : ''};
+  return {subscriptions, groups, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
 }
 
 function subscriptionBlock(state: WizardState): string[] {
@@ -105,20 +108,10 @@ function groupBlock(state: WizardState): string[] {
     '}'
   ];
 }
-// Routing from the groups' uses: presets, adverts, one line per use per group in list order, the China
-// catch-all, then the fallback. A group with no uses gets traffic only through the fallback.
-function routingBlock(state: WizardState): string[] {
+function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
   const first = ident(state.groups[0]?.name ?? 'proxy') || 'proxy';
-  const lines = [...preset];
-  if (state.ads) lines.push('# Advertising', 'domain(geosite:category-ads-all) -> block');
-  for (const group of state.groups) {
-    const name = ident(group.name) || 'proxy';
-    if (group.uses.length) lines.push(`# ${name}`);
-    for (const use of group.uses) lines.push(`${useRules[use]} -> ${name}`);
-  }
-  if (state.chinaDirect) lines.push('# Mainland China direct', 'dip(geoip:cn) -> direct', 'domain(geosite:cn) -> direct');
-  lines.push(`fallback: ${state.fallback === 'direct' ? 'direct' : first}`);
-  return ['routing {', ...lines.map(line => '  ' + line), '}'];
+  const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
+  return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
 const dnsBlock = [
   'dns {',
@@ -148,14 +141,25 @@ function globalBlock(state: WizardState): string[] {
 // chosen), or a whole file when there is no text to keep.
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
-    return [...globalBlock(state), '', ...subscriptionBlock(state), '', ...groupBlock(state), '', ...dnsBlock, '', ...routingBlock(state), ''].join('\n');
+    return [
+      ...globalBlock(state),
+      '',
+      ...subscriptionBlock(state),
+      '',
+      ...groupBlock(state),
+      '',
+      ...dnsBlock,
+      '',
+      ...routingBlock(state, state.rules === 'keep' ? 'domestic' : state.rules),
+      ''
+    ].join('\n');
   }
   const lines = current.replace(/\n$/, '').split('\n');
   const replacements = new Map<string, string[]>([
     ['subscription', subscriptionBlock(state)],
     ['group', groupBlock(state)]
   ]);
-  if (state.rules !== 'keep') replacements.set('routing', routingBlock(state));
+  if (state.rules !== 'keep') replacements.set('routing', routingBlock(state, state.rules));
   const out: string[] = [];
   const done = new Set<string>();
   const found = sections(lines);
