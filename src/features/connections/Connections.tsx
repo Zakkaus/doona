@@ -19,7 +19,8 @@ import {
   panelQuery,
   toast,
   useMediaQuery,
-  exportName
+  exportName,
+  TextTooltip
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
@@ -149,6 +150,11 @@ export function Connections({go, query}: PageProps) {
           </Button>
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
+        {resource.data && resource.data.visibility !== 'full' && (
+          <TextTooltip text={t('conn.visibilityNote')}>
+            <Badge>{t(resource.data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial')}</Badge>
+          </TextTooltip>
+        )}
         <span className="rp-grow" />
         {canClose && (
           <CloseAllButton

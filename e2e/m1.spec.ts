@@ -26,6 +26,7 @@ test.describe('first-release backend', () => {
     await page.goto('/#/connections');
     await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
     await expect(page.getByRole('button', {name: 'Close all', exact: true})).toHaveCount(0);
+    await expect(page.getByText('Partial view', {exact: true})).toBeVisible();
     // Search finds pages and connections, and asks nothing else of the backend.
     await page.keyboard.press('Control+K');
     await page.locator('.rp-dialog input').fill('telegram');

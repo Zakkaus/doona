@@ -81,8 +81,9 @@ export function createMockApi(): Api {
   let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
+  let profile: string | null = null;
   try {
-    const profile = localStorage.getItem('doona-mock-profile');
+    profile = localStorage.getItem('doona-mock-profile');
     if (profile === 'base') capabilities = fixtures.capabilitiesBase;
     if (profile === 'm1') capabilities = fixtures.capabilitiesM1;
   } catch {}
@@ -91,6 +92,8 @@ export function createMockApi(): Api {
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
+  // honk's first release observes userspace only; the mock says so the same way.
+  if (profile === 'm1') connections.visibility = 'partial';
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   const dnsCache = structuredClone(fixtures.dnsCache);

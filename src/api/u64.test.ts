@@ -14,7 +14,7 @@ describe('UInt64 counters', () => {
     expect(parseU64('0')).toBe(0n);
     expect(formatBytes(null)).toBe('—');
     expect(formatRate(null)).toBe('—');
-    expect(formatBytes('0')).toBe('0');
+    expect(formatBytes('0')).toBe('0 B');
     expect(addU64('10', null)).toBeNull();
     expect(pctU64(null, '10')).toBeNull();
     expect(pctU64('1', null)).toBeNull();

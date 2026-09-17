@@ -40,6 +40,14 @@ export function BackendActionsCard() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const fail = (error: unknown) => toast('negative', errorText(error));
   const target = runtimeMode.data?.target ?? groups.data?.[0]?.id ?? '';
+  const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
+  const offered =
+    lifecycle ||
+    !!resources?.runtime_mode?.available ||
+    !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
+    !!resources?.providers.can_refresh ||
+    !!resources?.connections.can_close ||
+    !!resources?.geodata.can_update;
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const live = (connections.data ? [...connections.data.tcp, ...connections.data.udp] : []).map(c => c.id);
   // Subscriptions refresh one after another: the backend keeps one refresh per provider in flight anyway.
@@ -64,7 +72,7 @@ export function BackendActionsCard() {
       <h2 className="rp-h3" id="settings-actions">
         {t('settings.actions')}
       </h2>
-      <span className="rp-label">{t('settings.actionsNote')}</span>
+      <span className="rp-label">{t(offered ? 'settings.actionsNote' : 'settings.actionsNone')}</span>
       <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
         <LifecycleActions runtime={runtime} capabilities={capabilities.data} />

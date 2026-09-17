@@ -128,8 +128,10 @@ export function Overview() {
                 </div>
               )}
             </>
-          ) : (
+          ) : capabilities.loading || version.loading || runtime.loading ? (
             <Loading />
+          ) : (
+            <span className="rp-empty">{t('ov.unavailable')}</span>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-counters">
@@ -145,7 +147,10 @@ export function Overview() {
                   [t('ov.f.total'), count(runtime.data.traffic.connections.total)],
                   [t('ui.upload'), formatBytes(runtime.data.traffic.bytes.upload)],
                   [t('ui.download'), formatBytes(runtime.data.traffic.bytes.download)],
-                  [t('ov.f.rateWindow'), t('ui.seconds', {n: runtime.data.traffic.rates?.window_seconds ?? '—'})]
+                  [
+                    t('ov.f.rateWindow'),
+                    t('ui.seconds', {n: runtime.data.traffic.rates ? formatNumber(runtime.data.traffic.rates.window_seconds, locale, 1) : '—'})
+                  ]
                 ]}
               />
               <span className="rp-label">
@@ -155,8 +160,10 @@ export function Overview() {
                 })}
               </span>
             </>
-          ) : (
+          ) : capabilities.loading || runtime.loading ? (
             <Loading />
+          ) : (
+            <span className="rp-empty">{t('ov.unavailable')}</span>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-memory">
@@ -245,8 +252,10 @@ export function Overview() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : capabilities.loading ? (
             <Loading />
+          ) : (
+            <span className="rp-empty">{t('ov.unavailable')}</span>
           )}
         </section>
       </div>

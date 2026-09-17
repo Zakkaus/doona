@@ -49,6 +49,7 @@ export const messages = defineMessages({
     'settings.about': '關於',
     'settings.actions': '後端操作',
     'settings.actionsNote': '各頁都有的一次性動作集中在這裡；按鈕只在後端宣告對應能力時出現。',
+    'settings.actionsNone': '此後端未宣告任何可執行的動作。',
     'settings.refreshAll': '刷新全部訂閱（{n}）',
     'settings.refreshedAll': '已刷新 {n} / {total} 條訂閱',
     'settings.geodata': '地理資料',
@@ -114,6 +115,7 @@ export const messages = defineMessages({
     'settings.about': '关于',
     'settings.actions': '后端操作',
     'settings.actionsNote': '各页都有的一次性动作集中在这里；按钮只在后端声明对应能力时出现。',
+    'settings.actionsNone': '此后端未声明任何可执行的动作。',
     'settings.refreshAll': '刷新全部订阅（{n}）',
     'settings.refreshedAll': '已刷新 {n} / {total} 条订阅',
     'settings.geodata': '地理数据',
@@ -180,6 +182,7 @@ export const messages = defineMessages({
     'settings.actions': 'Backend actions',
     'settings.actionsNote':
       'The one-shot actions from the other pages, gathered here; a button appears only when the backend advertises the capability behind it.',
+    'settings.actionsNone': 'This backend advertises no action to run.',
     'settings.refreshAll': 'Refresh all subscriptions ({n})',
     'settings.refreshedAll': 'Refreshed {n} of {total} subscriptions',
     'settings.geodata': 'Geodata',
