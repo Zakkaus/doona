@@ -28,7 +28,8 @@ const theme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     lineHeight: '20px',
-    maxHeight: '70vh'
+    maxHeight: '70vh',
+    fontVariantLigatures: 'none'
   },
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
