@@ -1,11 +1,11 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {Link} from 'react-aria-components';
-import {useCapabilities} from '../../api/store';
+import {useCapabilities, useVersion} from '../../api/store';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {ApiError, createApi} from '../../api/client';
-import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
+import {Button, ErrorMessage, Kv, LabeledSelect, Light, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
@@ -42,6 +42,7 @@ export function Settings({query}: PageProps) {
   const t = useT();
   const install = useInstallOffer();
   const capabilities = useCapabilities();
+  const version = useVersion();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
@@ -330,9 +331,22 @@ export function Settings({query}: PageProps) {
         <Kv
           items={[
             [t('settings.version'), import.meta.env.VITE_DOONA_VERSION],
-            [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT]
+            [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT],
+            ...(version.data
+              ? [
+                  [
+                    t('settings.engine'),
+                    `${version.data.engine.name} ${version.data.engine.version} · API ${version.data.api.major} (${version.data.api.status})`
+                  ] as [string, string]
+                ]
+              : [])
           ]}
         />
+        {version.data && version.data.api.major !== 1 && (
+          <Light small tone="warn">
+            {t('settings.apiMajor', {major: String(version.data.api.major)})}
+          </Light>
+        )}
         <div className="rp-cluster">
           <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
             {t('github')}

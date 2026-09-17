@@ -62,7 +62,9 @@ export const messages = defineMessages({
     'settings.install': '安裝為應用程式',
     'settings.installed': '已安裝到桌面',
     'settings.version': 'doona 版本',
-    'settings.contract': '契約提交'
+    'settings.contract': '契約提交',
+    'settings.engine': '後端',
+    'settings.apiMajor': '後端的 API 主版本為 {major}，本面板依 1 版契約寫成；欄位可能對不上。'
   },
   'zh-CN': {
     'nav.settings': '设置',
@@ -125,7 +127,9 @@ export const messages = defineMessages({
     'settings.install': '安装为应用',
     'settings.installed': '已安装到桌面',
     'settings.version': 'doona 版本',
-    'settings.contract': '契约提交'
+    'settings.contract': '契约提交',
+    'settings.engine': '后端',
+    'settings.apiMajor': '后端的 API 主版本为 {major}，本面板按 1 版契约编写；字段可能对不上。'
   },
   en: {
     'nav.settings': 'Settings',
@@ -190,6 +194,8 @@ export const messages = defineMessages({
     'settings.install': 'Install as an app',
     'settings.installed': 'Installed',
     'settings.version': 'doona version',
-    'settings.contract': 'Contract commit'
+    'settings.contract': 'Contract commit',
+    'settings.engine': 'Backend',
+    'settings.apiMajor': 'The backend speaks API major {major}; this panel is written against major 1, so fields may not line up.'
   }
 });

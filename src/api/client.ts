@@ -31,6 +31,9 @@ export function createApi(base: string, token?: string): Api {
       return response;
     }
   });
+  // Every mutation the contract lets a client repeat safely carries a fresh key, so a retry after a lost
+  // reply cannot start the same operation twice.
+  const once = () => ({'Idempotency-Key': crypto.randomUUID()});
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href, root);
@@ -143,14 +146,14 @@ export function createApi(base: string, token?: string): Api {
     patchGroup: async (groupId, body, ifMatch, signal) => {
       const result = await client.PATCH('/api/v1/groups/{groupId}', {
         params: {path: {groupId}, header: {'If-Match': ifMatch}},
-        headers: {'Content-Type': 'application/json-patch+json'},
+        headers: {'Content-Type': 'application/json-patch+json', ...once()},
         body,
         signal
       });
       const value = data(result);
       return 'operation_id' in value ? accepted({data: value, response: result.response}) : value;
     },
-    startProbe: async (body, signal) => accepted(await client.POST('/api/v1/probes', {body, signal})),
+    startProbe: async (body, signal) => accepted(await client.POST('/api/v1/probes', {body, headers: once(), signal})),
     connections: async (query, signal) => data(await client.GET('/api/v1/connections', {params: {query}, signal})),
     flows: async (query, signal) => data(await client.GET('/api/v1/flows', {params: {query}, signal})),
     // Readable in openapi-fetch drops required null fields from composed schemas.
@@ -160,33 +163,40 @@ export function createApi(base: string, token?: string): Api {
     dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
     // 204 carries no body; the response middleware has already turned any error status into an ApiError.
     closeConnection: async (connection_id, signal) => {
-      await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});
+      await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, headers: once(), signal});
     },
-    closeConnections: async (query, signal) => data(await client.DELETE('/api/v1/connections', {params: {query}, signal})),
+    closeConnections: async (query, signal) => data(await client.DELETE('/api/v1/connections', {params: {query}, headers: once(), signal})),
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
     runtimeMode: async signal => data(await client.GET('/api/v1/runtime/mode', {signal})),
-    setRuntimeMode: async (body, signal) => data(await client.PUT('/api/v1/runtime/mode', {body, signal})),
+    setRuntimeMode: async (body, signal) => data(await client.PUT('/api/v1/runtime/mode', {body, headers: once(), signal})),
     providers: async (query, signal) => data(await client.GET('/api/v1/providers', {params: {query}, signal})),
-    refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, signal})),
+    refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, headers: once(), signal})),
     createProvider: async (body, signal) => data(await client.POST('/api/v1/providers', {body, signal})),
     deleteProvider: async (id, signal) => data(await client.DELETE('/api/v1/providers/{id}', {params: {path: {id}}, signal})),
     createNode: async (body, signal) => data(await client.POST('/api/v1/nodes', {body, signal})),
     deleteNode: async (id, signal) => data(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
     geodata: async signal => data(await client.GET('/api/v1/geodata', {signal})),
     rules: async signal => data(await client.GET('/api/v1/rules', {signal})),
-    updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {signal})),
+    updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {headers: once(), signal})),
     config: async signal => data(await client.GET('/api/v1/config', {signal})),
     validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
     replaceConfigSource: async (source_id, content, ifMatch, signal) =>
-      accepted(await client.PUT('/api/v1/config/sources/{source_id}', {params: {path: {source_id}, header: {'If-Match': ifMatch}}, body: {content}, signal})),
-    patchRuntimeSettings: async (body, signal) => data(await client.PATCH('/api/v1/runtime/settings', {body, signal})),
+      accepted(
+        await client.PUT('/api/v1/config/sources/{source_id}', {
+          params: {path: {source_id}, header: {'If-Match': ifMatch}},
+          headers: once(),
+          body: {content},
+          signal
+        })
+      ),
+    patchRuntimeSettings: async (body, signal) => data(await client.PATCH('/api/v1/runtime/settings', {body, headers: once(), signal})),
     deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.
     routingTrace: async (body, signal) => data(await client.POST('/api/v1/routing/trace', {body, signal})) as RoutingTraceResponse,
-    startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, signal})),
-    startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, signal})),
-    startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, signal})),
+    startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, headers: once(), signal})),
+    startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, headers: once(), signal})),
+    startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, headers: once(), signal})),
     operation: async (id, signal) => {
       const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
       return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
