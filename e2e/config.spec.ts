@@ -47,6 +47,25 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('8 lines');
 });
 
+test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
+  await page.goto('/#/config?tab=validate');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
+  const rows = page.locator('.rp-table tbody tr[data-key]');
+  await expect(rows).toHaveCount(3);
+  await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
+  await expect(rows).toHaveCount(1);
+  await page.getByRole('radio', {name: 'All 3', exact: true}).click();
+  await page.getByRole('button', {name: 'Validate again', exact: true}).click();
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Last validation');
+  await expect(rows).toHaveCount(0);
+  await page.reload();
+  await rows.filter({hasText: 'rules.dae:3'}).click();
+  await page.getByRole('button', {name: 'Open source', exact: true}).click();
+  await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
+  await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
+  await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
+});
+
 test.describe('without configuration readback', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 

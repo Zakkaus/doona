@@ -6,7 +6,9 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {Badge, Button, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, errorText, toast} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, Segmented, Tabs, TextTooltip, errorText, toast} from '../../ui/ui';
+import type {ConfigValidationResult} from '../../api/model';
+import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
 import type {PageProps} from '../types';
@@ -19,6 +21,16 @@ const kinds: Record<ConfigSource['kind'], Key> = {
 };
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
+
+// A query change that keeps the other parameters.
+function within(query: string, patch: Record<string, string | null>): string {
+  const next = new URLSearchParams(query);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+  }
+  return next.toString();
+}
 
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -47,15 +59,11 @@ export function Config({go, query}: PageProps) {
   const config = useConfig(resources?.config.available !== false);
   const editor = useConfigEditor(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
+  const tab = params.get('tab') === 'validate' ? 'validate' : 'source';
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
-  const select = (id: string | null) => {
-    const next = new URLSearchParams(query);
-    if (id) next.set('source', id);
-    else next.delete('source');
-    go('config', next.toString());
-  };
+  const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(sources.find(item => item.kind === 'main')?.content ?? ''), [sources]);
@@ -99,37 +107,70 @@ export function Config({go, query}: PageProps) {
         </div>
       )}
       {config.data && (
-        <div className="rp-toolbar">
-          <LabeledSelect
-            side
-            label={t('config.source')}
-            value={selectedId ?? ''}
-            onChange={select}
-            items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
-          />
-          {source && (
-            <>
-              <Badge>{t(kinds[source.kind])}</Badge>
-              <Light small tone={source.writable ? 'ok' : 'muted'}>
-                {t(source.writable ? 'config.editable' : 'config.readOnly')}
-              </Light>
-              <span className="rp-label">
-                {t('config.sourceFacts', {lines: n(source.line_count), size: formatBytes(String(source.bytes)), time: localTime(source.loaded_at, locale)})}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-      {source && config.data && (
-        <SourceCard
-          key={source.id}
-          source={source}
-          diagnostics={config.data.diagnostics.filter(d => d.source_id === source.id)}
-          canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
-          canWrite={resources?.config.writable === true && source.writable}
-          editor={editor}
-          groups={groupList}
-          focusLine={focusLine}
+        <Tabs
+          label={t('nav.config')}
+          value={tab}
+          onChange={next => go('config', within(query, {tab: next}))}
+          items={[
+            {
+              id: 'source',
+              label: t('config.tabSource'),
+              content: (
+                <>
+                  {config.data && (
+                    <div className="rp-toolbar">
+                      <LabeledSelect
+                        side
+                        label={t('config.source')}
+                        value={selectedId ?? ''}
+                        onChange={select}
+                        items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
+                      />
+                      {source && (
+                        <>
+                          <Badge>{t(kinds[source.kind])}</Badge>
+                          <Light small tone={source.writable ? 'ok' : 'muted'}>
+                            {t(source.writable ? 'config.editable' : 'config.readOnly')}
+                          </Light>
+                          <span className="rp-label">
+                            {t('config.sourceFacts', {
+                              lines: n(source.line_count),
+                              size: formatBytes(String(source.bytes)),
+                              time: localTime(source.loaded_at, locale)
+                            })}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {source && config.data && (
+                    <SourceCard
+                      key={source.id}
+                      source={source}
+                      diagnostics={config.data.diagnostics.filter(d => d.source_id === source.id)}
+                      canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
+                      canWrite={resources?.config.writable === true && source.writable}
+                      editor={editor}
+                      groups={groupList}
+                      focusLine={focusLine}
+                    />
+                  )}
+                </>
+              )
+            },
+            {
+              id: 'validate',
+              label: t('config.tabValidate'),
+              content: (
+                <ValidateTab
+                  config={config.data}
+                  editor={editor}
+                  canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
+                  open={(sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))}
+                />
+              )
+            }
+          ]}
         />
       )}
     </div>
@@ -268,5 +309,118 @@ function SourceCard({
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
     </section>
+  );
+}
+
+// Every diagnostic in one table: what the engine kept for the accepted configuration, or the last dry run
+// over every source with text. A row opens its source at the line. Mirrors the archived validation page,
+// minus the disk-versus-running diff the contract cannot describe.
+function ValidateTab({
+  config,
+  editor,
+  canValidate,
+  open
+}: {
+  config: {sources: ConfigSource[]; diagnostics: ConfigDiagnostic[]; generation_id: string};
+  editor: ReturnType<typeof useConfigEditor>;
+  canValidate: boolean;
+  open: (sourceId: string, line: number | null) => void;
+}) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
+  const [level, setLevel] = useState('all');
+  const [run, setRun] = useState<ConfigValidationResult | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const rows = useMemo(() => (run?.diagnostics ?? config.diagnostics).map((item, index) => ({...item, id: String(index)})), [run, config.diagnostics]);
+  const count = (which: ConfigDiagnostic['level']) => rows.filter(item => item.level === which).length;
+  const errors = count('error');
+  const warnings = count('warning');
+  const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
+  const pathOf = (id: string) =>
+    config.sources
+      .find(item => item.id === id)
+      ?.path.split('/')
+      .pop() ?? id;
+  const cur = rows.find(item => item.id === selected) ?? null;
+  // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
+  const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));
+  return (
+    <>
+      <div className="rp-toolbar">
+        <Light small tone={errors ? 'err' : warnings ? 'warn' : 'ok'}>
+          {errors
+            ? t('config.failed', {errors: n(errors), warnings: n(warnings)})
+            : warnings
+              ? t('config.passedWarnings', {n: n(warnings)})
+              : t('config.passed')}
+        </Light>
+        <span className="rp-label">
+          {run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id})}
+        </span>
+        <span className="rp-grow" />
+        {canValidate && (
+          <Button
+            small
+            isPending={editor.busy === 'validate'}
+            isDisabled={!!editor.busy || candidates.length === 0}
+            tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
+            onPress={() => {
+              void editor.validate({sources: candidates.map(item => ({id: item.id, path: item.path, content: item.content!})), mode: 'full'}).then(result => {
+                if (result) setRun(result);
+              });
+            }}
+          >
+            <Refresh />
+            {t('config.revalidate')}
+          </Button>
+        )}
+      </div>
+      <span className="rp-label">{t('config.validateNote')}</span>
+      <Segmented
+        label={t('config.level')}
+        value={level}
+        onChange={setLevel}
+        items={[
+          ['all', t('config.levelAll', {n: n(rows.length)})],
+          ['error', t('config.levelErrors', {n: n(errors)})],
+          ['warning', t('config.levelWarnings', {n: n(warnings)})],
+          ['info', t('config.levelInfo', {n: n(count('info'))})]
+        ]}
+      />
+      <DataTable
+        label={t('config.diagnostics')}
+        rows={shown}
+        height={360}
+        selected={selected}
+        onSelect={setSelected}
+        empty={t('config.noDiagnostics')}
+        cols={[
+          {id: 'level', label: t('config.levelLabel'), minWidth: 96, grow: 0},
+          {id: 'where', label: t('config.where'), minWidth: 150, grow: 0},
+          {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true},
+          {id: 'code', label: t('config.code'), minWidth: 140, drop: 1}
+        ]}
+        render={item => [
+          <Light small tone={tones[item.level]}>
+            {t(levels[item.level])}
+          </Light>,
+          <span className="rp-code">{item.line !== null ? `${pathOf(item.source_id)}:${item.line}` : pathOf(item.source_id)}</span>,
+          <TextTooltip>{item.message}</TextTooltip>,
+          <span className="rp-code">{item.code}</span>
+        ]}
+      />
+      {cur && (
+        <div className="rp-cluster">
+          <InlineAlert tone={tones[cur.level]} title={cur.line !== null ? t('config.atLine', {line: n(cur.line), message: cur.message}) : cur.message}>
+            {pathOf(cur.source_id)} · {cur.code}
+            {cur.column !== null && cur.line !== null ? ` · ${t('config.column', {n: n(cur.column)})}` : ''}
+          </InlineAlert>
+          <Button small onPress={() => open(cur.source_id, cur.line)}>
+            {t('config.openSource')}
+          </Button>
+        </div>
+      )}
+    </>
   );
 }

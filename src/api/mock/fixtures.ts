@@ -13,6 +13,7 @@ import type {
   RuntimeOutbounds,
   RuntimeSettings,
   ConfigSource,
+  ConfigDiagnostic,
   TrafficHistory,
   Version
 } from '../model';
@@ -675,6 +676,37 @@ const configSubscription = `'香港 01 · IPLC': 'vless://<redacted>'
 const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
 skylink { filter: subtag(sub-c) }
 `;
+// Diagnostics the engine kept when it accepted the configuration: nothing fatal, the kind of thing a person
+// wants to know about before the next reload.
+export const configNotes: ConfigDiagnostic[] = [
+  {
+    level: 'warning',
+    source_id: 'src-main',
+    line: 5,
+    column: 3,
+    span: null,
+    code: 'interface_auto',
+    message: 'wan_interface: auto is resolved at start; a changed default route needs a reload'
+  },
+  {
+    level: 'warning',
+    source_id: 'src-rules',
+    line: 3,
+    column: 1,
+    span: null,
+    code: 'mac_unseen',
+    message: 'mac(aa:bb:cc:dd:ee:ff) has not been seen on the LAN since start'
+  },
+  {
+    level: 'info',
+    source_id: 'src-sub-c',
+    line: 1,
+    column: null,
+    span: null,
+    code: 'subscription_cached',
+    message: 'Subscription fetched 30 minutes ago; nodes come from the cache'
+  }
+];
 export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},

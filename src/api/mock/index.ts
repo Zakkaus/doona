@@ -584,7 +584,10 @@ export function createMockApi(): Api {
         generation_id: generation,
         revision: generation,
         sources: list.map(source => (capabilities.resources.config.content ? {...source} : {...source, content: undefined})),
-        diagnostics: list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
+        diagnostics: [
+          ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
+          ...fixtures.configNotes
+        ],
         secrets_redacted: true
       };
     },
