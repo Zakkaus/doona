@@ -362,11 +362,8 @@ function SourceCard({
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
               <Light small tone={tones[item.level]}>
-                {t(levels[item.level])}
+                {item.line !== null ? t('config.atLine', {line: n(item.line), message: item.message}) : item.message}
               </Light>
-              <span className="rp-code">{item.line !== null ? t('config.lineRef', {line: n(item.line)}) : '—'}</span>
-              <span>{item.message}</span>
-              <span className="rp-label">{item.code}</span>
             </div>
           ))}
         </div>
@@ -491,12 +488,8 @@ function ValidateTab({
       {cur && (
         <div className="rp-cluster">
           <Light small tone={tones[cur.level]}>
-            {t(levels[cur.level])}
+            {cur.line !== null ? t('config.atFile', {file: pathOf(cur.source_id), line: n(cur.line), message: cur.message}) : cur.message}
           </Light>
-          <span className="rp-code">
-            {cur.line !== null ? `${pathOf(cur.source_id)}:${cur.line}${cur.column !== null ? ':' + cur.column : ''}` : pathOf(cur.source_id)}
-          </span>
-          <span>{cur.message}</span>
           <Button small onPress={() => open(cur.source_id, cur.line)}>
             {t('config.openSource')}
           </Button>
