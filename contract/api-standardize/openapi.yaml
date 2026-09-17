@@ -1174,6 +1174,7 @@ paths:
                           error: null
                     capabilities:
                       can_select: false
+                      can_override: true
                       supports_nested_groups: true
                       mutable_config:
                         - policy
@@ -1320,7 +1321,7 @@ paths:
       - $ref: '#/components/parameters/GroupId'
     put:
       operationId: selectGroupMember
-      summary: Replace a supported runtime group selection
+      summary: Replace a selector's choice, or pin a member on an automatic group
       x-permission: control
       security:
         - bearerAuth: []
@@ -1376,6 +1377,60 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/Unprocessable'
+    delete:
+      operationId: clearGroupOverride
+      summary: Clear a pinned member so the automatic policy chooses again
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: network
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - tcp
+              - udp
+              - both
+            default: both
+      responses:
+        '200':
+          description: Selection after the override is cleared; unchanged when none stood
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupSelectionResult'
+              examples:
+                automatic_again:
+                  value:
+                    group_id: group-auto
+                    member_id: node-sg-01
+                    resolved_leaf_node_id: node-sg-01
+                    network: both
+                    source: policy
+                    selection_revision: '9'
+                    connections_interrupted: false
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/probes:
     post:
       operationId: createProbe
@@ -5866,6 +5921,7 @@ components:
         source:
           type: string
           minLength: 1
+          description: How the member was chosen. `override` while a pinned member stands in for an automatic policy; other values (health, runtime, policy, ...) are the engine's own.
     GroupRanking:
       type: object
       required:
@@ -5947,12 +6003,17 @@ components:
       type: object
       required:
         - can_select
+        - can_override
         - supports_nested_groups
         - mutable_config
         - probe_transports
       properties:
         can_select:
           type: boolean
+          description: The policy is a manual selector; PUT selection replaces its choice.
+        can_override:
+          type: boolean
+          description: The policy chooses automatically but accepts a pinned member; PUT selection pins, DELETE selection returns to automatic.
         supports_nested_groups:
           type: boolean
         mutable_config:
@@ -6316,7 +6377,11 @@ components:
             - both
         source:
           type: string
-          const: runtime
+          enum:
+            - runtime
+            - override
+            - policy
+          description: runtime for a selector, override while a pinned member stands, policy once the automatic choice is back.
         selection_revision:
           type: string
           minLength: 1

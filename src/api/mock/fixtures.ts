@@ -308,6 +308,13 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
   };
 }
+// What an automatic policy would pick on its own: the healthy member with the lowest latency, else the first.
+export function policyPick(group: Group): string {
+  const ranked = group.runtime.health
+    .filter(h => h.state === 'healthy' && h.transport === 'tcp' && h.latency_ms != null)
+    .sort((a, b) => a.latency_ms! - b.latency_ms!);
+  return ranked[0]?.member_id ?? group.members[0].id;
+}
 function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
   for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
@@ -338,6 +345,7 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
     },
     capabilities: {
       can_select: kind === 'selector',
+      can_override: kind !== 'selector',
       supports_nested_groups: true,
       mutable_config: ['policy', 'default_member_id', 'check_interval', 'tolerance', 'interrupt_connections'],
       probe_transports: ['tcp', 'udp']

@@ -202,7 +202,14 @@ it('selects both networks with an independent revision and preserves configurati
   const second = await api.selectGroup('proxy', {member_id: 'hk-02', network: 'udp'});
   expect(BigInt(second.selection_revision)).toBeGreaterThan(BigInt(first.selection_revision));
   expect((await api.group('proxy')).runtime.selection).toMatchObject({tcp: {member_id: 'sg-01'}, udp: {member_id: 'hk-02'}});
-  await expect(api.selectGroup('gaming', {member_id: 'jp-01', network: 'both'})).rejects.toMatchObject({code: 'selection_not_supported'});
+  // An automatic group takes the pick as a pin and hands it back on clear.
+  const pinned = await api.selectGroup('gaming', {member_id: 'jp-01', network: 'both'});
+  expect(pinned).toMatchObject({member_id: 'jp-01', source: 'override'});
+  expect((await api.group('gaming')).runtime.selection.tcp).toMatchObject({member_id: 'jp-01', source: 'override'});
+  const released = await api.clearGroupOverride('gaming', 'both');
+  expect(released).toMatchObject({member_id: 'hk-02', source: 'policy'});
+  expect((await api.group('gaming')).runtime.selection.udp).toMatchObject({member_id: 'hk-02', source: 'policy'});
+  await expect(api.clearGroupOverride('proxy', 'both')).rejects.toMatchObject({code: 'state_conflict'});
   await expect(api.selectGroup('proxy', {member_id: 'missing', network: 'both'})).rejects.toMatchObject({status: 404});
 });
 

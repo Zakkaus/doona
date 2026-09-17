@@ -46,6 +46,9 @@ function PolicyCard({
   const udp = g?.runtime.selection.udp?.member_id;
   const selected = control.network === 'tcp' ? tcp : control.network === 'udp' ? udp : tcp === udp ? tcp : undefined;
   const selectable = g?.policy.kind === 'selector' && g.capabilities.can_select;
+  // An automatic policy that accepts a pin: tiles pick like a selector, and a pinned pick can be released.
+  const overridable = !selectable && (g?.capabilities.can_override ?? false);
+  const pinned = overridable && [g?.runtime.selection.tcp, g?.runtime.selection.udp].some(item => item?.source === 'override');
   const interruptable = g?.capabilities.mutable_config.includes('interrupt_connections') ?? false;
   const healthy = members.filter(m => m.health?.state === 'healthy').length;
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
@@ -101,7 +104,7 @@ function PolicyCard({
             />
           </Disclosure>
           <div className="rp-toolbar">
-            {selectable && (
+            {(selectable || overridable) && (
               <Segmented
                 label={t('policy.network', {name: g.name})}
                 value={control.network}
@@ -114,6 +117,25 @@ function PolicyCard({
                   ['udp', t('ui.udp')]
                 ]}
               />
+            )}
+            {overridable && (
+              <Light small tone={pinned ? 'info' : 'neutral'}>
+                {t(pinned ? 'policy.overridden' : 'policy.automatic')}
+              </Light>
+            )}
+            {pinned && (
+              <Button
+                small
+                isPending={control.busy === 'selection'}
+                isDisabled={!!control.busy}
+                onPress={() => {
+                  void control.clearOverride().then(result => {
+                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: result.member_id}));
+                  });
+                }}
+              >
+                {t('policy.releaseOverride')}
+              </Button>
             )}
             {interruptable && (
               <Switch
@@ -136,13 +158,20 @@ function PolicyCard({
             cur={selected}
             isDisabled={!!control.busy}
             onSelect={
-              selectable
+              selectable || overridable
                 ? memberId => {
                     void control.select(memberId).then(result => {
                       if (result)
                         toast(
                           'positive',
-                          t(result.connections_interrupted ? 'policy.selectedInterrupted' : 'policy.selectedKept', {name: g.name, member: result.member_id})
+                          t(
+                            result.source === 'override'
+                              ? 'policy.pinned'
+                              : result.connections_interrupted
+                                ? 'policy.selectedInterrupted'
+                                : 'policy.selectedKept',
+                            {name: g.name, member: result.member_id}
+                          )
                         );
                     });
                   }

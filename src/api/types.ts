@@ -317,10 +317,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Replace a supported runtime group selection */
+        /** Replace a selector's choice, or pin a member on an automatic group */
         put: operations["selectGroupMember"];
         post?: never;
-        delete?: never;
+        /** Clear a pinned member so the automatic policy chooses again */
+        delete: operations["clearGroupOverride"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1346,6 +1347,7 @@ export interface components {
         GroupSelection: {
             member_id: string;
             resolved_leaf_node_id?: string | null;
+            /** @description How the member was chosen. `override` while a pinned member stands in for an automatic policy; other values (health, runtime, policy, ...) are the engine's own. */
             source: string;
         };
         GroupRanking: {
@@ -1369,7 +1371,10 @@ export interface components {
             health: components["schemas"]["GroupHealthObservation"][];
         };
         GroupCapabilities: {
+            /** @description The policy is a manual selector; PUT selection replaces its choice. */
             can_select: boolean;
+            /** @description The policy chooses automatically but accepts a pinned member; PUT selection pins, DELETE selection returns to automatic. */
+            can_override: boolean;
             supports_nested_groups: boolean;
             mutable_config: ("policy" | "default_member_id" | "final_outbound" | "check_url" | "check_interval" | "tolerance" | "idle_timeout" | "interrupt_connections")[];
             probe_transports: components["schemas"]["Transport"][];
@@ -1479,8 +1484,11 @@ export interface components {
             resolved_leaf_node_id?: string | null;
             /** @enum {string} */
             network: "tcp" | "udp" | "both";
-            /** @constant */
-            source: "runtime";
+            /**
+             * @description runtime for a selector, override while a pinned member stands, policy once the automatic choice is back.
+             * @enum {string}
+             */
+            source: "runtime" | "override" | "policy";
             selection_revision: string;
             connections_interrupted: boolean;
         };
@@ -3188,6 +3196,38 @@ export interface operations {
             409: components["responses"]["Conflict"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
+        };
+    };
+    clearGroupOverride: {
+        parameters: {
+            query?: {
+                network?: "tcp" | "udp" | "both";
+            };
+            header?: never;
+            path: {
+                /** @example group-proxy */
+                groupId: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Selection after the override is cleared; unchanged when none stood */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupSelectionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     createProbe: {
