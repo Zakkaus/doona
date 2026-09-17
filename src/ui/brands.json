@@ -192,14 +192,14 @@
   {
     "id": "apple",
     "label": "Apple",
-    "source": "qure-color/Apple",
+    "source": "qure-color/Apple_2",
     "geosite": ["apple", "apple-pki"],
     "domain": ["apple.com", "icloud.com"]
   },
   {
     "id": "apple-developer",
     "label": "Apple Developer",
-    "source": "qure-color/Apple",
+    "source": "qure-color/Apple_2",
     "geosite": ["apple-dev"],
     "domain": ["developer.apple.com"]
   },
@@ -3034,7 +3034,7 @@
   {
     "id": "youtube",
     "label": "YouTube",
-    "source": "qure-color/YouTube",
+    "source": "favicon/youtube.com",
     "geosite": ["youtube"],
     "domain": ["youtube.com", "youtu.be", "ytimg.com", "googlevideo.com"],
     "keyword": ["googlevideo"]
