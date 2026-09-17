@@ -12,7 +12,7 @@ import {
 } from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap, indentWithTab, toggleComment} from '@codemirror/commands';
 import {bracketMatching, syntaxHighlighting, HighlightStyle, foldGutter, foldKeymap, indentUnit, indentOnInput, indentService} from '@codemirror/language';
-import {lintGutter, setDiagnostics, type Diagnostic} from '@codemirror/lint';
+import {setDiagnostics, type Diagnostic} from '@codemirror/lint';
 import {highlightSelectionMatches, searchKeymap, gotoLine} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
 import {dae} from './dae';
@@ -43,13 +43,7 @@ const theme = EditorView.theme({
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
   '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-pine) 20%, transparent)', outline: 'none'},
   '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 25%, transparent)'},
-  // Gutter markers are the kit's status dots; the hover tooltip is the kit's tooltip.
-  '.cm-gutter-lint': {width: '16px'},
-  '.cm-gutter-lint .cm-gutterElement': {padding: '0'},
-  '.cm-lint-marker': {content: 'none', width: '8px', height: '8px', margin: '6px 4px', borderRadius: '50%', backgroundColor: 'var(--rp-muted)'},
-  '.cm-lint-marker-error': {backgroundColor: 'var(--rp-love)'},
-  '.cm-lint-marker-warning': {backgroundColor: 'var(--rp-gold)'},
-  '.cm-lint-marker-info': {backgroundColor: 'var(--rp-foam)'},
+  // Diagnostics are underlines in the text and the list above the editor; no gutter icons. The hover tooltip is the kit's.
   '.cm-tooltip.cm-tooltip-lint': {backgroundColor: 'var(--rp-text)', color: 'var(--rp-on-text)', border: 'none', borderRadius: '6px', padding: '2px 0'},
   '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', fontFamily: 'inherit'},
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
@@ -146,8 +140,6 @@ export function CodeEditor({
       state: EditorState.create({
         doc: value,
         extensions: [
-          // Gutter order is extension order: the diagnostic dot sits left of the line number.
-          lintGutter(),
           lineNumbers(),
           foldGutter(),
           highlightActiveLineGutter(),
