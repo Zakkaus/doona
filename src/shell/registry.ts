@@ -6,6 +6,7 @@ import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
 import ListBulleted from '../ui/icons/ListBulleted';
+import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
 import {Activity} from '../features/activity/Activity';
@@ -17,6 +18,7 @@ const Overview = lazy(() => import('../features/overview/Overview').then(m => ({
 const Connections = lazy(() => import('../features/connections/Connections').then(m => ({default: m.Connections})));
 const Policies = lazy(() => import('../features/policies/Policies').then(m => ({default: m.Policies})));
 const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
+const Config = lazy(() => import('../features/config/Config').then(m => ({default: m.Config})));
 const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
 const Events = lazy(() => import('../features/events/Events').then(m => ({default: m.Events})));
 
@@ -71,6 +73,14 @@ export const features: Feature[] = [
     nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
     requires: {resources: ['routing_trace', 'flows']}
+  },
+  {
+    id: 'config',
+    path: 'config',
+    shortcut: 'g',
+    nav: {group: 'grp.proxy', titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
+    Page: Config,
+    requires: {resources: ['config']}
   },
   {
     id: 'events',

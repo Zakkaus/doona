@@ -26,6 +26,7 @@ export function Events() {
         </Light>
         {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
         <span className="rp-label">{t('event.limit')}</span>
+        <span className="rp-grow" />
         <Button
           small
           isDisabled={!shown.length}

@@ -207,10 +207,16 @@ function observedValue(name, bodies) {
 function observedPath(path, snapshots) {
   let missing;
   const filled = path.replace(/\{([^}]+)\}/g, (placeholder, name, offset) => {
-    const parent = path.slice(0, offset).replace(/\/$/, '');
-    const bodies = snapshots.get(parent) ?? [];
-    const arrays = bodies.flatMap(body => (Array.isArray(body) ? [body] : Object.values(body ?? {}).filter(Array.isArray)));
-    const item = arrays.flat().find(value => value && typeof value === 'object' && typeof (value[name] ?? value.id) === 'string');
+    // The list that names the id is the nearest ancestor that was fetched: /groups for /groups/{groupId},
+    // /config for /config/sources/{source_id}.
+    let parent = path.slice(0, offset).replace(/\/$/, '');
+    let item;
+    while (parent.includes('/') && item === undefined) {
+      const bodies = snapshots.get(parent) ?? [];
+      const arrays = bodies.flatMap(body => (Array.isArray(body) ? [body] : Object.values(body ?? {}).filter(Array.isArray)));
+      item = arrays.flat().find(value => value && typeof value === 'object' && typeof (value[name] ?? value.id) === 'string');
+      parent = parent.slice(0, parent.lastIndexOf('/'));
+    }
     if (!item) {
       missing = name;
       return placeholder;

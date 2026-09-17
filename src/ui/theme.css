@@ -1975,7 +1975,7 @@ input {
   overflow-wrap: anywhere;
 }
 .rp-code {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: 13px;
 }
 .rp-kv {
@@ -2812,6 +2812,18 @@ button.rp-node[data-focus-visible] {
   overflow-wrap: anywhere;
   font: inherit;
   font-family: monospace;
+}
+
+/* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. */
+.rp-editor {
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-editor .cm-editor {
+  max-width: 100%;
+}
+.rp-editor.compact .cm-scroller {
+  max-height: 40vh;
 }
 
 .rp-provenance {

@@ -16,6 +16,7 @@ import * as fixtures from './fixtures';
 import {ipLiteral, sourceIp} from '../selectors';
 import {patchGroupConfig, probeResult, resolveLeaf} from './control';
 import {routingTrace} from './routing';
+import {diagnose, groupsIn, stored, validate} from './config';
 
 function page<T>(items: T[], cursor?: string, limit = 1000) {
   const start = cursor ? Number(cursor) : 0;
@@ -64,6 +65,12 @@ export function createMockApi(): Api {
   } catch {}
   let capabilities = fixtures.capabilities;
   const settings = structuredClone(fixtures.runtimeSettings);
+  // Accepted configuration sources; hashes are filled in on first read and refreshed on replacement.
+  let sources: Awaited<ReturnType<typeof stored>>[] | null = null;
+  const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
+  let configRevision = 40;
+  // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
+  const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   try {
     if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
   } catch {}
@@ -178,6 +185,8 @@ export function createMockApi(): Api {
           capabilities: '/api/v1/capabilities',
           runtime: '/api/v1/runtime',
           runtime_outbounds: '/api/v1/runtime/outbounds',
+          config: '/api/v1/config',
+          config_validate: '/api/v1/config/validate',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
           logs: '/api/v1/logs',
@@ -564,6 +573,66 @@ export function createMockApi(): Api {
         return;
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
+    },
+    config: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
+      const list = await loadSources();
+      const generation = String(configRevision);
+      const known = new Set(groups.map(g => g.name));
+      return {
+        generation_id: generation,
+        revision: generation,
+        sources: list.map(source => (capabilities.resources.config.content ? {...source} : {...source, content: undefined})),
+        diagnostics: [
+          ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
+          ...fixtures.configNotes
+        ],
+        secrets_redacted: true
+      };
+    },
+    configSource: async (sourceId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
+      const source = found(
+        (await loadSources()).find(item => item.id === sourceId),
+        'Configuration source'
+      );
+      return capabilities.resources.config.content ? {...source} : {...source, content: undefined};
+    },
+    validateConfig: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config_validate.available) throw new ApiError(404, 'capability_not_supported', 'Validation is unavailable');
+      if (!capabilities.resources.config_validate.modes?.includes(request.mode))
+        throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
+      return validate(request, String(configRevision), new Set(groups.map(g => g.name)));
+    },
+    // The editing contract in order: If-Match present and current, full validation clean, then the write and a reload.
+    replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
+      signal?.throwIfAborted();
+      const list = await loadSources();
+      const source = found(
+        list.find(item => item.id === sourceId),
+        'Configuration source'
+      );
+      if (!capabilities.resources.config.writable || !source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only');
+      if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
+      if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
+        throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
+      const main = sourceId === 'src-main' ? content : list[0].content;
+      const known = new Set([...groupsIn(main), ...groups.map(g => g.name)]);
+      const diagnostics = list.filter(ruleFile).flatMap(item => diagnose(item.id, item.id === sourceId ? content : item.content, known, 'full'));
+      if (diagnostics.some(item => item.level === 'error'))
+        throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics});
+      const next = await stored({...source, content, loaded_at: new Date().toISOString()});
+      Object.assign(source, next);
+      return enqueue('reload', () => {
+        configRevision += 1;
+        const generation = String(configRevision);
+        runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
+        publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
     },
     runtimeSettings: async signal => {
       signal?.throwIfAborted();

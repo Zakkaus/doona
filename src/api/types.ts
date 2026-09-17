@@ -55,6 +55,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the effective configuration
+         * @description Requires resources.config.available. Returns one coherent snapshot of the
+         *     accepted sources and retained diagnostics for generation_id and revision,
+         *     not a fresh read of files that may have changed since loading. The source
+         *     set is complete and bounded by resources.config.max_sources; never truncate it.
+         *     Omit source content unless resources.config.content is true. Apply visibility
+         *     filters to paths, content and diagnostics; observe never grants raw secrets.
+         */
+        get: operations["getConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate candidate configuration without applying it
+         * @description Requires resources.config_validate.available and control because the body
+         *     may contain secrets. Syntax mode parses only submitted text. Full mode also
+         *     checks semantics and resolves includes/subscriptions from submitted sources
+         *     or adapter-authorized local files and cached data, never from the network.
+         *     A missing or inaccessible dependency produces an error diagnostic, not a
+         *     successful partial validation. Neither mode writes files, refreshes caches,
+         *     applies configuration, publishes a generation, or starts an operation.
+         *     Return 200 for completed validation, including invalid candidates. Malformed
+         *     JSON/request shape or duplicate effective source IDs returns 400; an
+         *     unadvertised mode returns 422 unsupported_value. Enforce max_bytes over the
+         *     sum of UTF-8 source bytes and max_sources over the source count, including
+         *     locally resolved dependencies in full mode; exceeding either returns 413.
+         *     The shared max_json_body_bytes limit applies independently to the HTTP body.
+         *     Never echo candidate text, secrets, or private paths in diagnostics or errors.
+         */
+        post: operations["validateConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Opaque ID of an accepted source, never a path supplied by the caller.
+                 * @example source-main
+                 */
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one accepted configuration source
+         * @description Requires resources.config.available. Returns the same ConfigSource as
+         *     GET /config, not a fresh read of disk. Include optional content only when
+         *     resources.config.content is true; apply the same path and secret redaction.
+         *     Unknown source IDs return 404 resource_not_found. Redacted text must never
+         *     be saved as a replacement; compare its UTF-8 SHA-256 with content_sha256
+         *     before using returned content as an editing representation.
+         */
+        get: operations["getConfigSource"];
+        /**
+         * Replace one configuration source and reload
+         * @description Requires control, resources.config.available, resources.config.writable,
+         *     and writable: true on the accepted source. A disabled write switch or a
+         *     read-only source returns 403 permission_denied. Generated and subscription
+         *     sources are never writable. Unknown IDs return 404 resource_not_found.
+         *     The body replaces the complete source with UTF-8 dae text; no partial
+         *     patches, caller-supplied file paths, or multi-source writes are accepted.
+         *     Enforce resources.config.max_bytes on replacement UTF-8 bytes and the
+         *     shared limits.max_json_body_bytes independently; excess returns 413.
+         *     Require If-Match before validating or writing: missing returns 428
+         *     precondition_required; a hash different from the current on-disk bytes
+         *     returns 412 stale_revision, even if it matches the accepted snapshot.
+         *     Validate the resulting source set with the same full-mode checks as
+         *     POST /config/validate, substituting the replacement for this source.
+         *     Resolve dependencies only from submitted text, authorized local files,
+         *     and cached data; never use the network or refresh caches during validation.
+         *     Missing or inaccessible dependencies produce error diagnostics.
+         *     If any diagnostic has level error, return 422 unsupported_value with
+         *     error.details.diagnostics using ConfigDiagnostic; never write any file
+         *     or start a reload. Warnings and info alone do not prevent a write.
+         *     Otherwise atomically replace the file using a temporary file in the same
+         *     directory and rename, preserving its mode. Serialize the hash check,
+         *     validation, and replacement against concurrent API writes; recheck the
+         *     on-disk hash before replacement and return 412 if it changed.
+         *     After the write, start a reload operation and return 202 OperationAccepted
+         *     with kind reload, Location, and Retry-After. This is not reload completion.
+         *     A successful reload publishes generation.changed when events are available;
+         *     GET /config then shows the new accepted content_sha256. If reload fails,
+         *     the previous generation remains active; the file write is not rolled back.
+         *     Idempotency-Key follows the operation retention rules: scope it to caller,
+         *     method, and path in this instance. A retained same-body replay returns the
+         *     original operation without another write or hash check; a different body
+         *     returns 409 idempotency_conflict.
+         */
+        put: operations["replaceConfigSource"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runtime": {
         parameters: {
             query?: never;
@@ -826,6 +950,10 @@ export interface components {
                 /** @constant */
                 capabilities: "/api/v1/capabilities";
                 /** @constant */
+                config: "/api/v1/config";
+                /** @constant */
+                config_validate: "/api/v1/config/validate";
+                /** @constant */
                 runtime: "/api/v1/runtime";
                 /** @constant */
                 runtime_outbounds: "/api/v1/runtime/outbounds";
@@ -874,6 +1002,34 @@ export interface components {
                 max_json_body_bytes: number;
             };
             resources: {
+                config: {
+                    available: boolean;
+                    /**
+                     * @description Visibility flag permitting optional source text; not permission to disclose secrets. False by default.
+                     * @default false
+                     */
+                    content: boolean;
+                    /**
+                     * @description Server-wide switch for replacing accepted sources under control;
+                     *     individual sources may still be read-only. True requires full
+                     *     validation and reload operations, including resources.reload.available
+                     *     and resources.operations.available. Independent of content visibility
+                     *     and the optional dry-run endpoint.
+                     */
+                    writable?: boolean;
+                    /** @description Maximum UTF-8 bytes in replacement content; the shared JSON body ceiling applies independently. */
+                    max_bytes?: components["schemas"]["SafeUInt"];
+                    /** @description Maximum complete effective source set the adapter can expose; never silently truncate it. */
+                    max_sources?: components["schemas"]["SafeUInt"];
+                };
+                config_validate: {
+                    available: boolean;
+                    modes?: components["schemas"]["ConfigValidationMode"][];
+                    /** @description Maximum total UTF-8 source bytes, including local dependencies in full mode; the shared JSON body ceiling also applies. */
+                    max_bytes?: components["schemas"]["SafeUInt"];
+                    /** @description Maximum sources per validation, including local dependencies in full mode. */
+                    max_sources?: components["schemas"]["SafeUInt"];
+                };
                 runtime: components["schemas"]["AvailableResource"];
                 runtime_memory: {
                     available: boolean;
@@ -999,6 +1155,96 @@ export interface components {
                 suspend: components["schemas"]["AvailableResource"];
                 resume: components["schemas"]["AvailableResource"];
             };
+        };
+        EffectiveConfig: {
+            /** @description Running generation whose accepted sources and diagnostics are returned. */
+            generation_id: string;
+            /** @description Opaque configuration revision used by Runtime.generation.config_revision and GroupSummary.config_revision; preserve without numeric parsing. */
+            revision: string;
+            sources: components["schemas"]["ConfigSource"][];
+            diagnostics: components["schemas"]["ConfigDiagnostic"][];
+            /** @description True when content is withheld or paths, text, or diagnostic messages are redacted under visibility policy. */
+            secrets_redacted: boolean;
+        };
+        ConfigSource: {
+            /** @description Unique opaque source ID within this configuration snapshot; never a credential-bearing path or URL. */
+            id: string;
+            /** @description Display path only, replaced with <redacted> when hidden by visibility policy; not a file-access capability. */
+            path: string;
+            /** @enum {string} */
+            kind: "main" | "include" | "subscription" | "generated";
+            /** @description Lowercase SHA-256 of the accepted source bytes before redaction; not necessarily the digest of displayed content. */
+            content_sha256: string;
+            /** @description Accepted source size in bytes before redaction. */
+            bytes: components["schemas"]["SafeUInt"];
+            /**
+             * @description True only when server-wide editing is enabled and this source permits
+             *     replacement by a control caller. False for engine-written includes,
+             *     generated sources, and subscriptions; observe alone never grants writes.
+             */
+            writable: boolean;
+            /** @description Time these source bytes were accepted, not the current file modification time. */
+            loaded_at: components["schemas"]["Timestamp"];
+            /** @description Optional dae text, only when resources.config.content is true; still subject to secret redaction. Use for editing only if its UTF-8 SHA-256 matches content_sha256. */
+            content?: string;
+            /** @description Lines in the accepted source before redaction; empty text has zero lines, and a final newline does not add an empty line. */
+            line_count: components["schemas"]["SafeUInt"];
+        };
+        /**
+         * @description Safe diagnostic for an accepted or candidate source, never raw parser output.
+         *     Coordinates refer to the original source before redaction. Use null for
+         *     unknown locations; do not fabricate positions from setting names.
+         */
+        ConfigDiagnostic: {
+            /** @enum {string} */
+            level: "error" | "warning" | "info";
+            /** @description Source ID in the effective snapshot, validation request, or source set being validated for replacement. */
+            source_id: string;
+            /** @description One-based line, or null if unknown. */
+            line: components["schemas"]["NullableSafeUInt"];
+            /** @description One-based UTF-8 byte column, or null if unknown; not a character or UTF-16 offset. */
+            column: components["schemas"]["NullableSafeUInt"];
+            span: null | components["schemas"]["ConfigDiagnosticSpan"];
+            /** @description Adapter-defined diagnostic code, independent of the HTTP ErrorCode catalogue. */
+            code: string;
+            /** @description Safe operator-facing description; never source excerpts, credentials, private paths, or raw engine errors. */
+            message: string;
+        };
+        /**
+         * @description One-based lines and UTF-8 byte columns; start inclusive, end exclusive.
+         *     The end must not precede the start. A zero-width span is permitted.
+         *     When line and column are known, they equal the span start.
+         */
+        ConfigDiagnosticSpan: {
+            start_line: components["schemas"]["SafeUInt"];
+            start_column: components["schemas"]["SafeUInt"];
+            end_line: components["schemas"]["SafeUInt"];
+            end_column: components["schemas"]["SafeUInt"];
+        };
+        /** @enum {string} */
+        ConfigValidationMode: "syntax" | "full";
+        ConfigValidationSource: {
+            /** @description Request-local diagnostic ID. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs. */
+            id?: string;
+            /** @description Optional engine-native source name and include-resolution base within the adapter's authorized local roots; never grants arbitrary file access. */
+            path?: string;
+            /** @description Candidate engine-native source text; empty text is a candidate, not a malformed request. */
+            content: string;
+        };
+        ConfigValidationRequest: {
+            /** @description Ordered candidate sources; the first is the main source. Supplied content takes precedence over local files at the same resolved path. */
+            sources: components["schemas"]["ConfigValidationSource"][];
+            mode: components["schemas"]["ConfigValidationMode"];
+        };
+        ConfigValidationResult: {
+            /** @description True exactly when validation completed without error diagnostics; warnings and info do not invalidate the candidate. No promise that a later apply will succeed. */
+            valid: boolean;
+            /** @description Source IDs identify submitted sources. Attribute a dependency failure to the referring submitted source and its include/subscription location, not an undisclosed local path. */
+            diagnostics: components["schemas"]["ConfigDiagnostic"][];
+            /** @description Running generation captured when validation starts, for context only; not a new candidate generation or an apply precondition. */
+            generation_id: string;
+            /** @description Time validation completed. */
+            validated_at: components["schemas"]["Timestamp"];
         };
         ProbeLimits: {
             max_members_per_job: number;
@@ -2397,6 +2643,17 @@ export interface components {
         };
     };
     responses: {
+        /** @description Unknown source ID or unavailable configuration readback */
+        404: {
+            headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
         /** @description Operation accepted */
         OperationAccepted: {
             headers: {
@@ -2470,7 +2727,7 @@ export interface components {
             };
             content?: never;
         };
-        /** @description If-Match does not equal the current configuration revision */
+        /** @description If-Match does not equal the current configuration revision or on-disk source content hash */
         PreconditionFailed: {
             headers: {
                 [name: string]: unknown;
@@ -2491,7 +2748,7 @@ export interface components {
             };
             content?: never;
         };
-        /** @description Syntactically valid but unsupported field, value, or transition */
+        /** @description Unsupported field, value, or transition, or error diagnostics from configuration replacement validation */
         Unprocessable: {
             headers: {
                 [name: string]: unknown;
@@ -2670,6 +2927,344 @@ export interface operations {
                     "application/json": components["schemas"]["Capabilities"];
                 };
             };
+        };
+    };
+    getConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective configuration snapshot */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EffectiveConfig"];
+                };
+            };
+            /** @description Credentials are missing or invalid */
+            401: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated caller lacks observe permission */
+            403: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuration readback is unavailable */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Advertised request rate exceeded */
+            429: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description Completed dry-run validation; valid is not an apply guarantee */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigValidationResult"];
+                };
+            };
+            /** @description Malformed JSON, invalid request shape, or duplicate effective source IDs */
+            400: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Credentials are missing or invalid */
+            401: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated caller lacks control permission */
+            403: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuration validation is unavailable */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source bytes, source count, or JSON body exceeds an advertised limit */
+            413: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported request Content-Type */
+            415: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Requested mode is not advertised by resources.config_validate.modes */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Advertised request rate exceeded */
+            429: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getConfigSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Opaque ID of an accepted source, never a path supplied by the caller.
+                 * @example source-main
+                 */
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted source; content remains subject to visibility policy */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigSource"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Unknown source ID or unavailable configuration readback */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replaceConfigSource: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description One strong entity tag containing the source's content_sha256 from
+                 *     GET /config, enclosed in double quotes. Compare the digest with the
+                 *     current on-disk content, not the snapshot revision. Wildcards, weak
+                 *     tags, and tag lists are not accepted.
+                 * @example "d1f62f00c6da9ec33956e66b8cc3b4670f164556fc12453193904af23451dec1"
+                 */
+                "If-Match": string;
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /**
+                 * @description Opaque ID of an accepted source, never a path supplied by the caller.
+                 * @example source-main
+                 */
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Complete UTF-8 dae source text; empty text is validated, not rejected as malformed. */
+                    content: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source written atomically and reload accepted */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"] & {
+                        /** @constant */
+                        kind?: "reload";
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Control permission is absent, editing is disabled, or the source is read-only */
+            403: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            404: components["responses"]["404"];
+            409: components["responses"]["Conflict"];
+            /** @description If-Match does not match the current on-disk content hash; nothing is written */
+            412: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Full validation found error diagnostics; no file is written and no reload starts */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"] & {
+                        error?: {
+                            /** @constant */
+                            code?: "unsupported_value";
+                            details: {
+                                diagnostics: components["schemas"]["ConfigDiagnostic"][];
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description If-Match is required; nothing is written */
+            428: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
         };
     };
     getRuntime: {

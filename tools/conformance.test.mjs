@@ -109,7 +109,9 @@ describe('native API conformance', () => {
     expect(result.summary.exitCode).toBe(0);
     const observedPaths = Object.entries(contract.paths)
       .filter(([, item]) => item.get?.['x-permission'] === 'observe')
-      .map(([path]) => path.replace('{groupId}', 'group-proxy').replace('{flow_id}', 'flow-23').replace('{id}', 'provider-a'));
+      .map(([path]) =>
+        path.replace('{groupId}', 'group-proxy').replace('{flow_id}', 'flow-23').replace('{id}', 'provider-a').replace('{source_id}', 'source-main')
+      );
     expect(new Set(server.requests.map(request => request.path))).toEqual(new Set(['/api', '/api/v1/version', '/api/v1/capabilities', ...observedPaths]));
     expect(server.requests.slice(0, 3).map(request => request.path)).toEqual(['/api', '/api/v1/version', '/api/v1/capabilities']);
     expect(server.requests.every(request => request.method === 'GET' && request.headers.authorization === 'Bearer test-secret')).toBe(true);
@@ -179,8 +181,12 @@ describe('native API conformance', () => {
     const server = await serve({unauthorized: '/api/v1/runtime'});
     const result = await walk({baseUrl: server.baseUrl, skip: ['getDiscovery']});
     expect(failures(result.checks)).toEqual([]);
-    expect(server.requests.map(request => request.path)).toEqual(['/api', '/api/v1/version', '/api/v1/capabilities', '/api/v1/runtime']);
-    expect(result.checks.filter(check => check.status === 'SKIP').every(check => check.detail === 'needs token')).toBe(true);
+    // The contract lists /config before /runtime; the walk stops at the first 401.
+    expect(server.requests.map(request => request.path)).toEqual(['/api', '/api/v1/version', '/api/v1/capabilities', '/api/v1/config', '/api/v1/runtime']);
+    // validateConfig sits before /runtime in the contract and is a POST, skipped by design rather than for the token.
+    expect(
+      result.checks.filter(check => check.status === 'SKIP' && !check.detail.startsWith('SKIP by design')).every(check => check.detail === 'needs token')
+    ).toBe(true);
     expect(server.requests.every(request => request.headers.authorization === undefined)).toBe(true);
   });
 

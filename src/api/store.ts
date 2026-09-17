@@ -15,7 +15,7 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch
 } from './model';
-import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
+import type {ConfigValidationRequest, ConfigValidationResult, RoutingTraceRequest, RoutingTraceResponse} from './model';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -481,6 +481,44 @@ export function useRuntimeSettings(enabled = true) {
     }
   }
   return {...resource, data: saved && (!resource.data || saved.observed_at >= resource.data.observed_at) ? saved : resource.data, busy, save};
+}
+// The accepted configuration: sources, diagnostics and the running generation; refetched on generation.changed.
+export function useConfig(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['config'], fetch: signal => api.config(signal)}, {deps: [api], enabled, every: 0});
+}
+// Dry-run validation and single-source replacement. Saving follows the contract's editor flow: the server
+// validates in full before writing; a 422 comes back as an error whose details carry the diagnostics.
+export function useConfigEditor(refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<'validate' | 'save' | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  async function run<T>(kind: NonNullable<typeof busy>, action: () => Promise<T>): Promise<T | undefined> {
+    if (busy) return;
+    setBusy(kind);
+    setError(null);
+    try {
+      return await action();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason : new Error(String(reason)));
+      return undefined;
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {
+    busy,
+    error,
+    validate: (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> => run('validate', () => api.validateConfig(request)),
+    save: (sourceId: string, content: string, sha256: string) =>
+      run('save', async () => {
+        const accepted = await api.replaceConfigSource(sourceId, content, '"' + sha256 + '"');
+        const result = await api.pollOperation(accepted);
+        refetch();
+        if (result.status !== 'succeeded') throw new Error(result.error?.message ?? 'Reload failed');
+        return result;
+      })
+  };
 }
 export function useRuntimeMemory(enabled = true) {
   const api = getApi();
