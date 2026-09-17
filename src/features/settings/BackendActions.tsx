@@ -1,4 +1,15 @@
-import {useCapabilities, useConnections, useDnsFlush, useGeodata, useGroups, useProviderRefresh, useProviders, useRuntimeMode} from '../../api/store';
+import {
+  useCapabilities,
+  useConnectionClose,
+  useConnections,
+  useDnsFlush,
+  useGeodata,
+  useGroups,
+  useProviderRefresh,
+  useProviders,
+  useRuntime,
+  useRuntimeMode
+} from '../../api/store';
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
@@ -15,12 +26,15 @@ import {useState} from 'react';
 export function BackendActionsCard() {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const resources = useCapabilities().data?.resources;
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const runtime = useRuntime(!!resources?.runtime.available);
   const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available === true);
   const groups = useGroups();
   const providers = useProviders(resources?.providers.available !== false);
   const refresh = useProviderRefresh(providers.refetch);
   const connections = useConnections(undefined);
+  const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const geodata = useGeodata(resources?.geodata.available ?? false);
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -51,8 +65,9 @@ export function BackendActionsCard() {
         {t('settings.actions')}
       </h2>
       <span className="rp-label">{t('settings.actionsNote')}</span>
+      <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
-        <LifecycleActions />
+        <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
         {resources?.runtime_mode?.available && <ModeSwitch target={target} />}
       </div>
       <div className="rp-toolbar">
@@ -72,7 +87,7 @@ export function BackendActionsCard() {
             {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
           </Button>
         )}
-        {resources?.connections.can_close && <CloseAllButton ids={live} refetch={connections.refetch} />}
+        {resources?.connections.can_close && <CloseAllButton ids={live} closing={closing} />}
         {resources?.geodata.can_update && (
           <Button
             secondary

@@ -150,7 +150,7 @@ export function Connections({go, query}: PageProps) {
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
         <span className="rp-grow" />
-        {canClose && <CloseAllButton ids={shown.map(c => c.id)} refetch={resource.refetch} onStart={() => select(null)} />}
+        {canClose && <CloseAllButton ids={shown.map(c => c.id)} closing={closing} onStart={() => select(null)} />}
         <Button
           isDisabled={!shown.length}
           onPress={() =>

@@ -65,12 +65,13 @@ export function Nodes({go, query}: PageProps) {
     go('nodes', next.toString());
   };
   const [search, setSearch] = useState(() => params.get('q') ?? '');
-  // A search-dialog jump always carries q; a typed filter survives a provider switch, which drops it.
-  const [lastQuery, setLastQuery] = useState(query);
-  if (lastQuery !== query) {
-    setLastQuery(query);
-    const next = params.get('q');
-    if (next !== null) setSearch(next);
+  // A q arriving in the URL (a search-dialog jump) replaces the typed filter; a provider switch keeps the
+  // same q and must not reset what was typed since.
+  const linked = params.get('q');
+  const [lastLinked, setLastLinked] = useState(linked);
+  if (lastLinked !== linked) {
+    setLastLinked(linked);
+    if (linked !== null) setSearch(linked);
   }
   const [group, setGroup] = useState('');
   const [protocol, setProtocol] = useState('');
@@ -287,7 +288,7 @@ export function Nodes({go, query}: PageProps) {
                   <SpeedFast />
                 </Button>
               )}
-              {canManageNodes && node.provider_id === inlineId && (
+              {canManageNodes && inlineId !== null && node.provider_id === inlineId && (
                 <Button
                   small
                   quiet

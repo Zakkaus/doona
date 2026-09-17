@@ -80,7 +80,7 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   // The form starts from the main source: one subscription; the groups are left as written.
-  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://<redacted>');
+  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
   await expect(card).toContainText('Templates route to proxy');
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");

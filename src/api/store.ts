@@ -257,8 +257,9 @@ async function walk<P extends {next_cursor: string | null}, T>(
     }
   }
 }
-// The page size a resource advertises, capped at the wire ceiling.
-const pageSize = (max: number | undefined) => Math.min(1000, max ?? 1000);
+// The page size a resource advertises, capped at the wire ceiling; undefined until the capabilities are known,
+// which leaves the backend's own default in force rather than guessing above its ceiling.
+const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(1000, max ?? 1000) : undefined);
 
 export function useNodes() {
   const api = getApi();
@@ -393,7 +394,8 @@ export function useRoutingTrace() {
 
 export function useFlows(connection_id?: string) {
   const api = getApi();
-  const limit = pageSize(useCapabilities().data?.resources.flows.max_page_size);
+  const capabilities = useCapabilities().data;
+  const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
   return useResource(
     {
       key: ['flows', {connection_id}],
@@ -456,6 +458,8 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
       }
     }
   }
+  // A TCP probe needs the backend to offer it and the group to accept it.
+  const canProbe = tcpProbe(capabilities, {type: 'group', group_id: id}) !== null && (resource.data?.capabilities.probe_transports.includes('tcp') ?? false);
   return {
     ...resource,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
@@ -464,12 +468,13 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     network,
     setNetwork,
     busy,
+    canProbe,
     select: (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal)),
     clearOverride: () => run('selection', signal => api.clearGroupOverride(id, network, signal)),
     probe: () =>
       run('probe', async signal => {
         const request = tcpProbe(capabilities, {type: 'group', group_id: id});
-        if (!request || !resource.data?.capabilities.probe_transports.includes('tcp')) throw new Error('TCP probes are not supported');
+        if (!request || !canProbe) throw new Error('TCP probes are not supported');
         const accepted = await api.startProbe(request, signal);
         const result = await api.pollOperation(accepted, signal);
         if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
@@ -556,7 +561,8 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
         onConnectionChange: setConnected,
         onRecord: record => {
           if (hold.current) return;
-          setRecords(previous => [record, ...previous].slice(0, limit));
+          // A resumed stream may replay the record the cursor pointed at; the id keeps it single.
+          setRecords(previous => (previous.some(item => item.id === record.id) ? previous : [record, ...previous].slice(0, limit)));
         }
       })
       .catch((reason: unknown) => {
@@ -589,7 +595,8 @@ export function useRuntimeMode(enabled = true) {
 // Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {
   const api = getApi();
-  const limit = pageSize(useCapabilities().data?.resources.providers.max_page_size);
+  const capabilities = useCapabilities().data;
+  const limit = pageSize(capabilities, capabilities?.resources.providers.max_page_size);
   return useResource(
     {
       key: ['providers'],
@@ -767,7 +774,9 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const name = query.name?.trim() || undefined;
   const type = query.type && query.type !== 'all' ? query.type : undefined;
   const src = query.src?.trim() || undefined;
-  const limit = Math.min(200, pageSize(useCapabilities().data?.resources.dns_log.max_page_size));
+  const capabilities = useCapabilities().data;
+  const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
+  const limit = advertised === undefined ? undefined : Math.min(200, advertised);
   return useResource(
     {key: ['dnsLog', {name, type, src}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)},
     {deps: [api, name, type, src, limit], enabled}

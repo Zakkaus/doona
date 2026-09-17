@@ -85,7 +85,7 @@ describe('native transport', () => {
     const request = vi.fn();
     vi.stubGlobal('fetch', request);
     const controller = new AbortController();
-    const accepted = {...acceptedBody, kind: 'reload' as const, status: 'queued' as const, location: acceptedBody.href, retryAfter: 0};
+    const accepted = {...acceptedBody, kind: 'reload' as const, status: 'queued' as const, retryAfter: 0};
     const result = createApi('https://honk.test').pollOperation(accepted, controller.signal);
     const rejection = expect(result).rejects.toMatchObject({name: 'AbortError'});
     await vi.advanceTimersByTimeAsync(999);
@@ -135,6 +135,41 @@ describe('native transport', () => {
     expect(request.mock.calls.map(call => new Headers(call[1].headers).get('Last-Event-ID'))).toEqual(['instance:1', null, 'instance:9']);
     expect(new Headers(request.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer secret');
     expect(String(request.mock.calls[0][0])).toBe('https://honk.test/api/v1/events?kinds=runtime.updated');
+  });
+  it('retries after a network failure or 5xx with backoff and Retry-After, and ends on a definitive 4xx', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const events: string[] = [];
+    const frame = 'id: instance:4\nevent: stream.ready\ndata: {"instance_id":"instance","observed_at":"2026-09-15T14:00:00Z"}\n\n';
+    const ready = () => new Response(frame, {headers: {'Content-Type': 'text/event-stream', 'Retry-After': '1'}});
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('network down'))
+      .mockResolvedValueOnce(json({error: {code: 'temporarily_unavailable', message: 'restarting'}, request_id: null}, 503, {'Retry-After': '5'}))
+      .mockResolvedValueOnce(ready())
+      .mockResolvedValueOnce(json({error: {code: 'permission_denied', message: 'no'}, request_id: null}, 403));
+    vi.stubGlobal('fetch', request);
+    const outcome = createApi('https://honk.test')
+      .subscribeEvents({signal: controller.signal, onEvent: event => events.push(event.event)})
+      .then(
+        () => null,
+        (error: unknown) => error
+      );
+    // Network failure: one second of backoff before the next attempt.
+    await vi.advanceTimersByTimeAsync(999);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(request).toHaveBeenCalledTimes(2);
+    // 503 with Retry-After 5 outranks the two-second backoff.
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(request).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(request).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(events).toEqual(['stream.ready']);
+    // A 403 is definitive: the stream ends with that error and no further attempt.
+    expect(await outcome).toMatchObject({status: 403, code: 'permission_denied'});
+    expect(request).toHaveBeenCalledTimes(4);
   });
   it('reports readiness and disconnection while waiting to resume the stream', async () => {
     vi.useFakeTimers();

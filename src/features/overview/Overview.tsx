@@ -98,7 +98,7 @@ export function Overview() {
             <Download />
             {t('ov.export')}
           </Button>
-          <LifecycleActions />
+          <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
         </div>
       </div>
       {runtime.error && <ErrorMessage error={runtime.error} />}

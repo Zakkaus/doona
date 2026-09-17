@@ -150,22 +150,18 @@ export function Button({
   );
   const text = label ?? tip;
   if (!text) return btn;
-  // A disabled native button takes no focus and no pointer events, so the tip (usually the reason it is
-  // disabled) hangs off a focusable wrapper instead; enabled buttons keep the plain DOM.
-  return isDisabled ? (
+  // The tip hangs off a wrapper so the tree keeps one shape while the button goes busy or disabled (a swap
+  // would remount the button and drop keyboard focus). Enabled, the wrapper has no box of its own; disabled,
+  // it takes the focus and pointer events the native button no longer accepts, usually to explain why.
+  return (
     <TooltipTrigger delay={400}>
       <Focusable>
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop */}
-        <span className="rp-tipwrap" tabIndex={0}>
+        <span className="rp-tipwrap" tabIndex={isDisabled ? 0 : -1} data-passive={isDisabled ? undefined : ''}>
           {btn}
         </span>
       </Focusable>
       <Tip>{text}</Tip>
-    </TooltipTrigger>
-  ) : (
-    <TooltipTrigger delay={400}>
-      <Tip>{text}</Tip>
-      {btn}
     </TooltipTrigger>
   );
 }
@@ -718,7 +714,10 @@ export function DataTable<T extends {id: string}>({
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
   const index = new Map(cols.map((column, i) => [column.id, i]));
   // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
-  const fitted = Math.min(height, tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
+  // `.rp-table` is border-box with a 1px border top and bottom; the fit includes that frame so a short table
+  // holds its rows without a 2px scroll.
+  const frame = 2;
+  const fitted = Math.min(height, frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
   const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const table = (
@@ -1052,12 +1051,12 @@ export function Chips({
   );
 }
 
-// Hands the browser a file to save; the URL is released once the click has been dispatched.
-// One naming for every export: `<prefix>-<local time to the second>.<ext>`, sortable and free of characters
+// One naming for every export: `<prefix>-<UTC time to the second>.<ext>`, sortable and free of characters
 // file systems reject.
 export function exportName(prefix: string, ext: string): string {
   return `${prefix}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
 }
+// Hands the browser a file to save; the URL is released once the click has been dispatched.
 export function downloadFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], {type}));
   const link = document.createElement('a');

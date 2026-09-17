@@ -25,7 +25,10 @@ export function Wizard({
   onDone: () => void;
 }) {
   const t = useT();
-  const current = main.content ?? '';
+  // The text and digest the form started from: the preview builds on them, and the save's If-Match names the
+  // digest, so a file that changed on disk while the form was open is refused rather than overwritten.
+  const [origin] = useState(() => ({content: main.content ?? '', sha256: main.content_sha256}));
+  const current = origin.content;
   const [state, setState] = useState<WizardState>(() => {
     const read = readState(current);
     return {...read, rules: current.trim() ? 'keep' : 'whitelist', subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]};
@@ -46,7 +49,7 @@ export function Wizard({
         return;
       }
     }
-    const result = await editor.save(main.id, text, main.content_sha256);
+    const result = await editor.save(main.id, text, origin.sha256);
     if (!result) return;
     toast('positive', t('config.saved', {path: main.path}));
     onDone();

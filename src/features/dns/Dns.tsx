@@ -202,7 +202,7 @@ export function Dns({go, query}: PageProps) {
       />
     </>
   );
-  const logTab = <DnsLog enabled={resources?.dns_log.available === true} initialName={params.get('domain') ?? ''} types={types} />;
+  const logTab = <DnsLog enabled={resources?.dns_log.available === true} initialName={params.get('domain') ?? ''} />;
   const tabs = [
     ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query'), content: queryTab}] : []),
     ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log'), content: logTab}] : []),
@@ -218,7 +218,9 @@ export function Dns({go, query}: PageProps) {
 }
 
 // "What did the resolver do for clients": the ring newest first, narrowed by name, type and client.
-function DnsLog({enabled, initialName, types}: {enabled: boolean; initialName: string; types: string[]}) {
+// The record types the log can be narrowed to; the log has no capability of its own for this list.
+const logTypes = ['A', 'AAAA', 'HTTPS', 'TXT', 'MX', 'SRV', 'PTR'];
+function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
@@ -235,7 +237,7 @@ function DnsLog({enabled, initialName, types}: {enabled: boolean; initialName: s
           side
           value={type}
           onChange={setType}
-          items={[{id: 'all', label: t('dns.allTypes')}, ...types.map(id => ({id, label: id}))]}
+          items={[{id: 'all', label: t('dns.allTypes')}, ...logTypes.map(id => ({id, label: id}))]}
         />
         <TextField search label={t('ui.source')} value={src} onChange={setSrc} placeholder="10.0.0.12" width={160} />
         {log.data && <span className="rp-label">{t('dns.logTotal', {n: log.data.total})}</span>}

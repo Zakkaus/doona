@@ -3,7 +3,8 @@ import {ApiError} from '../error';
 import {sha256} from '../hash';
 import * as vocab from '../daeVocab';
 
-type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string};
+// `onDisk` is the text the digest and size describe when the served content is a redacted copy of it.
+type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};
 type Stored = ConfigSource & {content: string};
 
 const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response']);
@@ -11,8 +12,9 @@ const builtinOutbounds = new Set(vocab.builtinOutbounds);
 const globalKeys = new Set(vocab.globalKeys);
 
 const lineCount = (text: string) => (text === '' ? 0 : text.replace(/\n$/, '').split('\n').length);
-export async function stored(draft: Draft): Promise<Stored> {
-  return {...draft, content_sha256: await sha256(draft.content), bytes: new TextEncoder().encode(draft.content).length, line_count: lineCount(draft.content)};
+export async function stored({onDisk, ...draft}: Draft): Promise<Stored> {
+  const text = onDisk ?? draft.content;
+  return {...draft, content_sha256: await sha256(text), bytes: new TextEncoder().encode(text).length, line_count: lineCount(text)};
 }
 
 // A small dae checker for the demo: braces must balance, sections must be known, routing lines must be

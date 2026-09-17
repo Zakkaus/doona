@@ -62,6 +62,8 @@ export function createApi(base: string, token?: string): Api {
   ): Promise<void> {
     let cursor = lastEventId;
     let backoff = 1;
+    // A failed attempt's Retry-After, honoured on top of the backoff; cleared once used.
+    let pause = 0;
     try {
       while (!signal?.aborted) {
         onConnectionChange?.(false);
@@ -74,6 +76,7 @@ export function createApi(base: string, token?: string): Api {
               cursor = undefined;
               continue;
             }
+            pause = retryAfter(response);
             throw error;
           }
           if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
@@ -95,7 +98,8 @@ export function createApi(base: string, token?: string): Api {
           if (signal?.aborted) throw error;
           if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429) throw error;
           onConnectionChange?.(false);
-          await wait(backoff, signal);
+          await wait(Math.max(backoff, pause), signal);
+          pause = 0;
           backoff = Math.min(backoff * 2, 30);
         }
       }

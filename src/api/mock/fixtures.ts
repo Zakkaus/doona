@@ -615,15 +615,15 @@ const configMain = `global {
 }
 
 subscription {
-  sub-c: 'https://<redacted>'
+  sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'
 }
 
 node {
-  'hk-01': 'vless://<redacted>'
-  'hk-02': 'vless://<redacted>'
-  'sg-01': 'trojan://<redacted>'
-  'jp-01': 'vless://<redacted>'
-  'us-01': 'trojan://<redacted>'
+  'hk-01': 'vless://demo@hk-01.example.net:443?security=tls#hk-01'
+  'hk-02': 'vless://demo@hk-02.example.net:443?security=tls#hk-02'
+  'sg-01': 'trojan://demo@sg-01.example.net:443#sg-01'
+  'jp-01': 'vless://demo@jp-01.example.net:443?security=tls#jp-01'
+  'us-01': 'trojan://demo@us-01.example.net:443#us-01'
 }
 
 group {
@@ -761,9 +761,20 @@ export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {f
   {level: 'error', target: 'honk::group', message: 'Health check failed.', fields: {node: 'jp-01', error: 'connect timeout'}},
   {level: 'info', target: 'honk::api', message: 'Native API listening.', fields: {listen: '127.0.0.1:9090'}}
 ];
-export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string}> = [
+// The demo's sources. The main config carries placeholder credentials in the clear, so it hashes to its own
+// digest and can be edited; the fetched subscription is served redacted, with the digest of the text on disk,
+// which is how a real backend hands out a file it will not let a client write back.
+export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},
-  {id: 'src-sub-c', path: '/var/lib/honk/subscriptions/sub-c.dae', kind: 'subscription', writable: false, loaded_at: ago(1800), content: configSubscription},
+  {
+    id: 'src-sub-c',
+    path: '/var/lib/honk/subscriptions/sub-c.dae',
+    kind: 'subscription',
+    writable: false,
+    loaded_at: ago(1800),
+    content: configSubscription,
+    onDisk: configSubscription.replaceAll('<redacted>', 'demo@edge.example.net:443')
+  },
   {id: 'src-generated', path: '/var/lib/honk/generated/skylink.dae', kind: 'generated', writable: false, loaded_at: ago(1800), content: configGenerated}
 ];

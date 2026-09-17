@@ -31,9 +31,10 @@ describe('quick setup text transforms', () => {
     expect(state.subscriptions.map(s => [s.name, s.url])).toEqual([
       ['sub-c', 'https://example.org/sub?token=abc'],
       ['', ''],
-      ['local', 'file:///etc/honk/nodes.txt']
+      ['', '']
     ]);
     expect(state.subscriptions[1].raw).toBe('  # a file the engine reads');
+    expect(state.subscriptions[2].raw).toBe("  'local': 'file:///etc/honk/nodes.txt'");
     expect(state.group).toBe('proxy');
     expect(state.lanInterface).toBe('br-lan');
     expect(state.rules).toBe('keep');
@@ -57,6 +58,12 @@ describe('quick setup text transforms', () => {
     expect(out.match(/^routing \{/gm)).toHaveLength(1);
   });
   it('adds a group section only when the source has none, and generates a whole file for an empty source', () => {
+    // A group name outside [\w-] is still the routing target, and its section is still left alone.
+    const odd = main.replace('  proxy {', '  proxy.eu {');
+    expect(readState(odd).group).toBe('proxy.eu');
+    const written = writeState(odd, {...readState(odd), rules: 'global'});
+    expect(written).toContain('  proxy.eu {\n    filter: name(hk-01, sg-01)');
+    expect(written).toContain('fallback: proxy.eu');
     const noGroup = main.replace(/group \{[\s\S]*?\n\}\n/, '');
     const state = readState(noGroup);
     expect(state.group).toBeNull();

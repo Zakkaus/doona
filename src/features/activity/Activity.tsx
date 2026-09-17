@@ -62,7 +62,8 @@ export function Activity({go}: {go: (page: string) => void}) {
     () =>
       (nodesResource.data ?? []).map(n => {
         const health = preferredHealth(n);
-        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive: health?.state === 'healthy', unavailable: health?.state === 'unavailable'};
+        const alive = health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined;
+        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive, unavailable: health?.state === 'unavailable'};
       }),
     [nodesResource.data]
   );
@@ -205,7 +206,7 @@ export function Activity({go}: {go: (page: string) => void}) {
             <span className="rp-tile-val">
               <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: node.tcp})) : '—'}</span>
             </span>
-            <Light small tone={node?.alive ? 'ok' : 'err'}>
+            <Light small tone={node?.alive ? 'ok' : node?.unavailable ? 'err' : 'muted'}>
               {node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}
             </Light>
           </div>

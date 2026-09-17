@@ -1,4 +1,5 @@
-import {useCapabilities, useRuntime, useRuntimeOperations} from '../../api/store';
+import {useRuntime, useRuntimeOperations} from '../../api/store';
+import type {Capabilities} from '../../api/model';
 import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {Button, errorText, toast} from '../../ui/ui';
@@ -6,12 +7,11 @@ import {Button, errorText, toast} from '../../ui/ui';
 const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
 
 // Reload, and suspend or resume depending on the engine's state; each runs as an operation and reports the
-// terminal status in a toast. Renders nothing the backend cannot do.
-export function LifecycleActions() {
+// terminal status in a toast. Renders nothing the backend cannot do. The page owns the runtime resource, so
+// the refetch after an operation reaches what the page shows.
+export function LifecycleActions({runtime, capabilities}: {runtime: ReturnType<typeof useRuntime>; capabilities: Capabilities | undefined}) {
   const t = useT();
-  const capabilities = useCapabilities();
-  const runtime = useRuntime(!!capabilities.data?.resources.runtime.available);
-  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
+  const operations = useRuntimeOperations(runtime.data, capabilities, runtime.refetch);
   const run = async (kind: 'reload' | 'suspend' | 'resume') => {
     try {
       const result = await operations.run(kind);

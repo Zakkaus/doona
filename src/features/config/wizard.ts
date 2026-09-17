@@ -80,10 +80,13 @@ export function readState(text: string): WizardState {
   const subscriptions: Subscription[] = [];
   for (const line of found.find(s => s.name === 'subscription')?.body ?? []) {
     const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(line.replace(/#.*$/, ''));
-    if (match) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
+    // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
+    if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
     else if (line.trim()) subscriptions.push({name: '', url: '', raw: line});
   }
-  const group = /^\s*([\w-]+)\s*\{/m.exec(found.find(s => s.name === 'group')?.body.join('\n') ?? '')?.[1] ?? null;
+  // The first group's name, whatever characters it uses; comment lines are skipped.
+  const groupBody = (found.find(s => s.name === 'group')?.body ?? []).map(line => line.replace(/#.*$/, ''));
+  const group = groupBody.map(line => /^[ \t]*([^\s{}]+)[ \t]*\{/.exec(line)?.[1]).find(name => name) ?? null;
   const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
   return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
 }
@@ -93,7 +96,8 @@ function subscriptionBlock(state: WizardState): string[] {
 }
 export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
-  const first = ident(state.group ?? defaultGroup) || defaultGroup;
+  // The name as written: the templates must route to the group the file already has.
+  const first = state.group ?? defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
@@ -143,12 +147,13 @@ export function writeState(current: string, state: WizardState): string {
     ].join('\n');
   }
   const lines = current.replace(/\n$/, '').split('\n');
+  const found = sections(lines);
   const replacements = new Map<string, string[]>([['subscription', subscriptionBlock(state)]]);
-  if (!state.group) replacements.set('group', groupBlock);
+  // A group section is added only when the source has none at all; an existing one is never rewritten.
+  if (!found.some(section => section.name === 'group')) replacements.set('group', groupBlock);
   if (state.rules !== 'keep') replacements.set('routing', routingBlock(state, state.rules));
   const out: string[] = [];
   const done = new Set<string>();
-  const found = sections(lines);
   let index = 0;
   for (const section of found) {
     out.push(...lines.slice(index, section.start));

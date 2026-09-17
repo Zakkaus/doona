@@ -52,7 +52,6 @@ try {
     await page.waitForFunction(() =>
       [...document.querySelectorAll('.rp-content [role="status"]')].every(element => !element.checkVisibility({visibilityProperty: true}))
     );
-    if (route === 'flows') await page.locator('.rp-flow-graph .recharts-surface').waitFor();
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     await page.waitForFunction(() =>
       document.getAnimations().every(animation => animation.effect?.getComputedTiming().iterations === Infinity || animation.playState === 'finished')

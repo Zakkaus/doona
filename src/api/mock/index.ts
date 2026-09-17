@@ -24,7 +24,7 @@ import {diagnose, stored, validate} from './config';
 
 function page<T>(items: T[], cursor?: string, limit = 1000) {
   const start = cursor ? Number(cursor) : 0;
-  if (!Number.isSafeInteger(start) || start < 0 || start > items.length) throw new ApiError(400, 'invalid_cursor', 'Invalid mock cursor');
+  if (!Number.isSafeInteger(start) || start < 0 || start > items.length) throw new ApiError(400, 'invalid_request', 'Unknown or expired cursor');
   const end = start + limit;
   return {items: items.slice(start, end), next_cursor: end < items.length ? String(end) : null};
 }
@@ -117,7 +117,8 @@ export function createMockApi(): Api {
     publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
     return generation;
   }
-  // Management writes land in the main source's text too, so the config page shows what the API did.
+  // Management writes land in the main source's text too, so the config page shows what the API did. The demo's
+  // main text carries placeholder credentials in the clear, the way the file on disk would.
   async function editMain(edit: (text: string) => string) {
     const main = (await loadSources()).find(item => item.id === 'src-main');
     if (!main) return;
@@ -439,7 +440,7 @@ export function createMockApi(): Api {
       );
       // A selector takes the choice; an automatic policy takes it as a pin that stands until cleared.
       const override = !group.capabilities.can_select && group.capabilities.can_override;
-      if (!group.capabilities.can_select && !override) throw new ApiError(422, 'selection_not_supported', 'Group does not support manual selection');
+      if (!group.capabilities.can_select && !override) throw new ApiError(404, 'capability_not_supported', 'Group does not support manual selection');
       found(
         group.members.find(m => m.id === request.member_id),
         'Group member'
@@ -504,10 +505,10 @@ export function createMockApi(): Api {
         groups.find(g => g.id === groupId),
         'Group'
       );
-      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'revision_mismatch', 'Group configuration revision changed');
+      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
       if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
       const limit = fixtures.capabilities.resources.groups.max_patch_operations;
-      if (limit !== undefined && ops.length > limit) throw new ApiError(422, 'too_many_operations', 'Too many patch operations');
+      if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
       const updated = patchGroupConfig(group, ops);
       updating.add(groupId);
       return enqueue('group_update', () => {
@@ -600,8 +601,8 @@ export function createMockApi(): Api {
     },
     routingTrace: async (request, signal) => {
       signal?.throwIfAborted();
-      if (!capabilities.resources.routing_trace.available) throw new ApiError(501, 'not_supported', 'Routing trace is unavailable');
-      return routingTrace(request);
+      if (!capabilities.resources.routing_trace.available) throw new ApiError(404, 'capability_not_supported', 'Routing trace is unavailable');
+      return routingTrace(request, String(configRevision));
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
@@ -690,7 +691,8 @@ export function createMockApi(): Api {
       if (!capabilities.resources.providers.available) throw new ApiError(404, 'capability_not_supported', 'Providers are unavailable');
       const max = capabilities.resources.providers.max_page_size ?? 1000;
       if (query?.limit !== undefined && query.limit > max) throw new ApiError(400, 'invalid_request', `limit exceeds max_page_size ${max}`);
-      return {providers: structuredClone(providers), next_cursor: null};
+      const result = page(providers, query?.cursor, query?.limit ?? Math.min(100, max));
+      return {providers: structuredClone(result.items), next_cursor: result.next_cursor};
     },
     // A refresh re-reads the source; the demo keeps the node set and moves the timestamps.
     refreshProvider: async (providerId, signal) => {
@@ -731,7 +733,7 @@ export function createMockApi(): Api {
         last_error: null
       };
       providers.push(provider);
-      await editMain(text => text.replace(/^(subscription \{\n)/m, `$1  ${request.name}: '${url.protocol}//<redacted>'\n`));
+      await editMain(text => text.replace(/^(subscription \{\n)/m, `$1  ${request.name}: '${request.url.replace(/'/g, '')}'\n`));
       log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
       advance();
       return structuredClone(provider);
@@ -759,7 +761,7 @@ export function createMockApi(): Api {
       nodes.push(node);
       const inline = providers.find(item => item.id === 'inline');
       if (inline) inline.node_count += 1;
-      await editMain(text => text.replace(/^(node \{\n)/m, `$1  '${request.name.replace(/'/g, '')}': '${scheme}://<redacted>'\n`));
+      await editMain(text => text.replace(/^(node \{\n)/m, `$1  '${request.name.replace(/'/g, '')}': '${request.link.trim().replace(/'/g, '')}'\n`));
       log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
       advance();
       return structuredClone(node);

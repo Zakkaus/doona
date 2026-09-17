@@ -637,7 +637,8 @@
 :root[data-family='glass'] .rp-card {
   border-radius: 20px;
 }
-:root[data-family='glass'] .rp-popover::after {
+:root[data-family='glass'] .rp-popover::after,
+:root[data-family='glass'] .rp-dialog::after {
   inset: 0;
 }
 :root[data-family='glass'] .rp-popover,
@@ -1603,7 +1604,8 @@ input {
   --dot: var(--rp-love);
 }
 .rp-light.info {
-  --dot: var(--rp-iris);
+  /* Foam is the info colour everywhere (toasts too); it shares the dot with ok, which text tells apart. */
+  --dot: var(--rp-foam);
 }
 .rp-light.neutral {
   --dot: var(--rp-subtle);
@@ -1761,7 +1763,7 @@ input {
   padding: 24px 32px;
   width: min(720px, 90vw);
   max-height: calc(100vh - 12vh - 24px);
-  overflow: auto;
+  overflow: hidden auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1872,7 +1874,11 @@ input {
   min-width: 0;
 }
 .rp-col > .rp-btn,
-.rp-card > .rp-btn {
+.rp-card > .rp-btn,
+.rp-col > .rp-tipwrap,
+.rp-card > .rp-tipwrap,
+.rp-col > .rp-tipwrap > .rp-btn,
+.rp-card > .rp-tipwrap > .rp-btn {
   align-self: flex-start;
 }
 
@@ -2794,10 +2800,14 @@ button.rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
 }
-/* A disabled button cannot take focus or hover, so its tip hangs off this wrapper. */
+/* A disabled button cannot take focus or hover, so its tip hangs off this wrapper; around an enabled button
+   the wrapper has no box, so layout and the direct-child rules see the button itself. */
 .rp-tipwrap {
   display: inline-flex;
   border-radius: 8px;
+}
+.rp-tipwrap[data-passive] {
+  display: contents;
 }
 /* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
 .rp-input:focus-within {

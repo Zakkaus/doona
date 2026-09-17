@@ -81,8 +81,8 @@ function PolicyCard({
             <Button
               small
               isPending={control.busy === 'probe'}
-              isDisabled={!!control.busy || !g.capabilities.probe_transports.includes('tcp')}
-              tip={!g.capabilities.probe_transports.includes('tcp') ? t('policy.noProbe') : undefined}
+              isDisabled={!!control.busy || !control.canProbe}
+              tip={!control.canProbe ? t('policy.noProbe') : undefined}
               onPress={() => {
                 void control.probe().then(result => {
                   if (result) {
