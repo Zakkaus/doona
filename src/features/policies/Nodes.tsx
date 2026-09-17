@@ -177,7 +177,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'labels
     <NodeTile
       {...props}
       name={n.name}
-      icon={n.kind === 'group' ? <NamedIcon name={n.name} icon={n.icon} fallback={<OutboundMark name={n.leaf ?? null} />} /> : <Flag name={n.name} />}
+      icon={<NamedIcon name={n.name} icon={n.icon} fallback={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : <Flag name={n.name} />} />}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}
