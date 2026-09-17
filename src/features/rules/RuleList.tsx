@@ -55,8 +55,8 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
   const rules = useRules();
-  const flows = useFlows();
-  const groups = useGroups();
+  const flows = useFlows(undefined, resources?.flows.available === true);
+  const groups = useGroups(resources?.groups.available === true);
   const canWrite = resources?.config.available === true && resources.config.writable === true;
   const config = useConfig(canWrite);
   const editor = useConfigEditor(() => {

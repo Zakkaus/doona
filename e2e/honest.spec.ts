@@ -101,6 +101,14 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
   await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
   await expect.poll(() => Object.keys(counts).sort()).toEqual(Object.keys(responses).sort());
+  // Resources gated on capabilities start a moment after it lands; wait until the counts stop moving.
+  await expect
+    .poll(async () => {
+      const snapshot = JSON.stringify(counts);
+      await new Promise(resolve => setTimeout(resolve, 250));
+      return snapshot === JSON.stringify(counts);
+    })
+    .toBe(true);
   const before = {...counts};
   hold = new Promise<void>(resolve => {
     release = resolve;

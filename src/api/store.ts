@@ -263,7 +263,8 @@ async function walk<P extends {next_cursor: string | null}, T>(
 // which leaves the backend's own default in force rather than guessing above its ceiling.
 const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(1000, max ?? 1000) : undefined);
 
-export function useNodes() {
+// Nodes and groups are fetched only when the backend declares them (honk's first release has neither).
+export function useNodes(enabled = true) {
   const api = getApi();
   return useResource(
     {
@@ -274,18 +275,18 @@ export function useNodes() {
           (acc: Node[] | undefined, page) => [...(acc ?? []), ...page.nodes]
         )
     },
-    {deps: [api], every: 30000}
+    {deps: [api], every: 30000, enabled}
   );
 }
-export function useGroups() {
+export function useGroups(enabled = true) {
   const api = getApi();
-  return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000});
+  return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000, enabled});
 }
-export function useConnections(src?: string) {
+export function useConnections(src?: string, enabled = true) {
   const api = getApi();
   return useResource(
     {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
-    {deps: [api, src]}
+    {deps: [api, src], enabled}
   );
 }
 
@@ -396,7 +397,7 @@ export function useRoutingTrace() {
   return {form, setForm, result, error: error ?? capabilities.error, busy, submit, invalid, available, modes};
 }
 
-export function useFlows(connection_id?: string) {
+export function useFlows(connection_id?: string, enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
@@ -409,7 +410,7 @@ export function useFlows(connection_id?: string) {
           (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
         )
     },
-    {deps: [api, connection_id, limit]}
+    {deps: [api, connection_id, limit], enabled}
   );
 }
 

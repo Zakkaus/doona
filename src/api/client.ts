@@ -6,6 +6,7 @@ import {ApiError, responseError} from './error';
 import {readSse} from './sse';
 import {wait} from './wait';
 import {eventKinds} from './selectors';
+import {normalizeCapabilities} from './capabilities';
 
 export {ApiError} from './error';
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
@@ -130,7 +131,7 @@ export function createApi(base: string, token?: string): Api {
   return {
     discovery: async signal => data(await client.GET('/api', {signal})),
     version: async signal => data(await client.GET('/api/v1/version', {signal})),
-    capabilities: async signal => data(await client.GET('/api/v1/capabilities', {signal})),
+    capabilities: async signal => normalizeCapabilities(data(await client.GET('/api/v1/capabilities', {signal}))),
     runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),
     runtimeOutbounds: async signal => data(await client.GET('/api/v1/runtime/outbounds', {signal})),
     trafficHistory: async (query, signal) => data(await client.GET('/api/v1/runtime/traffic/history', {params: {query}, signal})),

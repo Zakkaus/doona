@@ -59,6 +59,21 @@ tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
 
 Hash routes such as `/ui/#/activity` need no server-side route rewriting. Without the font archive, font requests return 404 and the browser uses local fallback fonts.
 
+honk's native API is opt-in and serves the UI from a directory it is pointed at; the page is then same-origin with the API and needs no CORS entry. A UI served from anywhere else (a dev server, another host) must be listed in `allow_origins`, and a token is required unless the listener is loopback with anonymous access switched on explicitly:
+
+```dae
+experimental {
+    native_api {
+        enabled: true
+        listen: '127.0.0.1:9527'
+        secret: 'operator-supplied-random-token'
+        ui: '/usr/share/doona'
+    }
+}
+```
+
+A backend built against an earlier contract pin (honk's first release stops at runtime and connections) is handled: resources it does not declare count as unavailable and their pages leave the navigation.
+
 ## Settings
 
 With no saved backend, opening the root page shows Settings; direct page links remain usable. Enter an HTTP(S) server root or reverse-proxy prefix, without `/api/v1`, credentials, a query or a fragment. An empty URL or `mock` selects the built-in demo.

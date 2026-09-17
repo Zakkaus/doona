@@ -82,7 +82,9 @@ export function createMockApi(): Api {
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   try {
-    if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
+    const profile = localStorage.getItem('doona-mock-profile');
+    if (profile === 'base') capabilities = fixtures.capabilitiesBase;
+    if (profile === 'm1') capabilities = fixtures.capabilitiesM1;
   } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
@@ -409,11 +411,13 @@ export function createMockApi(): Api {
     },
     nodes: async (query, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.available) throw new ApiError(404, 'capability_not_supported', 'Nodes are unavailable');
       const result = page(query?.group_id ? nodes.filter(n => n.group_ids.includes(query.group_id!)) : nodes, query?.cursor, query?.limit);
       return {observed_at: fixtures.observedAt, nodes: structuredClone(result.items), next_cursor: result.next_cursor};
     },
     groups: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available) throw new ApiError(404, 'capability_not_supported', 'Groups are unavailable');
       return groups.map(g => ({
         id: g.id,
         name: g.name,
@@ -426,6 +430,7 @@ export function createMockApi(): Api {
     },
     group: async (id, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available) throw new ApiError(404, 'capability_not_supported', 'Groups are unavailable');
       return structuredClone(
         found(
           groups.find(g => g.id === id),

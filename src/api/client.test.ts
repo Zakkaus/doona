@@ -197,3 +197,18 @@ describe('native transport', () => {
     expect(states.at(-1)).toBe(false);
   });
 });
+
+it('fills resource keys a backend on an older contract pin leaves out as unavailable', async () => {
+  const {normalizeCapabilities} = await import('./capabilities');
+  const raw = {
+    observed_at: '2026-09-15T14:00:00Z',
+    profiles: ['base'],
+    limits: {},
+    resources: {runtime: {available: true}, connections: {available: true, can_close: false}}
+  };
+  const capabilities = normalizeCapabilities(raw as never);
+  expect(capabilities.resources.runtime.available).toBe(true);
+  expect(capabilities.resources.geodata.available).toBe(false);
+  expect(capabilities.resources.nodes.available).toBe(false);
+  expect(capabilities.resources.rules.available).toBe(false);
+});

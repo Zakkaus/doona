@@ -256,6 +256,19 @@ export const capabilitiesBase: Capabilities = {
   }
 };
 
+// honk's first native release (its plan's M1): runtime and connections only, connections observed by userspace
+// without close, every other resource declared unavailable. Nothing else on this backend answers.
+export const capabilitiesM1: Capabilities = {
+  ...capabilities,
+  profiles: ['base'],
+  resources: {
+    ...Object.fromEntries(Object.keys(capabilities.resources).map(key => [key, {available: false}])),
+    runtime: {available: true},
+    connections: {available: true, can_close: false, max_bulk_close: 1000},
+    config: {available: false, content: false}
+  } as Capabilities['resources']
+};
+
 // What PATCH /runtime/settings can change; the values start from the configuration and the ceilings are the
 // capabilities above.
 export const runtimeSettings: RuntimeSettings = {

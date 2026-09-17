@@ -43,10 +43,14 @@ export function Activity({go}: {go: (page: string) => void}) {
   const locale = LOCALE[lang];
   const chartRate = (value: number | null | undefined) => fmtRate(value, locale, t);
   const p = usePalette();
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  // Node and group tiles need those resources; a backend without them still gets traffic and connections.
+  const hasNodes = resources?.nodes.available === true;
+  const hasGroups = resources?.groups.available === true;
   const runtimeResource = useRuntime(),
-    nodesResource = useNodes(),
-    groupsResource = useGroups(),
-    capabilities = useCapabilities();
+    nodesResource = useNodes(hasNodes),
+    groupsResource = useGroups(hasGroups);
   const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
   const memory = useRuntimeMemory(capabilities.data?.resources.runtime_memory.available === true);
   const rss = memory.data?.process?.rss_bytes ?? null;
@@ -86,7 +90,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   const history = useTrafficHistory(range, capabilities.data);
   const series = useMemo(() => trafficSeries(history.data), [history.data]);
   // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
-  const runtimeMode = useRuntimeMode(capabilities.data?.resources.runtime_mode?.available !== false);
+  const runtimeMode = useRuntimeMode(resources?.runtime_mode.available === true);
   const mode = runtimeMode.data?.mode ?? 'rule';
   const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
@@ -94,9 +98,9 @@ export function Activity({go}: {go: (page: string) => void}) {
   const nodeName = node?.name ?? '';
   const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? capabilities.error;
   if (error) return <ErrorMessage error={error} />;
-  if (!runtimeResource.data || !nodesResource.data || !groupsResource.data) return <Loading>{t('act.loading')}</Loading>;
+  if (!runtimeResource.data || (hasNodes && !nodesResource.data) || (hasGroups && !groupsResource.data)) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
-  const groups = groupsResource.data;
+  const groups = groupsResource.data ?? [];
   const target = groups.some(g => g.id === (chosenTarget || runtimeMode.data?.target)) ? chosenTarget || runtimeMode.data!.target! : (groups[0]?.id ?? '');
   const targetName = groups.find(g => g.id === target)?.name ?? '—';
   const usage = outboundUsage(outbounds.data);

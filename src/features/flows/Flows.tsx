@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useFlow, useFlows, useGroups, useNodes} from '../../api/store';
+import {useCapabilities, useFlow, useFlows, useGroups, useNodes} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough} from './map';
 import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
@@ -30,8 +30,9 @@ export function RoutingMap({go, query}: PageProps) {
   const t = useT();
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const resource = useFlows(undefined);
-  const groups = useGroups();
-  const nodes = useNodes();
+  const resources = useCapabilities().data?.resources;
+  const groups = useGroups(resources?.groups.available === true);
+  const nodes = useNodes(resources?.nodes.available === true);
   const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));

@@ -30,10 +30,10 @@ export function BackendActionsCard() {
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(!!resources?.runtime.available);
   const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available === true);
-  const groups = useGroups();
-  const providers = useProviders(resources?.providers.available !== false);
+  const groups = useGroups(resources?.groups.available === true);
+  const providers = useProviders(resources?.providers.available === true);
   const refresh = useProviderRefresh(providers.refetch);
-  const connections = useConnections(undefined);
+  const connections = useConnections(undefined, resources?.connections.available === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const geodata = useGeodata(resources?.geodata.available ?? false);

@@ -172,9 +172,9 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const connections = useConnections();
-  const nodes = useNodes();
-  const groups = useGroups();
-  const providers = useProviders(resources?.providers.available !== false);
+  const nodes = useNodes(resources?.nodes.available === true);
+  const groups = useGroups(resources?.groups.available === true);
+  const providers = useProviders(resources?.providers.available === true);
   const config = useConfig(resources?.config.available === true);
   const needle = q.trim().toLowerCase();
   const limit = needle ? 8 : 5;
@@ -362,9 +362,10 @@ function Frame({
   const version = useVersion();
   const [settings] = useState(readSettings);
   const profile = settings.profiles.find(item => item.id === settings.activeId);
-  const nav = navGroups.map(
-    group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const
-  );
+  // A group whose pages the backend does not offer disappears with them.
+  const nav = navGroups
+    .map(group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const)
+    .filter(([, items]) => items.length > 0);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
   const refreshLock = useRef(false);
