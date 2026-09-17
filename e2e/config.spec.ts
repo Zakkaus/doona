@@ -89,7 +89,7 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
   const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
   await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
-  await expect(main).toContainText('gaming { filter: name(jp-01, hk-02) policy: min }');
+  await expect(main).toContainText('gaming { filter: name(jp-01, hk-02) policy: min_last_delay }');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });
 

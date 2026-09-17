@@ -30,6 +30,8 @@ import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
+import {within} from '../../shell/route';
+import {sha256} from '../../api/hash';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
   main: 'config.kind.main',
@@ -40,20 +42,6 @@ const kinds: Record<ConfigSource['kind'], Key> = {
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 
-// A query change that keeps the other parameters.
-function within(query: string, patch: Record<string, string | null>): string {
-  const next = new URLSearchParams(query);
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === null) next.delete(key);
-    else next.set(key, value);
-  }
-  return next.toString();
-}
-
-async function sha256(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
 // The digest of a text, once computed; undefined until then or when there is no text.
 function useSha256(text: string | undefined): string | undefined {
   const [hashes, setHashes] = useState<Map<string, string>>(() => new Map());
@@ -77,8 +65,15 @@ export function Config({go, query}: PageProps) {
   const config = useConfig(resources?.config.available !== false);
   const editor = useConfigEditor(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  const tab = ['validate', 'setup'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'source';
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
+  const mainSource = sources.find(item => item.kind === 'main') ?? null;
+  // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
+  const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
+  const mainHash = useSha256(mainSource?.content);
+  const mainComplete = mainHash === undefined ? null : mainHash === mainSource?.content_sha256;
+  const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
+  const requested = params.get('tab');
+  const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
   // Leaving an edit: the browser asks on reload or close; switching source or tab asks with the kit's dialog.
@@ -97,7 +92,6 @@ export function Config({go, query}: PageProps) {
   const select = (id: string | null) => navigate(within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
-  const mainSource = sources.find(item => item.kind === 'main') ?? null;
   const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
@@ -144,12 +138,20 @@ export function Config({go, query}: PageProps) {
           value={tab}
           onChange={next => navigate(within(query, {tab: next}))}
           items={[
-            ...(mainSource && resources?.config.writable && mainSource.writable && mainSource.content !== undefined
+            ...(setupAvailable && mainSource
               ? [
                   {
                     id: 'setup',
                     label: t('config.wizard'),
-                    content: <Wizard main={mainSource} editor={editor} onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))} />
+                    content: (
+                      <Wizard
+                        main={mainSource}
+                        complete={mainComplete}
+                        canValidate={canValidate}
+                        editor={editor}
+                        onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))}
+                      />
+                    )
                   }
                 ]
               : []),
@@ -198,7 +200,7 @@ export function Config({go, query}: PageProps) {
                       key={source.id}
                       source={source}
                       diagnostics={config.data.diagnostics.filter(d => d.source_id === source.id)}
-                      canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
+                      canValidate={canValidate}
                       canWrite={resources?.config.writable === true && source.writable}
                       editor={editor}
                       groups={groupList}
@@ -216,7 +218,7 @@ export function Config({go, query}: PageProps) {
                 <ValidateTab
                   config={config.data}
                   editor={editor}
-                  canValidate={resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full')}
+                  canValidate={canValidate}
                   open={(sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))}
                 />
               )
@@ -276,7 +278,9 @@ function SourceCard({
   const t = useT();
   const locale = LOCALE[useLang()];
   const n = (value: number) => formatNumber(value, locale);
-  const [draft, setDraft] = useState<string | null>(null);
+  // The draft keeps the digest of the text it started from: If-Match carries that, so a source that changed on
+  // disk while it was being edited is refused with 412 instead of overwritten.
+  const [draft, setDraft] = useState<{text: string; base: string} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   // Content is only safe to edit when it is the complete accepted text: present and hashing to the accepted digest.
   const hash = useSha256(source.content);
@@ -284,7 +288,7 @@ function SourceCard({
   const editing = draft !== null;
   // What the list shows: the last dry run, else the diagnostics a rejected save came back with, else the engine's.
   const saveErrors =
-    editor.error instanceof ApiError && editor.error.status === 422
+    editor.error instanceof ApiError && editor.error.status === 422 && editor.errorSource === source.id
       ? ((editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [])
       : null;
   const shown = found ?? saveErrors ?? diagnostics;
@@ -297,20 +301,21 @@ function SourceCard({
     const own = groupNames(text);
     return own.length ? own : groups;
   };
-  const text = draft ?? source.content ?? '';
+  const text = draft?.text ?? source.content ?? '';
   const [jump, setJump] = useState<number | null>(null);
-  const dirty = editing && draft !== source.content;
+  const dirty = editing && draft.text !== source.content;
   useEffect(() => {
     onDirty(dirty);
     return () => onDirty(false);
   }, [dirty, onDirty]);
   // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
   const api = getApi();
+  const draftText = draft?.text;
   useEffect(() => {
-    if (!editing || !canValidate || draft === null) return;
+    if (!canValidate || draftText === undefined) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      api.validateConfig({sources: [{id: source.id, path: source.path, content: draft}], mode: 'full'}, controller.signal).then(
+      api.validateConfig({sources: [{id: source.id, path: source.path, content: draftText}], mode: 'full'}, controller.signal).then(
         result => setFound(result.diagnostics),
         () => undefined
       );
@@ -319,7 +324,7 @@ function SourceCard({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [api, editing, canValidate, draft, source.id, source.path]);
+  }, [api, canValidate, draftText, source.id, source.path]);
   const validate = async () => {
     const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
     if (!result) return false;
@@ -336,7 +341,7 @@ function SourceCard({
   const save = async () => {
     if (draft === null) return;
     if (canValidate && !(await validate())) return;
-    const result = await editor.save(source.id, draft, source.content_sha256);
+    const result = await editor.save(source.id, draft.text, draft.base);
     // A rejected save carries its own diagnostics; drop the dry-run list so they show.
     setFound(null);
     if (result) {
@@ -349,7 +354,7 @@ function SourceCard({
       <div className="rp-row">
         <span className="rp-cluster">
           <h3 className="rp-h3 rp-code">{source.path}</h3>
-          {editing && draft !== source.content && <Badge tone="warn">{t('config.unsaved')}</Badge>}
+          {dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
         </span>
         <span className="rp-cluster">
           {canValidate && (
@@ -362,7 +367,7 @@ function SourceCard({
               small
               isDisabled={!complete || !!editor.busy}
               tip={complete === false ? t('config.incomplete') : undefined}
-              onPress={() => setDraft(source.content ?? '')}
+              onPress={() => setDraft({text: source.content ?? '', base: source.content_sha256})}
             >
               {t('config.edit')}
             </Button>
@@ -383,8 +388,8 @@ function SourceCard({
                 small
                 accent
                 isPending={editor.busy === 'save'}
-                isDisabled={!!editor.busy || draft === source.content}
-                tip={t('config.saveShortcut')}
+                isDisabled={!!editor.busy || !dirty}
+                tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
                 onPress={() => void save()}
               >
                 {t('config.save')}
@@ -411,7 +416,7 @@ function SourceCard({
           label={source.path}
           value={text}
           readOnly={!editing || editor.busy === 'save'}
-          onChange={editing ? setDraft : undefined}
+          onChange={editing ? value => setDraft(prev => (prev ? {...prev, text: value} : prev)) : undefined}
           marks={marks}
           focusLine={jump ?? focusLine}
           outbounds={outbounds}
@@ -461,7 +466,7 @@ function ValidateTab({
       <div className="rp-toolbar">
         <Light small tone={errors ? 'err' : warnings ? 'warn' : 'ok'}>
           {errors
-            ? t('config.failed', {errors: n(errors), warnings: n(warnings)})
+            ? t('config.failed', {errors: t('config.errors', {n: errors}), warnings: t('config.warnings', {n: warnings})})
             : warnings
               ? t('config.passedWarnings', {n: n(warnings)})
               : t('config.passed')}

@@ -1,12 +1,10 @@
-// The quick setup edits `subscription` (one entry per line, read and written line by line) and swaps `routing`
-// for a template; `group` is read to find the group templates route to and written back as it stands, or as a
-// single `proxy` when the source has none. Every other section is kept verbatim, and a missing main source is
-// generated whole. No dae parser: sections are cut by brace matching.
-export type Subscription = {name: string; url: string};
-// `raw` is the line as it stands in the file and is written back untouched, so filters and policies the form
-// does not model survive a round trip.
-export type GroupSpec = {name: string; policy: 'auto' | 'manual'; subscriptions: string[]; raw?: string};
-export type WizardState = {subscriptions: Subscription[]; groups: GroupSpec[]; rules: 'keep' | RuleTemplate; lanInterface: string};
+// The quick setup edits `subscription` (one entry per line) and swaps `routing` for a template; `group` is
+// only read, to find the group the templates route to, and a main source without one gets a single `proxy`.
+// Every other section, and every subscription line the form does not recognise, is kept verbatim; a missing
+// main source is generated whole. No dae parser: sections are cut by brace matching.
+// `raw` is the line as it stands in the file; a line the form has not changed is written back untouched.
+export type Subscription = {name: string; url: string; raw?: string};
+export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
 
 export type RuleTemplate = 'dae' | 'whitelist' | 'blacklist' | 'global';
 // The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
@@ -75,46 +73,27 @@ function sections(lines: string[]): Section[] {
   return out;
 }
 
-// What the current text says, for the form.
+// What the current text says, for the form: the recognised `tag: 'url'` lines, the first group's name.
 export function readState(text: string): WizardState {
   const lines = text.split('\n');
   const found = sections(lines);
   const subscriptions: Subscription[] = [];
   for (const line of found.find(s => s.name === 'subscription')?.body ?? []) {
-    const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'/.exec(line);
-    if (match) subscriptions.push({name: match[1] ?? match[2], url: match[3]});
+    const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(line.replace(/#.*$/, ''));
+    if (match) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
+    else if (line.trim()) subscriptions.push({name: '', url: '', raw: line});
   }
-  const groups: GroupSpec[] = [];
-  for (const line of found.find(s => s.name === 'group')?.body ?? []) {
-    const match = /^\s*([\w-]+)\s*\{(.*)\}\s*$/.exec(line);
-    if (!match) continue;
-    const tags =
-      /subtag\(([^)]*)\)/
-        .exec(match[2])?.[1]
-        .split(',')
-        .map(s => s.trim()) ?? [];
-    groups.push({name: match[1], policy: /policy:\s*fixed/.test(match[2]) ? 'manual' : 'auto', subscriptions: tags, raw: line});
-  }
+  const group = /^\s*([\w-]+)\s*\{/m.exec(found.find(s => s.name === 'group')?.body.join('\n') ?? '')?.[1] ?? null;
   const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
-  return {subscriptions, groups, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
+  return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
 }
 
 function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(s => `  ${ident(s.name) || 'sub'}: ${quote(s.url.trim())}`), '}'];
+  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${ident(s.name) || 'sub'}: ${quote(s.url.trim())}`), '}'];
 }
-function groupBlock(state: WizardState): string[] {
-  return [
-    'group {',
-    ...state.groups.map(g => {
-      if (g.raw !== undefined) return g.raw;
-      const filter = g.subscriptions.length ? `filter: subtag(${g.subscriptions.map(ident).join(', ')}) ` : '';
-      return `  ${ident(g.name) || 'proxy'} { ${filter}policy: ${g.policy === 'auto' ? 'min_moving_avg' : 'fixed(0)'} }`;
-    }),
-    '}'
-  ];
-}
+export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
-  const first = ident(state.groups[0]?.name ?? 'proxy') || 'proxy';
+  const first = ident(state.group ?? defaultGroup) || defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
@@ -125,7 +104,10 @@ const dnsBlock = [
   "    alidns: 'udp://223.5.5.5:53'",
   '  }',
   '  routing {',
-  '    request { qname(geosite:cn) -> alidns; fallback: cloudflare }',
+  '    request {',
+  '      qname(geosite:cn) -> alidns',
+  '      fallback: cloudflare',
+  '    }',
   '  }',
   '}'
 ];
@@ -142,8 +124,9 @@ function globalBlock(state: WizardState): string[] {
   ];
 }
 
-// The text to write: the current text with subscription and group replaced (and routing/dns when a template is
-// chosen), or a whole file when there is no text to keep.
+const groupBlock = ['group {', `  ${defaultGroup} { policy: min_moving_avg }`, '}'];
+// The text to write: the current text with subscription replaced (and routing when a template is chosen), a
+// group section added when there is none, or a whole file when there is no text to keep.
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
     return [
@@ -151,7 +134,7 @@ export function writeState(current: string, state: WizardState): string {
       '',
       ...subscriptionBlock(state),
       '',
-      ...groupBlock(state),
+      ...groupBlock,
       '',
       ...dnsBlock,
       '',
@@ -160,10 +143,8 @@ export function writeState(current: string, state: WizardState): string {
     ].join('\n');
   }
   const lines = current.replace(/\n$/, '').split('\n');
-  const replacements = new Map<string, string[]>([
-    ['subscription', subscriptionBlock(state)],
-    ['group', groupBlock(state)]
-  ]);
+  const replacements = new Map<string, string[]>([['subscription', subscriptionBlock(state)]]);
+  if (!state.group) replacements.set('group', groupBlock);
   if (state.rules !== 'keep') replacements.set('routing', routingBlock(state, state.rules));
   const out: string[] = [];
   const done = new Set<string>();
