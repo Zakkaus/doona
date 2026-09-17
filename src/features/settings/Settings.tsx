@@ -44,6 +44,10 @@ function readPairing(): {api: string; token: string} | null {
   history.replaceState(null, '', location.pathname + location.search + '#/settings' + (rest ? '?' + rest : ''));
   return {api, token};
 }
+// `?card=` (from search) scrolls to that card's heading.
+function readCard(): string | null {
+  return new URLSearchParams(location.hash.split('?')[1] ?? '').get('card');
+}
 
 export function Settings() {
   const t = useT();
@@ -52,6 +56,10 @@ export function Settings() {
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
   const [paired] = useState(readPairing);
+  const [card] = useState(readCard);
+  useEffect(() => {
+    if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
+  }, [card]);
   const [api, setApi] = useState(paired?.api ?? saved.api ?? '');
   const [token, setToken] = useState(paired?.token ?? saved.token);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);

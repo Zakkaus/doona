@@ -63,7 +63,7 @@ export function Nodes({go, query}: PageProps) {
     else next.delete('provider');
     go('nodes', next.toString());
   };
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => params.get('q') ?? '');
   const [group, setGroup] = useState('');
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});

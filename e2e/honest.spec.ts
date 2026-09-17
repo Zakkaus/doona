@@ -56,11 +56,16 @@ test('search reads live connection addresses, node and group names, and availabl
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/id=/);
   await expect(detail(page)).toHaveCount(0);
-  for (const query of ['Live node', 'Live group', 'Settings']) {
+  const targets: Array<[string, RegExp]> = [
+    ['Live node', /#\/nodes\?provider=inline&q=Live%20node$/],
+    ['Live group', /#\/policies\?group=proxy$/],
+    ['Settings', /#\/settings$/]
+  ];
+  for (const [query, url] of targets) {
     await page.keyboard.press('Control+K');
     await dialog.getByRole('searchbox').fill(query);
-    await dialog.getByRole('option', {name: query, exact: true}).click();
-    await expect(page).toHaveURL(query === 'Settings' ? /#\/settings$/ : /#\/policies$/);
+    await dialog.getByRole('option', {name: new RegExp('^' + query)}).click();
+    await expect(page).toHaveURL(url);
   }
 });
 

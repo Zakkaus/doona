@@ -117,3 +117,22 @@ export function navAvailable(path: string, capabilities: Capabilities | undefine
   const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
+
+// Tabs and cards the search can jump to directly; each is gated by its page's requirements.
+export const subpages: Array<{path: string; query: string; titleKey: Key}> = [
+  {path: 'rules', query: 'tab=map', titleKey: 'rule.map'},
+  {path: 'rules', query: 'tab=list', titleKey: 'rule.listTitle'},
+  {path: 'rules', query: 'tab=flows', titleKey: 'rule.flows'},
+  {path: 'rules', query: 'tab=trace', titleKey: 'rule.trace'},
+  {path: 'dns', query: 'tab=query', titleKey: 'dns.query'},
+  {path: 'dns', query: 'tab=log', titleKey: 'dns.log'},
+  {path: 'dns', query: 'tab=cache', titleKey: 'ui.cache'},
+  {path: 'config', query: 'tab=setup', titleKey: 'config.wizard'},
+  {path: 'config', query: 'tab=source', titleKey: 'config.tabSource'},
+  {path: 'config', query: 'tab=validate', titleKey: 'config.tabValidate'},
+  {path: 'settings', query: 'card=backend', titleKey: 'settings.backend'},
+  {path: 'settings', query: 'card=runtime', titleKey: 'settings.runtime'},
+  {path: 'settings', query: 'card=actions', titleKey: 'settings.actions'},
+  {path: 'settings', query: 'card=appearance', titleKey: 'settings.appearance'},
+  {path: 'settings', query: 'card=about', titleKey: 'settings.about'}
+];
