@@ -23,8 +23,11 @@ import type {
   RoutingTraceRequest,
   RoutingTraceResponse,
   RuntimeMode,
-  RuntimeModeRequest
+  RuntimeModeRequest,
+  ProviderCreate,
+  NodeCreate
 } from './model';
+import {ApiError} from './error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch, type ResourceName} from './invalidation';
 
@@ -277,7 +280,28 @@ export function useConnectionClose(refetch: () => void) {
       setBusy(null);
     }
   }
-  return {busy, close};
+  // One request per connection, in order; a 409 is a connection the backend does not own and counts as skipped.
+  async function closeAll(ids: string[]): Promise<{closed: number; skipped: number}> {
+    if (busy) return {closed: 0, skipped: 0};
+    setBusy('all');
+    const tally = {closed: 0, skipped: 0};
+    try {
+      for (const id of ids) {
+        try {
+          await api.closeConnection(id);
+          tally.closed += 1;
+        } catch (error) {
+          if (error instanceof ApiError && (error.status === 409 || error.status === 404)) tally.skipped += 1;
+          else throw error;
+        }
+      }
+      return tally;
+    } finally {
+      refetch();
+      setBusy(null);
+    }
+  }
+  return {busy, close, closeAll};
 }
 
 export function useRoutingTrace() {
@@ -573,6 +597,77 @@ export function useProviderRefresh(refetch: () => void) {
     }
   }
   return {busy, refresh};
+}
+// Adding and removing subscriptions and inline nodes: each call rewrites the managed main source and starts a new
+// generation, so the lists refetch on generation.changed; `refetch` covers a backend without events.
+export function useNodeManage(refetch: () => void) {
+  const api = getApi();
+  const [busy, setBusy] = useState<string | null>(null);
+  async function run<T>(key: string, action: () => Promise<T>): Promise<T | undefined> {
+    if (busy) return undefined;
+    setBusy(key);
+    try {
+      const result = await action();
+      refetch();
+      return result;
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {
+    busy,
+    addProvider: (request: ProviderCreate) => run('provider', () => api.createProvider(request)),
+    removeProvider: (id: string) => run(id, () => api.deleteProvider(id)),
+    addNode: (request: NodeCreate) => run('node', () => api.createNode(request)),
+    removeNode: (id: string) => run(id, () => api.deleteNode(id))
+  };
+}
+// One TCP probe of one node, for the node table; the group card probes whole groups.
+export function useNodeProbe(refetch: () => void) {
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const [busy, setBusy] = useState<string | null>(null);
+  async function probe(nodeId: string) {
+    if (busy) return undefined;
+    setBusy(nodeId);
+    try {
+      const accepted = await api.startProbe({
+        target: {type: 'node', node_id: nodeId},
+        kind: 'tcp_connect',
+        purpose: 'data',
+        transport: ['tcp'],
+        warmth: 'warm',
+        ip_version: capabilities.data?.resources.probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
+        members: 'direct'
+      });
+      const result = await api.pollOperation(accepted);
+      refetch();
+      if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
+      return result.result;
+    } finally {
+      setBusy(null);
+    }
+  }
+  return {busy, probe};
+}
+export function useGeodata(enabled = true) {
+  const api = getApi();
+  const resource = useResource({key: ['geodata'], fetch: signal => api.geodata(signal)}, {deps: [api], enabled, every: 0});
+  const [busy, setBusy] = useState(false);
+  async function update() {
+    if (busy) return undefined;
+    setBusy(true);
+    try {
+      const accepted = await api.updateGeodata();
+      const result = await api.pollOperation(accepted);
+      resource.refetch();
+      if (result.status !== 'succeeded' || result.kind !== 'geodata_update') throw new Error(result.error?.message ?? 'Update failed');
+      return result.result;
+    } finally {
+      setBusy(false);
+    }
+  }
+  return {...resource, busy, update};
 }
 // The accepted configuration: sources, diagnostics and the running generation; refetched on generation.changed.
 export function useConfig(enabled = true) {

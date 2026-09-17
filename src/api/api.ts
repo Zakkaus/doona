@@ -37,6 +37,11 @@ import type {
   RuntimeSettings,
   RuntimeSettingsPatch,
   ProviderList,
+  Provider,
+  Node,
+  ProviderCreate,
+  NodeCreate,
+  GeoData,
   RuntimeMode,
   RuntimeModeRequest,
   LogOptions,
@@ -77,6 +82,12 @@ export interface Api {
   setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
   providers(signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
+  createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;
+  deleteProvider(providerId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  createNode(request: NodeCreate, signal?: AbortSignal): Promise<Node>;
+  deleteNode(nodeId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  geodata(signal?: AbortSignal): Promise<GeoData>;
+  updateGeodata(signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
   configSource(sourceId: string, signal?: AbortSignal): Promise<ConfigSource>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;

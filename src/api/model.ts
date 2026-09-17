@@ -54,6 +54,7 @@ export type Operation =
   | SucceededOperation<'probe', Schema['ProbeResult']>
   | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
   | SucceededOperation<'provider_refresh', Schema['Provider']>
+  | SucceededOperation<'geodata_update', Schema['GeoData']>
   | SucceededOperation<'suspend', {runtime_state: 'suspended' | null}>
   | SucceededOperation<'resume', {runtime_state: 'running' | null}>;
 export type OperationState = Operation & {retryAfter?: number};
@@ -69,6 +70,10 @@ export type RuntimeMode = Schema['RuntimeMode'];
 export type RuntimeModeRequest = Schema['RuntimeModeRequest'];
 export type Provider = Schema['Provider'];
 export type ProviderList = Schema['ProviderList'];
+export type ProviderCreate = Schema['ProviderCreate'];
+export type NodeCreate = Schema['NodeCreate'];
+export type GeoData = Schema['GeoData'];
+export type GeoAsset = Schema['GeoAsset'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'];

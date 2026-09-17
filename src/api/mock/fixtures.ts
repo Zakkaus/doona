@@ -15,6 +15,7 @@ import type {
   ConfigSource,
   ConfigDiagnostic,
   Provider,
+  GeoData,
   LogRecord,
   TrafficHistory,
   Version
@@ -156,8 +157,9 @@ export const capabilities: Capabilities = {
     traffic_history: {available: true, max_window_seconds: 3600, max_points: 360},
     memory_history: {available: true, max_window_seconds: 3600, max_points: 720},
     runtime_mode: {available: true, modes: ['rule', 'direct', 'global']},
-    nodes: {available: true},
-    providers: {available: true, can_refresh: true, max_page_size: 1000},
+    nodes: {available: true, can_manage: true},
+    providers: {available: true, can_refresh: true, can_manage: true, max_page_size: 1000},
+    geodata: {available: true, can_update: true, assets: ['geosite', 'geoip']},
     rules: {available: false},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
@@ -241,6 +243,9 @@ export const capabilitiesBase: Capabilities = {
     logs: {available: false},
     dns_log: {available: false},
     runtime_settings: {available: false},
+    geodata: {available: false},
+    nodes: {available: true, can_manage: false},
+    providers: {available: true, can_refresh: true, can_manage: false, max_page_size: 1000},
     config: {available: false, content: false},
     config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
@@ -740,6 +745,28 @@ export const providers: Provider[] = [
     last_error: null
   }
 ];
+// Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
+export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity'];
+// The geosite and geoip files the demo datapath was built from.
+export const geodata: GeoData = {
+  observed_at: observedAt,
+  assets: [
+    {
+      kind: 'geosite',
+      sha256: '3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c',
+      size_bytes: '4718592',
+      modified_at: ago(3 * 86400),
+      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+    },
+    {
+      kind: 'geoip',
+      sha256: '9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e',
+      size_bytes: '6291456',
+      modified_at: ago(3 * 86400),
+      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+    }
+  ]
+};
 // What the engine logged while starting: the replay ring's first records.
 export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {fields?: LogRecord['fields']}> = [
   {level: 'info', target: 'honk::main', message: 'honk 0.9.3 starting.', fields: {pid: 4120}},

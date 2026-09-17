@@ -4,7 +4,7 @@ test.use({viewport: {width: 1440, height: 900}});
 
 test('a flow opens its trace beside the list and links to its connection', async ({page}) => {
   await page.goto('/#/rules?tab=flows');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
   const total = await rows.count();
   expect(total).toBeGreaterThan(1);
@@ -41,7 +41,7 @@ test('the routing map lays the config out as lanes and a pinned item carries int
   expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
   await page.getByRole('button', {name: 'Show the 2 flows on this path', exact: true}).click();
   await expect(page).toHaveURL(/tab=flows/);
-  const rows = page.locator('.rp-table tbody tr[data-key]');
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('dip(geoip:cn)');
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
@@ -55,7 +55,7 @@ test('the routing map lays the config out as lanes and a pinned item carries int
 
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
   await page.goto('/#/rules?tab=flows');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
   const total = await rows.count();
   await page.getByRole('radio', {name: 'UDP', exact: true}).click();

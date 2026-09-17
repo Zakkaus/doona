@@ -49,6 +49,7 @@ paths:
                       providers: /api/v1/providers
                       rules: /api/v1/rules
                       runtime_mode: /api/v1/runtime/mode
+                      geodata: /api/v1/geodata
                       operations: /api/v1/operations/{id}
                   x-headers:
                     Content-Type: application/json
@@ -168,9 +169,11 @@ paths:
                           - maps
                       nodes:
                         available: true
+                        can_manage: true
                       providers:
                         available: true
                         can_refresh: true
+                        can_manage: true
                         max_page_size: 1000
                       groups:
                         available: true
@@ -286,6 +289,12 @@ paths:
                           - dns_log.max_records
                           - flows.max_flows
                           - flows.retention_seconds
+                      geodata:
+                        available: true
+                        can_update: true
+                        assets:
+                          - geosite
+                          - geoip
                       operations:
                         available: true
                         retention_seconds: 300
@@ -1771,6 +1780,169 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createNode
+      summary: Add an inline node from a share link
+      description: |
+        Requires resources.nodes.can_manage; otherwise returns 404
+        capability_not_supported. The backend parses the link with the engine's own
+        share-link support, writes it into the node section of its managed main
+        source under the given name, advances the configuration revision and emits
+        generation.changed. The link is stored, never returned. A link the engine
+        cannot parse returns 422 unprocessable with the engine's reason in message;
+        a name already in use returns 409 state_conflict. The node belongs to the
+        inline provider and to every group whose filter matches it after reload.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeCreate'
+            examples:
+              link:
+                value:
+                  name: hk-03
+                  link: vless://uuid@example.com:443?security=tls#hk-03
+      responses:
+        '201':
+          description: Node written to the managed configuration
+          headers:
+            Location:
+              description: The new node in the node list.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/nodes/[^/]+$
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+              examples:
+                created:
+                  value:
+                    id: node-hk-03
+                    name: hk-03
+                    protocol: vless
+                    subscription_tag: null
+                    provider_id: inline
+                    group_ids:
+                      - group-proxy
+                    health: []
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/nodes/node-hk-03
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A node with this name exists
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                name_taken:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: An inline node named hk-03 already exists.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '413':
+          description: Request body exceeds limits.max_json_body_bytes
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                too_large:
+                  value:
+                    error:
+                      code: request_too_large
+                      message: The request body exceeds the advertised limit.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '415':
+          description: Request body is not application/json
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unsupported:
+                  value:
+                    error:
+                      code: unsupported_media_type
+                      message: The request body must be application/json.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '422':
+          description: The engine cannot parse the link
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_link:
+                  value:
+                    error:
+                      code: unsupported_value
+                      message: Unsupported share link scheme "foo".
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/providers:
     get:
       operationId: listProviders
@@ -1830,6 +2002,175 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProvider
+      summary: Add a subscription provider to the managed configuration
+      description: |
+        Requires resources.providers.can_manage; otherwise returns 404
+        capability_not_supported. Only kind subscription can be created here: file and
+        inline providers are authored in the configuration sources. The backend writes
+        the provider into the subscription section of its managed main source,
+        advances the configuration revision and emits generation.changed, so a
+        configuration editor holding the previous revision receives 412 on its next
+        write. The provider is created unfetched: node_count 0, updated_at null and
+        status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
+        never returned; the response carries url_redacted. A name already in use
+        returns 409 state_conflict; a URL that is not http(s) returns 422
+        unprocessable.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+            examples:
+              subscription:
+                value:
+                  name: provider-b
+                  kind: subscription
+                  url: https://subscriptions.example.com/sub?token=secret
+      responses:
+        '201':
+          description: Provider written to the managed configuration
+          headers:
+            Location:
+              description: The new provider's URL.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/providers/[^/]+$
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+              examples:
+                created:
+                  value:
+                    id: provider-b
+                    name: provider-b
+                    kind: subscription
+                    url_redacted: https://subscriptions.example.com/[redacted]
+                    node_count: 0
+                    updated_at: null
+                    expires_at: null
+                    traffic: null
+                    status: stale
+                    last_error: null
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/providers/provider-b
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A provider with this name exists
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                name_taken:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: A provider named provider-b already exists.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '413':
+          description: Request body exceeds limits.max_json_body_bytes
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                too_large:
+                  value:
+                    error:
+                      code: request_too_large
+                      message: The request body exceeds the advertised limit.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '415':
+          description: Request body is not application/json
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unsupported:
+                  value:
+                    error:
+                      code: unsupported_media_type
+                      message: The request body must be application/json.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '422':
+          description: The URL is not an http(s) URL
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_url:
+                  value:
+                    error:
+                      code: unsupported_value
+                      message: The subscription URL must start with http:// or https://.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/providers/{id}:
     parameters:
       - $ref: '#/components/parameters/ProviderId'
@@ -1880,6 +2221,49 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProvider
+      summary: Remove a subscription or file provider from the managed configuration
+      description: |
+        Requires resources.providers.can_manage; otherwise returns 404
+        capability_not_supported, as does an inline provider, which is the node
+        section itself. Removes the provider's line from the managed main source and
+        its nodes from the running groups, advances the configuration revision and
+        emits generation.changed. Idempotent: an unknown id returns deleted 0. A
+        provider that is the only member source of a group is still removed; the
+        group is then empty.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Idempotent deletion result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteCount'
+              examples:
+                deleted:
+                  value:
+                    deleted: 1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/providers/{id}/refresh:
     parameters:
       - $ref: '#/components/parameters/ProviderId'
@@ -2013,6 +2397,196 @@ paths:
                     Retry-After: 1
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
+  /api/v1/nodes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/NodeId'
+    delete:
+      operationId: deleteNode
+      summary: Remove an inline node from the managed configuration
+      description: |
+        Requires resources.nodes.can_manage; otherwise returns 404
+        capability_not_supported, as does a node that came from a subscription or
+        file provider: those are removed by refreshing or deleting their provider.
+        Removes the node's line from the node section of the managed main source and
+        the node from the running groups, advances the configuration revision and
+        emits generation.changed. Idempotent: an unknown id returns deleted 0.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Idempotent deletion result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteCount'
+              examples:
+                deleted:
+                  value:
+                    deleted: 1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/geodata:
+    get:
+      operationId: getGeoData
+      summary: Read the geosite and geoip assets the engine loaded
+      description: |
+        Requires resources.geodata.available; otherwise returns 404
+        capability_not_supported. One entry per asset kind in
+        resources.geodata.assets, describing the file the running datapath was
+        built from: its digest, size and modification time, and the download source
+        POST /geodata/update fetches, redacted like a provider URL. Reading never
+        touches the network.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Loaded assets
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoData'
+              examples:
+                loaded:
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    assets:
+                      - kind: geosite
+                        sha256: 3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c
+                        size_bytes: '4718592'
+                        modified_at: '2026-08-14T03:00:00Z'
+                        source_redacted: https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+                      - kind: geoip
+                        sha256: 9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e
+                        size_bytes: '6291456'
+                        modified_at: '2026-08-14T03:00:00Z'
+                        source_redacted: https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/geodata/update:
+    post:
+      operationId: updateGeoData
+      summary: Queue a download of the geosite and geoip assets
+      description: |
+        Requires resources.geodata.can_update; otherwise returns 404
+        capability_not_supported. Takes no request body and never changes the
+        configured sources. The backend downloads every asset from its source into a
+        temporary file, verifies it parses, replaces the loaded file and reloads the
+        datapath once, emitting generation.changed; an asset that fails to download
+        or parse leaves the loaded file in place and fails the operation. Follow the
+        shared operation ownership, retention and idempotency rules. Replaying an
+        accepted Idempotency-Key returns its original operation; a distinct update
+        while one is queued or running returns 409 state_conflict. A full bounded
+        queue returns 503 temporarily_unavailable with Retry-After. A successful
+        geodata_update operation returns the new GeoData in result; failure uses
+        SafeError.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Geodata update accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoDataUpdateAccepted'
+              examples:
+                queued:
+                  value:
+                    operation_id: op-geodata-01
+                    kind: geodata_update
+                    status: queued
+                    href: /api/v1/operations/op-geodata-01
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-geodata-01
+                    Retry-After: 2
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: An update is queued or running, or an idempotency key conflicts
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                in_flight:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: A geodata update is already queued or running.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/groups:
     get:
       operationId: listGroups
@@ -4816,6 +5390,14 @@ components:
         type: string
         minLength: 1
       example: provider-a
+    NodeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: node-hk-03
   responses:
     '404':
       description: Unknown source ID or unavailable configuration readback
@@ -5219,6 +5801,7 @@ components:
             - providers
             - rules
             - operations
+            - geodata
           properties:
             version:
               type: string
@@ -5256,6 +5839,9 @@ components:
             runtime_mode:
               type: string
               const: /api/v1/runtime/mode
+            geodata:
+              type: string
+              const: /api/v1/geodata
             operations:
               type: string
               const: /api/v1/operations/{id}
@@ -5383,6 +5969,7 @@ components:
             - reload
             - suspend
             - resume
+            - geodata
           properties:
             config:
               type: object
@@ -5578,7 +6165,22 @@ components:
                       - attachments
                       - maps
             nodes:
-              $ref: '#/components/schemas/AvailableResource'
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - can_manage
+              properties:
+                available:
+                  type: boolean
+                can_manage:
+                  type: boolean
+                  description: POST /nodes and DELETE /nodes/{id} are implemented for inline nodes; the backend owns a writable main source.
             providers:
               type: object
               required:
@@ -5590,6 +6192,7 @@ components:
               then:
                 required:
                   - can_refresh
+                  - can_manage
                   - max_page_size
               properties:
                 available:
@@ -5597,6 +6200,9 @@ components:
                 can_refresh:
                   type: boolean
                   description: Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available.
+                can_manage:
+                  type: boolean
+                  description: POST /providers and DELETE /providers/{id} are implemented for subscription providers; the backend owns a writable main source.
                 max_page_size:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -5964,6 +6570,30 @@ components:
                   description: The settings PATCH /runtime/settings accepts on this backend; others return 400.
                   items:
                     $ref: '#/components/schemas/RuntimeSettingField'
+            geodata:
+              type: object
+              required:
+                - available
+              if:
+                properties:
+                  available:
+                    const: true
+              then:
+                required:
+                  - can_update
+                  - assets
+              properties:
+                available:
+                  type: boolean
+                can_update:
+                  type: boolean
+                  description: POST /geodata/update is implemented. Requires operations.available and configured asset sources.
+                assets:
+                  type: array
+                  uniqueItems: true
+                  description: The asset kinds GET /geodata reports on this backend.
+                  items:
+                    $ref: '#/components/schemas/GeoAssetKind'
             operations:
               type: object
               required:
@@ -7185,6 +7815,111 @@ components:
               $ref: '#/components/schemas/Timestamp'
             result:
               $ref: '#/components/schemas/Provider'
+            error:
+              type: 'null'
+    ProviderCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - kind
+        - url
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9_.-]+$
+          description: The subscription tag as written in the configuration; unique among providers.
+        kind:
+          type: string
+          const: subscription
+        url:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          pattern: ^https?://
+          description: Fetched by the engine on refresh; stored in the managed main source and never returned.
+    NodeCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - link
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: The node name as written in the configuration; unique among inline nodes.
+        link:
+          type: string
+          minLength: 1
+          maxLength: 8192
+          description: A share link in a scheme the engine parses (for example vless, vmess, trojan, ss); stored in the managed main source and never returned.
+    GeoAssetKind:
+      type: string
+      enum:
+        - geosite
+        - geoip
+    GeoAsset:
+      type: object
+      required:
+        - kind
+        - sha256
+        - size_bytes
+        - modified_at
+        - source_redacted
+      properties:
+        kind:
+          $ref: '#/components/schemas/GeoAssetKind'
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          description: Digest of the loaded file.
+        size_bytes:
+          $ref: '#/components/schemas/UInt64'
+        modified_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: Modification time of the loaded file, or null when the filesystem does not report one.
+        source_redacted:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          description: Display-only download source with userinfo, query and fragment removed; null when the backend has no source for this asset.
+    GeoData:
+      type: object
+      required:
+        - observed_at
+        - assets
+      properties:
+        observed_at:
+          $ref: '#/components/schemas/Timestamp'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoAsset'
+    GeoDataUpdateAccepted:
+      allOf:
+        - $ref: '#/components/schemas/OperationAccepted'
+        - type: object
+          properties:
+            kind:
+              const: geodata_update
+    GeoDataUpdateSucceededOperation:
+      allOf:
+        - $ref: '#/components/schemas/OperationCommon'
+        - type: object
+          properties:
+            kind:
+              const: geodata_update
+            status:
+              const: succeeded
+            finished_at:
+              $ref: '#/components/schemas/Timestamp'
+            result:
+              $ref: '#/components/schemas/GeoData'
             error:
               type: 'null'
     GroupPolicy:
@@ -9995,6 +10730,7 @@ components:
         - resume
         - group_update
         - provider_refresh
+        - geodata_update
     OperationAccepted:
       type: object
       required:
@@ -10025,6 +10761,7 @@ components:
         - $ref: '#/components/schemas/ResumeSucceededOperation'
         - $ref: '#/components/schemas/GroupUpdateSucceededOperation'
         - $ref: '#/components/schemas/ProviderRefreshSucceededOperation'
+        - $ref: '#/components/schemas/GeoDataUpdateSucceededOperation'
     QueuedOperation:
       allOf:
         - $ref: '#/components/schemas/OperationCommon'

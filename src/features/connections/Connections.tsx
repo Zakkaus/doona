@@ -10,6 +10,7 @@ import {
   LabeledSelect,
   Light,
   MenuButton,
+  ModalDialog,
   Segmented,
   TextField,
   ErrorMessage,
@@ -146,6 +147,38 @@ export function Connections({go, query}: PageProps) {
         )}
         {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
         <span className="rp-grow" />
+        {canClose && (
+          <ModalDialog
+            title={t('conn.closeAll')}
+            narrow
+            alert
+            trigger={
+              <Button negative quiet isDisabled={!shown.length || !!closing.busy} isPending={closing.busy === 'all'}>
+                {t('conn.closeAll')}
+              </Button>
+            }
+            footer={close => (
+              <>
+                <Button onPress={close}>{t('ui.cancel')}</Button>
+                <Button
+                  negative
+                  onPress={() => {
+                    close();
+                    select(null);
+                    void closing.closeAll(shown.map(c => c.id)).then(
+                      tally => toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped})),
+                      (error: unknown) => toast('negative', t('conn.closeFailed', {error: errorText(error)}))
+                    );
+                  }}
+                >
+                  {t('conn.closeAll')}
+                </Button>
+              </>
+            )}
+          >
+            <span className="rp-label">{t('conn.closeAllHelp', {n: shown.length})}</span>
+          </ModalDialog>
+        )}
         <Button
           isDisabled={!shown.length}
           onPress={() =>

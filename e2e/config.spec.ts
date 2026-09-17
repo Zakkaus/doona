@@ -50,7 +50,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
   await page.goto('/#/config?tab=validate');
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
-  const rows = page.locator('.rp-table tbody tr[data-key]');
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(3);
   await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
   await expect(rows).toHaveCount(1);
@@ -110,10 +110,10 @@ test('the quick setup writes a rule template into routing', async ({page}) => {
 
 test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
   await page.goto('/#/nodes');
-  const sources = page.locator('.rp-table').first().locator('tbody tr[data-key]');
+  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources).toHaveCount(2);
   await expect(sources.first()).toContainText('sub-c');
-  const nodes = page.locator('.rp-table').nth(1).locator('tbody tr[data-key]');
+  const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(nodes.first()).toBeVisible();
   expect(await nodes.count()).toBeGreaterThan(10);
   await sources.nth(1).click();

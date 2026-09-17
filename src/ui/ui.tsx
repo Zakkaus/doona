@@ -449,6 +449,8 @@ import {
   TableBody,
   Row,
   Cell,
+  Virtualizer,
+  TableLayout,
   DialogTrigger,
   Modal,
   ModalOverlay,
@@ -699,7 +701,8 @@ export function NodeTile({
 // Column minima include cell padding; grow weights their fractional share (zero keeps the minimum).
 // `drop` orders which columns give way first when the container is narrower than the minima add up to;
 // a column without it always stays. Tables never scroll sideways on a desktop.
-export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number};
+export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
+export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 
 export function fitColumns<C extends {id: string; minWidth: number; drop?: number}>(cols: C[], width: number | null): C[] {
   if (width === null) return cols;
@@ -726,6 +729,10 @@ export function useContentWidth<E extends HTMLElement>() {
   }, []);
   return [ref, width] as const;
 }
+// Long lists are virtualised: only the visible rows are in the DOM, so a rule list of thousands stays light.
+// Short ones render whole, which keeps every row reachable to assistive technology and find-in-page.
+const tableLayout = {rowHeight: 40, headingHeight: 41};
+const virtualiseFrom = 200;
 export function DataTable<T extends {id: string}>({
   label,
   cols,
@@ -736,7 +743,9 @@ export function DataTable<T extends {id: string}>({
   onSelect,
   selectOnFocus,
   empty,
-  loading
+  loading,
+  sort,
+  onSort
 }: {
   label: string;
   cols: Col[];
@@ -749,6 +758,9 @@ export function DataTable<T extends {id: string}>({
   selectOnFocus?: boolean;
   empty?: string;
   loading?: boolean;
+  // Header clicks on sortable columns; the caller orders `rows`.
+  sort?: TableSort | null;
+  onSort?: (sort: TableSort) => void;
 }) {
   const t = useT();
   const keys: Selection = selected ? new Set([selected]) : new Set();
@@ -756,54 +768,73 @@ export function DataTable<T extends {id: string}>({
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
   const index = new Map(cols.map((column, i) => [column.id, i]));
   // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
-  const fitted = Math.min(height, 41 + Math.max(rows.length, 2) * 40);
+  const fitted = Math.min(height, tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
+  const table = (
+    <Table
+      aria-label={label}
+      selectionMode={onSelect ? 'single' : 'none'}
+      selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
+      selectedKeys={keys}
+      onSelectionChange={k => onSelect && onSelect(k === 'all' ? null : k.size ? String([...k][0]) : null)}
+      disallowEmptySelection={!!onSelect}
+      sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
+      onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
+    >
+      <TableHeader>
+        {shown.map(c => (
+          <Column
+            key={c.id}
+            id={c.id}
+            isRowHeader={c.isRowHeader}
+            allowsSorting={c.sortable}
+            className={c.align === 'end' ? 'end' : undefined}
+            defaultWidth={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
+            minWidth={c.minWidth}
+          >
+            {({sortDirection}) => (
+              <>
+                <span className="rp-th">
+                  {c.label}
+                  {sortDirection && <span aria-hidden="true">{sortDirection === 'ascending' ? ' ↑' : ' ↓'}</span>}
+                </span>
+                <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
+              </>
+            )}
+          </Column>
+        ))}
+      </TableHeader>
+      <TableBody
+        items={rows}
+        dependencies={[shown]}
+        renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}
+      >
+        {r => {
+          const cells = render(r);
+          return (
+            <Row id={r.id}>
+              {shown.map(c => {
+                const cell = cells[index.get(c.id)!];
+                return (
+                  <Cell key={c.id} className={c.align === 'end' ? 'end' : undefined}>
+                    {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
+                  </Cell>
+                );
+              })}
+            </Row>
+          );
+        }}
+      </TableBody>
+    </Table>
+  );
   return (
     <ResizableTableContainer ref={ref} className="rp-table" style={{height: fitted}}>
-      <Table
-        aria-label={label}
-        selectionMode={onSelect ? 'single' : 'none'}
-        selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-        selectedKeys={keys}
-        onSelectionChange={k => onSelect && onSelect(k === 'all' ? null : k.size ? String([...k][0]) : null)}
-        disallowEmptySelection={!!onSelect}
-      >
-        <TableHeader>
-          {shown.map(c => (
-            <Column
-              key={c.id}
-              id={c.id}
-              isRowHeader={c.isRowHeader}
-              className={c.align === 'end' ? 'end' : undefined}
-              defaultWidth={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
-              minWidth={c.minWidth}
-            >
-              <span className="rp-th">{c.label}</span>
-              <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
-            </Column>
-          ))}
-        </TableHeader>
-        <TableBody
-          items={rows}
-          dependencies={[shown]}
-          renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}
-        >
-          {r => {
-            const cells = render(r);
-            return (
-              <Row id={r.id}>
-                {shown.map(c => {
-                  const cell = cells[index.get(c.id)!];
-                  return (
-                    <Cell key={c.id} className={c.align === 'end' ? 'end' : undefined}>
-                      {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
-                    </Cell>
-                  );
-                })}
-              </Row>
-            );
-          }}
-        </TableBody>
-      </Table>
+      {rows.length >= virtualiseFrom ? (
+        <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
+          {table}
+        </Virtualizer>
+      ) : (
+        table
+      )}
     </ResizableTableContainer>
   );
 }

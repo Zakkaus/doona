@@ -7,9 +7,11 @@ import type {
   GroupSelectionResult,
   LogOptions,
   LogRecord,
+  Node,
   Operation,
   OperationAccepted,
   OperationState,
+  Provider,
   RuntimeSettingsPatch
 } from '../model';
 import {ApiError} from '../error';
@@ -72,6 +74,7 @@ export function createMockApi(): Api {
   const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
   let configRevision = 40;
   const providers = structuredClone(fixtures.providers);
+  const geodata = structuredClone(fixtures.geodata);
   // The outbound mode: runtime state the next activation resets.
   let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
@@ -99,6 +102,31 @@ export function createMockApi(): Api {
     history.push(event);
     if (history.length > 1024) history.shift();
     listeners.forEach(listener => listener(event));
+  }
+  // A new generation: the revision moves, the outbound mode falls back to the configuration, listeners hear it.
+  function advance(): string {
+    configRevision += 1;
+    mode = {mode: 'rule', target: null, source: 'config'};
+    log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
+    const generation = String(configRevision);
+    runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
+    publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+    return generation;
+  }
+  // Management writes land in the main source's text too, so the config page shows what the API did.
+  async function editMain(edit: (text: string) => string) {
+    const main = (await loadSources()).find(item => item.id === 'src-main');
+    if (!main) return;
+    Object.assign(main, await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()}));
+  }
+  function dropNode(id: string) {
+    const index = nodes.findIndex(n => n.id === id);
+    if (index < 0) return;
+    nodes.splice(index, 1);
+    for (const group of groups) {
+      group.members = group.members.filter(m => m.id !== id);
+      group.runtime.health = group.runtime.health.filter(h => h.member_id !== id);
+    }
   }
   function runtimeUpdated() {
     runtime.observed_at = new Date().toISOString();
@@ -245,6 +273,7 @@ export function createMockApi(): Api {
           runtime_mode: '/api/v1/runtime/mode',
           logs: '/api/v1/logs',
           providers: '/api/v1/providers',
+          geodata: '/api/v1/geodata',
           rules: '/api/v1/rules',
           operations: '/api/v1/operations/{id}'
         }
@@ -669,6 +698,95 @@ export function createMockApi(): Api {
         return structuredClone(provider);
       });
     },
+    createProvider: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.can_manage) throw new ApiError(404, 'capability_not_supported', 'Provider management is unavailable');
+      if (!/^https?:\/\//.test(request.url)) throw new ApiError(422, 'unsupported_value', 'The subscription URL must start with http:// or https://');
+      if (providers.some(item => item.name === request.name)) throw new ApiError(409, 'state_conflict', `A provider named ${request.name} already exists`);
+      const url = new URL(request.url);
+      const provider: Provider = {
+        id: request.name,
+        name: request.name,
+        kind: 'subscription',
+        url_redacted: url.origin + url.pathname + (url.search ? '?[redacted]' : ''),
+        node_count: 0,
+        updated_at: null,
+        expires_at: null,
+        traffic: null,
+        status: 'stale',
+        last_error: null
+      };
+      providers.push(provider);
+      await editMain(text => text.replace(/^(subscription \{\n)/m, `$1  ${request.name}: '${request.url.replace(/'/g, '')}'\n`));
+      log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
+      advance();
+      return structuredClone(provider);
+    },
+    deleteProvider: async (providerId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.providers.can_manage) throw new ApiError(404, 'capability_not_supported', 'Provider management is unavailable');
+      const index = providers.findIndex(item => item.id === providerId);
+      if (index < 0) return {deleted: 0};
+      if (providers[index].kind === 'inline') throw new ApiError(404, 'capability_not_supported', 'The inline provider is the node section itself');
+      const [provider] = providers.splice(index, 1);
+      for (const node of nodes.filter(n => n.provider_id === provider.id)) dropNode(node.id);
+      await editMain(text => text.replace(new RegExp(`^\\s*${provider.name}:.*\\n`, 'm'), ''));
+      log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
+      advance();
+      return {deleted: 1};
+    },
+    createNode: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.can_manage) throw new ApiError(404, 'capability_not_supported', 'Node management is unavailable');
+      const scheme = /^([a-z][a-z0-9+.-]*):\/\/\S+$/i.exec(request.link.trim())?.[1]?.toLowerCase();
+      if (!scheme || !fixtures.linkSchemes.includes(scheme)) throw new ApiError(422, 'unsupported_value', `Unsupported share link scheme "${scheme ?? ''}"`);
+      if (nodes.some(n => n.name === request.name)) throw new ApiError(409, 'state_conflict', `An inline node named ${request.name} already exists`);
+      const node: Node = {id: request.name, name: request.name, protocol: scheme, subscription_tag: null, provider_id: 'inline', group_ids: [], health: []};
+      nodes.push(node);
+      const inline = providers.find(item => item.id === 'inline');
+      if (inline) inline.node_count += 1;
+      await editMain(text => text.replace(/^(node \{\n)/m, `$1  '${request.name.replace(/'/g, '')}': '${request.link.trim().replace(/'/g, '')}'\n`));
+      log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
+      advance();
+      return structuredClone(node);
+    },
+    deleteNode: async (nodeId, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.can_manage) throw new ApiError(404, 'capability_not_supported', 'Node management is unavailable');
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return {deleted: 0};
+      if (node.provider_id !== 'inline')
+        throw new ApiError(404, 'capability_not_supported', 'Only inline nodes can be deleted; refresh or delete the provider instead');
+      dropNode(node.id);
+      const inline = providers.find(item => item.id === 'inline');
+      if (inline) inline.node_count = Math.max(0, inline.node_count - 1);
+      await editMain(text => text.replace(new RegExp(`^\\s*'${node.name}':.*\\n`, 'm'), ''));
+      log('info', 'honk::config', 'Node removed.', {node: node.name});
+      advance();
+      return {deleted: 1};
+    },
+    geodata: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.geodata.available) throw new ApiError(404, 'capability_not_supported', 'Geodata is unavailable');
+      return {...structuredClone(geodata), observed_at: new Date().toISOString()};
+    },
+    updateGeodata: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.geodata.can_update) throw new ApiError(404, 'capability_not_supported', 'Geodata update is unavailable');
+      if ([...operations.values()].some(op => op.kind === 'geodata_update' && (op.status === 'queued' || op.status === 'running')))
+        throw new ApiError(409, 'state_conflict', 'A geodata update is already queued or running');
+      return enqueue('geodata_update', () => {
+        const now = new Date().toISOString();
+        for (const asset of geodata.assets) {
+          asset.modified_at = now;
+          asset.sha256 = Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+          asset.size_bytes = String(Number(asset.size_bytes) + Math.floor(Math.random() * 65536));
+        }
+        log('info', 'honk::geodata', 'Geodata updated; reloading.', {assets: geodata.assets.map(a => a.kind)});
+        advance();
+        return {...structuredClone(geodata), observed_at: now};
+      });
+    },
     config: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
@@ -723,12 +841,7 @@ export function createMockApi(): Api {
       Object.assign(source, next);
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
-        configRevision += 1;
-        mode = {mode: 'rule', target: null, source: 'config'};
-        log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
-        const generation = String(configRevision);
-        runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
-        publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+        const generation = advance();
         return {active_generation_id: generation, datapath_generation_id: generation};
       });
     },

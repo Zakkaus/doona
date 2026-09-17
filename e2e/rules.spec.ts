@@ -5,7 +5,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   await page.clock.install();
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
-  const rows = panel.locator('.rp-table tbody tr[data-key]');
+  const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
   const allCount = await rows.count();
   const snapshot = await rows.allTextContents();
@@ -55,7 +55,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
-  const rows = panel.locator('.rp-table tbody tr[data-key]');
+  const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(15);
   // Config order: rule-2 before rule-10, unknown IDs last.
   const ids = await panel.getByRole('rowheader').allTextContents();

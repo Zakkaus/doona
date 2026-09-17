@@ -20,6 +20,7 @@ export type ResourceName =
   | 'runtimeSettings'
   | 'config'
   | 'providers'
+  | 'geodata'
   | 'runtimeMode';
 
 // Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
@@ -33,7 +34,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll
   'flow.gap': {now: ['flows', 'flow'], poll: []},
   'operation.updated': {now: ['runtime'], poll: []},
   'generation.changed': {
-    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'],
+    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'datapath', 'flows', 'flow'],
     poll: ['dnsCache']
   }
 };

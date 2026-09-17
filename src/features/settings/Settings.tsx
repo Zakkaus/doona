@@ -8,6 +8,7 @@ import {ApiError, createApi} from '../../api/client';
 import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
+import {GeodataCard} from './Geodata';
 import {useInstallOffer} from '../../shell/install';
 
 type Appearance = {
@@ -28,14 +29,31 @@ export const SettingsContext = createContext<{
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
+// `#/settings?api=<base>&token=<token>` fills the backend form so one link pairs a device; nothing is saved
+// until the person presses Save, and the address bar is scrubbed so the token is not left in history.
+function readPairing(): {api: string; token: string} | null {
+  const query = location.hash.split('?')[1];
+  if (!query) return null;
+  const params = new URLSearchParams(query);
+  const api = params.get('api');
+  if (!api) return null;
+  const token = params.get('token') ?? '';
+  params.delete('api');
+  params.delete('token');
+  const rest = params.toString();
+  history.replaceState(null, '', location.pathname + location.search + '#/settings' + (rest ? '?' + rest : ''));
+  return {api, token};
+}
+
 export function Settings() {
   const t = useT();
   const install = useInstallOffer();
   const capabilities = useCapabilities();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
-  const [api, setApi] = useState(saved.api ?? '');
-  const [token, setToken] = useState(saved.token);
+  const [paired] = useState(readPairing);
+  const [api, setApi] = useState(paired?.api ?? saved.api ?? '');
+  const [token, setToken] = useState(paired?.token ?? saved.token);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
   const [name, setName] = useState('');
@@ -163,6 +181,7 @@ export function Settings() {
   return (
     <div className="rp-col">
       {saved.api === null && <div className="rp-label">{t('settings.firstRun')}</div>}
+      {paired && <div className="rp-label">{t('settings.paired')}</div>}
       <section className="rp-card" aria-labelledby="settings-backend">
         <h2 className="rp-h3" id="settings-backend">
           {t('settings.backend')}
@@ -254,6 +273,7 @@ export function Settings() {
         </form>
       </section>
       <RuntimeSettingsCard />
+      <GeodataCard />
       <section className="rp-card" aria-labelledby="settings-appearance">
         <h2 className="rp-h3" id="settings-appearance">
           {t('settings.appearance')}

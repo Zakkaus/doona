@@ -1,21 +1,44 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {useCapabilities, useNodes, useProviderRefresh, useProviders} from '../../api/store';
+import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, ErrorMessage, Light, TextTooltip, errorText, latencyTone, toast} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  ErrorMessage,
+  LabeledSelect,
+  Light,
+  ModalDialog,
+  TextField,
+  TextTooltip,
+  errorText,
+  latencyTone,
+  toast,
+  type TableSort
+} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
+import Close from '../../ui/icons/Close';
+import SpeedFast from '../../ui/icons/SpeedFast';
 import {Flag} from '../policies/Flag';
 import type {PageProps} from '../types';
 
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
 const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
+// Names sort the way a person reads them: Chinese by pinyin, digits by value, case ignored.
+const collator = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
+const latencyOf = (node: Node) => {
+  const health = preferredHealth(node);
+  return health?.state === 'healthy' && health.latency_ms != null ? health.latency_ms : Infinity;
+};
 
 // Where nodes come from and what they are: providers (subscriptions, files, the nodes written in the config)
-// with their usage and expiry, refreshable when the backend allows; the nodes of the picked provider below.
+// with their usage and expiry, refreshable when the backend allows; the nodes of the picked provider below,
+// searchable, filterable and sortable. With can_manage, subscriptions and share links are added and removed here.
 export function Nodes({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -23,10 +46,13 @@ export function Nodes({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(resources?.providers.available !== false);
   const nodes = useNodes();
-  const refresh = useProviderRefresh(() => {
+  const reload = () => {
     providers.refetch();
     nodes.refetch();
-  });
+  };
+  const refresh = useProviderRefresh(reload);
+  const manage = useNodeManage(reload);
+  const probe = useNodeProbe(nodes.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const list = providers.data?.providers ?? [];
   const selectedId = params.get('provider') ?? list[0]?.id ?? null;
@@ -37,7 +63,30 @@ export function Nodes({go, query}: PageProps) {
     else next.delete('provider');
     go('nodes', next.toString());
   };
-  const members = useMemo(() => (nodes.data ?? []).filter(node => (provider ? node.provider_id === provider.id : true)), [nodes.data, provider]);
+  const [search, setSearch] = useState('');
+  const [group, setGroup] = useState('');
+  const [protocol, setProtocol] = useState('');
+  const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
+  const [dialog, setDialog] = useState<
+    {kind: 'provider'} | {kind: 'node'} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node} | null
+  >(null);
+  const [form, setForm] = useState({name: '', value: ''});
+  const owned = useMemo(() => (nodes.data ?? []).filter(node => (provider ? node.provider_id === provider.id : true)), [nodes.data, provider]);
+  const groups = useMemo(() => [...new Set(owned.flatMap(node => node.group_ids))].sort(collator.compare), [owned]);
+  const protocols = useMemo(() => [...new Set(owned.map(node => node.protocol ?? ''))].filter(Boolean).sort(collator.compare), [owned]);
+  const members = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    const kept = owned.filter(
+      node => (!needle || node.name.toLowerCase().includes(needle)) && (!group || node.group_ids.includes(group)) && (!protocol || node.protocol === protocol)
+    );
+    const sign = sort.direction === 'ascending' ? 1 : -1;
+    const by: Record<string, (a: Node, b: Node) => number> = {
+      name: (a, b) => collator.compare(a.name, b.name),
+      protocol: (a, b) => collator.compare(a.protocol ?? '', b.protocol ?? ''),
+      latency: (a, b) => latencyOf(a) - latencyOf(b) || collator.compare(a.name, b.name)
+    };
+    return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
+  }, [owned, search, group, protocol, sort]);
   useEffect(() => {
     if (nodes.error) toast('negative', errorText(nodes.error));
   }, [nodes.error]);
@@ -46,10 +95,49 @@ export function Nodes({go, query}: PageProps) {
     const used = (BigInt(item.traffic.upload_bytes ?? '0') + BigInt(item.traffic.download_bytes ?? '0')).toString();
     return {used, total: item.traffic.total_bytes};
   };
+  const canManageProviders = !!resources?.providers.can_manage;
+  const canManageNodes = !!resources?.nodes.can_manage;
+  const canProbe = resources?.probes.available && resources.probes.targets?.includes('node');
+  const open = (next: NonNullable<typeof dialog>) => {
+    setForm({name: '', value: ''});
+    setDialog(next);
+  };
+  const fail = (error: unknown) => toast('negative', errorText(error));
+  const submit = async (close: () => void) => {
+    if (!dialog) return;
+    try {
+      if (dialog.kind === 'provider') {
+        const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
+        if (created) toast('positive', t('nodes.added', {name: created.name}));
+      } else if (dialog.kind === 'node') {
+        const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
+        if (created) toast('positive', t('nodes.added', {name: created.name}));
+      } else if (dialog.kind === 'removeProvider') {
+        if (await manage.removeProvider(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
+      } else if (await manage.removeNode(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
+      close();
+    } catch (error) {
+      fail(error);
+    }
+  };
+  const formValid =
+    dialog?.kind === 'provider'
+      ? /^[\w.-]+$/.test(form.name.trim()) && /^https?:\/\/\S+$/.test(form.value.trim())
+      : dialog?.kind === 'node'
+        ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
+        : true;
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
       <ErrorMessage error={providers.error} />
+      {canManageProviders && (
+        <div className="rp-toolbar">
+          <span className="rp-grow" />
+          <Button small onPress={() => open({kind: 'provider'})}>
+            {t('nodes.addProvider')}
+          </Button>
+        </div>
+      )}
       <DataTable
         label={t('nodes.providers')}
         loading={providers.loading && !providers.data}
@@ -67,7 +155,7 @@ export function Nodes({go, query}: PageProps) {
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
           {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
           {id: 'status', label: t('ui.state'), minWidth: 110, grow: 0},
-          {id: 'actions', label: '', minWidth: 96, grow: 0}
+          {id: 'actions', label: '', minWidth: canManageProviders ? 120 : 96, grow: 0}
         ]}
         render={item => {
           const used = usage(item);
@@ -83,45 +171,80 @@ export function Nodes({go, query}: PageProps) {
             <Light small tone={tones[item.status]}>
               <TextTooltip text={item.last_error?.message}>{t(statuses[item.status])}</TextTooltip>
             </Light>,
-            item.kind === 'subscription' && resources?.providers.can_refresh ? (
-              <Button
-                small
-                quiet
-                isPending={refresh.busy === item.id}
-                isDisabled={!!refresh.busy}
-                label={t('nodes.refresh', {name: item.name})}
-                onPress={() => {
-                  void refresh.refresh(item.id).then(
-                    result => {
+            <span className="rp-chain">
+              {item.kind === 'subscription' && resources?.providers.can_refresh && (
+                <Button
+                  small
+                  quiet
+                  isPending={refresh.busy === item.id}
+                  isDisabled={!!refresh.busy}
+                  label={t('nodes.refresh', {name: item.name})}
+                  onPress={() => {
+                    void refresh.refresh(item.id).then(result => {
                       if (result)
                         toast(
                           'positive',
                           t('nodes.refreshed', {name: item.name, n: n(result.kind === 'provider_refresh' ? result.result.node_count : item.node_count)})
                         );
-                    },
-                    (error: unknown) => toast('negative', errorText(error))
-                  );
-                }}
-              >
-                <Refresh />
-              </Button>
-            ) : (
-              ''
-            )
+                    }, fail);
+                  }}
+                >
+                  <Refresh />
+                </Button>
+              )}
+              {canManageProviders && item.kind !== 'inline' && (
+                <Button
+                  small
+                  quiet
+                  isDisabled={!!manage.busy}
+                  label={t('nodes.remove', {name: item.name})}
+                  onPress={() => open({kind: 'removeProvider', item})}
+                >
+                  <Close />
+                </Button>
+              )}
+            </span>
           ];
         }}
       />
+      <div className="rp-toolbar">
+        <TextField label={t('nodes.search')} search value={search} width={220} onChange={setSearch} />
+        <LabeledSelect
+          label={t('nodes.group')}
+          side
+          value={group}
+          onChange={setGroup}
+          items={[{id: '', label: t('nodes.anyGroup')}, ...groups.map(id => ({id, label: id}))]}
+        />
+        <LabeledSelect
+          label={t('nodes.protocol')}
+          side
+          value={protocol}
+          onChange={setProtocol}
+          items={[{id: '', label: t('nodes.anyProtocol')}, ...protocols.map(id => ({id, label: id}))]}
+        />
+        <span className="rp-label">{t('nodes.shown', {n: n(members.length), total: n(owned.length)})}</span>
+        <span className="rp-grow" />
+        {canManageNodes && (
+          <Button small onPress={() => open({kind: 'node'})}>
+            {t('nodes.addNode')}
+          </Button>
+        )}
+      </div>
       <DataTable
         label={provider ? t('nodes.of', {name: provider.name}) : t('nav.nodes')}
         loading={nodes.loading && !nodes.data}
         rows={members}
         height={520}
         empty={t('nodes.empty')}
+        sort={sort}
+        onSort={setSort}
         cols={[
-          {id: 'name', label: t('nodes.node'), minWidth: 220, grow: 2, isRowHeader: true},
-          {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2},
-          {id: 'latency', label: t('nodes.latency'), minWidth: 110, grow: 0, align: 'end'},
-          {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1}
+          {id: 'name', label: t('nodes.node'), minWidth: 220, grow: 2, isRowHeader: true, sortable: true},
+          {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true},
+          {id: 'latency', label: t('nodes.latency'), minWidth: 110, grow: 0, align: 'end', sortable: true},
+          {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1},
+          {id: 'actions', label: '', minWidth: canManageNodes ? 96 : 56, grow: 0}
         ]}
         render={(node: Node) => {
           const health = preferredHealth(node);
@@ -136,10 +259,94 @@ export function Nodes({go, query}: PageProps) {
             ) : (
               <span className="ms err">{health?.state === 'unavailable' ? t('policy.unavailable') : '—'}</span>
             ),
-            <TextTooltip>{node.group_ids.join(', ') || '—'}</TextTooltip>
+            <TextTooltip>{node.group_ids.join(', ') || '—'}</TextTooltip>,
+            <span className="rp-chain">
+              {canProbe && (
+                <Button
+                  small
+                  quiet
+                  isPending={probe.busy === node.id}
+                  isDisabled={!!probe.busy}
+                  label={t('nodes.probe', {name: node.name})}
+                  onPress={() => {
+                    void probe.probe(node.id).then(result => {
+                      if (!result) return;
+                      const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
+                      toast(
+                        sample ? 'positive' : 'negative',
+                        sample ? t('nodes.probed', {name: node.name, n: n(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+                      );
+                    }, fail);
+                  }}
+                >
+                  <SpeedFast />
+                </Button>
+              )}
+              {canManageNodes && node.provider_id === 'inline' && (
+                <Button
+                  small
+                  quiet
+                  isDisabled={!!manage.busy}
+                  label={t('nodes.remove', {name: node.name})}
+                  onPress={() => open({kind: 'removeNode', item: node})}
+                >
+                  <Close />
+                </Button>
+              )}
+            </span>
           ];
         }}
       />
+      <ModalDialog
+        title={
+          dialog?.kind === 'provider'
+            ? t('nodes.addProvider')
+            : dialog?.kind === 'node'
+              ? t('nodes.addNode')
+              : dialog?.kind === 'removeProvider'
+                ? t('nodes.removeProviderTitle', {name: dialog.item.name})
+                : dialog?.kind === 'removeNode'
+                  ? t('nodes.removeNodeTitle', {name: dialog.item.name})
+                  : ''
+        }
+        narrow
+        alert={dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode'}
+        isOpen={dialog !== null}
+        onOpenChange={isOpen => {
+          if (!isOpen) setDialog(null);
+        }}
+        footer={close => (
+          <>
+            <Button onPress={close}>{t('ui.cancel')}</Button>
+            <Button
+              accent={dialog?.kind === 'provider' || dialog?.kind === 'node'}
+              negative={dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode'}
+              isDisabled={!formValid}
+              isPending={!!manage.busy}
+              onPress={() => void submit(close)}
+            >
+              {dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode' ? t('nodes.remove', {name: dialog.item.name}) : t('nodes.add')}
+            </Button>
+          </>
+        )}
+      >
+        {dialog?.kind === 'provider' && (
+          <div className="rp-list">
+            <span className="rp-label">{t('nodes.addProviderHelp')}</span>
+            <TextField label={t('nodes.name')} value={form.name} placeholder="sub-a" onChange={name => setForm({...form, name})} />
+            <TextField label={t('nodes.url')} value={form.value} placeholder="https://example.org/sub?token=…" onChange={value => setForm({...form, value})} />
+          </div>
+        )}
+        {dialog?.kind === 'node' && (
+          <div className="rp-list">
+            <span className="rp-label">{t('nodes.addNodeHelp')}</span>
+            <TextField label={t('nodes.name')} value={form.name} placeholder="hk-03" onChange={name => setForm({...form, name})} />
+            <TextField label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
+          </div>
+        )}
+        {dialog?.kind === 'removeProvider' && <span className="rp-label">{t('nodes.removeProviderHelp')}</span>}
+        {dialog?.kind === 'removeNode' && <span className="rp-label">{t('nodes.removeNodeHelp')}</span>}
+      </ModalDialog>
     </div>
   );
 }
