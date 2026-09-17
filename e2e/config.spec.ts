@@ -96,6 +96,21 @@ test('the quick setup rewrites subscriptions and groups and keeps the rules', as
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });
 
+test('the quick setup writes a rule template into routing', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Whitelist/}).click();
+  const preview = card.locator('.cm-content');
+  await expect(preview).toContainText('domain(geosite:category-ads-all) -> block');
+  await expect(preview).toContainText('geosite:category-games@cn) -> direct');
+  await expect(preview).toContainText('domain(geosite:geolocation-!cn) -> proxy');
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
+  await expect(preview).toContainText('fallback: direct');
+});
+
 test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
   await page.goto('/#/nodes');
   const sources = page.locator('.rp-table').first().locator('tbody tr[data-key]');

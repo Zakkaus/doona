@@ -124,9 +124,9 @@ export function Wizard({main, editor, onDone}: {main: ConfigSource; editor: Retu
           onChange={rules => patch({rules: rules as WizardState['rules']})}
           items={[
             ...(current.trim() ? [{id: 'keep', label: t('config.wizardKeep'), desc: t('config.wizardKeepHelp')}] : []),
-            {id: 'domestic', label: t('config.wizardDomestic'), desc: t('config.wizardDomesticHelp')},
-            {id: 'fine', label: t('config.wizardFine'), desc: t('config.wizardFineHelp')},
-            {id: 'overseas', label: t('config.wizardOverseas'), desc: t('config.wizardOverseasHelp')},
+            {id: 'whitelist', label: t('config.wizardWhitelist'), desc: t('config.wizardWhitelistHelp')},
+            {id: 'blacklist', label: t('config.wizardBlacklist'), desc: t('config.wizardBlacklistHelp')},
+            {id: 'dae', label: t('config.wizardDae'), desc: t('config.wizardDaeHelp')},
             {id: 'global', label: t('config.wizardGlobal'), desc: t('config.wizardGlobalHelp')}
           ]}
         />
