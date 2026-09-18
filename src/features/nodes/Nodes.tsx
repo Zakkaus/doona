@@ -132,6 +132,8 @@ export function Nodes({go, query}: PageProps) {
   const canManageProviders = !!resources?.providers.can_manage;
   const canManageNodes = !!resources?.nodes.can_manage;
   const canProbe = probe.canProbe;
+  // The engine's own direct and block outbounds have nothing to connect to; a probe of them is refused.
+  const probeable = (node: Node) => canProbe && node.protocol !== 'direct' && node.protocol !== 'block';
   const open = (next: NonNullable<typeof dialog>) => {
     setForm({name: '', value: ''});
     setDialog(next);
@@ -308,7 +310,7 @@ export function Nodes({go, query}: PageProps) {
                 : '—'}
             </TextTooltip>,
             <span className="rp-chain">
-              {canProbe && (
+              {probeable(node) && (
                 <Button
                   small
                   quiet
