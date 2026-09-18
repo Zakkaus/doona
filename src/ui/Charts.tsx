@@ -64,6 +64,19 @@ const niceStep = (range: number) => {
   const s = n <= 1 ? 0.2 : n <= 2 ? 0.5 : n <= 5 ? 1 : 2;
   return s * p;
 };
+// Tick marks on round clock values for a fixed window: the step that yields three to six marks. Marks within
+// a few percent of either edge are dropped, since their labels would hang outside the axis.
+const tickSteps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400].map(s => s * 1000);
+export function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
+  const span = until - since;
+  const step = tickSteps.find(s => span / s <= 6) ?? tickSteps[tickSteps.length - 1];
+  // Day and longer steps align to local midnight; shorter ones to the epoch, which lands on round minutes.
+  const offset = step >= 86400000 ? new Date(until).getTimezoneOffset() * 60000 : 0;
+  const first = Math.ceil((since - offset) / step) * step + offset;
+  const ticks: number[] = [];
+  for (let t = first; t <= until; t += step) if (t - since >= span * 0.04 && until - t >= span * 0.04) ticks.push(t);
+  return {ticks, step};
+}
 const tip = (p: Palette) => ({backgroundColor: p.text, color: p['on-text'], border: 'none', borderRadius: 8, fontSize: 12, padding: '8px 12px'});
 
 export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null | undefined) => string}) {
@@ -86,24 +99,39 @@ const LazyAreaChart = lazy(() =>
       fmt,
       locale,
       height = 150,
-      baseline = 'zero'
+      baseline = 'zero',
+      window
     }: {
       series: Series[];
       timestamps: number[];
       fmt: (v: number) => string;
       locale: string;
       height?: number;
+      // A fixed span for the x axis: the chart is read against the window, so a young session sits at the
+      // right edge instead of being stretched across the width. Without it the axis fits the data.
+      window?: {since: number; until: number};
       // Rates start at zero; a level such as memory zooms to its own range so small movements stay visible.
       baseline?: 'zero' | 'auto';
     }) {
       const p = usePalette();
       const uid = useId();
-      const span = timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
-      const withSeconds = span < 3 * 60 * 1000;
-      // Under three minutes the hour repeats on every tick, so the axis reads minute:second instead.
+      const span = window ? window.until - window.since : timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+      const marks = window ? clockTicks(window.since, window.until) : undefined;
+      const withSeconds = marks ? marks.step < 60000 : span < 3 * 60 * 1000;
+      // Day marks sit on midnight, so they read as dates; anything finer reads as a 24-hour clock, with seconds
+      // when the marks are closer than a minute.
+      const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
       const clock = useMemo(
-        () => new Intl.DateTimeFormat(locale, withSeconds ? {minute: '2-digit', second: '2-digit'} : {hour: '2-digit', minute: '2-digit'}),
-        [locale, withSeconds]
+        () =>
+          new Intl.DateTimeFormat(
+            locale,
+            withDate
+              ? {month: 'numeric', day: 'numeric'}
+              : withSeconds
+                ? {hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false}
+                : {hour: '2-digit', minute: '2-digit', hour12: false}
+          ),
+        [locale, withSeconds, withDate]
       );
       const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
       if (!timestamps.length) return null;
@@ -120,9 +148,12 @@ const LazyAreaChart = lazy(() =>
         max = Math.ceil(top / step) * step + step;
       }
       const yTicks = baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max];
-      const ticks = [
-        ...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))
-      ];
+      // A fixed window gets ticks on round clock marks (every 30 s, 2 min, 15 min, 1 h, 6 h, 1 d); a free axis
+      // shows its ends and thirds.
+      const ticks = marks
+        ? marks.ticks
+        : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
+      const domain: [number | string, number | string] = window ? [window.since, window.until] : ['dataMin', 'dataMax'];
       return (
         <div style={{height, width: '100%'}}>
           <ResponsiveContainer width="100%" height="100%">
@@ -139,13 +170,15 @@ const LazyAreaChart = lazy(() =>
               <XAxis
                 dataKey="t"
                 type="number"
-                domain={['dataMin', 'dataMax']}
+                domain={domain}
                 ticks={ticks}
                 tickFormatter={value => clock.format(value)}
                 tick={{fontSize: 11, fill: p.subtle}}
                 axisLine={false}
                 tickLine={false}
-                interval={0}
+                // A narrow card cannot fit every clock mark; overlapping labels are thinned, the ends kept.
+                interval={marks ? 'preserveStartEnd' : 0}
+                minTickGap={16}
               />
               <YAxis
                 orientation="right"

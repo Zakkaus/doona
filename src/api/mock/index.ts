@@ -325,9 +325,18 @@ export function createMockApi(): Api {
     },
     runtime: async signal => {
       signal?.throwIfAborted();
+      const now = Date.now();
       if (runtime.lifecycle.started_at)
-        runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((Date.now() - Date.parse(runtime.lifecycle.started_at)) / 1000)));
-      return structuredClone(runtime);
+        runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((now - Date.parse(runtime.lifecycle.started_at)) / 1000)));
+      const snapshot = structuredClone(runtime);
+      // Each poll is a fresh sample with a little swell, so the live curve keeps moving.
+      const swell = 1 + 0.15 * Math.sin(now / 20000);
+      snapshot.traffic.sampled_at = new Date(now).toISOString();
+      if (snapshot.traffic.rates) {
+        snapshot.traffic.rates.upload_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.upload_bytes_per_second) * swell));
+        snapshot.traffic.rates.download_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.download_bytes_per_second) * swell));
+      }
+      return snapshot;
     },
     runtimeOutbounds: async signal => {
       signal?.throwIfAborted();

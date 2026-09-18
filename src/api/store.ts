@@ -232,12 +232,13 @@ export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
   return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
 }
-export const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
-export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
+// The backend's ring, asked for the chart's window (or as much of it as the backend keeps) at its full
+// resolution: the live window wants every second the backend has.
+export function useTrafficHistory(windowSeconds: number, capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.traffic_history;
-  const window_seconds = Math.min(historyWindows[range] ?? 720, limits?.max_window_seconds ?? 720);
-  const max_points = Math.min(360, limits?.max_points ?? 360);
+  const window_seconds = Math.min(windowSeconds, limits?.max_window_seconds ?? 600);
+  const max_points = Math.min(600, limits?.max_points ?? 600);
   return useResource(
     {key: ['trafficHistory', {window_seconds, max_points}], fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
     {

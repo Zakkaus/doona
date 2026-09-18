@@ -16,7 +16,6 @@ import {
   useRuntimeMemory,
   useRuntimeOutbounds,
   useTrafficHistory,
-  historyWindows,
   useRuntimeMode
 } from '../../api/store';
 import {connectionRows, eventSummary, lifecycleStates, localTime, outboundLabel, outboundUsage, preferredHealth, sourceIp} from '../../api/selectors';
@@ -27,7 +26,7 @@ import {NodeMenu} from '../policies/Nodes';
 import {ModeSwitch} from './ModeSwitch';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
-import {historyTrafficSamples, trafficWindow, useTrafficSamples} from './traffic';
+import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
@@ -45,8 +44,10 @@ export function Activity({go}: {go: (page: string) => void}) {
     groupsResource = useGroups(hasGroups);
   const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
   const memory = useRuntimeMemory(capabilities.data?.resources.runtime_memory.available === true);
+  const [range, setRange] = useState('live');
+  const windowSeconds = trafficWindows[range] ?? 120;
   const rss = memory.data?.process?.rss_bytes ?? null;
-  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
   const memorySamples = memoryHistory.samples;
   const memorySeries = [
     {label: t('act.rss'), color: p.cat[0], values: memorySamples.map(sample => sample.rss)},
@@ -78,13 +79,12 @@ export function Activity({go}: {go: (page: string) => void}) {
     rows.sort((a, b) => (a.download === b.download ? 0 : a.download === null ? 1 : b.download === null ? -1 : a.download > b.download ? -1 : 1));
     return rows.slice(0, 5).map(row => ({...row, percent: pctU64(row.download, total)}));
   }, [by, connections.data]);
-  const [range, setRange] = useState('live');
-  const history = useTrafficHistory(range, capabilities.data);
+  const history = useTrafficHistory(windowSeconds, capabilities.data);
   // The backend's ring reaches back before the page opened; the session's own polls carry the chart past it.
   const polledTraffic = useTrafficSamples(runtimeResource.data);
   const series = useMemo(
-    () => trafficWindow(polledTraffic, history.data ? historyTrafficSamples(history.data) : [], historyWindows[range] ?? 720),
-    [polledTraffic, history.data, range]
+    () => trafficWindow(polledTraffic, history.data ? historyTrafficSamples(history.data) : [], windowSeconds),
+    [polledTraffic, history.data, windowSeconds]
   );
   // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
   const runtimeMode = useRuntimeMode(resources?.runtime_mode.available === true);
@@ -248,6 +248,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               onChange={setRange}
               items={[
                 ['live', t('act.live')],
+                ['m10', t('act.m10')],
                 ['h1', t('act.h1')],
                 ['h6', t('act.h6')],
                 ['h24', t('act.h24')],
@@ -266,7 +267,14 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
-              <AreaChart series={traffic} timestamps={series.timestamps} fmt={chartRate} locale={locale} height={120} />
+              <AreaChart
+                series={traffic}
+                timestamps={series.timestamps}
+                fmt={chartRate}
+                locale={locale}
+                height={120}
+                window={{since: series.since, until: series.until}}
+              />
             </>
           )}
         </section>
@@ -354,6 +362,7 @@ export function Activity({go}: {go: (page: string) => void}) {
                 locale={locale}
                 height={150}
                 baseline="auto"
+                window={{since: memoryHistory.since, until: memoryHistory.until}}
               />
             </>
           ) : capabilities.data?.resources.runtime_memory.available === false ? (
