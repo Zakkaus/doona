@@ -743,15 +743,17 @@
 :root[data-family='glass'] .rp-underlay {
   backdrop-filter: blur(8px);
 }
+/* Icons are sized in px like the text next to them: rem would follow the browser's default font size and
+   leave the glyphs out of step with the fixed 14px type. */
 .rp-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 @media not ((hover: hover) and (pointer: fine)) {
   .rp-icon {
-    width: 1.5625rem;
-    height: 1.5625rem;
+    width: 25px;
+    height: 25px;
   }
 }
 .rp-icon-stack {
