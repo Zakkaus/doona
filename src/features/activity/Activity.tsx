@@ -181,7 +181,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} />
+              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} />
             </span>
           </div>
         </div>
@@ -195,7 +195,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} />
+              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} />
             </span>
           </div>
         </div>

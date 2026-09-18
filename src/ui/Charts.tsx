@@ -227,13 +227,26 @@ export function AreaChart(props: ComponentProps<typeof LazyAreaChart>) {
 }
 const LazySpark = lazy(() =>
   import('recharts').then(({AreaChart: RAreaChart, Area, ResponsiveContainer, XAxis, YAxis}) => ({
-    default: function Spark({values, timestamps, color, height = 32}: {values: Array<number | null>; timestamps: number[]; color: string; height?: number}) {
+    default: function Spark({
+      values,
+      timestamps,
+      color,
+      height = 32,
+      floor = 0
+    }: {
+      values: Array<number | null>;
+      timestamps: number[];
+      color: string;
+      height?: number;
+      // The least the axis spans from zero, so a trickle is drawn flat instead of blown up to fill the tile.
+      floor?: number;
+    }) {
       const uid = useId();
       const known = values.filter((v): v is number => v !== null);
       if (!known.length) return null;
       const data = values.map((v, i) => ({t: timestamps[i], v}));
-      const lo = Math.min(...known) * 0.85,
-        hi = Math.max(...known) * 1.05 || 1;
+      const lo = floor > 0 ? 0 : Math.min(...known) * 0.85,
+        hi = Math.max(Math.max(...known) * 1.05 || 1, floor);
       return (
         <div style={{height, width: '100%'}}>
           <ResponsiveContainer width="100%" height="100%">
