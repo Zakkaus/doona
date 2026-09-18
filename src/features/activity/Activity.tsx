@@ -82,10 +82,10 @@ export function Activity({go}: {go: (page: string) => void}) {
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   // The backend's ring reaches back before the page opened; the session's own polls carry the chart past it.
   const polledTraffic = useTrafficSamples(runtimeResource.data);
-  const series = useMemo(
-    () => trafficWindow(polledTraffic, history.data ? historyTrafficSamples(history.data) : [], windowSeconds),
-    [polledTraffic, history.data, windowSeconds]
-  );
+  const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
+  const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
+  // The tiles' sparklines always show the last two minutes, whatever span the chart is set to.
+  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live), [polledTraffic, historySamples]);
   // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
   const runtimeMode = useRuntimeMode(resources?.runtime_mode.available === true);
   const mode = runtimeMode.data?.mode ?? 'rule';
@@ -169,7 +169,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={series.down} timestamps={series.timestamps} color={p.cat[0]} />
+              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} />
             </span>
           </div>
         </div>
@@ -183,7 +183,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={series.up} timestamps={series.timestamps} color={p.cat[3]} />
+              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} />
             </span>
           </div>
         </div>
@@ -197,7 +197,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <span className="rp-big">{liveRuntime.traffic.connections.total ?? '—'}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={series.connections} timestamps={series.timestamps} color={p.cat[2]} />
+              <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} />
             </span>
           </div>
         </CardLink>
