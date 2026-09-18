@@ -72,6 +72,8 @@ experimental {
 }
 ```
 
+A main file that carries `native_api.secret` is served without its text and stays read-only, whatever `config_content` and `config_write` say: keep the `native_api` block in its own include (`include { api.dae }`) so the main file can be edited from the configuration page.
+
 A backend built against an earlier contract pin (honk's first release stops at runtime and connections) is handled: resources it does not declare count as unavailable and their pages leave the navigation.
 
 ## Settings

@@ -376,6 +376,7 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
   ];
 }
 // The memory figures as rows; `omit` drops the ones a page shows another way (the cgroup bar on the overview).
+const cgroupScopes: Record<'service' | 'shared' | 'unknown', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared', unknown: 'ui.unknown'};
 export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] = []): Array<[string, string]> {
   const percent = pctU64(memory.cgroup?.current_bytes ?? null, memory.cgroup?.limit_bytes ?? null);
   const rows: Array<[Key, string]> = [
@@ -383,6 +384,9 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] 
     ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null)],
     ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null)],
     ['ov.f.cgroupPercent', percent === null ? '—' : Math.round(percent) + '%'],
+    // Whose cgroup: the service's own, one shared with other processes, or unknown (a desktop session slice
+    // reads as the whole login), so the usage is not mistaken for the engine's alone.
+    ['ov.f.cgroupScope', memory.cgroup ? label(cgroupScopes[memory.cgroup.scope]) : '—'],
     ['ov.f.oomHigh', memory.cgroup?.events?.high ?? '—'],
     ['ov.f.oom', memory.cgroup?.events?.oom ?? '—'],
     ['ov.f.oomKill', memory.cgroup?.events?.oom_kill ?? '—'],

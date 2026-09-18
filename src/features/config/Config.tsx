@@ -194,6 +194,7 @@ export function Config({go, query}: PageProps) {
                       diagnostics={config.data.diagnostics.filter(d => d.source_id === source.id)}
                       canValidate={canValidate}
                       canWrite={resources?.config.writable === true && source.writable}
+                      contentOffered={resources?.config.content === true}
                       editor={editor}
                       groups={groupList}
                       focusLine={focusLine}
@@ -253,6 +254,7 @@ function SourceCard({
   diagnostics,
   canValidate,
   canWrite,
+  contentOffered,
   editor,
   groups,
   focusLine,
@@ -262,6 +264,7 @@ function SourceCard({
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
   canWrite: boolean;
+  contentOffered: boolean;
   editor: ReturnType<typeof useConfigEditor>;
   groups: string[];
   focusLine: number | null;
@@ -303,11 +306,12 @@ function SourceCard({
   // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
   const api = getApi();
   const draftText = draft?.text;
+  const sourceId = source.id;
   useEffect(() => {
     if (!canValidate || draftText === undefined) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      api.validateConfig({sources: [candidate(source, draftText)], mode: 'full'}, controller.signal).then(
+      api.validateConfig({sources: [candidate({id: sourceId}, draftText)], mode: 'full'}, controller.signal).then(
         result => setFound(result.diagnostics),
         () => undefined
       );
@@ -316,7 +320,7 @@ function SourceCard({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [api, canValidate, draftText, source.id, source.path]);
+  }, [api, canValidate, draftText, sourceId]);
   // `announce` also toasts a pass; a save reports only its own outcome.
   const validate = async (announce: 'always' | 'failure' = 'always') => {
     const result = await editor.validate({sources: [candidate(source, text)], mode: 'full'});
@@ -401,7 +405,8 @@ function SourceCard({
         </div>
       )}
       {source.content === undefined ? (
-        <span className="rp-empty">{t('config.contentHidden')}</span>
+        // With content on, a withheld source is the one holding the API credential.
+        <span className="rp-empty">{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</span>
       ) : (
         <CodeEditor
           label={source.path}
