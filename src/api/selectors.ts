@@ -18,9 +18,14 @@ import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 import type {RuntimeOutbounds, TrafficHistory} from './model';
 
 /** The latency column compares one observation tuple: warm TCP data probes, IPv4 first and IPv6 when that is all a node has. */
+// The one TCP data observation a node's latency column shows. Backends differ in what they measure (honk's
+// periodic probe reports HTTP headers on an unknown-warmth session; a warm TCP connect is the cheapest), so
+// the pick is a ranking rather than a fixed tuple: warmth, then measurement cost, then IPv4 before IPv6.
+const warmthRank = {warm: 0, unknown: 1, mixed: 2, cold: 3};
+const measurementRank = {tcp_connect: 0, http_headers: 1, http_round_trip: 2, quic_handshake: 3, mixed: 4, unknown: 5, dns_round_trip: 6};
 export function preferredHealth(node: Node): HealthObservation | undefined {
-  const warm = node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data' && h.measurement === 'tcp_connect' && h.warmth === 'warm');
-  return warm.find(h => h.ip_version === 'ipv4') ?? warm.find(h => h.ip_version === 'ipv6');
+  const rank = (h: HealthObservation) => warmthRank[h.warmth] * 100 + measurementRank[h.measurement] * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
+  return node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
 }
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
@@ -83,10 +88,16 @@ export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
 }
-export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: LabelFn): string {
+// A chain carries group ids followed by the leaf node id; `names` turns them into what the config calls them.
+export type OutboundNames = ReadonlyMap<string, string>;
+export const chainNames = (chain: string[], names?: OutboundNames) => chain.map(id => names?.get(id) ?? id);
+export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: LabelFn, names?: OutboundNames): string {
   if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
-  return row.chain.join(' → ') || '—';
+  return chainNames(row.chain, names).join(' → ') || '—';
 }
+// The node a chain ends in, by name, for the mark beside it.
+export const chainLeaf = (row: Pick<Connection, 'chain' | 'outbound'>, names?: OutboundNames): string | null =>
+  row.outbound === 'direct' || row.outbound === 'block' ? row.outbound : (chainNames(row.chain, names).at(-1) ?? null);
 
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   starting: 'lifecycle.starting',

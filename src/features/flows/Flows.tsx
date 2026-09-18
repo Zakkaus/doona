@@ -1,8 +1,8 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useFlow, useFlows, useGroups, useNodes} from '../../api/store';
+import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames} from '../../api/store';
 import {FlowMap} from './FlowMap';
-import {flowMap, flowsThrough} from './map';
-import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
+import {flowMap, flowsThrough, nodeNames} from './map';
+import {chainLabel, chainLeaf, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
 import {OutboundMark} from '../policies/Mark';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
@@ -36,7 +36,7 @@ export function RoutingMap({go, query}: PageProps) {
   const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned).length : 0;
+  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
       {resource.error && <ErrorMessage error={resource.error} />}
@@ -71,6 +71,7 @@ export function FlowRecords({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
+  const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
   const flow = detail.data;
@@ -80,7 +81,9 @@ export function FlowRecords({go, query}: PageProps) {
   // A pinned map item is `stage:label`; the label is all the chip needs.
   const pinnedLabel = pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
   const all = resource.data?.flows ?? [];
-  const shown = (pinned ? flowsThrough(all, pinned) : all).filter(f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state));
+  const shown = (pinned ? flowsThrough(all, pinned, names) : all).filter(
+    f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state)
+  );
   return (
     <>
       {resource.error && <ErrorMessage error={resource.error} />}
@@ -137,8 +140,8 @@ export function FlowRecords({go, query}: PageProps) {
           render={f => [
             <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
             <span className="rp-chain">
-              <OutboundMark name={f.outbound === 'direct' || f.outbound === 'block' ? f.outbound : (f.chain.at(-1) ?? null)} />
-              <TextTooltip>{chainLabel(f, t)}</TextTooltip>
+              <OutboundMark name={chainLeaf(f, names)} />
+              <TextTooltip>{chainLabel(f, t, names)}</TextTooltip>
             </span>,
             <span className="rp-rule">
               <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>

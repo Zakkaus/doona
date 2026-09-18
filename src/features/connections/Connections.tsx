@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections} from '../../api/store';
+import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../api/store';
 import {ApiError} from '../../api/error';
-import {connectionDetails, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
+import {chainNames, connectionDetails, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
 import {
   Badge,
   Button,
@@ -68,6 +68,7 @@ export function Connections({go, query}: PageProps) {
   const src = ipLiteral(text);
   const resource = useConnections(src);
   const canClose = useCapabilities().data?.resources.connections.can_close === true;
+  const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   async function close(id: string, name: string) {
     try {
@@ -87,7 +88,9 @@ export function Connections({go, query}: PageProps) {
     c =>
       (network === 'all' || c.network === network) &&
       (out === 'all' || c.outbound === out) &&
-      (src || !needle || [c.dst, c.domain, c.src, c.pname, c.outbound, c.chain.join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+      (src ||
+        !needle ||
+        [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
@@ -185,7 +188,7 @@ export function Connections({go, query}: PageProps) {
                     c.network,
                     c.state,
                     c.outbound,
-                    c.chain.join(' > '),
+                    chainNames(c.chain, names).join(' > '),
                     c.rule_expression,
                     c.upload_bytes,
                     c.download_bytes,
@@ -210,6 +213,7 @@ export function Connections({go, query}: PageProps) {
           selectOnFocus={wide}
           view={view}
           onSort={sort => updateView({sort})}
+          names={names}
         />
         <DetailPanel open={!!cur} title={cur?.domain || cur?.dst || cur?.id || ''} onClose={() => select(null)}>
           {cur && (

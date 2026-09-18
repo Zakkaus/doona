@@ -147,19 +147,24 @@ it('keeps list decisions consistent with recorded traces rather than current sel
   expect((await api.groups()).find(g => g.id === 'proxy')?.config_revision).toBe((await api.group('proxy')).config_revision);
 });
 
-it('keeps the latency column on one tuple, with IPv6 only where no IPv4 observation exists', async () => {
+it('ranks the latency column by warmth, measurement and IPv4 before IPv6', async () => {
   const node = (await createMockApi().nodes()).nodes[0];
   const exact = preferredHealth(node)!;
-  const alternatives = [
-    {...exact, measurement: 'http_round_trip' as const},
-    {...exact, warmth: 'cold' as const},
+  expect([exact.measurement, exact.warmth]).toEqual(['tcp_connect', 'warm']);
+  const headers = {...exact, measurement: 'http_headers' as const, warmth: 'unknown' as const};
+  const roundTrip = {...exact, measurement: 'http_round_trip' as const};
+  const cold = {...exact, warmth: 'cold' as const};
+  const others = [
     {...exact, purpose: 'dns' as const},
     {...exact, transport: 'udp' as const}
   ];
   const v6 = {...exact, ip_version: 'ipv6' as const};
-  expect(preferredHealth({...node, health: alternatives})).toBeUndefined();
-  expect(preferredHealth({...node, health: [...alternatives, exact]})).toBe(exact);
-  expect(preferredHealth({...node, health: [...alternatives, v6]})).toBe(v6);
+  expect(preferredHealth({...node, health: others})).toBeUndefined();
+  // honk's periodic probe: HTTP headers over a session of unknown warmth is still a TCP data measurement.
+  expect(preferredHealth({...node, health: [...others, headers]})).toBe(headers);
+  expect(preferredHealth({...node, health: [cold, roundTrip, headers, exact]})).toBe(exact);
+  expect(preferredHealth({...node, health: [cold, headers, roundTrip]})).toBe(roundTrip);
+  expect(preferredHealth({...node, health: [...others, v6]})).toBe(v6);
   expect(preferredHealth({...node, health: [v6, exact]})).toBe(exact);
 });
 it('pages the airport override without losing members', async () => {

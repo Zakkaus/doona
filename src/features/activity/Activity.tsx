@@ -16,26 +16,18 @@ import {
   useRuntimeMemory,
   useRuntimeOutbounds,
   useTrafficHistory,
+  historyWindows,
   useRuntimeMode
 } from '../../api/store';
-import {
-  connectionRows,
-  eventSummary,
-  lifecycleStates,
-  localTime,
-  outboundLabel,
-  outboundUsage,
-  preferredHealth,
-  sourceIp,
-  trafficSeries
-} from '../../api/selectors';
-import {addU64, formatBytes, formatRate, parseU64, pctU64} from '../../api/u64';
+import {connectionRows, eventSummary, lifecycleStates, localTime, outboundLabel, outboundUsage, preferredHealth, sourceIp} from '../../api/selectors';
+import {addU64, formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Badge, Button, CardLink, MenuButton, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
 import {NodeMenu} from '../policies/Nodes';
 import {ModeSwitch} from './ModeSwitch';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
+import {historyTrafficSamples, trafficWindow, useTrafficSamples} from './traffic';
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
@@ -88,13 +80,20 @@ export function Activity({go}: {go: (page: string) => void}) {
   }, [by, connections.data]);
   const [range, setRange] = useState('live');
   const history = useTrafficHistory(range, capabilities.data);
-  const series = useMemo(() => trafficSeries(history.data), [history.data]);
+  // The backend's ring reaches back before the page opened; the session's own polls carry the chart past it.
+  const polledTraffic = useTrafficSamples(runtimeResource.data);
+  const series = useMemo(
+    () => trafficWindow(polledTraffic, history.data ? historyTrafficSamples(history.data) : [], historyWindows[range] ?? 720),
+    [polledTraffic, history.data, range]
+  );
   // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
   const runtimeMode = useRuntimeMode(resources?.runtime_mode.available === true);
   const mode = runtimeMode.data?.mode ?? 'rule';
   const [chosenTarget, setTarget] = useState('');
   const [chosenNode, setNodeName] = useState('');
-  const node = NODES.find(n => n.name === chosenNode) ?? NODES[0];
+  // Until a node is chosen: the first with a measurement, else the first proxy node; the built-ins come last.
+  const node =
+    NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
   const nodeName = node?.name ?? '';
   const error = runtimeResource.error ?? nodesResource.error ?? groupsResource.error ?? capabilities.error;
   if (error) return <ErrorMessage error={error} />;
@@ -114,7 +113,9 @@ export function Activity({go}: {go: (page: string) => void}) {
     text: formatBytes(r.bytes),
     color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
-  const events = feed.events.slice(0, 6);
+  // Only events a person acts on: an operation's outcome, a new generation, a gap in the records, a lost and
+  // regained stream. The per-second runtime and flow ticks drive the charts, not this list.
+  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated').slice(0, 6);
   return (
     <>
       <div className="rp-quick">
@@ -208,7 +209,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: node.tcp})) : '—'}</span>
+              <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)})) : '—'}</span>
             </span>
             <Light small tone={node?.alive ? 'ok' : node?.unavailable ? 'err' : 'muted'}>
               {node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}

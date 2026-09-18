@@ -1,5 +1,5 @@
 import type {Key} from '../i18n/messages';
-import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
 import type {
@@ -35,6 +35,7 @@ import type {
 import {ApiError, LocalError} from './error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch} from './invalidation';
+import type {OutboundNames} from './selectors';
 
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -196,8 +197,26 @@ function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled
       refresh.current = () => undefined;
     };
   }, [key]);
+  // A burst of events (one per flow change under load) becomes one refetch: the first event arms a short
+  // timer, later ones ride on it. Reconnection refetches at once.
+  const armed = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (armed.current) clearTimeout(armed.current);
+    },
+    []
+  );
   useEvents((event, reconnected) => {
-    if (shouldRefetch(lane, event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
+    if (!shouldRefetch(lane, event, reconnected) || !(resource.acceptEvent?.(event) ?? true)) return;
+    if (reconnected) {
+      refetch();
+      return;
+    }
+    if (armed.current) return;
+    armed.current = setTimeout(() => {
+      armed.current = null;
+      refetch();
+    }, 2000);
   });
   return {...state, refetch};
 }
@@ -213,7 +232,7 @@ export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
   return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
 }
-const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
+export const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.traffic_history;
@@ -277,6 +296,16 @@ export function useNodes(enabled = true) {
         )
     },
     {deps: [api], every: 30000, enabled}
+  );
+}
+// Group and node ids as the config names them, for chains the backend reports by id.
+export function useOutboundNames(): OutboundNames {
+  const resources = useCapabilities().data?.resources;
+  const groups = useGroups(resources?.groups.available === true);
+  const nodes = useNodes(resources?.nodes.available === true);
+  return useMemo(
+    () => new Map([...(groups.data ?? []).map(g => [g.id, g.name] as const), ...(nodes.data ?? []).map(n => [n.id, n.name] as const)]),
+    [groups.data, nodes.data]
   );
 }
 export function useGroups(enabled = true) {
@@ -428,11 +457,13 @@ export function useFlows(connection_id?: string, enabled = true) {
       key: ['flows', {connection_id}],
       fetch: signal =>
         walk(
-          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit}, signal),
+          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit, detail: 'full'}, signal),
           (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
         )
     },
-    {deps: [api, connection_id, limit], enabled}
+    // Every list request opens a bounded snapshot on the backend (honk keeps eight for 30 s), so this polls at
+    // a third of the usual cadence; events still refetch it the moment a flow changes.
+    {deps: [api, connection_id, limit], enabled, every: 15000}
   );
 }
 

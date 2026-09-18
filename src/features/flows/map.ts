@@ -11,7 +11,10 @@ export type FlowMap = {nodes: MapNode[]; links: MapLink[]};
 
 const terminal = (outbound: string | null) => outbound === 'direct' || outbound === 'block';
 
-function stageLabel(flow: FlowSummary, stage: MapStage): {label: string; unknown: boolean} | null {
+// Node ids as the config names them; a chain ends in a node id, the map draws node names.
+export type NodeNames = ReadonlyMap<string, string>;
+export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
+function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {label: string; unknown: boolean} | null {
   switch (stage) {
     case 'rule':
       return flow.rule_expression ? {label: flow.rule_expression, unknown: false} : {label: 'unknown', unknown: true};
@@ -20,7 +23,7 @@ function stageLabel(flow: FlowSummary, stage: MapStage): {label: string; unknown
     case 'node': {
       if (terminal(flow.outbound)) return null;
       const leaf = flow.chain.length > 1 ? flow.chain[flow.chain.length - 1] : null;
-      return leaf ? {label: leaf, unknown: false} : {label: 'unknown', unknown: true};
+      return leaf ? {label: names.get(leaf) ?? leaf, unknown: false} : {label: 'unknown', unknown: true};
     }
   }
 }
@@ -45,7 +48,7 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
     return entry;
   };
   // Config first: every group and its selected node exist even before a flow went through them.
-  const names = new Map(nodes.map(n => [n.id, n.name]));
+  const names = nodeNames(nodes);
   for (const group of groups) {
     const outbound = node('outbound', group.name);
     const selected = group.selection.tcp_member_id ?? group.selection.udp_member_id;
@@ -54,7 +57,7 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
   for (const flow of flows) {
     let previous: MapNode | undefined;
     for (const stage of mapStages) {
-      const part = stageLabel(flow, stage);
+      const part = stageLabel(flow, stage, names);
       if (!part) break;
       const current = node(stage, part.label, part.unknown);
       current.count++;
@@ -68,10 +71,10 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
 }
 
 // The flows that pass through one node of the map, for filtering the list beneath it.
-export function flowsThrough(flows: FlowSummary[], id: string): FlowSummary[] {
+export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames): FlowSummary[] {
   const [stage, label] = [id.slice(0, id.indexOf(':')) as MapStage, id.slice(id.indexOf(':') + 1)];
   return flows.filter(flow => {
-    const part = stageLabel(flow, stage);
+    const part = stageLabel(flow, stage, names);
     return !!part && part.label === label;
   });
 }

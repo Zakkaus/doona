@@ -3,6 +3,7 @@ import type {paths} from './types';
 import type {Api} from './api';
 import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
 import {ApiError, responseError} from './error';
+import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
 import {eventKinds} from './selectors';
@@ -33,7 +34,7 @@ export function createApi(base: string, token?: string): Api {
   });
   // Every mutation the contract lets a client repeat safely carries a fresh key, so a retry after a lost
   // reply cannot start the same operation twice.
-  const once = () => ({'Idempotency-Key': crypto.randomUUID()});
+  const once = () => ({'Idempotency-Key': uuid()});
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href, root);

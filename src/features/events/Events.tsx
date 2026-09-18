@@ -24,11 +24,14 @@ export function Events() {
         <Light small tone={feed.connected ? 'ok' : 'warn'}>
           {feed.available === false ? t('event.unavailable') : feed.connected ? t('event.connected') : t('event.reconnecting')}
         </Light>
-        {feed.cursor && <span className="rp-code">{t('event.cursor', {cursor: feed.cursor})}</span>}
+        {feed.cursor && (
+          <TextTooltip text={feed.cursor}>
+            <span className="rp-label">{t('event.cursor')}</span>
+          </TextTooltip>
+        )}
         <span className="rp-label">{t('event.limit', {n: formatNumber(EVENT_FEED_LIMIT, locale)})}</span>
         <span className="rp-grow" />
         <Button
-          small
           isDisabled={!shown.length}
           onPress={() => downloadFile(exportName('doona-events', 'json'), JSON.stringify(shown, null, 2) + '\n', 'application/json')}
         >

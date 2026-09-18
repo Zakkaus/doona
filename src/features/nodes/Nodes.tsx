@@ -3,7 +3,7 @@ import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
-import {addU64, formatBytes} from '../../api/u64';
+import {addU64, formatBytes, millis} from '../../api/u64';
 import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
 import {
   Badge,
@@ -264,7 +264,7 @@ export function Nodes({go, query}: PageProps) {
             </span>,
             node.protocol ?? '—',
             health?.state === 'healthy' && health.latency_ms != null ? (
-              <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: health.latency_ms})}</span>
+              <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: millis(health.latency_ms)})}</span>
             ) : (
               <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
             ),

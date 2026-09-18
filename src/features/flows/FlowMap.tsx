@@ -104,11 +104,12 @@ export function FlowMap({
               </div>
             ) : (
               <div className="rp-lane-node">
+                {/* A group with no live selection has nothing to show on the right; direct and block are themselves. */}
                 <NodeTile
-                  name={outboundLabel(lane.outbound.label, t)}
-                  icon={<OutboundMark name={lane.outbound.unknown ? null : lane.outbound.label} />}
-                  description={t('flow.builtin')}
-                  unavailable={false}
+                  name={kind === 'group' ? t('flow.laneNoNode') : outboundLabel(lane.outbound.label, t)}
+                  icon={<OutboundMark name={lane.outbound.unknown || kind === 'group' ? null : lane.outbound.label} />}
+                  description={kind === 'group' ? t('flow.laneNoNodeHelp') : t('flow.builtin')}
+                  unavailable={kind === 'group'}
                   selected={pinned === lane.outbound.id}
                   onPress={() => onPin(pinned === lane.outbound.id ? null : lane.outbound.id)}
                 />

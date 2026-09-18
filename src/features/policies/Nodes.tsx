@@ -19,6 +19,7 @@ import {
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
+import {millis} from '../../api/u64';
 import {OutboundMark} from './Mark';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
@@ -187,7 +188,7 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       ) : n.tcp === undefined ? (
         <span className="desc">—</span>
       ) : (
-        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: n.tcp})}</span>
+        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: millis(n.tcp)})}</span>
       )}
     </MenuItem>
   );

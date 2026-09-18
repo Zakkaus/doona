@@ -78,7 +78,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await expect(rows).toHaveCount(1);
   snapshot.flows = [];
   snapshot.dropped_records = null;
-  await page.clock.fastForward(6000);
+  await page.clock.fastForward(16000);
   await expect(rows).toHaveCount(0);
   await expect(panel.getByText('No matching flows in this snapshot', {exact: true})).toBeVisible();
   await expect(panel.getByText('Dropped record count unknown', {exact: true})).toBeVisible();
@@ -89,7 +89,7 @@ test.describe('without flow capability', () => {
 
   test('the page leaves the navigation and a deep link says so', async ({page}) => {
     await page.goto('/#/rules');
-    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveCount(0);
+    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
     await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
     await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page).toHaveURL(/#\/rules$/);

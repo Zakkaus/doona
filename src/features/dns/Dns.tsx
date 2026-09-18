@@ -3,6 +3,7 @@ import {useMemo, useState} from 'react';
 import Delete from '../../ui/icons/Delete';
 import {useDnsControl, useDnsLog} from '../../api/store';
 import {localTime, relativeStart} from '../../api/selectors';
+import {millis} from '../../api/u64';
 import {
   Badge,
   Button,
@@ -115,7 +116,7 @@ export function Dns({go, query}: PageProps) {
                   [t('ui.upstream'), result.upstream ?? '—'],
                   [t('dns.routeSource'), result.route.source],
                   [t('dns.routeRule'), result.route.rule ?? '—'],
-                  [t('ui.elapsed'), t('ui.latency', {n: result.elapsed_ms})]
+                  [t('ui.elapsed'), t('ui.latency', {n: millis(result.elapsed_ms)})]
                 ]}
               />
               {result.answers?.length ? (
@@ -309,7 +310,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
           ) : (
             <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
           ),
-          t('ui.latency', {n: record.elapsed_ms})
+          t('ui.latency', {n: millis(record.elapsed_ms)})
         ]}
       />
     </>

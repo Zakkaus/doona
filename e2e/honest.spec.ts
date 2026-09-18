@@ -6,9 +6,16 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
+  // The home card keeps the ticks out; the events page lists every one.
   const notifications = page.getByRole('region', {name: 'Notifications and issues'});
   await page.clock.fastForward(5100);
-  await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'}).first()).toContainText('/api/v1/runtime');
+  await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
+  await page.goto('/#/events');
+  // The stream reconnects on the new page; the next tick lands after the mock's five-second cadence.
+  await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
+  await page.clock.fastForward(5100);
+  await page.clock.fastForward(5100);
+  await expect(page.locator('.rp-table [role=row][data-key]').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
   await page.goto('/#/connections?id=2');
   await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
 });

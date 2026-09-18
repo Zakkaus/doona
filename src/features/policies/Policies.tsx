@@ -69,7 +69,6 @@ function PolicyCard({
               )}
             </span>
             <Button
-              small
               isPending={control.busy === 'probe'}
               isDisabled={!!control.busy || !control.canProbe}
               tip={!control.canProbe ? t('policy.noProbe') : undefined}
@@ -97,7 +96,7 @@ function PolicyCard({
             />
           </Disclosure>
           <div className="rp-toolbar">
-            {(selectable || overridable) && (
+            {(selectable || overridable || g.runtime.selection.tcp?.member_id !== g.runtime.selection.udp?.member_id) && (
               <Segmented
                 label={t('policy.network', {name: g.name})}
                 value={control.network}
@@ -118,7 +117,6 @@ function PolicyCard({
             )}
             {pinned && (
               <Button
-                small
                 isPending={control.busy === 'selection'}
                 isDisabled={!!control.busy}
                 onPress={() => {
