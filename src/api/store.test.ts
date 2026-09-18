@@ -145,9 +145,27 @@ it('refreshes runtime counters immediately but leaves inventory and clients to t
 });
 
 it('refreshes generation-dependent resources but leaves DNS cache to its poll', () => {
-  for (const resource of ['capabilities', 'runtime', 'groups', 'group', 'nodes', 'datapath', 'flows', 'flow'] as const) {
+  for (const resource of [
+    'capabilities',
+    'runtime',
+    'runtimeSettings',
+    'runtimeMode',
+    'config',
+    'groups',
+    'group',
+    'nodes',
+    'providers',
+    'geodata',
+    'rules',
+    'datapath',
+    'flows',
+    'flow'
+  ] as const) {
     expect(shouldRefetch(resource, event('generation.changed'))).toBe(true);
   }
+  for (const resource of ['dnsLog', 'version'] as const) expect(shouldRefetch(resource, event('generation.changed'))).toBe(false);
+  expect(shouldRefetch('runtimeMode', event('runtime.updated'))).toBe(true);
+  expect(shouldRefetch('runtimeSettings', event('runtime.updated'))).toBe(false);
   expect(invalidations['generation.changed'].poll).toContain('dnsCache');
   expect(shouldRefetch('dnsCache', event('generation.changed'))).toBe(false);
 });

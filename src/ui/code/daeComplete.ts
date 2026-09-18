@@ -50,7 +50,14 @@ export function daeCompletion(outbounds: () => string[]) {
         } else if (/\b(domain|dip|sip|qname)\(\s*[\w.-]*$/.test(before)) {
           options = matchers;
         } else if (section === null) {
-          options = sections.map(item => ({...item, apply: item.label + ' {\n  \n}'}));
+          options = sections.map(item => ({
+            ...item,
+            // The cursor lands on the indented blank line inside the new section.
+            apply: (view, _completion, from, to) => {
+              const insert = item.label + ' {\n  \n}';
+              view.dispatch({changes: {from, to, insert}, selection: {anchor: from + item.label.length + 4}});
+            }
+          }));
         } else if (section === 'routing' || section === 'dns') {
           options = [...conditions, ...routingWords];
         } else if (section === 'global') {

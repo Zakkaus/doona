@@ -1,7 +1,7 @@
 {
   "name": "doona",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "A web interface for the honk transparent proxy.",
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "conformance": "node tools/conformance.mjs",
+    "e2e:live": "playwright test e2e/routes.spec.ts e2e/a11y.spec.ts e2e/chunks.spec.ts e2e/mobile.spec.ts e2e/keyboard.spec.ts",
     "gen:api": "openapi-typescript contract/api-standardize/openapi.yaml -o \"${OPENAPI_OUTPUT:-src/api/types.ts}\"",
     "lint": "eslint .",
     "format": "prettier --write .",

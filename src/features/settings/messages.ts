@@ -49,6 +49,7 @@ export const messages = defineMessages({
     'settings.about': '關於',
     'settings.actions': '後端操作',
     'settings.actionsNote': '各頁都有的一次性動作集中在這裡；按鈕只在後端宣告對應能力時出現。',
+    'settings.actionsNone': '此後端未宣告任何可執行的動作。',
     'settings.refreshAll': '刷新全部訂閱（{n}）',
     'settings.refreshedAll': '已刷新 {n} / {total} 條訂閱',
     'settings.geodata': '地理資料',
@@ -58,21 +59,23 @@ export const messages = defineMessages({
     'settings.geodataAsset': '資料',
     'settings.geodataSize': '大小',
     'settings.geodataSource': '來源',
-    'settings.paired': '已從連結帶入後端位址與令牌；儲存後生效。',
+    'settings.paired': '已從連結帶入後端網址與 token；儲存後生效。',
     'settings.install': '安裝為應用程式',
-    'settings.installed': '已安裝到桌面',
+    'settings.installed': '已安裝',
     'settings.version': 'doona 版本',
-    'settings.contract': '契約提交'
+    'settings.contract': '契約提交',
+    'settings.engine': '後端',
+    'settings.apiMajor': '後端的 API 主版本為 {major}，本面板依 1 版契約寫成；欄位可能對不上。'
   },
   'zh-CN': {
     'nav.settings': '设置',
     'settings.backend': '后端',
-    'settings.profile': '后端配置',
-    'settings.profileName': '配置名称',
-    'settings.addProfile': '添加配置',
+    'settings.profile': '后端档案',
+    'settings.profileName': '档案名称',
+    'settings.addProfile': '添加档案',
     'settings.renameProfile': '重命名',
-    'settings.deleteProfile': '删除配置',
-    'settings.deleteProfileHelp': '删除 {name}？此配置的地址与 token 将从此浏览器移除。',
+    'settings.deleteProfile': '删除档案',
+    'settings.deleteProfileHelp': '删除 {name}？此档案的网址与 token 将从此浏览器移除。',
     'settings.api': '服务器地址',
     'settings.apiHelp': '填写服务器根地址或反向代理前缀，不是 /api/v1；留空或填写 mock 可使用内置演示数据。',
     'settings.invalidUrl': '请输入 http(s)://主机[:端口][/前缀] 或 mock。地址不能包含账号密码、查询参数或片段。',
@@ -112,6 +115,7 @@ export const messages = defineMessages({
     'settings.about': '关于',
     'settings.actions': '后端操作',
     'settings.actionsNote': '各页都有的一次性动作集中在这里；按钮只在后端声明对应能力时出现。',
+    'settings.actionsNone': '此后端未声明任何可执行的动作。',
     'settings.refreshAll': '刷新全部订阅（{n}）',
     'settings.refreshedAll': '已刷新 {n} / {total} 条订阅',
     'settings.geodata': '地理数据',
@@ -121,11 +125,13 @@ export const messages = defineMessages({
     'settings.geodataAsset': '数据',
     'settings.geodataSize': '大小',
     'settings.geodataSource': '来源',
-    'settings.paired': '已从链接带入后端地址与令牌；保存后生效。',
+    'settings.paired': '已从链接带入后端网址与 token；保存后生效。',
     'settings.install': '安装为应用',
-    'settings.installed': '已安装到桌面',
+    'settings.installed': '已安装',
     'settings.version': 'doona 版本',
-    'settings.contract': '契约提交'
+    'settings.contract': '契约提交',
+    'settings.engine': '后端',
+    'settings.apiMajor': '后端的 API 主版本为 {major}，本面板按 1 版契约编写；字段可能对不上。'
   },
   en: {
     'nav.settings': 'Settings',
@@ -176,6 +182,7 @@ export const messages = defineMessages({
     'settings.actions': 'Backend actions',
     'settings.actionsNote':
       'The one-shot actions from the other pages, gathered here; a button appears only when the backend advertises the capability behind it.',
+    'settings.actionsNone': 'This backend advertises no action to run.',
     'settings.refreshAll': 'Refresh all subscriptions ({n})',
     'settings.refreshedAll': 'Refreshed {n} of {total} subscriptions',
     'settings.geodata': 'Geodata',
@@ -186,10 +193,12 @@ export const messages = defineMessages({
     'settings.geodataAsset': 'Asset',
     'settings.geodataSize': 'Size',
     'settings.geodataSource': 'Source',
-    'settings.paired': 'Backend address and token were filled in from the link; they take effect once saved.',
+    'settings.paired': 'Backend URL and token were filled in from the link; they take effect once saved.',
     'settings.install': 'Install as an app',
     'settings.installed': 'Installed',
     'settings.version': 'doona version',
-    'settings.contract': 'Contract commit'
+    'settings.contract': 'Contract commit',
+    'settings.engine': 'Backend',
+    'settings.apiMajor': 'The backend speaks API major {major}; this panel is written against major 1, so fields may not line up.'
   }
 });

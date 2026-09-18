@@ -26,7 +26,7 @@ export function ModeSwitch({target}: {target: string}) {
       onChange={next => {
         if (!modes.includes(next as (typeof order)[number])) return;
         void runtimeMode.change(next === 'global' ? {mode: 'global', target} : {mode: next as 'rule' | 'direct'}).then(
-          result => toast('positive', t('act.modeChanged', {mode: t(modeLabels[result.mode])})),
+          result => result && toast('positive', t('act.modeChanged', {mode: t(modeLabels[result.mode])})),
           (error: unknown) => toast('negative', errorText(error))
         );
       }}

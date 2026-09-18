@@ -12,6 +12,7 @@ import type {
   OperationAccepted,
   OperationState,
   Provider,
+  RuleList,
   RuntimeSettingsPatch
 } from '../model';
 import {ApiError} from '../error';
@@ -80,14 +81,19 @@ export function createMockApi(): Api {
   let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
+  let profile: string | null = null;
   try {
-    if (localStorage.getItem('doona-mock-profile') === 'base') capabilities = fixtures.capabilitiesBase;
+    profile = localStorage.getItem('doona-mock-profile');
+    if (profile === 'base') capabilities = fixtures.capabilitiesBase;
+    if (profile === 'm1') capabilities = fixtures.capabilitiesM1;
   } catch {}
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
+  // honk's first release observes userspace only; the mock says so the same way.
+  if (profile === 'm1') connections.visibility = 'partial';
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   const dnsCache = structuredClone(fixtures.dnsCache);
@@ -408,11 +414,13 @@ export function createMockApi(): Api {
     },
     nodes: async (query, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.nodes.available) throw new ApiError(404, 'capability_not_supported', 'Nodes are unavailable');
       const result = page(query?.group_id ? nodes.filter(n => n.group_ids.includes(query.group_id!)) : nodes, query?.cursor, query?.limit);
       return {observed_at: fixtures.observedAt, nodes: structuredClone(result.items), next_cursor: result.next_cursor};
     },
     groups: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available) throw new ApiError(404, 'capability_not_supported', 'Groups are unavailable');
       return groups.map(g => ({
         id: g.id,
         name: g.name,
@@ -425,6 +433,7 @@ export function createMockApi(): Api {
     },
     group: async (id, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available) throw new ApiError(404, 'capability_not_supported', 'Groups are unavailable');
       return structuredClone(
         found(
           groups.find(g => g.id === id),
@@ -507,7 +516,7 @@ export function createMockApi(): Api {
       );
       if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
       if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
-      const limit = fixtures.capabilities.resources.groups.max_patch_operations;
+      const limit = capabilities.resources.groups.max_patch_operations;
       if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
       const updated = patchGroupConfig(group, ops);
       updating.add(groupId);
@@ -666,6 +675,30 @@ export function createMockApi(): Api {
       }
       throw new ApiError(404, 'resource_not_found', 'Connection not found');
     },
+    closeConnections: async (query, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.connections.can_close) throw new ApiError(404, 'capability_not_supported', 'Closing connections is unavailable');
+      const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
+      const type = query?.type ?? 'all';
+      if (type === 'all' && !src && !query?.all) throw new ApiError(400, 'invalid_request', 'An unfiltered close needs all=true');
+      const lists: Array<'tcp' | 'udp'> = type === 'tcp' ? ['tcp'] : type === 'udp' ? ['udp'] : ['tcp', 'udp'];
+      const selected = lists.flatMap(network => connections[network].filter(c => !src || sourceIp(c.src) === src).map(c => ({network, c})));
+      const max = capabilities.resources.connections.max_bulk_close ?? 1000;
+      if (selected.length > max) throw new ApiError(413, 'request_too_large', `More than ${max} connections match`);
+      let closed = 0;
+      let skipped = 0;
+      for (const {network, c} of selected) {
+        if (c.observed_by === 'ebpf') {
+          skipped += 1;
+          continue;
+        }
+        closeLive(c, 'closed_by_request');
+        connections[network].splice(connections[network].indexOf(c), 1);
+        closed += 1;
+      }
+      return {closed, skipped};
+    },
     runtimeMode: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
@@ -683,7 +716,7 @@ export function createMockApi(): Api {
       } else if (request.target) throw new ApiError(400, 'invalid_request', `${request.mode} takes no target`);
       mode = {mode: request.mode, target: request.mode === 'global' ? request.target! : null, source: 'runtime'};
       log('info', 'honk::routing', 'Outbound mode changed.', {mode: mode.mode, target: mode.target});
-      publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
+      runtimeUpdated();
       return {observed_at: new Date().toISOString(), ...mode};
     },
     providers: async (query, signal) => {
@@ -780,6 +813,65 @@ export function createMockApi(): Api {
       log('info', 'honk::config', 'Node removed.', {node: node.name});
       advance();
       return {deleted: 1};
+    },
+    // The dictionary is read off the accepted text: main routing first, includes in place, in evaluation order.
+    // A line the demo's flows and trace already refer to keeps that id; anything added later gets one from its
+    // file and line.
+    rules: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
+      const list = await loadSources();
+      const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
+      const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
+      const entries: RuleList['rules'] = [];
+      let fallback: RuleList['fallback'] | null = null;
+      const read = (file: (typeof list)[number], bare: boolean) => {
+        let depth = 0;
+        file.content.split('\n').forEach((raw, i) => {
+          const code = raw.replace(/#.*$/, '').trim();
+          if (!bare) {
+            if (/^routing\s*\{/.test(code)) {
+              depth = 1;
+              return;
+            }
+            if (depth === 0) return;
+            if (code === '}') {
+              depth = 0;
+              return;
+            }
+          }
+          const include = /^include\s+(\S+)$/.exec(code);
+          if (include) {
+            const target = byPath.get(include[1]);
+            if (target) read(target, true);
+            return;
+          }
+          const fb = /^fallback:\s*(\S+)$/.exec(code);
+          const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
+          if (!fb && !rule) return;
+          const source = {file: file.path.split('/').pop()!, line: i + 1};
+          if (fb) {
+            fallback = {outbound: fb[1], source};
+            entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
+            return;
+          }
+          const must = rule![2].endsWith('(must)');
+          const outbound = rule![2].replace(/\(must\)$/, '');
+          entries.push({
+            rule_id: known.get(code) ?? `${source.file}:${source.line}`,
+            index: entries.length,
+            expression: code,
+            outbound,
+            must,
+            source,
+            kind: 'rule'
+          });
+        });
+      };
+      const main = list.find(item => item.kind === 'main');
+      if (main) read(main, false);
+      if (!fallback) throw new ApiError(409, 'snapshot_unavailable', 'The routing section has no fallback');
+      return {generation_id: String(configRevision), rules: entries, fallback};
     },
     geodata: async signal => {
       signal?.throwIfAborted();
@@ -886,6 +978,8 @@ export function createMockApi(): Api {
       apply('log');
       apply('dns_log');
       apply('flows');
+      // A smaller ring drops its oldest records at once, not when the next one arrives.
+      if (logRing.length > settings.log.buffered_records) logRing.splice(0, logRing.length - settings.log.buffered_records);
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
       log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});

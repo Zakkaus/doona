@@ -1,12 +1,23 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useT} from '../../i18n';
+import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
 import type {useConfigEditor} from '../../api/store';
 import {Button, LabeledSelect, TextField, toast} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
-import {defaultGroup, isSubscriptionUrl, readState, writeState, type WizardState} from './wizard';
+import {candidate} from './names';
+import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, writeState, type RuleTemplate, type WizardState} from './wizard';
 
+const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
+const templateLabels: Record<RuleTemplate, [Key, Key]> = {
+  global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],
+  bypass: ['config.wizardBypass', 'config.wizardBypassHelp'],
+  gfw: ['config.wizardGfw', 'config.wizardGfwHelp'],
+  mini: ['config.wizardMini', 'config.wizardMiniHelp'],
+  standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
+  full: ['config.wizardFull', 'config.wizardFullHelp']
+};
 // Subscriptions as a list, the way daed does it; rules stay text (kept, or swapped for a template). Groups are
 // left as written: the templates route to the first one, and a main source without any gets a single `proxy`.
 // The form starts from what the main source says and writes back only the sections it owns. `complete` is
@@ -33,7 +44,11 @@ export function Wizard({
   const current = origin.content;
   const [state, setState] = useState<WizardState>(() => {
     const read = readState(current);
-    return {...read, rules: current.trim() ? 'keep' : 'whitelist', subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]};
+    return {
+      ...read,
+      rules: current.trim() ? 'keep' : defaultTemplate,
+      subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]
+    };
   });
   const text = useMemo(() => writeState(current, state), [current, state]);
   // A form that would write something different is unsaved work, guarded the same way as the editor's draft.
@@ -50,7 +65,7 @@ export function Wizard({
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
     if (canValidate) {
-      const check = await editor.validate({sources: [{id: main.id, path: main.path, content: text}], mode: 'full'});
+      const check = await editor.validate({sources: [candidate(main, text)], mode: 'full'});
       if (!check) return;
       if (!check.valid) {
         toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
@@ -82,6 +97,7 @@ export function Wizard({
                   width={520}
                   placeholder="https://example.org/sub?token=…"
                   isInvalid={item.url !== '' && !isSubscriptionUrl(item.url)}
+                  error={item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : undefined}
                   description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
                   onChange={url => setSubscription(index, {url})}
                 />
@@ -112,10 +128,7 @@ export function Wizard({
           onChange={rules => patch({rules: rules as WizardState['rules']})}
           items={[
             ...(current.trim() ? [{id: 'keep', label: t('config.wizardKeep'), desc: t('config.wizardKeepHelp')}] : []),
-            {id: 'whitelist', label: t('config.wizardWhitelist'), desc: t('config.wizardWhitelistHelp')},
-            {id: 'blacklist', label: t('config.wizardBlacklist'), desc: t('config.wizardBlacklistHelp')},
-            {id: 'dae', label: t('config.wizardDae'), desc: t('config.wizardDaeHelp')},
-            {id: 'global', label: t('config.wizardGlobal'), desc: t('config.wizardGlobalHelp')}
+            ...templateIds.map(id => ({id, label: t(templateLabels[id][0]), desc: t(templateLabels[id][1])}))
           ]}
         />
         {!current.trim() && (

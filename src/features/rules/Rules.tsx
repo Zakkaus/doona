@@ -1,5 +1,5 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
-import {localTime} from '../../api/selectors';
+import {localTime, word} from '../../api/selectors';
 import {useEffect, useMemo} from 'react';
 import {useCapabilities, useRoutingTrace} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
@@ -16,33 +16,23 @@ const outcomes: Record<string, Key> = {
 };
 
 // Everything about routing decisions on one page: the rule list, the config drawn as a map, the retained flow
-// records with their traces, and a simulator for a hypothetical input. The editor joins once the contract
-// carries the config rule list.
+// records with their traces, and a simulator for a hypothetical input.
 export function Rules({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const flows = resources?.flows.available !== false;
+  const rules = resources?.rules.available === true;
   const tabs = [
-    ...(flows
-      ? [
-          {id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />},
-          {id: 'list', label: t('rule.listTitle'), content: <RuleList />},
-          {id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}
-        ]
-      : []),
+    ...(flows ? [{id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />}] : []),
+    ...(flows || rules ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList go={go} />}] : []),
+    ...(flows ? [{id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}] : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];
   const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'map');
   if (capabilities.loading && !capabilities.data) return <Loading />;
   if (capabilities.error) return <ErrorMessage error={capabilities.error} />;
-  if (!tabs.length)
-    return (
-      <div className="rp-page">
-        <span className="rp-empty">{t('rule.unavailable')}</span>
-      </div>
-    );
   return (
     <div className="rp-page">
       <Tabs
@@ -63,6 +53,8 @@ function Trace() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
+  // Engine words the flow pages translate read the same here; anything else stays as reported.
+  const phrase = (value: ReturnType<typeof word>) => (typeof value === 'string' ? value : t(value.key, value.params));
   useEffect(() => {
     if (trace.error) toast('negative', errorText(trace.error));
   }, [trace.error]);
@@ -167,8 +159,8 @@ function Trace() {
                 items={[
                   [t('ui.type'), dns.qtype],
                   [t('ui.state'), dns.status],
-                  [t('ui.source'), dns.source],
-                  [t('ui.cache'), dns.cache],
+                  [t('ui.source'), phrase(word(dns.source))],
+                  [t('ui.cache'), phrase(word(dns.cache))],
                   [t('rule.address'), formatList(lang, dns.addresses) || '—'],
                   ...(dns.error ? [[t('ui.error'), dns.error] as [string, string]] : [])
                 ]}

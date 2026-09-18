@@ -1,7 +1,6 @@
 import {expect, routes, test} from './fixtures';
-
-const LOCALE: Record<string, string> = {'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US'};
-for (const lang of ['zh-TW', 'zh-CN', 'en']) {
+import {LOCALE} from '../src/i18n';
+for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
     test('renders navigation without browser errors', async ({page}) => {

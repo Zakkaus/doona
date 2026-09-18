@@ -1,4 +1,4 @@
-import type {FlowList, FlowSummary} from '../../api/model';
+import type {FlowSummary} from '../../api/model';
 
 type RuleDistributionRow = {
   id: string | null;
@@ -22,8 +22,4 @@ export function ruleDistribution(flows: FlowSummary[]): RuleDistributionRow[] {
   const result = [...rows.values()];
   for (const row of result) row.share = row.count / flows.length;
   return result.sort((a, b) => b.count - a.count);
-}
-
-export function ruleDistributionSummary(list: FlowList) {
-  return {total: list.flows.length, dropped: list.dropped_records, coverage: list.coverage};
 }

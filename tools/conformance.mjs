@@ -1,6 +1,7 @@
 /**
  * Usage: node tools/conformance.mjs <server-root> [--token T] [--only opId,...]
- *        [--skip opId,...] [--json] [--timeout ms]
+ *        [--skip opId,...] [--json] [--timeout ms] [--contract path/to/openapi.yaml]
+ * --contract validates against another bundle (a backend built on an earlier pin).
  * Node 22+. Exit: 0 passes, 1 contract failures, 2 usage/unreachable server.
  * Discovery, version, and capabilities precede filters. Only GET observe operations
  * run after them: mutations, diagnostic DNS, and observe-owner-or-control are SKIP
@@ -19,7 +20,12 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import {parse} from 'yaml';
 
-const contract = parse(readFileSync(new URL('../contract/api-standardize/openapi.yaml', import.meta.url), 'utf8'));
+const contractArg = process.argv.indexOf('--contract');
+const contractPath =
+  contractArg > 0 && process.argv[contractArg + 1]
+    ? pathToFileURL(process.argv[contractArg + 1])
+    : new URL('../contract/api-standardize/openapi.yaml', import.meta.url);
+const contract = parse(readFileSync(contractPath, 'utf8'));
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
 const operations = Object.entries(contract.paths).flatMap(([path, item]) =>
   Object.entries(item)
@@ -351,7 +357,7 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
   return {checks, summary};
 }
 
-const usage = 'Usage: node tools/conformance.mjs <base-url> [--token T] [--only opId,...] [--skip opId,...] [--json] [--timeout ms]';
+const usage = 'Usage: node tools/conformance.mjs <base-url> [--token T] [--only opId,...] [--skip opId,...] [--json] [--timeout ms] [--contract file]';
 
 async function main(args) {
   try {
@@ -367,9 +373,11 @@ async function main(args) {
         json = true;
         continue;
       }
-      if (!['--token', '--only', '--skip', '--timeout'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error(usage);
+      if (!['--token', '--only', '--skip', '--timeout', '--contract'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error(usage);
       const value = args[++i];
       const name = flag.slice(2);
+      // --contract was read at module load; here it only needs to pass the argument check.
+      if (name === 'contract') continue;
       config[name] = name === 'timeout' ? Number(value) : name === 'only' || name === 'skip' ? value.split(',') : value;
     }
     const result = await walk(config);

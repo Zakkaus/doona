@@ -30,16 +30,24 @@ export function BackendActionsCard() {
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(!!resources?.runtime.available);
   const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available === true);
-  const groups = useGroups();
-  const providers = useProviders(resources?.providers.available !== false);
+  const groups = useGroups(resources?.groups.available === true);
+  const providers = useProviders(resources?.providers.available === true);
   const refresh = useProviderRefresh(providers.refetch);
-  const connections = useConnections(undefined);
+  const connections = useConnections(undefined, resources?.connections.available === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const geodata = useGeodata(resources?.geodata.available ?? false);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const fail = (error: unknown) => toast('negative', errorText(error));
   const target = runtimeMode.data?.target ?? groups.data?.[0]?.id ?? '';
+  const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
+  const offered =
+    lifecycle ||
+    !!resources?.runtime_mode?.available ||
+    !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
+    !!resources?.providers.can_refresh ||
+    !!resources?.connections.can_close ||
+    !!resources?.geodata.can_update;
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const live = (connections.data ? [...connections.data.tcp, ...connections.data.udp] : []).map(c => c.id);
   // Subscriptions refresh one after another: the backend keeps one refresh per provider in flight anyway.
@@ -64,7 +72,7 @@ export function BackendActionsCard() {
       <h2 className="rp-h3" id="settings-actions">
         {t('settings.actions')}
       </h2>
-      <span className="rp-label">{t('settings.actionsNote')}</span>
+      <span className="rp-label">{t(offered ? 'settings.actionsNote' : 'settings.actionsNone')}</span>
       <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
         <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
@@ -83,14 +91,13 @@ export function BackendActionsCard() {
           />
         )}
         {resources?.providers.can_refresh && (
-          <Button secondary isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
+          <Button isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
             {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
           </Button>
         )}
-        {resources?.connections.can_close && <CloseAllButton ids={live} closing={closing} />}
+        {resources?.connections.can_close && <CloseAllButton count={live.length} selection={{query: {all: true}}} closing={closing} />}
         {resources?.geodata.can_update && (
           <Button
-            secondary
             isPending={geodata.busy}
             isDisabled={geodata.busy || !geodata.data}
             onPress={() => {

@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {createApi, ApiError} from './client';
+import {createApi} from './client';
+import {ApiError} from './error';
 import type {ApiEvent} from './model';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
@@ -39,6 +40,7 @@ describe('native transport', () => {
   it('sends conditional JSON Patch and accepts both contract success responses', async () => {
     const body = [{op: 'replace', path: '/config/tolerance', value: 100}] as const;
     let calls = 0;
+    const keys: string[] = [];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (request: Request) => {
@@ -46,6 +48,7 @@ describe('native transport', () => {
         expect(request.url).toBe('https://honk.test/api/v1/groups/proxy');
         expect(request.headers.get('If-Match')).toBe('\"40\"');
         expect(request.headers.get('Content-Type')).toBe('application/json-patch+json');
+        keys.push(request.headers.get('Idempotency-Key') ?? '');
         expect(await request.json()).toEqual(body);
         return calls++ === 0
           ? json({...acceptedBody, kind: 'group_update'}, 202, {Location: acceptedBody.href, 'Retry-After': '2'})
@@ -59,6 +62,9 @@ describe('native transport', () => {
       retryAfter: 2
     });
     await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
+    // Each attempt carries its own idempotency key, so a retry cannot replay as a new operation.
+    expect(keys.every(key => /^[0-9a-f-]{36}$/.test(key))).toBe(true);
+    expect(new Set(keys).size).toBe(2);
   });
   it('follows href, honors each polling floor, and returns failure as terminal', async () => {
     vi.useFakeTimers();
@@ -191,4 +197,19 @@ describe('native transport', () => {
     await stream;
     expect(states.at(-1)).toBe(false);
   });
+});
+
+it('fills resource keys a backend on an older contract pin leaves out as unavailable', async () => {
+  const {normalizeCapabilities} = await import('./capabilities');
+  const raw = {
+    observed_at: '2026-09-15T14:00:00Z',
+    profiles: ['base'],
+    limits: {},
+    resources: {runtime: {available: true}, connections: {available: true, can_close: false}}
+  };
+  const capabilities = normalizeCapabilities(raw as never);
+  expect(capabilities.resources.runtime.available).toBe(true);
+  expect(capabilities.resources.geodata.available).toBe(false);
+  expect(capabilities.resources.nodes.available).toBe(false);
+  expect(capabilities.resources.rules.available).toBe(false);
 });

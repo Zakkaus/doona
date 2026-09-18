@@ -38,7 +38,7 @@ export function pctU64(part: U64, whole: U64): number | null {
 export function formatBytes(input: U64): string {
   const value = valueOf(input);
   if (value === null) return '—';
-  if (value === 0n) return '0';
+  if (value === 0n) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
   let unit = 0,
     scale = 1n;
@@ -53,5 +53,8 @@ export function formatBytes(input: U64): string {
 
 export function formatRate(input: U64): string {
   const text = formatBytes(input);
-  return text === '—' ? text : text === '0' ? '0 B/s' : text + '/s';
+  return text === '—' ? text : text + '/s';
 }
+
+/** A measured duration for display: backends report microsecond floats (1.8567589999999998); one decimal under 10 ms, whole milliseconds above. */
+export const millis = (value: number): number => (value < 10 ? Math.round(value * 10) / 10 : Math.round(value));

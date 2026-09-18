@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {flowMap, flowsThrough, lanes} from './map';
+import {flowMap, flowsThrough, lanes, nodeNames} from './map';
 
 it('lays the config out as columns and weights them with retained flows', async () => {
   const api = createMockApi();
@@ -17,7 +17,7 @@ it('lays the config out as columns and weights them with retained flows', async 
   expect(stages('rule').reduce((sum, node) => sum + node.count, 0)).toBe(flows.flows.length);
   // Terminal outbounds have no node hop.
   const direct = flows.flows.filter(flow => flow.outbound === 'direct');
-  expect(flowsThrough(flows.flows, 'outbound:direct')).toHaveLength(direct.length);
+  expect(flowsThrough(flows.flows, 'outbound:direct', nodeNames(nodes.nodes))).toHaveLength(direct.length);
   expect(map.links.some(link => link.source === 'outbound:direct')).toBe(false);
   // Sorted busiest first, unknowns after named entries of the same weight.
   const rules = stages('rule');

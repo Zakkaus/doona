@@ -34,19 +34,19 @@ test('the routing map lays the config out as lanes and a pinned item carries int
   // One card per outbound: every configured group is there, used or not, with its selected node.
   for (const group of ['proxy', 'Direct', 'skylink']) await expect(map.locator('strong', {hasText: new RegExp(`^${group}$`)})).toBeVisible();
   await expect(lanes.filter({has: page.locator('strong', {hasText: /^skylink$/})})).toContainText('Selected');
-  const rule = map.getByRole('radio', {name: 'dip(geoip:cn) 2', exact: true});
+  const rule = map.getByRole('radio', {name: 'dip(geoip: private) 4', exact: true});
   await rule.click();
   await expect(page).toHaveURL(/path=rule%3Adip/);
   await expect(rule).toHaveAttribute('aria-checked', 'true');
   expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
-  await page.getByRole('button', {name: 'Show the 2 flows on this path', exact: true}).click();
+  await page.getByRole('button', {name: 'Show the 4 flows on this path', exact: true}).click();
   await expect(page).toHaveURL(/tab=flows/);
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rows).toHaveCount(2);
-  await expect(rows.first()).toContainText('dip(geoip:cn)');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.first()).toContainText('dip(geoip: private)');
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
   await expect(page).not.toHaveURL(/path=/);
-  await expect.poll(() => rows.count()).toBeGreaterThan(2);
+  await expect.poll(() => rows.count()).toBeGreaterThan(4);
   // The old address still lands on the map.
   await page.goto('/#/flows');
   await expect(page).toHaveURL(/#\/rules\?tab=map$/);
@@ -77,7 +77,7 @@ test.describe('flows unavailable', () => {
   test('direct flow link renders without browser errors', async ({page}) => {
     await page.goto('/#/flows');
     await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveCount(0);
+    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
     await expect(page).toHaveURL(/#\/rules\?tab=map$/);
   });
 });

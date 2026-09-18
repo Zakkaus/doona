@@ -1,7 +1,7 @@
 import type {Api} from './api';
 import {createApi} from './client';
 import {createMockApi} from './mock';
-import {readProfiles} from '../features/settings/settings';
+import {readProfiles} from './profiles';
 
 let selected: Api | undefined;
 let configuration = '';

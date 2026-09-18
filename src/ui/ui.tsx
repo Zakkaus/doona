@@ -49,8 +49,7 @@ import {
   Dialog,
   Heading,
   type Key,
-  type Selection,
-  type SortDescriptor
+  type Selection
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
@@ -59,8 +58,9 @@ import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
 import Search from './icons/Search';
-import {useT} from '../i18n';
-import {ApiError} from '../api/error';
+import {readLang, translate, useT} from '../i18n';
+import {ApiError, LocalError} from '../api/error';
+import {millis} from '../api/u64';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -92,7 +92,7 @@ export function useSlider(value: string, selector = '[data-selected]') {
   return [ref, pos] as const;
 }
 
-// accent / secondary / negative are S2 Button variants (pills); the rest is an ActionButton (radius 8).
+// accent / negative are the coloured variants; every neutral button shares one look.
 export function Button({
   children,
   onPress,
@@ -100,7 +100,6 @@ export function Button({
   small,
   icon,
   accent,
-  secondary,
   negative,
   label,
   isDisabled,
@@ -116,7 +115,6 @@ export function Button({
   small?: boolean;
   icon?: boolean;
   accent?: boolean;
-  secondary?: boolean;
   negative?: boolean;
   label?: string;
   isDisabled?: boolean;
@@ -134,7 +132,6 @@ export function Button({
         small && 'sm',
         icon && 'icon',
         accent && 'accent',
-        secondary && 'secondary',
         negative && 'negative',
         className
       )}
@@ -213,6 +210,10 @@ export function Loading({children}: {children?: ReactNode}) {
 }
 
 export function errorText(error: unknown) {
+  if (error instanceof LocalError) {
+    const text = translate(readLang(), error.key);
+    return error.detail ? `${text}: ${error.detail}` : text;
+  }
   const message = error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
 }
@@ -387,14 +388,11 @@ export function MenuButton({
                 {sec.items.map(item)}
               </MenuSection>
             ))}
-            {[extra].map(
-              x =>
-                x && (
-                  <MenuSection key={x.title} id={x.title} selectionMode="single" selectedKeys={[x.value]} onSelectionChange={pick(x.onChange)}>
-                    <Header className="rp-sec-h">{x.title}</Header>
-                    {x.items.map(item)}
-                  </MenuSection>
-                )
+            {extra && (
+              <MenuSection id={extra.title} selectionMode="single" selectedKeys={[extra.value]} onSelectionChange={pick(extra.onChange)}>
+                <Header className="rp-sec-h">{extra.title}</Header>
+                {extra.items.map(item)}
+              </MenuSection>
             )}
           </Menu>
         ) : (
@@ -619,7 +617,7 @@ export function NodeTile({
         {nested ? (
           <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: tcp})}</span>
+          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
         ) : (
           <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
         )}
@@ -756,7 +754,7 @@ export function DataTable<T extends {id: string}>({
       </TableHeader>
       <TableBody
         items={rows}
-        dependencies={[shown]}
+        dependencies={[shown, render]}
         renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}
       >
         {r => {
@@ -972,7 +970,6 @@ export function Toasts() {
     </>
   );
 }
-export type {SortDescriptor};
 
 // Tabs: the selected key is the caller's (URL-backed), panels render only when selected.
 export function Tabs({

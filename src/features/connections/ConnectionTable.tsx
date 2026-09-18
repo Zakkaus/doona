@@ -1,6 +1,6 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
-import {chainLabel, connectionStates, relativeStart} from '../../api/selectors';
+import {chainLabel, chainLeaf, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
 import {OutboundMark} from '../policies/Mark';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
@@ -16,7 +16,8 @@ export function ConnectionTable({
   onSelect,
   selectOnFocus,
   view,
-  onSort
+  onSort,
+  names
 }: {
   rows: Connection[];
   loading: boolean;
@@ -25,6 +26,7 @@ export function ConnectionTable({
   selectOnFocus: boolean;
   view: ConnectionView;
   onSort: (sort: NonNullable<ConnectionView['sort']>) => void;
+  names: OutboundNames;
 }) {
   const t = useT();
   const lang = useLang();
@@ -60,8 +62,8 @@ export function ConnectionTable({
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
       chain: (
         <span className="rp-chain">
-          <OutboundMark name={c.outbound === 'direct' || c.outbound === 'block' ? c.outbound : (c.chain.at(-1) ?? null)} />
-          <TextTooltip>{chainLabel(c, t)}</TextTooltip>
+          <OutboundMark name={chainLeaf(c, names)} />
+          <TextTooltip>{chainLabel(c, t, names)}</TextTooltip>
         </span>
       ),
       rule: (

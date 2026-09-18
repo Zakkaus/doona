@@ -1,4 +1,5 @@
 import type {Connection, FlowDetail, FlowStep} from '../model';
+import {rules} from './rules';
 
 export type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
 export type ConnectionSeed = Omit<Connection, keyof FlowFields>;
@@ -17,35 +18,38 @@ export function flowFields(input: FlowDetail['input'], steps: FlowStep[]): FlowF
   };
 }
 
-// A slice of a real-world rule set, so the demo shows how a config with many rules reads.
+// Which of the demo config's rules a domain hits, so flow evidence and the rule dictionary agree: adverts are
+// blocked, mainland sites go direct, Telegram and Discord through proxy, everything else through the fallback.
 const ruleTable: Array<[string[], string]> = [
-  [['netflix.com', 'nflxvideo.net'], 'domain(geosite: netflix)'],
-  [['youtube.com', 'googlevideo.com', 'ytimg.com'], 'domain(geosite: youtube)'],
-  [['google.com', 'googleapis.com', 'gstatic.com'], 'domain(geosite: google)'],
-  [['github.com', 'githubusercontent.com'], 'domain(geosite: github)'],
-  [['apple.com', 'icloud.com', 'mzstatic.com'], 'domain(geosite: apple)'],
-  [['microsoft.com', 'live.com', 'office.com'], 'domain(geosite: microsoft)'],
-  [['steampowered.com', 'steamcommunity.com'], 'domain(geosite: steam)'],
-  [['spotify.com', 'scdn.co'], 'domain(geosite: spotify)'],
-  [['x.com', 'twimg.com'], 'domain(geosite: twitter)'],
-  [['instagram.com', 'facebook.com', 'fbcdn.net', 'whatsapp.net'], 'domain(geosite: meta)'],
-  [['openai.com', 'chatgpt.com'], 'domain(geosite: openai)'],
-  [['claude.ai', 'anthropic.com'], 'domain(geosite: anthropic)'],
-  [['reddit.com', 'redd.it'], 'domain(suffix: reddit.com, redd.it)'],
-  [['wikipedia.org'], 'domain(geosite: wikimedia)'],
-  [['cloudflare.com', 'one.one.one.one'], 'domain(geosite: cloudflare)'],
-  [['taobao.com', 'tmall.com', 'alipay.com', 'alicdn.com'], 'domain(geosite: alibaba)'],
-  [['weixin.qq.com', 'wechat.com'], 'domain(geosite: tencent)'],
-  [['zhihu.com', 'zhimg.com'], 'domain(suffix: zhihu.com, zhimg.com)'],
-  [['douyin.com', 'iqiyi.com', 'youku.com', 'weibo.com', 'jd.com', 'xiaohongshu.com', 'baidu.com'], 'domain(geosite: cn)'],
-  [['steamcdn-a.akamaihd.net'], 'domain(keyword: steamcdn)'],
-  [['speedtest.net'], 'domain(suffix: speedtest.net)'],
-  [['ad.doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'domain(geosite: category-ads-all)'],
-  [['tailscale.com', 'controlplane.tailscale.com'], 'domain(geosite: tailscale)']
+  [['ad.doubleclick.net', 'doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'r1'],
+  [
+    [
+      'taobao.com',
+      'tmall.com',
+      'alipay.com',
+      'alicdn.com',
+      'weixin.qq.com',
+      'wechat.com',
+      'zhihu.com',
+      'zhimg.com',
+      'douyin.com',
+      'iqiyi.com',
+      'youku.com',
+      'weibo.com',
+      'jd.com',
+      'xiaohongshu.com',
+      'baidu.com',
+      'bilibili.com'
+    ],
+    'r4'
+  ],
+  [['telegram.org', 't.me'], 'r5'],
+  [['discord.com', 'discord.gg', 'discordapp.com'], 'r7']
 ];
-function ruleFor(domain: string): string | null {
+const ruleOf = (id: string) => rules.find(rule => rule.id === id)!;
+function ruleFor(domain: string): {id: string; expression: string} | null {
   const name = domain.toLowerCase();
-  for (const [suffixes, expression] of ruleTable) if (suffixes.some(s => name === s || name.endsWith('.' + s))) return expression;
+  for (const [suffixes, id] of ruleTable) if (suffixes.some(s => name === s || name.endsWith('.' + s))) return {id, expression: ruleOf(id).cond};
   return null;
 }
 
@@ -66,16 +70,17 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
   const common = {observed_at: observedAt, elapsed_us: 0, generation_id: '40', evidence: 'observed' as const};
   const direct = connection.outbound === 'direct';
   const blocked = connection.state === 'blocked';
+  // The rule that decided this flow: a listed domain hits its config rule; a blocked flow the advert rule; a
+  // direct flow without a domain the mainland IP rule; anything else the fallback.
   const known = connection.domain ? ruleFor(connection.domain) : null;
-  const expression =
+  const decided =
     known ??
     (blocked
-      ? 'domain(suffix: doubleclick.net)'
+      ? {id: 'r1', expression: ruleOf('r1').cond}
       : direct
-        ? 'dip(geoip:cn)'
-        : connection.domain
-          ? 'domain(full: ' + connection.domain + ')'
-          : 'fallback: ' + connection.outbound);
+        ? {id: 'r3', expression: ruleOf('r3').cond}
+        : {id: 'fallback', expression: 'fallback: ' + connection.outbound});
+  const expression = decided.expression;
   const leaf = connection.outbound === 'resilient' ? 'sg-01' : connection.outbound === 'gaming' ? 'hk-02' : 'hk-01';
   const policy = connection.outbound === 'resilient' ? 'score' : connection.outbound === 'gaming' ? 'urltest' : 'selector';
   const steps: FlowStep[] = [
@@ -88,8 +93,8 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
         evaluation_id: 'eval-1',
         chain: 'traffic',
         plane: direct || blocked ? 'kernel' : 'userspace',
-        rule_id: 'rule-1',
-        rules: [{rule_id: 'rule-1', expression, result: 'matched', conditions: [], missing_inputs: []}],
+        rule_id: decided.id,
+        rules: [{rule_id: decided.id, expression, result: 'matched', conditions: [], missing_inputs: []}],
         outbound: connection.outbound,
         must: blocked,
         mark: 0,
@@ -215,6 +220,14 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
       stage: 'connection',
       data: {state: 'active', reason: 'reply_received', milestone: 'first_reply', attempt_id: direct ? null : 'attempt-1', reply_received: true, error: null}
     });
+  // A retained closed flow ends with its terminal step, the way closeLive records one.
+  if (connection.state === 'closed')
+    steps.push({
+      ...common,
+      seq: steps.length + 1,
+      stage: 'connection',
+      data: {state: 'closed', milestone: 'terminal', reason: 'peer_closed', attempt_id: null, reply_received: null, error: null}
+    });
   const timed = steps.map((step, i) => ({
     ...step,
     elapsed_us: i * 1200,
@@ -232,7 +245,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     ...flowFields(input, timed),
     observed_by: connection.observed_by,
     started_at: connection.started_at,
-    ended_at: blocked ? timed[timed.length - 1].observed_at : null,
+    ended_at: blocked || connection.state === 'closed' ? timed[timed.length - 1].observed_at : null,
     input
   };
   return direct

@@ -1,5 +1,5 @@
 import type {Key} from '../i18n/messages';
-import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DependencyList} from 'react';
 import {getApi} from './index';
 import type {Api} from './api';
 import type {
@@ -19,6 +19,8 @@ import type {
   ConfigValidationResult,
   LogLevel,
   LogRecord,
+  Operation,
+  OperationState,
   RoutingTraceRequest,
   RoutingTraceResponse,
   RuntimeMode,
@@ -26,11 +28,14 @@ import type {
   ProviderCreate,
   ProviderList,
   ProbeRequest,
+  BulkCloseQuery,
+  BulkCloseResult,
   NodeCreate
 } from './model';
-import {ApiError} from './error';
+import {ApiError, LocalError} from './error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from './inflight';
 import {shouldRefetch} from './invalidation';
+import type {OutboundNames} from './selectors';
 
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -42,7 +47,7 @@ const refreshers = new WeakMap<Api, Set<() => Promise<void> | undefined>>();
 export async function refetchAll() {
   await Promise.allSettled([...(refreshers.get(getApi()) ?? [])].map(refresh => refresh()));
 }
-export function useEvents(onEvent: Listener) {
+function useEvents(onEvent: Listener) {
   const api = getApi();
   const callback = useRef(onEvent);
   useEffect(() => {
@@ -106,6 +111,8 @@ export function useEvents(onEvent: Listener) {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+// How many events the feed keeps; the page's caption quotes the same number.
+export const EVENT_FEED_LIMIT = 200;
 export function useEventFeed() {
   const api = getApi();
   const [events, setEvents] = useState<ApiEvent[]>([]);
@@ -114,7 +121,7 @@ export function useEventFeed() {
     setPreviousApi(api);
     setEvents([]);
   }
-  const status = useEvents(event => setEvents(previous => [event, ...previous.filter(item => item.id !== event.id)].slice(0, 200)));
+  const status = useEvents(event => setEvents(previous => [event, ...previous.filter(item => item.id !== event.id)].slice(0, EVENT_FEED_LIMIT)));
   return {...status, events};
 }
 
@@ -124,10 +131,7 @@ type Resource<T> = {
   acceptEvent?: (event: ApiEvent) => boolean;
 };
 
-export function useResource<T>(
-  resource: Resource<T>,
-  {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}
-) {
+function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
   const lane = resource.key[0];
@@ -193,8 +197,26 @@ export function useResource<T>(
       refresh.current = () => undefined;
     };
   }, [key]);
+  // A burst of events (one per flow change under load) becomes one refetch: the first event arms a short
+  // timer, later ones ride on it. Reconnection refetches at once.
+  const armed = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (armed.current) clearTimeout(armed.current);
+    },
+    []
+  );
   useEvents((event, reconnected) => {
-    if (shouldRefetch(lane, event, reconnected) && (resource.acceptEvent?.(event) ?? true)) refetch();
+    if (!shouldRefetch(lane, event, reconnected) || !(resource.acceptEvent?.(event) ?? true)) return;
+    if (reconnected) {
+      refetch();
+      return;
+    }
+    if (armed.current) return;
+    armed.current = setTimeout(() => {
+      armed.current = null;
+      refetch();
+    }, 2000);
   });
   return {...state, refetch};
 }
@@ -210,7 +232,7 @@ export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
   return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
 }
-const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
+export const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.traffic_history;
@@ -261,7 +283,8 @@ async function walk<P extends {next_cursor: string | null}, T>(
 // which leaves the backend's own default in force rather than guessing above its ceiling.
 const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(1000, max ?? 1000) : undefined);
 
-export function useNodes() {
+// Nodes and groups are fetched only when the backend declares them (honk's first release has neither).
+export function useNodes(enabled = true) {
   const api = getApi();
   return useResource(
     {
@@ -272,57 +295,112 @@ export function useNodes() {
           (acc: Node[] | undefined, page) => [...(acc ?? []), ...page.nodes]
         )
     },
-    {deps: [api], every: 30000}
+    {deps: [api], every: 30000, enabled}
   );
 }
-export function useGroups() {
-  const api = getApi();
-  return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000});
+// Group and node ids as the config names them, for chains the backend reports by id.
+export function useOutboundNames(): OutboundNames {
+  const resources = useCapabilities().data?.resources;
+  const groups = useGroups(resources?.groups.available === true);
+  const nodes = useNodes(resources?.nodes.available === true);
+  return useMemo(
+    () => new Map([...(groups.data ?? []).map(g => [g.id, g.name] as const), ...(nodes.data ?? []).map(n => [n.id, n.name] as const)]),
+    [groups.data, nodes.data]
+  );
 }
-export function useConnections(src?: string) {
+export function useGroups(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['groups'], fetch: signal => api.groups(signal)}, {deps: [api], every: 30000, enabled});
+}
+export function useConnections(src?: string, enabled = true) {
   const api = getApi();
   return useResource(
     {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
-    {deps: [api, src]}
+    {deps: [api, src], enabled}
   );
 }
 
 // Closing one connection: the list refetches on success; a 409 is the backend saying it does not own the transport.
+// One action at a time per hook. The action gets a signal that aborts with the api, with `scope`, or on unmount;
+// a result after an abort is dropped, a failure is kept as `error` and, with `rethrow`, thrown again for the
+// caller's toast.
+function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
+  const api = getApi();
+  const [busy, setBusy] = useState<K | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const active = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      active.current?.abort();
+      active.current = null;
+    },
+    [api, scope]
+  );
+  async function run<T>(kind: K, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
+    if (active.current) return undefined;
+    const controller = new AbortController();
+    active.current = controller;
+    setBusy(kind);
+    setError(null);
+    try {
+      const result = await action(controller.signal);
+      return controller.signal.aborted ? undefined : result;
+    } catch (reason) {
+      if (controller.signal.aborted) return undefined;
+      const failure = reason instanceof Error ? reason : new Error(String(reason));
+      setError(failure);
+      if (rethrow) throw failure;
+      return undefined;
+    } finally {
+      if (active.current === controller) {
+        active.current = null;
+        setBusy(null);
+      }
+    }
+  }
+  return {busy, error, setError, run};
+}
+// If-Match carries the revision as a quoted entity tag.
+const etag = (revision: string) => '"' + revision + '"';
+// The result of a finished operation of the expected kind; anything else is a failure carrying the backend's message.
+type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
+function finished<K extends Operation['kind']>(operation: OperationState, kind: K): SucceededResult<K> {
+  if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as SucceededResult<K>;
+  throw new LocalError('ui.operationFailed', operation.error?.message ?? null);
+}
 export function useConnectionClose(refetch: () => void) {
   const api = getApi();
-  const [busy, setBusy] = useState<string | null>(null);
-  async function close(id: string) {
-    if (busy) return;
-    setBusy(id);
-    try {
-      await api.closeConnection(id);
-      refetch();
-    } finally {
-      setBusy(null);
-    }
-  }
-  // One request per connection, in order; a 409 is a connection the backend does not own and counts as skipped.
-  async function closeAll(ids: string[]): Promise<{closed: number; skipped: number}> {
-    if (busy) return {closed: 0, skipped: 0};
-    setBusy('all');
-    const tally = {closed: 0, skipped: 0};
-    try {
-      for (const id of ids) {
-        try {
-          await api.closeConnection(id);
-          tally.closed += 1;
-        } catch (error) {
-          if (error instanceof ApiError && (error.status === 409 || error.status === 404)) tally.skipped += 1;
-          else throw error;
+  const {busy, run} = useAction<string>({rethrow: true});
+  // Bulk close for a selection the contract can express (network and source IP); anything narrower (a text
+  // or outbound filter) closes one by one, where a 409 or 404 is a connection the backend no longer owns.
+  const closeAll = (selection: {query: BulkCloseQuery} | {ids: string[]}): Promise<BulkCloseResult> =>
+    run('all', async signal => {
+      try {
+        if ('query' in selection) return await api.closeConnections(selection.query, signal);
+        const tally = {closed: 0, skipped: 0};
+        for (const id of selection.ids) {
+          try {
+            await api.closeConnection(id, signal);
+            tally.closed += 1;
+          } catch (error) {
+            if (error instanceof ApiError && (error.status === 409 || error.status === 404)) tally.skipped += 1;
+            else throw error;
+          }
         }
+        return tally;
+      } finally {
+        refetch();
       }
-      return tally;
-    } finally {
-      refetch();
-      setBusy(null);
-    }
-  }
-  return {busy, close, closeAll};
+    }).then(result => result ?? {closed: 0, skipped: 0});
+  return {
+    busy,
+    close: (id: string) =>
+      run(id, async signal => {
+        await api.closeConnection(id, signal);
+        refetch();
+      }),
+    closeAll
+  };
 }
 
 export function useRoutingTrace() {
@@ -339,16 +417,7 @@ export function useRoutingTrace() {
     resolve: 'none' as 'none' | 'live'
   });
   const [result, setResult] = useState<RoutingTraceResponse | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [busy, setBusy] = useState(false);
-  const active = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      active.current?.abort();
-      active.current = null;
-    },
-    [api]
-  );
+  const {busy, error, run} = useAction<'trace'>();
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
   const invalid: Key | null =
     !form.domain.trim() && !form.dst_ip.trim()
@@ -362,11 +431,7 @@ export function useRoutingTrace() {
   const modes = resource?.resolve_modes ?? ['none', 'live'];
   const available = resource?.available !== false;
   async function submit() {
-    if (active.current || invalid || !available || !modes.includes(form.resolve)) return;
-    const controller = new AbortController();
-    active.current = controller;
-    setBusy(true);
-    setError(null);
+    if (busy || invalid || !available || !modes.includes(form.resolve)) return;
     setResult(null);
     const input: RoutingTraceRequest['input'] = {
       network: form.network,
@@ -377,22 +442,13 @@ export function useRoutingTrace() {
     if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    try {
-      const response = await api.routingTrace({input, resolve: form.resolve}, controller.signal);
-      if (!controller.signal.aborted) setResult(response);
-    } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason : new Error(String(reason)));
-    } finally {
-      if (active.current === controller) {
-        active.current = null;
-        setBusy(false);
-      }
-    }
+    const response = await run('trace', signal => api.routingTrace({input, resolve: form.resolve}, signal));
+    if (response) setResult(response);
   }
-  return {form, setForm, result, error: error ?? capabilities.error, busy, submit, invalid, available, modes};
+  return {form, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
 }
 
-export function useFlows(connection_id?: string) {
+export function useFlows(connection_id?: string, enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
@@ -401,11 +457,13 @@ export function useFlows(connection_id?: string) {
       key: ['flows', {connection_id}],
       fetch: signal =>
         walk(
-          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit}, signal),
+          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit, detail: 'full'}, signal),
           (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
         )
     },
-    {deps: [api, connection_id, limit]}
+    // Every list request opens a bounded snapshot on the backend (honk keeps eight for 30 s), so this polls at
+    // a third of the usual cadence; events still refetch it the moment a flow changes.
+    {deps: [api, connection_id, limit], enabled, every: 15000}
   );
 }
 
@@ -426,37 +484,16 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   const capabilities = useCapabilities().data;
   const resource = useResource({key: ['group', {id}], fetch: signal => api.group(id, signal)}, {deps: [api, id], every: 30000});
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
-  const [busy, setBusy] = useState<'selection' | 'probe' | 'config' | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const active = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      active.current?.abort();
-      active.current = null;
-    },
-    [api, id]
-  );
-  async function run<T>(kind: NonNullable<typeof busy>, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
-    if (active.current) return;
-    const controller = new AbortController();
-    active.current = controller;
-    setBusy(kind);
-    setError(null);
-    try {
-      const result = await action(controller.signal);
-      if (controller.signal.aborted) return;
+  const action = useAction<'selection' | 'probe' | 'config'>({scope: id});
+  // Every control changes what the lists show, so all three refetch once it has gone through.
+  async function run<T>(kind: 'selection' | 'probe' | 'config', act: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
+    const result = await action.run(kind, act);
+    if (result !== undefined) {
       resource.refetch();
       refetchGroups();
       refetchNodes();
-      return result;
-    } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason : new Error(String(reason)));
-    } finally {
-      if (active.current === controller) {
-        active.current = null;
-        setBusy(null);
-      }
     }
+    return result;
   }
   // A TCP probe needs the backend to offer it and the group to accept it.
   const canProbe = tcpProbe(capabilities, {type: 'group', group_id: id}) !== null && (resource.data?.capabilities.probe_transports.includes('tcp') ?? false);
@@ -464,35 +501,25 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     ...resource,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
     error: resource.error,
-    actionError: error,
+    actionError: action.error,
     network,
     setNetwork,
-    busy,
+    busy: action.busy,
     canProbe,
     select: (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal)),
     clearOverride: () => run('selection', signal => api.clearGroupOverride(id, network, signal)),
     probe: () =>
       run('probe', async signal => {
         const request = tcpProbe(capabilities, {type: 'group', group_id: id});
-        if (!request || !canProbe) throw new Error('TCP probes are not supported');
+        if (!request || !canProbe) throw new LocalError('ui.probeUnsupported');
         const accepted = await api.startProbe(request, signal);
-        const result = await api.pollOperation(accepted, signal);
-        if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
-        return result.result;
+        return finished(await api.pollOperation(accepted, signal), 'probe');
       }),
     setInterrupt: (value: boolean) =>
       run('config', async signal => {
-        if (!resource.data) throw new Error('Group is not loaded');
-        const result = await api.patchGroup(
-          id,
-          [{op: 'replace', path: '/config/interrupt_connections', value}],
-          '\"' + resource.data.config_revision + '\"',
-          signal
-        );
-        if ('operation_id' in result) {
-          const operation = await api.pollOperation(result, signal);
-          if (operation.status !== 'succeeded') throw new Error(operation.error?.message ?? 'Group update failed');
-        }
+        if (!resource.data) throw new LocalError('ui.groupNotLoaded');
+        const result = await api.patchGroup(id, [{op: 'replace', path: '/config/interrupt_connections', value}], etag(resource.data.config_revision), signal);
+        if ('operation_id' in result) finished(await api.pollOperation(result, signal), 'group_update');
         return true;
       })
   };
@@ -515,20 +542,16 @@ const newest = <T extends {observed_at: string}>(written: T | null, polled: T | 
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {deps: [api], enabled});
-  const [busy, setBusy] = useState(false);
+  const {busy, run} = useAction<'save'>({rethrow: true});
   const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);
-  async function save(patch: RuntimeSettingsPatch): Promise<RuntimeSettings> {
-    setBusy(true);
-    try {
-      const next = await api.patchRuntimeSettings(patch);
+  const save = (patch: RuntimeSettingsPatch) =>
+    run('save', async signal => {
+      const next = await api.patchRuntimeSettings(patch, signal);
       setSaved({api, value: next});
       resource.refetch();
       return next;
-    } finally {
-      setBusy(false);
-    }
-  }
-  return {...resource, data: newest(saved?.api === api ? saved.value : null, resource.data), busy, save};
+    });
+  return {...resource, data: newest(saved?.api === api ? saved.value : null, resource.data), busy: busy !== null, save};
 }
 // The engine's log stream, newest first, bounded; filters restart the stream from the ring. Paused keeps the
 // stream open but stops appending, so the list can be read.
@@ -576,21 +599,17 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
 export function useRuntimeMode(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['runtimeMode'], fetch: signal => api.runtimeMode(signal)}, {deps: [api], enabled});
-  const [busy, setBusy] = useState(false);
+  const {busy, run} = useAction<'change'>({rethrow: true});
   const [set, setSet] = useState<{api: Api; value: RuntimeMode} | null>(null);
   const override = set?.api === api ? set.value : null;
-  async function change(request: RuntimeModeRequest): Promise<RuntimeMode> {
-    setBusy(true);
-    try {
-      const next = await api.setRuntimeMode(request);
+  const change = (request: RuntimeModeRequest) =>
+    run('change', async signal => {
+      const next = await api.setRuntimeMode(request, signal);
       setSet({api, value: next});
       resource.refetch();
       return next;
-    } finally {
-      setBusy(false);
-    }
-  }
-  return {...resource, data: newest(override, resource.data), busy, change};
+    });
+  return {...resource, data: newest(override, resource.data), busy: busy !== null, change};
 }
 // Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {
@@ -611,44 +630,31 @@ export function useProviders(enabled = true) {
 }
 export function useProviderRefresh(refetch: () => void) {
   const api = getApi();
-  const [busy, setBusy] = useState<string | null>(null);
-  async function refresh(id: string) {
-    if (busy) return undefined;
-    setBusy(id);
-    try {
-      const accepted = await api.refreshProvider(id);
-      const result = await api.pollOperation(accepted);
+  const {busy, run} = useAction<string>({rethrow: true});
+  const refresh = (id: string) =>
+    run(id, async signal => {
+      const accepted = await api.refreshProvider(id, signal);
+      const result = await api.pollOperation(accepted, signal);
       refetch();
-      if (result.status !== 'succeeded') throw new Error(result.error?.message ?? 'Refresh failed');
-      return result;
-    } finally {
-      setBusy(null);
-    }
-  }
+      return finished(result, 'provider_refresh');
+    });
   return {busy, refresh};
 }
 // Adding and removing subscriptions and inline nodes: each call rewrites the managed main source and starts a new
 // generation, so the lists refetch on generation.changed; `refetch` covers a backend without events.
 export function useNodeManage(refetch: () => void) {
   const api = getApi();
-  const [busy, setBusy] = useState<string | null>(null);
-  async function run<T>(key: string, action: () => Promise<T>): Promise<T | undefined> {
-    if (busy) return undefined;
-    setBusy(key);
-    try {
-      const result = await action();
-      refetch();
-      return result;
-    } finally {
-      setBusy(null);
-    }
-  }
+  const {busy, run} = useAction<string>({rethrow: true});
+  const then = <T>(result: T) => {
+    refetch();
+    return result;
+  };
   return {
     busy,
-    addProvider: (request: ProviderCreate) => run('provider', () => api.createProvider(request)),
-    removeProvider: (id: string) => run(id, () => api.deleteProvider(id)),
-    addNode: (request: NodeCreate) => run('node', () => api.createNode(request)),
-    removeNode: (id: string) => run(id, () => api.deleteNode(id))
+    addProvider: (request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then)),
+    removeProvider: (id: string) => run(id, signal => api.deleteProvider(id, signal).then(then)),
+    addNode: (request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then)),
+    removeNode: (id: string) => run(id, signal => api.deleteNode(id, signal).then(then))
   };
 }
 // The one probe shape the UI sends: a warm TCP connect for data, over whatever IP versions the backend reaches
@@ -671,57 +677,43 @@ export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRe
 export function useNodeProbe(refetch: () => void) {
   const api = getApi();
   const capabilities = useCapabilities();
-  const [busy, setBusy] = useState<string | null>(null);
+  const {busy, run} = useAction<string>({rethrow: true});
   const canProbe = tcpProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
-  async function probe(nodeId: string) {
+  const probe = (nodeId: string) => {
     const request = tcpProbe(capabilities.data, {type: 'node', node_id: nodeId});
-    if (busy || !request) return undefined;
-    setBusy(nodeId);
-    try {
-      const accepted = await api.startProbe(request);
-      const result = await api.pollOperation(accepted);
+    if (!request) return Promise.resolve(undefined);
+    return run(nodeId, async signal => {
+      const accepted = await api.startProbe(request, signal);
+      const result = await api.pollOperation(accepted, signal);
       refetch();
-      if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error(result.error?.message ?? 'Probe failed');
-      return result.result;
-    } finally {
-      setBusy(null);
-    }
-  }
+      return finished(result, 'probe');
+    });
+  };
   return {busy, canProbe, probe};
 }
 // Flushing the whole DNS cache, for pages that do not carry the DNS page's full control set.
 export function useDnsFlush() {
   const api = getApi();
-  const [busy, setBusy] = useState(false);
-  async function flush() {
-    if (busy) return undefined;
-    setBusy(true);
-    try {
-      return await api.flushDnsCache();
-    } finally {
-      setBusy(false);
-    }
-  }
-  return {busy, flush};
+  const {busy, run} = useAction<'flush'>({rethrow: true});
+  return {busy: busy !== null, flush: () => run('flush', signal => api.flushDnsCache(signal))};
+}
+// The rule dictionary of the running generation; refetched on generation.changed.
+export function useRules(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['rules'], fetch: signal => api.rules(signal)}, {deps: [api], enabled, every: 0});
 }
 export function useGeodata(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['geodata'], fetch: signal => api.geodata(signal)}, {deps: [api], enabled, every: 0});
-  const [busy, setBusy] = useState(false);
-  async function update() {
-    if (busy) return undefined;
-    setBusy(true);
-    try {
-      const accepted = await api.updateGeodata();
-      const result = await api.pollOperation(accepted);
+  const {busy, run} = useAction<'update'>({rethrow: true});
+  const update = () =>
+    run('update', async signal => {
+      const accepted = await api.updateGeodata(signal);
+      const result = await api.pollOperation(accepted, signal);
       resource.refetch();
-      if (result.status !== 'succeeded' || result.kind !== 'geodata_update') throw new Error(result.error?.message ?? 'Update failed');
-      return result.result;
-    } finally {
-      setBusy(false);
-    }
-  }
-  return {...resource, busy, update};
+      return finished(result, 'geodata_update');
+    });
+  return {...resource, busy: busy !== null, update};
 }
 // The accepted configuration: sources, diagnostics and the running generation; refetched on generation.changed.
 export function useConfig(enabled = true) {
@@ -732,36 +724,26 @@ export function useConfig(enabled = true) {
 // validates in full before writing; a 422 comes back as an error whose details carry the diagnostics.
 export function useConfigEditor(refetch: () => void) {
   const api = getApi();
-  const [busy, setBusy] = useState<'validate' | 'save' | null>(null);
-  // The last failure and the source it concerned, so only that source's card shows a rejected save's diagnostics.
-  const [failure, setFailure] = useState<{error: Error; sourceId: string | null} | null>(null);
-  async function run<T>(kind: NonNullable<typeof busy>, sourceId: string | null, action: () => Promise<T>): Promise<T | undefined> {
-    if (busy) return;
-    setBusy(kind);
-    setFailure(null);
-    try {
-      return await action();
-    } catch (reason) {
-      setFailure({error: reason instanceof Error ? reason : new Error(String(reason)), sourceId});
-      return undefined;
-    } finally {
-      setBusy(null);
-    }
-  }
+  const {busy, error, run} = useAction<'validate' | 'save'>();
+  // The source the last action concerned, so only that source's card shows a rejected save's diagnostics.
+  const [sourceId, setSourceId] = useState<string | null>(null);
   return {
     busy,
-    error: failure?.error ?? null,
-    errorSource: failure?.sourceId ?? null,
-    validate: (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> =>
-      run('validate', request.sources.length === 1 ? (request.sources[0].id ?? null) : null, () => api.validateConfig(request)),
-    save: (sourceId: string, content: string, sha256: string) =>
-      run('save', sourceId, async () => {
-        const accepted = await api.replaceConfigSource(sourceId, content, '"' + sha256 + '"');
-        const result = await api.pollOperation(accepted);
+    error,
+    errorSource: error ? sourceId : null,
+    validate: (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> => {
+      setSourceId(request.sources.length === 1 ? (request.sources[0].id ?? null) : null);
+      return run('validate', signal => api.validateConfig(request, signal));
+    },
+    save: (id: string, content: string, sha256: string) => {
+      setSourceId(id);
+      return run('save', async signal => {
+        const accepted = await api.replaceConfigSource(id, content, etag(sha256), signal);
+        const result = await api.pollOperation(accepted, signal);
         refetch();
-        if (result.status !== 'succeeded') throw new Error(result.error?.message ?? 'Reload failed');
-        return result;
-      })
+        return finished(result, 'reload');
+      });
+    }
   };
 }
 export function useRuntimeMemory(enabled = true) {
@@ -782,7 +764,7 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
     {deps: [api, name, type, src, limit], enabled}
   );
 }
-export function useDnsCache(enabled = true) {
+function useDnsCache(enabled = true) {
   const api = getApi();
   return useResource(
     {
@@ -800,48 +782,23 @@ export function useDnsCache(enabled = true) {
 type RuntimeAction = 'reload' | 'suspend' | 'resume';
 export function useRuntimeOperations(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
   const api = getApi();
-  const [busy, setBusy] = useState<RuntimeAction | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const active = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      active.current?.abort();
-      active.current = null;
-    },
-    [api]
-  );
+  const action = useAction<RuntimeAction>({rethrow: true});
   const canRun = (kind: RuntimeAction) =>
     !!runtime &&
     !!capabilities?.resources.operations.available &&
     !!capabilities.resources[kind].available &&
     (kind === 'reload' || runtime.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended'));
-  async function run(kind: RuntimeAction) {
-    if (active.current || !canRun(kind)) return;
-    const controller = new AbortController();
-    active.current = controller;
-    setBusy(kind);
-    setError(null);
-    try {
-      const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(controller.signal);
-      const terminal = await api.pollOperation(accepted, controller.signal);
-      if (controller.signal.aborted) return;
+  const run = (kind: RuntimeAction) => {
+    if (!canRun(kind)) return Promise.resolve(undefined);
+    return action.run(kind, async signal => {
+      const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal);
+      const terminal = await api.pollOperation(accepted, signal);
       refetch();
-      if (terminal.status === 'failed') setError(new Error(terminal.error.message));
-      return terminal;
-    } catch (reason) {
-      if (!controller.signal.aborted) {
-        const error = reason instanceof Error ? reason : new Error(String(reason));
-        setError(error);
-        throw error;
-      }
-    } finally {
-      if (active.current === controller) {
-        active.current = null;
-        setBusy(null);
-      }
-    }
-  }
-  return {busy, error, canRun, run};
+      finished(terminal, kind);
+      return terminal as Extract<Operation, {status: 'succeeded'}>;
+    });
+  };
+  return {busy: action.busy, error: action.error, canRun, run};
 }
 
 export function useDnsControl() {
@@ -850,38 +807,7 @@ export function useDnsControl() {
   const resources = capabilities.data?.resources;
   const cache = useDnsCache(!!resources?.dns_cache.available && !!resources.dns_cache.read);
   const [result, setResult] = useState<DnsQueryResponse | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const active = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      active.current?.abort();
-      active.current = null;
-    },
-    [api]
-  );
-  async function run<T>(kind: string, action: (signal: AbortSignal) => Promise<T>) {
-    if (active.current) return;
-    const controller = new AbortController();
-    active.current = controller;
-    setBusy(kind);
-    setError(null);
-    try {
-      const value = await action(controller.signal);
-      if (!controller.signal.aborted) return value;
-    } catch (reason) {
-      if (!controller.signal.aborted) {
-        const error = reason instanceof Error ? reason : new Error(String(reason));
-        setError(error);
-        throw error;
-      }
-    } finally {
-      if (active.current === controller) {
-        active.current = null;
-        setBusy(null);
-      }
-    }
-  }
+  const {busy, error, run} = useAction<string>({rethrow: true});
   return {
     capabilities,
     cache,

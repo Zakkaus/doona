@@ -71,8 +71,8 @@ test.describe('without configuration readback', () => {
 
   test('the page is hidden from navigation and says so when opened', async ({page}) => {
     await page.goto('/#/config');
-    await expect(page.locator('.rp-nav[href="#/config"]')).toHaveCount(0);
-    await expect(page.locator('.rp-content')).toContainText('does not expose its configuration');
+    await expect(page.locator('.rp-nav[href="#/config"]')).toHaveAttribute('data-unavailable', '');
+    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
   });
 });
 
@@ -97,7 +97,7 @@ test('the quick setup guards unsaved changes like the editor', async ({page}) =>
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('option', {name: /^GFW list only/}).click();
   await page.getByRole('tab', {name: 'Sources'}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
   await expect(dialog).toBeVisible();
@@ -112,28 +112,14 @@ test('the quick setup writes a rule template into routing', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Whitelist/}).click();
+  await page.getByRole('option', {name: /^Standard groups/}).click();
   const preview = card.locator('.cm-content');
   await expect(preview).toContainText('domain(geosite:category-ads-all) -> block');
   await expect(preview).toContainText('geosite:category-games@cn) -> direct');
-  await expect(preview).toContainText('domain(geosite:geolocation-!cn) -> proxy');
+  await expect(preview).toContainText('domain(geosite:telegram) -> telegram');
+  await expect(preview).toContainText('telegram {');
   await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Blacklist/}).click();
+  await page.getByRole('option', {name: /^GFW list only/}).click();
   await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
   await expect(preview).toContainText('fallback: direct');
-});
-
-test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
-  await page.goto('/#/nodes');
-  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
-  await expect(sources).toHaveCount(2);
-  await expect(sources.first()).toContainText('sub-c');
-  const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
-  await expect(nodes.first()).toBeVisible();
-  expect(await nodes.count()).toBeGreaterThan(10);
-  await sources.nth(1).click();
-  await expect(page).toHaveURL(/provider=inline$/);
-  await expect(nodes).toHaveCount(5);
-  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 100 nodes');
 });

@@ -1,8 +1,18 @@
 import {createMockApi} from '../src/api/mock';
 import {expect, test} from './fixtures';
 
+// Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.rules.available = false;
+  const flows = await api.flows();
   await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
@@ -34,6 +44,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
+  capabilities.resources.rules.available = false;
   const snapshot = await api.flows();
   const flow = snapshot.flows[0];
   snapshot.flows = Array.from({length: 13}, (_, i) => ({
@@ -67,7 +78,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await expect(rows).toHaveCount(1);
   snapshot.flows = [];
   snapshot.dropped_records = null;
-  await page.clock.fastForward(6000);
+  await page.clock.fastForward(16000);
   await expect(rows).toHaveCount(0);
   await expect(panel.getByText('No matching flows in this snapshot', {exact: true})).toBeVisible();
   await expect(panel.getByText('Dropped record count unknown', {exact: true})).toBeVisible();
@@ -76,10 +87,10 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
 test.describe('without flow capability', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 
-  test('renders the rules page without tabs', async ({page}) => {
+  test('the page leaves the navigation and a deep link says so', async ({page}) => {
     await page.goto('/#/rules');
-    await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.getByText('Routing trace unavailable', {exact: true})).toBeVisible();
+    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
+    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
     await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page).toHaveURL(/#\/rules$/);
   });

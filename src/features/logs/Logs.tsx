@@ -62,7 +62,6 @@ export function Logs() {
           {t('log.clear')}
         </Button>
         <Button
-          small
           isDisabled={!feed.records.length}
           onPress={() =>
             downloadFile(

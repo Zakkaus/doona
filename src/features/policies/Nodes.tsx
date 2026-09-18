@@ -19,13 +19,14 @@ import {
 } from 'react-aria-components';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
+import {millis} from '../../api/u64';
 import {OutboundMark} from './Mark';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
-export type NodeInfo = {name: string; tcp?: number; alive?: boolean; nested?: boolean};
+export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
 export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
 const BIG = 12;
 
@@ -187,7 +188,7 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       ) : n.tcp === undefined ? (
         <span className="desc">—</span>
       ) : (
-        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: n.tcp})}</span>
+        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: millis(n.tcp)})}</span>
       )}
     </MenuItem>
   );

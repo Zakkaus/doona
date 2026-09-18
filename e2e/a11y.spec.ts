@@ -1,14 +1,16 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, routes, test} from './fixtures';
+import {expect, offered, routes, test} from './fixtures';
 
 // Dawn contrast remains a palette decision; other violations must fail this gate.
 const KNOWN: Record<string, string> = {
-  'color-contrast': 'Dawn muted, subtle and accent text fall below WCAG AA contrast; adjust palette tokens in src/ui/theme.css:21-32.'
+  'color-contrast':
+    'Rosé Pine Dawn is used with its official values: subtle text (#797593) reaches 4.0:1 and the gold current-page mark 2.1:1. Labels use subtle, never muted.'
 };
 
 for (const route of routes) {
   test(route, async ({page}, testInfo) => {
     await page.goto(`/#/${route}`);
+    test.skip(!(await offered(page, route)), 'not offered by this backend');
     await expect(page.locator('.rp-content')).toBeVisible();
     await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
@@ -25,7 +27,6 @@ for (const route of routes) {
       ])
     );
     await testInfo.attach('axe.json', {body: JSON.stringify({route, findings}, null, 2), contentType: 'application/json'});
-    console.log(JSON.stringify({route, rules: Object.fromEntries(results.violations.map(rule => [rule.id, rule.nodes.length]))}));
     const violations = results.violations.filter(rule => !Object.hasOwn(KNOWN, rule.id));
     expect(
       violations.map(rule => rule.id),

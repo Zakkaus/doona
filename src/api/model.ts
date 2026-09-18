@@ -55,11 +55,13 @@ export type Operation =
   | SucceededOperation<'group_update', Schema['GroupUpdateResult']>
   | SucceededOperation<'provider_refresh', Schema['Provider']>
   | SucceededOperation<'geodata_update', Schema['GeoData']>
-  | SucceededOperation<'suspend', {runtime_state: 'suspended' | null}>
-  | SucceededOperation<'resume', {runtime_state: 'running' | null}>;
+  | SucceededOperation<'suspend', NonNullable<Schema['SuspendSucceededOperation']['result']>>
+  | SucceededOperation<'resume', NonNullable<Schema['ResumeSucceededOperation']['result']>>;
 export type OperationState = Operation & {retryAfter?: number};
 export type NodeQuery = operations['listNodes']['parameters']['query'];
 export type ConnectionQuery = operations['listConnections']['parameters']['query'];
+export type BulkCloseQuery = operations['closeConnections']['parameters']['query'];
+export type BulkCloseResult = Schema['BulkCloseResult'];
 export type FlowQuery = operations['listFlows']['parameters']['query'];
 export type DnsCacheQuery = operations['listDnsCache']['parameters']['query'];
 export type DnsLogList = Schema['DnsLogList'];
@@ -74,7 +76,8 @@ export type ProviderQuery = operations['listProviders']['parameters']['query'];
 export type ProviderCreate = Schema['ProviderCreate'];
 export type NodeCreate = Schema['NodeCreate'];
 export type GeoData = Schema['GeoData'];
-export type GeoAsset = Schema['GeoAsset'];
+export type RuleList = Schema['RuleList'];
+export type RoutingRule = Schema['RoutingRule'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'];

@@ -21,6 +21,7 @@ import type {
   Version
 } from '../model';
 import {createFlow, flowFields, type ConnectionSeed} from './flows';
+import {rules, type ConfigRule} from './rules';
 
 // Fixture clocks are anchored to page load so ages and expiries read naturally instead of drifting from a fixed date.
 const now = Date.now();
@@ -86,17 +87,18 @@ export const runtime: Runtime = {
   instance_id: instanceId,
   lifecycle: {state: 'running', started_at: ago(273600), uptime_seconds: '273600'},
   generation: {active_id: '40', config_revision: '40', state: 'active', activated_at: observedAt},
+  // The same degraded datapath /datapath reports in full: one delayed map sample, everything else attached.
   datapath: {
     kind: 'ebpf',
-    state: 'active',
+    state: 'degraded',
     visibility: 'full',
     ebpf: {
       backend: 'real',
       programs: 'loaded',
       hooks: 'attached',
       routing: {state: 'published', generation_id: '40'},
-      health: 'healthy',
-      last_error: null,
+      health: 'degraded',
+      last_error: 'Routing map sample delayed',
       checked_at: observedAt
     }
   },
@@ -119,8 +121,6 @@ export const datapath: Datapath = {
   visibility: 'full',
   ebpf: {
     ...runtime.datapath.ebpf!,
-    health: 'degraded',
-    last_error: 'Routing map sample delayed',
     attachments: ['lan0', 'wan0'].flatMap(iface =>
       (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, interface: iface, direction, state: 'attached' as const}))
     ),
@@ -160,7 +160,7 @@ export const capabilities: Capabilities = {
     nodes: {available: true, can_manage: true},
     providers: {available: true, can_refresh: true, can_manage: true, max_page_size: 1000},
     geodata: {available: true, can_update: true, assets: ['geosite', 'geoip']},
-    rules: {available: false},
+    rules: {available: true, max_rules: 4096},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
@@ -244,6 +244,7 @@ export const capabilitiesBase: Capabilities = {
     dns_log: {available: false},
     runtime_settings: {available: false},
     geodata: {available: false},
+    rules: {available: false},
     nodes: {available: true, can_manage: false},
     providers: {available: true, can_refresh: true, can_manage: false, max_page_size: 1000},
     config: {available: false, content: false},
@@ -252,6 +253,19 @@ export const capabilitiesBase: Capabilities = {
     routing_trace: {...capabilities.resources.routing_trace, available: false},
     events: {...capabilities.resources.events, available: false}
   }
+};
+
+// honk's first native release (its plan's M1): runtime and connections only, connections observed by userspace
+// without close, every other resource declared unavailable. Nothing else on this backend answers.
+export const capabilitiesM1: Capabilities = {
+  ...capabilities,
+  profiles: ['base'],
+  resources: {
+    ...Object.fromEntries(Object.keys(capabilities.resources).map(key => [key, {available: false}])),
+    runtime: {available: true},
+    connections: {available: true, can_close: false, max_bulk_close: 1000},
+    config: {available: false, content: false}
+  } as Capabilities['resources']
 };
 
 // What PATCH /runtime/settings can change; the values start from the configuration and the ceilings are the
@@ -264,21 +278,11 @@ export const runtimeSettings: RuntimeSettings = {
   flows: {max_flows: 4096, retention_seconds: 300}
 };
 
-// The demo routing dictionary the mock evaluates in routing.ts; the native API exposes no rule list yet.
-// The routing rules the demo's trace and flow evidence refer to, in config order.
-type ConfigRule = {id: string; cond: string; target: string; must: boolean};
+// The demo routing dictionary the mock's trace evaluates and its flows refer to; /rules reads the same lines
+// back off the config text with their ids.
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
-export const rules: ConfigRule[] = [
-  {id: 'r1', cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false},
-  {id: 'r2', cond: 'pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)', target: 'direct', must: true},
-  {id: 'r3', cond: 'dip(geoip: private)', target: 'direct', must: true},
-  {id: 'r4', cond: 'domain(geosite: cn)', target: 'direct', must: false},
-  {id: 'r5', cond: 'domain(geosite: telegram)', target: 'proxy', must: false},
-  {id: 'r6', cond: 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4)', target: 'direct', must: false},
-  {id: 'r7', cond: 'domain(geosite: discord)', target: 'proxy', must: false},
-  {id: 'r8', cond: 'sip(10.0.0.0/24) && dport(25)', target: 'block', must: false}
-];
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
+export {rules};
 
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
@@ -296,11 +300,11 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     error: latency === null ? 'timeout' : null
   };
 }
-function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string): Node {
+function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string, protocol: Node['protocol'] = 'shadowsocks'): Node {
   return {
     id: name,
     name,
-    protocol: 'shadowsocks',
+    protocol,
     subscription_tag: source,
     provider_id: source === 'inline' ? 'inline' : source,
     group_ids: [],
@@ -354,11 +358,12 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
 }
 export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
   const nodes = [
-    node('hk-01', 84, 91, true, 'inline'),
-    node('hk-02', 91, 88, true, 'inline'),
-    node('sg-01', 63, 70, false, 'inline'),
-    node('jp-01', null, null, false, 'inline'),
-    node('us-01', 188, 201, true, 'inline')
+    // The inline nodes match the links in the mock's config.dae.
+    node('hk-01', 84, 91, true, 'inline', 'vless'),
+    node('hk-02', 91, 88, true, 'inline', 'vless'),
+    node('sg-01', 63, 70, false, 'inline', 'trojan'),
+    node('jp-01', null, null, false, 'inline', 'vless'),
+    node('us-01', 188, 201, true, 'inline', 'trojan')
   ];
   const groups = [
     group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),

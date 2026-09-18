@@ -49,8 +49,8 @@ export const fmtRate = (kb: number | null | undefined, locale: string, t: Transl
   kb == null
     ? '—'
     : kb >= 1000
-      ? t('unit.mbps', {n: formatNumber(kb / 1000, locale, kb >= 10000 || kb % 1000 === 0 ? 0 : 1)})
-      : t('unit.kbps', {n: formatNumber(Math.round(kb), locale)});
+      ? t('unit.mbPerSecond', {n: formatNumber(kb / 1000, locale, kb >= 10000 || kb % 1000 === 0 ? 0 : 1)})
+      : t('unit.kbPerSecond', {n: formatNumber(Math.round(kb), locale)});
 const niceMax = (v: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;

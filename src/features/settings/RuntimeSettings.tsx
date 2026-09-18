@@ -60,7 +60,7 @@ export function RuntimeSettingsCard() {
     for (const field of numericFields) {
       if (!fields.has(field) || invalid(field) || Number(values[field]) === at(baseline, field)) continue;
       const [section, key] = field.split('.') as ['log' | 'dns_log' | 'flows', string];
-      (patch[section] ??= {})[key as never] = Number(values[field]) as never;
+      ((patch[section] ??= {}) as Record<string, number>)[key] = Number(values[field]);
     }
   }
   const dirty = Object.keys(patch).length > 0;

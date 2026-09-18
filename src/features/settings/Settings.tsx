@@ -1,12 +1,15 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
-import {Link} from 'react-aria-components';
-import {useCapabilities} from '../../api/store';
+import GitHub from '../../ui/icons/GitHub';
+import {useCapabilities, useVersion} from '../../api/store';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {ApiError, createApi} from '../../api/client';
-import {Button, ErrorMessage, Kv, LabeledSelect, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
-import {normalizeApi, readSettings, writeProfiles, type Profile, type PaletteId, type Scheme, type Wordmark} from './settings';
+import {createApi} from '../../api/client';
+import {uuid} from '../../api/hash';
+import {ApiError} from '../../api/error';
+import {Button, ErrorMessage, Kv, LabeledSelect, Light, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
+import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
+import {readSettings, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {useInstallOffer} from '../../shell/install';
@@ -42,6 +45,7 @@ export function Settings({query}: PageProps) {
   const t = useT();
   const install = useInstallOffer();
   const capabilities = useCapabilities();
+  const version = useVersion();
   const controls = useContext(SettingsContext);
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
@@ -121,7 +125,7 @@ export function Settings({query}: PageProps) {
   const editedProfiles = () => {
     const base = validate(api);
     if (base === null) return null;
-    const profile = {...(active ?? {id: crypto.randomUUID(), name: t('settings.backend')}), api: base, token};
+    const profile = {...(active ?? {id: uuid(), name: t('settings.backend')}), api: base, token};
     return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
   };
   const save = (id?: string) => {
@@ -143,7 +147,7 @@ export function Settings({query}: PageProps) {
     }
     if (!name.trim()) return;
     if (dialog === 'add') {
-      const profile = {id: crypto.randomUUID(), name: name.trim(), api: 'mock', token: ''};
+      const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
       persist([...profiles, profile], profile.id);
     } else {
       persist(
@@ -330,16 +334,29 @@ export function Settings({query}: PageProps) {
         <Kv
           items={[
             [t('settings.version'), import.meta.env.VITE_DOONA_VERSION],
-            [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT]
+            [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT],
+            ...(version.data
+              ? [
+                  [
+                    t('settings.engine'),
+                    `${version.data.engine.name} ${version.data.engine.version} · API ${version.data.api.major} (${version.data.api.status})`
+                  ] as [string, string]
+                ]
+              : [])
           ]}
         />
+        {version.data && version.data.api.major !== 1 && (
+          <Light small tone="warn">
+            {t('settings.apiMajor', {major: String(version.data.api.major)})}
+          </Light>
+        )}
         <div className="rp-cluster">
-          <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
+          <Button onPress={() => window.open('https://github.com/Zakkaus/doona', '_blank', 'noreferrer')}>
+            <GitHub />
             {t('github')}
-          </Link>
+          </Button>
           {install && (
             <Button
-              small
               onPress={() => {
                 void install().then(accepted => {
                   if (accepted) toast('positive', t('settings.installed'));

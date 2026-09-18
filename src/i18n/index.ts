@@ -24,9 +24,9 @@ export const LangContext = createContext<Lang>('zh-TW');
 export function useLang() {
   return useContext(LangContext);
 }
-export function readLang(): Lang {
+export function readLang(storage?: Pick<Storage, 'getItem'>): Lang {
   try {
-    const value = localStorage.getItem('doona-lang');
+    const value = (storage ?? localStorage).getItem('doona-lang');
     return value === 'zh-CN' || value === 'en' ? value : 'zh-TW';
   } catch {
     return 'zh-TW';

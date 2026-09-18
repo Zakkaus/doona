@@ -11,7 +11,7 @@ const scopes: Record<string, Key> = {
   dns_intercept: 'flow.dnsIntercept',
   kernel_bypass: 'flow.kernelBypass'
 };
-const visibility: Record<string, Key> = {full: 'flow.full', partial: 'flow.partialVisibility', none: 'ui.none', unknown: 'ui.unknown'};
+const visibility: Record<FlowList['coverage'][keyof FlowList['coverage']], Key> = {full: 'flow.full', partial: 'flow.partialVisibility', none: 'ui.none'};
 
 // Full coverage is the normal case and says nothing; anything less folds into one badge with the detail on hover.
 export function Coverage({data}: {data: Pick<FlowList, 'coverage' | 'dropped_records'>}) {

@@ -4,7 +4,8 @@ import {useMemoryHistory} from '../../api/store';
 import {parseU64} from '../../api/u64';
 
 export type MemorySample = {time: number; rss: number | null; cgroup: number | null};
-export const memorySampleLimit = 60;
+// An hour of five-second polls: the backend's ring covers ten minutes, the session keeps the rest.
+export const memorySampleLimit = 720;
 
 export function appendMemorySample(samples: MemorySample[], memory: RuntimeMemory): MemorySample[] {
   const time = Date.parse(memory.observed_at);
@@ -40,13 +41,22 @@ export function historySamples(history: MemoryHistory): MemorySample[] {
   });
 }
 
-// The producer's ring when the backend advertises one; otherwise the polls collected in this session.
+// Two rings on one time axis: the polls this session collected, and the backend's, which reaches back before
+// the page was opened. Where both have a second, the backend's sample wins.
+export function mergeSamples(polled: MemorySample[], history: MemorySample[]): MemorySample[] {
+  const byTime = new Map<number, MemorySample>();
+  for (const sample of polled) byTime.set(sample.time, sample);
+  for (const sample of history) byTime.set(sample.time, sample);
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
+// The backend's ring merged with the polls collected in this session; the polls alone without a ring.
 export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined) {
   const history = useMemoryHistory(capabilities);
   const polled = useMemorySamples(memory);
   const advertised = capabilities?.resources.memory_history.available === true;
   return {
-    samples: advertised && history.data ? historySamples(history.data) : polled,
+    samples: advertised && history.data ? mergeSamples(polled, historySamples(history.data)) : polled,
     loading: advertised && !history.data && history.loading,
     error: advertised ? history.error : undefined
   };

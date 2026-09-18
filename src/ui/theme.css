@@ -1,4 +1,4 @@
-/* Palettes: Rosé Pine (Dawn/Moon), Catppuccin (Latte/Mocha), Nord (light/dark). data-palette picks the family,
+/* Palettes: Rosé Pine, Catppuccin, Nord, Glass, Ant Design, Arco and Semi. data-family picks the family,
    data-scheme picks light or dark; every component reads the same --rp-* roles. */
 
 :root,
@@ -660,9 +660,6 @@
 :root[data-family='glass'] .rp-btn.quiet[data-hovered] {
   background: var(--rp-hl-low);
 }
-:root[data-family='glass'] .rp-btn.secondary {
-  background: transparent;
-}
 :root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-pine);
   border-color: transparent;
@@ -865,6 +862,18 @@ input {
   width: 28px;
   height: 28px;
 }
+/* The name and its version share one baseline; only the name takes the gradient. */
+.rp-brand-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rp-brand-version {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--rp-subtle);
+}
 .rp-search-wrap {
   grid-column: 2;
   display: none;
@@ -951,7 +960,7 @@ input {
 .rp-group {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   margin: 0 0 4px;
 }
 .rp-side > div + div {
@@ -967,6 +976,13 @@ input {
   color: var(--rp-subtle);
   text-decoration: none;
   position: relative;
+}
+/* A page the backend has no capability for stays listed, dimmed; opening it says so. */
+.rp-nav[data-unavailable] {
+  color: var(--rp-muted);
+}
+.rp-nav[data-unavailable] > svg {
+  opacity: 0.6;
 }
 .rp-nav[data-hovered] {
   background: var(--rp-hl-low);
@@ -1277,7 +1293,7 @@ input {
 .rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c4);
 }
-:root:not([data-wordmark='plain']) .rp-brand span {
+:root:not([data-wordmark='plain']) .rp-brand-text > span:first-child {
   background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
   -webkit-background-clip: text;
   background-clip: text;
@@ -1325,24 +1341,17 @@ input {
 .rp-btn.quiet[data-hovered] {
   background: var(--rp-hl-low);
 }
+.rp-btn:not(.icon) > .rp-icon {
+  width: 16px;
+  height: 16px;
+}
 .rp-btn.sm {
   padding: 0 8px;
   font-size: 12px;
   line-height: 16px;
 }
-/* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
-   destructive ones, secondary outlined. */
-.rp-btn.secondary {
-  background: transparent;
-  border-color: var(--rp-hl-high);
-  color: var(--rp-text);
-}
-.rp-btn.secondary[data-hovered] {
-  background: var(--rp-hl-low);
-}
-.rp-btn.secondary[data-pressed] {
-  background: var(--rp-hl-high);
-}
+/* One button shape everywhere (8px); a variant only changes colour: accent for the one primary action, negative
+   for a destructive one. Neutral actions all look alike, whatever page they sit on. */
 .rp-btn.icon {
   width: 32px;
   padding: 0;
@@ -1392,7 +1401,7 @@ input {
 .rp-sec-h {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   padding: 8px 8px 2px 32px;
 }
 .rp-popover [role='menu'],
@@ -1419,9 +1428,7 @@ input {
   border-radius: 10px;
   padding: 8px;
   overflow: hidden auto;
-  scrollbar-width: thin;
   scrollbar-color: var(--rp-hl-high) transparent;
-  box-sizing: border-box;
   box-shadow: var(--rp-elevated);
   min-width: 160px;
 }
@@ -1774,13 +1781,12 @@ input {
 .rp-results {
   max-height: 420px;
   overflow: auto;
-  scrollbar-width: thin;
   padding-right: 12px;
 }
 .rp-section-h {
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
   padding: 8px 12px 4px;
 }
 
@@ -1850,7 +1856,7 @@ input {
   display: block;
   font-size: 12px;
   line-height: 16px;
-  color: var(--rp-muted);
+  color: var(--rp-subtle);
 }
 .rp-kv .v {
   display: block;
@@ -1978,7 +1984,6 @@ button.rp-node[data-focus-visible] {
   height: 376px;
   overflow: auto;
   outline: none;
-  scrollbar-width: thin;
   border-radius: 8px;
 }
 .rp-nodegrid .rp-node {
@@ -1992,7 +1997,6 @@ button.rp-node[data-focus-visible] {
 .rp-menu-scroll {
   max-height: 360px;
   overflow: auto;
-  scrollbar-width: thin;
 }
 .rp-menu-search {
   margin: 4px 4px 8px;
@@ -2074,7 +2078,6 @@ button.rp-node[data-focus-visible] {
   border-radius: 8px;
   background: var(--rp-surface);
   overflow: auto;
-  scrollbar-width: thin;
   outline: none;
 }
 .rp-table table {
@@ -2085,7 +2088,6 @@ button.rp-node[data-focus-visible] {
   /* RAC sets min-content inline; fractional columns must fill the scrollport. */
   width: 100% !important;
   min-width: 0;
-  box-sizing: border-box;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -2127,7 +2129,6 @@ button.rp-node[data-focus-visible] {
   height: 100%;
   cursor: col-resize;
   touch-action: none;
-  box-sizing: border-box;
   border-right: 2px solid transparent;
   outline: none;
 }
@@ -2165,10 +2166,11 @@ button.rp-node[data-focus-visible] {
   text-align: end;
 }
 /* Virtualized tables use divs; only their layout differs from native cells. */
-.rp-table > div[role='grid'] {
+.rp-table > div[role='grid'],
+.rp-table > div[role='treegrid'] {
+  width: 100%;
   height: 100%;
   overflow: auto;
-  scrollbar-width: thin;
   outline: none;
 }
 .rp-table div[role='row'],
@@ -2302,7 +2304,6 @@ button.rp-node[data-focus-visible] {
   border-radius: 8px;
   background: var(--rp-surface);
   border: 2px solid var(--rp-pine);
-  box-sizing: border-box;
   transition:
     translate 200ms var(--rp-ease-out),
     width 200ms var(--rp-ease-out);
@@ -2454,7 +2455,6 @@ button.rp-node[data-focus-visible] {
   font-size: 14px;
   line-height: 20px;
   box-shadow: var(--rp-shadow-lg);
-  box-sizing: border-box;
   flex-shrink: 0;
   transition:
     translate 400ms var(--rp-ease),
@@ -2581,7 +2581,6 @@ button.rp-node[data-focus-visible] {
   text-align: start;
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
   font: inherit;
   transition:
     background-color 150ms var(--rp-ease),
@@ -2595,8 +2594,7 @@ button.rp-node[data-focus-visible] {
 .rp-flow-raw {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: inherit;
-  font-family: monospace;
+  margin: 0;
 }
 
 /* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. */
@@ -2633,14 +2631,6 @@ button.rp-node[data-focus-visible] {
 }
 .rp-rule > .rp-provenance {
   flex-shrink: 0;
-}
-
-.rp-table > div[role='treegrid'] {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  scrollbar-width: thin;
-  outline: none;
 }
 
 /* Shared disclosure, overflow, and interaction states. */
@@ -2721,6 +2711,12 @@ button.rp-node[data-focus-visible] {
 }
 .rp-empty > .rp-spinner {
   margin-inline-end: 8px;
+}
+.rp-empty > .rp-btn,
+.rp-empty > .rp-tipwrap {
+  display: block;
+  margin: 16px auto 0;
+  width: max-content;
 }
 .rp-btn[data-pending] {
   cursor: progress;
@@ -2813,6 +2809,12 @@ button.rp-node[data-focus-visible] {
   margin-left: -8px;
 }
 @media (max-width: 600px) {
+  .rp-brand-version {
+    display: none;
+  }
+  .rp-main {
+    padding: 20px 16px 40px;
+  }
   .rp-field {
     max-width: 100%;
   }
@@ -2830,7 +2832,6 @@ button.rp-node[data-focus-visible] {
   }
   .rp-badge {
     max-width: 100%;
-    box-sizing: border-box;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2916,7 +2917,6 @@ button.rp-node[data-focus-visible] {
   top: 16px;
   max-height: calc(100vh - 32px);
   overflow: auto;
-  scrollbar-width: thin;
 }
 .rp-drawer-underlay {
   justify-content: flex-end;

@@ -3,7 +3,7 @@ import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
-import {addU64, formatBytes} from '../../api/u64';
+import {addU64, formatBytes, millis} from '../../api/u64';
 import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
 import {
   Badge,
@@ -123,6 +123,16 @@ export function Nodes({go, query}: PageProps) {
       fail(error);
     }
   };
+  // What the dialog is about: its title, whether it adds or removes, and when its form is complete.
+  const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode';
+  const dialogTitle =
+    dialog === null
+      ? ''
+      : dialog.kind === 'provider'
+        ? t('nodes.addProvider')
+        : dialog.kind === 'node'
+          ? t('nodes.addNode')
+          : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const formValid =
     dialog?.kind === 'provider'
       ? /^[\w.-]+$/.test(form.name.trim()) && /^https?:\/\/\S+$/.test(form.value.trim())
@@ -185,11 +195,7 @@ export function Nodes({go, query}: PageProps) {
                   label={t('nodes.refresh', {name: item.name})}
                   onPress={() => {
                     void refresh.refresh(item.id).then(result => {
-                      if (result)
-                        toast(
-                          'positive',
-                          t('nodes.refreshed', {name: item.name, n: n(result.kind === 'provider_refresh' ? result.result.node_count : item.node_count)})
-                        );
+                      if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: n(result.node_count)}));
                     }, fail);
                   }}
                 >
@@ -258,7 +264,7 @@ export function Nodes({go, query}: PageProps) {
             </span>,
             node.protocol ?? '—',
             health?.state === 'healthy' && health.latency_ms != null ? (
-              <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: health.latency_ms})}</span>
+              <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: millis(health.latency_ms)})}</span>
             ) : (
               <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
             ),
@@ -302,19 +308,9 @@ export function Nodes({go, query}: PageProps) {
         }}
       />
       <ModalDialog
-        title={
-          dialog?.kind === 'provider'
-            ? t('nodes.addProvider')
-            : dialog?.kind === 'node'
-              ? t('nodes.addNode')
-              : dialog?.kind === 'removeProvider'
-                ? t('nodes.removeProviderTitle', {name: dialog.item.name})
-                : dialog?.kind === 'removeNode'
-                  ? t('nodes.removeNodeTitle', {name: dialog.item.name})
-                  : ''
-        }
+        title={dialogTitle}
         narrow
-        alert={dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode'}
+        alert={removing}
         isOpen={dialog !== null}
         onOpenChange={isOpen => {
           if (!isOpen) setDialog(null);
@@ -322,14 +318,8 @@ export function Nodes({go, query}: PageProps) {
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button
-              accent={dialog?.kind === 'provider' || dialog?.kind === 'node'}
-              negative={dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode'}
-              isDisabled={!formValid}
-              isPending={!!manage.busy}
-              onPress={() => void submit(close)}
-            >
-              {dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode' ? t('nodes.remove', {name: dialog.item.name}) : t('nodes.add')}
+            <Button accent={!removing} negative={removing} isDisabled={!formValid} isPending={!!manage.busy} onPress={() => void submit(close)}>
+              {removing ? t('nodes.remove', {name: dialog.item.name}) : t('nodes.add')}
             </Button>
           </>
         )}
