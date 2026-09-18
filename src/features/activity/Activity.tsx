@@ -94,8 +94,9 @@ export function Activity({go}: {go: (page: string) => void}) {
   const polledTraffic = useTrafficSamples(runtimeResource.data);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
   const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
-  // The tiles' sparklines always show the last two minutes, whatever span the chart is set to.
-  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live), [polledTraffic, historySamples]);
+  // The tiles' sparklines always show the last two minutes, whatever span the chart is set to, in five-second
+  // means: a hundred pixels cannot show a hundred and twenty seconds of one-second samples as anything but noise.
+  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
   // The quick row drives the engine's outbound mode: rule, direct, or global through the chosen group.
   const runtimeMode = useRuntimeMode(resources?.runtime_mode.available === true);
   const mode = runtimeMode.data?.mode ?? 'rule';

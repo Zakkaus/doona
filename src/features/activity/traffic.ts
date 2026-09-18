@@ -52,8 +52,8 @@ export type TrafficSeries = {
   until: number;
 };
 
-export function trafficWindow(rings: Rings<TrafficSample>, ring: TrafficSample[], windowSeconds: number, now = Date.now()): TrafficSeries {
-  const {samples, since, until} = window(rings, ring, windowSeconds, foldTraffic, now);
+export function trafficWindow(rings: Rings<TrafficSample>, ring: TrafficSample[], windowSeconds: number, now = Date.now(), maxPoints?: number): TrafficSeries {
+  const {samples, since, until} = window(rings, ring, windowSeconds, foldTraffic, now, maxPoints);
   return {
     timestamps: samples.map(s => s.time),
     down: samples.map(s => s.down),
