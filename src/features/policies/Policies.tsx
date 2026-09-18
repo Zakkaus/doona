@@ -46,6 +46,8 @@ function PolicyCard({
   const interruptable = g?.capabilities.mutable_config.includes('interrupt_connections') ?? false;
   const healthy = members.filter(m => m.health?.state === 'healthy').length;
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
+  // Members the backend has not measured yet: neither healthy nor down, so the counts add up.
+  const untested = members.filter(m => !m.health || (m.health.state !== 'healthy' && m.health.state !== 'unavailable')).length;
   return (
     <section className="rp-card" id={'group-' + id} aria-label={g?.name ?? id}>
       <ErrorMessage error={control.error} />
@@ -65,6 +67,11 @@ function PolicyCard({
               {unavailable > 0 && (
                 <Light small tone="err">
                   {t('policy.down', {n: unavailable})}
+                </Light>
+              )}
+              {untested > 0 && (
+                <Light small tone="neutral">
+                  {t('policy.untested', {n: untested})}
                 </Light>
               )}
             </span>

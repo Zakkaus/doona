@@ -114,7 +114,7 @@ export function Overview() {
                 items={[
                   [t('ov.f.engine'), version.data.engine.name + ' ' + version.data.engine.version],
                   [t('ov.f.api'), `${version.data.api.name} v${version.data.api.major} · ${version.data.api.status}`],
-                  [t('ov.f.build'), version.data.build?.revision ?? '—'],
+                  [t('ov.f.build'), [version.data.build?.revision, version.data.build?.target].filter(Boolean).join(' · ') || '—'],
                   [t('ov.f.instance'), runtime.data.instance_id],
                   [t('ov.f.started'), localTime(runtime.data.lifecycle.started_at, locale)],
                   [t('ov.f.activated'), runtime.data.generation.activated_at ? localTime(runtime.data.generation.activated_at, locale) : '—']
