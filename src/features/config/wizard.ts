@@ -99,7 +99,7 @@ function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
   const have = new Set(current);
   const wanted = rules === 'keep' ? [] : templates[rules].groups.filter(group => !have.has(group.name));
   if (!wanted.length && current.length) return [];
-  if (!wanted.length) return [`  ${defaultGroup} { policy: min_moving_avg }`];
+  if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
   return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
 // The text to write: the current text with subscription replaced (and routing when a template is chosen), a

@@ -75,8 +75,10 @@ describe('quick setup text transforms', () => {
     // The existing `proxy` stays as written; the template's other groups are appended inside the section.
     expect(out).toContain('  proxy {\n    filter: name(hk-01, sg-01)\n    policy: fixed(0)\n  }');
     expect(out.match(/^group \{/gm)).toHaveLength(1);
-    expect(out).toContain('  auto {\n    policy: min_moving_avg\n  }');
-    expect(out).toContain("  telegram {\n    filter: group('proxy', 'auto')\n    filter: name(regex: '.')\n    policy: select\n    default: 'proxy'\n  }");
+    expect(out).toContain("  auto {\n    filter: !name('direct', 'block')\n    policy: min_moving_avg\n  }");
+    expect(out).toContain(
+      "  telegram {\n    filter: group('proxy', 'auto')\n    filter: !name('direct', 'block')\n    policy: select\n    default: 'proxy'\n  }"
+    );
     expect(out).toContain('domain(geosite:apple) -> apple');
     expect(out).toContain('domain(geosite:microsoft) -> direct');
     expect(out).toContain('  fallback: proxy');
@@ -97,11 +99,11 @@ describe('quick setup text transforms', () => {
     const noGroup = main.replace(/group \{[\s\S]*?\n\}\n/, '');
     const state = readState(noGroup);
     expect(state.group).toBeNull();
-    expect(writeState(noGroup, state)).toContain('group {\n  proxy { policy: min_moving_avg }\n}');
+    expect(writeState(noGroup, state)).toContain("group {\n  proxy { filter: !name('direct', 'block') policy: min_moving_avg }\n}");
     const fresh = writeState('', {subscriptions: [{name: 'sub', url: 'https://example.org/sub'}], group: null, rules: 'keep', lanInterface: ''});
     expect(fresh).toContain('lan_interface: auto');
     expect(fresh).toContain('      qname(geosite:cn) -> alidns\n      fallback: cloudflare');
-    expect(fresh).toContain("  proxy {\n    filter: group('auto')\n    filter: name(regex: '.')\n    policy: select\n    default: 'auto'\n  }");
+    expect(fresh).toContain("  proxy {\n    filter: group('auto')\n    filter: !name('direct', 'block')\n    policy: select\n    default: 'auto'\n  }");
     expect(fresh).toContain('geosite:category-games@cn) -> direct');
     expect(fresh).toContain('fallback: proxy');
   });

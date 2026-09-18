@@ -23,16 +23,17 @@ for (const width of [1024, 1280, 1440]) {
     for (const route of ['dns', 'rules', 'connections', 'events', 'overview']) {
       await page.goto(`/#/${route}`);
       if (!(await offered(page, route))) continue;
+      await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
+      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
-      if (route === 'rules') {
+      // A live backend may offer the rules page without the trace simulation.
+      if (route === 'rules' && (await page.getByRole('tab', {name: 'Trace simulation', exact: true}).count())) {
         await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
         await page.getByRole('button', {name: 'Run trace', exact: true}).click();
         await expect(page.getByRole('grid', {name: 'Rule evaluation 1'})).toBeVisible();
       }
       const grids = page.getByRole('grid').or(page.getByRole('treegrid'));
-      await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
-      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
       // A live backend with nothing to list shows an empty state instead of a table.
       if (isLive && !(await grids.count())) continue;
       await expect(grids.first()).toBeVisible();

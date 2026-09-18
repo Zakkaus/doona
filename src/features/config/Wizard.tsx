@@ -6,6 +6,7 @@ import type {useConfigEditor} from '../../api/store';
 import {Button, LabeledSelect, TextField, toast} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
+import {candidate} from './names';
 import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, writeState, type RuleTemplate, type WizardState} from './wizard';
 
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
@@ -64,7 +65,7 @@ export function Wizard({
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
     if (canValidate) {
-      const check = await editor.validate({sources: [{id: main.id, path: main.path, content: text}], mode: 'full'});
+      const check = await editor.validate({sources: [candidate(main, text)], mode: 'full'});
       if (!check) return;
       if (!check.valid) {
         toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));

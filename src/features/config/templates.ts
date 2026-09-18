@@ -24,12 +24,14 @@ const media = (target: string) => [
 const gfw = (target: string) => ['# ProxyGFWlist', `domain(geosite:gfw) -> ${target}`];
 
 // A group the template needs: honk's `group` syntax with the ACL4SSR name as the comment. `select` groups list
-// the nested groups they can switch to and, with `.`, every node.
+// the nested groups they can switch to and every proxy node. honk injects `direct` and `block` into the node
+// pool, so "every node" is spelled as everything but those two; an unfiltered group would take them as well.
 type GroupSpec = {name: string; label: string; lines: string[]};
+const everyNode = "filter: !name('direct', 'block')";
 const selectGroup = (name: string, label: string, nested: string[], fallback = nested[0]): GroupSpec => ({
   name,
   label,
-  lines: [`filter: group(${nested.map(quote).join(', ')})`, "filter: name(regex: '.')", 'policy: select', `default: ${quote(fallback)}`]
+  lines: [`filter: group(${nested.map(quote).join(', ')})`, everyNode, 'policy: select', `default: ${quote(fallback)}`]
 });
 const region = (name: string, label: string, pattern: string): GroupSpec => ({
   name,
@@ -37,7 +39,7 @@ const region = (name: string, label: string, pattern: string): GroupSpec => ({
   lines: [`filter: name(regex: ${quote(pattern)})`, 'policy: min_moving_avg']
 });
 const proxy = selectGroup('proxy', '节点选择', ['auto']);
-const auto: GroupSpec = {name: 'auto', label: '自动选择', lines: ['policy: min_moving_avg']};
+const auto: GroupSpec = {name: 'auto', label: '自动选择', lines: [everyNode, 'policy: min_moving_avg']};
 const regions = [
   region('hk', '香港节点', '港|HK|Hong Kong|HongKong'),
   region('jp', '日本节点', '日|JP|Japan|Tokyo'),

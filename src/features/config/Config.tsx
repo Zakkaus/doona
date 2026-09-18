@@ -26,7 +26,7 @@ import {
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
-import {groupNames} from './names';
+import {candidate, groupNames} from './names';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -307,7 +307,7 @@ function SourceCard({
     if (!canValidate || draftText === undefined) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      api.validateConfig({sources: [{id: source.id, path: source.path, content: draftText}], mode: 'full'}, controller.signal).then(
+      api.validateConfig({sources: [candidate(source, draftText)], mode: 'full'}, controller.signal).then(
         result => setFound(result.diagnostics),
         () => undefined
       );
@@ -319,7 +319,7 @@ function SourceCard({
   }, [api, canValidate, draftText, source.id, source.path]);
   // `announce` also toasts a pass; a save reports only its own outcome.
   const validate = async (announce: 'always' | 'failure' = 'always') => {
-    const result = await editor.validate({sources: [{id: source.id, path: source.path, content: text}], mode: 'full'});
+    const result = await editor.validate({sources: [candidate(source, text)], mode: 'full'});
     if (!result) return false;
     setFound(result.diagnostics);
     // Put the cursor on the first error so the problem is on screen, not below a long file.
@@ -473,7 +473,7 @@ function ValidateTab({
             isDisabled={!!editor.busy || candidates.length === 0}
             tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
             onPress={() => {
-              void editor.validate({sources: candidates.map(item => ({id: item.id, path: item.path, content: item.content!})), mode: 'full'}).then(result => {
+              void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
                 // A fresh list has new rows; the old selection would point at a different diagnostic.
                 if (result) {
                   setRun(result);

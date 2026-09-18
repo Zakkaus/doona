@@ -21,6 +21,7 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import {ruleDistribution} from './distribution';
+import {candidate} from '../config/names';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
 
@@ -85,7 +86,7 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
   const write = async (source: ConfigSource, lines: string[]) => {
     const content = lines.join('\n');
     if (canValidate) {
-      const check = await editor.validate({sources: [{id: source.id, path: source.path, content}], mode: 'full'});
+      const check = await editor.validate({sources: [candidate(source, content)], mode: 'full'});
       if (!check) return false;
       if (!check.valid) {
         toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
