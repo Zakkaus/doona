@@ -443,10 +443,13 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-// A flow record leaving the ring to make room, or a flow never recorded because sampling skipped it, is the
-// backend's routine housekeeping; only an overflow or a change in what gets recorded is a gap worth a notice.
+// A flow record leaving the ring to make room (aged out, or pushed out of a full ring: no resource named), or
+// a flow never recorded because sampling skipped it, is the backend's routine housekeeping; a record that
+// lost its own history or a change in what gets recorded is a gap worth a notice.
 export function routineGap(event: ApiEvent): boolean {
-  return event.event === 'flow.gap' && (event.data.reason === 'evicted' || event.data.reason === 'sampled');
+  if (event.event !== 'flow.gap') return false;
+  const {reason, resource_id} = event.data;
+  return reason === 'evicted' || reason === 'sampled' || (reason === 'buffer_overflow' && resource_id == null);
 }
 const gapReasons: Record<string, Key> = {
   buffer_overflow: 'event.gap.overflow',
