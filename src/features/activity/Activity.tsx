@@ -18,7 +18,17 @@ import {
   useTrafficHistory,
   useRuntimeMode
 } from '../../api/store';
-import {connectionRows, eventSummary, lifecycleStates, localTime, outboundLabel, outboundUsage, preferredHealth, sourceIp} from '../../api/selectors';
+import {
+  connectionRows,
+  eventSummary,
+  lifecycleStates,
+  localTime,
+  outboundLabel,
+  outboundUsage,
+  preferredHealth,
+  routineGap,
+  sourceIp
+} from '../../api/selectors';
 import {addU64, formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Badge, Button, CardLink, MenuButton, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, errorText, toast} from '../../ui/ui';
@@ -113,9 +123,10 @@ export function Activity({go}: {go: (page: string) => void}) {
     text: formatBytes(r.bytes),
     color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
-  // Only events a person acts on: an operation's outcome, a new generation, a gap in the records, a lost and
-  // regained stream. The per-second runtime and flow ticks drive the charts, not this list.
-  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated').slice(0, 6);
+  // Only events a person acts on: an operation's outcome, a new generation, a real gap in the records, a lost
+  // and regained stream. The per-second runtime and flow ticks drive the charts, and the ring's own
+  // housekeeping is not a problem.
+  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 6);
   return (
     <>
       <div className="rp-quick">
@@ -391,7 +402,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : (
             <div className="rp-list" role="list">
               {events.map(event => {
-                const summary = eventSummary(event);
+                const summary = eventSummary(event, t);
                 return (
                   <div key={event.id} role="listitem" className="rp-row">
                     <Light small tone={event.event === 'flow.gap' ? 'warn' : 'info'}>

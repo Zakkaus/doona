@@ -443,7 +443,18 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-export function eventSummary(event: ApiEvent): MessageRef {
+// A flow record leaving the ring to make room, or a flow never recorded because sampling skipped it, is the
+// backend's routine housekeeping; only an overflow or a change in what gets recorded is a gap worth a notice.
+export function routineGap(event: ApiEvent): boolean {
+  return event.event === 'flow.gap' && (event.data.reason === 'evicted' || event.data.reason === 'sampled');
+}
+const gapReasons: Record<string, Key> = {
+  buffer_overflow: 'event.gap.overflow',
+  sampled: 'event.gap.sampled',
+  evicted: 'event.gap.evicted',
+  recording_changed: 'event.gap.recording'
+};
+export function eventSummary(event: ApiEvent, t?: (key: Key) => string): MessageRef {
   switch (event.event) {
     case 'stream.ready':
       return {key: 'event.resource', params: {resource: event.data.instance_id}};
@@ -456,6 +467,13 @@ export function eventSummary(event: ApiEvent): MessageRef {
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
     case 'flow.gap':
-      return {key: 'event.gap', params: {id: event.data.resource_id ?? '—', reason: event.data.reason, n: event.data.dropped_records ?? '—'}};
+      return {
+        key: 'event.gap',
+        params: {
+          id: event.data.resource_id ?? '—',
+          reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
+          n: event.data.dropped_records ?? '—'
+        }
+      };
   }
 }
