@@ -1,10 +1,11 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
-import {Link} from 'react-aria-components';
+import GitHub from '../../ui/icons/GitHub';
 import {useCapabilities, useVersion} from '../../api/store';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {createApi} from '../../api/client';
+import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {Button, ErrorMessage, Kv, LabeledSelect, Light, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
@@ -124,7 +125,7 @@ export function Settings({query}: PageProps) {
   const editedProfiles = () => {
     const base = validate(api);
     if (base === null) return null;
-    const profile = {...(active ?? {id: crypto.randomUUID(), name: t('settings.backend')}), api: base, token};
+    const profile = {...(active ?? {id: uuid(), name: t('settings.backend')}), api: base, token};
     return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
   };
   const save = (id?: string) => {
@@ -146,7 +147,7 @@ export function Settings({query}: PageProps) {
     }
     if (!name.trim()) return;
     if (dialog === 'add') {
-      const profile = {id: crypto.randomUUID(), name: name.trim(), api: 'mock', token: ''};
+      const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
       persist([...profiles, profile], profile.id);
     } else {
       persist(
@@ -350,12 +351,12 @@ export function Settings({query}: PageProps) {
           </Light>
         )}
         <div className="rp-cluster">
-          <Link className="rp-link" href="https://github.com/Zakkaus/doona" target="_blank" rel="noreferrer">
+          <Button onPress={() => window.open('https://github.com/Zakkaus/doona', '_blank', 'noreferrer')}>
+            <GitHub />
             {t('github')}
-          </Link>
+          </Button>
           {install && (
             <Button
-              small
               onPress={() => {
                 void install().then(accepted => {
                   if (accepted) toast('positive', t('settings.installed'));

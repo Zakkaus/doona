@@ -1,7 +1,7 @@
 {
   "name": "doona",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "A web interface for the honk transparent proxy.",
   "repository": {
     "type": "git",

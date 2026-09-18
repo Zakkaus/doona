@@ -350,10 +350,9 @@ function Frame({
   const capabilities = useCapabilities();
   const version = useVersion();
   const profile = settings.profiles.find(item => item.id === settings.activeId);
-  // A group whose pages the backend does not offer disappears with them.
-  const nav = navGroups
-    .map(group => [group, features.filter(feature => feature.nav?.group === group && navAvailable(feature.path, capabilities.data))] as const)
-    .filter(([, items]) => items.length > 0);
+  // Every page stays in the navigation; one the backend does not offer is marked so, and opens to that notice.
+  const offered = (path: string) => navAvailable(path, capabilities.data);
+  const nav = navGroups.map(group => [group, features.filter(feature => feature.nav?.group === group)] as const);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
   const refreshLock = useRef(false);
@@ -375,7 +374,10 @@ function Frame({
       <header className="rp-top">
         <RLink className="rp-brand" href="#/activity">
           <img src={logo} alt="" />
-          <span>doona</span>
+          <span className="rp-brand-text">
+            <span>doona</span>
+            <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
+          </span>
         </RLink>
         <div className="rp-search-wrap">
           <Button appearance="search" onPress={openSearch}>
@@ -458,7 +460,14 @@ function Frame({
             {items.map(
               ({id, path, nav}) =>
                 nav && (
-                  <RLink key={id} className="rp-nav" href={'#/' + path} aria-current={route === path ? 'page' : undefined}>
+                  <RLink
+                    key={id}
+                    className="rp-nav"
+                    href={'#/' + path}
+                    aria-current={route === path ? 'page' : undefined}
+                    data-unavailable={offered(path) ? undefined : ''}
+                    aria-description={offered(path) ? undefined : t('shell.notOffered')}
+                  >
                     <nav.Icon />
                     {t(nav.titleKey)}
                   </RLink>
@@ -492,7 +501,8 @@ function Frame({
                       ? [
                           {
                             id: path,
-                            label: t(nav.titleKey)
+                            label: t(nav.titleKey),
+                            desc: offered(path) ? undefined : t('shell.notOfferedShort')
                           }
                         ]
                       : []
@@ -511,9 +521,7 @@ function Frame({
             ) : capabilities.data && !navAvailable(feature.path, capabilities.data) ? (
               <div className="rp-empty">
                 {t('shell.notOffered')}
-                <Button secondary onPress={() => go('activity')}>
-                  {t('shell.toActivity')}
-                </Button>
+                <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
               </div>
             ) : (
               <Suspense key={feature.id} fallback={<Loading />}>

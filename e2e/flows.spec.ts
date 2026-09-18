@@ -77,7 +77,7 @@ test.describe('flows unavailable', () => {
   test('direct flow link renders without browser errors', async ({page}) => {
     await page.goto('/#/flows');
     await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveCount(0);
+    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
     await expect(page).toHaveURL(/#\/rules\?tab=map$/);
   });
 });

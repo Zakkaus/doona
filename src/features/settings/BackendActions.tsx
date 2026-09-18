@@ -91,14 +91,13 @@ export function BackendActionsCard() {
           />
         )}
         {resources?.providers.can_refresh && (
-          <Button secondary isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
+          <Button isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
             {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
           </Button>
         )}
         {resources?.connections.can_close && <CloseAllButton count={live.length} selection={{query: {all: true}}} closing={closing} />}
         {resources?.geodata.can_update && (
           <Button
-            secondary
             isPending={geodata.busy}
             isDisabled={geodata.busy || !geodata.data}
             onPress={() => {

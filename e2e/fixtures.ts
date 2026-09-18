@@ -13,9 +13,9 @@ const live = env.DOONA_API ? {'doona-api': env.DOONA_API, 'doona-api-token': env
 export const isLive = !!env.DOONA_API;
 export const offered = async (page: Page, route: string) => {
   if (!isLive) return true;
-  // The navigation lists every page until the capabilities arrive.
+  // The navigation marks nothing until the capabilities arrive.
   await expect(page.locator('nav.rp-side')).not.toHaveAttribute('aria-busy', 'true');
-  return (await page.locator(`.rp-nav[href="#/${route}"]`).count()) > 0;
+  return (await page.locator(`.rp-nav[href="#/${route}"]:not([data-unavailable])`).count()) > 0;
 };
 
 export const test = base.extend<{storage: Record<string, string>}>({

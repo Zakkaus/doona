@@ -60,6 +60,7 @@ import InfoCircle from './icons/InfoCircle';
 import Search from './icons/Search';
 import {readLang, translate, useT} from '../i18n';
 import {ApiError, LocalError} from '../api/error';
+import {millis} from '../api/u64';
 
 const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
@@ -91,7 +92,7 @@ export function useSlider(value: string, selector = '[data-selected]') {
   return [ref, pos] as const;
 }
 
-// accent / secondary / negative are S2 Button variants (pills); the rest is an ActionButton (radius 8).
+// accent / negative are the coloured variants; every neutral button shares one look.
 export function Button({
   children,
   onPress,
@@ -99,7 +100,6 @@ export function Button({
   small,
   icon,
   accent,
-  secondary,
   negative,
   label,
   isDisabled,
@@ -115,7 +115,6 @@ export function Button({
   small?: boolean;
   icon?: boolean;
   accent?: boolean;
-  secondary?: boolean;
   negative?: boolean;
   label?: string;
   isDisabled?: boolean;
@@ -133,7 +132,6 @@ export function Button({
         small && 'sm',
         icon && 'icon',
         accent && 'accent',
-        secondary && 'secondary',
         negative && 'negative',
         className
       )}
@@ -619,7 +617,7 @@ export function NodeTile({
         {nested ? (
           <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: tcp})}</span>
+          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
         ) : (
           <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
         )}

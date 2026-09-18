@@ -180,7 +180,7 @@ export function Config({go, query}: PageProps) {
                     {source?.content !== undefined && (
                       <>
                         <span className="rp-grow" />
-                        <Button small onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
+                        <Button onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
                           <Download />
                           {t('config.export')}
                         </Button>
@@ -353,13 +353,12 @@ function SourceCard({
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button small isPending={editor.busy === 'validate'} isDisabled={!!editor.busy || source.content === undefined} onPress={() => void validate()}>
+            <Button isPending={editor.busy === 'validate'} isDisabled={!!editor.busy || source.content === undefined} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
           {canWrite && !editing && (
             <Button
-              small
               isDisabled={!complete || !!editor.busy}
               tip={complete === false ? t('config.incomplete') : undefined}
               onPress={() => setDraft({text: source.content ?? '', base: source.content_sha256})}
@@ -370,7 +369,6 @@ function SourceCard({
           {editing && (
             <>
               <Button
-                small
                 isDisabled={!!editor.busy}
                 onPress={() => {
                   setDraft(null);
@@ -380,7 +378,6 @@ function SourceCard({
                 {t('ui.cancel')}
               </Button>
               <Button
-                small
                 accent
                 isPending={editor.busy === 'save'}
                 isDisabled={!!editor.busy || !dirty}
@@ -473,7 +470,6 @@ function ValidateTab({
         <span className="rp-grow" />
         {canValidate && (
           <Button
-            small
             isPending={editor.busy === 'validate'}
             isDisabled={!!editor.busy || candidates.length === 0}
             tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
@@ -531,9 +527,7 @@ function ValidateTab({
           <Light small tone={tones[cur.level]}>
             {cur.line !== null ? t('config.atFile', {file: pathOf(cur.source_id), line: n(cur.line), message: cur.message}) : cur.message}
           </Light>
-          <Button small onPress={() => open(cur.source_id, cur.line)}>
-            {t('config.openSource')}
-          </Button>
+          <Button onPress={() => open(cur.source_id, cur.line)}>{t('config.openSource')}</Button>
         </div>
       )}
     </>

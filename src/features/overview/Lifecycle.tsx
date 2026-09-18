@@ -25,7 +25,7 @@ export function LifecycleActions({runtime, capabilities}: {runtime: ReturnType<t
       {(['reload', 'suspend', 'resume'] as const)
         .filter(kind => operations.canRun(kind) || operations.busy === kind)
         .map(kind => (
-          <Button key={kind} secondary isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void run(kind)}>
+          <Button key={kind} isPending={operations.busy === kind} isDisabled={!!operations.busy} onPress={() => void run(kind)}>
             {t(operationLabels[kind])}
           </Button>
         ))}

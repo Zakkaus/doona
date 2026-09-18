@@ -8,6 +8,7 @@ test('mobile page select exposes and opens every page without horizontal overflo
   // The select lists the pages this backend offers, in navigation order; the mock offers every page.
   await select.click();
   const listed = await page.getByRole('option').evaluateAll(items => items.map(item => item.getAttribute('data-key')));
+  // Pages the backend lacks are listed too; opening one shows the notice, which is fine here.
   await page.keyboard.press('Escape');
   const shown = routes.filter(route => listed.includes(route));
   expect(shown.length).toBe(listed.length);

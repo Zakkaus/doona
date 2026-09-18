@@ -5,11 +5,12 @@ import {expect, routes, test} from './fixtures';
 test.describe('first-release backend', () => {
   test.use({storage: {'doona-mock-profile': 'm1'}});
 
-  test('the shell shows only what the backend has and every remaining page loads clean', async ({page}) => {
+  test('the shell marks what the backend lacks and every offered page loads clean', async ({page}) => {
     await page.goto('/#/activity');
     await expect(page.locator('.rp-strip')).toBeVisible();
-    const nav = page.locator('.rp-nav');
-    await expect(nav).toHaveText(['Activity', 'Overview', 'Connections', 'Settings']);
+    // Every page stays listed; the ones this backend cannot serve are marked.
+    await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
+    await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Activity', 'Overview', 'Connections', 'Settings']);
     // The quick row says the mode switch is not offered rather than pretending to switch.
     await expect(page.getByText('Not offered by the backend', {exact: true})).toBeVisible();
     for (const route of ['overview', 'connections', 'settings'] as const) {

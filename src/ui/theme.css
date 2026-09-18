@@ -660,9 +660,6 @@
 :root[data-family='glass'] .rp-btn.quiet[data-hovered] {
   background: var(--rp-hl-low);
 }
-:root[data-family='glass'] .rp-btn.secondary {
-  background: transparent;
-}
 :root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-pine);
   border-color: transparent;
@@ -865,6 +862,18 @@ input {
   width: 28px;
   height: 28px;
 }
+/* The name and its version share one baseline; only the name takes the gradient. */
+.rp-brand-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rp-brand-version {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--rp-subtle);
+}
 .rp-search-wrap {
   grid-column: 2;
   display: none;
@@ -967,6 +976,13 @@ input {
   color: var(--rp-subtle);
   text-decoration: none;
   position: relative;
+}
+/* A page the backend has no capability for stays listed, dimmed; opening it says so. */
+.rp-nav[data-unavailable] {
+  color: var(--rp-muted);
+}
+.rp-nav[data-unavailable] > svg {
+  opacity: 0.6;
 }
 .rp-nav[data-hovered] {
   background: var(--rp-hl-low);
@@ -1277,7 +1293,7 @@ input {
 .rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c4);
 }
-:root:not([data-wordmark='plain']) .rp-brand span {
+:root:not([data-wordmark='plain']) .rp-brand-text > span:first-child {
   background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
   -webkit-background-clip: text;
   background-clip: text;
@@ -1325,24 +1341,17 @@ input {
 .rp-btn.quiet[data-hovered] {
   background: var(--rp-hl-low);
 }
+.rp-btn:not(.icon) > .rp-icon {
+  width: 16px;
+  height: 16px;
+}
 .rp-btn.sm {
   padding: 0 8px;
   font-size: 12px;
   line-height: 16px;
 }
-/* One button shape everywhere (8px); a variant only changes colour: accent for the primary action, negative for
-   destructive ones, secondary outlined. */
-.rp-btn.secondary {
-  background: transparent;
-  border-color: var(--rp-hl-high);
-  color: var(--rp-text);
-}
-.rp-btn.secondary[data-hovered] {
-  background: var(--rp-hl-low);
-}
-.rp-btn.secondary[data-pressed] {
-  background: var(--rp-hl-high);
-}
+/* One button shape everywhere (8px); a variant only changes colour: accent for the one primary action, negative
+   for a destructive one. Neutral actions all look alike, whatever page they sit on. */
 .rp-btn.icon {
   width: 32px;
   padding: 0;
@@ -2800,6 +2809,9 @@ button.rp-node[data-focus-visible] {
   margin-left: -8px;
 }
 @media (max-width: 600px) {
+  .rp-brand-version {
+    display: none;
+  }
   .rp-main {
     padding: 20px 16px 40px;
   }
