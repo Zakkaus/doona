@@ -1874,8 +1874,8 @@ input {
   padding: 0 8px;
   border-radius: 6px;
   font-size: 12px;
-  /* The line box spans the badge, so its text sits on the same line as neighbouring labels. */
-  line-height: 20px;
+  /* Flex centres the glyphs; a line box as tall as the badge would sit CJK glyphs below its middle. */
+  line-height: 1;
   font-weight: 500;
   border: 1px solid var(--rp-hl-high);
   color: var(--rp-subtle);
