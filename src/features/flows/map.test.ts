@@ -41,3 +41,26 @@ it('folds the map into one lane per outbound with its rules and selected node', 
   // Terminal outbounds have no node.
   expect(rows.find(lane => lane.outbound.label === 'direct')!.node).toBeNull();
 });
+
+it('draws configured rules into their lanes before any flow used them, joined to flows by rule id', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const configured = rules.rules.filter(rule => rule.outbound);
+  const map = flowMap([], groups, nodes.nodes, rules.rules);
+  // Every configured rule is a column entry with a configured link into its outbound.
+  for (const rule of configured) {
+    const entry = map.nodes.find(node => node.id === 'rule:' + rule.rule_id);
+    expect(entry?.label).toBe(rule.expression);
+    expect(entry?.count).toBe(0);
+    expect(map.links.some(link => link.source === 'rule:' + rule.rule_id && link.target === 'outbound:' + rule.outbound && link.configured)).toBe(true);
+  }
+  // A flow that names a rule id lands on that entry rather than on a second one with the same text.
+  const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression);
+  if (matched) {
+    const withFlows = flowMap(flows.flows, groups, nodes.nodes, rules.rules);
+    const entries = withFlows.nodes.filter(node => node.id === 'rule:' + matched.rule_id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].count).toBeGreaterThan(0);
+    expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes))).toContain(matched);
+  }
+});

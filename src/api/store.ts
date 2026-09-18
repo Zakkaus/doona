@@ -659,20 +659,24 @@ export function useNodeManage(refetch: () => void) {
   };
 }
 // The one probe shape the UI sends: a warm TCP connect for data, over whatever IP versions the backend reaches
-// (a v6-only node is not a failure). Null when the backend does not advertise that probe.
+// (a v6-only node is not a failure). Null when the backend does not advertise that probe. `members` picks a
+// group's direct members; a node target has none and the contract refuses the field there.
 export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
   const probes = capabilities?.resources.probes;
   if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
     return null;
-  return {
+  const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
     target,
     kind: 'tcp_connect',
     purpose: 'data',
     transport: ['tcp'],
     warmth: 'warm',
-    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
-    members: 'direct'
+    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4'
   };
+  if (target.type === 'group') request.members = 'direct';
+  // The generated type reads the contract's `default: direct` as "always present"; the contract itself forbids
+  // the field on a node target.
+  return request as ProbeRequest;
 }
 // One TCP probe of one node, for the node table; the group card probes whole groups.
 export function useNodeProbe(refetch: () => void) {

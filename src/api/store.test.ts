@@ -4,6 +4,7 @@ import {invalidations, shouldRefetch, type ResourceName} from './invalidation';
 import {createMockApi} from './mock';
 import {capabilities} from './mock/fixtures';
 import type {ApiEvent, Capabilities, EventKind} from './model';
+import {tcpProbe} from './store';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -203,4 +204,12 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
     expect(shouldRefetch(resource, event('stream.ready'))).toBe(false);
     expect(shouldRefetch(resource, event('stream.ready'), true)).toBe(true);
   }
+});
+
+it('sends a group probe over its direct members and a node probe without a members field', () => {
+  const probes = {available: true, kinds: ['tcp_connect'], transports: ['tcp'], targets: ['node', 'group'], ip_versions: ['ipv4']};
+  const caps = {resources: {probes}} as unknown as Capabilities;
+  expect(tcpProbe(caps, {type: 'group', group_id: 'g'})).toMatchObject({members: 'direct', ip_version: 'ipv4'});
+  expect(tcpProbe(caps, {type: 'node', node_id: 'n'})).not.toHaveProperty('members');
+  expect(tcpProbe({resources: {probes: {...probes, targets: ['group']}}} as unknown as Capabilities, {type: 'node', node_id: 'n'})).toBeNull();
 });

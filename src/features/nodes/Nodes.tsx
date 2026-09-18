@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useProviderRefresh, useProviders} from '../../api/store';
+import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
 import {addU64, formatBytes, millis} from '../../api/u64';
 import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
@@ -25,6 +25,8 @@ import Close from '../../ui/icons/Close';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import type {PageProps} from '../types';
 
+// The row doona adds for configuration nodes when the backend lists no inline provider.
+const INLINE = 'inline';
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
 const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
@@ -54,7 +56,30 @@ export function Nodes({go, query}: PageProps) {
   const manage = useNodeManage(reload);
   const probe = useNodeProbe(nodes.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  const list = providers.data?.providers ?? [];
+  const names = useOutboundNames();
+  // Nodes written straight into the configuration have no provider. A backend that lists them under an
+  // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
+  const list = useMemo(() => {
+    // A provider's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
+    const tags = new Map<string, string>();
+    for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
+    const rows = (providers.data?.providers ?? []).map(item => (tags.has(item.id) ? {...item, name: tags.get(item.id)!} : item));
+    const loose = (nodes.data ?? []).filter(node => node.provider_id === null).length;
+    if (!loose || rows.some(item => item.kind === 'inline')) return rows;
+    const inline: Provider = {
+      id: INLINE,
+      name: t('nodes.kind.inline'),
+      kind: 'inline',
+      url_redacted: null,
+      node_count: loose,
+      updated_at: null,
+      expires_at: null,
+      traffic: null,
+      status: 'ok',
+      last_error: null
+    };
+    return [inline, ...rows];
+  }, [providers.data, nodes.data, t]);
   const selectedId = params.get('provider') ?? list[0]?.id ?? null;
   const provider = list.find(item => item.id === selectedId) ?? null;
   const select = (id: string | null) => {
@@ -80,8 +105,14 @@ export function Nodes({go, query}: PageProps) {
   >(null);
   const [form, setForm] = useState({name: '', value: ''});
   const inlineId = list.find(item => item.kind === 'inline')?.id ?? null;
-  const owned = useMemo(() => (nodes.data ?? []).filter(node => (provider ? node.provider_id === provider.id : true)), [nodes.data, provider]);
-  const groups = useMemo(() => [...new Set(owned.flatMap(node => node.group_ids))].sort(collator.compare), [owned]);
+  const owned = useMemo(
+    () => (nodes.data ?? []).filter(node => (provider ? node.provider_id === (provider.id === INLINE ? null : provider.id) : true)),
+    [nodes.data, provider]
+  );
+  const groups = useMemo(
+    () => [...new Set(owned.flatMap(node => node.group_ids))].sort((a, b) => collator.compare(names.get(a) ?? a, names.get(b) ?? b)),
+    [owned, names]
+  );
   const protocols = useMemo(() => [...new Set(owned.map(node => node.protocol ?? ''))].filter(Boolean).sort(collator.compare), [owned]);
   const members = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -224,7 +255,7 @@ export function Nodes({go, query}: PageProps) {
           side
           value={group}
           onChange={setGroup}
-          items={[{id: '', label: t('nodes.anyGroup')}, ...groups.map(id => ({id, label: id}))]}
+          items={[{id: '', label: t('nodes.anyGroup')}, ...groups.map(id => ({id, label: names.get(id) ?? id}))]}
         />
         <LabeledSelect
           label={t('nodes.protocol')}
@@ -268,7 +299,14 @@ export function Nodes({go, query}: PageProps) {
             ) : (
               <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
             ),
-            <TextTooltip>{node.group_ids.length ? formatList(lang, node.group_ids) : '—'}</TextTooltip>,
+            <TextTooltip>
+              {node.group_ids.length
+                ? formatList(
+                    lang,
+                    node.group_ids.map(id => names.get(id) ?? id)
+                  )
+                : '—'}
+            </TextTooltip>,
             <span className="rp-chain">
               {canProbe && (
                 <Button

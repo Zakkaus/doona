@@ -36,6 +36,8 @@ function PolicyCard({
     if (settled) onLoaded(id);
   }, [settled, id, onLoaded]);
   const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), leaf: leaves.get(m.id)})) ?? [], [g, health, leaves]);
+  // Toasts name the member; the backend answers with its id.
+  const memberName = (id: string) => members.find(m => m.id === id)?.name ?? id;
   const tcp = g?.runtime.selection.tcp?.member_id;
   const udp = g?.runtime.selection.udp?.member_id;
   const selected = control.network === 'tcp' ? tcp : control.network === 'udp' ? udp : tcp === udp ? tcp : undefined;
@@ -128,7 +130,7 @@ function PolicyCard({
                 isDisabled={!!control.busy}
                 onPress={() => {
                   void control.clearOverride().then(result => {
-                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: result.member_id}));
+                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: memberName(result.member_id)}));
                   });
                 }}
               >
@@ -167,7 +169,7 @@ function PolicyCard({
                               : result.connections_interrupted
                                 ? 'policy.selectedInterrupted'
                                 : 'policy.selectedKept',
-                            {name: g.name, member: result.member_id}
+                            {name: g.name, member: memberName(result.member_id)}
                           )
                         );
                     });

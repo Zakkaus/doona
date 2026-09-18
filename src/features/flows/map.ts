@@ -1,4 +1,4 @@
-import type {FlowSummary, GroupSummary, Node} from '../../api/model';
+import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
 
 // The routing pipeline as the config lays it out, weighted by the flows the backend retained:
 // rule → outbound (a policy group, or direct / block) → the node the group currently selects.
@@ -14,10 +14,12 @@ const terminal = (outbound: string | null) => outbound === 'direct' || outbound 
 // Node ids as the config names them; a chain ends in a node id, the map draws node names.
 export type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
-function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {label: string; unknown: boolean} | null {
+// A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
+// matched even when two rules display alike; the expression is only the label.
+function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {label: string; unknown: boolean; key?: string} | null {
   switch (stage) {
     case 'rule':
-      return flow.rule_expression ? {label: flow.rule_expression, unknown: false} : {label: 'unknown', unknown: true};
+      return flow.rule_expression ? {label: flow.rule_expression, unknown: false, key: flow.rule_id ?? undefined} : {label: 'unknown', unknown: true};
     case 'outbound':
       return flow.outbound ? {label: flow.outbound, unknown: false} : {label: 'unknown', unknown: true};
     case 'node': {
@@ -28,12 +30,12 @@ function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {labe
   }
 }
 
-export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[]): FlowMap {
+export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[] = []): FlowMap {
   const byId = new Map<string, MapNode>();
   const linkById = new Map<string, MapLink>();
   const links: MapLink[] = [];
-  const node = (stage: MapStage, label: string, unknown = false) => {
-    const id = stage + ':' + label;
+  const node = (stage: MapStage, label: string, unknown = false, key = label) => {
+    const id = stage + ':' + key;
     let entry = byId.get(id);
     if (!entry) byId.set(id, (entry = {id, stage, label, count: 0, unknown: unknown || undefined}));
     return entry;
@@ -47,19 +49,20 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
     }
     return entry;
   };
-  // Config first: every group and its selected node exist even before a flow went through them.
+  // Config first: every rule, group and selected node exists even before a flow went through them.
   const names = nodeNames(nodes);
   for (const group of groups) {
     const outbound = node('outbound', group.name);
     const selected = group.selection.tcp_member_id ?? group.selection.udp_member_id;
     if (selected) link(outbound.id, node('node', names.get(selected) ?? selected).id, true);
   }
+  for (const rule of rules) if (rule.outbound) link(node('rule', rule.expression, false, rule.rule_id).id, node('outbound', rule.outbound).id, true);
   for (const flow of flows) {
     let previous: MapNode | undefined;
     for (const stage of mapStages) {
       const part = stageLabel(flow, stage, names);
       if (!part) break;
-      const current = node(stage, part.label, part.unknown);
+      const current = node(stage, part.label, part.unknown, part.key);
       current.count++;
       if (previous) link(previous.id, current.id).count++;
       previous = current;
@@ -72,10 +75,10 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
 
 // The flows that pass through one node of the map, for filtering the list beneath it.
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames): FlowSummary[] {
-  const [stage, label] = [id.slice(0, id.indexOf(':')) as MapStage, id.slice(id.indexOf(':') + 1)];
+  const [stage, key] = [id.slice(0, id.indexOf(':')) as MapStage, id.slice(id.indexOf(':') + 1)];
   return flows.filter(flow => {
     const part = stageLabel(flow, stage, names);
-    return !!part && part.label === label;
+    return !!part && (part.key ?? part.label) === key;
   });
 }
 
