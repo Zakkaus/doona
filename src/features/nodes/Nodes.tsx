@@ -95,8 +95,8 @@ export function Nodes({go, query}: PageProps) {
   // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
   const {list, synthetic} = useMemo(() => {
     // A subscription's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
-    // A subscription without nodes (not fetched yet, or empty) is matched to its entry by URL host instead,
-    // when exactly one entry has that host.
+    // A subscription without nodes (not fetched yet, or empty) is matched to its entry by URL host when the
+    // backend shows one, else by elimination: the one entry no named subscription claims.
     const tags = new Map<string, string>();
     for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
     const byHost = (item: Provider) => {
@@ -104,11 +104,16 @@ export function Nodes({go, query}: PageProps) {
       const same = hostname ? entries.filter(entry => entry.host === hostname) : [];
       return same.length === 1 ? same[0].tag : undefined;
     };
-    const rows = (providers.data?.providers ?? []).map(item => {
-      if (item.kind !== 'subscription') return item;
+    const named = new Map<string, string>();
+    const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
+    for (const item of subscriptions) {
       const tag = tags.get(item.id) ?? byHost(item);
-      return tag ? {...item, name: tag} : item;
-    });
+      if (tag) named.set(item.id, tag);
+    }
+    const unnamed = subscriptions.filter(item => !named.has(item.id));
+    const unclaimed = entries.filter(entry => ![...named.values()].includes(entry.tag));
+    if (unnamed.length === 1 && unclaimed.length === 1) named.set(unnamed[0].id, unclaimed[0].tag);
+    const rows = (providers.data?.providers ?? []).map(item => (named.has(item.id) ? {...item, name: named.get(item.id)!} : item));
     const loose = (nodes.data ?? []).filter(node => node.provider_id === null).length;
     if (!loose || rows.some(item => item.kind === 'inline')) return {list: rows, synthetic: false};
     const inline: Provider = {
@@ -187,8 +192,9 @@ export function Nodes({go, query}: PageProps) {
     if (!dialog) return;
     try {
       if (dialog.kind === 'provider') {
+        // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
-        if (created) toast('positive', t('nodes.added', {name: created.name}));
+        if (created) toast('positive', t('nodes.added', {name: form.name.trim()}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (created) toast('positive', t('nodes.added', {name: created.name}));
