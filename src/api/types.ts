@@ -301,13 +301,16 @@ export interface paths {
         get: operations["getRuntimeMode"];
         /**
          * Switch the outbound mode without a reload
-         * @description Requires control and resources.runtime_mode.available; mode must be one
+         * @description Requires control and resources.runtime_mode.writable; mode must be one
          *     of resources.runtime_mode.modes. global needs target, the id of a group
          *     or node every flow then leaves through; rule and direct take no target.
          *     Presets the engine treats as must (LAN, multicast, the network manager)
          *     keep applying in every mode. The change applies immediately, interrupts
          *     nothing already established, and is dropped by the next activation.
-         *     Follows the shared idempotency rules.
+         *     Follows the shared idempotency rules. While the engine is suspended or
+         *     an activation is in flight the switch answers 409 and the mode stays as
+         *     it was; when the owner that applies the mode is not running it answers
+         *     503 with Retry-After, and the mode stays as it was as well.
          */
         put: operations["setRuntimeMode"];
         post?: never;
@@ -1208,7 +1211,10 @@ export interface components {
                     max_points?: components["schemas"]["SafeUInt"];
                 };
                 runtime_mode: {
+                    /** @description GET /runtime/mode answers. */
                     available: boolean;
+                    /** @description PUT /runtime/mode is offered. False keeps the mode readable while the engine cannot take a change through this surface, whether the switch is not built or another owner holds the mode. */
+                    writable?: boolean;
                     /** @description The modes PUT /runtime/mode accepts; rule is always one of them. */
                     modes?: components["schemas"]["OutboundMode"][];
                 };
@@ -1977,6 +1983,21 @@ export interface components {
             source: "runtime" | "override" | "policy";
             selection_revision: string;
             connections_interrupted: boolean;
+        };
+        /** @description The outcome of clearing an override, one selection per network like GroupRuntime.selection. */
+        GroupOverrideCleared: {
+            group_id: string;
+            /**
+             * @description The networks the request cleared.
+             * @enum {string}
+             */
+            network: "tcp" | "udp" | "both";
+            selection_revision: string;
+            connections_interrupted: boolean;
+            selection: {
+                tcp: null | components["schemas"]["GroupSelection"];
+                udp: null | components["schemas"]["GroupSelection"];
+            };
         };
         /** @enum {string} */
         ProbeKind: "tcp_connect" | "http" | "dns";
@@ -3736,8 +3757,10 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
+            503: components["responses"]["Unavailable"];
         };
     };
     getDatapath: {
@@ -4389,7 +4412,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Selection after the override is cleared; unchanged when none stood */
+            /**
+             * @description The group's selection per network after the override is cleared;
+             *     unchanged when none stood. A network the policy has not chosen a
+             *     member for is null, so clearing both networks when only one had a
+             *     pin, or when one side is still unselected, is stated as it is.
+             */
             200: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4397,7 +4425,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GroupSelectionResult"];
+                    "application/json": components["schemas"]["GroupOverrideCleared"];
                 };
             };
             400: components["responses"]["BadRequest"];

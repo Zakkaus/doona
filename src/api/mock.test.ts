@@ -216,7 +216,7 @@ it('selects both networks with an independent revision and preserves configurati
   expect(pinned).toMatchObject({member_id: 'jp-01', source: 'override'});
   expect((await api.group('gaming')).runtime.selection.tcp).toMatchObject({member_id: 'jp-01', source: 'override'});
   const released = await api.clearGroupOverride('gaming', 'both');
-  expect(released).toMatchObject({member_id: 'hk-02', source: 'policy'});
+  expect(released).toMatchObject({network: 'both', selection: {tcp: {member_id: 'hk-02', source: 'policy'}, udp: {member_id: 'hk-02', source: 'policy'}}});
   expect((await api.group('gaming')).runtime.selection.udp).toMatchObject({member_id: 'hk-02', source: 'policy'});
   await expect(api.clearGroupOverride('proxy', 'both')).rejects.toMatchObject({code: 'state_conflict'});
   await expect(api.selectGroup('proxy', {member_id: 'missing', network: 'both'})).rejects.toMatchObject({status: 404});

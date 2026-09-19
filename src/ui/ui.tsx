@@ -263,13 +263,26 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     </TooltipTrigger>
   );
 }
-export function Segmented({items, value, onChange, label}: {items: Array<[string, string]>; value: string; onChange: (k: string) => void; label: string}) {
+export function Segmented({
+  items,
+  value,
+  onChange,
+  label,
+  isDisabled
+}: {
+  items: Array<[string, string]>;
+  value: string;
+  onChange: (k: string) => void;
+  label: string;
+  isDisabled?: boolean;
+}) {
   const [ref, pos] = useSlider(value);
   return (
     <ToggleButtonGroup
       ref={ref}
       className="rp-seg"
       aria-label={label}
+      isDisabled={isDisabled}
       selectionMode="single"
       disallowEmptySelection
       selectedKeys={[value]}

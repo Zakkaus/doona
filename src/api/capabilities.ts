@@ -37,5 +37,8 @@ const resourceKeys = [
 export function normalizeCapabilities(raw: Capabilities): Capabilities {
   const resources = {...raw.resources} as Record<string, unknown>;
   for (const key of resourceKeys) if (!resources[key] || typeof resources[key] !== 'object') resources[key] = {available: false};
+  // Before PR #8 an offered mode was always switchable; a backend from that pin omits `writable`.
+  const mode = resources.runtime_mode as {available: boolean; writable?: boolean};
+  if (mode.available && mode.writable === undefined) resources.runtime_mode = {...mode, writable: true};
   return {...raw, resources: resources as Capabilities['resources']};
 }

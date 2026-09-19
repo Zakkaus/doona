@@ -130,7 +130,16 @@ function PolicyCard({
                 isDisabled={!!control.busy}
                 onPress={() => {
                   void control.clearOverride().then(result => {
-                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: memberName(result.member_id)}));
+                    if (!result) return;
+                    const tcp = result.selection.tcp?.member_id;
+                    const udp = result.selection.udp?.member_id;
+                    const member =
+                      tcp && udp && tcp !== udp
+                        ? `TCP ${memberName(tcp)} · UDP ${memberName(udp)}`
+                        : tcp || udp
+                          ? memberName((tcp ?? udp)!)
+                          : t('policy.noneSelected');
+                    toast('positive', t('policy.backToAutomatic', {name: g.name, member}));
                   });
                 }}
               >

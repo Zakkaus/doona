@@ -156,6 +156,7 @@ paths:
                         max_points: 720
                       runtime_mode:
                         available: true
+                        writable: true
                         modes:
                           - rule
                           - direct
@@ -1592,13 +1593,16 @@ paths:
       operationId: setRuntimeMode
       summary: Switch the outbound mode without a reload
       description: |
-        Requires control and resources.runtime_mode.available; mode must be one
+        Requires control and resources.runtime_mode.writable; mode must be one
         of resources.runtime_mode.modes. global needs target, the id of a group
         or node every flow then leaves through; rule and direct take no target.
         Presets the engine treats as must (LAN, multicast, the network manager)
         keep applying in every mode. The change applies immediately, interrupts
         nothing already established, and is dropped by the next activation.
-        Follows the shared idempotency rules.
+        Follows the shared idempotency rules. While the engine is suspended or
+        an activation is in flight the switch answers 409 and the mode stays as
+        it was; when the owner that applies the mode is not running it answers
+        503 with Retry-After, and the mode stays as it was as well.
       x-permission: control
       security:
         - bearerAuth: []
@@ -1647,10 +1651,14 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/Unprocessable'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/datapath:
     get:
       operationId: getDatapath
@@ -2934,7 +2942,11 @@ paths:
             default: both
       responses:
         '200':
-          description: Selection after the override is cleared; unchanged when none stood
+          description: |
+            The group's selection per network after the override is cleared;
+            unchanged when none stood. A network the policy has not chosen a
+            member for is null, so clearing both networks when only one had a
+            pin, or when one side is still unselected, is stated as it is.
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -2943,17 +2955,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GroupSelectionResult'
+                $ref: '#/components/schemas/GroupOverrideCleared'
               examples:
                 automatic_again:
                   value:
                     group_id: group-auto
-                    member_id: node-sg-01
-                    resolved_leaf_node_id: node-sg-01
                     network: both
-                    source: policy
                     selection_revision: '9'
                     connections_interrupted: false
+                    selection:
+                      tcp:
+                        member_id: node-sg-01
+                        resolved_leaf_node_id: node-sg-01
+                        source: policy
+                      udp: null
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -6125,10 +6140,15 @@ components:
                     const: true
               then:
                 required:
+                  - writable
                   - modes
               properties:
                 available:
                   type: boolean
+                  description: GET /runtime/mode answers.
+                writable:
+                  type: boolean
+                  description: PUT /runtime/mode is offered. False keeps the mode readable while the engine cannot take a change through this surface, whether the switch is not built or another owner holds the mode.
                 modes:
                   type: array
                   uniqueItems: true
@@ -8518,6 +8538,45 @@ components:
           minLength: 1
         connections_interrupted:
           type: boolean
+    GroupOverrideCleared:
+      type: object
+      description: The outcome of clearing an override, one selection per network like GroupRuntime.selection.
+      required:
+        - group_id
+        - network
+        - selection_revision
+        - connections_interrupted
+        - selection
+      properties:
+        group_id:
+          type: string
+          minLength: 1
+        network:
+          type: string
+          enum:
+            - tcp
+            - udp
+            - both
+          description: The networks the request cleared.
+        selection_revision:
+          type: string
+          minLength: 1
+        connections_interrupted:
+          type: boolean
+        selection:
+          type: object
+          required:
+            - tcp
+            - udp
+          properties:
+            tcp:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/GroupSelection'
+            udp:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/GroupSelection'
     ProbeKind:
       type: string
       enum:

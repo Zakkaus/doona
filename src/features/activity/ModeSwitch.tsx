@@ -19,9 +19,11 @@ export function ModeSwitch({target}: {target: string}) {
       </Light>
     );
   const modes = order.filter(mode => (resource.modes ?? ['rule']).includes(mode));
+  // A readable but unwritable mode is shown as it is; the engine owns it elsewhere.
   return (
     <Segmented
       label={t('act.mode')}
+      isDisabled={resource.writable === false}
       value={runtimeMode.data?.mode ?? 'rule'}
       onChange={next => {
         if (!modes.includes(next as (typeof order)[number])) return;

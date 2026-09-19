@@ -509,12 +509,10 @@ export function createMockApi(): Api {
       revisions.set(groupId, revision);
       return {
         group_id: groupId,
-        member_id: chosen,
-        resolved_leaf_node_id: network === 'both' ? undefined : group.runtime.selection[network]?.resolved_leaf_node_id,
         network,
-        source: 'policy',
         selection_revision: String(revision),
-        connections_interrupted: false
+        connections_interrupted: false,
+        selection: structuredClone(group.runtime.selection)
       };
     },
     patchGroup: async (groupId, ops, ifMatch, signal) => {

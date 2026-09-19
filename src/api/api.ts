@@ -15,6 +15,7 @@ import type {
   Group,
   GroupSummary,
   GroupSelectionRequest,
+  GroupOverrideCleared,
   GroupSelectionResult,
   JsonPatch,
   ProbeRequest,
@@ -70,7 +71,7 @@ export interface Api {
   groups(signal?: AbortSignal): Promise<GroupSummary[]>;
   group(id: string, signal?: AbortSignal): Promise<Group>;
   selectGroup(groupId: string, selection: GroupSelectionRequest, signal?: AbortSignal): Promise<GroupSelectionResult>;
-  clearGroupOverride(groupId: string, network: GroupSelectionRequest['network'], signal?: AbortSignal): Promise<GroupSelectionResult>;
+  clearGroupOverride(groupId: string, network: GroupSelectionRequest['network'], signal?: AbortSignal): Promise<GroupOverrideCleared>;
   patchGroup(groupId: string, ops: JsonPatch, ifMatch: string, signal?: AbortSignal): Promise<Group | OperationAccepted>;
   startProbe(request: ProbeRequest, signal?: AbortSignal): Promise<OperationAccepted>;
   connections(query?: ConnectionQuery, signal?: AbortSignal): Promise<ConnectionList>;

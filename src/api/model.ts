@@ -19,6 +19,7 @@ export type Group = Schema['Group'];
 export type GroupSummary = Schema['GroupSummary'];
 export type GroupSelectionRequest = Schema['GroupSelectionRequest'];
 export type GroupSelectionResult = Schema['GroupSelectionResult'];
+export type GroupOverrideCleared = Schema['GroupOverrideCleared'];
 export type JsonPatch = Schema['JsonPatch'];
 export type ProbeRequest = Schema['ProbeRequest'];
 export type ProbeResult = Schema['ProbeResult'];
