@@ -1791,6 +1791,15 @@ input {
   height: 40px;
   border-radius: 10px;
 }
+/* The field's own glyphs match button icons: 16px in the 32px field, 20px in the large header search. */
+.rp-input .rp-icon {
+  width: 16px;
+  height: 16px;
+}
+.rp-input.lg > .rp-icon {
+  width: 20px;
+  height: 20px;
+}
 .rp-input .clear {
   display: inline-flex;
   align-items: center;
