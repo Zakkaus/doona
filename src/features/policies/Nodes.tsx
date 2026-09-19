@@ -6,6 +6,7 @@ import {
   GridLayout,
   GridList,
   GridListItem,
+  ListLayout,
   Menu,
   MenuItem,
   MenuSection,
@@ -192,7 +193,7 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       )}
     </MenuItem>
   );
-  const menu = (
+  const list = (
     <Menu
       className="rp-menu-scroll"
       aria-label={label}
@@ -218,6 +219,15 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
           ))
         : nodes.map(item)}
     </Menu>
+  );
+  // A long list draws only the rows in view: opening it costs the same for eighty nodes as for eight. The
+  // row heights are the ones the stylesheet gives items and section headers.
+  const menu = big ? (
+    <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
+      {list}
+    </Virtualizer>
+  ) : (
+    list
   );
   return (
     <MenuTrigger>
