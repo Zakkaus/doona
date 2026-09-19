@@ -4,7 +4,9 @@ import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
 import {addU64, formatBytes, millis} from '../../api/u64';
-import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
+import {formatDuration, localTime, preferredHealth, relativeStart} from '../../api/selectors';
+import {useMainSourceEdit} from '../config/mainSource';
+import {readSubscriptions, writeInterval} from './subscriptions';
 import {
   Badge,
   Button,
@@ -12,6 +14,7 @@ import {
   ErrorMessage,
   LabeledSelect,
   Light,
+  MenuButton,
   ModalDialog,
   TextField,
   TextTooltip,
@@ -27,6 +30,8 @@ import type {PageProps} from '../types';
 
 // The row doona adds for configuration nodes when the backend lists no inline provider.
 const INLINE = 'inline';
+// The refresh intervals offered, in seconds; the engine's default is the last.
+const INTERVALS = [3600, 21600, 43200, 86400];
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
 const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
@@ -54,6 +59,25 @@ export function Nodes({go, query}: PageProps) {
   };
   const refresh = useProviderRefresh(reload);
   const manage = useNodeManage(reload);
+  // The refresh interval of a subscription is a line in the main source, keyed by the tag its nodes carry.
+  const source = useMainSourceEdit();
+  const intervals = useMemo(() => new Map(readSubscriptions(source.main?.content ?? '').map(e => [e.tag, e.interval])), [source.main?.content]);
+  const intervalLabel = (seconds: number) =>
+    seconds === 0
+      ? t('nodes.manualOnly')
+      : INTERVALS.includes(seconds)
+        ? t('nodes.everyHours', {n: n(seconds / 3600)})
+        : formatDuration(String(seconds), locale);
+  const setInterval = (name: string, seconds: number) => {
+    void source
+      .apply(
+        text => writeInterval(text, name, seconds),
+        errors => toast('negative', t('nodes.intervalInvalid', {n: n(errors)}))
+      )
+      .then(written => {
+        if (written) toast('positive', t('nodes.intervalSet', {name, interval: intervalLabel(seconds)}));
+      }, fail);
+  };
   const probe = useNodeProbe(nodes.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const names = useOutboundNames();
@@ -200,12 +224,14 @@ export function Nodes({go, query}: PageProps) {
           {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end'},
           {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2},
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
+          {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4},
           {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
           {id: 'status', label: t('ui.state'), minWidth: 110, grow: 0},
           {id: 'actions', label: t('ui.actions'), minWidth: canManageProviders ? 120 : 96, grow: 0}
         ]}
         render={item => {
           const used = usage(item);
+          const interval = item.kind === 'subscription' ? intervals.get(item.name) : undefined;
           return [
             <span className="rp-chain">
               <TextTooltip text={item.url_redacted ?? undefined}>{item.name}</TextTooltip>
@@ -214,6 +240,25 @@ export function Nodes({go, query}: PageProps) {
             n(item.node_count),
             used ? (used.total ? t('nodes.used', {used: formatBytes(used.used), total: formatBytes(used.total)}) : formatBytes(used.used)) : '—',
             <TextTooltip text={item.updated_at ? localTime(item.updated_at, locale) : undefined}>{relativeStart(item.updated_at, locale)}</TextTooltip>,
+            interval === undefined ? (
+              '—'
+            ) : source.writable ? (
+              <MenuButton
+                quiet
+                label={t('nodes.intervalOf', {name: item.name})}
+                value={String(interval)}
+                isDisabled={source.busy}
+                onChange={key => setInterval(item.name, Number(key))}
+                items={[0, ...INTERVALS, ...(INTERVALS.includes(interval) || interval === 0 ? [] : [interval])].map(seconds => ({
+                  id: String(seconds),
+                  label: intervalLabel(seconds)
+                }))}
+              >
+                {intervalLabel(interval)}
+              </MenuButton>
+            ) : (
+              intervalLabel(interval)
+            ),
             item.expires_at ? localTime(item.expires_at, locale) : '—',
             <Light small tone={tones[item.status]}>
               <TextTooltip text={item.last_error?.message}>{t(statuses[item.status])}</TextTooltip>

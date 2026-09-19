@@ -367,7 +367,8 @@ export function MenuButton({
   label,
   quiet,
   chevron = true,
-  extra
+  extra,
+  isDisabled
 }: {
   children: ReactNode;
   items?: Item[];
@@ -379,10 +380,11 @@ export function MenuButton({
   quiet?: boolean;
   chevron?: boolean;
   extra?: {title: string; items: Item[]} & Picked;
+  isDisabled?: boolean;
 }) {
   return (
     <MenuTrigger>
-      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>
+      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} isDisabled={isDisabled}>
         {children}
         {chevron && <ChevronDown />}
       </RButton>
