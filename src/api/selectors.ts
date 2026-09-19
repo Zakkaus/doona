@@ -480,3 +480,6 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
       };
   }
 }
+
+// The first block of a UUID, enough to tell two apart on a strip; the full value goes in a tooltip.
+export const shortId = (id: string) => (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id) ? id.slice(0, 8) : id);

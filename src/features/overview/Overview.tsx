@@ -1,5 +1,5 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
-import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
+import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields, shortId} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
@@ -46,6 +46,7 @@ export function Overview() {
   const state = runtime.data?.lifecycle.state;
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
+  const revision = runtime.data?.generation.config_revision ?? runtime.data?.generation.active_id ?? '—';
   const reload = runtime.data?.last_reload;
   const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
   return (
@@ -59,7 +60,8 @@ export function Overview() {
           <Kv
             row
             items={[
-              [t('ov.config'), runtime.data?.generation.config_revision ?? runtime.data?.generation.active_id ?? '—'],
+              // A revision is a UUID; the strip shows its first block, the whole value sits in the tooltip.
+              [t('ov.config'), shortId(revision), revision],
               [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)],
               [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
             ]}

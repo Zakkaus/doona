@@ -2712,6 +2712,10 @@ button.rp-node[data-focus-visible] {
   white-space: nowrap;
   vertical-align: middle;
 }
+/* A badge truncates like any label but keeps its flex box, which is what centres its text. */
+.rp-truncate.rp-badge {
+  display: inline-flex;
+}
 .rp-tip {
   /* Tooltips are portaled without a z-index
   background: var(--rp-text);
