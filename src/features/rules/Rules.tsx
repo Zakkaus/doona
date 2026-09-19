@@ -26,7 +26,7 @@ export function Rules({go, query}: PageProps) {
   const rules = resources?.rules.available === true;
   const tabs = [
     ...(flows ? [{id: 'map', label: t('rule.map'), content: <RoutingMap go={go} query={query} />}] : []),
-    ...(flows || rules ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList go={go} />}] : []),
+    ...(flows || rules ? [{id: 'list', label: t('rule.listTitle'), content: <RuleList go={go} query={query} />}] : []),
     ...(flows ? [{id: 'flows', label: t('rule.flows'), content: <FlowRecords go={go} query={query} />}] : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace', label: t('rule.trace'), content: <Trace />}] : [])
   ];

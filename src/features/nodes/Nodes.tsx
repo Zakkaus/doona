@@ -30,6 +30,15 @@ import type {PageProps} from '../types';
 
 // The row doona adds for configuration nodes when the backend lists no inline provider.
 const INLINE = 'inline';
+// The host of a redacted subscription URL; the backend blanks the query, not the origin.
+function redactedHost(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname || null;
+  } catch {
+    return null;
+  }
+}
 // The refresh intervals offered, in seconds; the engine's default is the last.
 const INTERVALS = [3600, 21600, 43200, 86400];
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
@@ -61,7 +70,8 @@ export function Nodes({go, query}: PageProps) {
   const manage = useNodeManage(reload);
   // The refresh interval of a subscription is a line in the main source, keyed by the tag its nodes carry.
   const source = useMainSourceEdit();
-  const intervals = useMemo(() => new Map(readSubscriptions(source.main?.content ?? '').map(e => [e.tag, e.interval])), [source.main?.content]);
+  const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const intervals = useMemo(() => new Map(entries.map(e => [e.tag, e.interval])), [entries]);
   const intervalLabel = (seconds: number) =>
     seconds === 0
       ? t('nodes.manualOnly')
@@ -85,11 +95,20 @@ export function Nodes({go, query}: PageProps) {
   // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
   const {list, synthetic} = useMemo(() => {
     // A subscription's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
+    // A subscription without nodes (not fetched yet, or empty) is matched to its entry by URL host instead,
+    // when exactly one entry has that host.
     const tags = new Map<string, string>();
     for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
-    const rows = (providers.data?.providers ?? []).map(item =>
-      item.kind === 'subscription' && tags.has(item.id) ? {...item, name: tags.get(item.id)!} : item
-    );
+    const byHost = (item: Provider) => {
+      const hostname = redactedHost(item.url_redacted);
+      const same = hostname ? entries.filter(entry => entry.host === hostname) : [];
+      return same.length === 1 ? same[0].tag : undefined;
+    };
+    const rows = (providers.data?.providers ?? []).map(item => {
+      if (item.kind !== 'subscription') return item;
+      const tag = tags.get(item.id) ?? byHost(item);
+      return tag ? {...item, name: tag} : item;
+    });
     const loose = (nodes.data ?? []).filter(node => node.provider_id === null).length;
     if (!loose || rows.some(item => item.kind === 'inline')) return {list: rows, synthetic: false};
     const inline: Provider = {
@@ -105,7 +124,7 @@ export function Nodes({go, query}: PageProps) {
       last_error: null
     };
     return {list: [inline, ...rows], synthetic: true};
-  }, [providers.data, nodes.data, t]);
+  }, [providers.data, nodes.data, entries, t]);
   const selectedId = params.get('provider') ?? list[0]?.id ?? null;
   const provider = list.find(item => item.id === selectedId) ?? null;
   // The row doona added stands for the nodes with no provider; a backend's own inline provider keeps its id.

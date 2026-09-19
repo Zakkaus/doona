@@ -40,3 +40,17 @@ test('search opens a node in its source, a group on its card, a subscription and
   await dialog.getByRole('option', {name: /rules\.dae/}).click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-rules$/);
 });
+
+test('search finds a routing rule by its condition and lands on its row', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  const dialog = await open(page, 'doubleclick');
+  // The connection to doubleclick.net is a hit too; the rule is the one that names its outbound.
+  const hit = dialog.getByRole('option', {name: /domain\(suffix: doubleclick\.net\).*→ block/});
+  await expect(hit).toHaveCount(1);
+  await hit.click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
+  const row = page.locator('[role="row"][aria-selected="true"]');
+  await expect(row).toContainText('doubleclick');
+  await expect(row).toBeInViewport();
+});

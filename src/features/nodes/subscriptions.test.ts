@@ -41,6 +41,10 @@ describe('readSubscriptions', () => {
     ]);
   });
 
+  it("keeps each entry's host for matching a provider by its URL", () => {
+    expect(readSubscriptions(text).map(e => e.host)).toEqual(['example.com', 'example.net', 'example.org', 'example.com', 'example.org', 'example.org']);
+  });
+
   it('reads the engine duration grammar', () => {
     expect(parseInterval('3600s')).toBe(3600);
     expect(parseInterval('2h')).toBe(7200);

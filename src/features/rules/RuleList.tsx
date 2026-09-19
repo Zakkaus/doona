@@ -46,12 +46,12 @@ const sourceFor = (list: ConfigSource[], file: string | undefined) =>
 // how many retained flows it decided; a rule can be added before another or at the end, or removed, by
 // rewriting that line of the source through the same validate-then-save path the editor uses. Without the
 // dictionary, the retained flows are grouped by the rule that decided them.
-export function RuleList({go}: Pick<PageProps, 'go'>) {
+export function RuleList({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
-  return resources?.rules.available === true ? <Dictionary go={go} /> : <Distribution />;
+  return resources?.rules.available === true ? <Dictionary go={go} query={query} /> : <Distribution />;
 }
 
-function Dictionary({go}: Pick<PageProps, 'go'>) {
+function Dictionary({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
@@ -72,6 +72,15 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
   const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule} | null>(null);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const list = rules.data?.rules ?? [];
+  // `?rule=` (from search) lands on that row: selected, and scrolled into view once the list is there.
+  const landed = new URLSearchParams(query).get('rule');
+  // The row picked by hand replaces the landed one; a new landing wins again.
+  const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
+  const selected = picked.landed === landed ? picked.row : landed;
+  const setSelected = (row: string | null) => setPicked({landed, row});
+  useEffect(() => {
+    if (landed && rules.data) document.querySelector(`[role="row"][data-key="${CSS.escape(landed)}"]`)?.scrollIntoView({block: 'nearest'});
+  }, [landed, rules.data]);
   const configSources = config.data?.sources ?? [];
   const writable = (rule: RoutingRule) => {
     const source = sourceFor(configSources, rule.source?.file);
@@ -150,6 +159,8 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
         label={t('rule.listTitle')}
         loading={rules.loading && !rules.data}
         rows={list.map(rule => ({...rule, id: rule.rule_id}))}
+        selected={selected}
+        onSelect={setSelected}
         height={560}
         empty={t('rule.distributionEmpty')}
         cols={[

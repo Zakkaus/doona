@@ -7,6 +7,8 @@ export const DEFAULT_INTERVAL = 86400;
 
 export type SubscriptionEntry = {
   tag: string;
+  // The URL's host, which is how a provider whose nodes carry no tag is matched to its entry.
+  host: string | null;
   // Seconds between refreshes; 0 means the subscription is only refreshed by hand.
   interval: number;
   // Line range in the source, inclusive; a scalar entry spans one line.
@@ -92,19 +94,21 @@ export function readSubscriptions(text: string): SubscriptionEntry[] {
       const tag = header[1] ?? header[2] ?? header[3];
       let depth = 1;
       let interval = DEFAULT_INTERVAL;
+      let url: string | null = null;
       let j = i + 1;
       for (; j < block.close && depth > 0; j++) {
         const inner = uncomment(lines[j]);
         depth += (inner.match(/\{/g) ?? []).length - (inner.match(/\}/g) ?? []).length;
         const field = keyOf(inner);
         if (field?.key === 'interval') interval = parseInterval(unquote(field.value)) ?? 0;
+        if (field?.key === 'url') url = unquote(field.value);
       }
-      entries.push({tag, interval, from: i, to: j - 1});
+      entries.push({tag, host: url ? host(url) : null, interval, from: i, to: j - 1});
       i = j - 1;
       continue;
     }
     const tag = scalarTag(code);
-    if (tag) entries.push({tag, interval: DEFAULT_INTERVAL, from: i, to: i});
+    if (tag) entries.push({tag, host: host(scalarParts(code)?.url ?? ''), interval: DEFAULT_INTERVAL, from: i, to: i});
   }
   return entries;
 }
