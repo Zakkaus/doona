@@ -19,7 +19,8 @@ import {
   downloadFile,
   errorText,
   toast,
-  exportName
+  exportName,
+  useDebounced
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
@@ -227,7 +228,8 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
   const [name, setName] = useState(initialName);
   const [type, setType] = useState('all');
   const [src, setSrc] = useState('');
-  const log = useDnsLog({name, type, src}, enabled);
+  // Each text filter is a server-side query, so it reaches the request only after typing pauses.
+  const log = useDnsLog({name: useDebounced(name, 300), type, src: useDebounced(src, 300)}, enabled);
   const rows = (log.data?.records ?? []).map(record => ({...record, id: record.id}));
   return (
     <>

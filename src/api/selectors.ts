@@ -20,10 +20,19 @@ import type {RuntimeOutbounds, TrafficHistory} from './model';
 // The one TCP data observation a node's latency column shows. Backends differ in what they measure (honk's
 // periodic probe reports HTTP headers on an unknown-warmth session; a warm TCP connect is the cheapest), so
 // the pick is a ranking rather than a fixed tuple: warmth, then measurement cost, then IPv4 before IPv6.
-const warmthRank = {warm: 0, unknown: 1, mixed: 2, cold: 3};
-const measurementRank = {tcp_connect: 0, http_headers: 1, http_round_trip: 2, quic_handshake: 3, mixed: 4, unknown: 5, dns_round_trip: 6};
+// Vocabulary a newer backend adds sorts with the unknown entries rather than falling out of the order.
+const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
+const measurementRank: Record<string, number> = {
+  tcp_connect: 0,
+  http_headers: 1,
+  http_round_trip: 2,
+  quic_handshake: 3,
+  mixed: 4,
+  unknown: 5,
+  dns_round_trip: 6
+};
 export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
-  const rank = (h: HealthObservation) => warmthRank[h.warmth] * 100 + measurementRank[h.measurement] * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
+  const rank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 100 + (measurementRank[h.measurement] ?? 5) * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
   return health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
 }
 export const preferredHealth = (node: Node) => preferredObservation(node.health);

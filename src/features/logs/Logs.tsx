@@ -1,10 +1,10 @@
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useLogFeed} from '../../api/store';
 import type {LogLevel} from '../../api/model';
 import {localTime} from '../../api/selectors';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, downloadFile, exportName} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, downloadFile, exportName, useDebounced} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 
 const tones: Record<LogLevel, 'muted' | 'neutral' | 'info' | 'warn' | 'err'> = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'};
@@ -26,11 +26,7 @@ export function Logs() {
   const [level, setLevel] = useState<LogLevel>('info');
   const [target, setTarget] = useState('');
   // The module filter restarts the stream, so it follows the field only after typing pauses.
-  const [targetFilter, setTargetFilter] = useState('');
-  useEffect(() => {
-    const timer = setTimeout(() => setTargetFilter(target.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [target]);
+  const targetFilter = useDebounced(target.trim(), 300);
   const [paused, setPaused] = useState(false);
   const feed = useLogFeed({level, target: targetFilter, paused});
   const levels = resources?.logs.levels ?? ['trace', 'debug', 'info', 'warn', 'error'];

@@ -378,7 +378,7 @@ export function Nodes({go, query}: PageProps) {
                   <SpeedFast />
                 </Button>
               )}
-              {canManageNodes && inlineId !== null && node.provider_id === inlineId && (
+              {canManageNodes && inlineId !== null && node.provider_id === (synthetic && inlineId === INLINE ? null : inlineId) && (
                 <Button
                   small
                   quiet

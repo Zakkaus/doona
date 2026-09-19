@@ -1086,6 +1086,15 @@ export function csvLine(values: Array<string | number | null | undefined>): stri
   return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
 }
 
+// The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it.
+export function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
   useEffect(() => {

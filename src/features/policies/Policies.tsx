@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
-import {useGroupControl, useGroups, useNodes} from '../../api/store';
+import {useGroupControl, useGroups, useNodes, useCapabilities} from '../../api/store';
 import {groupConfigFields, policyKindLabels, preferredHealth, preferredObservation, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
@@ -195,8 +195,9 @@ function PolicyCard({
 }
 export function Policies({query}: PageProps) {
   const t = useT();
+  const resources = useCapabilities().data?.resources;
   const groups = useGroups();
-  const nodes = useNodes();
+  const nodes = useNodes(resources?.nodes.available === true);
   // `?group=` (from search) brings that card into view once every card has its full height, so the cards above
   // it no longer grow after the scroll.
   const focus = new URLSearchParams(query).get('group');
