@@ -143,7 +143,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
   const [q, setQ] = useState('');
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const connections = useConnections();
+  const connections = useConnections(undefined, resources?.connections.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const groups = useGroups(resources?.groups.available === true);
   const providers = useProviders(resources?.providers.available === true);

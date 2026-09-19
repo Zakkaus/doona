@@ -93,7 +93,7 @@ export function NodeGrid({
       </div>
     );
   }
-  const down = nodes.filter(n => n.health?.state === 'unavailable').length;
+  const down = shown.filter(n => n.health?.state === 'unavailable').length;
   return (
     <div className="rp-form">
       <div className="rp-toolbar">

@@ -63,6 +63,10 @@ describe('quick setup text transforms', () => {
     expect(out).toContain('  dip(geoip:cn) -> direct');
     expect(readState(out).subscriptions.map(s => [s.name, s.url])).toEqual(state.subscriptions.map(s => [s.name, s.url]));
   });
+  it('round-trips an untouched file, blank lines in the subscription block included', () => {
+    const spaced = main.replace('  # a file the engine reads\n', '\n  # a file the engine reads\n');
+    expect(writeState(spaced, readState(spaced))).toBe(spaced);
+  });
   it('replaces routing with a template routed to the first group', () => {
     const out = writeState(main, {...readState(main), rules: 'gfw'});
     expect(out).toContain('domain(geosite:gfw) -> proxy');

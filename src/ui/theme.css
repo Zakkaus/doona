@@ -2694,13 +2694,12 @@ button.rp-node[data-focus-visible] {
   display: inline-flex;
 }
 .rp-tip {
-  /* Tooltips are portaled without a z-index
   background: var(--rp-text);
   color: var(--rp-on-text);
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 6px;
-  sticky table headers must not cover them. */
+  /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
   z-index: 10;
   max-width: min(480px, calc(100vw - 24px));
   white-space: normal;

@@ -60,7 +60,8 @@ export function Activity({go}: {go: (page: string) => void}) {
     [nodesResource.data]
   );
   const [by, setBy] = useState('dev');
-  const connections = useConnections();
+  const hasConnections = resources?.connections.available === true;
+  const connections = useConnections(undefined, hasConnections);
   const feed = useEventFeed();
   const ranking = useMemo(() => {
     const totals = new Map<string, bigint | null>();
@@ -284,8 +285,10 @@ export function Activity({go}: {go: (page: string) => void}) {
             </TextTooltip>
           )}
           {!connections.data ? (
-            connections.error ? null : (
+            connections.error ? null : hasConnections ? (
               <Loading>{t('act.loading')}</Loading>
+            ) : (
+              <span className="rp-empty">{t('shell.notOfferedShort')}</span>
             )
           ) : ranking.length === 0 ? (
             <span className="rp-empty">{t('act.rankingEmpty')}</span>

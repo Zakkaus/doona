@@ -52,7 +52,7 @@ export function Nodes({go, query}: PageProps) {
   const n = (value: number) => formatNumber(value, locale);
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(resources?.providers.available !== false);
-  const nodes = useNodes();
+  const nodes = useNodes(resources?.nodes.available !== false);
   const reload = () => {
     providers.refetch();
     nodes.refetch();

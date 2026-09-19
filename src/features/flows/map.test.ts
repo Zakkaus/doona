@@ -64,3 +64,15 @@ it('draws configured rules into their lanes before any flow used them, joined to
     expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes))).toContain(matched);
   }
 });
+
+it('takes a one-element chain as the leaf node the flow left through', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
+  const routed = flows.flows.find(flow => flow.chain.length > 1)!;
+  const leaf = routed.chain[routed.chain.length - 1];
+  const map = flowMap([{...routed, chain: [leaf]}], groups, nodes.nodes);
+  // Configured selections add their own node entries; the flow itself must be counted at its leaf, not at unknown.
+  const names = nodeNames(nodes.nodes);
+  expect(map.links.some(link => link.target === 'node:' + names.get(leaf) && link.count === 1)).toBe(true);
+  expect(map.nodes.some(node => node.stage === 'node' && node.unknown)).toBe(false);
+});

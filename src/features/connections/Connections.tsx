@@ -162,9 +162,10 @@ export function Connections({go, query}: PageProps) {
         {canClose && (
           <CloseAllButton
             count={shown.length}
-            // Network and source-IP filters are the bulk endpoint's own; a text or outbound filter is not.
+            // Network and source-IP filters are the bulk endpoint's own; a text or outbound filter is not. A
+            // truncated snapshot lists fewer rows than match, so it closes the listed ones only.
             selection={
-              out === 'all' && (src || !needle)
+              out === 'all' && (src || !needle) && !resource.data?.truncated
                 ? {query: {type: network as 'all' | 'tcp' | 'udp', src: src ?? undefined, all: true}}
                 : {ids: shown.map(c => c.id)}
             }

@@ -29,11 +29,14 @@ export function useMainSourceEdit(): MainSourceEdit {
     apply: async (transform, onInvalid) => {
       if (!main) return false;
       const content = transform(main.content!);
-      const check = await editor.validate({sources: [candidate(main, content)], mode: 'full'});
-      if (!check) return false;
-      if (!check.valid) {
-        onInvalid?.(check.diagnostics.filter(d => d.level === 'error').length);
-        return false;
+      // The dry run is optional in the contract; without it the write's own validation answers instead.
+      if (resources?.config_validate.available && resources.config_validate.modes?.includes('full')) {
+        const check = await editor.validate({sources: [candidate(main, content)], mode: 'full'});
+        if (!check) return false;
+        if (!check.valid) {
+          onInvalid?.(check.diagnostics.filter(d => d.level === 'error').length);
+          return false;
+        }
       }
       return !!(await editor.save(main.id, content, main.content_sha256));
     }

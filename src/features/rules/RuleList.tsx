@@ -77,9 +77,17 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
     const source = sourceFor(configSources, rule.source?.file);
     return !!source && source.writable && source.content !== undefined;
   };
+  // Where a new rule can go: before the fallback when its line is known and writable, else before a writable rule.
+  const fallback = list.find(rule => rule.kind === 'fallback');
+  const positions = [
+    ...(fallback && writable(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+    ...list
+      .filter(rule => rule.kind === 'rule' && writable(rule))
+      .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
+  ];
   const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
   const open = (next: NonNullable<typeof dialog>) => {
-    setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: 'end'});
+    setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
     setDialog(next);
   };
   // Writes one changed source: validated in full when the backend can, then saved against its accepted digest.
@@ -132,7 +140,7 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
         )}
         <span className="rp-grow" />
         {canWrite && (
-          <Button small isDisabled={!list.length || !!editor.busy} onPress={() => open({kind: 'add'})}>
+          <Button small isDisabled={!positions.length || !!editor.busy} onPress={() => open({kind: 'add'})}>
             {t('rule.add')}
           </Button>
         )}
@@ -225,17 +233,7 @@ function Dictionary({go}: Pick<PageProps, 'go'>) {
                 must
               </Switch>
             </div>
-            <LabeledSelect
-              label={t('rule.position')}
-              value={form.before}
-              onChange={before => setForm({...form, before})}
-              items={[
-                {id: 'end', label: t('rule.positionEnd')},
-                ...list
-                  .filter(rule => rule.kind === 'rule' && writable(rule))
-                  .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
-              ]}
-            />
+            <LabeledSelect label={t('rule.position')} value={form.before} onChange={before => setForm({...form, before})} items={positions} />
           </div>
         )}
       </ModalDialog>

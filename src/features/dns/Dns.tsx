@@ -160,7 +160,7 @@ export function Dns({go, query}: PageProps) {
         )}
         <span className="rp-grow" />
         <FlushCacheButton
-          count={dns.cache.data?.total ?? 0}
+          count={dns.cache.data ? dns.cache.data.total : null}
           busy={dns.busy === 'flush'}
           isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush}
           onFlush={() => void flush()}

@@ -22,10 +22,11 @@ import type {RuntimeOutbounds, TrafficHistory} from './model';
 // the pick is a ranking rather than a fixed tuple: warmth, then measurement cost, then IPv4 before IPv6.
 const warmthRank = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank = {tcp_connect: 0, http_headers: 1, http_round_trip: 2, quic_handshake: 3, mixed: 4, unknown: 5, dns_round_trip: 6};
-export function preferredHealth(node: Node): HealthObservation | undefined {
+export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
   const rank = (h: HealthObservation) => warmthRank[h.warmth] * 100 + measurementRank[h.measurement] * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
-  return node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
+  return health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
 }
+export const preferredHealth = (node: Node) => preferredObservation(node.health);
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   const total = snapshot ? addU64(...snapshot.outbounds.map(row => row.download_bytes)) : null;

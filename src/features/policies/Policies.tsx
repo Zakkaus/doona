@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
 import {useGroupControl, useGroups, useNodes} from '../../api/store';
-import {groupConfigFields, policyKindLabels, preferredHealth, probeSummary} from '../../api/selectors';
+import {groupConfigFields, policyKindLabels, preferredHealth, preferredObservation, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
@@ -33,7 +33,11 @@ function PolicyCard({
   useEffect(() => {
     if (settled) onLoaded(id);
   }, [settled, id, onLoaded]);
-  const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id)})) ?? [], [g, health]);
+  // The group reports its members' health itself, nested groups included; the node list fills in when it does not.
+  const members = useMemo(
+    () => g?.members.map(m => ({...m, health: preferredObservation(g.runtime.health.filter(h => h.member_id === m.id)) ?? health.get(m.id)})) ?? [],
+    [g, health]
+  );
   // Toasts name the member; the backend answers with its id.
   const memberName = (id: string) => members.find(m => m.id === id)?.name ?? id;
   const tcp = g?.runtime.selection.tcp?.member_id;
