@@ -70,11 +70,16 @@ export function ModeCards() {
           ) : (
             <span className="rp-cluster">
               <Segmented label={t('act.mode')} value={shown.mode} onChange={pick} isDisabled={busy} items={order.map(mode => [mode, t(modeLabels[mode])])} />
-              {dirty && (
-                <Button small accent isPending={busy} onPress={() => void apply().catch((error: unknown) => toast('negative', errorText(error)))}>
-                  {t('act.apply')}
-                </Button>
-              )}
+              {/* Always in place; greyed out until a change is staged, so the row never reflows. */}
+              <Button
+                small
+                accent
+                isDisabled={!dirty}
+                isPending={busy}
+                onPress={() => void apply().catch((error: unknown) => toast('negative', errorText(error)))}
+              >
+                {t('act.apply')}
+              </Button>
             </span>
           )}
         </div>

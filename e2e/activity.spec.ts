@@ -54,11 +54,14 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+  // Apply stays in place and only wakes up once a change is staged.
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  await expect(apply).toBeDisabled();
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(apply).toBeEnabled();
+  await apply.click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+  await expect(apply).toBeDisabled();
   // The write is in the configuration: the marked rule sits in the main source after the must presets. The
   // editor only renders the lines in view, so the source is scrolled to its end first.
   const routing = async () => {
@@ -70,7 +73,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.goto('/#/activity');
   await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
   await mode.getByRole('radio', {name: 'Rule', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await apply.click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Rule'})).toBeVisible();
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });

@@ -794,6 +794,14 @@ body {
   background: var(--rp-base);
   color: var(--rp-text);
 }
+/* An open menu or dialog locks page scrolling; keeping the scrollbar's gutter means the page does not
+   shift sideways when the bar disappears and comes back. Phones draw overlay bars and narrow windows
+   need every pixel, so the gutter is only reserved from tablet width up. */
+@media (min-width: 640px) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
 /* Integer line heights everywhere so 1px rules land on whole pixels. */
 body {
   font:
@@ -1151,14 +1159,38 @@ input {
   grid-template-columns: 1fr;
   gap: 12px;
 }
+/* The strip holds four or five tiles. An odd fifth tile spans the row rather than sitting alone in a
+   corner; from 1280px the five share one row. */
 @media (min-width: 600px) {
   .rp-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .rp-strip > :nth-child(5):last-child {
+    grid-column: 1 / -1;
+  }
 }
-@media (min-width: 1200px) {
+@media (min-width: 1100px) {
   .rp-strip {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  /* Five tiles at this width sit three over two, every row filled: six tracks, two or three per tile. */
+  .rp-strip:has(> :nth-child(5)) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .rp-strip:has(> :nth-child(5)) > .rp-card {
+    grid-column: span 2;
+  }
+  .rp-strip:has(> :nth-child(5)) > :nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+@media (min-width: 1280px) {
+  .rp-strip:has(> :nth-child(5)) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .rp-strip:has(> :nth-child(5)) > .rp-card,
+  .rp-strip:has(> :nth-child(5)) > :nth-child(n + 4) {
+    grid-column: auto;
   }
 }
 .rp-g21 {
@@ -1188,14 +1220,22 @@ input {
   grid-template-columns: 1fr;
   gap: 12px;
 }
+/* Two columns: the mode card needs a full row for its label, switch and apply button to sit on one line;
+   the other two share the row beneath. */
 @media (min-width: 640px) {
   .rp-quick {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .rp-quick > :first-child:nth-last-child(3) {
+    grid-column: 1 / -1;
+  }
 }
-@media (min-width: 1280px) {
+@media (min-width: 1100px) {
   .rp-quick {
     grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  }
+  .rp-quick > :first-child:nth-last-child(3) {
+    grid-column: auto;
   }
 }
 .rp-qlabel {
@@ -2361,6 +2401,7 @@ button.rp-node[data-focus-visible] {
     translate: var(--rp-drift, 0 -4px);
   }
 }
+
 @keyframes rp-pop-out {
   to {
     opacity: 0;
