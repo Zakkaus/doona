@@ -38,6 +38,13 @@ const kinds: Record<ConfigSource['kind'], Key> = {
   subscription: 'config.kind.subscription',
   generated: 'config.kind.generated'
 };
+// The backend redacts the path of a file that holds a secret; the file is then named by its kind and the
+// start of its id, and exports fall back to a name by kind.
+const redacted = (source: ConfigSource) => source.path === '<redacted>' || source.path === '';
+const sourceName = (source: ConfigSource, t: (key: Key) => string) => (redacted(source) ? `${t(kinds[source.kind])} · ${source.id.slice(0, 8)}` : source.path);
+const fileName = (source: ConfigSource) =>
+  redacted(source) ? (source.kind === 'main' ? 'config.dae' : `${source.kind}-${source.id.slice(0, 8)}.dae`) : source.path.split('/').pop() || 'config.dae';
+
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 
@@ -160,7 +167,7 @@ export function Config({go, query}: PageProps) {
                       label={t('config.source')}
                       value={selectedId ?? ''}
                       onChange={select}
-                      items={sources.map(item => ({id: item.id, label: item.path, desc: t(kinds[item.kind])}))}
+                      items={sources.map(item => ({id: item.id, label: sourceName(item, t), desc: t(kinds[item.kind])}))}
                     />
                     {source && (
                       <>
@@ -180,7 +187,7 @@ export function Config({go, query}: PageProps) {
                     {source?.content !== undefined && (
                       <>
                         <span className="rp-grow" />
-                        <Button onPress={() => downloadFile(source.path.split('/').pop() || 'config.dae', source.content!, 'text/plain;charset=utf-8')}>
+                        <Button onPress={() => downloadFile(fileName(source), source.content!, 'text/plain;charset=utf-8')}>
                           <Download />
                           {t('config.export')}
                         </Button>
@@ -340,7 +347,7 @@ function SourceCard({
     // A rejected save carries its own diagnostics; drop the dry-run list so they show.
     setFound(null);
     if (result) {
-      toast('positive', t('config.saved', {path: source.path}));
+      toast('positive', t('config.saved', {path: sourceName(source, t)}));
       setDraft(null);
     }
   };
@@ -348,7 +355,7 @@ function SourceCard({
     <section className="rp-card">
       <div className="rp-row">
         <span className="rp-cluster">
-          <h3 className="rp-h3 rp-code">{source.path}</h3>
+          <h3 className="rp-h3 rp-code">{sourceName(source, t)}</h3>
           {dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
         </span>
         <span className="rp-cluster">
@@ -406,7 +413,7 @@ function SourceCard({
         <span className="rp-empty">{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</span>
       ) : (
         <CodeEditor
-          label={source.path}
+          label={sourceName(source, t)}
           value={text}
           readOnly={!editing || editor.busy === 'save'}
           onChange={editing ? value => setDraft(prev => (prev ? {...prev, text: value} : prev)) : undefined}
@@ -446,11 +453,10 @@ function ValidateTab({
   const errors = count('error');
   const warnings = count('warning');
   const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
-  const pathOf = (id: string) =>
-    config.sources
-      .find(item => item.id === id)
-      ?.path.split('/')
-      .pop() ?? id;
+  const pathOf = (id: string) => {
+    const source = config.sources.find(item => item.id === id);
+    return source ? fileName(source) : id;
+  };
   const cur = rows.find(item => item.id === selected) ?? null;
   // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
   const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));

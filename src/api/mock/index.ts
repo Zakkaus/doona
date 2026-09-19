@@ -77,8 +77,6 @@ export function createMockApi(): Api {
   let configRevision = 40;
   const providers = structuredClone(fixtures.providers);
   const geodata = structuredClone(fixtures.geodata);
-  // The outbound mode: runtime state the next activation resets.
-  let mode: {mode: 'rule' | 'direct' | 'global'; target: string | null; source: 'config' | 'runtime'} = {mode: 'rule', target: null, source: 'config'};
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   let profile: string | null = null;
@@ -111,11 +109,10 @@ export function createMockApi(): Api {
     if (history.length > 1024) history.shift();
     listeners.forEach(listener => listener(event));
   }
-  // A new generation: the revision moves, the outbound mode and the runtime settings fall back to the
+  // A new generation: the revision moves, the runtime settings fall back to the
   // configuration, listeners hear it.
   function advance(): string {
     configRevision += 1;
-    mode = {mode: 'rule', target: null, source: 'config'};
     Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
     log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
     const generation = String(configRevision);
@@ -306,7 +303,6 @@ export function createMockApi(): Api {
           config_validate: '/api/v1/config/validate',
           traffic_history: '/api/v1/runtime/traffic/history',
           memory_history: '/api/v1/runtime/memory/history',
-          runtime_mode: '/api/v1/runtime/mode',
           logs: '/api/v1/logs',
           providers: '/api/v1/providers',
           geodata: '/api/v1/geodata',
@@ -325,9 +321,18 @@ export function createMockApi(): Api {
     },
     runtime: async signal => {
       signal?.throwIfAborted();
+      const now = Date.now();
       if (runtime.lifecycle.started_at)
-        runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((Date.now() - Date.parse(runtime.lifecycle.started_at)) / 1000)));
-      return structuredClone(runtime);
+        runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((now - Date.parse(runtime.lifecycle.started_at)) / 1000)));
+      const snapshot = structuredClone(runtime);
+      // Each poll is a fresh sample with a little swell, so the live curve keeps moving.
+      const swell = 1 + 0.15 * Math.sin(now / 20000);
+      snapshot.traffic.sampled_at = new Date(now).toISOString();
+      if (snapshot.traffic.rates) {
+        snapshot.traffic.rates.upload_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.upload_bytes_per_second) * swell));
+        snapshot.traffic.rates.download_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.download_bytes_per_second) * swell));
+      }
+      return snapshot;
     },
     runtimeOutbounds: async signal => {
       signal?.throwIfAborted();
@@ -500,12 +505,10 @@ export function createMockApi(): Api {
       revisions.set(groupId, revision);
       return {
         group_id: groupId,
-        member_id: chosen,
-        resolved_leaf_node_id: network === 'both' ? undefined : group.runtime.selection[network]?.resolved_leaf_node_id,
         network,
-        source: 'policy',
         selection_revision: String(revision),
-        connections_interrupted: false
+        connections_interrupted: false,
+        selection: structuredClone(group.runtime.selection)
       };
     },
     patchGroup: async (groupId, ops, ifMatch, signal) => {
@@ -699,26 +702,6 @@ export function createMockApi(): Api {
       }
       return {closed, skipped};
     },
-    runtimeMode: async signal => {
-      signal?.throwIfAborted();
-      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
-      return {observed_at: new Date().toISOString(), ...mode};
-    },
-    setRuntimeMode: async (request, signal) => {
-      signal?.throwIfAborted();
-      if (!capabilities.resources.runtime_mode.available) throw new ApiError(404, 'capability_not_supported', 'Outbound mode is unavailable');
-      if (!capabilities.resources.runtime_mode.modes?.includes(request.mode))
-        throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
-      if (request.mode === 'global') {
-        if (!request.target) throw new ApiError(400, 'invalid_request', 'global needs a target');
-        if (!groups.some(g => g.id === request.target) && !nodes.some(n => n.id === request.target))
-          throw new ApiError(422, 'unsupported_value', `No group or node named ${request.target}`);
-      } else if (request.target) throw new ApiError(400, 'invalid_request', `${request.mode} takes no target`);
-      mode = {mode: request.mode, target: request.mode === 'global' ? request.target! : null, source: 'runtime'};
-      log('info', 'honk::routing', 'Outbound mode changed.', {mode: mode.mode, target: mode.target});
-      runtimeUpdated();
-      return {observed_at: new Date().toISOString(), ...mode};
-    },
     providers: async (query, signal) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.providers.available) throw new ApiError(404, 'capability_not_supported', 'Providers are unavailable');
@@ -857,10 +840,11 @@ export function createMockApi(): Api {
           }
           const must = rule![2].endsWith('(must)');
           const outbound = rule![2].replace(/\(must\)$/, '');
+          // The condition alone, as honk renders it and as flows quote it; the outbound is its own field.
           entries.push({
             rule_id: known.get(code) ?? `${source.file}:${source.line}`,
             index: entries.length,
-            expression: code,
+            expression: rule![1],
             outbound,
             must,
             source,

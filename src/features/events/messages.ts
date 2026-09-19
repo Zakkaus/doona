@@ -22,7 +22,11 @@ export const messages = defineMessages({
     'event.flow': '{id}／修訂 {revision}',
     'event.operation': '{id}／{status}',
     'event.generation': '{previous} → {current}',
-    'event.gap': '{id}／{reason}／捨棄記錄 {n}'
+    'event.gap': '{id}／{reason}／捨棄記錄 {n}',
+    'event.gap.overflow': '緩衝溢位',
+    'event.gap.sampled': '取樣略過',
+    'event.gap.evicted': '環形緩衝汰換',
+    'event.gap.recording': '記錄設定變更'
   },
   'zh-CN': {
     'event.export': '导出 JSON',
@@ -45,7 +49,11 @@ export const messages = defineMessages({
     'event.flow': '{id}／修订 {revision}',
     'event.operation': '{id}／{status}',
     'event.generation': '{previous} → {current}',
-    'event.gap': '{id}／{reason}／丢弃记录 {n}'
+    'event.gap': '{id}／{reason}／丢弃记录 {n}',
+    'event.gap.overflow': '缓冲溢出',
+    'event.gap.sampled': '采样略过',
+    'event.gap.evicted': '环形缓冲淘汰',
+    'event.gap.recording': '记录设置变更'
   },
   en: {
     'event.export': 'Export JSON',
@@ -68,6 +76,10 @@ export const messages = defineMessages({
     'event.flow': '{id} / revision {revision}',
     'event.operation': '{id} / {status}',
     'event.generation': '{previous} → {current}',
-    'event.gap': '{id} / {reason} / dropped records {n}'
+    'event.gap': '{id} / {reason} / dropped records {n}',
+    'event.gap.overflow': 'buffer overflow',
+    'event.gap.sampled': 'skipped by sampling',
+    'event.gap.evicted': 'evicted from the ring',
+    'event.gap.recording': 'recording changed'
   }
 });

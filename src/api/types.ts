@@ -283,40 +283,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/runtime/mode": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read the outbound mode
-         * @description The engine's outbound mode: rule follows the configuration, direct
-         *     sends every flow straight out as if the routing section were only
-         *     `fallback: direct`, global sends every flow through one outbound. Runtime
-         *     state, never written to the configuration; the next activation returns
-         *     to rule. Requires resources.runtime_mode.available.
-         */
-        get: operations["getRuntimeMode"];
-        /**
-         * Switch the outbound mode without a reload
-         * @description Requires control and resources.runtime_mode.available; mode must be one
-         *     of resources.runtime_mode.modes. global needs target, the id of a group
-         *     or node every flow then leaves through; rule and direct take no target.
-         *     Presets the engine treats as must (LAN, multicast, the network manager)
-         *     keep applying in every mode. The change applies immediately, interrupts
-         *     nothing already established, and is dropped by the next activation.
-         *     Follows the shared idempotency rules.
-         */
-        put: operations["setRuntimeMode"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/datapath": {
         parameters: {
             query?: never;
@@ -1121,8 +1087,6 @@ export interface components {
                 /** @constant */
                 rules: "/api/v1/rules";
                 /** @constant */
-                runtime_mode: "/api/v1/runtime/mode";
-                /** @constant */
                 geodata: "/api/v1/geodata";
                 /** @constant */
                 operations: "/api/v1/operations/{id}";
@@ -1206,11 +1170,6 @@ export interface components {
                     max_window_seconds?: components["schemas"]["SafeUInt"];
                     /** @description Maximum returned samples per history request. */
                     max_points?: components["schemas"]["SafeUInt"];
-                };
-                runtime_mode: {
-                    available: boolean;
-                    /** @description The modes PUT /runtime/mode accepts; rule is always one of them. */
-                    modes?: components["schemas"]["OutboundMode"][];
                 };
                 datapath: {
                     available: boolean;
@@ -1561,24 +1520,6 @@ export interface components {
             download_bytes_per_second: components["schemas"]["NullableUInt64"];
             /** @description Visible active TCP and UDP connections at sampled_at, or null when unavailable. */
             connections: components["schemas"]["NullableSafeUInt"];
-        };
-        RuntimeMode: {
-            observed_at: components["schemas"]["Timestamp"];
-            mode: components["schemas"]["OutboundMode"];
-            /** @description The group or node id every flow leaves through in global mode; null otherwise. */
-            target: string | null;
-            /**
-             * @description config until a PUT changed the mode in this generation, runtime afterwards.
-             * @enum {string}
-             */
-            source: "config" | "runtime";
-        };
-        /** @enum {string} */
-        OutboundMode: "rule" | "direct" | "global";
-        RuntimeModeRequest: {
-            mode: components["schemas"]["OutboundMode"];
-            /** @description Required with global; rejected with rule and direct. */
-            target?: string;
         };
         /**
          * @description Samples lie in (observed_at - window_seconds, observed_at], oldest first,
@@ -1977,6 +1918,21 @@ export interface components {
             source: "runtime" | "override" | "policy";
             selection_revision: string;
             connections_interrupted: boolean;
+        };
+        /** @description The outcome of clearing an override, one selection per network like GroupRuntime.selection. */
+        GroupOverrideCleared: {
+            group_id: string;
+            /**
+             * @description The networks the request cleared.
+             * @enum {string}
+             */
+            network: "tcp" | "udp" | "both";
+            selection_revision: string;
+            connections_interrupted: boolean;
+            selection: {
+                tcp: null | components["schemas"]["GroupSelection"];
+                udp: null | components["schemas"]["GroupSelection"];
+            };
         };
         /** @enum {string} */
         ProbeKind: "tcp_connect" | "http" | "dns";
@@ -3681,65 +3637,6 @@ export interface operations {
             429: components["responses"]["RateLimited"];
         };
     };
-    getRuntimeMode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current outbound mode */
-            200: {
-                headers: {
-                    "Cache-Control": components["headers"]["NoStore"];
-                    "X-Content-Type-Options": components["headers"]["NoSniff"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RuntimeMode"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    setRuntimeMode: {
-        parameters: {
-            query?: never;
-            header?: {
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RuntimeModeRequest"];
-            };
-        };
-        responses: {
-            /** @description Mode after the change */
-            200: {
-                headers: {
-                    "Cache-Control": components["headers"]["NoStore"];
-                    "X-Content-Type-Options": components["headers"]["NoSniff"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RuntimeMode"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["Unprocessable"];
-        };
-    };
     getDatapath: {
         parameters: {
             query?: {
@@ -4389,7 +4286,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Selection after the override is cleared; unchanged when none stood */
+            /**
+             * @description The group's selection per network after the override is cleared;
+             *     unchanged when none stood. A network the policy has not chosen a
+             *     member for is null, so clearing both networks when only one had a
+             *     pin, or when one side is still unselected, is stated as it is.
+             */
             200: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4397,7 +4299,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GroupSelectionResult"];
+                    "application/json": components["schemas"]["GroupOverrideCleared"];
                 };
             };
             400: components["responses"]["BadRequest"];

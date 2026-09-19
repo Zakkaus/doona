@@ -36,7 +36,8 @@ test('the routing map lays the config out as lanes and a pinned item carries int
   await expect(lanes.filter({has: page.locator('strong', {hasText: /^skylink$/})})).toContainText('Selected');
   const rule = map.getByRole('radio', {name: 'dip(geoip: private) 4', exact: true});
   await rule.click();
-  await expect(page).toHaveURL(/path=rule%3Adip/);
+  // A rule is pinned by its id, so the address survives a rewording of the expression.
+  await expect(page).toHaveURL(/path=rule%3Ar3$/);
   await expect(rule).toHaveAttribute('aria-checked', 'true');
   expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
   await page.getByRole('button', {name: 'Show the 4 flows on this path', exact: true}).click();

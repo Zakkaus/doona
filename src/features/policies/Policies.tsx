@@ -36,6 +36,8 @@ function PolicyCard({
     if (settled) onLoaded(id);
   }, [settled, id, onLoaded]);
   const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), leaf: leaves.get(m.id)})) ?? [], [g, health, leaves]);
+  // Toasts name the member; the backend answers with its id.
+  const memberName = (id: string) => members.find(m => m.id === id)?.name ?? id;
   const tcp = g?.runtime.selection.tcp?.member_id;
   const udp = g?.runtime.selection.udp?.member_id;
   const selected = control.network === 'tcp' ? tcp : control.network === 'udp' ? udp : tcp === udp ? tcp : undefined;
@@ -46,6 +48,8 @@ function PolicyCard({
   const interruptable = g?.capabilities.mutable_config.includes('interrupt_connections') ?? false;
   const healthy = members.filter(m => m.health?.state === 'healthy').length;
   const unavailable = members.filter(m => m.health?.state === 'unavailable').length;
+  // Members the backend has not measured yet: neither healthy nor down, so the counts add up.
+  const untested = members.filter(m => !m.health || (m.health.state !== 'healthy' && m.health.state !== 'unavailable')).length;
   return (
     <section className="rp-card" id={'group-' + id} aria-label={g?.name ?? id}>
       <ErrorMessage error={control.error} />
@@ -65,6 +69,11 @@ function PolicyCard({
               {unavailable > 0 && (
                 <Light small tone="err">
                   {t('policy.down', {n: unavailable})}
+                </Light>
+              )}
+              {untested > 0 && (
+                <Light small tone="neutral">
+                  {t('policy.untested', {n: untested})}
                 </Light>
               )}
             </span>
@@ -121,7 +130,16 @@ function PolicyCard({
                 isDisabled={!!control.busy}
                 onPress={() => {
                   void control.clearOverride().then(result => {
-                    if (result) toast('positive', t('policy.backToAutomatic', {name: g.name, member: result.member_id}));
+                    if (!result) return;
+                    const tcp = result.selection.tcp?.member_id;
+                    const udp = result.selection.udp?.member_id;
+                    const member =
+                      tcp && udp && tcp !== udp
+                        ? `TCP ${memberName(tcp)} · UDP ${memberName(udp)}`
+                        : tcp || udp
+                          ? memberName((tcp ?? udp)!)
+                          : t('policy.noneSelected');
+                    toast('positive', t('policy.backToAutomatic', {name: g.name, member}));
                   });
                 }}
               >
@@ -160,7 +178,7 @@ function PolicyCard({
                               : result.connections_interrupted
                                 ? 'policy.selectedInterrupted'
                                 : 'policy.selectedKept',
-                            {name: g.name, member: result.member_id}
+                            {name: g.name, member: memberName(result.member_id)}
                           )
                         );
                     });

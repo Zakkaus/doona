@@ -52,7 +52,7 @@ export function Events() {
           {id: 'm', label: t('event.summary'), minWidth: 240, isRowHeader: true}
         ]}
         render={event => {
-          const summary = eventSummary(event);
+          const summary = eventSummary(event, t);
           return [
             <TextTooltip className="rp-code" text={event.data.observed_at}>
               {localTime(event.data.observed_at, locale)}

@@ -263,13 +263,26 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     </TooltipTrigger>
   );
 }
-export function Segmented({items, value, onChange, label}: {items: Array<[string, string]>; value: string; onChange: (k: string) => void; label: string}) {
+export function Segmented({
+  items,
+  value,
+  onChange,
+  label,
+  isDisabled
+}: {
+  items: Array<[string, string]>;
+  value: string;
+  onChange: (k: string) => void;
+  label: string;
+  isDisabled?: boolean;
+}) {
   const [ref, pos] = useSlider(value);
   return (
     <ToggleButtonGroup
       ref={ref}
       className="rp-seg"
       aria-label={label}
+      isDisabled={isDisabled}
       selectionMode="single"
       disallowEmptySelection
       selectedKeys={[value]}
@@ -564,13 +577,20 @@ export function CardLink({href, label, children}: {href: string; label: string; 
   );
 }
 // `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
-export function Kv({items, inline, row}: {items: Array<[string, string]>; inline?: boolean; row?: boolean}) {
+// A third element is the full value behind a shortened one, shown as a tooltip.
+export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
   return (
     <div className={cx('rp-kv', (inline || row) && 'inline', row && 'row')}>
-      {items.map(([k, v]) => (
+      {items.map(([k, v, full]) => (
         <div key={k}>
           <span className="k">{k}</span>
-          <span className="v">{v}</span>
+          {full ? (
+            <TextTooltip className="v" text={full}>
+              {v}
+            </TextTooltip>
+          ) : (
+            <span className="v">{v}</span>
+          )}
         </div>
       ))}
     </div>

@@ -443,7 +443,21 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-export function eventSummary(event: ApiEvent): MessageRef {
+// A flow record leaving the ring to make room (aged out, or pushed out of a full ring: no resource named), or
+// a flow never recorded because sampling skipped it, is the backend's routine housekeeping; a record that
+// lost its own history or a change in what gets recorded is a gap worth a notice.
+export function routineGap(event: ApiEvent): boolean {
+  if (event.event !== 'flow.gap') return false;
+  const {reason, resource_id} = event.data;
+  return reason === 'evicted' || reason === 'sampled' || (reason === 'buffer_overflow' && resource_id == null);
+}
+const gapReasons: Record<string, Key> = {
+  buffer_overflow: 'event.gap.overflow',
+  sampled: 'event.gap.sampled',
+  evicted: 'event.gap.evicted',
+  recording_changed: 'event.gap.recording'
+};
+export function eventSummary(event: ApiEvent, t?: (key: Key) => string): MessageRef {
   switch (event.event) {
     case 'stream.ready':
       return {key: 'event.resource', params: {resource: event.data.instance_id}};
@@ -456,6 +470,16 @@ export function eventSummary(event: ApiEvent): MessageRef {
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
     case 'flow.gap':
-      return {key: 'event.gap', params: {id: event.data.resource_id ?? '—', reason: event.data.reason, n: event.data.dropped_records ?? '—'}};
+      return {
+        key: 'event.gap',
+        params: {
+          id: event.data.resource_id ?? '—',
+          reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
+          n: event.data.dropped_records ?? '—'
+        }
+      };
   }
 }
+
+// The first block of a UUID, enough to tell two apart on a strip; the full value goes in a tooltip.
+export const shortId = (id: string) => (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id) ? id.slice(0, 8) : id);

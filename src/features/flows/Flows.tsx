@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames} from '../../api/store';
+import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough, nodeNames} from './map';
 import {chainLabel, chainLeaf, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
@@ -33,7 +33,11 @@ export function RoutingMap({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
-  const map = useMemo(() => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? []), [resource.data, groups.data, nodes.data]);
+  const rules = useRules(resources?.rules.available === true);
+  const map = useMemo(
+    () => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? []),
+    [resource.data, groups.data, nodes.data, rules.data]
+  );
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
   const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;

@@ -16,15 +16,32 @@ import SpeedFast from '../ui/icons/SpeedFast';
 import {Settings} from '../features/settings/Settings';
 import SettingsIcon from '../ui/icons/Settings';
 
-const Overview = lazy(() => import('../features/overview/Overview').then(m => ({default: m.Overview})));
-const Connections = lazy(() => import('../features/connections/Connections').then(m => ({default: m.Connections})));
-const Policies = lazy(() => import('../features/policies/Policies').then(m => ({default: m.Policies})));
-const NodesPage = lazy(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes})));
-const Rules = lazy(() => import('../features/rules/Rules').then(m => ({default: m.Rules})));
-const Config = lazy(() => import('../features/config/Config').then(m => ({default: m.Config})));
-const Dns = lazy(() => import('../features/dns/Dns').then(m => ({default: m.Dns})));
-const Logs = lazy(() => import('../features/logs/Logs').then(m => ({default: m.Logs})));
-const Events = lazy(() => import('../features/events/Events').then(m => ({default: m.Events})));
+// One loader per page: `lazy` renders through it, and the nav warms it up when the pointer reaches a link, so
+// the chunk is usually in hand before the click lands. The first page stays eager.
+const loaders = {
+  overview: () => import('../features/overview/Overview').then(m => ({default: m.Overview})),
+  connections: () => import('../features/connections/Connections').then(m => ({default: m.Connections})),
+  policies: () => import('../features/policies/Policies').then(m => ({default: m.Policies})),
+  nodes: () => import('../features/nodes/Nodes').then(m => ({default: m.Nodes})),
+  rules: () => import('../features/rules/Rules').then(m => ({default: m.Rules})),
+  config: () => import('../features/config/Config').then(m => ({default: m.Config})),
+  dns: () => import('../features/dns/Dns').then(m => ({default: m.Dns})),
+  logs: () => import('../features/logs/Logs').then(m => ({default: m.Logs})),
+  events: () => import('../features/events/Events').then(m => ({default: m.Events}))
+};
+const Overview = lazy(loaders.overview);
+const Connections = lazy(loaders.connections);
+const Policies = lazy(loaders.policies);
+const NodesPage = lazy(loaders.nodes);
+const Rules = lazy(loaders.rules);
+const Config = lazy(loaders.config);
+const Dns = lazy(loaders.dns);
+const Logs = lazy(loaders.logs);
+const Events = lazy(loaders.events);
+// Loading a chunk twice costs nothing; a failed warm-up is not an error, the click loads it again.
+export function warmPage(id: string) {
+  void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
+}
 
 type Feature = {
   id: string;

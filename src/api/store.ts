@@ -23,8 +23,6 @@ import type {
   OperationState,
   RoutingTraceRequest,
   RoutingTraceResponse,
-  RuntimeMode,
-  RuntimeModeRequest,
   ProviderCreate,
   ProviderList,
   ProbeRequest,
@@ -232,12 +230,13 @@ export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
   return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
 }
-export const historyWindows: Record<string, number> = {live: 720, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
-export function useTrafficHistory(range: string, capabilities: Capabilities | undefined) {
+// The backend's ring, asked for the chart's window (or as much of it as the backend keeps) at its full
+// resolution: the live window wants every second the backend has.
+export function useTrafficHistory(windowSeconds: number, capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.traffic_history;
-  const window_seconds = Math.min(historyWindows[range] ?? 720, limits?.max_window_seconds ?? 720);
-  const max_points = Math.min(360, limits?.max_points ?? 360);
+  const window_seconds = Math.min(windowSeconds, limits?.max_window_seconds ?? 600);
+  const max_points = Math.min(600, limits?.max_points ?? 600);
   return useResource(
     {key: ['trafficHistory', {window_seconds, max_points}], fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
     {
@@ -596,22 +595,6 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
   return {records, connected, error, available, clear: () => setRecords([])};
 }
 // The outbound mode switch: read with the usual poll, set at once; the reply replaces the cached copy.
-export function useRuntimeMode(enabled = true) {
-  const api = getApi();
-  const resource = useResource({key: ['runtimeMode'], fetch: signal => api.runtimeMode(signal)}, {deps: [api], enabled});
-  const {busy, run} = useAction<'change'>({rethrow: true});
-  const [set, setSet] = useState<{api: Api; value: RuntimeMode} | null>(null);
-  const override = set?.api === api ? set.value : null;
-  const change = (request: RuntimeModeRequest) =>
-    run('change', async signal => {
-      const next = await api.setRuntimeMode(request, signal);
-      setSet({api, value: next});
-      resource.refetch();
-      return next;
-    });
-  return {...resource, data: newest(override, resource.data), busy: busy !== null, change};
-}
-// Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;
@@ -658,20 +641,24 @@ export function useNodeManage(refetch: () => void) {
   };
 }
 // The one probe shape the UI sends: a warm TCP connect for data, over whatever IP versions the backend reaches
-// (a v6-only node is not a failure). Null when the backend does not advertise that probe.
+// (a v6-only node is not a failure). Null when the backend does not advertise that probe. `members` picks a
+// group's direct members; a node target has none and the contract refuses the field there.
 export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
   const probes = capabilities?.resources.probes;
   if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
     return null;
-  return {
+  const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
     target,
     kind: 'tcp_connect',
     purpose: 'data',
     transport: ['tcp'],
     warmth: 'warm',
-    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4',
-    members: 'direct'
+    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4'
   };
+  if (target.type === 'group') request.members = 'direct';
+  // The generated type reads the contract's `default: direct` as "always present"; the contract itself forbids
+  // the field on a node target.
+  return request as ProbeRequest;
 }
 // One TCP probe of one node, for the node table; the group card probes whole groups.
 export function useNodeProbe(refetch: () => void) {

@@ -15,6 +15,7 @@ import type {
   Group,
   GroupSummary,
   GroupSelectionRequest,
+  GroupOverrideCleared,
   GroupSelectionResult,
   JsonPatch,
   ProbeRequest,
@@ -46,8 +47,6 @@ import type {
   NodeCreate,
   GeoData,
   RuleList,
-  RuntimeMode,
-  RuntimeModeRequest,
   LogOptions,
   EffectiveConfig,
   ConfigValidationRequest,
@@ -70,7 +69,7 @@ export interface Api {
   groups(signal?: AbortSignal): Promise<GroupSummary[]>;
   group(id: string, signal?: AbortSignal): Promise<Group>;
   selectGroup(groupId: string, selection: GroupSelectionRequest, signal?: AbortSignal): Promise<GroupSelectionResult>;
-  clearGroupOverride(groupId: string, network: GroupSelectionRequest['network'], signal?: AbortSignal): Promise<GroupSelectionResult>;
+  clearGroupOverride(groupId: string, network: GroupSelectionRequest['network'], signal?: AbortSignal): Promise<GroupOverrideCleared>;
   patchGroup(groupId: string, ops: JsonPatch, ifMatch: string, signal?: AbortSignal): Promise<Group | OperationAccepted>;
   startProbe(request: ProbeRequest, signal?: AbortSignal): Promise<OperationAccepted>;
   connections(query?: ConnectionQuery, signal?: AbortSignal): Promise<ConnectionList>;
@@ -83,8 +82,6 @@ export interface Api {
   /** Closes every closable connection the filters select; unfiltered needs all=true. */
   closeConnections(query: BulkCloseQuery, signal?: AbortSignal): Promise<BulkCloseResult>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
-  runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
-  setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
   providers(query?: ProviderQuery, signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
   createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;

@@ -1,5 +1,5 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
-import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields} from '../../api/selectors';
+import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields, shortId} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
@@ -22,7 +22,6 @@ const resourceLabels = {
   traffic_history: 'ov.r.trafficHistory',
   memory_history: 'ov.r.memoryHistory',
   runtime_outbounds: 'ov.r.outbounds',
-  runtime_mode: 'act.mode',
   logs: 'nav.logs',
   providers: 'nodes.providers',
   config: 'nav.config',
@@ -47,6 +46,7 @@ export function Overview() {
   const state = runtime.data?.lifecycle.state;
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
+  const revision = runtime.data?.generation.config_revision ?? runtime.data?.generation.active_id ?? '—';
   const reload = runtime.data?.last_reload;
   const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
   return (
@@ -60,7 +60,8 @@ export function Overview() {
           <Kv
             row
             items={[
-              [t('ov.config'), runtime.data?.generation.config_revision ?? runtime.data?.generation.active_id ?? '—'],
+              // A revision is a UUID; the strip shows its first block, the whole value sits in the tooltip.
+              [t('ov.config'), shortId(revision), revision],
               [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)],
               [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
             ]}
@@ -114,7 +115,7 @@ export function Overview() {
                 items={[
                   [t('ov.f.engine'), version.data.engine.name + ' ' + version.data.engine.version],
                   [t('ov.f.api'), `${version.data.api.name} v${version.data.api.major} · ${version.data.api.status}`],
-                  [t('ov.f.build'), version.data.build?.revision ?? '—'],
+                  [t('ov.f.build'), [version.data.build?.revision, version.data.build?.target].filter(Boolean).join(' · ') || '—'],
                   [t('ov.f.instance'), runtime.data.instance_id],
                   [t('ov.f.started'), localTime(runtime.data.lifecycle.started_at, locale)],
                   [t('ov.f.activated'), runtime.data.generation.activated_at ? localTime(runtime.data.generation.activated_at, locale) : '—']

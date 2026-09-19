@@ -11,7 +11,6 @@ const resourceKeys = [
   'runtime_outbounds',
   'traffic_history',
   'memory_history',
-  'runtime_mode',
   'datapath',
   'nodes',
   'providers',

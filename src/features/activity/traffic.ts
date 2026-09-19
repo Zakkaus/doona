@@ -1,42 +1,37 @@
-import {useState} from 'react';
 import type {Runtime, TrafficHistory} from '../../api/model';
+import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 
 // One traffic sample on the chart: rates in KB/s, the connection count, and when the backend sampled it.
 export type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
-// An hour of five-second polls: the backend's ring covers ten minutes, the session keeps the rest.
-export const trafficSampleLimit = 720;
+// The chart's windows in seconds. Live is what other dashboards call the last two minutes at full resolution;
+// the rest are the fixed spans a router page is read at. The backend's own ring covers ten minutes at one
+// second; the session's polls carry the longer spans, in minute buckets.
+export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 const rate = (value: string | null | undefined) => (value == null ? null : Number(parseU64(value)) / 1000);
 
-export function appendTrafficSample(samples: TrafficSample[], runtime: Runtime): TrafficSample[] {
+// A bucket averages the rates and keeps the highest connection count seen in it.
+export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
+  time,
+  up: mean(group.map(s => s.up)),
+  down: mean(group.map(s => s.down)),
+  connections: group.some(s => s.connections !== null) ? Math.max(...group.map(s => s.connections ?? 0)) : null
+});
+
+export function trafficSample(runtime: Runtime): TrafficSample | undefined {
   const traffic = runtime.traffic;
   const time = Date.parse(traffic.sampled_at ?? '');
-  if (!Number.isFinite(time) || samples.at(-1)?.time === time) return samples;
-  const sample = {
+  if (!Number.isFinite(time)) return undefined;
+  return {
     time,
     up: rate(traffic.rates?.upload_bytes_per_second),
     down: rate(traffic.rates?.download_bytes_per_second),
     connections: traffic.connections.total
   };
-  // A backend restart brings an earlier clock; the session ring starts over.
-  if (samples.length && time < samples[samples.length - 1].time) return [sample];
-  return [...samples.slice(-(trafficSampleLimit - 1)), sample];
 }
 
-// One history for the whole session: the curve keeps growing while the user moves between pages.
-let history: TrafficSample[] = [];
-function record(runtime: Runtime | undefined): TrafficSample[] {
-  if (runtime) history = appendTrafficSample(history, runtime);
-  return history;
-}
-export function useTrafficSamples(runtime: Runtime | undefined) {
-  const [observed, setObserved] = useState(runtime);
-  const [samples, setSamples] = useState<TrafficSample[]>(() => record(runtime));
-  if (observed !== runtime) {
-    setObserved(runtime);
-    setSamples(record(runtime));
-  }
-  return samples;
+export function useTrafficSamples(runtime: Runtime | undefined): Rings<TrafficSample> {
+  return useRings('traffic', runtime, trafficSample, foldTraffic);
 }
 
 export function historyTrafficSamples(history: TrafficHistory): TrafficSample[] {
@@ -48,18 +43,23 @@ export function historyTrafficSamples(history: TrafficHistory): TrafficSample[] 
   }));
 }
 
-// The backend's ring merged with this session's polls, clipped to the chosen window; where both have a
-// second, the backend's sample wins.
-export function trafficWindow(polled: TrafficSample[], ring: TrafficSample[], windowSeconds: number, now = Date.now()) {
-  const byTime = new Map<number, TrafficSample>();
-  for (const sample of polled) byTime.set(sample.time, sample);
-  for (const sample of ring) byTime.set(sample.time, sample);
-  const since = now - windowSeconds * 1000;
-  const samples = [...byTime.values()].filter(sample => sample.time >= since).sort((a, b) => a.time - b.time);
+export type TrafficSeries = {
+  timestamps: number[];
+  down: Array<number | null>;
+  up: Array<number | null>;
+  connections: Array<number | null>;
+  since: number;
+  until: number;
+};
+
+export function trafficWindow(rings: Rings<TrafficSample>, ring: TrafficSample[], windowSeconds: number, now = Date.now(), maxPoints?: number): TrafficSeries {
+  const {samples, since, until} = window(rings, ring, windowSeconds, foldTraffic, now, maxPoints);
   return {
     timestamps: samples.map(s => s.time),
     down: samples.map(s => s.down),
     up: samples.map(s => s.up),
-    connections: samples.map(s => s.connections)
+    connections: samples.map(s => s.connections),
+    since,
+    until
   };
 }

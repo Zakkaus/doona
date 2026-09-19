@@ -50,15 +50,30 @@ test('home charts collect memory polls and change the traffic history range', as
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
 });
 
-test('the outbound mode switch drives the engine and reads back on return', async ({page}) => {
+test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
   await page.goto('/#/activity');
-  await page.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('Outbound mode: Direct');
-  await page.goto('/#/overview');
+  const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
+  // Apply stays in place and only wakes up once a change is staged.
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  await expect(apply).toBeDisabled();
+  await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
+  await expect(apply).toBeDisabled();
+  // The write is in the configuration: the marked rule sits in the main source after the must presets. The
+  // editor only renders the lines in view, so the source is scrolled to its end first.
+  const routing = async () => {
+    await page.goto('/#/config');
+    await page.locator('.cm-scroller').evaluate(el => el.scrollTo(0, el.scrollHeight));
+    return page.locator('.cm-content');
+  };
+  await expect(await routing()).toContainText('l4proto(tcp, udp) -> direct # doona: outbound mode');
   await page.goto('/#/activity');
-  await expect(page.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('radio', {name: 'Global', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Global'})).toBeVisible();
-  await page.getByRole('radio', {name: 'Rule', exact: true}).click();
-  await expect(page.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await mode.getByRole('radio', {name: 'Rule', exact: true}).click();
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Rule'})).toBeVisible();
+  await expect(await routing()).not.toContainText('doona: outbound mode');
 });

@@ -1,36 +1,23 @@
-import {useState} from 'react';
 import type {Capabilities, MemoryHistory, RuntimeMemory} from '../../api/model';
+import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {useMemoryHistory} from '../../api/store';
 import {parseU64} from '../../api/u64';
 
 export type MemorySample = {time: number; rss: number | null; cgroup: number | null};
-// An hour of five-second polls: the backend's ring covers ten minutes, the session keeps the rest.
-export const memorySampleLimit = 720;
 
-export function appendMemorySample(samples: MemorySample[], memory: RuntimeMemory): MemorySample[] {
+// A bucket averages both levels.
+export const foldMemory: Fold<MemorySample> = (group, time) => ({time, rss: mean(group.map(s => s.rss)), cgroup: mean(group.map(s => s.cgroup))});
+
+export function memorySample(memory: RuntimeMemory): MemorySample | undefined {
   const time = Date.parse(memory.observed_at);
-  if (!Number.isFinite(time) || samples.at(-1)?.time === time) return samples;
+  if (!Number.isFinite(time)) return undefined;
   const rss = parseU64(memory.process?.rss_bytes ?? null);
   const cgroup = parseU64(memory.cgroup?.current_bytes ?? null);
-  const sample = {time, rss: rss === null ? null : Number(rss), cgroup: cgroup === null ? null : Number(cgroup)};
-  if (samples.length && time < samples[samples.length - 1].time) return [sample];
-  return [...samples.slice(-(memorySampleLimit - 1)), sample];
+  return {time, rss: rss === null ? null : Number(rss), cgroup: cgroup === null ? null : Number(cgroup)};
 }
 
-// One history for the whole session: the curve keeps growing while the user moves between pages.
-let history: MemorySample[] = [];
-function record(memory: RuntimeMemory | undefined): MemorySample[] {
-  if (memory) history = appendMemorySample(history, memory);
-  return history;
-}
-export function useMemorySamples(memory: RuntimeMemory | undefined) {
-  const [observed, setObserved] = useState(memory);
-  const [samples, setSamples] = useState<MemorySample[]>(() => record(memory));
-  if (observed !== memory) {
-    setObserved(memory);
-    setSamples(record(memory));
-  }
-  return samples;
+export function useMemorySamples(memory: RuntimeMemory | undefined): Rings<MemorySample> {
+  return useRings('memory', memory, memorySample, foldMemory);
 }
 
 export function historySamples(history: MemoryHistory): MemorySample[] {
@@ -41,22 +28,14 @@ export function historySamples(history: MemoryHistory): MemorySample[] {
   });
 }
 
-// Two rings on one time axis: the polls this session collected, and the backend's, which reaches back before
-// the page was opened. Where both have a second, the backend's sample wins.
-export function mergeSamples(polled: MemorySample[], history: MemorySample[]): MemorySample[] {
-  const byTime = new Map<number, MemorySample>();
-  for (const sample of polled) byTime.set(sample.time, sample);
-  for (const sample of history) byTime.set(sample.time, sample);
-  return [...byTime.values()].sort((a, b) => a.time - b.time);
-}
-
-// The backend's ring merged with the polls collected in this session; the polls alone without a ring.
-export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined) {
+// The backend's ring merged with the polls collected in this session, over the chosen window.
+export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined, windowSeconds: number) {
   const history = useMemoryHistory(capabilities);
-  const polled = useMemorySamples(memory);
+  const rings = useMemorySamples(memory);
   const advertised = capabilities?.resources.memory_history.available === true;
+  const series = window(rings, advertised && history.data ? historySamples(history.data) : [], windowSeconds, foldMemory);
   return {
-    samples: advertised && history.data ? mergeSamples(polled, historySamples(history.data)) : polled,
+    ...series,
     loading: advertised && !history.data && history.loading,
     error: advertised ? history.error : undefined
   };

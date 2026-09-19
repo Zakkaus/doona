@@ -1,27 +1,14 @@
-import {
-  useCapabilities,
-  useConnectionClose,
-  useConnections,
-  useDnsFlush,
-  useGeodata,
-  useGroups,
-  useProviderRefresh,
-  useProviders,
-  useRuntime,
-  useRuntimeMode
-} from '../../api/store';
+import {useCapabilities, useConnectionClose, useConnections, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../api/store';
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {Button, DataTable, ErrorMessage, TextTooltip, errorText, toast} from '../../ui/ui';
-import {ModeSwitch} from '../activity/ModeSwitch';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
 import {useState} from 'react';
 
-// One place for the one-shot backend actions the contract offers: reload, suspend or resume, the outbound mode,
-// the DNS cache, subscriptions, connections and the geodata files. Each control is the same component the
+// One place for the one-shot backend actions the contract offers: reload, suspend or resume, the DNS cache, subscriptions, connections and the geodata files. Each control is the same component the
 // action's own page uses; every one is gated on the capability that backs it.
 export function BackendActionsCard() {
   const t = useT();
@@ -29,8 +16,6 @@ export function BackendActionsCard() {
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(!!resources?.runtime.available);
-  const runtimeMode = useRuntimeMode(resources?.runtime_mode?.available === true);
-  const groups = useGroups(resources?.groups.available === true);
   const providers = useProviders(resources?.providers.available === true);
   const refresh = useProviderRefresh(providers.refetch);
   const connections = useConnections(undefined, resources?.connections.available === true);
@@ -39,11 +24,9 @@ export function BackendActionsCard() {
   const geodata = useGeodata(resources?.geodata.available ?? false);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const fail = (error: unknown) => toast('negative', errorText(error));
-  const target = runtimeMode.data?.target ?? groups.data?.[0]?.id ?? '';
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const offered =
     lifecycle ||
-    !!resources?.runtime_mode?.available ||
     !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
     !!resources?.providers.can_refresh ||
     !!resources?.connections.can_close ||
@@ -76,7 +59,6 @@ export function BackendActionsCard() {
       <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
         <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
-        {resources?.runtime_mode?.available && <ModeSwitch target={target} />}
       </div>
       <div className="rp-toolbar">
         {resources?.dns_cache.available && resources.dns_cache.flush && (

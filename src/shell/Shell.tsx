@@ -33,7 +33,7 @@ import type {PageProps} from '../features/types';
 import {useRoute} from './route';
 import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useVersion} from '../api/store';
 import {chainLabel, connectionRows} from '../api/selectors';
-import {features, navAvailable, subpages} from './registry';
+import {features, navAvailable, subpages, warmPage} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
 import {readSettings, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
@@ -467,6 +467,8 @@ function Frame({
                     aria-current={route === path ? 'page' : undefined}
                     data-unavailable={offered(path) ? undefined : ''}
                     aria-description={offered(path) ? undefined : t('shell.notOffered')}
+                    onHoverStart={() => warmPage(id)}
+                    onFocus={() => warmPage(id)}
                   >
                     <nav.Icon />
                     {t(nav.titleKey)}

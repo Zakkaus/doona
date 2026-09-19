@@ -1,7 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
 import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
-import {addU64, formatRate} from './u64';
+import {addU64} from './u64';
 import type {ApiEvent} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
 
@@ -32,10 +32,12 @@ it('serves cumulative outbound counters independently of live connection bytes',
   }
   const live = await api.connections();
   expect(outboundUsage(counters).total).not.toBe(addU64(...[...live.tcp, ...live.udp].map(c => c.download_bytes)));
-  expect(runtime.traffic.sampled_at).toBe(history.samples.at(-1)?.sampled_at);
+  // The live sample continues the ring: sampled now, rates within a swell of the ring's last point.
+  expect(Date.parse(runtime.traffic.sampled_at!)).toBeGreaterThanOrEqual(Date.parse(history.samples.at(-1)!.sampled_at));
   expect(runtime.traffic.connections.total).toBe(history.samples.at(-1)?.connections);
-  expect(formatRate(runtime.traffic.rates!.download_bytes_per_second)).toBe(formatRate(history.samples.at(-1)!.download_bytes_per_second));
-  expect(formatRate(runtime.traffic.rates!.upload_bytes_per_second)).toBe(formatRate(history.samples.at(-1)!.upload_bytes_per_second));
+  const near = (a: string | null, b: string | null) => a !== null && b !== null && Math.abs(Number(a) / Number(b) - 1) <= 0.15;
+  expect(near(runtime.traffic.rates!.download_bytes_per_second, history.samples.at(-1)!.download_bytes_per_second!)).toBe(true);
+  expect(near(runtime.traffic.rates!.upload_bytes_per_second, history.samples.at(-1)!.upload_bytes_per_second!)).toBe(true);
 });
 
 it('filters the history window before thinning backwards without changing samples', async () => {
@@ -214,7 +216,7 @@ it('selects both networks with an independent revision and preserves configurati
   expect(pinned).toMatchObject({member_id: 'jp-01', source: 'override'});
   expect((await api.group('gaming')).runtime.selection.tcp).toMatchObject({member_id: 'jp-01', source: 'override'});
   const released = await api.clearGroupOverride('gaming', 'both');
-  expect(released).toMatchObject({member_id: 'hk-02', source: 'policy'});
+  expect(released).toMatchObject({network: 'both', selection: {tcp: {member_id: 'hk-02', source: 'policy'}, udp: {member_id: 'hk-02', source: 'policy'}}});
   expect((await api.group('gaming')).runtime.selection.udp).toMatchObject({member_id: 'hk-02', source: 'policy'});
   await expect(api.clearGroupOverride('proxy', 'both')).rejects.toMatchObject({code: 'state_conflict'});
   await expect(api.selectGroup('proxy', {member_id: 'missing', network: 'both'})).rejects.toMatchObject({status: 404});

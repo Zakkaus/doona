@@ -254,7 +254,9 @@ export function CodeEditor({
           ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
           language.current.of(phrasesFor(t)),
-          EditorView.contentAttributes.of({'aria-label': label}),
+          // A viewer's text is not editable, so it stops being focusable; keep it in the tab order so a long
+          // or wide source can still be scrolled from the keyboard.
+          EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'}),
           EditorView.updateListener.of(update => {
             if (update.docChanged) change.current?.(update.state.doc.toString());
           })
