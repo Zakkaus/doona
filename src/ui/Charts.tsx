@@ -288,8 +288,9 @@ export function Spark(props: ComponentProps<typeof LazySpark>) {
     </Suspense>
   );
 }
-// `limit` bounds the legend: the rows past it (the small ones, callers sort by size) sit behind a toggle, so a
-// deployment with dozens of outbounds does not stretch the card the chart shares its row with.
+// `limit` bounds the legend: the rows past it (the small ones, callers sort by size) sit behind a toggle, and
+// the opened list scrolls inside the card, so a deployment with dozens of outbounds never stretches the card
+// the chart shares its row with.
 export function Donut({rows, total, limit}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string; limit?: number}) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
@@ -302,7 +303,7 @@ export function Donut({rows, total, limit}: {rows: Array<{name: string; value: n
         </Suspense>
         <div className="center">{total}</div>
       </div>
-      <div className="lst">
+      <div className={expanded ? 'lst open' : 'lst'}>
         {shown.map(r => (
           <div key={r.name} className="r">
             <i className="dot" style={{background: r.color}} />

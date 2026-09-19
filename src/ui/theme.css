@@ -1673,6 +1673,11 @@ input {
   flex-direction: column;
   gap: 4px;
 }
+/* Opened past its limit, the legend scrolls instead of growing the card. */
+.rp-donut .lst.open {
+  max-height: 320px;
+  overflow-y: auto;
+}
 .rp-donut .r {
   display: flex;
   align-items: center;
