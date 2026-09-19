@@ -23,6 +23,7 @@ import {NodeMenu} from '../policies/Nodes';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
+import {ModeCards} from './ModeSwitch';
 
 export function Activity({go}: {go: (page: string) => void}) {
   const t = useT();
@@ -108,6 +109,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   return (
     <>
       <div className="rp-quick">
+        <ModeCards />
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>

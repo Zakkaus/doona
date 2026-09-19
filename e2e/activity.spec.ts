@@ -49,3 +49,24 @@ test('home charts collect memory polls and change the traffic history range', as
   await request;
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
 });
+
+test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
+  await page.goto('/#/activity');
+  const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+  await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+  // The write is in the configuration: the marked rule sits in the main source after the must presets.
+  await page.goto('/#/config');
+  await expect(page.locator('.cm-content')).toContainText('l4proto(tcp, udp) -> direct # doona: outbound mode');
+  await page.goto('/#/activity');
+  await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await mode.getByRole('radio', {name: 'Rule', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Rule'})).toBeVisible();
+  await page.goto('/#/config');
+  await expect(page.locator('.cm-content')).not.toContainText('doona: outbound mode');
+});
