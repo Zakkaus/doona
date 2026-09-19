@@ -59,14 +59,18 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
-  // The write is in the configuration: the marked rule sits in the main source after the must presets.
-  await page.goto('/#/config');
-  await expect(page.locator('.cm-content')).toContainText('l4proto(tcp, udp) -> direct # doona: outbound mode');
+  // The write is in the configuration: the marked rule sits in the main source after the must presets. The
+  // editor only renders the lines in view, so the source is scrolled to its end first.
+  const routing = async () => {
+    await page.goto('/#/config');
+    await page.locator('.cm-scroller').evaluate(el => el.scrollTo(0, el.scrollHeight));
+    return page.locator('.cm-content');
+  };
+  await expect(await routing()).toContainText('l4proto(tcp, udp) -> direct # doona: outbound mode');
   await page.goto('/#/activity');
   await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
   await mode.getByRole('radio', {name: 'Rule', exact: true}).click();
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Rule'})).toBeVisible();
-  await page.goto('/#/config');
-  await expect(page.locator('.cm-content')).not.toContainText('doona: outbound mode');
+  await expect(await routing()).not.toContainText('doona: outbound mode');
 });
