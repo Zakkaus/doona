@@ -257,7 +257,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : !OUT.length ? (
             <span className="rp-empty">{t('ui.empty')}</span>
           ) : (
-            <Donut rows={OUT} total={formatBytes(usage.total)} />
+            <Donut rows={OUT} total={formatBytes(usage.total)} limit={8} />
           )}
         </div>
       </div>

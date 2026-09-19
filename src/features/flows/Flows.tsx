@@ -3,7 +3,21 @@ import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundName
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough, nodeNames} from './map';
 import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
-import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  DetailPanel,
+  ErrorMessage,
+  Loading,
+  TextTooltip,
+  Kv,
+  LabeledSelect,
+  Segmented,
+  panelQuery,
+  useMediaQuery,
+  RuleRef
+} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -74,6 +88,7 @@ export function FlowRecords({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
+  const rulesListed = useCapabilities().data?.resources.rules.available === true;
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -144,7 +159,7 @@ export function FlowRecords({go, query}: PageProps) {
             <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
             <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>,
             <span className="rp-rule">
-              <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>
+              <RuleRef expression={f.rule_expression} ruleId={f.rule_id} linked={rulesListed} />
               {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
             </span>,
             f.network.toUpperCase(),

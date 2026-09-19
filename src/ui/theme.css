@@ -2644,6 +2644,12 @@ button.rp-node[data-focus-visible] {
   gap: 8px;
   min-width: 0;
 }
+.rp-rule-link {
+  min-height: 24px;
+  height: 24px;
+  width: 24px;
+  flex: none;
+}
 .rp-rule > span {
   overflow: hidden;
   text-overflow: ellipsis;

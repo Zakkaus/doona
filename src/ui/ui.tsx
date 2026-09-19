@@ -53,6 +53,7 @@ import {
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
+import ListBulleted from './icons/ListBulleted';
 import Checkmark from './icons/Checkmark';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
@@ -578,6 +579,27 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
+// A routing rule named by a connection or flow: the expression, and a small link to its row in the rule
+// list when the backend lists rules and the record carries the id. The link is its own target so a click on
+// the row still selects the row.
+export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
+  const t = useT();
+  if (!expression) return <>—</>;
+  return (
+    <>
+      <TextTooltip text={expression}>{expression}</TextTooltip>
+      {linked && ruleId && (
+        <RLink
+          href={'#/rules?tab=list&rule=' + encodeURIComponent(ruleId)}
+          className="rp-btn quiet icon rp-rule-link"
+          aria-label={t('ui.openRule', {rule: expression})}
+        >
+          <ListBulleted />
+        </RLink>
+      )}
+    </>
+  );
+}
 // `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
 // A third element is the full value behind a shortened one, shown as a tooltip.
 export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
@@ -688,6 +710,26 @@ export function useContentWidth<E extends HTMLElement>() {
     return () => observer.disconnect();
   }, []);
   return [ref, width] as const;
+}
+// The height that takes an element to the bottom of the viewport, never below `min`: a page whose table is
+// its last content shows as many rows as the screen holds instead of a fixed box over empty page.
+export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
+  const ref = useRef<E>(null);
+  const [height, setHeight] = useState(min);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setHeight(Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [min, gap]);
+  return [ref, height] as const;
 }
 // Long lists are virtualised: only the visible rows are in the DOM, so a rule list of thousands stays light.
 // Short ones render whole, which keeps every row reachable to assistive technology and find-in-page. A list

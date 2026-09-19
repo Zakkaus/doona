@@ -82,3 +82,12 @@ test.describe('flows unavailable', () => {
     await expect(page).toHaveURL(/#\/rules\?tab=map$/);
   });
 });
+
+test('a flow record links its rule into the rule list', async ({page}) => {
+  await page.goto('/#/rules?tab=flows');
+  const link = page.getByRole('link', {name: /^Open .* in the rule list$/}).first();
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
+  await expect(page.locator('[role="row"][aria-selected="true"]')).toBeVisible();
+});

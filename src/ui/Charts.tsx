@@ -2,6 +2,7 @@
 import {lazy, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
 import type {ComponentProps} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
+import {Button} from './ui';
 // Charts re-lay out once a resize settles rather than on every event; a drag then costs one render per
 // chart instead of dozens.
 const RESIZE_DEBOUNCE = 120;
@@ -287,8 +288,12 @@ export function Spark(props: ComponentProps<typeof LazySpark>) {
     </Suspense>
   );
 }
-export function Donut({rows, total}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
+// `limit` bounds the legend: the rows past it (the small ones, callers sort by size) sit behind a toggle, so a
+// deployment with dozens of outbounds does not stretch the card the chart shares its row with.
+export function Donut({rows, total, limit}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string; limit?: number}) {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
+  const shown = limit !== undefined && !expanded ? rows.slice(0, limit) : rows;
   return (
     <div className="rp-donut">
       <div className="box">
@@ -298,7 +303,7 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
         <div className="center">{total}</div>
       </div>
       <div className="lst">
-        {rows.map(r => (
+        {shown.map(r => (
           <div key={r.name} className="r">
             <i className="dot" style={{background: r.color}} />
             <span className="n">{r.name}</span>
@@ -306,6 +311,11 @@ export function Donut({rows, total}: {rows: Array<{name: string; value: number |
             <span className="p">{r.value === null ? '—' : t('ui.percent', {n: r.value})}</span>
           </div>
         ))}
+        {limit !== undefined && rows.length > limit && (
+          <Button small quiet onPress={() => setExpanded(v => !v)}>
+            {expanded ? t('ui.fewerRows') : t('ui.moreRows', {n: rows.length - limit})}
+          </Button>
+        )}
       </div>
     </div>
   );
