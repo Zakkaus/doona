@@ -23,8 +23,6 @@ import type {
   OperationState,
   RoutingTraceRequest,
   RoutingTraceResponse,
-  RuntimeMode,
-  RuntimeModeRequest,
   ProviderCreate,
   ProviderList,
   ProbeRequest,
@@ -597,22 +595,6 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
   return {records, connected, error, available, clear: () => setRecords([])};
 }
 // The outbound mode switch: read with the usual poll, set at once; the reply replaces the cached copy.
-export function useRuntimeMode(enabled = true) {
-  const api = getApi();
-  const resource = useResource({key: ['runtimeMode'], fetch: signal => api.runtimeMode(signal)}, {deps: [api], enabled});
-  const {busy, run} = useAction<'change'>({rethrow: true});
-  const [set, setSet] = useState<{api: Api; value: RuntimeMode} | null>(null);
-  const override = set?.api === api ? set.value : null;
-  const change = (request: RuntimeModeRequest) =>
-    run('change', async signal => {
-      const next = await api.setRuntimeMode(request, signal);
-      setSet({api, value: next});
-      resource.refetch();
-      return next;
-    });
-  return {...resource, data: newest(override, resource.data), busy: busy !== null, change};
-}
-// Where nodes come from, and a refresh that re-reads one source through an operation.
 export function useProviders(enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;

@@ -150,7 +150,6 @@ it('refreshes generation-dependent resources but leaves DNS cache to its poll', 
     'capabilities',
     'runtime',
     'runtimeSettings',
-    'runtimeMode',
     'config',
     'groups',
     'group',
@@ -165,7 +164,6 @@ it('refreshes generation-dependent resources but leaves DNS cache to its poll', 
     expect(shouldRefetch(resource, event('generation.changed'))).toBe(true);
   }
   for (const resource of ['dnsLog', 'version'] as const) expect(shouldRefetch(resource, event('generation.changed'))).toBe(false);
-  expect(shouldRefetch('runtimeMode', event('runtime.updated'))).toBe(true);
   expect(shouldRefetch('runtimeSettings', event('runtime.updated'))).toBe(false);
   expect(invalidations['generation.changed'].poll).toContain('dnsCache');
   expect(shouldRefetch('dnsCache', event('generation.changed'))).toBe(false);

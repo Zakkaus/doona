@@ -19,7 +19,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 ## Status
 
-doona is a contract and demo preview until honk ships `/api/v1`, not a claim of compatibility with a released backend. It targets `daeuniverse/api-standardize`, fork branch `doona-pin`, commit `5657e5e` (PR #4, #5, #6, #7 and #8 merged), pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). The mock backend is the default; the screenshots show mock data.
+doona is a contract and demo preview until honk ships `/api/v1`, not a claim of compatibility with a released backend. It targets `daeuniverse/api-standardize`, fork branch `doona-pin`, commit `ba3e4c3` (PR #4, #5, #6, #7 and #8 merged), pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). The mock backend is the default; the screenshots show mock data.
 
 ## Requirements
 

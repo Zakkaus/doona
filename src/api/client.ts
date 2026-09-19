@@ -168,8 +168,6 @@ export function createApi(base: string, token?: string): Api {
     },
     closeConnections: async (query, signal) => data(await client.DELETE('/api/v1/connections', {params: {query}, headers: once(), signal})),
     runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
-    runtimeMode: async signal => data(await client.GET('/api/v1/runtime/mode', {signal})),
-    setRuntimeMode: async (body, signal) => data(await client.PUT('/api/v1/runtime/mode', {body, headers: once(), signal})),
     providers: async (query, signal) => data(await client.GET('/api/v1/providers', {params: {query}, signal})),
     refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, headers: once(), signal})),
     createProvider: async (body, signal) => data(await client.POST('/api/v1/providers', {body, signal})),

@@ -49,16 +49,3 @@ test('home charts collect memory polls and change the traffic history range', as
   await request;
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
 });
-
-test('the outbound mode switch drives the engine and reads back on return', async ({page}) => {
-  await page.goto('/#/activity');
-  await page.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('Outbound mode: Direct');
-  await page.goto('/#/overview');
-  await page.goto('/#/activity');
-  await expect(page.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('radio', {name: 'Global', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Global'})).toBeVisible();
-  await page.getByRole('radio', {name: 'Rule', exact: true}).click();
-  await expect(page.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-});

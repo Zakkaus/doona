@@ -22,7 +22,6 @@ const resourceLabels = {
   traffic_history: 'ov.r.trafficHistory',
   memory_history: 'ov.r.memoryHistory',
   runtime_outbounds: 'ov.r.outbounds',
-  runtime_mode: 'act.mode',
   logs: 'nav.logs',
   providers: 'nodes.providers',
   config: 'nav.config',

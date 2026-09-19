@@ -11,8 +11,6 @@ test.describe('first-release backend', () => {
     // Every page stays listed; the ones this backend cannot serve are marked.
     await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
     await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Activity', 'Overview', 'Connections', 'Settings']);
-    // The quick row says the mode switch is not offered rather than pretending to switch.
-    await expect(page.getByText('Not offered by the backend', {exact: true})).toBeVisible();
     for (const route of ['overview', 'connections', 'settings'] as const) {
       await page.goto(`/#/${route}`);
       await expect(page.locator('.rp-nav[href="#/' + route + '"]')).toHaveAttribute('aria-current', 'page');

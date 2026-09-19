@@ -47,8 +47,6 @@ import type {
   NodeCreate,
   GeoData,
   RuleList,
-  RuntimeMode,
-  RuntimeModeRequest,
   LogOptions,
   EffectiveConfig,
   ConfigValidationRequest,
@@ -84,8 +82,6 @@ export interface Api {
   /** Closes every closable connection the filters select; unfiltered needs all=true. */
   closeConnections(query: BulkCloseQuery, signal?: AbortSignal): Promise<BulkCloseResult>;
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
-  runtimeMode(signal?: AbortSignal): Promise<RuntimeMode>;
-  setRuntimeMode(request: RuntimeModeRequest, signal?: AbortSignal): Promise<RuntimeMode>;
   providers(query?: ProviderQuery, signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
   createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;

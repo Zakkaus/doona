@@ -212,14 +212,4 @@ it('fills resource keys a backend on an older contract pin leaves out as unavail
   expect(capabilities.resources.geodata.available).toBe(false);
   expect(capabilities.resources.nodes.available).toBe(false);
   expect(capabilities.resources.rules.available).toBe(false);
-  // An offered mode from a pin before `writable` existed was always switchable; a declared flag is kept.
-  expect(capabilities.resources.runtime_mode).toEqual({available: false});
-  expect(normalizeCapabilities({...raw, resources: {runtime_mode: {available: true, modes: ['rule']}}} as never).resources.runtime_mode).toEqual({
-    available: true,
-    modes: ['rule'],
-    writable: true
-  });
-  expect(
-    normalizeCapabilities({...raw, resources: {runtime_mode: {available: true, writable: false, modes: ['rule']}}} as never).resources.runtime_mode.writable
-  ).toBe(false);
 });

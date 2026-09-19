@@ -83,12 +83,10 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/runtime': await api.runtime(),
     '/runtime/memory': await api.runtimeMemory(),
     '/runtime/memory/history': await api.memoryHistory(),
-    '/runtime/mode': await api.runtimeMode(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections(),
-    '/nodes': await api.nodes(),
-    '/groups': await api.groups()
+    '/nodes': await api.nodes()
   };
   const counts: Record<string, number> = {};
   let hold: Promise<void> | undefined;
