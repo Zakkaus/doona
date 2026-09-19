@@ -864,10 +864,11 @@ export function createMockApi(): Api {
           }
           const must = rule![2].endsWith('(must)');
           const outbound = rule![2].replace(/\(must\)$/, '');
+          // The condition alone, as honk renders it and as flows quote it; the outbound is its own field.
           entries.push({
             rule_id: known.get(code) ?? `${source.file}:${source.line}`,
             index: entries.length,
-            expression: code,
+            expression: rule![1],
             outbound,
             must,
             source,

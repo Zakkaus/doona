@@ -59,13 +59,15 @@ export function Nodes({go, query}: PageProps) {
   const names = useOutboundNames();
   // Nodes written straight into the configuration have no provider. A backend that lists them under an
   // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
-  const list = useMemo(() => {
-    // A provider's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
+  const {list, synthetic} = useMemo(() => {
+    // A subscription's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
     const tags = new Map<string, string>();
     for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
-    const rows = (providers.data?.providers ?? []).map(item => (tags.has(item.id) ? {...item, name: tags.get(item.id)!} : item));
+    const rows = (providers.data?.providers ?? []).map(item =>
+      item.kind === 'subscription' && tags.has(item.id) ? {...item, name: tags.get(item.id)!} : item
+    );
     const loose = (nodes.data ?? []).filter(node => node.provider_id === null).length;
-    if (!loose || rows.some(item => item.kind === 'inline')) return rows;
+    if (!loose || rows.some(item => item.kind === 'inline')) return {list: rows, synthetic: false};
     const inline: Provider = {
       id: INLINE,
       name: t('nodes.kind.inline'),
@@ -78,10 +80,12 @@ export function Nodes({go, query}: PageProps) {
       status: 'ok',
       last_error: null
     };
-    return [inline, ...rows];
+    return {list: [inline, ...rows], synthetic: true};
   }, [providers.data, nodes.data, t]);
   const selectedId = params.get('provider') ?? list[0]?.id ?? null;
   const provider = list.find(item => item.id === selectedId) ?? null;
+  // The row doona added stands for the nodes with no provider; a backend's own inline provider keeps its id.
+  const ownerId = provider && synthetic && provider.id === INLINE ? null : provider?.id;
   const select = (id: string | null) => {
     const next = new URLSearchParams(query);
     if (id) next.set('provider', id);
@@ -105,10 +109,7 @@ export function Nodes({go, query}: PageProps) {
   >(null);
   const [form, setForm] = useState({name: '', value: ''});
   const inlineId = list.find(item => item.kind === 'inline')?.id ?? null;
-  const owned = useMemo(
-    () => (nodes.data ?? []).filter(node => (provider ? node.provider_id === (provider.id === INLINE ? null : provider.id) : true)),
-    [nodes.data, provider]
-  );
+  const owned = useMemo(() => (nodes.data ?? []).filter(node => (provider ? node.provider_id === ownerId : true)), [nodes.data, provider, ownerId]);
   const groups = useMemo(
     () => [...new Set(owned.flatMap(node => node.group_ids))].sort((a, b) => collator.compare(names.get(a) ?? a, names.get(b) ?? b)),
     [owned, names]
