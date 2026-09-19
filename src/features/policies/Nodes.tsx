@@ -21,14 +21,13 @@ import {
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
 import {millis} from '../../api/u64';
-import {OutboundMark} from './Mark';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
 export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
-export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
+export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
 const BIG = 12;
 
 // Region facets for a node list, ordered by count.
@@ -155,7 +154,6 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
     <NodeTile
       {...props}
       name={n.name}
-      icon={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : undefined}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}

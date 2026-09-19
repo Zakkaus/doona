@@ -601,7 +601,6 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
 // Virtual collections render the same tile body inside their own selectable item.
 export type NodeTileProps = {
   name: string;
-  icon?: ReactNode;
   tcp?: number;
   alive?: boolean;
   unavailable?: boolean;
@@ -616,7 +615,6 @@ export type NodeTileProps = {
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
 export function NodeTile({
   name,
-  icon,
   tcp,
   alive = true,
   unavailable = !alive || tcp == null,
@@ -633,7 +631,6 @@ export function NodeTile({
     <>
       <span className="top">
         <span className="n">
-          {icon && <span className="ic">{icon}</span>}
           <TextTooltip>{name}</TextTooltip>
         </span>
         {nested ? (
@@ -1040,7 +1037,7 @@ export function Chips({
   onChange
 }: {
   label: string;
-  items: Array<{id: string; label: string; count?: string; countLabel?: string; icon?: ReactNode}>;
+  items: Array<{id: string; label: string; count?: string; countLabel?: string}>;
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
@@ -1057,7 +1054,6 @@ export function Chips({
     >
       {items.map(item => (
         <ToggleButton key={item.id} id={item.id} className="rp-btn sm">
-          {item.icon}
           <span className="rp-truncate">{item.label}</span>
           {item.count !== undefined && (
             <span className="n" title={item.countLabel}>

@@ -1412,6 +1412,7 @@ input {
 
 .rp-seg .rp-btn[data-hovered] {
   color: var(--rp-text);
+  transition-delay: 0ms;
 }
 /* Chips: a wrapping row of small toggles; the chosen one takes the selection tint. */
 .rp-chips {
@@ -1536,41 +1537,6 @@ input {
 .rp-il .ic {
   margin-right: 0;
 }
-.flag {
-  display: inline-flex;
-  width: 16px;
-  height: 12px;
-  border-radius: 2px;
-  overflow: hidden;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.18);
-  flex: none;
-  vertical-align: -1px;
-}
-.flag > svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.flag.mark {
-  color: var(--rp-on-accent);
-  background: var(--rp-muted);
-}
-.flag.mark[data-kind='direct'] {
-  background: var(--rp-foam);
-}
-.flag.mark[data-kind='block'] {
-  background: var(--rp-love);
-}
-.flag.mark[data-kind='node'] {
-  background: var(--rp-pine);
-}
-/* Marks sit on the text baseline of the chain, chip or light they lead. */
-.rp-chain > .flag,
-.rp-chips .flag,
-.rp-light > .flag {
-  translate: 0 0.5px;
-}
-
 .rp-light {
   display: inline-flex;
   align-items: center;
@@ -2371,6 +2337,8 @@ button.rp-node[data-focus-visible] {
   border: 2px solid transparent;
   position: relative;
   z-index: 1;
+  /* Like a tab: the label recolours as the slider arrives. */
+  transition: color 120ms var(--rp-ease) 100ms;
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,
@@ -2936,10 +2904,12 @@ button.rp-node[data-focus-visible] {
   color: var(--rp-subtle);
   cursor: pointer;
   outline: none;
-  transition: color 150ms var(--rp-ease);
+  /* The label takes the selection colour as the slider arrives, not the moment it leaves the old tab. */
+  transition: color 120ms var(--rp-ease) 100ms;
 }
 .rp-tab[data-hovered] {
   color: var(--rp-text);
+  transition-delay: 0ms;
 }
 .rp-tab[data-selected] {
   color: var(--rp-pine);

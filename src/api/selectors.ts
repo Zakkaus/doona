@@ -7,7 +7,6 @@ import type {
   EventKind,
   FlowStep,
   Group,
-  GroupSummary,
   HealthObservation,
   Node,
   ProbeResult,
@@ -71,19 +70,6 @@ export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   random: 'policy.kind.random',
   score: 'policy.kind.score'
 };
-// The node a group currently exits through, following nested groups by their TCP selection; undefined when the
-// chain is broken or cycles. Summaries carry member ids only, so node names come from the node list.
-export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]): string | undefined {
-  const byGroup = new Map(groups.map(group => [group.id, group]));
-  const byNode = new Map(nodes.map(node => [node.id, node.name]));
-  const seen = new Set<string>();
-  let id: string | null = groupId;
-  while (id && byGroup.has(id) && !seen.has(id)) {
-    seen.add(id);
-    id = byGroup.get(id)!.selection.tcp_member_id;
-  }
-  return id ? byNode.get(id) : undefined;
-}
 // Built-in outbounds read in the user's language; group and node names stay as configured.
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
@@ -95,10 +81,6 @@ export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: 
   if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
   return chainNames(row.chain, names).join(' → ') || '—';
 }
-// The node a chain ends in, by name, for the mark beside it.
-export const chainLeaf = (row: Pick<Connection, 'chain' | 'outbound'>, names?: OutboundNames): string | null =>
-  row.outbound === 'direct' || row.outbound === 'block' ? row.outbound : (chainNames(row.chain, names).at(-1) ?? null);
-
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   starting: 'lifecycle.starting',
   running: 'lifecycle.running',

@@ -2,8 +2,7 @@ import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough, nodeNames} from './map';
-import {chainLabel, chainLeaf, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
-import {OutboundMark} from '../policies/Mark';
+import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, panelQuery, useMediaQuery} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
@@ -143,10 +142,7 @@ export function FlowRecords({go, query}: PageProps) {
           ]}
           render={f => [
             <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
-            <span className="rp-chain">
-              <OutboundMark name={chainLeaf(f, names)} />
-              <TextTooltip>{chainLabel(f, t, names)}</TextTooltip>
-            </span>,
+            <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>,
             <span className="rp-rule">
               <TextTooltip text={f.rule_expression ?? undefined}>{f.rule_expression ?? '—'}</TextTooltip>
               {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}

@@ -1,7 +1,6 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
-import {chainLabel, chainLeaf, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
-import {OutboundMark} from '../policies/Mark';
+import {chainLabel, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
@@ -60,12 +59,7 @@ export function ConnectionTable({
     const cells: Record<string, React.ReactNode> = {
       dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-      chain: (
-        <span className="rp-chain">
-          <OutboundMark name={chainLeaf(c, names)} />
-          <TextTooltip>{chainLabel(c, t, names)}</TextTooltip>
-        </span>
-      ),
+      chain: <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
       rule: (
         <span className="rp-rule">
           <TextTooltip text={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</TextTooltip>

@@ -3,7 +3,6 @@ import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, policyKindLabels, preferredHealth} from '../../api/selectors';
 import {Button, Chips, Light, NodeTile} from '../../ui/ui';
-import {OutboundMark} from '../policies/Mark';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
 // The status light says what kind of exit it is, nothing more: a proxy group, direct, block, or unknown.
@@ -47,11 +46,6 @@ export function FlowMap({
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
               <Light tone={tones[kind]}>
-                <OutboundMark
-                  name={
-                    kind === 'group' ? (lane.node && !lane.node.node.unknown ? lane.node.node.label : null) : lane.outbound.unknown ? null : lane.outbound.label
-                  }
-                />
                 <strong>{outboundLabel(lane.outbound.unknown ? null : lane.outbound.label, t)}</strong>
               </Light>
               <span className="rp-label">{facts}</span>
@@ -64,8 +58,7 @@ export function FlowMap({
                     id: rule.node.id,
                     label: label(rule.node),
                     count: n(rule.count),
-                    countLabel: t('flow.laneFlows', {n: n(rule.count)}),
-                    icon: rule.node.unknown ? <OutboundMark name={null} /> : undefined
+                    countLabel: t('flow.laneFlows', {n: n(rule.count)})
                   }))}
                   value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
                   onChange={onPin}
@@ -93,7 +86,6 @@ export function FlowMap({
               <div className="rp-lane-node">
                 <NodeTile
                   name={label(lane.node.node)}
-                  icon={<OutboundMark name={lane.node.node.unknown ? null : lane.node.node.label} />}
                   tcp={nodeHealth?.latency_ms ?? undefined}
                   alive={nodeHealth ? nodeHealth.state === 'healthy' : true}
                   unavailable={nodeHealth?.state === 'unavailable'}
@@ -107,7 +99,6 @@ export function FlowMap({
                 {/* A group with no live selection has nothing to show on the right; direct and block are themselves. */}
                 <NodeTile
                   name={kind === 'group' ? t('flow.laneNoNode') : outboundLabel(lane.outbound.label, t)}
-                  icon={<OutboundMark name={lane.outbound.unknown || kind === 'group' ? null : lane.outbound.label} />}
                   description={kind === 'group' ? t('flow.laneNoNodeHelp') : t('flow.builtin')}
                   unavailable={kind === 'group'}
                   selected={pinned === lane.outbound.id}
