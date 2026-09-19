@@ -236,6 +236,7 @@ export function Activity({go}: {go: (page: string) => void}) {
                 fmt={chartRate}
                 locale={locale}
                 height={120}
+                fill
                 window={{since: series.since, until: series.until}}
               />
             </>
@@ -326,6 +327,7 @@ export function Activity({go}: {go: (page: string) => void}) {
                 fmt={memoryBytes}
                 locale={locale}
                 height={150}
+                fill
                 baseline="auto"
                 window={{since: memoryHistory.since, until: memoryHistory.until}}
               />

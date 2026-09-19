@@ -110,13 +110,17 @@ const LazyAreaChart = lazy(() =>
       locale,
       height = 150,
       baseline = 'zero',
-      window
+      window,
+      fill
     }: {
       series: Series[];
       timestamps: number[];
       fmt: (v: number) => string;
       locale: string;
       height?: number;
+      // Grow with the card: `height` is then the floor, and a card stretched by its row neighbours fills
+      // the extra with chart rather than blank.
+      fill?: boolean;
       // A fixed span for the x axis: the chart is read against the window, so a young session sits at the
       // right edge instead of being stretched across the width. Without it the axis fits the data.
       window?: {since: number; until: number};
@@ -166,7 +170,7 @@ const LazyAreaChart = lazy(() =>
         : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
       const domain: [number | string, number | string] = window ? [window.since, window.until] : ['dataMin', 'dataMax'];
       return (
-        <div style={{height, width: '100%'}} {...hover.handlers}>
+        <div style={fill ? {minHeight: height, flex: '1 1 auto', width: '100%'} : {height, width: '100%'}} {...hover.handlers}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
             <RAreaChart data={data} margin={{top: 8, right: 0, bottom: 0, left: 20}}>
               <defs>
@@ -232,7 +236,9 @@ const LazyAreaChart = lazy(() =>
 
 export function AreaChart(props: ComponentProps<typeof LazyAreaChart>) {
   return (
-    <Suspense fallback={<div style={{height: props.height ?? 150, width: '100%'}} />}>
+    <Suspense
+      fallback={<div style={props.fill ? {minHeight: props.height ?? 150, flex: '1 1 auto', width: '100%'} : {height: props.height ?? 150, width: '100%'}} />}
+    >
       <LazyAreaChart {...props} />
     </Suspense>
   );
