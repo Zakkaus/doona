@@ -80,6 +80,16 @@ export const messages = defineMessages({
     'palette.semi': 'Semi Design',
     'palette.lightDark': '亮色／暗色',
     'palette.kary': 'Kary Pro Colors',
+    'about.title': '關於 doona',
+    'about.tagline': '{engine} 的 Web 介面',
+    'about.duck': '鴨子',
+    'about.quack': '嘎！',
+    'about.engine': '引擎',
+    'about.api': 'API',
+    'about.license': '授權',
+    'about.close': '關閉',
+    'about.credits':
+      '字型 Noto Sans TC／SC（OFL）；圖示 Adobe Spectrum（Apache-2.0）；配色來自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 與 Semi Design。',
     'palette.glassName': '玻璃'
   },
   'zh-CN': {
@@ -161,6 +171,16 @@ export const messages = defineMessages({
     'palette.semi': 'Semi Design',
     'palette.lightDark': '浅色／深色',
     'palette.kary': 'Kary Pro Colors',
+    'about.title': '关于 doona',
+    'about.tagline': '{engine} 的 Web 界面',
+    'about.duck': '鸭子',
+    'about.quack': '嘎！',
+    'about.engine': '引擎',
+    'about.api': 'API',
+    'about.license': '许可',
+    'about.close': '关闭',
+    'about.credits':
+      '字体 Noto Sans TC／SC（OFL）；图标 Adobe Spectrum（Apache-2.0）；配色来自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 与 Semi Design。',
     'palette.glassName': '玻璃'
   },
   en: {
@@ -242,6 +262,16 @@ export const messages = defineMessages({
     'palette.semi': 'Semi Design',
     'palette.lightDark': 'Light / Dark',
     'palette.kary': 'Kary Pro Colors',
+    'about.title': 'About doona',
+    'about.tagline': 'Web UI for {engine}',
+    'about.duck': 'The duck',
+    'about.quack': 'Honk!',
+    'about.engine': 'Engine',
+    'about.api': 'API',
+    'about.license': 'Licence',
+    'about.close': 'Close',
+    'about.credits':
+      'Fonts Noto Sans TC/SC (OFL); icons Adobe Spectrum (Apache-2.0); palettes from Rosé Pine, Catppuccin, Nord, Kary Pro Colors, Ant Design, Arco Design and Semi Design.',
     'palette.glassName': 'Glass'
   }
 });

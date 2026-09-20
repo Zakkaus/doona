@@ -10,6 +10,7 @@ import Translate from '../ui/icons/Translate';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
+import {About, engineLinks} from './About';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
 import {
@@ -381,13 +382,17 @@ function Frame({
   return (
     <div className="rp-shell">
       <header className="rp-top">
-        <RLink className="rp-brand" href="#/activity">
-          <img src={logo} alt="" />
-          <span className="rp-brand-text">
-            <span>doona</span>
-            <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
-          </span>
-        </RLink>
+        <About
+          trigger={
+            <Button appearance="brand" label={t('about.title')}>
+              <img src={logo} alt="" />
+              <span className="rp-brand-text">
+                <span>doona</span>
+                <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
+              </span>
+            </Button>
+          }
+        />
         <div className="rp-search-wrap">
           <Button appearance="search" onPress={openSearch}>
             <Search />
@@ -487,10 +492,12 @@ function Frame({
           </div>
         ))}
         <div className="rp-side-grow" />
-        <Button appearance="version" onPress={() => window.open('https://github.com/daeuniverse/honk', '_blank')} label={t('github')}>
+        <Button appearance="version" onPress={() => window.open(engineLinks(version.data?.engine.name).repo, '_blank', 'noreferrer')} label={t('github')}>
           <GitHub />
           {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-          {settings.profiles.length > 1 && <TextTooltip text={profile?.name}>{profile?.name}</TextTooltip>}
+          {settings.profiles.length > 1 && profile && (
+            <TextTooltip text={t('ui.valuePair', {label: t('settings.backend'), value: profile.name})}>{profile.name}</TextTooltip>
+          )}
         </Button>
       </nav>
       <main className="rp-main">

@@ -63,7 +63,7 @@ import {readLang, translate, useT} from '../i18n';
 import {ApiError, LocalError} from '../api/error';
 import {millis} from '../api/u64';
 
-const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
+export const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
 // Wrap a state change in a view transition (a page-wide crossfade) where the browser supports it.
 export function withCrossfade(fn: () => void) {
@@ -122,7 +122,7 @@ export function Button({
   isPending?: boolean;
   tip?: string;
   type?: 'button' | 'submit' | 'reset';
-  appearance?: 'search' | 'version' | 'select';
+  appearance?: 'search' | 'version' | 'select' | 'brand';
   className?: string;
 }) {
   const btn = (

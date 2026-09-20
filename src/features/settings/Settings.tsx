@@ -352,7 +352,7 @@ export function Settings({query}: PageProps) {
           </Light>
         )}
         <div className="rp-cluster">
-          <Button onPress={() => window.open('https://github.com/Zakkaus/doona', '_blank', 'noreferrer')}>
+          <Button onPress={() => window.open(import.meta.env.VITE_DOONA_REPO, '_blank', 'noreferrer')}>
             <GitHub />
             {t('github')}
           </Button>
