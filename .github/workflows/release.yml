@@ -59,8 +59,12 @@ jobs:
             nfpm package --config install/nfpm/doona.yaml --packager "$packager" --target release/
             nfpm package --config install/nfpm/doona-fonts.yaml --packager "$packager" --target release/
           done
+      # GitHub renames a `~` in an asset name to `.`; rename first so SHA256SUMS lists what is served.
       - name: Sum every asset
-        run: cd release && sha256sum doona* > SHA256SUMS
+        run: |
+          cd release
+          for f in *~*; do [ -e "$f" ] && mv "$f" "$(printf '%s' "$f" | tr '~' '.')"; done
+          sha256sum doona* > SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
