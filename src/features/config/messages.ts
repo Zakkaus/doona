@@ -81,6 +81,7 @@ export const messages = defineMessages({
     'config.source': '來源',
     'config.sourceFacts': '{lines} 行，{size}，{time} 載入',
     'config.unsaved': '未儲存',
+    'config.unsavedHint': '重新整理或關閉頁面會遺失修改',
     'config.editNote':
       '唯讀檢視會遮蔽機密（訂閱網址、密碼），遮蔽後的文字永不寫回；只有內容完整且雜湊等於 content_sha256 才開放編輯。儲存時帶 If-Match，磁碟被別人改過就回 412 不覆蓋。',
     'config.readNote': '此來源由引擎寫入或後端未開放編輯，只能檢視。',
@@ -168,6 +169,7 @@ export const messages = defineMessages({
     'config.source': '来源',
     'config.sourceFacts': '{lines} 行，{size}，{time} 加载',
     'config.unsaved': '未保存',
+    'config.unsavedHint': '刷新或关闭页面会丢失修改',
     'config.editNote':
       '只读查看会脱敏机密（订阅网址、密码），脱敏后的文本永不写回；只有内容完整且哈希等于 content_sha256 才开放编辑。保存时带 If-Match，磁盘被别人改过就回 412 不覆盖。',
     'config.readNote': '此来源由引擎写入或后端未开放编辑，只能查看。',
@@ -258,6 +260,7 @@ export const messages = defineMessages({
     'config.source': 'Source',
     'config.sourceFacts': '{lines} lines, {size}, loaded {time}',
     'config.unsaved': 'Unsaved',
+    'config.unsavedHint': 'Reloading or closing the page loses the changes',
     'config.editNote':
       'The read-only view redacts secrets (subscription URLs, passwords) and redacted text is never written back; editing opens only when the text is complete and hashes to content_sha256. Saves carry If-Match, so a file changed on disk answers 412 instead of being overwritten.',
     'config.readNote': 'This source is written by the engine or the backend does not allow editing; view only.',

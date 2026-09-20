@@ -351,7 +351,12 @@ function SourceCard({
       <div className="rp-row">
         <span className="rp-cluster">
           <h3 className="rp-h3 rp-code">{sourceName(source, t)}</h3>
-          {dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
+          {dirty && (
+            <>
+              <Badge tone="warn">{t('config.unsaved')}</Badge>
+              <span className="rp-label">{t('config.unsavedHint')}</span>
+            </>
+          )}
         </span>
         <span className="rp-cluster">
           {canValidate && (
