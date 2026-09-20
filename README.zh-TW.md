@@ -7,7 +7,7 @@
 
 # doona
 
-**[honk](https://github.com/daeuniverse/honk) 的 Web 介面：在瀏覽器裡管節點、群組、規則與配置。**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 介面：在瀏覽器裡管節點、群組、規則與配置。**
 
 [English](README.md) · [简体中文](README.zh-CN.md) · 繁體中文
 
@@ -15,7 +15,7 @@
 
 </div>
 
-doona 是一組靜態檔案，由 honk 自己或任一 Web 伺服器提供。它顯示 honk 當下的狀態：連線、保留的流程、DNS、事件、日誌、流量與記憶體。它也匯入訂閱與分享連結，把節點編成群組並測延遲，用表單寫路由規則，配置檔每次儲存前先校驗。介面有繁體中文、簡體中文與英文，十一套配色，各有淺色與深色。
+doona 是一組靜態檔案，由引擎自己或任一 Web 伺服器提供。現在對接 [honk](https://github.com/daeuniverse/honk)，dae 實作同一套 API 後也能用。它顯示引擎當下的狀態：連線、保留的流程、DNS、事件、日誌、流量與記憶體。它也匯入訂閱與分享連結，把節點編成群組並測延遲，用表單寫路由規則，配置檔每次儲存前先校驗。介面有繁體中文、簡體中文與英文，十一套配色，各有淺色與深色。
 
 ![活動頁](docs/screenshots/zh-TW/activity-light.png)
 
@@ -30,7 +30,7 @@ doona 是一組靜態檔案，由 honk 自己或任一 Web 伺服器提供。它
 
 ## 狀態
 
-doona 對接 honk 的原生 API。這套 API 在 honk 的 `feat/native-api` 分支，尚未發行。契約是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契約修改已全部合併），記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。以較舊釘點建置的後端仍可用：後端沒宣告的資源視為不可用，對應頁面從導覽列消失。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
+doona 對接原生 API。honk 在 `feat/native-api` 分支實作了這套 API，尚未發行；dae 預計實作同一份契約。契約是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契約修改已全部合併），記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。以較舊釘點建置的後端仍可用：後端沒宣告的資源視為不可用，對應頁面從導覽列消失。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
 
 ## 執行環境
 

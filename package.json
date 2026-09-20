@@ -2,7 +2,7 @@
   "name": "doona",
   "private": true,
   "version": "0.3.0",
-  "description": "A web interface for the honk transparent proxy.",
+  "description": "Web UI for the daeuniverse engines (honk, and dae once it speaks the same API).",
   "repository": {
     "type": "git",
     "url": "https://github.com/Zakkaus/doona.git"
