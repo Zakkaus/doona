@@ -29,7 +29,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveValue('name(jp-01, hk-02)');
   await dialog.getByRole('button', {name: /Policy$/}).click();
-  await page.getByRole('option', {name: 'Lowest latency', exact: true}).click();
+  await page.getByRole('option', {name: /^Lowest latency/}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 2'}).fill("subtag('sub-c')");
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
