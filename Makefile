@@ -22,7 +22,7 @@ check:
 install:
 	@test -f dist/index.html || { echo 'run make build first' >&2; exit 1; }
 	find dist -path dist/fonts -prune -o -type f -print | while read -r f; do \
-		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}"; \
+		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}" || exit 1; \
 	done
 	$(INSTALL) -Dm644 LICENSE "$(DOCDIR)/LICENSE"
 	$(INSTALL) -Dm644 NOTICE "$(DOCDIR)/NOTICE"
@@ -32,7 +32,7 @@ install:
 install-fonts:
 	@test -d dist/fonts || { echo 'run make build first' >&2; exit 1; }
 	find dist/fonts -type f | while read -r f; do \
-		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}"; \
+		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}" || exit 1; \
 	done
 	$(INSTALL) -Dm644 public/fonts/OFL.txt "$(DOCDIR)/OFL.txt"
 

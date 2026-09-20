@@ -64,6 +64,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ env.PRERELEASE != '' }}
           fail_on_unmatched_files: true
           files: |
             release/doona*

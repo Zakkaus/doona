@@ -3,14 +3,12 @@
 # PRERELEASE=beta.2, and NPM (the package.json form) 0.1.0-beta.2. The tag shape follows honk's.
 set -eu
 tag=${1:?usage: tools/version.sh vX.Y.Z[.pre.N]}
-case "$tag" in
-    v[0-9]*.[0-9]*.[0-9]*) ;;
-    *) echo "unexpected tag: $tag" >&2; exit 1 ;;
-esac
 bare=${tag#v}
-case "$bare" in
-    *[!0-9a-z.]*) echo "tag may hold digits, lower-case letters and dots only: $tag" >&2; exit 1 ;;
-esac
+# Three numbers, then nothing or a lower-case label and a number: v0.1.0, v0.1.0.beta.2.
+printf '%s\n' "$bare" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.[a-z]+\.[0-9]+)?$' || {
+    echo "unexpected tag: $tag (want vX.Y.Z or vX.Y.Z.label.N)" >&2
+    exit 1
+}
 version=$(printf '%s' "$bare" | cut -d. -f1-3)
 pre=${bare#"$version"}
 pre=${pre#.}

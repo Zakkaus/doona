@@ -10,6 +10,7 @@ PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-v$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
+# Fill in from the release's SHA256SUMS; skip only while there is no release.
 PKG_HASH:=skip
 
 PKG_LICENSE:=GPL-3.0-only
@@ -61,7 +62,6 @@ define Build/Prepare
 		gzip -dc $(DL_DIR)/$(PKG_SOURCE) | $(HOST_TAR) -C $(PKG_BUILD_DIR)/web $(TAR_OPTIONS) ; \
 	)
 ifneq ($(CONFIG_PACKAGE_doona-fonts),)
-	$(call Download,doona-fonts)
 	( \
 		mkdir -p $(PKG_BUILD_DIR)/fonts ; \
 		gzip -dc $(DL_DIR)/$(FONTS_FILE) | $(HOST_TAR) -C $(PKG_BUILD_DIR)/fonts $(TAR_OPTIONS) ; \
@@ -83,5 +83,8 @@ define Package/doona-fonts/install
 	$(CP) $(PKG_BUILD_DIR)/fonts/fonts/* $(1)/usr/share/doona/fonts/
 endef
 
+ifneq ($(CONFIG_PACKAGE_doona-fonts),)
+$(eval $(call Download,doona-fonts))
+endif
 $(eval $(call BuildPackage,doona))
 $(eval $(call BuildPackage,doona-fonts))
