@@ -1617,6 +1617,12 @@ input {
   flex-direction: column;
   gap: 8px;
 }
+/* A long list of short rows folds into as many columns as the card holds, so it stays about as tall as its neighbours. */
+.rp-list-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  column-gap: 24px;
+}
 
 .rp-legend {
   display: flex;
