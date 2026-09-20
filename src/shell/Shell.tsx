@@ -18,6 +18,7 @@ import {
   MenuButton,
   ModalDialog,
   TextField,
+  TextTooltip,
   Toasts,
   LabeledSelect,
   ErrorMessage,
@@ -491,10 +492,14 @@ function Frame({
           </div>
         ))}
         <div className="rp-side-grow" />
+        {settings.profiles.length > 1 && profile && (
+          <TextTooltip className="rp-label rp-side-backend" text={t('shell.activeBackend', {name: profile.name})}>
+            {profile.name}
+          </TextTooltip>
+        )}
         <Button appearance="version" onPress={() => window.open(engineLinks(version.data?.engine.name).repo, '_blank', 'noreferrer')} label={t('github')}>
           <GitHub />
           {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-          {settings.profiles.length > 1 && profile && <TextTooltip text={t('shell.activeBackend', {name: profile.name})}>· {profile.name}</TextTooltip>}
         </Button>
       </nav>
       <main className="rp-main">

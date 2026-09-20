@@ -1154,10 +1154,16 @@ input {
   pointer-events: none;
   clip-path: inset(8px 0);
 }
+/* With several backends saved, the one in use is named above the version. */
+.rp-side-backend {
+  display: block;
+  padding: 0 8px 4px;
+}
 .rp-version {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
   height: 32px;
   padding: 0 8px;
   border-radius: var(--rp-r-md);
