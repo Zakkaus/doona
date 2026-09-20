@@ -2,7 +2,7 @@ import {defineConfig} from 'vite';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {version} from './package.json';
+import {version, repository, config} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
 
@@ -10,6 +10,10 @@ export default defineConfig({
   base: './',
   define: {
     'import.meta.env.VITE_DOONA_VERSION': JSON.stringify(version),
+    // The links the about box and the sidebar open: doona's own repository, and the organisation whose engine
+    // (honk today, dae later) the backend names in its version; neither is written in a component.
+    'import.meta.env.VITE_DOONA_REPO': JSON.stringify(repository.url.replace(/\.git$/, '')),
+    'import.meta.env.VITE_ENGINE_ORG': JSON.stringify(config.engineOrg),
     'import.meta.env.VITE_DOONA_CONTRACT_COMMIT': JSON.stringify(
       readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/\bcommit ([0-9a-f]{7,40})\b/)![1]
     )

@@ -1,0 +1,24 @@
+# The optional Noto Sans TC/SC subset doona loads when present (make install-fonts DESTDIR=build/stage/doona-fonts).
+name: doona-fonts
+arch: all
+platform: linux
+version: ${VERSION}
+prerelease: ${PRERELEASE}
+version_schema: semver
+# nfpm 2.47 writes the Arch pkgver without the prerelease unless an epoch is set; 0 is pacman's default.
+epoch: '0'
+section: fonts
+priority: optional
+maintainer: Zakkaus <zakk@gentoozh.org>
+vendor: daeuniverse
+homepage: https://github.com/Zakkaus/doona
+license: OFL-1.1
+description: |
+  Noto Sans TC and SC for doona.
+  Without this package the browser falls back to its own fonts.
+depends:
+  - doona
+contents:
+  - src: build/stage/doona-fonts/
+    dst: /
+    type: tree

@@ -7,7 +7,7 @@
 
 # doona
 
-**[honk](https://github.com/daeuniverse/honk) 的 Web 界面：在浏览器里管理节点、群组、规则与配置。**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 界面：在浏览器里管理节点、群组、规则与配置。**
 
 [English](README.md) · 简体中文 · [繁體中文](README.zh-TW.md)
 
@@ -15,7 +15,7 @@
 
 </div>
 
-doona 是一组静态文件，由 honk 自己或任意 Web 服务器提供。它显示 honk 当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
+doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。现在对接 [honk](https://github.com/daeuniverse/honk)，dae 实现同一套 API 后也能用。它显示引擎当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
 
 ![活动页](docs/screenshots/zh-CN/activity-light.png)
 
@@ -30,7 +30,7 @@ doona 是一组静态文件，由 honk 自己或任意 Web 服务器提供。它
 
 ## 状态
 
-doona 对接 honk 的原生 API。这套 API 在 honk 的 `feat/native-api` 分支，尚未发布。契约是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契约修改已全部合并），记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。按较旧钉点构建的后端仍可用：后端没有声明的资源视为不可用，对应页面从导航栏消失。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
+doona 对接原生 API。honk 在 `feat/native-api` 分支实现了这套 API，尚未发布；dae 预计实现同一份契约。契约是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契约修改已全部合并），记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。按较旧钉点构建的后端仍可用：后端没有声明的资源视为不可用，对应页面从导航栏消失。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
 
 ## 运行环境
 
@@ -85,7 +85,7 @@ experimental {
 <details>
 <summary><strong>发行版软件包</strong></summary>
 
-目前没有。发行文件就是静态文件，Nix、Debian、AUR、Gentoo 或 OpenWrt 的软件包只需把文件装进目录、把 honk 的 `ui` 指过去；字体包可做成独立的可选软件包。
+尚未发布。之后每个发行版本会附上 [nfpm](install/nfpm) 从 `make install` 打出的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包；OpenWrt 的 feed Makefile 在 [install/openwrt](install/openwrt)。其他打包方式从 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts` 入手。
 
 </details>
 
@@ -167,6 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 | `public/`       | 静态资源、字体与 service worker        |
 | `e2e/`          | 浏览器测试                             |
 | `tools/`        | 构建、打包、一致性检查与截图工具       |
+| `install/`      | nfpm 配置与 OpenWrt feed Makefile      |
 
 ### 契约
 

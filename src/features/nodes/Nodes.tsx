@@ -266,15 +266,15 @@ export function Nodes({go, query}: PageProps) {
         selectOnFocus
         empty={t('nodes.noProviders')}
         cols={[
-          {id: 'name', label: t('nodes.provider'), minWidth: 200, grow: 2, isRowHeader: true},
-          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 110, grow: 0},
-          {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end'},
+          {id: 'name', label: t('nodes.provider'), minWidth: 140, grow: 2, isRowHeader: true},
+          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 110, grow: 0, drop: 5},
+          {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6},
           {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2},
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
           {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4},
           {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
-          {id: 'status', label: t('ui.state'), minWidth: 110, grow: 0},
-          {id: 'actions', label: t('ui.actions'), minWidth: canManageProviders ? 120 : 96, grow: 0}
+          {id: 'status', label: t('ui.state'), minWidth: 96, grow: 0},
+          {id: 'actions', label: t('ui.actions'), minWidth: canManageProviders ? 112 : 88, grow: 0}
         ]}
         render={item => {
           const used = usage(item);
@@ -376,11 +376,11 @@ export function Nodes({go, query}: PageProps) {
         sort={sort}
         onSort={setSort}
         cols={[
-          {id: 'name', label: t('nodes.node'), minWidth: 220, grow: 2, isRowHeader: true, sortable: true},
+          {id: 'name', label: t('nodes.node'), minWidth: 150, grow: 2, isRowHeader: true, sortable: true},
           {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true},
-          {id: 'latency', label: t('nodes.latency'), minWidth: 110, grow: 0, align: 'end', sortable: true},
+          {id: 'latency', label: t('nodes.latency'), minWidth: 96, grow: 0, align: 'end', sortable: true},
           {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1},
-          {id: 'actions', label: t('ui.actions'), minWidth: canManageNodes ? 96 : 56, grow: 0}
+          {id: 'actions', label: t('ui.actions'), minWidth: canManageNodes ? 108 : 72, grow: 0}
         ]}
         render={(node: Node) => {
           const health = preferredHealth(node);

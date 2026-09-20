@@ -7,7 +7,7 @@
 
 # doona
 
-**A web interface for [honk](https://github.com/daeuniverse/honk): nodes, groups, rules and the configuration, from a browser.**
+**Web UI for the [daeuniverse](https://github.com/daeuniverse) engines: nodes, groups, rules and the configuration, from a browser.**
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
@@ -15,7 +15,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a set of static files that honk serves itself, or any web server does. It shows what honk is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
+doona is a set of static files that the engine serves itself, or any web server does. It talks to [honk](https://github.com/daeuniverse/honk) today and to dae once it speaks the same API. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
@@ -30,7 +30,7 @@ Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin ke
 
 ## Status
 
-doona targets honk's native API, which is on honk's `feat/native-api` branch and not in a release yet. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
+doona targets the native API that honk implements on its `feat/native-api` branch, not in a release yet; dae is expected to implement the same contract. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
 
 ## Requirements
 
@@ -85,7 +85,7 @@ A reverse proxy in front of both keeps them same-origin: forward `/api/` to honk
 <details>
 <summary><strong>Distribution packages</strong></summary>
 
-None yet. The archives are plain static files, so a package for Nix, Debian, AUR, Gentoo or OpenWrt installs them into a directory and points honk's `ui` at it; the font archive can be a separate optional package.
+None published yet. Each release will also carry `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package; an OpenWrt feed Makefile is in [install/openwrt](install/openwrt). `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
 
 </details>
 
@@ -167,6 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<
 | `public/`       | Static assets, fonts and the service worker        |
 | `e2e/`          | Browser tests                                      |
 | `tools/`        | Build, packaging, conformance and screenshot tools |
+| `install/`      | nfpm configs and the OpenWrt feed Makefile         |
 
 ### Contract
 

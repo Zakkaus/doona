@@ -917,14 +917,125 @@ input {
 }
 .rp-brand {
   grid-column: 1;
+  justify-self: start;
   display: flex;
   align-items: center;
   min-height: 32px;
   gap: 12px;
+  /* The hover pill hugs the duck and the name, not the whole column. */
+  margin: -4px -8px -4px -6px;
+  padding: 4px 8px 4px 6px;
+  border: 0;
+  border-radius: var(--rp-r-lg);
+  background: none;
+  font: inherit;
   font-size: 18px;
   font-weight: 800;
   color: var(--rp-text);
   text-decoration: none;
+  cursor: pointer;
+}
+.rp-brand[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+/* The about box. The duck hops on a tap; after five it honks and the name cycles its colours for a while. */
+.rp-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.rp-about-duck {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.rp-about-duck:focus-visible {
+  outline: 2px solid var(--rp-pine);
+}
+.rp-about-duck img {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+/* The painting sits over the drawing and fades in when the duck is tapped past its honk. */
+.rp-about-duck .night {
+  position: absolute;
+  inset: 8px;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--rp-r-lg);
+  object-fit: cover;
+  opacity: 0;
+  scale: 0.9;
+  transition:
+    opacity 400ms var(--rp-ease),
+    scale 400ms var(--rp-ease-out);
+  pointer-events: none;
+}
+.rp-about-duck.painted .night {
+  opacity: 1;
+  scale: 1;
+}
+.rp-about-duck img.hop {
+  animation: rp-hop 360ms var(--rp-ease-out);
+}
+@keyframes rp-hop {
+  30% {
+    translate: 0 -14px;
+    rotate: -8deg;
+  }
+  60% {
+    translate: 0 0;
+    rotate: 4deg;
+  }
+}
+.rp-about-bubble {
+  position: absolute;
+  top: -4px;
+  right: -28px;
+  padding: 4px 10px;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-pine);
+  color: var(--rp-on-accent);
+  font-weight: 700;
+  animation: rp-pop 240ms var(--rp-ease-out);
+}
+@keyframes rp-pop {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+/* The facts stack one under another; a build string wraps only at its spaces. */
+.rp-about .rp-kv {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.rp-about .rp-kv .v {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+.rp-about-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.rp-about.honked .rp-brand-text > span:first-child {
+  animation: rp-hue 3s linear infinite;
+}
+@keyframes rp-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
 }
 .rp-brand img {
   width: 28px;
@@ -1075,6 +1186,7 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
   height: 32px;
   padding: 0 8px;
   border-radius: var(--rp-r-md);
@@ -2921,10 +3033,12 @@ button.rp-node[data-focus-visible] {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
+  gap: 6px;
   min-height: var(--rp-control);
   border-radius: var(--rp-r-md);
   padding: 0 8px;
   color: var(--rp-pine);
+  text-decoration: none;
 }
 /* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
 .rp-card > .rp-link {
