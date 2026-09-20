@@ -963,6 +963,25 @@ input {
   width: 96px;
   height: 96px;
 }
+/* The painting sits over the drawing and fades in when the duck is tapped past its honk. */
+.rp-about-duck .night {
+  position: absolute;
+  inset: 8px;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--rp-r-lg);
+  object-fit: cover;
+  opacity: 0;
+  scale: 0.9;
+  transition:
+    opacity 400ms var(--rp-ease),
+    scale 400ms var(--rp-ease-out);
+  pointer-events: none;
+}
+.rp-about-duck.painted .night {
+  opacity: 1;
+  scale: 1;
+}
 .rp-about-duck img.hop {
   animation: rp-hop 360ms var(--rp-ease-out);
 }

@@ -3,6 +3,10 @@ declare module '*.jpg' {
   const src: string;
   export default src;
 }
+declare module '*.webp' {
+  const src: string;
+  export default src;
+}
 // Filled in by vite.config.ts from package.json.
 interface ImportMetaEnv {
   readonly VITE_DOONA_VERSION: string;
