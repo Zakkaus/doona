@@ -80,6 +80,14 @@ it('reads and expands the one-line form', () => {
   );
 });
 
+it('reads every group section and appends to the last', () => {
+  const text = 'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n}\n';
+  expect(readGroupEntries(text).map(e => e.name)).toEqual(['a', 'b']);
+  expect(addNamesToGroup(text, 'c', ['n'])).toBe(
+    'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n  c {\n    filter: name(n)\n  }\n}\n'
+  );
+});
+
 it('reads policy spellings as the documented names', () => {
   expect(['min_moving_avg', 'fixed(0)', 'Score', null, 'honk'].map(canonicalPolicy)).toEqual(['urltest', 'selector', 'score', 'selector', 'selector']);
 });

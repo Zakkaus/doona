@@ -1,4 +1,4 @@
-import {topLevelBlock} from './blocks';
+import {topLevelBlocks} from './blocks';
 
 // The `group {}` section as the pages edit it: each named subsection's filters and policy, everything else
 // in the subsection kept as written. No dae parser; subsections are cut by brace matching, one per line.
@@ -22,9 +22,11 @@ const field = /^\s*([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$/;
 
 export function readGroupEntries(text: string): GroupEntry[] {
   const lines = text.split('\n');
-  const block = topLevelBlock(lines, 'group');
-  if (!block) return [];
   const entries: GroupEntry[] = [];
+  for (const block of topLevelBlocks(lines, 'group')) readBlock(lines, block, entries);
+  return entries;
+}
+function readBlock(lines: string[], block: {open: number; close: number}, entries: GroupEntry[]) {
   for (let i = block.open + 1; i < block.close; i++) {
     const code = uncomment(lines[i]);
     const filters: string[] = [];
@@ -54,7 +56,6 @@ export function readGroupEntries(text: string): GroupEntry[] {
     entries.push({name: head[1] ?? head[2] ?? head[3], filters, policy, from: i, to: j - 1});
     i = j - 1;
   }
-  return entries;
 }
 
 const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : `'${value.replace(/'/g, '')}'`);
@@ -85,7 +86,7 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
     else lines.splice(entry.from + 1, entry.to - entry.from - 1, ...body);
     return lines.join('\n');
   }
-  const block = topLevelBlock(lines, 'group');
+  const block = topLevelBlocks(lines, 'group').at(-1) ?? null;
   const indent = block
     ? (lines
         .slice(block.open + 1, block.close)
