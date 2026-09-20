@@ -1,3 +1,5 @@
+import {topLevelBlock} from '../config/blocks';
+
 // The outbound mode as a staged configuration edit: honk keeps no native mode switch, so doona writes one
 // catch-all rule into the routing section and reloads. `rule` is the configuration as written; `direct`
 // sends everything the must-rules leave straight out; `global` sends it all through one outbound. The rule
@@ -15,26 +17,12 @@ export function readMode(text: string): OutboundMode {
   return {mode: 'rule'};
 }
 
-// The first top-level routing block's line range, exclusive of its braces; null when the text has none.
-// The dns section has a routing block of its own, so the depth is tracked from the start of the file.
-function routingBlock(lines: string[]): {open: number; close: number} | null {
-  let depth = 0;
-  let open = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const code = lines[i].replace(/#.*$/, '');
-    if (open === -1 && depth === 0 && /^\s*routing\s*\{\s*$/.test(code)) open = i;
-    depth += (code.match(/\{/g) ?? []).length - (code.match(/\}/g) ?? []).length;
-    if (open !== -1 && depth === 0) return {open, close: i};
-  }
-  return null;
-}
-
 // Presets marked `(must)` keep applying in every mode, as the engine promises; the catch-all goes after the
 // last of them so LAN and resolver traffic stays where the author put it.
 export function writeMode(text: string, next: OutboundMode): string {
   const lines = text.split('\n').filter(line => !modeLine.test(line));
   if (next.mode === 'rule') return lines.join('\n');
-  const block = routingBlock(lines);
+  const block = topLevelBlock(lines, 'routing');
   if (!block) throw new Error('no routing section');
   const body = lines.slice(block.open + 1, block.close);
   const indent = body.find(line => line.trim())?.match(/^\s*/)?.[0] ?? '    ';

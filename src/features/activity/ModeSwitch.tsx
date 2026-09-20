@@ -1,8 +1,8 @@
 import {useState} from 'react';
 import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {useCapabilities, useConfig, useConfigEditor, useGroups} from '../../api/store';
-import {candidate} from '../config/names';
+import {useCapabilities, useGroups} from '../../api/store';
+import {useMainSourceEdit} from '../config/mainSource';
 import {Button, Light, MenuButton, Segmented, errorText, toast} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
@@ -17,11 +17,8 @@ const modeLabels: Record<(typeof order)[number], Key> = {rule: 'mode.rule', dire
 export function ModeCards() {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const writable = resources?.config.available === true && resources.config.writable === true && resources.config.content === true;
-  const config = useConfig(resources?.config.available === true);
   const groups = useGroups(resources?.groups.available === true);
-  const editor = useConfigEditor(config.refetch);
-  const main = config.data?.sources.find(source => source.kind === 'main' && source.writable && typeof source.content === 'string');
+  const {main, writable, busy, apply: write} = useMainSourceEdit();
   const current: OutboundMode = main ? readMode(main.content!) : {mode: 'rule'};
   const [staged, setStaged] = useState<OutboundMode | null>(null);
   const shown = staged ?? current;
@@ -34,27 +31,22 @@ export function ModeCards() {
     else if (mode === 'direct' || mode === 'rule') setStaged({mode});
   };
   const apply = async () => {
-    if (!main || !staged) return;
-    let content: string;
+    if (!staged) return;
+    let written: boolean;
     try {
-      content = writeMode(main.content!, staged);
+      written = await write(
+        text => writeMode(text, staged),
+        errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
+      );
     } catch {
       toast('negative', t('act.modeNoRouting'));
       return;
     }
-    const check = await editor.validate({sources: [candidate(main, content)], mode: 'full'});
-    if (!check) return;
-    if (!check.valid) {
-      toast('negative', t('act.modeInvalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
-      return;
-    }
-    const result = await editor.save(main.id, content, main.content_sha256);
-    if (result) {
+    if (written) {
       setStaged(null);
       toast('positive', t('act.modeApplied', {mode: t(modeLabels[staged.mode])}));
     }
   };
-  const busy = editor.busy !== null;
   return (
     <>
       <div className="rp-card">

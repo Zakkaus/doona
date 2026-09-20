@@ -24,7 +24,7 @@ function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {labe
       return flow.outbound ? {label: flow.outbound, unknown: false} : {label: 'unknown', unknown: true};
     case 'node': {
       if (terminal(flow.outbound)) return null;
-      const leaf = flow.chain.length > 1 ? flow.chain[flow.chain.length - 1] : null;
+      const leaf = flow.chain.at(-1) ?? null;
       return leaf ? {label: names.get(leaf) ?? leaf, unknown: false} : {label: 'unknown', unknown: true};
     }
   }

@@ -49,7 +49,7 @@ export function readState(text: string): WizardState {
     const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(line.replace(/#.*$/, ''));
     // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
     if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
-    else if (line.trim()) subscriptions.push({name: '', url: '', raw: line});
+    else subscriptions.push({name: '', url: '', raw: line});
   }
   // The first group's name, whatever characters it uses; comment lines are skipped.
   const group = groupNames(found.find(s => s.name === 'group')?.body ?? [])[0] ?? null;

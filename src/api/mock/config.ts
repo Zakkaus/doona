@@ -31,12 +31,13 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
     const line = index + 1;
     const code = raw.replace(/#.*$/, '').trim();
     if (!code) return;
-    const open = /^([A-Za-z_][\w.-]*)\s*\{\s*(.*)$/.exec(code);
+    // A section is `name {`; an entry block inside one is `tag: {`, the tag quoted or bare.
+    const open = /^(?:'([^']*)'|"([^"]*)"|([A-Za-z_][\w.-]*))\s*:?\s*\{\s*(.*)$/.exec(code);
     if (open) {
-      const name = open[1];
+      const name = open[1] ?? open[2] ?? open[3];
       if (stack.length === 0 && !sections.has(name)) at(line, 1, 'error', 'unknown_section', `Unknown section "${name}"`);
       stack.push({name, line});
-      if (/\}\s*$/.test(open[2])) stack.pop();
+      if (/\}\s*$/.test(open[4])) stack.pop();
       return;
     }
     if (code === '}') {

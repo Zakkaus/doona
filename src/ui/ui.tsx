@@ -53,6 +53,7 @@ import {
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
+import ListBulleted from './icons/ListBulleted';
 import Checkmark from './icons/Checkmark';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
@@ -367,7 +368,8 @@ export function MenuButton({
   label,
   quiet,
   chevron = true,
-  extra
+  extra,
+  isDisabled
 }: {
   children: ReactNode;
   items?: Item[];
@@ -379,10 +381,11 @@ export function MenuButton({
   quiet?: boolean;
   chevron?: boolean;
   extra?: {title: string; items: Item[]} & Picked;
+  isDisabled?: boolean;
 }) {
   return (
     <MenuTrigger>
-      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label}>
+      <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} isDisabled={isDisabled}>
         {children}
         {chevron && <ChevronDown />}
       </RButton>
@@ -576,6 +579,27 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
+// A routing rule named by a connection or flow: the expression, and a small link to its row in the rule
+// list when the backend lists rules and the record carries the id. The link is its own target so a click on
+// the row still selects the row.
+export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
+  const t = useT();
+  if (!expression) return <>—</>;
+  return (
+    <>
+      <TextTooltip text={expression}>{expression}</TextTooltip>
+      {linked && ruleId && (
+        <RLink
+          href={'#/rules?tab=list&rule=' + encodeURIComponent(ruleId)}
+          className="rp-btn quiet icon rp-rule-link"
+          aria-label={t('ui.openRule', {rule: expression})}
+        >
+          <ListBulleted />
+        </RLink>
+      )}
+    </>
+  );
+}
 // `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
 // A third element is the full value behind a shortened one, shown as a tooltip.
 export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
@@ -599,7 +623,6 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
 // Virtual collections render the same tile body inside their own selectable item.
 export type NodeTileProps = {
   name: string;
-  icon?: ReactNode;
   tcp?: number;
   alive?: boolean;
   unavailable?: boolean;
@@ -614,7 +637,6 @@ export type NodeTileProps = {
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
 export function NodeTile({
   name,
-  icon,
   tcp,
   alive = true,
   unavailable = !alive || tcp == null,
@@ -631,7 +653,6 @@ export function NodeTile({
     <>
       <span className="top">
         <span className="n">
-          {icon && <span className="ic">{icon}</span>}
           <TextTooltip>{name}</TextTooltip>
         </span>
         {nested ? (
@@ -689,6 +710,26 @@ export function useContentWidth<E extends HTMLElement>() {
     return () => observer.disconnect();
   }, []);
   return [ref, width] as const;
+}
+// The height that takes an element to the bottom of the viewport, never below `min`: a page whose table is
+// its last content shows as many rows as the screen holds instead of a fixed box over empty page.
+export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
+  const ref = useRef<E>(null);
+  const [height, setHeight] = useState(min);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setHeight(Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [min, gap]);
+  return [ref, height] as const;
 }
 // Long lists are virtualised: only the visible rows are in the DOM, so a rule list of thousands stays light.
 // Short ones render whole, which keeps every row reachable to assistive technology and find-in-page. A list
@@ -1038,7 +1079,7 @@ export function Chips({
   onChange
 }: {
   label: string;
-  items: Array<{id: string; label: string; count?: string; countLabel?: string; icon?: ReactNode}>;
+  items: Array<{id: string; label: string; count?: string; countLabel?: string}>;
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
@@ -1055,7 +1096,6 @@ export function Chips({
     >
       {items.map(item => (
         <ToggleButton key={item.id} id={item.id} className="rp-btn sm">
-          {item.icon}
           <span className="rp-truncate">{item.label}</span>
           {item.count !== undefined && (
             <span className="n" title={item.countLabel}>
@@ -1088,6 +1128,15 @@ export function csvLine(values: Array<string | number | null | undefined>): stri
   return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
 }
 
+// The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it.
+export function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
   useEffect(() => {

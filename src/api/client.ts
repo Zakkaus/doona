@@ -35,9 +35,11 @@ export function createApi(base: string, token?: string): Api {
   // Every mutation the contract lets a client repeat safely carries a fresh key, so a retry after a lost
   // reply cannot start the same operation twice.
   const once = () => ({'Idempotency-Key': uuid()});
+  // The contract pins an operation's href to an absolute /api/v1 path; a base URL that carries a proxy prefix
+  // keeps it, so the path is resolved under the base rather than against its origin.
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
-    const url = new URL(href, root);
+    const url = new URL(href.replace(/^\/+/, ''), root);
     if (url.origin !== root.origin) throw new ApiError(0, 'invalid_location', 'Operation URL has a different origin');
     return url;
   };

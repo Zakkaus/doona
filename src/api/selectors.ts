@@ -7,7 +7,6 @@ import type {
   EventKind,
   FlowStep,
   Group,
-  GroupSummary,
   HealthObservation,
   Node,
   ProbeResult,
@@ -21,12 +20,22 @@ import type {RuntimeOutbounds, TrafficHistory} from './model';
 // The one TCP data observation a node's latency column shows. Backends differ in what they measure (honk's
 // periodic probe reports HTTP headers on an unknown-warmth session; a warm TCP connect is the cheapest), so
 // the pick is a ranking rather than a fixed tuple: warmth, then measurement cost, then IPv4 before IPv6.
-const warmthRank = {warm: 0, unknown: 1, mixed: 2, cold: 3};
-const measurementRank = {tcp_connect: 0, http_headers: 1, http_round_trip: 2, quic_handshake: 3, mixed: 4, unknown: 5, dns_round_trip: 6};
-export function preferredHealth(node: Node): HealthObservation | undefined {
-  const rank = (h: HealthObservation) => warmthRank[h.warmth] * 100 + measurementRank[h.measurement] * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
-  return node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
+// Vocabulary a newer backend adds sorts with the unknown entries rather than falling out of the order.
+const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
+const measurementRank: Record<string, number> = {
+  tcp_connect: 0,
+  http_headers: 1,
+  http_round_trip: 2,
+  quic_handshake: 3,
+  mixed: 4,
+  unknown: 5,
+  dns_round_trip: 6
+};
+export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
+  const rank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 100 + (measurementRank[h.measurement] ?? 5) * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
+  return health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
 }
+export const preferredHealth = (node: Node) => preferredObservation(node.health);
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   const total = snapshot ? addU64(...snapshot.outbounds.map(row => row.download_bytes)) : null;
@@ -71,19 +80,6 @@ export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   random: 'policy.kind.random',
   score: 'policy.kind.score'
 };
-// The node a group currently exits through, following nested groups by their TCP selection; undefined when the
-// chain is broken or cycles. Summaries carry member ids only, so node names come from the node list.
-export function groupLeaf(groupId: string, groups: GroupSummary[], nodes: Node[]): string | undefined {
-  const byGroup = new Map(groups.map(group => [group.id, group]));
-  const byNode = new Map(nodes.map(node => [node.id, node.name]));
-  const seen = new Set<string>();
-  let id: string | null = groupId;
-  while (id && byGroup.has(id) && !seen.has(id)) {
-    seen.add(id);
-    id = byGroup.get(id)!.selection.tcp_member_id;
-  }
-  return id ? byNode.get(id) : undefined;
-}
 // Built-in outbounds read in the user's language; group and node names stay as configured.
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
@@ -95,10 +91,6 @@ export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: 
   if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
   return chainNames(row.chain, names).join(' → ') || '—';
 }
-// The node a chain ends in, by name, for the mark beside it.
-export const chainLeaf = (row: Pick<Connection, 'chain' | 'outbound'>, names?: OutboundNames): string | null =>
-  row.outbound === 'direct' || row.outbound === 'block' ? row.outbound : (chainNames(row.chain, names).at(-1) ?? null);
-
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   starting: 'lifecycle.starting',
   running: 'lifecycle.running',
@@ -316,11 +308,14 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
     });
 }
 
+// A member gets one row per address family; the one that says most wins: a failure over a success, a
+// success over a family with no address.
+const probeRank = {unknown: 0, healthy: 1, unavailable: 2};
 export function probeSummary(result: ProbeResult): MessageRef {
   const members = new Map<string, 'healthy' | 'unavailable' | 'unknown'>();
   for (const item of result.results) {
     const previous = members.get(item.member_id);
-    if (previous !== 'unavailable' && (previous !== 'unknown' || item.state === 'unavailable')) members.set(item.member_id, item.state);
+    if (!previous || probeRank[item.state] > probeRank[previous]) members.set(item.member_id, item.state);
   }
   const states = [...members.values()];
   return {

@@ -94,6 +94,19 @@ export function createMockApi(): Api {
   if (profile === 'm1') connections.visibility = 'partial';
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
+  // A large deployment lists dozens of outbounds, most of them idle.
+  if (big)
+    outbounds.outbounds.push(
+      ...Array.from({length: 24}, (_, i) => ({
+        name: `kad.${['hk', 'jp', 'us'][i % 3]}.${String(i + 1).padStart(2, '0')}`,
+        kind: 'group' as const,
+        active_connections: 0,
+        total_connections: '1',
+        upload_bytes: '0',
+        download_bytes: String(Math.max(0, 900_000 - i * 60_000)),
+        errors: '0'
+      }))
+    );
   const dnsCache = structuredClone(fixtures.dnsCache);
   const revisions = new Map<string, bigint>();
   const operations = new Map<string, OperationState>();

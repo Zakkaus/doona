@@ -243,7 +243,7 @@ export function Overview() {
             {t('ov.resources')}
           </h3>
           {capabilities.data ? (
-            <div className="rp-list">
+            <div className="rp-list rp-list-columns">
               {resourceRows(capabilities.data).map(([key, available]) => (
                 <div key={key} className="rp-row">
                   <span>{t(resourceLabels[key])}</span>

@@ -99,3 +99,23 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 100 nodes');
 });
+
+test('a subscription refresh interval is written into the configuration', async ({page}) => {
+  await page.goto('/#/nodes');
+  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
+  await expect(sources.first()).toContainText('Every 24 hours');
+  // The inline source keeps no interval of its own.
+  await expect(sources.nth(1)).not.toContainText('Every');
+  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c auto-refresh written to the configuration and reloaded: Every 6 hours');
+  await expect(sources.first()).toContainText('Every 6 hours');
+  await page.goto('/#/config');
+  await expect(page.locator('.cm-content')).toContainText(
+    "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
+  );
+  await page.goto('/#/nodes');
+  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
+  await expect(sources.first()).toContainText('Manual only');
+});

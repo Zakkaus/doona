@@ -19,7 +19,8 @@ import {
   downloadFile,
   errorText,
   toast,
-  exportName
+  exportName,
+  useDebounced
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
@@ -160,7 +161,7 @@ export function Dns({go, query}: PageProps) {
         )}
         <span className="rp-grow" />
         <FlushCacheButton
-          count={dns.cache.data?.total ?? 0}
+          count={dns.cache.data ? dns.cache.data.total : null}
           busy={dns.busy === 'flush'}
           isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.flush}
           onFlush={() => void flush()}
@@ -227,7 +228,8 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
   const [name, setName] = useState(initialName);
   const [type, setType] = useState('all');
   const [src, setSrc] = useState('');
-  const log = useDnsLog({name, type, src}, enabled);
+  // Each text filter is a server-side query, so it reaches the request only after typing pauses.
+  const log = useDnsLog({name: useDebounced(name, 300), type, src: useDebounced(src, 300)}, enabled);
   const rows = (log.data?.records ?? []).map(record => ({...record, id: record.id}));
   return (
     <>

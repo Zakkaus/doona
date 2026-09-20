@@ -83,36 +83,39 @@ export function Wizard({
 
       <h3 className="rp-h3">{t('config.wizardSubscriptions')}</h3>
       <div className="rp-list">
-        {state.subscriptions.map((item, index) => (
-          <div className="rp-toolbar top" key={index}>
-            {item.raw !== undefined && !item.name ? (
-              // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
-              <span className="rp-code rp-grow">{item.raw.trim()}</span>
-            ) : (
-              <>
-                <TextField label={t('config.wizardSubscriptionName')} value={item.name} width={140} onChange={name => setSubscription(index, {name})} />
-                <TextField
-                  label={t('config.wizardSubscription')}
-                  value={item.url}
-                  width={520}
-                  placeholder="https://example.org/sub?token=…"
-                  isInvalid={item.url !== '' && !isSubscriptionUrl(item.url)}
-                  error={item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : undefined}
-                  description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
-                  onChange={url => setSubscription(index, {url})}
-                />
-              </>
-            )}
-            <Button
-              quiet
-              small
-              label={t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})}
-              onPress={() => patch({subscriptions: state.subscriptions.filter((_, i) => i !== index)})}
-            >
-              <Close />
-            </Button>
-          </div>
-        ))}
+        {state.subscriptions.map((item, index) =>
+          // A blank line is kept for the round trip but is not a row.
+          item.raw !== undefined && !item.raw.trim() ? null : (
+            <div className="rp-toolbar top" key={index}>
+              {item.raw !== undefined && !item.name ? (
+                // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
+                <span className="rp-code rp-grow">{item.raw.trim()}</span>
+              ) : (
+                <>
+                  <TextField label={t('config.wizardSubscriptionName')} value={item.name} width={140} onChange={name => setSubscription(index, {name})} />
+                  <TextField
+                    label={t('config.wizardSubscription')}
+                    value={item.url}
+                    width={520}
+                    placeholder="https://example.org/sub?token=…"
+                    isInvalid={item.url !== '' && !isSubscriptionUrl(item.url)}
+                    error={item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : undefined}
+                    description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
+                    onChange={url => setSubscription(index, {url})}
+                  />
+                </>
+              )}
+              <Button
+                quiet
+                small
+                label={t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})}
+                onPress={() => patch({subscriptions: state.subscriptions.filter((_, i) => i !== index)})}
+              >
+                <Close />
+              </Button>
+            </div>
+          )
+        )}
         <div>
           <Button small onPress={() => patch({subscriptions: [...state.subscriptions, {name: `sub-${state.subscriptions.length + 1}`, url: ''}]})}>
             {t('config.wizardAddSubscription')}

@@ -77,7 +77,7 @@ export const features: Feature[] = [
     path: 'dns',
     nav: {group: 'grp.network', titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
     Page: Dns,
-    requires: {resources: ['dns_query', 'dns_cache']}
+    requires: {resources: ['dns_query', 'dns_log', 'dns_cache']}
   },
   {
     id: 'policies',
@@ -101,7 +101,7 @@ export const features: Feature[] = [
     shortcut: 'n',
     nav: {group: 'grp.proxy', titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
     Page: NodesPage,
-    requires: {resources: ['providers']}
+    requires: {resources: ['nodes', 'providers']}
   },
   {
     id: 'config',

@@ -131,6 +131,7 @@ export function Settings({query}: PageProps) {
   const save = (id?: string) => {
     const profiles = editedProfiles();
     if (profiles) persist(profiles, id ?? active?.id ?? profiles[0].id);
+    else toast('negative', t('settings.invalidUrl'));
   };
   const confirmProfile = () => {
     if (dialog === 'delete') {

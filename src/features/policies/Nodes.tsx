@@ -6,6 +6,7 @@ import {
   GridLayout,
   GridList,
   GridListItem,
+  ListLayout,
   Menu,
   MenuItem,
   MenuSection,
@@ -20,14 +21,13 @@ import {
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
 import {millis} from '../../api/u64';
-import {OutboundMark} from './Mark';
 import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
 export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
-export type MemberInfo = Group['members'][number] & {health?: HealthObservation; leaf?: string};
+export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
 const BIG = 12;
 
 // Region facets for a node list, ordered by count.
@@ -93,7 +93,7 @@ export function NodeGrid({
       </div>
     );
   }
-  const down = nodes.filter(n => n.health?.state === 'unavailable').length;
+  const down = shown.filter(n => n.health?.state === 'unavailable').length;
   return (
     <div className="rp-form">
       <div className="rp-toolbar">
@@ -154,7 +154,6 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
     <NodeTile
       {...props}
       name={n.name}
-      icon={n.kind === 'group' ? <OutboundMark name={n.leaf ?? null} /> : undefined}
       nested={n.kind === 'group'}
       tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
       unavailable={health?.state === 'unavailable'}
@@ -192,7 +191,7 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       )}
     </MenuItem>
   );
-  const menu = (
+  const list = (
     <Menu
       className="rp-menu-scroll"
       aria-label={label}
@@ -218,6 +217,15 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
           ))
         : nodes.map(item)}
     </Menu>
+  );
+  // A long list draws only the rows in view: opening it costs the same for eighty nodes as for eight. The
+  // row heights are the ones the stylesheet gives items and section headers.
+  const menu = big ? (
+    <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
+      {list}
+    </Virtualizer>
+  ) : (
+    list
   );
   return (
     <MenuTrigger>

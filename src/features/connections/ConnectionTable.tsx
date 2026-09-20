@@ -1,11 +1,11 @@
 import {useEffect, useMemo} from 'react';
 import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
-import {chainLabel, chainLeaf, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
-import {OutboundMark} from '../policies/Mark';
+import {chainLabel, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
+import {useCapabilities} from '../../api/store';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth} from '../../ui/ui';
+import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth, useFillHeight, RuleRef} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
 
@@ -43,6 +43,10 @@ export function ConnectionTable({
       ),
     [view.hidden, width]
   );
+  // As tall as the screen allows, but no taller than the rows need.
+  const [fillRef, fill] = useFillHeight<HTMLDivElement>(442);
+  const rulesListed = useCapabilities().data?.resources.rules.available === true;
+  const height = Math.min(fill, 2 + tableLayout.headingHeight + Math.max(flatRows.length, 2) * tableLayout.rowHeight);
   const selectedIndex = flatRows.findIndex(row => row?.id === selected);
   useEffect(() => {
     // Wait for RAC to commit the virtual content height before revealing a deep link.
@@ -60,15 +64,10 @@ export function ConnectionTable({
     const cells: Record<string, React.ReactNode> = {
       dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
       src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-      chain: (
-        <span className="rp-chain">
-          <OutboundMark name={chainLeaf(c, names)} />
-          <TextTooltip>{chainLabel(c, t, names)}</TextTooltip>
-        </span>
-      ),
+      chain: <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
       rule: (
         <span className="rp-rule">
-          <TextTooltip text={c.rule_expression ?? undefined}>{c.rule_expression ?? '—'}</TextTooltip>
+          <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
           {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
         </span>
       ),
@@ -95,7 +94,7 @@ export function ConnectionTable({
         }
       }}
     >
-      <ResizableTableContainer className="rp-table">
+      <ResizableTableContainer ref={fillRef} className="rp-table" style={{height}}>
         <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
           <Table
             ref={ref}

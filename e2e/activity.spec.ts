@@ -77,3 +77,13 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Rule'})).toBeVisible();
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });
+
+test.describe('many outbounds', () => {
+  test.use({storage: {'doona-mock-big': '3000'}});
+  test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {
+    await page.goto('/#/activity');
+    const legend = page.locator('.rp-donut .lst');
+    await expect(legend.locator('.r')).toHaveCount(29);
+    expect(await legend.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight <= 170)).toBe(true);
+  });
+});

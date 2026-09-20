@@ -86,6 +86,19 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(result).resolves.toMatchObject({status: 'failed', error: {code: 'reload_failed'}});
   });
+  it('keeps a proxy prefix when following an operation href', async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json(acceptedBody, 202, {Location: acceptedBody.href, 'Retry-After': '1'}))
+      .mockResolvedValueOnce(json({operation_id: 'op-1', status: 'succeeded'}));
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test/doona');
+    const result = api.pollOperation(await api.startReload());
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(String(request.mock.calls[1][0])).toBe('https://honk.test/doona' + acceptedBody.href);
+    await expect(result).resolves.toMatchObject({status: 'succeeded'});
+  });
   it('enforces the one-second floor and aborts without another GET', async () => {
     vi.useFakeTimers();
     const request = vi.fn();

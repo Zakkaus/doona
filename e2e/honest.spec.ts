@@ -86,7 +86,10 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections(),
-    '/nodes': await api.nodes()
+    '/nodes': await api.nodes(),
+    // The mode cards read the main source and the groups.
+    '/config': await api.config(),
+    '/groups': await api.groups()
   };
   const counts: Record<string, number> = {};
   let hold: Promise<void> | undefined;

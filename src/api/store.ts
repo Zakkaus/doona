@@ -129,12 +129,32 @@ type Resource<T> = {
   acceptEvent?: (event: ApiEvent) => boolean;
 };
 
+// The last answer for every resource, per backend: a page that mounts again paints it at once and refreshes
+// behind it, instead of a loading placeholder that flashes before the same data arrives ten milliseconds later.
+const remembered = new WeakMap<Api, Map<string, unknown>>();
+function recall<T>(api: Api, name: string): T | undefined {
+  return remembered.get(api)?.get(name) as T | undefined;
+}
+function remember(api: Api, name: string, data: unknown) {
+  let store = remembered.get(api);
+  if (!store) remembered.set(api, (store = new Map()));
+  store.set(name, data);
+}
+// Test seam: forget every remembered answer.
+export function forgetResources() {
+  for (const api of [getApi()]) remembered.delete(api);
+}
+
 function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
   const lane = resource.key[0];
   const [key, setKey] = useState(() => ({api, name, every, enabled, deps}));
-  const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>({data: undefined, loading: enabled, error: null});
+  const start = (api: Api, name: string, enabled: boolean) => {
+    const data = enabled ? recall<T>(api, name) : undefined;
+    return {data, loading: enabled && data === undefined, error: null as Error | null};
+  };
+  const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>(() => start(api, name, enabled));
   // Match React's dependency comparison without serializing API object identities.
   if (
     key.api !== api ||
@@ -145,7 +165,7 @@ function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled
     deps.some((dep, i) => !Object.is(dep, key.deps[i]))
   ) {
     setKey({api, name, every, enabled, deps});
-    setState({data: undefined, loading: enabled, error: null});
+    setState(start(api, name, enabled));
   }
   const current = useRef(resource.fetch);
   useEffect(() => {
@@ -166,6 +186,7 @@ function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled
         data => {
           pending = undefined;
           request.release();
+          remember(key.api, key.name, data);
           if (!disposed) setState({data, loading: false, error: null});
         },
         reason => {

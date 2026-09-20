@@ -4,7 +4,9 @@ import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
 import {addU64, formatBytes, millis} from '../../api/u64';
-import {localTime, preferredHealth, relativeStart} from '../../api/selectors';
+import {formatDuration, localTime, preferredHealth, relativeStart} from '../../api/selectors';
+import {useMainSourceEdit} from '../config/mainSource';
+import {readSubscriptions, writeInterval} from './subscriptions';
 import {
   Badge,
   Button,
@@ -12,6 +14,7 @@ import {
   ErrorMessage,
   LabeledSelect,
   Light,
+  MenuButton,
   ModalDialog,
   TextField,
   TextTooltip,
@@ -27,6 +30,17 @@ import type {PageProps} from '../types';
 
 // The row doona adds for configuration nodes when the backend lists no inline provider.
 const INLINE = 'inline';
+// The host of a redacted subscription URL; the backend blanks the query, not the origin.
+function redactedHost(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname || null;
+  } catch {
+    return null;
+  }
+}
+// The refresh intervals offered, in seconds; the engine's default is the last.
+const INTERVALS = [3600, 21600, 43200, 86400];
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
 const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
@@ -47,13 +61,33 @@ export function Nodes({go, query}: PageProps) {
   const n = (value: number) => formatNumber(value, locale);
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(resources?.providers.available !== false);
-  const nodes = useNodes();
+  const nodes = useNodes(resources?.nodes.available !== false);
   const reload = () => {
     providers.refetch();
     nodes.refetch();
   };
   const refresh = useProviderRefresh(reload);
   const manage = useNodeManage(reload);
+  // The refresh interval of a subscription is a line in the main source, keyed by the tag its nodes carry.
+  const source = useMainSourceEdit();
+  const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const intervals = useMemo(() => new Map(entries.map(e => [e.tag, e.interval])), [entries]);
+  const intervalLabel = (seconds: number) =>
+    seconds === 0
+      ? t('nodes.manualOnly')
+      : INTERVALS.includes(seconds)
+        ? t('nodes.everyHours', {n: n(seconds / 3600)})
+        : formatDuration(String(seconds), locale);
+  const setInterval = (name: string, seconds: number) => {
+    void source
+      .apply(
+        text => writeInterval(text, name, seconds),
+        errors => toast('negative', t('nodes.intervalInvalid', {n: n(errors)}))
+      )
+      .then(written => {
+        if (written) toast('positive', t('nodes.intervalSet', {name, interval: intervalLabel(seconds)}));
+      }, fail);
+  };
   const probe = useNodeProbe(nodes.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const names = useOutboundNames();
@@ -61,11 +95,25 @@ export function Nodes({go, query}: PageProps) {
   // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
   const {list, synthetic} = useMemo(() => {
     // A subscription's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
+    // A subscription without nodes (not fetched yet, or empty) is matched to its entry by URL host when the
+    // backend shows one, else by elimination: the one entry no named subscription claims.
     const tags = new Map<string, string>();
     for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
-    const rows = (providers.data?.providers ?? []).map(item =>
-      item.kind === 'subscription' && tags.has(item.id) ? {...item, name: tags.get(item.id)!} : item
-    );
+    const byHost = (item: Provider) => {
+      const hostname = redactedHost(item.url_redacted);
+      const same = hostname ? entries.filter(entry => entry.host === hostname) : [];
+      return same.length === 1 ? same[0].tag : undefined;
+    };
+    const named = new Map<string, string>();
+    const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
+    for (const item of subscriptions) {
+      const tag = tags.get(item.id) ?? byHost(item);
+      if (tag) named.set(item.id, tag);
+    }
+    const unnamed = subscriptions.filter(item => !named.has(item.id));
+    const unclaimed = entries.filter(entry => ![...named.values()].includes(entry.tag));
+    if (unnamed.length === 1 && unclaimed.length === 1) named.set(unnamed[0].id, unclaimed[0].tag);
+    const rows = (providers.data?.providers ?? []).map(item => (named.has(item.id) ? {...item, name: named.get(item.id)!} : item));
     const loose = (nodes.data ?? []).filter(node => node.provider_id === null).length;
     if (!loose || rows.some(item => item.kind === 'inline')) return {list: rows, synthetic: false};
     const inline: Provider = {
@@ -81,7 +129,7 @@ export function Nodes({go, query}: PageProps) {
       last_error: null
     };
     return {list: [inline, ...rows], synthetic: true};
-  }, [providers.data, nodes.data, t]);
+  }, [providers.data, nodes.data, entries, t]);
   const selectedId = params.get('provider') ?? list[0]?.id ?? null;
   const provider = list.find(item => item.id === selectedId) ?? null;
   // The row doona added stands for the nodes with no provider; a backend's own inline provider keeps its id.
@@ -144,8 +192,9 @@ export function Nodes({go, query}: PageProps) {
     if (!dialog) return;
     try {
       if (dialog.kind === 'provider') {
+        // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
-        if (created) toast('positive', t('nodes.added', {name: created.name}));
+        if (created) toast('positive', t('nodes.added', {name: form.name.trim()}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (created) toast('positive', t('nodes.added', {name: created.name}));
@@ -200,12 +249,14 @@ export function Nodes({go, query}: PageProps) {
           {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end'},
           {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2},
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
+          {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4},
           {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
           {id: 'status', label: t('ui.state'), minWidth: 110, grow: 0},
           {id: 'actions', label: t('ui.actions'), minWidth: canManageProviders ? 120 : 96, grow: 0}
         ]}
         render={item => {
           const used = usage(item);
+          const interval = item.kind === 'subscription' ? intervals.get(item.name) : undefined;
           return [
             <span className="rp-chain">
               <TextTooltip text={item.url_redacted ?? undefined}>{item.name}</TextTooltip>
@@ -214,6 +265,25 @@ export function Nodes({go, query}: PageProps) {
             n(item.node_count),
             used ? (used.total ? t('nodes.used', {used: formatBytes(used.used), total: formatBytes(used.total)}) : formatBytes(used.used)) : '—',
             <TextTooltip text={item.updated_at ? localTime(item.updated_at, locale) : undefined}>{relativeStart(item.updated_at, locale)}</TextTooltip>,
+            interval === undefined ? (
+              '—'
+            ) : source.writable ? (
+              <MenuButton
+                quiet
+                label={t('nodes.intervalOf', {name: item.name})}
+                value={String(interval)}
+                isDisabled={source.busy}
+                onChange={key => setInterval(item.name, Number(key))}
+                items={[0, ...INTERVALS, ...(INTERVALS.includes(interval) || interval === 0 ? [] : [interval])].map(seconds => ({
+                  id: String(seconds),
+                  label: intervalLabel(seconds)
+                }))}
+              >
+                {intervalLabel(interval)}
+              </MenuButton>
+            ) : (
+              intervalLabel(interval)
+            ),
             item.expires_at ? localTime(item.expires_at, locale) : '—',
             <Light small tone={tones[item.status]}>
               <TextTooltip text={item.last_error?.message}>{t(statuses[item.status])}</TextTooltip>
@@ -333,7 +403,7 @@ export function Nodes({go, query}: PageProps) {
                   <SpeedFast />
                 </Button>
               )}
-              {canManageNodes && inlineId !== null && node.provider_id === inlineId && (
+              {canManageNodes && inlineId !== null && node.provider_id === (synthetic && inlineId === INLINE ? null : inlineId) && (
                 <Button
                   small
                   quiet

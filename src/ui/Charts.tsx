@@ -1,7 +1,17 @@
 // Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
-import {lazy, Suspense, useId, useMemo, useSyncExternalStore} from 'react';
+import {lazy, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
 import type {ComponentProps} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
+// Charts re-lay out once a resize settles rather than on every event; a drag then costs one render per
+// chart instead of dozens.
+const RESIZE_DEBOUNCE = 120;
+// The tooltip is shown only while the pointer is inside the chart's own box. Recharts hides it on its own
+// mouseleave, but a pointer that jumps out (a fast flick, a touchpad gesture, a re-render while it left)
+// can leave the last reading standing; the wrapper's pointer state settles it.
+function useHover() {
+  const [inside, setInside] = useState(false);
+  return {inside, handlers: {onPointerEnter: () => setInside(true), onPointerLeave: () => setInside(false)}};
+}
 
 export type Series = {label: string; color: string; values: Array<number | null>};
 const VARS = [
@@ -100,13 +110,17 @@ const LazyAreaChart = lazy(() =>
       locale,
       height = 150,
       baseline = 'zero',
-      window
+      window,
+      fill
     }: {
       series: Series[];
       timestamps: number[];
       fmt: (v: number) => string;
       locale: string;
       height?: number;
+      // Grow with the card: `height` is then the floor, and a card stretched by its row neighbours fills
+      // the extra with chart rather than blank.
+      fill?: boolean;
       // A fixed span for the x axis: the chart is read against the window, so a young session sits at the
       // right edge instead of being stretched across the width. Without it the axis fits the data.
       window?: {since: number; until: number};
@@ -115,6 +129,7 @@ const LazyAreaChart = lazy(() =>
     }) {
       const p = usePalette();
       const uid = useId();
+      const hover = useHover();
       const span = window ? window.until - window.since : timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
       const marks = window ? clockTicks(window.since, window.until) : undefined;
       const withSeconds = marks ? marks.step < 60000 : span < 3 * 60 * 1000;
@@ -155,8 +170,8 @@ const LazyAreaChart = lazy(() =>
         : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
       const domain: [number | string, number | string] = window ? [window.since, window.until] : ['dataMin', 'dataMax'];
       return (
-        <div style={{height, width: '100%'}}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div style={{height, width: '100%', flex: fill ? '1 1 auto' : undefined}} {...hover.handlers}>
+          <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
             <RAreaChart data={data} margin={{top: 8, right: 0, bottom: 0, left: 20}}>
               <defs>
                 {series.map((s, k) => (
@@ -191,6 +206,7 @@ const LazyAreaChart = lazy(() =>
                 width={64}
               />
               <Tooltip
+                active={hover.inside ? undefined : false}
                 contentStyle={tip(p)}
                 itemStyle={{color: p['on-text']}}
                 labelFormatter={value => date.format(Number(value))}
@@ -220,7 +236,9 @@ const LazyAreaChart = lazy(() =>
 
 export function AreaChart(props: ComponentProps<typeof LazyAreaChart>) {
   return (
-    <Suspense fallback={<div style={{height: props.height ?? 150, width: '100%'}} />}>
+    <Suspense
+      fallback={<div style={props.fill ? {minHeight: props.height ?? 150, flex: '1 1 auto', width: '100%'} : {height: props.height ?? 150, width: '100%'}} />}
+    >
       <LazyAreaChart {...props} />
     </Suspense>
   );
@@ -249,7 +267,7 @@ const LazySpark = lazy(() =>
         hi = Math.max(Math.max(...known) * 1.05 || 1, floor);
       return (
         <div style={{height, width: '100%'}}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
             <RAreaChart data={data} margin={{top: 2, right: 0, bottom: 2, left: 0}}>
               <defs>
                 <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
@@ -275,6 +293,8 @@ export function Spark(props: ComponentProps<typeof LazySpark>) {
     </Suspense>
   );
 }
+// The legend scrolls past six rows, so a deployment with dozens of outbounds never stretches the card the
+// chart shares its row with; callers sort by size, so the rows in view are the ones that matter.
 export function Donut({rows, total}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
   const t = useT();
   return (
@@ -304,37 +324,41 @@ const LazyDonut = lazy(() =>
     default: function DonutPlot({rows}: Pick<ComponentProps<typeof Donut>, 'rows'>) {
       const t = useT();
       const p = usePalette();
+      const hover = useHover();
       const data = rows.filter(r => r.value !== null && r.value > 0);
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart margin={{top: 0, right: 0, bottom: 0, left: 0}}>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={44}
-              outerRadius={56}
-              minAngle={6}
-              stroke="none"
-              startAngle={90}
-              endAngle={-270}
-              isAnimationActive={false}
-            >
-              {data.map(r => (
-                <Cell key={r.name} fill={r.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={tip(p)}
-              itemStyle={{color: p['on-text']}}
-              formatter={(v, name, item) => {
-                const payload: unknown = item.payload;
-                const bytes = payload && typeof payload === 'object' && 'text' in payload && typeof payload.text === 'string' ? payload.text : '';
-                return [t('ui.share', {bytes, percent: String(v)}), String(name)];
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <div style={{height: '100%', width: '100%'}} {...hover.handlers}>
+          <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
+            <PieChart margin={{top: 0, right: 0, bottom: 0, left: 0}}>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={44}
+                outerRadius={56}
+                minAngle={6}
+                stroke="none"
+                startAngle={90}
+                endAngle={-270}
+                isAnimationActive={false}
+              >
+                {data.map(r => (
+                  <Cell key={r.name} fill={r.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                active={hover.inside ? undefined : false}
+                contentStyle={tip(p)}
+                itemStyle={{color: p['on-text']}}
+                formatter={(v, name, item) => {
+                  const payload: unknown = item.payload;
+                  const bytes = payload && typeof payload === 'object' && 'text' in payload && typeof payload.text === 'string' ? payload.text : '';
+                  return [t('ui.share', {bytes, percent: String(v)}), String(name)];
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       );
     }
   }))

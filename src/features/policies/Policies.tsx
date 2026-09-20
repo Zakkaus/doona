@@ -1,8 +1,8 @@
 import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
-import {useGroupControl, useGroups, useNodes} from '../../api/store';
-import {groupConfigFields, groupLeaf, policyKindLabels, preferredHealth, probeSummary} from '../../api/selectors';
+import {useGroupControl, useGroups, useNodes, useCapabilities} from '../../api/store';
+import {groupConfigFields, policyKindLabels, preferredHealth, preferredObservation, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
@@ -11,14 +11,12 @@ import type {PageProps} from '../types';
 function PolicyCard({
   id,
   health,
-  leaves,
   refreshGroups,
   refreshNodes,
   onLoaded
 }: {
   id: string;
   health: Map<string, HealthObservation | undefined>;
-  leaves: Map<string, string | undefined>;
   refreshGroups: () => void;
   refreshNodes: () => void;
   onLoaded: (id: string) => void;
@@ -35,7 +33,11 @@ function PolicyCard({
   useEffect(() => {
     if (settled) onLoaded(id);
   }, [settled, id, onLoaded]);
-  const members = useMemo(() => g?.members.map(m => ({...m, health: health.get(m.id), leaf: leaves.get(m.id)})) ?? [], [g, health, leaves]);
+  // The group reports its members' health itself, nested groups included; the node list fills in when it does not.
+  const members = useMemo(
+    () => g?.members.map(m => ({...m, health: preferredObservation(g.runtime.health.filter(h => h.member_id === m.id)) ?? health.get(m.id)})) ?? [],
+    [g, health]
+  );
   // Toasts name the member; the backend answers with its id.
   const memberName = (id: string) => members.find(m => m.id === id)?.name ?? id;
   const tcp = g?.runtime.selection.tcp?.member_id;
@@ -193,8 +195,9 @@ function PolicyCard({
 }
 export function Policies({query}: PageProps) {
   const t = useT();
+  const resources = useCapabilities().data?.resources;
   const groups = useGroups();
-  const nodes = useNodes();
+  const nodes = useNodes(resources?.nodes.available === true);
   // `?group=` (from search) brings that card into view once every card has its full height, so the cards above
   // it no longer grow after the scroll.
   const focus = new URLSearchParams(query).get('group');
@@ -205,8 +208,6 @@ export function Policies({query}: PageProps) {
     if (focus && ready) document.getElementById('group-' + focus)?.scrollIntoView({block: 'start'});
   }, [focus, ready]);
   const health = useMemo(() => new Map((nodes.data ?? []).map(n => [n.id, preferredHealth(n)])), [nodes.data]);
-  // Every group's current exit node, so headers and nested member tiles carry the flag the traffic actually leaves under.
-  const leaves = useMemo(() => new Map((groups.data ?? []).map(g => [g.id, groupLeaf(g.id, groups.data ?? [], nodes.data ?? [])])), [groups.data, nodes.data]);
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
@@ -215,7 +216,7 @@ export function Policies({query}: PageProps) {
       {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
       <DisclosureGroup>
         {groups.data?.map(g => (
-          <PolicyCard key={g.id} id={g.id} health={health} leaves={leaves} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} onLoaded={onLoaded} />
+          <PolicyCard key={g.id} id={g.id} health={health} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} onLoaded={onLoaded} />
         ))}
       </DisclosureGroup>
     </div>

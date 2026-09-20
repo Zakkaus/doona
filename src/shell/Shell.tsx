@@ -31,7 +31,7 @@ import {
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {useRoute} from './route';
-import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useVersion} from '../api/store';
+import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useVersion} from '../api/store';
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable, subpages, warmPage} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
@@ -143,11 +143,12 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
   const [q, setQ] = useState('');
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const connections = useConnections();
+  const connections = useConnections(undefined, resources?.connections.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const groups = useGroups(resources?.groups.available === true);
   const providers = useProviders(resources?.providers.available === true);
   const config = useConfig(resources?.config.available === true);
+  const rules = useRules(resources?.rules.available === true);
   const needle = q.trim().toLowerCase();
   const limit = needle ? 8 : 5;
   const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
@@ -174,6 +175,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
     groups: (groups.data ?? []).filter(g => match(g.name)).slice(0, limit),
     providers: (providers.data?.providers ?? []).filter(p => match(p.name)).slice(0, limit),
     sources: (config.data?.sources ?? []).filter(source => match(source.path)).slice(0, limit),
+    rules: (rules.data?.rules ?? []).filter(rule => rule.kind === 'rule' && match(rule.expression, rule.outbound)).slice(0, limit),
     pages: places.filter(place => match(place.title, place.parent && place.parent + ' ' + place.title)).slice(0, limit)
   };
   const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
@@ -188,6 +190,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
     } else if (kind === 'group') go('policies', 'group=' + encodeURIComponent(id));
     else if (kind === 'provider') go('nodes', 'provider=' + encodeURIComponent(id));
     else if (kind === 'source') go('config', 'tab=source&source=' + encodeURIComponent(id));
+    else if (kind === 'rule') go('rules', 'tab=list&rule=' + encodeURIComponent(id));
     else {
       const [path, query] = id.split('?');
       go(path, query);
@@ -254,6 +257,11 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
           'sources',
           t('search.sources'),
           hits.sources.map(source => ({key: 'source:' + source.id, label: source.path, desc: source.kind}))
+        )}
+        {section(
+          'rules',
+          t('nav.rules'),
+          hits.rules.map(rule => ({key: 'rule:' + rule.rule_id, label: rule.expression, desc: `#${rule.index + 1} → ${rule.outbound}`}))
         )}
       </ListBox>
     </ModalDialog>
