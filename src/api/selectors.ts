@@ -308,11 +308,14 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
     });
 }
 
+// A member gets one row per address family; the one that says most wins: a failure over a success, a
+// success over a family with no address.
+const probeRank = {unknown: 0, healthy: 1, unavailable: 2};
 export function probeSummary(result: ProbeResult): MessageRef {
   const members = new Map<string, 'healthy' | 'unavailable' | 'unknown'>();
   for (const item of result.results) {
     const previous = members.get(item.member_id);
-    if (previous !== 'unavailable' && (previous !== 'unknown' || item.state === 'unavailable')) members.set(item.member_id, item.state);
+    if (!previous || probeRank[item.state] > probeRank[previous]) members.set(item.member_id, item.state);
   }
   const states = [...members.values()];
   return {
