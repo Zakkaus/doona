@@ -1,10 +1,30 @@
 import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
+import Close from '../../ui/icons/Close';
 import {useGroupControl, useGroups, useNodes, useCapabilities} from '../../api/store';
 import {groupConfigFields, policyKindLabels, preferredHealth, preferredObservation, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast} from '../../ui/ui';
+import {useMainSourceEdit} from '../config/mainSource';
+import {canonicalPolicy, policyNames, readGroupEntries, writeGroupEntry, type GroupEntry} from '../config/groups';
+import type {MainSourceEdit} from '../config/mainSource';
+import {
+  Badge,
+  Button,
+  Disclosure,
+  DisclosureGroup,
+  ErrorMessage,
+  LabeledSelect,
+  Light,
+  Loading,
+  Kv,
+  ModalDialog,
+  Segmented,
+  Switch,
+  TextField,
+  errorText,
+  toast
+} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import type {PageProps} from '../types';
 
@@ -13,15 +33,37 @@ function PolicyCard({
   health,
   refreshGroups,
   refreshNodes,
-  onLoaded
+  onLoaded,
+  source,
+  entry
 }: {
   id: string;
   health: Map<string, HealthObservation | undefined>;
   refreshGroups: () => void;
   refreshNodes: () => void;
   onLoaded: (id: string) => void;
+  source: MainSourceEdit;
+  // The group's subsection in the main source, when it is written there.
+  entry: GroupEntry | undefined;
 }) {
   const t = useT();
+  // The edit dialog's draft: the documented policy name and one filter per row.
+  const [draft, setDraft] = useState<{policy: string; filters: string[]} | null>(null);
+  const saveDraft = (close: () => void) => {
+    if (!draft) return;
+    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
+    void source
+      .apply(
+        text => writeGroupEntry(text, entry!.name, {filters, policy: draft.policy}),
+        errors => toast('negative', t('policy.editInvalid', {n: errors}))
+      )
+      .then(written => {
+        if (written) {
+          toast('positive', t('policy.updated', {name: entry!.name}));
+          close();
+        }
+      });
+  };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
   // A failed control toasts once; a failed load shows inline and does not repeat on every poll.
   useEffect(() => {
@@ -79,22 +121,82 @@ function PolicyCard({
                 </Light>
               )}
             </span>
-            <Button
-              isPending={control.busy === 'probe'}
-              isDisabled={!!control.busy || !control.canProbe}
-              tip={!control.canProbe ? t('policy.noProbe') : undefined}
-              onPress={() => {
-                void control.probe().then(result => {
-                  if (result) {
-                    const summary = probeSummary(result);
-                    toast('positive', t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}));
+            <span className="rp-cluster">
+              {source.writable && entry && (
+                <ModalDialog
+                  title={t('policy.editTitle', {name: g.name})}
+                  narrow
+                  isOpen={draft !== null}
+                  onOpenChange={isOpen => {
+                    if (!isOpen) setDraft(null);
+                  }}
+                  trigger={
+                    <Button quiet isDisabled={source.busy} onPress={() => setDraft({policy: canonicalPolicy(entry.policy), filters: entry.filters})}>
+                      {t('policy.edit')}
+                    </Button>
                   }
-                });
-              }}
-            >
-              <Refresh />
-              {control.busy === 'probe' ? t('policy.probing') : t('policy.probeAll')}
-            </Button>
+                  footer={close => (
+                    <>
+                      <Button onPress={close}>{t('ui.cancel')}</Button>
+                      <Button accent isDisabled={!draft?.filters.some(f => f.trim())} isPending={source.busy} onPress={() => saveDraft(close)}>
+                        {t('policy.save')}
+                      </Button>
+                    </>
+                  )}
+                >
+                  {draft && (
+                    <div className="rp-list">
+                      <span className="rp-label">{t('policy.editHelp')}</span>
+                      <LabeledSelect
+                        label={t('policy.policy')}
+                        value={draft.policy}
+                        onChange={policy => setDraft({...draft, policy})}
+                        items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name])}))}
+                      />
+                      {draft.filters.map((filter, i) => (
+                        <TextField
+                          key={i}
+                          label={t('policy.filterN', {n: i + 1})}
+                          value={filter}
+                          placeholder="name(keyword: 'HK')"
+                          spellCheck={false}
+                          onChange={value => setDraft({...draft, filters: draft.filters.map((f, j) => (j === i ? value : f))})}
+                          action={
+                            <Button
+                              quiet
+                              icon
+                              label={t('policy.removeFilter', {n: i + 1})}
+                              onPress={() => setDraft({...draft, filters: draft.filters.filter((_, j) => j !== i)})}
+                            >
+                              <Close />
+                            </Button>
+                          }
+                        />
+                      ))}
+                      <Button small quiet onPress={() => setDraft({...draft, filters: [...draft.filters, '']})}>
+                        {t('policy.addFilter')}
+                      </Button>
+                    </div>
+                  )}
+                </ModalDialog>
+              )}
+              <Button
+                isPending={control.busy === 'probe'}
+                isDisabled={!!control.busy || !control.canProbe}
+                tip={!control.canProbe ? t('policy.noProbe') : undefined}
+                onPress={() => {
+                  void control.probe().then(result => {
+                    if (result) {
+                      const summary = probeSummary(result);
+                      toast('positive', t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}));
+                    }
+                  });
+                }}
+              >
+                <Refresh />
+                {control.busy === 'probe' ? t('policy.probing') : t('policy.probeAll')}
+              </Button>
+            </span>
           </div>
           <Disclosure id={id} title={t('ui.config')}>
             <Kv
@@ -208,6 +310,8 @@ export function Policies({query}: PageProps) {
     if (focus && ready) document.getElementById('group-' + focus)?.scrollIntoView({block: 'start'});
   }, [focus, ready]);
   const health = useMemo(() => new Map((nodes.data ?? []).map(n => [n.id, preferredHealth(n)])), [nodes.data]);
+  const source = useMainSourceEdit();
+  const entries = useMemo(() => readGroupEntries(source.main?.content ?? ''), [source.main?.content]);
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
@@ -222,7 +326,16 @@ export function Policies({query}: PageProps) {
       {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
       <DisclosureGroup>
         {groups.data?.map(g => (
-          <PolicyCard key={g.id} id={g.id} health={health} refreshGroups={groups.refetch} refreshNodes={nodes.refetch} onLoaded={onLoaded} />
+          <PolicyCard
+            key={g.id}
+            id={g.id}
+            health={health}
+            refreshGroups={groups.refetch}
+            refreshNodes={nodes.refetch}
+            onLoaded={onLoaded}
+            source={source}
+            entry={entries.find(entry => entry.name === g.name)}
+          />
         ))}
       </DisclosureGroup>
     </div>

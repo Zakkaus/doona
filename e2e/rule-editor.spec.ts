@@ -22,7 +22,8 @@ test('a rule is added before the fallback and removed again through validate, sa
   await expect(list).toHaveCount(9);
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Condition').fill('domain(geosite:netflix)');
+  await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Condition'}).fill('domain(geosite:netflix)');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();

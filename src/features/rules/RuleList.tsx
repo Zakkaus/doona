@@ -22,8 +22,34 @@ import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import {ruleDistribution} from './distribution';
 import {candidate} from '../config/names';
+import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
+
+const kindLabels: Record<ConditionKind, Key> = {
+  domainSuffix: 'rule.kind.domainSuffix',
+  domain: 'rule.kind.domain',
+  geosite: 'rule.kind.geosite',
+  dip: 'rule.kind.dip',
+  geoip: 'rule.kind.geoip',
+  sip: 'rule.kind.sip',
+  dport: 'rule.kind.dport',
+  sport: 'rule.kind.sport',
+  pname: 'rule.kind.pname',
+  l4proto: 'rule.kind.l4proto'
+};
+const kindHints: Record<ConditionKind, string> = {
+  domainSuffix: 'example.com, example.org',
+  domain: 'www.example.com',
+  geosite: 'netflix, cn',
+  dip: '10.0.0.0/8, 224.0.0.0/4',
+  geoip: 'cn, private',
+  sip: '192.168.1.10',
+  dport: '80, 443',
+  sport: '53',
+  pname: 'curl, firefox',
+  l4proto: 'udp'
+};
 
 const sources: Record<string, Key> = {
   kernel: 'rule.sourceKernel',
@@ -71,6 +97,9 @@ function Dictionary({go, query}: PageProps) {
   const hits = useMemo(() => new Map(ruleDistribution(flows.data?.flows ?? []).map(row => [row.id, row.count])), [flows.data]);
   const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule} | null>(null);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
+  // The condition is picked from a kind and its values, or typed as an expression; the pick fills the text.
+  const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
+  const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
   const list = rules.data?.rules ?? [];
   // `?rule=` (from search) lands on that row: selected, and scrolled into view once the list is there.
   const landed = new URLSearchParams(query).get('rule');
@@ -97,6 +126,7 @@ function Dictionary({go, query}: PageProps) {
   const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
   const open = (next: NonNullable<typeof dialog>) => {
     setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
+    setPick({on: true, kind: 'domainSuffix', value: ''});
     setDialog(next);
   };
   // Writes one changed source: validated in full when the backend can, then saved against its accepted digest.
@@ -120,7 +150,7 @@ function Dictionary({go, query}: PageProps) {
     const lines = source.content.replace(/\n$/, '').split('\n');
     const at = anchor.source.line - 1;
     const indent = /^\s*/.exec(lines[at] ?? '')?.[0] ?? '';
-    lines.splice(at, 0, `${indent}${form.condition.trim()} -> ${form.outbound}${form.must ? '(must)' : ''}`);
+    lines.splice(at, 0, `${indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}`);
     if (await write(source, [...lines, ''])) {
       toast('positive', t('rule.added'));
       close();
@@ -140,7 +170,7 @@ function Dictionary({go, query}: PageProps) {
     const source = sourceFor(configSources, rule.source?.file);
     if (source && rule.source) go('config', `tab=source&source=${encodeURIComponent(source.id)}&line=${rule.source.line}`);
   };
-  const conditionValid = /\w\(/.test(form.condition) && !form.condition.includes('->');
+  const conditionValid = pick.on ? pick.value.trim() !== '' : /\w\(/.test(form.condition) && !form.condition.includes('->');
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
@@ -232,13 +262,49 @@ function Dictionary({go, query}: PageProps) {
         {dialog?.kind === 'add' && (
           <div className="rp-list">
             <span className="rp-label">{t('rule.addHelp')}</span>
-            <TextField
-              label={t('rule.condition')}
-              value={form.condition}
-              placeholder="domain(geosite:netflix)"
-              isInvalid={form.condition !== '' && !conditionValid}
-              onChange={condition => setForm({...form, condition})}
+            <Segmented
+              label={t('rule.conditionMode')}
+              value={pick.on ? 'pick' : 'text'}
+              onChange={mode => {
+                // Leaving the picker keeps what it composed, so the expression can be refined by hand.
+                if (mode === 'text' && pick.on && pick.value.trim()) setForm({...form, condition});
+                setPick({...pick, on: mode === 'pick'});
+              }}
+              items={[
+                ['pick', t('rule.pick')],
+                ['text', t('rule.expression')]
+              ]}
             />
+            {pick.on ? (
+              <>
+                <div className="rp-toolbar top">
+                  <LabeledSelect
+                    label={t('rule.kind')}
+                    value={pick.kind}
+                    onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
+                    items={conditionKinds.map(kind => ({id: kind, label: t(kindLabels[kind])}))}
+                  />
+                  <TextField
+                    label={t('rule.values')}
+                    value={pick.value}
+                    placeholder={kindHints[pick.kind]}
+                    description={t('rule.valuesHelp')}
+                    spellCheck={false}
+                    onChange={value => setPick({...pick, value})}
+                  />
+                </div>
+                {pick.value.trim() !== '' && <span className="rp-code">{condition}</span>}
+              </>
+            ) : (
+              <TextField
+                label={t('rule.condition')}
+                value={form.condition}
+                placeholder="domain(geosite:netflix)"
+                isInvalid={form.condition !== '' && !conditionValid}
+                spellCheck={false}
+                onChange={condition => setForm({...form, condition})}
+              />
+            )}
             <div className="rp-toolbar">
               <LabeledSelect
                 label={t('ui.outbound')}
