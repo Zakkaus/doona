@@ -39,7 +39,12 @@ export const preferredHealth = (node: Node) => preferredObservation(node.health)
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   const total = snapshot ? addU64(...snapshot.outbounds.map(row => row.download_bytes)) : null;
-  const rows = (snapshot?.outbounds ?? []).map(row => ({name: row.name, bytes: parseU64(row.download_bytes), percent: pctU64(row.download_bytes, total)}));
+  const rows = (snapshot?.outbounds ?? []).map(row => ({
+    name: row.name,
+    kind: row.kind,
+    bytes: parseU64(row.download_bytes),
+    percent: pctU64(row.download_bytes, total)
+  }));
   rows.sort((a, b) => (a.bytes === b.bytes ? 0 : a.bytes === null ? 1 : b.bytes === null ? -1 : a.bytes > b.bytes ? -1 : 1));
   return {rows, total};
 }

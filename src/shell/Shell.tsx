@@ -56,6 +56,7 @@ const palettes = (t: Translator): Array<{title: string; items: Array<{id: Palett
     ]
   },
   {title: t('palette.nord'), items: [{id: 'nord/nord', label: t('palette.nord'), desc: t('palette.nordVariants')}]},
+  {title: t('palette.kary'), items: [{id: 'kary/kary', label: t('palette.kary'), desc: t('palette.lightDark')}]},
   {title: t('palette.antd'), items: [{id: 'antd/antd', label: t('palette.antd'), desc: t('palette.defaultDark')}]},
   {
     title: t('palette.bytedance'),

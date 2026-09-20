@@ -167,8 +167,14 @@ describe('native API conformance', () => {
       }
     });
     const result = await walk({baseUrl: server.baseUrl, only: ['getRuntime', 'listGroups', 'getGroup', 'listFlows', 'getFlow']});
-    expect(failures(result.checks)).toEqual([]);
-    expect(result.checks).toContainEqual({id: 'getRuntime.request', operation: 'getRuntime', status: 'SKIP', detail: 'capability unavailable'});
+    // A selected check the server declares unavailable is a failure; an id the walk could not observe is a skip.
+    expect(failures(result.checks)).toEqual(['getRuntime.request']);
+    expect(result.checks).toContainEqual({
+      id: 'getRuntime.request',
+      operation: 'getRuntime',
+      status: 'FAIL',
+      detail: 'selected but not run: capability unavailable'
+    });
     expect(result.checks).toContainEqual({id: 'getGroup.request', operation: 'getGroup', status: 'SKIP', detail: 'no observed id for groupId'});
     expect(server.requests.filter(request => request.path.startsWith('/api/v1/flows')).map(request => request.path + request.query)).toEqual([
       '/api/v1/flows',

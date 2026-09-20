@@ -1,12 +1,32 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
-import {localTime, word} from '../../api/selectors';
+import {localTime, outboundLabel, preferredHealth, word} from '../../api/selectors';
+import {millis} from '../../api/u64';
+import type {GroupSummary, Node} from '../../api/model';
 import {useEffect, useMemo} from 'react';
-import {useCapabilities, useRoutingTrace} from '../../api/store';
+import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace, type TraceResolve} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';
 import type {PageProps} from '../types';
 import type {Key} from '../../i18n/messages';
+
+// The member an outbound would use right now: the group's current selection for the network, followed through
+// nested groups to a node. A built-in outbound has no chain.
+function leafOf(outbound: string, network: 'tcp' | 'udp', groups: GroupSummary[], nodes: Node[]): {chain: string[]; node: Node | null} {
+  const chain: string[] = [];
+  let group = groups.find(g => g.name === outbound);
+  while (group && chain.length < 8) {
+    chain.push(group.name);
+    const member = network === 'udp' ? group.selection.udp_member_id : group.selection.tcp_member_id;
+    if (!member) return {chain, node: null};
+    const next = groups.find(g => g.id === member);
+    if (!next) return {chain, node: nodes.find(n => n.id === member) ?? null};
+    group = next;
+  }
+  return {chain, node: null};
+}
+
+const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 
 const outcomes: Record<string, Key> = {
   matched: 'rule.result.matched',
@@ -59,6 +79,24 @@ function Trace() {
     if (trace.error) toast('negative', errorText(trace.error));
   }, [trace.error]);
   const {form, setForm} = trace;
+  const resources = useCapabilities().data?.resources;
+  const groups = useGroups(resources?.groups.available === true);
+  const nodes = useNodes(resources?.nodes.available === true);
+  const probe = useNodeProbe(nodes.refetch);
+  // What the decision means today: the member the outbound resolves to and its last measured health.
+  const leaf = (outbound: string | null) => {
+    if (!outbound || outbound === 'direct' || outbound === 'block') return null;
+    const {chain, node} = leafOf(outbound, form.network, groups.data ?? [], nodes.data ?? []);
+    const health = node ? preferredHealth(node) : undefined;
+    const reach = !node
+      ? t('rule.noMember')
+      : health?.state === 'healthy' && health.latency_ms != null
+        ? t('ui.latency', {n: millis(health.latency_ms)})
+        : health?.state === 'unavailable'
+          ? t('ui.unavailable')
+          : t('rule.untested');
+    return {chain: [...chain, ...(node ? [node.name] : [])].join(' → '), node, reach};
+  };
   return (
     <>
       <form
@@ -83,14 +121,14 @@ function Trace() {
           <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} />
           <LabeledSelect
             label={t('rule.resolve')}
-            value={form.resolve}
-            onChange={resolve => setForm({...form, resolve: resolve as 'none' | 'live'})}
-            items={trace.modes.map(id => ({id, label: id === 'none' ? t('rule.resolveNone') : t('rule.resolveLive')}))}
+            value={trace.resolve}
+            onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
+            items={trace.modes.map(id => ({id, label: t(resolveLabels[id])}))}
           />
           <Button
             accent
             isPending={trace.busy}
-            isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(form.resolve)}
+            isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(trace.resolve)}
             type="submit"
           >
             {t('rule.run')}
@@ -104,6 +142,7 @@ function Trace() {
           </div>
         </Disclosure>
         {trace.invalid && <span className="rp-label">{t(trace.invalid)}</span>}
+        {!trace.invalid && form.dst_ip.trim() && !form.domain.trim() && <span className="rp-label">{t('rule.ipOnly')}</span>}
         {!trace.available && <span className="rp-label">{t('rule.unavailable')}</span>}
       </form>
       {trace.result && (
@@ -122,10 +161,43 @@ function Trace() {
                   inline
                   items={[
                     [t('rule.decision'), t(evaluation.decision === 'determinate' ? 'rule.determinate' : 'rule.result.indeterminate')],
-                    [t('ui.outbound'), evaluation.outbound ?? '—'],
-                    ...(evaluation.missing_inputs.length ? [[t('rule.missing'), formatList(lang, evaluation.missing_inputs)] as [string, string]] : [])
+                    [t('ui.outbound'), outboundLabel(evaluation.outbound, t)],
+                    ...(evaluation.missing_inputs.length ? [[t('rule.missing'), formatList(lang, evaluation.missing_inputs)] as [string, string]] : []),
+                    ...(picked => (picked ? [[t('rule.node'), picked.chain] as [string, string], [t('rule.reach'), picked.reach] as [string, string]] : []))(
+                      leaf(evaluation.outbound)
+                    )
                   ]}
                 />
+                {(picked => {
+                  const node = picked?.node;
+                  return (
+                    node &&
+                    probe.canProbe &&
+                    node.protocol !== 'direct' &&
+                    node.protocol !== 'block' && (
+                      <Button
+                        small
+                        isPending={probe.busy === node.id}
+                        isDisabled={!!probe.busy}
+                        onPress={() => {
+                          void probe.probe(node.id).then(
+                            result => {
+                              if (!result) return;
+                              const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
+                              toast(
+                                sample ? 'positive' : 'negative',
+                                sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+                              );
+                            },
+                            error => toast('negative', errorText(error))
+                          );
+                        }}
+                      >
+                        {t('nodes.probe', {name: node.name})}
+                      </Button>
+                    )
+                  );
+                })(leaf(evaluation.outbound))}
               </div>
               <DataTable
                 label={t('rule.evaluation', {n: i + 1})}

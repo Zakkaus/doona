@@ -9,6 +9,7 @@ export type PaletteId =
   | 'catppuccin/macchiato'
   | 'catppuccin/mocha'
   | 'nord/nord'
+  | 'kary/kary'
   | 'glass/glass'
   | 'antd/antd'
   | 'arco/arco'

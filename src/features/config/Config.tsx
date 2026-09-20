@@ -26,7 +26,7 @@ import {
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
-import {candidate, groupNames} from './names';
+import {candidate, fileName, groupNames, redacted} from './names';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -38,12 +38,7 @@ const kinds: Record<ConfigSource['kind'], Key> = {
   subscription: 'config.kind.subscription',
   generated: 'config.kind.generated'
 };
-// The backend redacts the path of a file that holds a secret; the file is then named by its kind and the
-// start of its id, and exports fall back to a name by kind.
-const redacted = (source: ConfigSource) => source.path === '<redacted>' || source.path === '';
 const sourceName = (source: ConfigSource, t: (key: Key) => string) => (redacted(source) ? `${t(kinds[source.kind])} · ${source.id.slice(0, 8)}` : source.path);
-const fileName = (source: ConfigSource) =>
-  redacted(source) ? (source.kind === 'main' ? 'config.dae' : `${source.kind}-${source.id.slice(0, 8)}.dae`) : source.path.split('/').pop() || 'config.dae';
 
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
@@ -356,7 +351,12 @@ function SourceCard({
       <div className="rp-row">
         <span className="rp-cluster">
           <h3 className="rp-h3 rp-code">{sourceName(source, t)}</h3>
-          {dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
+          {dirty && (
+            <>
+              <Badge tone="warn">{t('config.unsaved')}</Badge>
+              <span className="rp-label">{t('config.unsavedHint')}</span>
+            </>
+          )}
         </span>
         <span className="rp-cluster">
           {canValidate && (

@@ -7,6 +7,7 @@ import {addU64, formatBytes, millis} from '../../api/u64';
 import {formatDuration, localTime, preferredHealth, relativeStart} from '../../api/selectors';
 import {useMainSourceEdit} from '../config/mainSource';
 import {readSubscriptions, writeInterval} from './subscriptions';
+import {addNamesToGroup, namedIn, readGroupEntries} from '../config/groups';
 import {
   Badge,
   Button,
@@ -25,6 +26,7 @@ import {
 } from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
 import Close from '../../ui/icons/Close';
+import AddCircle from '../../ui/icons/AddCircle';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import type {PageProps} from '../types';
 
@@ -41,6 +43,8 @@ function redactedHost(url: string | null): string | null {
 }
 // The refresh intervals offered, in seconds; the engine's default is the last.
 const INTERVALS = [3600, 21600, 43200, 86400];
+// The menu entry that opens the new-group dialog; group names cannot start with a slash.
+const NEW_GROUP = '/new';
 const kinds: Record<Provider['kind'], Key> = {subscription: 'nodes.kind.subscription', file: 'nodes.kind.file', inline: 'nodes.kind.inline'};
 const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
@@ -82,10 +86,22 @@ export function Nodes({go, query}: PageProps) {
     void source
       .apply(
         text => writeInterval(text, name, seconds),
-        errors => toast('negative', t('nodes.intervalInvalid', {n: n(errors)}))
+        errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
       )
       .then(written => {
         if (written) toast('positive', t('nodes.intervalSet', {name, interval: intervalLabel(seconds)}));
+      }, fail);
+  };
+  // Joining a group adds the node's name to that group's `name(...)` filter; a new group is created around it.
+  const groupEntries = useMemo(() => readGroupEntries(source.main?.content ?? ''), [source.main?.content]);
+  const joinGroup = (node: Node, group: string) => {
+    void source
+      .apply(
+        text => addNamesToGroup(text, group, [node.name]),
+        errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
+      )
+      .then(written => {
+        if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
       }, fail);
   };
   const probe = useNodeProbe(nodes.refetch);
@@ -153,7 +169,7 @@ export function Nodes({go, query}: PageProps) {
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
   const [dialog, setDialog] = useState<
-    {kind: 'provider'} | {kind: 'node'} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node} | null
+    {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node} | null
   >(null);
   const [form, setForm] = useState({name: '', value: ''});
   const inlineId = list.find(item => item.kind === 'inline')?.id ?? null;
@@ -198,6 +214,8 @@ export function Nodes({go, query}: PageProps) {
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (created) toast('positive', t('nodes.added', {name: created.name}));
+      } else if (dialog.kind === 'group') {
+        joinGroup(dialog.item, form.name.trim());
       } else if (dialog.kind === 'removeProvider') {
         if (await manage.removeProvider(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
       } else if (await manage.removeNode(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
@@ -215,17 +233,21 @@ export function Nodes({go, query}: PageProps) {
         ? t('nodes.addProvider')
         : dialog.kind === 'node'
           ? t('nodes.addNode')
-          : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+          : dialog.kind === 'group'
+            ? t('nodes.newGroup')
+            : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const formValid =
     dialog?.kind === 'provider'
       ? /^[\w.-]+$/.test(form.name.trim()) && /^https?:\/\/\S+$/.test(form.value.trim())
       : dialog?.kind === 'node'
         ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
-        : true;
+        : dialog?.kind === 'group'
+          ? form.name.trim() !== '' && !form.name.includes('{') && !form.name.includes('}')
+          : true;
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
-      <ErrorMessage error={providers.error ?? nodes.error} />
+      <ErrorMessage error={providers.error ?? nodes.error} onRetry={reload} />
       {canManageProviders && (
         <div className="rp-toolbar">
           <span className="rp-grow" />
@@ -403,6 +425,24 @@ export function Nodes({go, query}: PageProps) {
                   <SpeedFast />
                 </Button>
               )}
+              {source.writable && (
+                <MenuButton
+                  quiet
+                  chevron={false}
+                  label={t('nodes.joinGroup', {name: node.name})}
+                  value=""
+                  isDisabled={source.busy}
+                  onChange={key => (key === NEW_GROUP ? open({kind: 'group', item: node}) : joinGroup(node, key))}
+                  items={[
+                    ...groupEntries
+                      .filter(entry => !namedIn(entry).includes(node.name) && !node.group_ids.some(id => (names.get(id) ?? id) === entry.name))
+                      .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
+                    {id: NEW_GROUP, label: t('nodes.newGroup')}
+                  ]}
+                >
+                  <AddCircle />
+                </MenuButton>
+              )}
               {canManageNodes && inlineId !== null && node.provider_id === (synthetic && inlineId === INLINE ? null : inlineId) && (
                 <Button
                   small
@@ -429,8 +469,14 @@ export function Nodes({go, query}: PageProps) {
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent={!removing} negative={removing} isDisabled={!formValid} isPending={!!manage.busy} onPress={() => void submit(close)}>
-              {removing ? t('nodes.remove', {name: dialog.item.name}) : t('nodes.add')}
+            <Button
+              accent={!removing}
+              negative={removing}
+              isDisabled={!formValid}
+              isPending={!!manage.busy || (dialog?.kind === 'group' && source.busy)}
+              onPress={() => void submit(close)}
+            >
+              {removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add')}
             </Button>
           </>
         )}
@@ -440,6 +486,12 @@ export function Nodes({go, query}: PageProps) {
             <span className="rp-label">{t('nodes.addProviderHelp')}</span>
             <TextField label={t('nodes.name')} value={form.name} placeholder="sub-a" onChange={name => setForm({...form, name})} />
             <TextField label={t('nodes.url')} value={form.value} placeholder="https://example.org/sub?token=…" onChange={value => setForm({...form, value})} />
+          </div>
+        )}
+        {dialog?.kind === 'group' && (
+          <div className="rp-list">
+            <span className="rp-label">{t('nodes.newGroupHelp', {name: dialog.item.name})}</span>
+            <TextField label={t('nodes.name')} value={form.name} placeholder="hk" onChange={name => setForm({...form, name})} />
           </div>
         )}
         {dialog?.kind === 'node' && (

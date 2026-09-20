@@ -38,6 +38,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   for (let i = 0; i < 'nowhere'.length; i++) await page.keyboard.press('Backspace');
   await page.keyboard.type('proxy');
   await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toBeVisible();
+  await expect(page.locator('.rp-card')).toContainText('Reloading or closing the page loses the changes');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();

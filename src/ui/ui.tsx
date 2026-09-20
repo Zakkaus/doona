@@ -221,7 +221,8 @@ export function errorText(error: unknown) {
 
 // Resource refetch promises settle on both success and failure; refresh feedback uses committed inline errors.
 export const visibleErrors = new Map<string, Error>();
-export function ErrorMessage({error}: {error: Error | null | undefined}) {
+// `onRetry` is the affordance a failed load owes the reader: the resource's own refetch, not a page reload.
+export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
   const t = useT();
   const id = useId();
   useLayoutEffect(() => {
@@ -233,6 +234,11 @@ export function ErrorMessage({error}: {error: Error | null | undefined}) {
   return error ? (
     <p role="alert" className="rp-alert">
       {t('ui.loadFailed', {error: errorText(error)})}
+      {onRetry && (
+        <Button small quiet onPress={onRetry}>
+          {t('ui.retry')}
+        </Button>
+      )}
     </p>
   ) : null;
 }
@@ -292,7 +298,7 @@ export function Segmented({
         if (v != null) onChange(String(v));
       }}
     >
-      {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+      {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
       {items.map(([k, l]) => (
         <ToggleButton key={k} id={k} className="rp-btn">
           {l}
@@ -1049,7 +1055,7 @@ export function Tabs({
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
-        {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+        {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
         <TabList aria-label={label} className="rp-tablist">
           {items.map(item => (
             <Tab key={item.id} id={item.id} className="rp-tab">

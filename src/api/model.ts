@@ -76,7 +76,10 @@ export type ProviderCreate = Schema['ProviderCreate'];
 export type NodeCreate = Schema['NodeCreate'];
 export type GeoData = Schema['GeoData'];
 export type RuleList = Schema['RuleList'];
-export type RoutingRule = Schema['RoutingRule'];
+// honk names the accepted source a rule came from by its opaque id beside the redacted `file` label; the
+// pinned contract has the label only, so the id is optional here until the contract carries it.
+export type RuleSource = NonNullable<Schema['RuleSource']> & {source_id?: string};
+export type RoutingRule = Omit<Schema['RoutingRule'], 'source'> & {source: RuleSource | null};
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'];

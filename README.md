@@ -7,59 +7,56 @@
 
 # doona
 
-**A web interface for honk**, `doona`.
+**A web interface for [honk](https://github.com/daeuniverse/honk): nodes, groups, rules and the configuration, from a browser.**
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-[Requirements](#requirements) • [Install / Deploy](#install--deploy) • [Settings](#settings) • [Pages](#pages) • [Development](#development) • [Contract](#contract)
+[Requirements](#requirements) • [Install](#install) • [First run](#first-run) • [Pages](#pages) • [Data and settings](#data-and-settings) • [Development](#development) • [Support](#support)
 
 </div>
 
-![Activity overview with mock data](docs/screenshots/en/overview-light.png)
+doona is a set of static files that honk serves itself, or any web server does. It shows what honk is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
+
+![The activity page](docs/screenshots/en/activity-light.png)
+
+<details>
+<summary><strong>Every palette</strong></summary>
+
+Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
+
+<img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+
+</details>
 
 ## Status
 
-doona is a contract and demo preview until honk ships `/api/v1`, not a claim of compatibility with a released backend. It targets `daeuniverse/api-standardize`, fork branch `doona-pin`, commit `ba3e4c3` (PR #4, #5, #6, #7 and #8 merged), pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). The mock backend is the default; the screenshots show mock data.
+doona targets honk's native API, which is on honk's `feat/native-api` branch and not in a release yet. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
 
 ## Requirements
 
-| Component      | Requirement                                                                           |
-| -------------- | ------------------------------------------------------------------------------------- |
-| Chrome / Edge  | 120 or later                                                                          |
-| Firefox        | 120 or later                                                                          |
-| Safari         | 17 or later                                                                           |
-| Build only     | Node 22 or later, pnpm 11.15.1                                                        |
-| Runtime        | Static hosting and a browser; no Node runtime or server-side application dependencies |
-| Packaging only | GNU tar, gzip, sha256sum                                                              |
+| Component | Requirement                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| Backend   | honk with `native_api` enabled (see [Install](#install)); nothing else runs on the server                      |
+| Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the build targets; automated tests use Chromium |
+| Build     | Node 22 or later and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                |
 
-Browser versions are build targets from [vite.config.ts](vite.config.ts), not a cross-browser test matrix. Automated browser tests use Chromium.
+## Install
 
-## Install / Deploy
-
-Build from source using the [development commands](#development), or use archives from a published [release](https://github.com/Zakkaus/doona/releases). Tags matching `v*` create draft releases; publication is manual.
-
-In the download directory, set `VERSION` to the archive's version and `WEBROOT` to an existing deployment directory. Keep both archives beside `SHA256SUMS`, then verify before extracting:
+Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Verify and extract into the directory honk or the web server will serve:
 
 ```sh
 sha256sum -c SHA256SUMS
-tar -xzf "doona-${VERSION}.tar.gz" -C "$WEBROOT"
+sudo mkdir -p /usr/share/doona
+sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
+sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona   # optional
 ```
 
-To add the optional Noto Sans TC and SC fonts, extract into the same directory:
+Without the font archive, the browser uses its own fonts.
 
-```sh
-tar -xzf "doona-fonts-${VERSION}.tar.gz" -C "$WEBROOT"
-```
+<details>
+<summary><strong>Served by honk</strong></summary>
 
-| Deployment            | Destination and serving                                                                                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Embedded in honk      | When honk provides UI hosting, serve the extracted files at `/ui/` and open `/ui/`. This does not establish backend compatibility                                 |
-| Static server         | Serve the extracted files, or the contents of `dist/`, at the web root or a subdirectory such as `/ui/`                                                           |
-| Distribution packages | Package the same static files for Nix, Debian, AUR, Gentoo or OpenWrt, with `doona-fonts` optional. These are packaging options, not a list of available packages |
-
-Hash routes such as `/ui/#/activity` need no server-side route rewriting. Without the font archive, font requests return 404 and the browser uses local fallback fonts.
-
-honk's native API is opt-in and serves the UI from a directory it is pointed at; the page is then same-origin with the API and needs no CORS entry. A UI served from anywhere else (a dev server, another host) must be listed in `allow_origins`, and a token is required unless the listener is loopback with anonymous access switched on explicitly:
+honk's native API is opt-in. Point `ui` at the extracted files and honk serves them at `/ui/`, same-origin with the API, so no CORS entry is needed:
 
 ```dae
 experimental {
@@ -72,92 +69,113 @@ experimental {
 }
 ```
 
-A main file that carries `native_api.secret` is served without its text and stays read-only, whatever `config_content` and `config_write` say: keep the `native_api` block in its own include (`include { api.dae }`) so the main file can be edited from the configuration page.
+Keep this block in its own include (`include { api.dae }`): a main file that carries `native_api.secret` is served without its text and stays read-only, so the configuration page could not edit it.
 
-A backend built against an earlier contract pin (honk's first release stops at runtime and connections) is handled: resources it does not declare count as unavailable and their pages leave the navigation.
+</details>
 
-## Settings
+<details>
+<summary><strong>Any static server or reverse proxy</strong></summary>
 
-On a first visit with nothing saved, doona asks the origin it was served from (or the reverse-proxy prefix in front of `/ui/`) for `/api`; a contract answer or a bearer challenge makes that backend the saved profile, and a token prompt follows when one is required. Without such an answer, opening the root page shows Settings; direct page links remain usable. Enter an HTTP(S) server root or reverse-proxy prefix, without `/api/v1`, credentials, a query or a fragment. An empty URL or `mock` selects the built-in demo.
+Serve the extracted files at the web root or under a prefix such as `/ui/`; the pages use hash routes (`/ui/#/activity`), so no rewrite rules are needed. A UI served from a different origin than honk must appear in honk's `allow_origins`, and a token is required unless the listener is loopback with anonymous access switched on explicitly.
 
-Values live in this browser's `localStorage`, scoped to the site's origin:
+A reverse proxy in front of both keeps them same-origin: forward `/api/` to honk's listener and serve the files under `/ui/`.
 
-| Field         | Storage key      | Values                                                                                                                                                                  |
-| ------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backends      | `doona-profiles` | JSON list of `{id, name, api, token}`; `api` is a server root or proxy prefix, empty or `mock` for demo data; the token goes in the Authorization header, never the URL |
-| Active one    | `doona-profile`  | `id` of the selected backend; the older `doona-api` and `doona-api-token` keys migrate into a profile once                                                              |
-| Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                        |
-| Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                     |
-| Palette       | `doona-palette`  | Default: `rose-pine/moon`                                                                                                                                               |
-| Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                           |
+</details>
 
-Test Connection checks native API discovery at `/api`; saving backend settings reloads the page. The token persists in browser storage. See [SECURITY.md](SECURITY.md) for security reporting.
+<details>
+<summary><strong>Distribution packages</strong></summary>
+
+None yet. The archives are plain static files, so a package for Nix, Debian, AUR, Gentoo or OpenWrt installs them into a directory and points honk's `ui` at it; the font archive can be a separate optional package.
+
+</details>
+
+## First run
+
+Open `/ui/` on the honk host. On a first visit doona asks the origin it was served from for `/api`; when honk answers it becomes the saved backend and a token prompt follows. Served from elsewhere, or to reach another honk, open Settings and enter the server root (`http://router:9527`, without `/api/v1`) and the token; Test Connection checks discovery before saving, and saving reloads the page. A pairing link fills the form for you: `/ui/#/settings?api=http://router:9527&token=…`, and the token leaves the address bar on load.
+
+The activity page then shows the running engine. The usual route through the rest:
+
+1. **Nodes**: add a subscription (a name and its URL) or paste share links; nodes appear with their protocol, latency and groups. Set how often a subscription refreshes, test a node, or add it to a group from its row.
+2. **Policies**: each group is a card with its members' latency. Pick a member of a selector group, pin one in an automatic group and release it again, test them all, or edit the group's policy and filters.
+3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
+4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
+
+Every write goes through honk: the text is validated in full, saved with the hash it was read at (a file changed on disk answers 412 instead of being overwritten), then reloaded. Secrets in a source are redacted on the way out and never written back.
 
 ## Pages
 
-The resource column lists navigation requirements from [registry.ts](src/shell/registry.ts), not every request a page makes. No gate does not mean no backend data; DNS remains available if either listed resource is available.
+<img src="docs/screenshots/en/policies-light.png" alt="The policies page" width="100%">
 
-| Page          | Shows                                                                    | Native resource gate       |
-| ------------- | ------------------------------------------------------------------------ | -------------------------- |
-| Activity      | Traffic, outbound usage, client rankings, node latency and recent events | None                       |
-| Overview      | Runtime status                                                           | `runtime`                  |
-| Connections   | Active connections and their details                                     | `connections`              |
-| Flows         | Retained flows and observation coverage                                  | `flows`                    |
-| Clients       | Clients grouped by source IP                                             | None                       |
-| Policies      | Groups and nodes                                                         | `groups`                   |
-| Routing trace | Routing diagnostics                                                      | `routing_trace`            |
-| DNS           | Queries and cache entries                                                | `dns_query` or `dns_cache` |
-| Events        | Backend event stream                                                     | `events`                   |
-| Settings      | Backend and appearance settings                                          | None                       |
+| Page          | Shows                                                                                                              | Needs                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients and notifications | —                                   |
+| Overview      | Engine and eBPF state, traffic counters, backend capabilities, and the status as JSON                              | `runtime`                           |
+| Connections   | Live connections with source, destination, rule, chain and traffic; close one or all; filters from the URL         | `connections`                       |
+| DNS           | Queries with their answers, the cache, and the log; a flush                                                        | `dns_query`, `dns_log`, `dns_cache` |
+| Policies      | Groups, their members and health; selection, pinning, probing and editing                                          | `groups`                            |
+| Rules         | The rule list with hits, the distribution of retained flows, the flow log and a routing trace for a chosen target  | `rules`, `flows`, `routing_trace`   |
+| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                     | `nodes`, `providers`                |
+| Configuration | Sources with diagnostics, an editor with validation, quick setup and export                                        | `config`                            |
+| Events        | The backend event stream                                                                                           | `events`                            |
+| Logs          | The log stream with level and module filters, pause and export                                                     | `logs`                              |
+| Settings      | Backends, language, appearance and palette                                                                         | —                                   |
 
-## Languages and appearance
+A page whose resources the backend does not declare leaves the navigation; the requirements come from [registry.ts](src/shell/registry.ts). `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
 
-The interface has Traditional Chinese, Simplified Chinese and English. Choose light, dark or system appearance in Settings. Palettes: Rosé Pine, Rosé Pine Moon, Catppuccin Frappé, Catppuccin Macchiato, Catppuccin Mocha, Nord, Ant Design, Arco Design, Semi Design and Glass.
+<img src="docs/screenshots/en/rules-light.png" alt="The rules page" width="100%">
 
-![Activity in dark mode with mock data](docs/screenshots/en/overview-dark.png)
+## Data and settings
 
-## Offline and PWA
+doona keeps nothing on the server. Its settings live in the browser's `localStorage` for the site's origin:
 
-HTTPS or localhost enables service workers and PWA installation in supporting browsers. The service worker precaches `index.html` and built assets, then caches successful same-origin asset, font and icon requests within its scope. Offline navigation uses the cached application shell. API responses are never cached; offline access does not provide live backend data.
+| Setting       | Key              | Values                                                                                                                                                                        |
+| ------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backends      | `doona-profiles` | JSON list of `{id, name, api, token}`; `api` is a server root or proxy prefix, empty or `mock` for demo data; the token travels in the Authorization header, never in the URL |
+| Active one    | `doona-profile`  | `id` of the selected backend                                                                                                                                                  |
+| Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                              |
+| Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                           |
+| Palette       | `doona-palette`  | `rose-pine/moon` (default); the other ids are the `PaletteId` union in [settings.ts](src/features/settings/settings.ts)                                                       |
+| Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                                 |
+
+The saved theme and language are applied before the first paint, so a reload does not flash the default look.
+
+Over HTTPS or on localhost a service worker precaches the application shell and caches fonts and icons, so the pages open offline and the site can be installed as an app. API responses are never cached. See [SECURITY.md](SECURITY.md) for reporting a vulnerability.
+
+![The activity page in dark mode](docs/screenshots/en/activity-dark.png)
 
 ## Development
 
-From the repository root, with the build and packaging tools listed above:
-
 ```sh
 pnpm install --frozen-lockfile
-pnpm build
-pnpm check
-pnpm e2e:install --with-deps
-pnpm e2e
-pnpm package
+pnpm build                       # writes dist/
+pnpm check                       # types, lint, translations, formatting, unit tests, generated API types
+pnpm e2e:install --with-deps     # once, for the browser tests
+pnpm e2e                         # browser tests against the mock, at the root and under /ui/
+pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
-The build writes `dist/`. `pnpm check` runs type, lint, translation, formatting, unit and generated-API checks. Browser tests cover root and `/ui/` deployments. Packaging writes `release/doona-<version>.tar.gz`, `release/doona-fonts-<version>.tar.gz` and `release/SHA256SUMS`.
+`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` refreshes the images above from a running build (the palette sheet needs `cwebp`). See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
-Run `pnpm test:coverage` from the repository root to print coverage totals and write `coverage/lcov.info`.
+| Path            | Purpose                                            |
+| --------------- | -------------------------------------------------- |
+| `src/features/` | Pages, their hooks and messages, one folder each   |
+| `src/shell/`    | Application shell, navigation and search           |
+| `src/ui/`       | Shared components, theme and icons                 |
+| `src/api/`      | Client, mock backend and generated types           |
+| `src/i18n/`     | Translations and locale helpers                    |
+| `contract/`     | The vendored OpenAPI contract and its pin          |
+| `public/`       | Static assets, fonts and the service worker        |
+| `e2e/`          | Browser tests                                      |
+| `tools/`        | Build, packaging, conformance and screenshot tools |
 
-Local archive versions come from `package.json`; release builds use the Git description. Archive timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. Set `SOURCE_DATE_EPOCH` when packaging without Git metadata. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+### Contract
 
-| Path            | Purpose                                       |
-| --------------- | --------------------------------------------- |
-| `src/features/` | Product pages, hooks and messages             |
-| `src/shell/`    | Application shell and routing                 |
-| `src/ui/`       | Shared components and icons                   |
-| `src/api/`      | Client, mock backend and generated types      |
-| `src/i18n/`     | Translations and locale helpers               |
-| `contract/`     | Vendored OpenAPI contract                     |
-| `public/`       | Static assets, fonts and service worker       |
-| `e2e/`          | Browser tests                                 |
-| `tools/`        | Development, verification and packaging tools |
-| `reference/`    | Read-only archived UI references              |
+[SOURCE.md](contract/api-standardize/SOURCE.md) records the pin of [openapi.yaml](contract/api-standardize/openapi.yaml). After moving the pin, run `pnpm gen:api` to regenerate [src/api/types.ts](src/api/types.ts). `node tools/conformance.mjs http://router:9527 --token …` checks a live backend's discovery, capabilities and read-only responses against the contract without sending a mutation.
 
-## Contract
+## Support
 
-[contract/api-standardize/SOURCE.md](contract/api-standardize/SOURCE.md) records the pin for [openapi.yaml](contract/api-standardize/openapi.yaml). After updating the contract, run `pnpm gen:api` from the repository root to regenerate [src/api/types.ts](src/api/types.ts).
-
-[tools/conformance.mjs](tools/conformance.mjs) checks discovery, version, capabilities and permitted read-only observations against a server; it does not send mutations or diagnostic DNS queries.
+Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/issues). Backend behaviour belongs to [honk](https://github.com/daeuniverse/honk).
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). Noto Sans TC and SC use the [Open Font License](public/fonts/OFL.txt). [NOTICE](NOTICE) credits Adobe Spectrum icons under Apache-2.0. The duck logo is the maintainer's artwork.
+[GPL-3.0-only](LICENSE). Noto Sans TC and SC are under the [Open Font License](public/fonts/OFL.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0). The duck is the maintainer's own artwork.

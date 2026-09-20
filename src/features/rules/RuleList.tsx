@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../api/store';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import type {ConfigSource, RoutingRule} from '../../api/model';
+import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
 import {
   Badge,
   Button,
@@ -21,9 +21,35 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import {ruleDistribution} from './distribution';
-import {candidate} from '../config/names';
+import {candidate, fileName} from '../config/names';
+import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
+
+const kindLabels: Record<ConditionKind, Key> = {
+  domainSuffix: 'rule.kind.domainSuffix',
+  domain: 'rule.kind.domain',
+  geosite: 'rule.kind.geosite',
+  dip: 'rule.kind.dip',
+  geoip: 'rule.kind.geoip',
+  sip: 'rule.kind.sip',
+  dport: 'rule.kind.dport',
+  sport: 'rule.kind.sport',
+  pname: 'rule.kind.pname',
+  l4proto: 'rule.kind.l4proto'
+};
+const kindHints: Record<ConditionKind, string> = {
+  domainSuffix: 'example.com, example.org',
+  domain: 'www.example.com',
+  geosite: 'netflix, cn',
+  dip: '10.0.0.0/8, 224.0.0.0/4',
+  geoip: 'cn, private',
+  sip: '192.168.1.10',
+  dport: '80, 443',
+  sport: '53',
+  pname: 'curl, firefox',
+  l4proto: 'udp'
+};
 
 const sources: Record<string, Key> = {
   kernel: 'rule.sourceKernel',
@@ -37,10 +63,12 @@ const ruleOrder = (a: string | null, b: string | null) => {
   return a.localeCompare(b, undefined, {numeric: true});
 };
 
-// The source a rule's `file` label names: the label is a redacted basename, so it is matched against the end
-// of each accepted source's path.
-const sourceFor = (list: ConfigSource[], file: string | undefined) =>
-  file ? list.find(item => item.path === file || item.path.endsWith('/' + file)) : undefined;
+// The accepted source a rule came from: by id when the backend names it, else by its `file` label, a redacted
+// basename matched against the end of each source's path.
+const sourceFor = (list: ConfigSource[], source: RuleSource | null | undefined) =>
+  source
+    ? (list.find(item => item.id === source.source_id) ?? list.find(item => item.path === source.file || item.path.endsWith('/' + source.file)))
+    : undefined;
 
 // The rules as a list. With the backend's dictionary: every rule in evaluation order, where it is written and
 // how many retained flows it decided; a rule can be added before another or at the end, or removed, by
@@ -71,6 +99,9 @@ function Dictionary({go, query}: PageProps) {
   const hits = useMemo(() => new Map(ruleDistribution(flows.data?.flows ?? []).map(row => [row.id, row.count])), [flows.data]);
   const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule} | null>(null);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
+  // The condition is picked from a kind and its values, or typed as an expression; the pick fills the text.
+  const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
+  const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
   const list = rules.data?.rules ?? [];
   // `?rule=` (from search) lands on that row: selected, and scrolled into view once the list is there.
   const landed = new URLSearchParams(query).get('rule');
@@ -83,7 +114,7 @@ function Dictionary({go, query}: PageProps) {
   }, [landed, rules.data]);
   const configSources = config.data?.sources ?? [];
   const writable = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     return !!source && source.writable && source.content !== undefined;
   };
   // Where a new rule can go: before the fallback when its line is known and writable, else before a writable rule.
@@ -97,6 +128,7 @@ function Dictionary({go, query}: PageProps) {
   const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
   const open = (next: NonNullable<typeof dialog>) => {
     setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
+    setPick({on: true, kind: 'domainSuffix', value: ''});
     setDialog(next);
   };
   // Writes one changed source: validated in full when the backend can, then saved against its accepted digest.
@@ -115,19 +147,19 @@ function Dictionary({go, query}: PageProps) {
   const add = async (close: () => void) => {
     // The new line goes before the chosen rule, else before the fallback, in whichever source holds that line.
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
-    const source = sourceFor(configSources, anchor?.source?.file);
+    const source = sourceFor(configSources, anchor?.source);
     if (!anchor?.source || !source || source.content === undefined) return;
     const lines = source.content.replace(/\n$/, '').split('\n');
     const at = anchor.source.line - 1;
     const indent = /^\s*/.exec(lines[at] ?? '')?.[0] ?? '';
-    lines.splice(at, 0, `${indent}${form.condition.trim()} -> ${form.outbound}${form.must ? '(must)' : ''}`);
+    lines.splice(at, 0, `${indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}`);
     if (await write(source, [...lines, ''])) {
       toast('positive', t('rule.added'));
       close();
     }
   };
   const remove = async (rule: RoutingRule, close: () => void) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     if (!rule.source || !source || source.content === undefined) return;
     const lines = source.content.replace(/\n$/, '').split('\n');
     lines.splice(rule.source.line - 1, 1);
@@ -137,10 +169,20 @@ function Dictionary({go, query}: PageProps) {
     }
   };
   const openSource = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     if (source && rule.source) go('config', `tab=source&source=${encodeURIComponent(source.id)}&line=${rule.source.line}`);
   };
-  const conditionValid = /\w\(/.test(form.condition) && !form.condition.includes('->');
+  // Where a rule is written: the file's name when a source is matched (a redacted path is named by kind), else
+  // the backend's label, which may itself be redacted and then leaves only the line.
+  const label = (source: RuleSource) => {
+    const matched = sourceFor(configSources, source);
+    return matched ? fileName(matched) : source.file === '<redacted>' ? '' : source.file;
+  };
+  const position = (source: RuleSource) => {
+    const file = label(source);
+    return file ? `${file}:${source.line}` : t('rule.lineOnly', {n: String(source.line)});
+  };
+  const conditionValid = pick.on ? pick.value.trim() !== '' : /\w\(/.test(form.condition) && !form.condition.includes('->');
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
@@ -154,7 +196,13 @@ function Dictionary({go, query}: PageProps) {
           </Button>
         )}
       </div>
-      <ErrorMessage error={rules.error ?? config.error} />
+      <ErrorMessage
+        error={rules.error ?? config.error}
+        onRetry={() => {
+          rules.refetch();
+          config.refetch();
+        }}
+      />
       <DataTable
         label={t('rule.listTitle')}
         loading={rules.loading && !rules.data}
@@ -164,11 +212,11 @@ function Dictionary({go, query}: PageProps) {
         height={560}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 56, grow: 0},
-          {id: 'expression', label: t('rule.expression'), minWidth: 260, grow: 3, isRowHeader: true},
-          {id: 'outbound', label: t('ui.outbound'), minWidth: 120, grow: 0},
-          {id: 'source', label: t('rule.where'), minWidth: 140, grow: 0, drop: 2},
-          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', drop: 1},
+          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0},
+          {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 3, isRowHeader: true},
+          {id: 'outbound', label: t('ui.outbound'), minWidth: 108, grow: 0},
+          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2},
+          {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1},
           {id: 'actions', label: t('ui.actions'), minWidth: canWrite ? 96 : 56, grow: 0}
         ]}
         render={rule => [
@@ -178,10 +226,10 @@ function Dictionary({go, query}: PageProps) {
             {rule.outbound}
             {rule.must && <Badge>must</Badge>}
           </span>,
-          rule.source ? `${rule.source.file}:${rule.source.line}` : '—',
+          rule.source ? position(rule.source) : '—',
           hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
           <span className="rp-chain">
-            {rule.source && sourceFor(configSources, rule.source.file) && (
+            {rule.source && sourceFor(configSources, rule.source) && (
               <Button small quiet icon label={t('rule.openSource')} onPress={() => openSource(rule)}>
                 <FileText />
               </Button>
@@ -219,20 +267,58 @@ function Dictionary({go, query}: PageProps) {
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
-            <span className="rp-label">{t('rule.removeHelp', {file: dialog.rule.source?.file ?? '', line: String(dialog.rule.source?.line ?? '')})}</span>
+            <span className="rp-label">
+              {t('rule.removeHelp', {file: dialog.rule.source ? label(dialog.rule.source) : '', line: String(dialog.rule.source?.line ?? '')})}
+            </span>
             <span className="rp-code">{dialog.rule.expression}</span>
           </div>
         )}
         {dialog?.kind === 'add' && (
           <div className="rp-list">
             <span className="rp-label">{t('rule.addHelp')}</span>
-            <TextField
-              label={t('rule.condition')}
-              value={form.condition}
-              placeholder="domain(geosite:netflix)"
-              isInvalid={form.condition !== '' && !conditionValid}
-              onChange={condition => setForm({...form, condition})}
+            <Segmented
+              label={t('rule.conditionMode')}
+              value={pick.on ? 'pick' : 'text'}
+              onChange={mode => {
+                // Leaving the picker keeps what it composed, so the expression can be refined by hand.
+                if (mode === 'text' && pick.on && pick.value.trim()) setForm({...form, condition});
+                setPick({...pick, on: mode === 'pick'});
+              }}
+              items={[
+                ['pick', t('rule.pick')],
+                ['text', t('rule.expression')]
+              ]}
             />
+            {pick.on ? (
+              <>
+                <div className="rp-toolbar top">
+                  <LabeledSelect
+                    label={t('rule.kind')}
+                    value={pick.kind}
+                    onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
+                    items={conditionKinds.map(kind => ({id: kind, label: t(kindLabels[kind])}))}
+                  />
+                  <TextField
+                    label={t('rule.values')}
+                    value={pick.value}
+                    placeholder={kindHints[pick.kind]}
+                    description={t('rule.valuesHelp')}
+                    spellCheck={false}
+                    onChange={value => setPick({...pick, value})}
+                  />
+                </div>
+                {pick.value.trim() !== '' && <span className="rp-code">{condition}</span>}
+              </>
+            ) : (
+              <TextField
+                label={t('rule.condition')}
+                value={form.condition}
+                placeholder="domain(geosite:netflix)"
+                isInvalid={form.condition !== '' && !conditionValid}
+                spellCheck={false}
+                onChange={condition => setForm({...form, condition})}
+              />
+            )}
             <div className="rp-toolbar">
               <LabeledSelect
                 label={t('ui.outbound')}

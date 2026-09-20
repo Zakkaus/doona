@@ -845,7 +845,7 @@ export function createMockApi(): Api {
           const fb = /^fallback:\s*(\S+)$/.exec(code);
           const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
           if (!fb && !rule) return;
-          const source = {file: file.path.split('/').pop()!, line: i + 1};
+          const source = {file: file.path.split('/').pop()!, source_id: file.id, line: i + 1};
           if (fb) {
             fallback = {outbound: fb[1], source};
             entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
