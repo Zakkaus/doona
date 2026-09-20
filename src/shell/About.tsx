@@ -4,6 +4,7 @@ import {useT} from '../i18n';
 import {useVersion} from '../api/store';
 import {Button, Kv, ModalDialog, cx} from '../ui/ui';
 import logo from '../logo.svg';
+import GitHub from '../ui/icons/GitHub';
 
 // The engine's home on GitHub follows the name the backend reports (honk today, dae later) under the
 // organisation package.json names; the slug is what the page shows.
@@ -20,7 +21,7 @@ export function About({trigger}: {trigger: ReactElement}) {
   const [taps, setTaps] = useState(0);
   const honked = taps >= 5;
   const engine = version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—';
-  const {slug, repo} = engineLinks(version.data?.engine.name);
+  const org = import.meta.env.VITE_ENGINE_ORG;
   const build = version.data?.build?.revision ? ` (${version.data.build.revision.slice(0, 12)})` : '';
   return (
     <ModalDialog title={t('about.title')} narrow trigger={trigger} footer={close => <Button onPress={close}>{t('about.close')}</Button>}>
@@ -34,7 +35,7 @@ export function About({trigger}: {trigger: ReactElement}) {
             <span>doona</span>
             <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
           </span>
-          <span className="rp-label">{t('about.tagline', {engine: slug})}</span>
+          <span className="rp-label">{t('about.tagline', {engine: org.split('/').pop()!})}</span>
         </div>
         <Kv
           items={[
@@ -46,10 +47,12 @@ export function About({trigger}: {trigger: ReactElement}) {
         <p className="rp-label">{t('about.credits')}</p>
         <div className="rp-cluster">
           <Link className="rp-link" href={import.meta.env.VITE_DOONA_REPO} target="_blank" rel="noreferrer">
-            doona · GitHub
+            <GitHub />
+            doona
           </Link>
-          <Link className="rp-link" href={repo} target="_blank" rel="noreferrer">
-            {slug} · GitHub
+          <Link className="rp-link" href={org} target="_blank" rel="noreferrer">
+            <GitHub />
+            {org.split('/').pop()}
           </Link>
         </div>
       </div>

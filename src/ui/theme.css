@@ -3004,6 +3004,7 @@ button.rp-node[data-focus-visible] {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
+  gap: 6px;
   min-height: var(--rp-control);
   border-radius: var(--rp-r-md);
   padding: 0 8px;
