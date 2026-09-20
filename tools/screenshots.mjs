@@ -86,9 +86,9 @@ try {
   mkdirSync(dir, {recursive: true});
   await sheet.screenshot({path: join(dir, 'palettes.png'), fullPage: true});
   await sheet.close();
-  // The sheet is tall; as WebP it is a quarter of the size. Without cwebp the PNG stays.
+  // The sheet is tall; lossless WebP is two thirds of the PNG with no artefacts. Without cwebp the PNG stays.
   try {
-    execFileSync('cwebp', ['-quiet', '-q', '88', join(dir, 'palettes.png'), '-o', join(dir, 'palettes.webp')]);
+    execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', join(dir, 'palettes.png'), '-o', join(dir, 'palettes.webp')]);
     rmSync(join(dir, 'palettes.png'));
   } catch {
     // cwebp missing
