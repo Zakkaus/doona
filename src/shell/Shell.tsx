@@ -22,7 +22,6 @@ import {
   LabeledSelect,
   ErrorMessage,
   Loading,
-  TextTooltip,
   errorText,
   toast,
   visibleErrors,
@@ -495,9 +494,7 @@ function Frame({
         <Button appearance="version" onPress={() => window.open(engineLinks(version.data?.engine.name).repo, '_blank', 'noreferrer')} label={t('github')}>
           <GitHub />
           {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-          {settings.profiles.length > 1 && profile && (
-            <TextTooltip text={t('ui.valuePair', {label: t('settings.backend'), value: profile.name})}>{profile.name}</TextTooltip>
-          )}
+          {settings.profiles.length > 1 && profile && <TextTooltip text={t('shell.activeBackend', {name: profile.name})}>· {profile.name}</TextTooltip>}
         </Button>
       </nav>
       <main className="rp-main">

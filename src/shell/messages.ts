@@ -88,6 +88,7 @@ export const messages = defineMessages({
     'about.api': 'API',
     'about.license': '授權',
     'about.close': '關閉',
+    'shell.activeBackend': '目前連線的後端：{name}（設定頁可改名）',
     'about.credits':
       '字型 Noto Sans TC／SC（OFL）；圖示 Adobe Spectrum（Apache-2.0）；配色來自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 與 Semi Design。',
     'palette.glassName': '玻璃'
@@ -179,6 +180,7 @@ export const messages = defineMessages({
     'about.api': 'API',
     'about.license': '许可',
     'about.close': '关闭',
+    'shell.activeBackend': '当前连接的后端：{name}（设置页可改名）',
     'about.credits':
       '字体 Noto Sans TC／SC（OFL）；图标 Adobe Spectrum（Apache-2.0）；配色来自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 与 Semi Design。',
     'palette.glassName': '玻璃'
@@ -270,6 +272,7 @@ export const messages = defineMessages({
     'about.api': 'API',
     'about.license': 'Licence',
     'about.close': 'Close',
+    'shell.activeBackend': 'Connected backend: {name} (rename it in Settings)',
     'about.credits':
       'Fonts Noto Sans TC/SC (OFL); icons Adobe Spectrum (Apache-2.0); palettes from Rosé Pine, Catppuccin, Nord, Kary Pro Colors, Ant Design, Arco Design and Semi Design.',
     'palette.glassName': 'Glass'

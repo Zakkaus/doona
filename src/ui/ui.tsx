@@ -1,5 +1,17 @@
 // Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
-import {useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type ReactElement, type ReactNode} from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+  type RefObject
+} from 'react';
 import {flushSync} from 'react-dom';
 import {
   Button as RButton,
@@ -125,8 +137,11 @@ export function Button({
   appearance?: 'search' | 'version' | 'select' | 'brand';
   className?: string;
 }) {
+  // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
+  const ref = useRef<HTMLButtonElement>(null);
   const btn = (
     <RButton
+      ref={ref}
       className={cx(
         appearance ? `rp-${appearance}` : 'rp-btn',
         quiet && 'quiet',
@@ -159,13 +174,13 @@ export function Button({
           {btn}
         </span>
       </Focusable>
-      <Tip>{text}</Tip>
+      <Tip triggerRef={ref}>{text}</Tip>
     </TooltipTrigger>
   );
 }
-export function Tip({children}: {children: ReactNode}) {
+export function Tip({children, triggerRef}: {children: ReactNode; triggerRef?: RefObject<HTMLElement | null>}) {
   return (
-    <Tooltip className="rp-tip" offset={6}>
+    <Tooltip className="rp-tip" offset={6} triggerRef={triggerRef}>
       <OverlayArrow /> {children}
     </Tooltip>
   );
