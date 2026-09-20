@@ -3010,6 +3010,7 @@ button.rp-node[data-focus-visible] {
   border-radius: var(--rp-r-md);
   padding: 0 8px;
   color: var(--rp-pine);
+  text-decoration: none;
 }
 /* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
 .rp-card > .rp-link {
