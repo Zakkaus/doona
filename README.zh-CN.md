@@ -85,7 +85,7 @@ experimental {
 <details>
 <summary><strong>发行版软件包</strong></summary>
 
-目前没有。发行文件就是静态文件，Nix、Debian、AUR、Gentoo 或 OpenWrt 的软件包只需把文件装进目录、把 honk 的 `ui` 指过去；字体包可做成独立的可选软件包。
+尚未发布。之后每个发行版本会附上 [nfpm](install/nfpm) 从 `make install` 打出的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包；OpenWrt 的 feed Makefile 在 [install/openwrt](install/openwrt)。其他打包方式从 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts` 入手。
 
 </details>
 
@@ -167,6 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 | `public/`       | 静态资源、字体与 service worker        |
 | `e2e/`          | 浏览器测试                             |
 | `tools/`        | 构建、打包、一致性检查与截图工具       |
+| `install/`      | nfpm 配置与 OpenWrt feed Makefile      |
 
 ### 契约
 

@@ -85,7 +85,7 @@ experimental {
 <details>
 <summary><strong>發行版套件</strong></summary>
 
-目前沒有。發行檔就是靜態檔案，Nix、Debian、AUR、Gentoo 或 OpenWrt 的套件只要把檔案裝進目錄、把 honk 的 `ui` 指過去；字型檔可做成獨立的選用套件。
+尚未發布。之後每個發行版本會附上 [nfpm](install/nfpm) 從 `make install` 打出的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件；OpenWrt 的 feed Makefile 在 [install/openwrt](install/openwrt)。其他打包方式從 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts` 入手。
 
 </details>
 
@@ -167,6 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 | `public/`       | 靜態資源、字型與 service worker        |
 | `e2e/`          | 瀏覽器測試                             |
 | `tools/`        | 建置、打包、一致性檢查與截圖工具       |
+| `install/`      | nfpm 設定與 OpenWrt feed Makefile      |
 
 ### 契約
 

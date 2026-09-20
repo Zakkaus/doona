@@ -10,3 +10,4 @@ coverage/
 .pi
 .reasonix
 skills-lock.json
+build/

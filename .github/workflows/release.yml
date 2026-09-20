@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  NFPM_VERSION: 2.47.0
+  NFPM_SHA256: 0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -20,6 +24,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # The tag names the version; package.json has to agree before anything is built.
+      - name: Check the tag against package.json
+        run: |
+          eval "$(tools/version.sh "${GITHUB_REF_NAME}")"
+          declared=$(node -p 'require("./package.json").version')
+          [ "$NPM" = "$declared" ] || { echo "tag ${GITHUB_REF_NAME} is version $NPM, package.json says $declared" >&2; exit 1; }
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "PRERELEASE=$PRERELEASE" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
@@ -27,10 +39,32 @@ jobs:
       - run: pnpm e2e:install --with-deps
       - run: pnpm e2e
       - run: tools/package.sh --git-version
+      # The dependencies as installed, for builds that must run offline (an ebuild, a Nix derivation).
+      - name: Pack the dependencies
+        run: |
+          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git log -1 --format=%ct)" \
+            -cf - node_modules | xz -T0 > "release/doona-${GITHUB_REF_NAME}-deps.tar.xz"
+      - name: Install nfpm
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/nfpm.tar.gz" \
+            "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz"
+          echo "${NFPM_SHA256}  $RUNNER_TEMP/nfpm.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/nfpm.tar.gz" -C "$RUNNER_TEMP" nfpm
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Build the distribution packages
+        run: |
+          make install DESTDIR=build/stage/doona
+          make install-fonts DESTDIR=build/stage/doona-fonts
+          for packager in deb rpm ipk archlinux; do
+            nfpm package --config install/nfpm/doona.yaml --packager "$packager" --target release/
+            nfpm package --config install/nfpm/doona-fonts.yaml --packager "$packager" --target release/
+          done
+      - name: Sum every asset
+        run: cd release && sha256sum doona* > SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
           fail_on_unmatched_files: true
           files: |
-            release/doona-*.tar.gz
+            release/doona*
             release/SHA256SUMS

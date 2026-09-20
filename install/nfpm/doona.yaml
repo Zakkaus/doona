@@ -1,0 +1,32 @@
+# nfpm packages the installed tree (make install DESTDIR=build/stage/doona) for deb, rpm, ipk and Arch.
+# VERSION and PRERELEASE come from the tag (tools/version.sh); the package is architecture-independent.
+name: doona
+arch: all
+platform: linux
+version: ${VERSION}
+prerelease: ${PRERELEASE}
+version_schema: semver
+section: web
+priority: optional
+maintainer: Zakkaus <zakk@gentoozh.org>
+vendor: daeuniverse
+homepage: https://github.com/Zakkaus/doona
+license: GPL-3.0-only
+description: |
+  Web UI for the daeuniverse engines.
+  Static files for /usr/share/doona; point the engine's `ui` setting at that directory.
+recommends:
+  - honk
+suggests:
+  - doona-fonts
+contents:
+  - src: build/stage/doona/
+    dst: /
+    type: tree
+overrides:
+  rpm:
+    recommends: []
+    suggests: []
+  ipk:
+    recommends: []
+    suggests: []

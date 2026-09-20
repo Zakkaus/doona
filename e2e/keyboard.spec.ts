@@ -25,6 +25,8 @@ test('tab order reaches the first navigation link', async ({page}) => {
 test('shortcut help and page sequences respect focus and the sequence deadline', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
+  // The shortcut listener mounts with the shell; a key pressed before that is lost.
+  await expect(page.getByRole('heading', {level: 1})).toBeVisible();
   await page.keyboard.press('?');
   const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
   await expect(help).toBeVisible();

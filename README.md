@@ -85,7 +85,7 @@ A reverse proxy in front of both keeps them same-origin: forward `/api/` to honk
 <details>
 <summary><strong>Distribution packages</strong></summary>
 
-None yet. The archives are plain static files, so a package for Nix, Debian, AUR, Gentoo or OpenWrt installs them into a directory and points honk's `ui` at it; the font archive can be a separate optional package.
+None published yet. Each release will also carry `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package; an OpenWrt feed Makefile is in [install/openwrt](install/openwrt). `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
 
 </details>
 
@@ -167,6 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<
 | `public/`       | Static assets, fonts and the service worker        |
 | `e2e/`          | Browser tests                                      |
 | `tools/`        | Build, packaging, conformance and screenshot tools |
+| `install/`      | nfpm configs and the OpenWrt feed Makefile         |
 
 ### Contract
 
