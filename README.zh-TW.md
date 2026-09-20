@@ -85,7 +85,7 @@ experimental {
 <details>
 <summary><strong>發行版套件</strong></summary>
 
-尚未發布。之後每個發行版本會附上 [nfpm](install/nfpm) 從 `make install` 打出的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件；OpenWrt 的 feed Makefile 在 [install/openwrt](install/openwrt)。其他打包方式從 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts` 入手。
+尚未發布。每個發行版本附 [nfpm](install/nfpm) 從 `make install` 打出的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件。各套件倉庫的寫法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表達式；AUR 的 `doona-bin` 另有倉庫。發行版本另附 `doona-<tag>-deps.tar.xz`（裝好的 `node_modules`），給必須離線建置的套件用，原生模組只有 x86_64 glibc。其他打包方式從 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts` 入手。
 
 </details>
 
@@ -167,7 +167,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 | `public/`       | 靜態資源、字型與 service worker        |
 | `e2e/`          | 瀏覽器測試                             |
 | `tools/`        | 建置、打包、一致性檢查與截圖工具       |
-| `install/`      | nfpm 設定與 OpenWrt feed Makefile      |
+| `install/`      | nfpm 設定與 OpenWrt、Alpine、Nix 寫法  |
 
 ### 契約
 
