@@ -434,7 +434,8 @@ export function useRoutingTrace() {
     src_ip: '',
     src_port: '',
     pname: '',
-    resolve: 'none' as 'none' | 'live'
+    // Null until the backend says what it offers: live when it can resolve, else none.
+    resolve: null as 'none' | 'live' | null
   });
   const [result, setResult] = useState<RoutingTraceResponse | null>(null);
   const {busy, error, run} = useAction<'trace'>();
@@ -450,8 +451,10 @@ export function useRoutingTrace() {
   const resource = capabilities.data?.resources.routing_trace;
   const modes = resource?.resolve_modes ?? ['none', 'live'];
   const available = resource?.available !== false;
+  // Live when the backend offers it and there is a name to resolve; an explicit choice stands.
+  const resolve = form.resolve ?? (modes.includes('live') && form.domain.trim() && !form.dst_ip.trim() ? 'live' : 'none');
   async function submit() {
-    if (busy || invalid || !available || !modes.includes(form.resolve)) return;
+    if (busy || invalid || !available || !modes.includes(resolve)) return;
     setResult(null);
     const input: RoutingTraceRequest['input'] = {
       network: form.network,
@@ -462,10 +465,10 @@ export function useRoutingTrace() {
     if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    const response = await run('trace', signal => api.routingTrace({input, resolve: form.resolve}, signal));
+    const response = await run('trace', signal => api.routingTrace({input, resolve}, signal));
     if (response) setResult(response);
   }
-  return {form, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
+  return {form, resolve, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
 }
 
 export function useFlows(connection_id?: string, enabled = true) {
