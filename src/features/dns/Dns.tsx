@@ -20,7 +20,10 @@ import {
   errorText,
   toast,
   exportName,
-  useDebounced
+  useDebounced,
+  DetailPanel,
+  panelQuery,
+  useMediaQuery
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
@@ -231,6 +234,10 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
   // Each text filter is a server-side query, so it reaches the request only after typing pauses.
   const log = useDnsLog({name: useDebounced(name, 300), type, src: useDebounced(src, 300)}, enabled);
   const rows = (log.data?.records ?? []).map(record => ({...record, id: record.id}));
+  // A record opens beside the table with everything the resolver did for it, the answers in full.
+  const [selected, setSelected] = useState<string | null>(null);
+  const wide = useMediaQuery(panelQuery);
+  const current = selected ? rows.find(record => record.id === selected) : undefined;
   return (
     <>
       <div className="rp-toolbar">
@@ -278,43 +285,79 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
         </Button>
       </div>
       {log.error && <ErrorMessage error={log.error} />}
-      <DataTable
-        label={t('dns.log')}
-        height={520}
-        rows={rows}
-        loading={log.loading && !log.data}
-        empty={enabled ? t('dns.logEmpty') : t('dns.logUnavailable')}
-        cols={[
-          {id: 't', label: t('ui.time'), minWidth: 96, grow: 0},
-          {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true},
-          {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3},
-          {id: 's', label: t('ui.source'), minWidth: 128, drop: 2},
-          {id: 'r', label: t('dns.result'), minWidth: 160, grow: 2},
-          {id: 'u', label: t('ui.upstream'), minWidth: 128, drop: 1},
-          {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4}
-        ]}
-        render={record => [
-          <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
-          <TextTooltip>{record.question.name}</TextTooltip>,
-          record.question.type,
-          <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>,
-          record.status !== 'NOERROR' ? (
-            <Light small tone="err">
-              {record.status}
-            </Light>
-          ) : (
-            <TextTooltip className="rp-code">{record.answers.map(answer => answer.data).join(', ') || '—'}</TextTooltip>
-          ),
-          record.cached ? (
-            <Light small tone="ok">
-              {t('dns.hit')}
-            </Light>
-          ) : (
-            <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
-          ),
-          t('ui.latency', {n: millis(record.elapsed_ms)})
-        ]}
-      />
+      <div className="rp-with-panel" data-open={current ? '' : undefined}>
+        <DataTable
+          label={t('dns.log')}
+          height={520}
+          rows={rows}
+          selected={current ? selected : null}
+          onSelect={setSelected}
+          selectOnFocus={wide}
+          loading={log.loading && !log.data}
+          empty={enabled ? t('dns.logEmpty') : t('dns.logUnavailable')}
+          cols={[
+            {id: 't', label: t('ui.time'), minWidth: 96, grow: 0},
+            {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true},
+            {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3},
+            {id: 's', label: t('ui.source'), minWidth: 128, drop: 2},
+            {id: 'r', label: t('dns.result'), minWidth: 160, grow: 2},
+            {id: 'u', label: t('ui.upstream'), minWidth: 128, drop: 1},
+            {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4}
+          ]}
+          render={record => [
+            <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
+            <TextTooltip>{record.question.name}</TextTooltip>,
+            record.question.type,
+            <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>,
+            record.status !== 'NOERROR' ? (
+              <Light small tone="err">
+                {record.status}
+              </Light>
+            ) : (
+              <TextTooltip className="rp-code">{record.answers.map(answer => answer.data).join(', ') || '—'}</TextTooltip>
+            ),
+            record.cached ? (
+              <Light small tone="ok">
+                {t('dns.hit')}
+              </Light>
+            ) : (
+              <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
+            ),
+            t('ui.latency', {n: millis(record.elapsed_ms)})
+          ]}
+        />
+        <DetailPanel open={!!current} title={current?.question.name ?? ''} onClose={() => setSelected(null)}>
+          {current && (
+            <>
+              <Kv
+                inline
+                items={[
+                  [t('ui.type'), current.question.type],
+                  [t('ui.source'), current.src ?? '—'],
+                  [t('ui.state'), current.status],
+                  [t('ui.cache'), t(current.cached ? 'dns.hit' : 'dns.miss')],
+                  [t('ui.upstream'), current.upstream ?? '—'],
+                  [t('dns.routeSource'), current.route.source],
+                  [t('dns.routeRule'), current.route.rule ?? '—'],
+                  [t('ui.elapsed'), t('ui.latency', {n: millis(current.elapsed_ms)})],
+                  [t('ui.time'), localTime(current.observed_at, locale)]
+                ]}
+              />
+              {current.answers.length ? (
+                <div className="rp-list">
+                  {current.answers.map((answer, i) => (
+                    <div key={i} className="rp-code">
+                      {t('dns.answer', {name: answer.name, type: answer.type, ttl: answer.ttl, data: answer.data})}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="rp-empty">{t('dns.noAnswers')}</span>
+              )}
+            </>
+          )}
+        </DetailPanel>
+      </div>
     </>
   );
 }

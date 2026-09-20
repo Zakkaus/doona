@@ -50,6 +50,7 @@ export function Connections({go, query}: PageProps) {
   const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
   const [network, setNetwork] = useState('all');
   const [out, setOut] = useState('all');
+  const [rule, setRule] = useState('all');
   const sel = q.get('id');
   // A filter arriving in the URL (a search hit, a client link) replaces the typed one; selecting a row keeps
   // the same q/src and must not reset what the person typed since.
@@ -88,13 +89,22 @@ export function Connections({go, query}: PageProps) {
     c =>
       (network === 'all' || c.network === network) &&
       (out === 'all' || c.outbound === out) &&
+      (rule === 'all' || c.rule_expression === rule) &&
       (src ||
         !needle ||
         [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
-  const filtered = network !== 'all' || out !== 'all' || needle !== '';
+  // The lazy filter: pick a client or a rule from what is on the table now, busiest first.
+  const seen = (values: Array<string | null | undefined>) => {
+    const counts = new Map<string, number>();
+    for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+  };
+  const clients = seen(rows.map(c => sourceIp(c.src)));
+  const rules = seen(rows.map(c => c.rule_expression));
+  const filtered = network !== 'all' || out !== 'all' || rule !== 'all' || needle !== '';
   return (
     <div className="rp-page">
       {resource.error && <ErrorMessage error={resource.error} />}
@@ -117,6 +127,21 @@ export function Connections({go, query}: PageProps) {
           onChange={setOut}
           items={[{id: 'all', label: t('conn.allOutbounds')}, ...outbounds.map(id => ({id, label: id}))]}
         />
+        <MenuButton
+          quiet
+          label={t('conn.pick')}
+          value={[src ? 'src:' + src : '', rule !== 'all' ? 'rule:' + rule : '']}
+          onChange={id => {
+            if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
+            else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
+          }}
+          sections={[
+            {title: t('ui.source'), items: clients.map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))},
+            {title: t('conn.rule'), items: rules.map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))}
+          ]}
+        >
+          {t('conn.pick')}
+        </MenuButton>
         <LabeledSelect
           label={t('conn.group')}
           side
@@ -147,6 +172,7 @@ export function Connections({go, query}: PageProps) {
               setText('');
               setNetwork('all');
               setOut('all');
+              setRule('all');
             }}
           >
             {t('ui.clearFilters')}
