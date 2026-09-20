@@ -30,7 +30,7 @@ Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin ke
 
 ## Status
 
-doona targets honk's native API, which is on honk's `feat/native-api` branch and not in a release yet. The contract it is built against is `daeuniverse/api-standardize`, fork branch `doona-pin` at commit `ba3e4c3`, recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
+doona targets honk's native API, which is on honk's `feat/native-api` branch and not in a release yet. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
 
 ## Requirements
 

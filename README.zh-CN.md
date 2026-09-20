@@ -30,7 +30,7 @@ doona 是一组静态文件，由 honk 自己或任意 Web 服务器提供。它
 
 ## 状态
 
-doona 对接 honk 的原生 API。这套 API 在 honk 的 `feat/native-api` 分支，尚未发布。契约是 `daeuniverse/api-standardize` 的 fork 分支 `doona-pin`，固定在提交 `ba3e4c3`，记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。按较旧钉点构建的后端仍可用：后端没有声明的资源视为不可用，对应页面从导航栏消失。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
+doona 对接 honk 的原生 API。这套 API 在 honk 的 `feat/native-api` 分支，尚未发布。契约是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契约修改已全部合并），记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。按较旧钉点构建的后端仍可用：后端没有声明的资源视为不可用，对应页面从导航栏消失。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
 
 ## 运行环境
 
