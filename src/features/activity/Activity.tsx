@@ -106,7 +106,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   // Only events a person acts on: an operation's outcome, a new generation, a real gap in the records, a lost
   // and regained stream. The per-second runtime and flow ticks drive the charts, and the ring's own
   // housekeeping is not a problem.
-  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 6);
+  // As many as the card holds at its neighbours' height; past that the list scrolls inside the card.
+  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 30);
   return (
     <>
       <div className="rp-quick">
@@ -263,7 +264,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
       </div>
 
-      <div className="rp-g3 rp-last">
+      <div className="rp-g3">
         <div className="rp-card">
           <div className="rp-row">
             <TextTooltip text={t('act.rankingScope')}>
@@ -356,7 +357,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : events.length === 0 ? (
             <span className="rp-empty">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
           ) : (
-            <div className="rp-list" role="list">
+            <div className="rp-list rp-feed" role="list">
               {events.map(event => {
                 const summary = eventSummary(event, t);
                 return (

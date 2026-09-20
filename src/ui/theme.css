@@ -1215,9 +1215,11 @@ input {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* A page's last row: a feed card ends where its items end instead of stretching to the tallest neighbour. */
-.rp-g3.rp-last {
-  align-items: start;
+/* A feed inside a card fills the card's height and scrolls past it, so the row's cards stay level. */
+.rp-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .rp-quick {
   display: grid;
