@@ -1215,6 +1215,10 @@ input {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* A page's last row: a feed card ends where its items end instead of stretching to the tallest neighbour. */
+.rp-g3.rp-last {
+  align-items: start;
+}
 .rp-quick {
   display: grid;
   grid-template-columns: 1fr;

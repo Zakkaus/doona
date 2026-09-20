@@ -263,7 +263,7 @@ export function Activity({go}: {go: (page: string) => void}) {
         </div>
       </div>
 
-      <div className="rp-g3">
+      <div className="rp-g3 rp-last">
         <div className="rp-card">
           <div className="rp-row">
             <TextTooltip text={t('act.rankingScope')}>
