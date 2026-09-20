@@ -1623,11 +1623,14 @@ input {
   flex-direction: column;
   gap: 8px;
 }
-/* A long list of short rows folds into as many columns as the card holds, so it stays about as tall as its neighbours. */
+/* A long list of short rows folds into as many columns as the card holds, and spreads its rows over the card's
+   height, so it sits level with its neighbours either way. */
 .rp-list-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  column-gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  column-gap: 16px;
+  align-content: space-between;
+  flex: 1 1 auto;
 }
 
 .rp-legend {
