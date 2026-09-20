@@ -102,7 +102,7 @@ export function Overview() {
           <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
         </div>
       </div>
-      {runtime.error && <ErrorMessage error={runtime.error} />}
+      {runtime.error && <ErrorMessage error={runtime.error} onRetry={runtime.refetch} />}
       <div className="rp-g3">
         <section className="rp-card" aria-labelledby="overview-engine">
           <h3 className="rp-h3" id="overview-engine">

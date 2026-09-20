@@ -215,3 +215,13 @@ test('the connection list exports the filtered rows as CSV', async ({page}) => {
   expect(lines.length).toBe(151);
   expect(lines.slice(1).every(line => line.includes('api.telegram.org'))).toBe(true);
 });
+
+test('connection filters live in the URL and survive a reload', async ({page}) => {
+  await page.goto('/#/connections');
+  await page.getByRole('radio', {name: 'UDP', exact: true}).click();
+  await expect(page).toHaveURL(/network=udp/);
+  await page.reload();
+  await expect(page.getByRole('radio', {name: 'UDP', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await expect(page).not.toHaveURL(/network=/);
+});

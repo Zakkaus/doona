@@ -89,7 +89,17 @@ export function Activity({go}: {go: (page: string) => void}) {
     NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
   const nodeName = node?.name ?? '';
   const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
-  if (error) return <ErrorMessage error={error} />;
+  if (error)
+    return (
+      <ErrorMessage
+        error={error}
+        onRetry={() => {
+          capabilities.refetch();
+          runtimeResource.refetch();
+          nodesResource.refetch();
+        }}
+      />
+    );
   if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const usage = outboundUsage(outbounds.data);
@@ -101,7 +111,8 @@ export function Activity({go}: {go: (page: string) => void}) {
     name: outboundLabel(r.name, t),
     value: r.percent === null ? null : Math.round(r.percent),
     text: formatBytes(r.bytes),
-    color: r.name === 'block' ? p.love : p.cat[i % p.cat.length]
+    // Only the engine's own block outbound is drawn as a refusal; a group may not take that name, but the kind says so.
+    color: r.kind === 'builtin' && r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
   // Only events a person acts on: an operation's outcome, a new generation, a real gap in the records, a lost
   // and regained stream. The per-second runtime and flow ticks drive the charts, and the ring's own

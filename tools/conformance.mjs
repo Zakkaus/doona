@@ -2,7 +2,7 @@
  * Usage: node tools/conformance.mjs <server-root> [--token T] [--only opId,...]
  *        [--skip opId,...] [--json] [--timeout ms] [--contract path/to/openapi.yaml]
  * --contract validates against another bundle (a backend built on an earlier pin).
- * Node 22+. Exit: 0 passes, 1 contract failures, 2 usage/unreachable server.
+ * Node 22+. Exit: 0 passes, 1 contract failures (including a check named by --only that the server cannot serve), 2 usage/unreachable server.
  * Discovery, version, and capabilities precede filters. Only GET observe operations
  * run after them: mutations, diagnostic DNS, and observe-owner-or-control are SKIP
  * by design. Missing observed ids/query values, unavailable capabilities, filters,
@@ -323,7 +323,11 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
     const {filled, missing} = observedPath(operation.path, snapshots);
     if (!reason && missing) reason = `no observed id for ${missing}`;
     if (reason) {
-      skipped(operation, reason);
+      // A check named by --only that the server cannot serve is a failure, not a quiet skip: the caller asked
+      // for it. An id the walk could not observe is the walk's own gap and stays a skip.
+      const unserved = ['capability unavailable', 'needs token', 'server unreachable'].includes(reason);
+      if (settings.only.has(operation.operationId) && unserved) add(check(operation.operationId, 'request', 'FAIL', `selected but not run: ${reason}`));
+      else skipped(operation, reason);
       continue;
     }
     const parameters = operation.parameters.map(resolve);

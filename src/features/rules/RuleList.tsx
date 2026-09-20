@@ -154,7 +154,13 @@ function Dictionary({go, query}: PageProps) {
           </Button>
         )}
       </div>
-      <ErrorMessage error={rules.error ?? config.error} />
+      <ErrorMessage
+        error={rules.error ?? config.error}
+        onRetry={() => {
+          rules.refetch();
+          config.refetch();
+        }}
+      />
       <DataTable
         label={t('rule.listTitle')}
         loading={rules.loading && !rules.data}

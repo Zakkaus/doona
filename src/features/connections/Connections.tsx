@@ -26,6 +26,7 @@ import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
+import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {columns, readView, viewKey, type ConnectionView} from './view';
 
@@ -48,9 +49,14 @@ export function Connections({go, query}: PageProps) {
   };
   const q = useMemo(() => new URLSearchParams(query), [query]);
   const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
-  const [network, setNetwork] = useState('all');
-  const [out, setOut] = useState('all');
-  const [rule, setRule] = useState('all');
+  // The collection filters live in the URL, so a filtered view survives reload and travels as a link.
+  const network = q.get('network') ?? 'all';
+  const out = q.get('out') ?? 'all';
+  const rule = q.get('rule') ?? 'all';
+  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
+  const setNetwork = (value: string) => setFilter('network', value);
+  const setOut = (value: string) => setFilter('out', value);
+  const setRule = (value: string) => setFilter('rule', value);
   const sel = q.get('id');
   // A filter arriving in the URL (a search hit, a client link) replaces the typed one; selecting a row keeps
   // the same q/src and must not reset what the person typed since.
@@ -107,7 +113,7 @@ export function Connections({go, query}: PageProps) {
   const filtered = network !== 'all' || out !== 'all' || rule !== 'all' || needle !== '';
   return (
     <div className="rp-page">
-      {resource.error && <ErrorMessage error={resource.error} />}
+      {resource.error && <ErrorMessage error={resource.error} onRetry={resource.refetch} />}
       <div className="rp-toolbar">
         <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={260} />
         <Segmented
@@ -170,9 +176,7 @@ export function Connections({go, query}: PageProps) {
             quiet
             onPress={() => {
               setText('');
-              setNetwork('all');
-              setOut('all');
-              setRule('all');
+              go('connections', within(query, {network: null, out: null, rule: null}));
             }}
           >
             {t('ui.clearFilters')}

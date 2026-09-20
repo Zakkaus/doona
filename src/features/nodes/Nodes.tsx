@@ -225,7 +225,7 @@ export function Nodes({go, query}: PageProps) {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
-      <ErrorMessage error={providers.error ?? nodes.error} />
+      <ErrorMessage error={providers.error ?? nodes.error} onRetry={reload} />
       {canManageProviders && (
         <div className="rp-toolbar">
           <span className="rp-grow" />

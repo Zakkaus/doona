@@ -211,7 +211,13 @@ export function Policies({query}: PageProps) {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('policy.note')}</p>
-      <ErrorMessage error={groups.error ?? nodes.error} />
+      <ErrorMessage
+        error={groups.error ?? nodes.error}
+        onRetry={() => {
+          groups.refetch();
+          nodes.refetch();
+        }}
+      />
       {groups.loading && !groups.data && <Loading />}
       {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
       <DisclosureGroup>
