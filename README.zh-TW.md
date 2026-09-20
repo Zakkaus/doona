@@ -19,6 +19,15 @@ doona 是一組靜態檔案，由 honk 自己或任一 Web 伺服器提供。它
 
 ![活動頁](docs/screenshots/zh-TW/activity-light.png)
 
+<details>
+<summary><strong>全部配色</strong></summary>
+
+十套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
+
+<img src="docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
+
+</details>
+
 ## 狀態
 
 doona 對接 honk 的原生 API。這套 API 在 honk 的 `feat/native-api` 分支，尚未發行。契約是 `daeuniverse/api-standardize` 的 fork 分支 `doona-pin`，固定在提交 `ba3e4c3`，記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。以較舊釘點建置的後端仍可用：後端沒宣告的資源視為不可用，對應頁面從導覽列消失。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
@@ -133,15 +142,6 @@ doona 不在伺服器上保存任何資料。設定存在瀏覽器該來源的 `
 在 HTTPS 或 localhost 下，service worker 預先快取應用外殼，並快取字型與圖示，離線也能開頁面，網站可安裝成應用程式。API 回應一律不快取。安全問題的回報方式見 [SECURITY.md](SECURITY.md)。
 
 ![深色模式的活動頁](docs/screenshots/zh-TW/activity-dark.png)
-
-<details>
-<summary><strong>全部配色</strong></summary>
-
-十套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
-
-<img src="docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
-
-</details>
 
 ## 開發
 

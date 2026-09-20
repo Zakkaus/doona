@@ -19,6 +19,15 @@ doona is a set of static files that honk serves itself, or any web server does. 
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
+<details>
+<summary><strong>Every palette</strong></summary>
+
+Ten palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
+
+<img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+
+</details>
+
 ## Status
 
 doona targets honk's native API, which is on honk's `feat/native-api` branch and not in a release yet. The contract it is built against is `daeuniverse/api-standardize`, fork branch `doona-pin` at commit `ba3e4c3`, recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
@@ -133,15 +142,6 @@ The saved theme and language are applied before the first paint, so a reload doe
 Over HTTPS or on localhost a service worker precaches the application shell and caches fonts and icons, so the pages open offline and the site can be installed as an app. API responses are never cached. See [SECURITY.md](SECURITY.md) for reporting a vulnerability.
 
 ![The activity page in dark mode](docs/screenshots/en/activity-dark.png)
-
-<details>
-<summary><strong>Every palette</strong></summary>
-
-Ten palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
-
-<img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
-
-</details>
 
 ## Development
 
