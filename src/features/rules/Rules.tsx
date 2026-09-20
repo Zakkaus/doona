@@ -3,7 +3,7 @@ import {localTime, outboundLabel, preferredHealth, word} from '../../api/selecto
 import {millis} from '../../api/u64';
 import type {GroupSummary, Node} from '../../api/model';
 import {useEffect, useMemo} from 'react';
-import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace} from '../../api/store';
+import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace, type TraceResolve} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';
@@ -25,6 +25,8 @@ function leafOf(outbound: string, network: 'tcp' | 'udp', groups: GroupSummary[]
   }
   return {chain, node: null};
 }
+
+const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 
 const outcomes: Record<string, Key> = {
   matched: 'rule.result.matched',
@@ -120,8 +122,8 @@ function Trace() {
           <LabeledSelect
             label={t('rule.resolve')}
             value={trace.resolve}
-            onChange={resolve => setForm({...form, resolve: resolve as 'none' | 'live'})}
-            items={trace.modes.map(id => ({id, label: id === 'none' ? t('rule.resolveNone') : t('rule.resolveLive')}))}
+            onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
+            items={trace.modes.map(id => ({id, label: t(resolveLabels[id])}))}
           />
           <Button
             accent

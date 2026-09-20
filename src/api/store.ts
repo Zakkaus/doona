@@ -423,6 +423,7 @@ export function useConnectionClose(refetch: () => void) {
   };
 }
 
+export type TraceResolve = 'none' | 'live' | 'query';
 export function useRoutingTrace() {
   const api = getApi();
   const capabilities = useCapabilities();
@@ -435,7 +436,7 @@ export function useRoutingTrace() {
     src_port: '',
     pname: '',
     // Null until the backend says what it offers: live when it can resolve, else none.
-    resolve: null as 'none' | 'live' | null
+    resolve: null as TraceResolve | null
   });
   const [result, setResult] = useState<RoutingTraceResponse | null>(null);
   const {busy, error, run} = useAction<'trace'>();
@@ -445,14 +446,21 @@ export function useRoutingTrace() {
       ? 'rule.invalidTarget'
       : !portValid(form.dst_port) || (form.src_port.trim() && !portValid(form.src_port))
         ? 'rule.invalidPort'
-        : form.resolve === 'live' && (!form.domain.trim() || form.dst_ip.trim())
+        : (form.resolve === 'live' || form.resolve === 'query') && (!form.domain.trim() || form.dst_ip.trim())
           ? 'rule.invalidLive'
           : null;
   const resource = capabilities.data?.resources.routing_trace;
-  const modes = resource?.resolve_modes ?? ['none', 'live'];
+  // honk simulates without resolving; when it also answers DNS diagnostics, doona resolves the name through
+  // `/dns/query` and simulates each address itself, the `query` mode.
+  const backendModes: TraceResolve[] = resource?.resolve_modes ?? ['none', 'live'];
+  const modes: TraceResolve[] = [
+    ...backendModes,
+    ...(backendModes.includes('live') || capabilities.data?.resources.dns_query.available !== true ? [] : ['query' as const])
+  ];
   const available = resource?.available !== false;
-  // Live when the backend offers it and there is a name to resolve; an explicit choice stands.
-  const resolve = form.resolve ?? (modes.includes('live') && form.domain.trim() && !form.dst_ip.trim() ? 'live' : 'none');
+  // Resolving when possible and there is a name to resolve; an explicit choice stands.
+  const named = form.domain.trim() !== '' && !form.dst_ip.trim();
+  const resolve: TraceResolve = form.resolve ?? (named && modes.includes('live') ? 'live' : named && modes.includes('query') ? 'query' : 'none');
   async function submit() {
     if (busy || invalid || !available || !modes.includes(resolve)) return;
     setResult(null);
@@ -465,7 +473,38 @@ export function useRoutingTrace() {
     if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    const response = await run('trace', signal => api.routingTrace({input, resolve}, signal));
+    const response = await run('trace', async signal => {
+      if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
+      // The name resolved through the engine's own DNS, then one simulation per address family; the answers are
+      // reported the way a backend resolution would be, so the page reads them alike.
+      const lookup = await api.dnsQuery(input.domain!, ['A', 'AAAA'], signal);
+      const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
+        lookup_id: `query:${item.type}`,
+        parent_lookup_id: null,
+        attempt_id: null,
+        purpose: 'dial_target',
+        name: lookup.domain,
+        qtype: item.type,
+        source: item.cached ? 'cache' : 'upstream',
+        upstream_transport: null,
+        carrier_transport: null,
+        cache: item.cached ? 'hit' : 'miss',
+        cache_entry_id: item.cache_entry_id,
+        upstream: item.upstream,
+        route_evaluation_ids: [],
+        status: item.status,
+        addresses: (item.answers ?? []).filter(answer => answer.type === item.type).map(answer => answer.data),
+        selected_ip: (item.answers ?? []).find(answer => answer.type === item.type)?.data ?? null,
+        error: null
+      }));
+      const addresses = dns.flatMap(item => item.addresses.slice(0, 1));
+      const traces = await Promise.all(
+        (addresses.length ? addresses : [null]).map(address =>
+          api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal)
+        )
+      );
+      return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
+    });
     if (response) setResult(response);
   }
   return {form, resolve, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
