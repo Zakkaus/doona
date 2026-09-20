@@ -128,14 +128,14 @@ experimental {
 
 doona 不在服务器上保存任何数据。设置存在浏览器该来源的 `localStorage`：
 
-| 设置     | 键               | 值                                                                                                                                           |
-| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 后端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 数组；`api` 是服务器根地址或代理前缀，留空或 `mock` 用演示数据；token 只放在 Authorization 头，不进网址     |
-| 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                              |
-| 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                               |
-| 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                            |
-| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；Rosé Pine、Catppuccin Frappé／Macchiato／Mocha、Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design、Glass |
-| 字标     | `doona-wordmark` | `gradient`（默认）、`plain`                                                                                                                  |
+| 设置     | 键               | 值                                                                                                                                       |
+| -------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 后端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 数组；`api` 是服务器根地址或代理前缀，留空或 `mock` 用演示数据；token 只放在 Authorization 头，不进网址 |
+| 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                          |
+| 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                           |
+| 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                        |
+| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；其他值见 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                       |
+| 字标     | `doona-wordmark` | `gradient`（默认）、`plain`                                                                                                              |
 
 保存的主题与语言在第一帧之前就应用，重新加载不会闪出默认外观。
 

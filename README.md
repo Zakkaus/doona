@@ -134,7 +134,7 @@ doona keeps nothing on the server. Its settings live in the browser's `localStor
 | Active one    | `doona-profile`  | `id` of the selected backend                                                                                                                                                  |
 | Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                              |
 | Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                           |
-| Palette       | `doona-palette`  | `rose-pine/moon` (default); Rosé Pine, Catppuccin Frappé, Macchiato and Mocha, Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design and Glass                          |
+| Palette       | `doona-palette`  | `rose-pine/moon` (default); the other ids are the `PaletteId` union in [settings.ts](src/features/settings/settings.ts)                                                       |
 | Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                                 |
 
 The saved theme and language are applied before the first paint, so a reload does not flash the default look.

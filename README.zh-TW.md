@@ -128,14 +128,14 @@ experimental {
 
 doona 不在伺服器上保存任何資料。設定存在瀏覽器該來源的 `localStorage`：
 
-| 設定     | 鍵               | 值                                                                                                                                           |
-| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 用示範資料；token 只放在 Authorization 標頭，不進網址   |
-| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                              |
-| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                               |
-| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                            |
-| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；Rosé Pine、Catppuccin Frappé／Macchiato／Mocha、Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design、Glass |
-| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                  |
+| 設定     | 鍵               | 值                                                                                                                                         |
+| -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 用示範資料；token 只放在 Authorization 標頭，不進網址 |
+| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                            |
+| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                             |
+| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                          |
+| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                         |
+| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                |
 
 儲存的主題與語言在第一幀之前就套用，重新載入不會閃出預設外觀。
 
