@@ -1012,6 +1012,15 @@ input {
     opacity: 0;
   }
 }
+/* The facts stack one under another; a build string wraps only at its spaces. */
+.rp-about .rp-kv {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.rp-about .rp-kv .v {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
 .rp-about-name {
   display: flex;
   flex-direction: column;
