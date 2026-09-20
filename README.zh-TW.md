@@ -134,6 +134,15 @@ doona 不在伺服器上保存任何資料。設定存在瀏覽器該來源的 `
 
 ![深色模式的活動頁](docs/screenshots/zh-TW/activity-dark.png)
 
+<details>
+<summary><strong>全部配色</strong></summary>
+
+十套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
+
+<img src="docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
+
+</details>
+
 ## 開發
 
 ```sh
@@ -145,7 +154,7 @@ pnpm e2e                         # 對模擬後端的瀏覽器測試，根目錄
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置重新產生上面的截圖。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
+`pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置重新產生上面的截圖（配色總覽需要 `cwebp`）。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
 
 | 路徑            | 用途                                   |
 | --------------- | -------------------------------------- |

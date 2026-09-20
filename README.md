@@ -134,6 +134,15 @@ Over HTTPS or on localhost a service worker precaches the application shell and 
 
 ![The activity page in dark mode](docs/screenshots/en/activity-dark.png)
 
+<details>
+<summary><strong>Every palette</strong></summary>
+
+Ten palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
+
+<img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+
+</details>
+
 ## Development
 
 ```sh
@@ -145,7 +154,7 @@ pnpm e2e                         # browser tests against the mock, at the root a
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
-`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` refreshes the images above from a running build. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` refreshes the images above from a running build (the palette sheet needs `cwebp`). See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 | Path            | Purpose                                            |
 | --------------- | -------------------------------------------------- |
