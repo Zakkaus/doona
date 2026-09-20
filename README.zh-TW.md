@@ -15,14 +15,14 @@
 
 </div>
 
-doona 是一組靜態檔案，由 honk 自己或任一 Web 伺服器提供。它顯示 honk 當下的狀態：連線、保留的流程、DNS、事件、日誌、流量與記憶體。它也匯入訂閱與分享連結，把節點編成群組並測延遲，用表單寫路由規則，配置檔每次儲存前先校驗。介面有繁體中文、簡體中文與英文，十套配色，各有淺色與深色。
+doona 是一組靜態檔案，由 honk 自己或任一 Web 伺服器提供。它顯示 honk 當下的狀態：連線、保留的流程、DNS、事件、日誌、流量與記憶體。它也匯入訂閱與分享連結，把節點編成群組並測延遲，用表單寫路由規則，配置檔每次儲存前先校驗。介面有繁體中文、簡體中文與英文，十一套配色，各有淺色與深色。
 
 ![活動頁](docs/screenshots/zh-TW/activity-light.png)
 
 <details>
 <summary><strong>全部配色</strong></summary>
 
-十套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
+十一套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
 
 <img src="docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
 
@@ -128,14 +128,14 @@ experimental {
 
 doona 不在伺服器上保存任何資料。設定存在瀏覽器該來源的 `localStorage`：
 
-| 設定     | 鍵               | 值                                                                                                                                         |
-| -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 用示範資料；token 只放在 Authorization 標頭，不進網址 |
-| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                            |
-| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                             |
-| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                          |
-| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；Rosé Pine、Catppuccin Frappé／Macchiato／Mocha、Nord、Ant Design、Arco Design、Semi Design、Glass                |
-| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                |
+| 設定     | 鍵               | 值                                                                                                                                           |
+| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 用示範資料；token 只放在 Authorization 標頭，不進網址   |
+| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                              |
+| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                               |
+| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                            |
+| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；Rosé Pine、Catppuccin Frappé／Macchiato／Mocha、Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design、Glass |
+| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                  |
 
 儲存的主題與語言在第一幀之前就套用，重新載入不會閃出預設外觀。
 

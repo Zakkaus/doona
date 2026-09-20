@@ -10,6 +10,7 @@ const palettes = [
   'catppuccin/frappe',
   'catppuccin/mocha',
   'nord/nord',
+  'kary/kary',
   'glass/glass',
   'antd/antd',
   'arco/arco',

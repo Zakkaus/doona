@@ -79,6 +79,7 @@ export const messages = defineMessages({
     'palette.arco': 'Arco Design',
     'palette.semi': 'Semi Design',
     'palette.lightDark': '亮色／暗色',
+    'palette.kary': 'Kary Pro Colors',
     'palette.glassName': '玻璃'
   },
   'zh-CN': {
@@ -159,6 +160,7 @@ export const messages = defineMessages({
     'palette.arco': 'Arco Design',
     'palette.semi': 'Semi Design',
     'palette.lightDark': '浅色／深色',
+    'palette.kary': 'Kary Pro Colors',
     'palette.glassName': '玻璃'
   },
   en: {
@@ -239,6 +241,7 @@ export const messages = defineMessages({
     'palette.arco': 'Arco Design',
     'palette.semi': 'Semi Design',
     'palette.lightDark': 'Light / Dark',
+    'palette.kary': 'Kary Pro Colors',
     'palette.glassName': 'Glass'
   }
 });

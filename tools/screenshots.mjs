@@ -37,6 +37,8 @@ const looks = [
   ['Catppuccin · Mocha', 'catppuccin/mocha', 'dark'],
   ['Nord · light', 'nord/nord', 'light'],
   ['Nord · dark', 'nord/nord', 'dark'],
+  ['Kary Pro Colors · light', 'kary/kary', 'light'],
+  ['Kary Pro Colors · dark', 'kary/kary', 'dark'],
   ['Ant Design · light', 'antd/antd', 'light'],
   ['Ant Design · dark', 'antd/antd', 'dark'],
   ['Arco Design · light', 'arco/arco', 'light'],

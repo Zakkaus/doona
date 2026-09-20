@@ -161,6 +161,61 @@
   --rp-hl-high: #4c566a;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
+:root[data-family='kary'] {
+  /* Kary Pro Colors (Pouya Kary) is an editor theme with a short official list: the editor background is the
+     card, the line highlight the page, the selection the overlay, and the caret the sixth chart colour. The
+     secondary text is a blend of its two greys. */
+  --rp-base: #e7f0f7;
+  --rp-surface: #f0f6fb;
+  --rp-overlay: #cff0f9;
+  --rp-muted: #9ba6b5;
+  --rp-subtle: color-mix(in srgb, #65758d 75%, #9ba6b5);
+  --rp-text: #65758d;
+  --rp-love: #c94824;
+  --rp-gold: #a56416;
+  --rp-rose: #00bbec;
+  --rp-pine: #3778b7;
+  --rp-foam: #428226;
+  --rp-iris: #b052a1;
+  --rp-c1: var(--rp-pine);
+  --rp-c2: var(--rp-foam);
+  --rp-c3: var(--rp-iris);
+  --rp-c4: var(--rp-gold);
+  --rp-c5: var(--rp-rose);
+  --rp-c6: var(--rp-love);
+  --rp-c7: var(--rp-pine);
+  --rp-c8: var(--rp-foam);
+  --rp-hl-low: #e7f0f7;
+  --rp-hl-med: #cff0f9;
+  --rp-hl-high: color-mix(in srgb, #65758d 25%, #f0f6fb);
+  --rp-shadow: 0 1px 2px rgba(101, 117, 141, 0.1);
+}
+:root[data-family='kary'][data-scheme='dark'] {
+  --rp-base: #1a1a1a;
+  --rp-surface: #242424;
+  --rp-overlay: #474747;
+  --rp-muted: #888888;
+  --rp-subtle: #909090;
+  --rp-text: #cacaca;
+  --rp-love: #d38569;
+  --rp-gold: #bc9550;
+  --rp-rose: #00bbec;
+  --rp-pine: #819dc2;
+  --rp-foam: #7da76f;
+  --rp-iris: #b98eb2;
+  --rp-c1: var(--rp-pine);
+  --rp-c2: var(--rp-foam);
+  --rp-c3: var(--rp-iris);
+  --rp-c4: var(--rp-gold);
+  --rp-c5: var(--rp-rose);
+  --rp-c6: var(--rp-love);
+  --rp-c7: var(--rp-pine);
+  --rp-c8: var(--rp-foam);
+  --rp-hl-low: #242424;
+  --rp-hl-med: #133853;
+  --rp-hl-high: #474747;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 :root[data-flavour='main'][data-scheme='dark'] {
   --rp-base: #191724;
   --rp-surface: #1f1d2e;
@@ -666,9 +721,17 @@
 :root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-pine);
   border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 var(--rp-bevel),
-    0 4px 12px color-mix(in srgb, var(--rp-pine) 35%, transparent);
+  box-shadow: none;
+}
+/* The glass rules outrank the generic disabled ones, so the disabled looks are restated here. */
+:root[data-family='glass'] .rp-btn[data-disabled] {
+  background: var(--rp-hl-low);
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-family='glass'] .rp-btn.accent[data-disabled] {
+  background: var(--rp-hl-med);
+  color: var(--rp-muted);
 }
 :root[data-family='glass'] .rp-btn.accent[data-hovered] {
   background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));

@@ -15,14 +15,14 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a set of static files that honk serves itself, or any web server does. It shows what honk is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships ten palettes in light and dark.
+doona is a set of static files that honk serves itself, or any web server does. It shows what honk is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Ten palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
+Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
 
 <img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -134,7 +134,7 @@ doona keeps nothing on the server. Its settings live in the browser's `localStor
 | Active one    | `doona-profile`  | `id` of the selected backend                                                                                                                                                  |
 | Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                              |
 | Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                           |
-| Palette       | `doona-palette`  | `rose-pine/moon` (default); Rosé Pine, Catppuccin Frappé, Macchiato and Mocha, Nord, Ant Design, Arco Design, Semi Design and Glass                                           |
+| Palette       | `doona-palette`  | `rose-pine/moon` (default); Rosé Pine, Catppuccin Frappé, Macchiato and Mocha, Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design and Glass                          |
 | Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                                 |
 
 The saved theme and language are applied before the first paint, so a reload does not flash the default look.
