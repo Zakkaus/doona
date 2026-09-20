@@ -298,7 +298,7 @@ export function Segmented({
         if (v != null) onChange(String(v));
       }}
     >
-      {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+      {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
       {items.map(([k, l]) => (
         <ToggleButton key={k} id={k} className="rp-btn">
           {l}
@@ -1055,7 +1055,7 @@ export function Tabs({
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
-        {pos && <span className="rp-slider" style={{translate: `${pos.x}px 0`, width: pos.w}} />}
+        {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
         <TabList aria-label={label} className="rp-tablist">
           {items.map(item => (
             <Tab key={item.id} id={item.id} className="rp-tab">

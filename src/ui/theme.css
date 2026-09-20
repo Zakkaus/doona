@@ -464,6 +464,13 @@
   --rp-track: rgba(0, 0, 0, 0.32);
   --rp-grain-opacity: 0.35;
   --rp-underlay: rgba(0, 0, 0, 0.45);
+  --rp-scrim: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%);
+  --rp-sheet: rgba(0, 0, 0, 0.18);
+  --rp-sheet-rim: rgba(255, 255, 255, 0.08);
+  --rp-row-hover: rgba(255, 255, 255, 0.05);
+  --rp-bevel: rgba(255, 255, 255, 0.08);
+  --rp-knob: rgba(120, 120, 128, 0.62);
+  --rp-knob-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.45);
   --rp-bg:
     radial-gradient(circle 320px at 24% 26%, rgba(46, 84, 230, 0.7) 0 22%, rgba(46, 84, 230, 0) 70%),
     radial-gradient(circle 280px at 74% 18%, rgba(150, 50, 140, 0.6) 0 20%, rgba(150, 50, 140, 0) 70%),
@@ -512,6 +519,15 @@
   --rp-track: rgba(60, 60, 67, 0.1);
   --rp-grain-opacity: 0.25;
   --rp-underlay: rgba(20, 20, 30, 0.3);
+  /* The mode-dependent pieces of the material: the readability scrim, the main sheet, a hovered row, the
+     bevel on controls and the lit pill of a segmented control. Component rules below read only these. */
+  --rp-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
+  --rp-sheet: rgba(255, 255, 255, 0.14);
+  --rp-sheet-rim: rgba(255, 255, 255, 0.35);
+  --rp-row-hover: rgba(255, 255, 255, 0.18);
+  --rp-bevel: rgba(255, 255, 255, 0.35);
+  --rp-knob: rgba(255, 255, 255, 0.85);
+  --rp-knob-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18);
   --rp-bg:
     radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
     radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
@@ -546,10 +562,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
-}
-:root[data-family='glass'][data-scheme='dark'] body::after {
-  background: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%);
+  background: var(--rp-scrim);
 }
 /* Over a photo the chrome becomes a vibrancy sheet (as macOS sidebars do): frosted, no border, so labels stay readable
    whatever the picture. The gradient look keeps the chrome bare. */
@@ -558,13 +571,9 @@
   background: transparent;
 }
 :root[data-family='glass'] .rp-main {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--rp-sheet);
+  border: 1px solid var(--rp-sheet-rim);
   border-bottom: 0;
-}
-:root[data-family='glass'][data-scheme='dark'] .rp-main {
-  background: rgba(0, 0, 0, 0.18);
-  border-color: rgba(255, 255, 255, 0.08);
 }
 :root[data-family='glass'] .rp-search {
   background: var(--rp-ctl);
@@ -619,7 +628,7 @@
   mask-composite: exclude;
 }
 :root[data-family='glass'] .rp-card {
-  border-radius: 20px;
+  border-radius: var(--rp-r-2xl);
 }
 :root[data-family='glass'] .rp-popover::after,
 :root[data-family='glass'] .rp-dialog::after {
@@ -635,19 +644,13 @@
   background: transparent;
 }
 :root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
-  background: rgba(255, 255, 255, 0.18);
-}
-:root[data-family='glass'][data-scheme='dark'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--rp-row-hover);
 }
 /* Controls are small pieces of the same glass: translucent fill, a light rim, a lit pill for the selected segment. */
 :root[data-family='glass'] .rp-btn {
   background: var(--rp-ctl);
   border-color: var(--rp-ctl-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-:root[data-family='glass'][data-scheme='dark'] .rp-btn {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 var(--rp-bevel);
 }
 :root[data-family='glass'] .rp-btn[data-hovered] {
   background: var(--rp-hl-med);
@@ -664,8 +667,8 @@
   background: var(--rp-pine);
   border-color: transparent;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 4px 12px rgba(0, 122, 255, 0.35);
+    inset 0 1px 0 var(--rp-bevel),
+    0 4px 12px color-mix(in srgb, var(--rp-pine) 35%, transparent);
 }
 :root[data-family='glass'] .rp-btn.accent[data-hovered] {
   background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
@@ -689,17 +692,9 @@
   color: var(--rp-text);
 }
 :root[data-family='glass'] .rp-slider {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--rp-knob);
   border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 #fff,
-    0 1px 3px rgba(0, 0, 0, 0.18);
-}
-:root[data-family='glass'][data-scheme='dark'] .rp-slider {
-  background: rgba(120, 120, 128, 0.62);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 3px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--rp-knob-shadow);
 }
 :root[data-family='glass'] .rp-switch .track {
   background: var(--rp-track);
@@ -903,7 +898,7 @@ input {
   height: 40px;
   padding: 0 12px 0 14px;
   border: 1px solid var(--rp-hl-high);
-  border-radius: 999px;
+  border-radius: var(--rp-r-pill);
   background: var(--rp-surface);
   color: var(--rp-subtle);
   cursor: text;
@@ -925,7 +920,7 @@ input {
   line-height: 16px;
   padding: 2px 8px;
   border: 1px solid var(--rp-hl-high);
-  border-radius: 999px;
+  border-radius: var(--rp-r-pill);
   color: var(--rp-subtle);
 }
 .rp-actions {
@@ -980,9 +975,9 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
+  height: var(--rp-control);
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   color: var(--rp-subtle);
   text-decoration: none;
   position: relative;
@@ -1019,7 +1014,7 @@ input {
   gap: 8px;
   height: 32px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   color: var(--rp-subtle);
   background: transparent;
   border: 0;
@@ -1031,10 +1026,10 @@ input {
   background: var(--rp-hl-low);
 }
 .rp-main {
-  margin-right: 0;
+  margin-inline-end: 0;
   padding: 32px 40px 48px;
   background: var(--rp-surface);
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--rp-r-xl) var(--rp-r-xl) 0 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1042,7 +1037,7 @@ input {
 }
 @media (min-width: 1024px) {
   .rp-main {
-    margin-right: 16px;
+    margin-inline-end: 16px;
   }
 }
 .rp-content {
@@ -1118,7 +1113,7 @@ input {
 .rp-card {
   background: var(--rp-base);
   border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
-  border-radius: 16px;
+  border-radius: var(--rp-r-xl);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1134,7 +1129,7 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
+  min-height: var(--rp-control);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -1363,9 +1358,9 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
+  height: var(--rp-control);
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   border: 1px solid transparent;
   background: var(--rp-overlay);
   color: var(--rp-text);
@@ -1474,7 +1469,7 @@ input {
 .rp-popover {
   background: var(--rp-surface);
   border: 1px solid var(--rp-popover-border);
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
   padding: 8px;
   overflow: hidden auto;
   scrollbar-color: var(--rp-hl-high) transparent;
@@ -1486,9 +1481,9 @@ input {
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
-  min-height: 32px;
+  min-height: var(--rp-control);
   padding: 0 8px 0 8px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   cursor: default;
   outline: none;
   color: var(--rp-text);
@@ -1514,7 +1509,7 @@ input {
 }
 .rp-item.plain {
   grid-template-columns: minmax(0, 1fr) auto;
-  padding-left: 12px;
+  padding-inline-start: 12px;
 }
 .rp-item .desc {
   color: var(--rp-subtle);
@@ -1538,10 +1533,10 @@ input {
 }
 .ic {
   display: inline-flex;
-  margin-right: 6px;
+  margin-inline-end: 6px;
 }
 .rp-il .ic {
-  margin-right: 0;
+  margin-inline-end: 0;
 }
 .rp-light {
   display: inline-flex;
@@ -1723,9 +1718,9 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 32px;
+  height: var(--rp-control);
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: transparent;
   border: 0;
   color: var(--rp-text);
@@ -1739,7 +1734,7 @@ input {
 .rp-dialog {
   position: relative;
   background: var(--rp-surface);
-  border-radius: 16px;
+  border-radius: var(--rp-r-xl);
   padding: 24px 32px;
   width: min(720px, 90vw);
   max-height: calc(100vh - 12vh - 24px);
@@ -1765,15 +1760,15 @@ input {
   max-width: 100%;
   align-items: center;
   gap: 8px;
-  height: 32px;
+  height: var(--rp-control);
   padding: 0 12px;
   border: 1px solid var(--rp-hl-high);
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-base);
 }
 .rp-input.lg {
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
 }
 /* The field's own glyphs match button icons: 16px in the 32px field, 20px in the large header search. */
 .rp-input .rp-icon {
@@ -1816,7 +1811,7 @@ input {
 .rp-results {
   max-height: 420px;
   overflow: auto;
-  padding-right: 12px;
+  padding-inline-end: 12px;
 }
 .rp-section-h {
   font-size: 12px;
@@ -1905,7 +1900,7 @@ input {
   flex: none;
   height: 20px;
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: var(--rp-r-sm);
   font-size: 12px;
   /* Flex centres the glyphs; a line box as tall as the badge would sit CJK glyphs below its middle. */
   line-height: 1;
@@ -2019,7 +2014,7 @@ button.rp-node[data-focus-visible] {
   height: 376px;
   overflow: auto;
   outline: none;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
 }
 .rp-nodegrid .rp-node {
   cursor: default;
@@ -2045,7 +2040,7 @@ button.rp-node[data-focus-visible] {
 .rp-switch .track {
   width: 32px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-hl-high);
   position: relative;
   transition: background 150ms;
@@ -2055,7 +2050,7 @@ button.rp-node[data-focus-visible] {
   content: '';
   position: absolute;
   top: 2px;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -2089,9 +2084,9 @@ button.rp-node[data-focus-visible] {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 32px;
+  height: var(--rp-control);
   padding: 0 8px 0 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-overlay);
   border: 0;
   color: var(--rp-text);
@@ -2110,7 +2105,7 @@ button.rp-node[data-focus-visible] {
   min-width: 0;
   height: 442px;
   border: 1px solid var(--rp-hl-med);
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-surface);
   overflow: auto;
   outline: none;
@@ -2159,18 +2154,18 @@ button.rp-node[data-focus-visible] {
 .rp-resizer {
   position: absolute;
   top: 0;
-  right: 0;
+  inset-inline-end: 0;
   width: 10px;
   height: 100%;
   cursor: col-resize;
   touch-action: none;
-  border-right: 2px solid transparent;
+  border-inline-end: 2px solid transparent;
   outline: none;
 }
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],
 .rp-resizer[data-focus-visible] {
-  border-right-color: var(--rp-pine);
+  border-inline-end-color: var(--rp-pine);
 }
 .rp-table [role='columnheader'][data-resizing] {
   color: var(--rp-pine);
@@ -2303,10 +2298,25 @@ button.rp-node[data-focus-visible] {
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
   --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
+  /* Corner radii by size, and the height every control shares. Hairline radii on bars and scrollbars stay
+     literal; so do the circle and the switch knob. */
+  --rp-r-sm: 6px;
+  --rp-r-md: 8px;
+  --rp-r-lg: 10px;
+  --rp-r-xl: 16px;
+  --rp-r-2xl: 20px;
+  --rp-r-pill: 999px;
+  --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
   --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
+}
+/* A finger needs more than a pointer does; table rows are already 40px. */
+@media (pointer: coarse) {
+  :root {
+    --rp-control: 36px;
+  }
 }
 :root[data-scheme='dark'] {
   color-scheme: dark;
@@ -2327,7 +2337,7 @@ button.rp-node[data-focus-visible] {
   gap: 4px;
   max-width: 100%;
   background: var(--rp-overlay);
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
   padding: 2px;
   position: relative;
 }
@@ -2336,11 +2346,13 @@ button.rp-node[data-focus-visible] {
   top: 2px;
   bottom: 2px;
   left: 0;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-surface);
   border: 2px solid var(--rp-pine);
+  /* Animated in layout, not on the compositor: a translating layer under the labels makes the browser
+     re-rasterise their text (Firefox drops subpixel antialiasing for the ride), which reads as a flicker. */
   transition:
-    translate 200ms var(--rp-ease-out),
+    left 200ms var(--rp-ease-out),
     width 200ms var(--rp-ease-out);
   pointer-events: none;
 }
@@ -2348,10 +2360,10 @@ button.rp-node[data-focus-visible] {
   flex: 0 1 auto;
   min-width: 0;
   padding: 0 8px;
-  height: 32px;
+  height: var(--rp-control);
   background: transparent;
   color: var(--rp-subtle);
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   position: relative;
   z-index: 1;
@@ -2446,8 +2458,7 @@ button.rp-node[data-focus-visible] {
 }
 .rp-toasts {
   position: fixed;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   bottom: 16px;
   margin: 0 auto;
   width: fit-content;
@@ -2487,7 +2498,7 @@ button.rp-node[data-focus-visible] {
   min-height: 56px;
   width: 336px;
   max-width: 90vw;
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
   background: var(--rp-text);
   color: var(--rp-on-text);
   font-size: 14px;
@@ -2525,7 +2536,7 @@ button.rp-node[data-focus-visible] {
 .rp-toast .more {
   color: inherit;
   flex: none;
-  margin-left: -8px;
+  margin-inline-start: -8px;
 }
 .rp-toast .more[data-hovered],
 .rp-toast .close[data-hovered] {
@@ -2534,7 +2545,7 @@ button.rp-node[data-focus-visible] {
 .rp-toast > .close {
   color: inherit;
   width: 32px;
-  height: 32px;
+  height: var(--rp-control);
   min-width: 0;
   flex: none;
   align-self: flex-start;
@@ -2612,7 +2623,7 @@ button.rp-node[data-focus-visible] {
   gap: 2px;
   height: 56px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   background: var(--rp-overlay);
   color: var(--rp-text);
@@ -2722,7 +2733,7 @@ button.rp-node[data-focus-visible] {
   color: var(--rp-on-text);
   font-size: 12px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--rp-r-sm);
   /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
   z-index: 10;
   max-width: min(480px, calc(100vw - 24px));
@@ -2741,7 +2752,7 @@ button.rp-node[data-focus-visible] {
   align-items: flex-start;
   gap: 4px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
   border: 1px solid var(--rp-love);
   margin: 0;
   overflow-wrap: anywhere;
@@ -2777,7 +2788,7 @@ button.rp-node[data-focus-visible] {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  min-height: 32px;
+  min-height: var(--rp-control);
 }
 :where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
   background-color: var(--rp-hl-med);
@@ -2822,7 +2833,7 @@ button.rp-node[data-focus-visible] {
    the wrapper has no box, so layout and the direct-child rules see the button itself. */
 .rp-tipwrap {
   display: inline-flex;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
 }
 .rp-tipwrap[data-passive] {
   display: contents;
@@ -2847,14 +2858,14 @@ button.rp-node[data-focus-visible] {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
-  min-height: 32px;
-  border-radius: 8px;
+  min-height: var(--rp-control);
+  border-radius: var(--rp-r-md);
   padding: 0 8px;
   color: var(--rp-pine);
 }
 /* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
 .rp-card > .rp-link {
-  margin-left: -8px;
+  margin-inline-start: -8px;
 }
 @media (max-width: 600px) {
   .rp-brand-version {
@@ -2869,11 +2880,11 @@ button.rp-node[data-focus-visible] {
   .rp-btn {
     max-width: 100%;
     height: auto;
-    min-height: 32px;
+    min-height: var(--rp-control);
     white-space: normal;
   }
   .rp-btn.icon {
-    height: 32px;
+    height: var(--rp-control);
   }
   .rp-seg .rp-btn {
     white-space: nowrap;
@@ -2907,7 +2918,7 @@ button.rp-node[data-focus-visible] {
   align-self: flex-start;
   max-width: 100%;
   padding: 2px;
-  border-radius: 10px;
+  border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
 }
 .rp-tablist {
@@ -2920,7 +2931,7 @@ button.rp-node[data-focus-visible] {
   z-index: 1;
   height: 28px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   display: inline-flex;
   align-items: center;
   font: inherit;
@@ -2977,7 +2988,7 @@ button.rp-node[data-focus-visible] {
   width: min(480px, 100vw);
   height: 100%;
   max-height: none;
-  border-radius: 16px 0 0 16px;
+  border-radius: var(--rp-r-xl) 0 0 var(--rp-r-xl);
   overflow: auto;
 }
 .rp-underlay[data-entering] .rp-dialog.rp-drawer {

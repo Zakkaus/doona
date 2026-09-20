@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../api/store';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import type {ConfigSource, RoutingRule} from '../../api/model';
+import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
 import {
   Badge,
   Button,
@@ -21,7 +21,7 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import {ruleDistribution} from './distribution';
-import {candidate} from '../config/names';
+import {candidate, fileName} from '../config/names';
 import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
@@ -63,10 +63,12 @@ const ruleOrder = (a: string | null, b: string | null) => {
   return a.localeCompare(b, undefined, {numeric: true});
 };
 
-// The source a rule's `file` label names: the label is a redacted basename, so it is matched against the end
-// of each accepted source's path.
-const sourceFor = (list: ConfigSource[], file: string | undefined) =>
-  file ? list.find(item => item.path === file || item.path.endsWith('/' + file)) : undefined;
+// The accepted source a rule came from: by id when the backend names it, else by its `file` label, a redacted
+// basename matched against the end of each source's path.
+const sourceFor = (list: ConfigSource[], source: RuleSource | null | undefined) =>
+  source
+    ? (list.find(item => item.id === source.source_id) ?? list.find(item => item.path === source.file || item.path.endsWith('/' + source.file)))
+    : undefined;
 
 // The rules as a list. With the backend's dictionary: every rule in evaluation order, where it is written and
 // how many retained flows it decided; a rule can be added before another or at the end, or removed, by
@@ -112,7 +114,7 @@ function Dictionary({go, query}: PageProps) {
   }, [landed, rules.data]);
   const configSources = config.data?.sources ?? [];
   const writable = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     return !!source && source.writable && source.content !== undefined;
   };
   // Where a new rule can go: before the fallback when its line is known and writable, else before a writable rule.
@@ -145,7 +147,7 @@ function Dictionary({go, query}: PageProps) {
   const add = async (close: () => void) => {
     // The new line goes before the chosen rule, else before the fallback, in whichever source holds that line.
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
-    const source = sourceFor(configSources, anchor?.source?.file);
+    const source = sourceFor(configSources, anchor?.source);
     if (!anchor?.source || !source || source.content === undefined) return;
     const lines = source.content.replace(/\n$/, '').split('\n');
     const at = anchor.source.line - 1;
@@ -157,7 +159,7 @@ function Dictionary({go, query}: PageProps) {
     }
   };
   const remove = async (rule: RoutingRule, close: () => void) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     if (!rule.source || !source || source.content === undefined) return;
     const lines = source.content.replace(/\n$/, '').split('\n');
     lines.splice(rule.source.line - 1, 1);
@@ -167,8 +169,18 @@ function Dictionary({go, query}: PageProps) {
     }
   };
   const openSource = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source?.file);
+    const source = sourceFor(configSources, rule.source);
     if (source && rule.source) go('config', `tab=source&source=${encodeURIComponent(source.id)}&line=${rule.source.line}`);
+  };
+  // Where a rule is written: the file's name when a source is matched (a redacted path is named by kind), else
+  // the backend's label, which may itself be redacted and then leaves only the line.
+  const label = (source: RuleSource) => {
+    const matched = sourceFor(configSources, source);
+    return matched ? fileName(matched) : source.file === '<redacted>' ? '' : source.file;
+  };
+  const position = (source: RuleSource) => {
+    const file = label(source);
+    return file ? `${file}:${source.line}` : t('rule.lineOnly', {n: String(source.line)});
   };
   const conditionValid = pick.on ? pick.value.trim() !== '' : /\w\(/.test(form.condition) && !form.condition.includes('->');
   return (
@@ -214,10 +226,10 @@ function Dictionary({go, query}: PageProps) {
             {rule.outbound}
             {rule.must && <Badge>must</Badge>}
           </span>,
-          rule.source ? `${rule.source.file}:${rule.source.line}` : '—',
+          rule.source ? position(rule.source) : '—',
           hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
           <span className="rp-chain">
-            {rule.source && sourceFor(configSources, rule.source.file) && (
+            {rule.source && sourceFor(configSources, rule.source) && (
               <Button small quiet icon label={t('rule.openSource')} onPress={() => openSource(rule)}>
                 <FileText />
               </Button>
@@ -255,7 +267,9 @@ function Dictionary({go, query}: PageProps) {
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
-            <span className="rp-label">{t('rule.removeHelp', {file: dialog.rule.source?.file ?? '', line: String(dialog.rule.source?.line ?? '')})}</span>
+            <span className="rp-label">
+              {t('rule.removeHelp', {file: dialog.rule.source ? label(dialog.rule.source) : '', line: String(dialog.rule.source?.line ?? '')})}
+            </span>
             <span className="rp-code">{dialog.rule.expression}</span>
           </div>
         )}
