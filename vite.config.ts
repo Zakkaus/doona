@@ -17,6 +17,18 @@ export default defineConfig({
   plugins: [
     react(),
     {
+      // The stored theme and language are stamped on <html> by an inline script before the stylesheet can paint,
+      // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
+      name: 'first-paint-stamp',
+      transformIndexHtml(html) {
+        const stamp = readFileSync(new URL('tools/stamp.js', import.meta.url), 'utf8');
+        const digest = createHash('sha256').update(stamp).digest('base64');
+        return html
+          .replace("default-src 'self';", `default-src 'self'; script-src 'self' 'sha256-${digest}';`)
+          .replace('<head>\n', `<head>\n<script>${stamp}</script>\n`);
+      }
+    },
+    {
       ...optimizeLocales.vite({locales: ['zh-TW', 'zh-CN', 'en-US']}),
       enforce: 'pre'
     },
