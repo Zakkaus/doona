@@ -212,11 +212,11 @@ function Dictionary({go, query}: PageProps) {
         height={560}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 56, grow: 0},
-          {id: 'expression', label: t('rule.expression'), minWidth: 260, grow: 3, isRowHeader: true},
-          {id: 'outbound', label: t('ui.outbound'), minWidth: 120, grow: 0},
-          {id: 'source', label: t('rule.where'), minWidth: 140, grow: 0, drop: 2},
-          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', drop: 1},
+          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0},
+          {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 3, isRowHeader: true},
+          {id: 'outbound', label: t('ui.outbound'), minWidth: 108, grow: 0},
+          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2},
+          {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1},
           {id: 'actions', label: t('ui.actions'), minWidth: canWrite ? 96 : 56, grow: 0}
         ]}
         render={rule => [
