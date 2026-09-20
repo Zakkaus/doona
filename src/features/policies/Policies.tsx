@@ -151,7 +151,7 @@ function PolicyCard({
                         label={t('policy.policy')}
                         value={draft.policy}
                         onChange={policy => setDraft({...draft, policy})}
-                        items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name])}))}
+                        items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name]), desc: name}))}
                       />
                       {draft.filters.map((filter, i) => (
                         <TextField
