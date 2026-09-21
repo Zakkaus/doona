@@ -157,3 +157,18 @@ browserTest('a backend that answers 401 gets a token form instead of the page', 
   await expect.poll(() => authorization).toBe('Bearer secret-1');
   await expect(page.getByRole('heading', {name: 'Token required'})).toHaveCount(0);
 });
+
+test('five taps on the duck honk, and the header wears the long name for the session', async ({page}) => {
+  await page.goto('/#/activity');
+  const brand = page.locator('.rp-brand .rp-brand-text > span').first();
+  await expect(brand).toHaveText('doona');
+  await page.locator('.rp-brand').click();
+  const duck = page.getByRole('dialog', {name: 'About doona', exact: true}).getByRole('button', {name: 'The duck', exact: true});
+  for (let i = 0; i < 4; i++) await duck.click();
+  await expect(brand).toHaveText('doona');
+  await duck.click();
+  await expect(page.getByText('Honk!', {exact: true})).toBeVisible();
+  await expect(brand).toHaveText('doooooona');
+  await page.getByRole('dialog').getByRole('button', {name: 'Close', exact: true}).click();
+  await expect(brand).toHaveText('doooooona');
+});

@@ -1,41 +1,125 @@
-/* ---- Routing: one row per outbound in a single card; a dimmed row is off the pinned path. ---- */
-.rp-lanes {
-  gap: 0;
-  padding: 4px 16px;
+.rp-topology {
+  min-width: 0;
+  overflow: hidden;
 }
-.rp-lane {
-  display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 240px;
-  gap: 8px 16px;
-  align-items: center;
-  padding: 10px 0;
-  transition: opacity 150ms var(--rp-ease);
+.rp-topology h2 {
+  margin: 0;
 }
-.rp-lane + .rp-lane {
-  border-top: 1px solid var(--rp-hl-low);
-}
-.rp-lane[data-dim] {
-  opacity: 0.35;
-}
-.rp-lane-title {
+/* The routing tree: tiles placed on computed rows, the connectors drawn from the same numbers. */
+.rp-tree {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
-.rp-lane-title .rp-light {
+.rp-tree-captions {
+  position: relative;
+  height: 16px;
+}
+.rp-tree-captions > .rp-label {
+  position: absolute;
+  top: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.rp-tree-canvas {
+  position: relative;
+}
+.rp-tree-links {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--rp-muted);
+  stroke-linecap: round;
+}
+.rp-tree-links path {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.rp-tree-links path[data-kind='direct'] {
+  stroke: var(--rp-foam);
+}
+.rp-tree-links path[data-kind='block'] {
+  stroke: var(--rp-love);
+}
+.rp-tree-links path[data-kind='group'] {
+  stroke: var(--rp-iris);
+}
+.rp-tree-links path[data-kind='node'] {
+  stroke: var(--rp-pine);
+}
+.rp-tree-links path[data-state='active'] {
+  opacity: 1;
+}
+.rp-tree-links path[data-state='dim'] {
+  opacity: 0.1;
+}
+.rp-tree-tile {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--rp-r-md);
+  border: 2px solid transparent;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 16px;
+  text-align: start;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.rp-tree-tile.dim {
+  opacity: 0.35;
+}
+.rp-tree-tile[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-tree-tile[data-selected] {
+  border-color: var(--rp-pine);
+  background: var(--rp-selected);
+}
+.rp-tree-tile[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-tree-tile .l {
+  flex: 1;
   min-width: 0;
-}
-.rp-lane-title strong {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.rp-lane-node .rp-node {
-  height: auto;
-  padding: 6px 10px;
+.rp-tree-tile[data-stage='rule'] .l {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
+  font-size: 12px;
 }
-@media (max-width: 1023px) {
-  .rp-lane {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.rp-tree-tile .s {
+  margin-inline-start: 8px;
+  font-size: 12px;
+  color: var(--rp-subtle);
+}
+.rp-tree-tile .s.ok {
+  color: var(--rp-foam);
+}
+.rp-tree-tile .s.warn {
+  color: var(--rp-gold);
+}
+.rp-tree-tile .s.err {
+  color: var(--rp-love);
+}
+.rp-tree-tile .c {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--rp-subtle);
 }

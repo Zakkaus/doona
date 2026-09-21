@@ -5,6 +5,20 @@ import {expect, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
+test('quick setup refuses an apostrophe without changing the subscription URL', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const url = page.getByLabel('Subscription URL', {exact: true});
+  await url.fill("https://example.org/o'brien");
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Cannot write this value losslessly');
+  await expect(url).toHaveValue("https://example.org/o'brien");
+  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  await url.fill('https://example.org/accepted');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(page.locator('.cm-content')).toContainText('https://example.org/accepted');
+});
+
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
   await page.goto('/#/config');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('tproxy_port: 12345');

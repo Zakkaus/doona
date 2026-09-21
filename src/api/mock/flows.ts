@@ -1,5 +1,6 @@
 import type {Connection, FlowDetail, FlowStep} from '../model';
 import {rules} from './rules';
+import {configRules} from './fixtures/configuration';
 
 export type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
 export type ConnectionSeed = Omit<Connection, keyof FlowFields>;
@@ -78,7 +79,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
       ? {id: 'r1', expression: ruleOf('r1').cond}
       : direct
         ? {id: 'r3', expression: ruleOf('r3').cond}
-        : {id: 'fallback', expression: 'fallback: ' + connection.outbound});
+        : {id: 'fallback', expression: 'fallback: ' + configRules.fallback.target});
   const expression = decided.expression;
   const leaf = connection.outbound === 'resilient' ? 'sg-01' : connection.outbound === 'gaming' ? 'hk-02' : 'hk-01';
   const policy = connection.outbound === 'resilient' ? 'score' : connection.outbound === 'gaming' ? 'urltest' : 'selector';

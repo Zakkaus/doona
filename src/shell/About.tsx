@@ -14,7 +14,10 @@ export function engineLinks(name: string | undefined) {
   return {slug, repo: name ? `${org}/${name}` : org};
 }
 
-export function About({trigger}: {trigger: ReactElement}) {
+// The name once the duck has honked: the header wears it for the rest of the session.
+export const wordmark = (honked: boolean) => (honked ? 'doooooona' : 'doona');
+
+export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => void}) {
   const t = useT();
   const version = useVersion();
   const [taps, setTaps] = useState(0);
@@ -27,14 +30,22 @@ export function About({trigger}: {trigger: ReactElement}) {
   return (
     <ModalDialog title={t('about.title')} narrow trigger={trigger} footer={close => <Button onPress={close}>{t('about.close')}</Button>}>
       <div className={cx('rp-about', honked && 'honked')}>
-        <button type="button" className={cx('rp-about-duck', painted && 'painted')} onClick={() => setTaps(n => n + 1)} aria-label={t('about.duck')}>
+        <button
+          type="button"
+          className={cx('rp-about-duck', painted && 'painted')}
+          onClick={() => {
+            if (taps === 4) onHonk?.();
+            setTaps(n => n + 1);
+          }}
+          aria-label={t('about.duck')}
+        >
           <img key={taps} src={logo} alt="" className={cx(taps > 0 && !painted && 'hop')} />
           <img src={night} alt="" className="night" />
           {honked && <span className="rp-about-bubble">{t('about.quack')}</span>}
         </button>
         <div className="rp-about-name">
           <span className="rp-brand-text">
-            <span>doona</span>
+            <span>{wordmark(honked)}</span>
             <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
           </span>
           <span className="rp-label">{t('about.tagline', {engine: org.split('/').pop()!})}</span>

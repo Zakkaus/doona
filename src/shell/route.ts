@@ -3,7 +3,7 @@ import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
 
 type Route = {route: string; query: string};
-export const DraftContext = createContext<(dirty: boolean) => void>(() => {});
+export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
@@ -36,45 +36,81 @@ export function updateRoute(current: Route, hash: string): Route {
   return current.route === next.route && current.query === next.query ? current : next;
 }
 
-const go: Go = (route, query) => {
-  location.hash = buildHash(route, query);
-};
+type PendingRoute = Route & {delta?: number};
 
 function currentHash(api: string | null): string {
-  if (shouldOpenSettings(api, location.hash)) history.replaceState(null, '', buildHash('settings'));
+  if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
   else if (/^#\/?flows(\?|$)/.test(location.hash)) {
     const {route, query} = parseHash(location.hash);
-    history.replaceState(null, '', buildHash(route, query));
+    history.replaceState(history.state, '', buildHash(route, query));
   }
   return location.hash;
 }
 
 export function useRoute(api: string | null) {
-  const [loc, setLoc] = useState(() => parseHash(currentHash(api)));
+  const [loc, setLoc] = useState(() => {
+    const hash = currentHash(api);
+    history.replaceState({...history.state, doonaPosition: history.state?.doonaPosition ?? 0}, '', hash);
+    return parseHash(hash);
+  });
+  const position = useRef<number>(history.state.doonaPosition);
+  const restoring = useRef<PendingRoute | null>(null);
   const dirty = useRef(false);
   const setDirty = useCallback((value: boolean) => {
     dirty.current = value;
   }, []);
-  const [pending, setPending] = useState<Route | null>(null);
+  const [revision, setRevision] = useState(0);
+  const [pending, setPending] = useState<PendingRoute | null>(null);
+  const push = useCallback((next: Route) => {
+    history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+    setLoc(next);
+  }, []);
+  const go = useCallback<Go>(
+    (route, query = '') => {
+      const next = updateRoute(loc, buildHash(route, query));
+      if (next === loc) return;
+      if (dirty.current) setPending(next);
+      else push(next);
+    },
+    [loc, push]
+  );
   useEffect(() => {
     const on = () => {
+      if (restoring.current) {
+        setPending(restoring.current);
+        restoring.current = null;
+        return;
+      }
       const hash = currentHash(api);
+      const nextPosition: number = history.state?.doonaPosition ?? position.current + 1;
+      if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
       const next = updateRoute(loc, hash);
-      if (next === loc) return;
-      if (dirty.current) {
-        history.replaceState(null, '', buildHash(loc.route, loc.query));
-        setPending(next);
-      } else setLoc(next);
+      const delta = nextPosition - position.current;
+      // A draft holds the page: step back to it and ask, then travel again on discard.
+      if (next !== loc && dirty.current) {
+        if (delta) {
+          restoring.current = {...next, delta};
+          history.go(-delta);
+        } else {
+          history.replaceState(history.state, '', buildHash(loc.route, loc.query));
+          setPending(next);
+        }
+      } else {
+        position.current = nextPosition;
+        setLoc(next);
+      }
     };
-    addEventListener('hashchange', on);
-    return () => removeEventListener('hashchange', on);
+    // popstate, not hashchange: it also fires when two entries share a hash, so the cursor never drifts.
+    addEventListener('popstate', on);
+    return () => removeEventListener('popstate', on);
   }, [api, loc]);
   const discard = () => {
     if (!pending) return;
     dirty.current = false;
-    history.replaceState(null, '', buildHash(pending.route, pending.query));
-    setLoc(pending);
+    setRevision(value => value + 1);
+    if (pending.delta !== undefined) history.go(pending.delta);
+    else push(pending);
     setPending(null);
   };
-  return {...loc, go, setDirty, pending, discard, cancel: () => setPending(null)};
+  return {...loc, go, setDirty, revision, pending, discard, cancel: () => setPending(null)};
 }

@@ -1,68 +1,56 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {flowMap, flowsThrough, lanes, nodeNames} from './map';
+import type {GroupSummary} from '../../api/model';
+import {flowsThrough, nodeNames, parentOf, pinnedLabel, routingTree, treeRows} from './map';
 
-it('lays the config out as columns and weights them with retained flows', async () => {
-  const api = createMockApi();
-  const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
-  const map = flowMap(flows.flows, groups, nodes.nodes);
-  const stages = (stage: string) => map.nodes.filter(node => node.stage === stage);
-  // Every configured group is a column entry, used or not; direct and block only appear when a flow took them.
-  for (const group of groups) expect(stages('outbound').some(node => node.label === group.name)).toBe(true);
-  // A group's selected node is linked from config even with zero flows through it.
-  const configured = map.links.filter(link => link.configured);
-  expect(configured.length).toBeGreaterThan(0);
-  for (const link of configured) expect(link.source.startsWith('outbound:') && link.target.startsWith('node:')).toBe(true);
-  // Counts flow along the path: the rule column adds up to the flow total.
-  expect(stages('rule').reduce((sum, node) => sum + node.count, 0)).toBe(flows.flows.length);
-  // Terminal outbounds have no node hop.
-  const direct = flows.flows.filter(flow => flow.outbound === 'direct');
-  expect(flowsThrough(flows.flows, 'outbound:direct', nodeNames(nodes.nodes))).toHaveLength(direct.length);
-  expect(map.links.some(link => link.source === 'outbound:direct')).toBe(false);
-  // Sorted busiest first, unknowns after named entries of the same weight.
-  const rules = stages('rule');
-  for (let i = 1; i < rules.length; i++) expect(rules[i - 1].count).toBeGreaterThanOrEqual(rules[i].count);
-});
-
-it('folds the map into one lane per outbound with its rules and selected node', async () => {
-  const api = createMockApi();
-  const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
-  const map = flowMap(flows.flows, groups, nodes.nodes);
-  const rows = lanes(map);
-  expect(rows.map(lane => lane.outbound.label)).toEqual(map.nodes.filter(node => node.stage === 'outbound').map(node => node.label));
-  const proxy = rows.find(lane => lane.outbound.label === 'proxy')!;
-  expect(proxy.rules.reduce((sum, rule) => sum + rule.count, 0)).toBe(proxy.outbound.count);
-  expect(proxy.node?.node.label).toBe('hk-01');
-  // A group nothing used still shows its configured node, marked as configured only.
-  const airport = rows.find(lane => lane.outbound.label === 'skylink')!;
-  expect(airport.rules).toEqual([]);
-  expect(airport.node?.configured).toBe(true);
-  expect(airport.node?.count).toBe(0);
-  // Terminal outbounds have no node.
-  expect(rows.find(lane => lane.outbound.label === 'direct')!.node).toBeNull();
-});
-
-it('draws configured rules into their lanes before any flow used them, joined to flows by rule id', async () => {
+it('lays the config out as a tree and weights it with retained flows', async () => {
   const api = createMockApi();
   const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
-  const configured = rules.rules.filter(rule => rule.outbound);
-  const map = flowMap([], groups, nodes.nodes, rules.rules);
-  // Every configured rule is a column entry with a configured link into its outbound.
-  for (const rule of configured) {
-    const entry = map.nodes.find(node => node.id === 'rule:' + rule.rule_id);
-    expect(entry?.label).toBe(rule.expression);
-    expect(entry?.count).toBe(0);
-    expect(map.links.some(link => link.source === 'rule:' + rule.rule_id && link.target === 'outbound:' + rule.outbound && link.configured)).toBe(true);
+  const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules);
+  // Rules keep their evaluation order and every configured rule is there, used or not, joined to its outbound.
+  expect(tree.leaves.slice(0, rules.rules.length).map(rule => rule.id)).toEqual(rules.rules.map(rule => 'rule:' + rule.rule_id));
+  for (const rule of rules.rules) {
+    const entry = tree.leaves.find(item => item.id === 'rule:' + rule.rule_id)!;
+    expect(entry.label).toBe(rule.expression);
+    expect(entry.must).toBe(rule.must);
+    expect(tree.links.some(link => link.source === entry.id && link.target === 'outbound:' + rule.outbound)).toBe(true);
   }
+  expect(tree.leaves.find(rule => rule.fallback)?.outbound).toBe('outbound:' + rules.fallback.outbound);
+  // Every configured group is an outbound with its selected node linked before any flow used it.
+  for (const group of groups) {
+    const outbound = tree.outbounds.find(item => item.label === group.name)!;
+    expect(outbound.kind).toBe('group');
+    expect(outbound.groups[0]).toMatchObject({name: group.name, kind: group.policy.kind});
+    if (outbound.node) expect(tree.links.some(link => link.source === outbound.id && link.target === outbound.node)).toBe(true);
+  }
+  // Counts flow along the tree: the rule column adds up to the flow total; terminal outbounds have no node hop.
+  expect(tree.leaves.reduce((sum, rule) => sum + rule.count, 0)).toBe(flows.flows.length);
+  expect(tree.outbounds.find(outbound => outbound.id === 'outbound:direct')).toMatchObject({kind: 'direct', node: null});
+  expect(tree.links.some(link => link.source === 'outbound:direct')).toBe(false);
+  const direct = flows.flows.filter(flow => flow.outbound === 'direct');
+  expect(flowsThrough(flows.flows, 'outbound:direct', nodeNames(nodes.nodes), rules.rules)).toHaveLength(direct.length);
   // A flow that names a rule id lands on that entry rather than on a second one with the same text.
-  const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression);
-  if (matched) {
-    const withFlows = flowMap(flows.flows, groups, nodes.nodes, rules.rules);
-    const entries = withFlows.nodes.filter(node => node.id === 'rule:' + matched.rule_id);
-    expect(entries).toHaveLength(1);
-    expect(entries[0].count).toBeGreaterThan(0);
-    expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes))).toContain(matched);
-  }
+  const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression)!;
+  expect(tree.leaves.filter(rule => rule.id === 'rule:' + matched.rule_id)).toHaveLength(1);
+  expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes), rules.rules)).toContain(matched);
+  const label = (name: string | null) => (name === 'direct' ? 'Direct' : String(name));
+  expect(pinnedLabel('rule:' + matched.rule_id, rules.rules, nodeNames(nodes.nodes), label)).toBe(matched.rule_expression);
+  expect(pinnedLabel('outbound:direct', rules.rules, nodeNames(nodes.nodes), label)).toBe('Direct');
+  expect(pinnedLabel('node:' + nodes.nodes[0].id, rules.rules, nodeNames(nodes.nodes), label)).toBe(nodes.nodes[0].name);
+});
+
+it('follows a nested selection to its node and draws the inner group inside the outbound', async () => {
+  const api = createMockApi();
+  const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const inner = groups.find(group => group.name === 'resilient')!;
+  const nested: GroupSummary[] = groups.map(group => (group.name === 'proxy' ? {...group, selection: {tcp_member_id: inner.id, udp_member_id: null}} : group));
+  const tree = routingTree([], nested, nodes.nodes, rules.rules);
+  const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
+  expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'resilient']);
+  expect(proxy.node).toBe('node:' + inner.selection.tcp_member_id);
+  // The inner group is only drawn inside proxy unless a rule names it directly.
+  const named = rules.rules.some(rule => rule.outbound === 'resilient');
+  expect(tree.outbounds.some(outbound => outbound.label === 'resilient')).toBe(named);
 });
 
 it('takes a one-element chain as the leaf node the flow left through', async () => {
@@ -70,9 +58,74 @@ it('takes a one-element chain as the leaf node the flow left through', async () 
   const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
   const routed = flows.flows.find(flow => flow.chain.length > 1)!;
   const leaf = routed.chain[routed.chain.length - 1];
-  const map = flowMap([{...routed, chain: [leaf]}], groups, nodes.nodes);
-  // Configured selections add their own node entries; the flow itself must be counted at its leaf, not at unknown.
+  const single = routingTree([{...routed, chain: [leaf]}], groups, nodes.nodes, []);
+  expect(single.links.some(link => link.target === 'node:' + leaf && link.count === 1)).toBe(true);
+  expect(single.nodes.find(node => node.id === 'node:' + leaf)?.label).toBe(nodeNames(nodes.nodes).get(leaf));
+  expect(single.nodes.some(node => node.unknown)).toBe(false);
+});
+
+it('rows the tree with rules as leaves under their outbound and parents level with their children', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules);
+  const {rows, at} = treeRows(tree);
+  // Every item has a row; the leaves take whole rows and never share one.
+  const leaves = [...tree.leaves, ...tree.outbounds.filter(outbound => !tree.leaves.some(rule => parentOf(tree, rule) === outbound.id))];
+  expect(new Set(leaves.map(item => at.get(item.id)))).toHaveProperty('size', leaves.length);
+  expect(rows).toBe(leaves.length + tree.nodes.filter(node => !tree.outbounds.some(outbound => parentOf(tree, outbound) === node.id)).length);
+  for (const outbound of tree.outbounds) {
+    const under = tree.leaves.filter(rule => parentOf(tree, rule) === outbound.id).map(rule => at.get(rule.id)!);
+    if (!under.length) continue;
+    expect(at.get(outbound.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
+    // Siblings sit on consecutive rows, so their connectors never cross another branch.
+    expect(Math.max(...under) - Math.min(...under)).toBe(under.length - 1);
+  }
+  for (const node of tree.nodes) {
+    const under = tree.outbounds.filter(outbound => parentOf(tree, outbound) === node.id).map(outbound => at.get(outbound.id)!);
+    if (under.length) expect(at.get(node.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
+  }
+});
+
+it('keeps one transport through a nested chain and hides a group only reached through another', async () => {
+  const api = createMockApi();
+  const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const inner = groups.find(group => group.name === 'gaming')!;
+  // proxy selects gaming for UDP only; the tree follows UDP into gaming rather than switching to its TCP pick.
+  const nested: GroupSummary[] = groups.map(group => (group.name === 'proxy' ? {...group, selection: {tcp_member_id: null, udp_member_id: inner.id}} : group));
+  const tree = routingTree([], nested, nodes.nodes, rules.rules);
+  const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
+  expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'gaming']);
+  expect(proxy.node).toBe('node:' + inner.selection.udp_member_id);
+  expect(tree.outbounds.some(outbound => outbound.label === 'gaming')).toBe(rules.rules.some(rule => rule.outbound === 'gaming'));
+});
+
+it('keeps a retained flow from an earlier generation apart from the rule that now holds its id', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression && rules.rules.some(rule => rule.rule_id === flow.rule_id))!;
+  const stale = {...matched, id: 'stale', rule_expression: 'domain(suffix: old.example)'};
+  const tree = routingTree([...flows.flows, stale], groups, nodes.nodes, rules.rules);
+  const historical = tree.leaves.find(leaf => leaf.id === `rule:${matched.rule_id}\u0000domain(suffix: old.example)`)!;
+  expect(historical).toMatchObject({label: 'domain(suffix: old.example)', count: 1, outbound: null});
+  expect(tree.leaves.find(leaf => leaf.id === 'rule:' + matched.rule_id)?.label).toBe(matched.rule_expression);
   const names = nodeNames(nodes.nodes);
-  expect(map.links.some(link => link.target === 'node:' + names.get(leaf) && link.count === 1)).toBe(true);
-  expect(map.nodes.some(node => node.stage === 'node' && node.unknown)).toBe(false);
+  expect(flowsThrough([...flows.flows, stale], historical.id, names, rules.rules)).toEqual([stale]);
+  expect(pinnedLabel(historical.id, rules.rules, names, String)).toBe('domain(suffix: old.example)');
+});
+
+it('seen by device, the leaves are client addresses joined to outbounds by flows alone', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules, 'client');
+  expect(tree.by).toBe('client');
+  expect(tree.leaves.every(leaf => leaf.id.startsWith('client:') && leaf.outbound === null && !leaf.must)).toBe(true);
+  expect(tree.leaves.reduce((sum, leaf) => sum + leaf.count, 0)).toBe(flows.flows.length);
+  const device = tree.leaves.find(leaf => leaf.label === '10.0.0.12')!;
+  expect(tree.links.some(link => link.source === device.id && link.target.startsWith('outbound:') && link.count > 0)).toBe(true);
+  expect(flowsThrough(flows.flows, device.id, nodeNames(nodes.nodes), rules.rules)).toHaveLength(device.count);
+  // Groups and their selected nodes still come from the config.
+  expect(tree.outbounds.some(outbound => outbound.label === 'skylink' && outbound.count === 0)).toBe(true);
+  const {rows, at} = treeRows(tree);
+  expect(rows).toBeGreaterThanOrEqual(tree.leaves.length);
+  for (const leaf of tree.leaves) expect(at.has(leaf.id)).toBe(true);
 });

@@ -109,19 +109,19 @@ Every write goes through the engine: the text is validated in full, saved with t
 
 <img src="docs/screenshots/en/policies-light.png" alt="The policies page" width="100%">
 
-| Page          | Shows                                                                                                              | Needs                               |
-| ------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients and notifications | —                                   |
-| Overview      | Engine and eBPF state, traffic counters, backend capabilities, and the status as JSON                              | `runtime`                           |
-| Connections   | Live connections with source, destination, rule, chain and traffic; close one or all; filters from the URL         | `connections`                       |
-| DNS           | Queries with their answers, the cache, and the log; a flush                                                        | `dns_query`, `dns_log`, `dns_cache` |
-| Policies      | Groups, their members and health; selection, pinning, probing and editing                                          | `groups`                            |
-| Rules         | The rule list with hits, the distribution of retained flows, the flow log and a routing trace for a chosen target  | `rules`, `flows`, `routing_trace`   |
-| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                     | `nodes`, `providers`                |
-| Configuration | Sources with diagnostics, an editor with validation, quick setup and export                                        | `config`                            |
-| Events        | The backend event stream                                                                                           | `events`                            |
-| Logs          | The log stream with level and module filters, pause and export                                                     | `logs`                              |
-| Settings      | Backends, runtime settings and backend actions, language, appearance and palette                                   | —                                   |
+| Page          | Shows                                                                                                                                                                                        | Needs                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients and notifications                                                                           | —                                   |
+| Overview      | Engine and eBPF state, traffic counters, backend capabilities, and the status as JSON                                                                                                        | `runtime`                           |
+| Connections   | Live connections with source, destination, rule, chain and traffic; close one or all; filters from the URL                                                                                   | `connections`                       |
+| DNS           | Queries with their answers, the cache, and the log; a flush                                                                                                                                  | `dns_query`, `dns_log`, `dns_cache` |
+| Policies      | Groups, their members and health; selection, pinning, probing and editing                                                                                                                    | `groups`                            |
+| Rules         | A routing tree from rules (or devices) through outbounds to the nodes they select, the rule list with hits, the flow log with a rule one click away, and a routing trace for a chosen target | `rules`, `flows`, `routing_trace`   |
+| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                                                                                               | `nodes`, `providers`                |
+| Configuration | Sources with diagnostics, an editor with validation, quick setup and export                                                                                                                  | `config`                            |
+| Events        | The backend event stream                                                                                                                                                                     | `events`                            |
+| Logs          | The log stream with level and module filters, pause and export                                                                                                                               | `logs`                              |
+| Settings      | Backends, runtime settings and backend actions, language, appearance and palette                                                                                                             | —                                   |
 
 Every page remains in navigation. A page is marked unavailable only when every resource listed for it in [registry.ts](src/shell/registry.ts) is unavailable; opening it shows an unavailable notice. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
 

@@ -36,10 +36,11 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const api = getApi();
   const validation = useCapabilities().data?.resources.config_validate;
   const canValidate = validation?.available === true && validation.modes?.includes('full') === true;
-  const {busy, error, run} = useAction<'validate' | 'save'>({rethrow});
+  const {busy, error, run, cancel} = useAction<'validate' | 'save'>({rethrow});
   const [sourceId, setSourceId] = useState<string | null>(null);
   return {
     busy,
+    cancel,
     error,
     errorSource: error ? sourceId : null,
     validate: useCallback(

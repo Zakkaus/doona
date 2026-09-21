@@ -1,6 +1,6 @@
-import {blockBody, blockFields, scanConfig, uncomment} from './blocks';
+import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from './blocks';
 import {readGroupEntries} from './groups';
-import {defaultTemplate, quote, templates, type RuleTemplate} from './templates';
+import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
 type Subscription = {name: string; url: string; raw?: string; section?: number};
 export type {RuleTemplate};
@@ -14,10 +14,13 @@ export function readState(text: string): WizardState {
   const {blocks, tokens} = scanConfig(text);
   const subscriptions: Subscription[] = [];
   for (const [section, block] of blocks.filter(block => block.name === 'subscription').entries()) {
-    for (const line of blockBody(text, block)) {
-      const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(uncomment(line));
-      // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
-      if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line, section});
+    const fields = blockFields(text, block, tokens);
+    for (const entry of blockEntries(text, block)) {
+      const line = text.slice(entry.from, entry.to);
+      const entryFields = fields.filter(field => field.from >= entry.from && field.to <= entry.to);
+      const field = entry.block ? undefined : entryFields.length === 1 ? entryFields[0] : undefined;
+      const url = field ? unquote(field.value) : '';
+      if (field && isSubscriptionUrl(url)) subscriptions.push({name: field.name, url, raw: line, section});
       else subscriptions.push({name: '', url: '', raw: line, section});
     }
   }
@@ -92,7 +95,7 @@ export function writeState(current: string, state: WizardState): string {
   const edits: Array<{from: number; to: number; text: string}> = [];
   const subscriptionSections = blocks.filter(block => block.name === 'subscription');
   for (const [section, block] of subscriptionSections.entries()) {
-    const subscriptions = state.subscriptions.filter(item => (item.section ?? 0) === section);
+    const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
     const body = subscriptions.map(item => item.raw ?? `  ${ident(item.name) || 'sub'}: ${quote(item.url.trim())}`);
     if (body.join('\n') !== blockBody(current, block).join('\n')) {
       edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});

@@ -1,6 +1,11 @@
 import type {FlowStep} from '../../api/model';
 import type {Key} from '../../i18n/messages';
-import {connectionStates, type MessageRef} from '../../api/selectors';
+import type {Translator} from '../../i18n';
+import {connectionStates, outboundLabel, type MessageRef} from '../../api/selectors';
+import {millis} from '../../api/u64';
+import {latencyTone} from '../../ui/ui';
+import {policyKindLabels} from '../policies/view';
+import type {RoutingTree, TreeBy, TreeItem} from './map';
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
   userspace: 'flow.v.userspace',
@@ -136,4 +141,53 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
     default:
       return null;
   }
+}
+
+// What a routing-tree tile shows, shaped once so the tree only lays tiles out: the name, small notes beside it
+// (policy, nested groups, latency), a badge, and the flow count. The spoken label adds where the branch leads.
+export type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
+export type TileView = {id: string; stage: TreeBy | 'outbound' | 'node'; name: string; badge?: string; notes: TileNote[]; count: number; label: string};
+export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
+  const unknown = (item: TreeItem, name: string) => (item.unknown ? t('flow.mapUnknown') : name);
+  type Bare = Omit<TileView, 'label'>;
+  const tiles: Bare[] = [
+    ...tree.leaves.map<Bare>(leaf => ({
+      id: leaf.id,
+      stage: tree.by,
+      name: unknown(leaf, leaf.label),
+      badge: leaf.must ? 'must' : undefined,
+      notes: [],
+      count: leaf.count
+    })),
+    ...tree.outbounds.map<Bare>(outbound => ({
+      id: outbound.id,
+      stage: 'outbound',
+      name: unknown(outbound, outboundLabel(outbound.label, t)),
+      notes: [
+        ...outbound.groups.slice(1).map(group => ({text: '› ' + group.name})),
+        ...(outbound.groups.length ? [{text: t(policyKindLabels[outbound.groups[outbound.groups.length - 1].kind])}] : []),
+        ...(outbound.kind === 'group' && !outbound.node ? [{text: t('flow.treeNoNode')}] : [])
+      ],
+      count: outbound.count
+    })),
+    ...tree.nodes.map<Bare>(node => ({
+      id: node.id,
+      stage: 'node',
+      name: unknown(node, node.label),
+      notes:
+        node.latency != null
+          ? [{text: t('ui.latency', {n: millis(node.latency)}), tone: latencyTone(node.latency)}]
+          : node.unavailable
+            ? [{text: t('ui.unavailable'), tone: 'err'}]
+            : [],
+      count: node.count
+    }))
+  ];
+  const names = new Map(tiles.map(tile => [tile.id, tile.name]));
+  return tiles.map(tile => {
+    const to = tree.links.filter(link => link.source === tile.id).map(link => names.get(link.target)!);
+    const parts = [tile.name, ...(tile.badge ? [tile.badge] : []), ...tile.notes.map(note => note.text), t('flow.treeFlows', {n: tile.count})];
+    if (to.length) parts.push('→ ' + to.join(', '));
+    return {...tile, label: parts.join(' · ')};
+  });
 }

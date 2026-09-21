@@ -92,6 +92,8 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
   let stale = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
+  // Consecutive transient refusals; the first few retry quietly after the backend's Retry-After.
+  let refused = 0;
   const clear = () => {
     clearTimeout(timer);
     timer = undefined;
@@ -127,6 +129,7 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
     settled = request.promise
       .then(
         value => {
+          refused = 0;
           if (!disposed) {
             data = value;
             publish({data, loading: false, error: null});
@@ -135,11 +138,20 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
         },
         reason => {
           const error = reason instanceof Error ? reason : new Error(String(reason));
+          // Not now: the load stays pending through the backend's Retry-After and then goes again, so a
+          // refresh, an invalidation or a poll in between waits on the same outcome.
+          if (error instanceof ApiError && error.transient && ++refused <= 3)
+            return new Promise<RefreshOutcome>(resolve => setTimeout(resolve, (error.retryAfter ?? 2) * 1000)).then(() => {
+              pending = undefined;
+              request.release();
+              return load();
+            });
           if (!disposed) publish({data, loading: false, error});
           return {key: name, ok: false, error} as const;
         }
       )
       .finally(() => {
+        if (pending !== request) return;
         pending = undefined;
         request.release();
         if (disposed) return;

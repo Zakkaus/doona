@@ -66,3 +66,11 @@ routing { fallback: proxy }
   expect(readMode(written)).toEqual({mode: 'direct'});
   expect(writeMode(written, {mode: 'rule'})).toContain('l4proto(tcp, udp) -> nested # doona: outbound mode');
 });
+
+it('places mode before ordinary conditions named must but after outbound must modifiers', () => {
+  const source = 'routing {\n  pname(system) -> direct(must)\n  domain(example.org) -> proxy\n  domain(must) -> proxy\n  fallback: proxy\n}\n';
+  const next = writeMode(source, {mode: 'direct'});
+  expect(next.indexOf('doona: outbound mode')).toBeGreaterThan(next.indexOf('direct(must)'));
+  expect(next.indexOf('doona: outbound mode')).toBeLessThan(next.indexOf('domain(example.org)'));
+  expect(next.indexOf('doona: outbound mode')).toBeLessThan(next.indexOf('domain(must)'));
+});

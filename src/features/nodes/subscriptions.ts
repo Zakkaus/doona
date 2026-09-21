@@ -1,47 +1,16 @@
-import {topLevelBlock} from '../config/blocks';
+import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
 
-// Scalar subscriptions use the one-day default; only block entries can store another interval. Changing one rewrites that entry into block form.
 export const DEFAULT_INTERVAL = 86400;
+export type SubscriptionEntry = {tag: string; host: string | null; interval: number; from: number; to: number};
+type ScalarSubscription = {tag: string; url: string; ua: string | null};
+type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null};
 
-export type SubscriptionEntry = {
-  tag: string;
-  // The URL's host, which is how a provider whose nodes carry no tag is matched to its entry.
-  host: string | null;
-  // Seconds between refreshes; 0 means the subscription is only refreshed by hand.
-  interval: number;
-  // Line range in the source, inclusive; a scalar entry spans one line.
-  from: number;
-  to: number;
-};
-
-function quoted(text: string): {value: string; end: number} | null {
-  const quote = text[0];
-  if (quote !== "'" && quote !== '"') return null;
-  const end = text.indexOf(quote, 1);
-  return end === -1 ? null : {value: text.slice(1, end), end: end + 1};
-}
-
-// Strip a comment that starts at the beginning of the statement or after whitespace, outside quotes.
-function uncomment(line: string): string {
-  let quote = '';
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (quote) {
-      if (c === quote) quote = '';
-    } else if (c === "'" || c === '"') quote = c;
-    else if (c === '#' && (i === 0 || line[i - 1] === ' ' || line[i - 1] === '\t')) return line.slice(0, i);
-  }
-  return line;
-}
-
-// The engine's duration grammar: `30s`, `1m`, `2h`, `500ms` or a bare number of seconds.
 export function parseInterval(text: string): number | null {
   const found = /^(\d+(?:\.\d+)?)(ms|s|m|h)?$/.exec(text.trim());
   if (!found) return null;
   const scale: Record<string, number> = {ms: 1 / 1000, s: 1, m: 60, h: 3600};
   return Math.ceil(Number(found[1]) * (scale[found[2] ?? 's'] ?? 1));
 }
-
 function host(url: string): string | null {
   try {
     return new URL(url).hostname || null;
@@ -50,103 +19,113 @@ function host(url: string): string | null {
   }
 }
 
-// A quoted head before the first colon is an explicit tag; otherwise use the text before that colon unless it begins ://. Name tagless URLs by host.
-function scalarTag(code: string): string | null {
-  const text = code.trim();
-  // A block squeezed onto one line is left alone: its interval is not read and it is not rewritten.
-  if (!text || text.includes('{')) return null;
-  const head = quoted(text);
-  if (head) {
-    if (/^\s*:/.test(text.slice(head.end))) return head.value;
-    return embeddedTag(head.value);
+function scalarParts(code: string) {
+  const text = uncomment(code).trim();
+  const {tokens} = scanConfig(text);
+  const head = tokens[0];
+  if (!head) return null;
+  const raw = text.slice(head.from, head.to);
+  const colon = tokens[1];
+  const tagged = colon && text.slice(colon.from, colon.to) === ':' && !text.slice(colon.to).startsWith('//');
+  const valueFrom = tagged ? colon.to : 0;
+  const valueToken = tokens.find(token => token.from >= valueFrom);
+  if (!valueToken) return null;
+  const quoted = valueToken.kind === 'quoted';
+  let url = quoted ? unquote(text.slice(valueToken.from, valueToken.to)) : text.slice(valueFrom).trim();
+  let tag = tagged ? unquote(raw) : null;
+  if (!tag) {
+    const split = url.indexOf(':');
+    if (split !== -1 && !url.startsWith('://', split)) {
+      tag = url.slice(0, split).trim();
+      url = url.slice(split + 1);
+    } else tag = host(url);
   }
-  return embeddedTag(text);
+  const suffix = quoted ? text.slice(valueToken.to).trim() : '';
+  const ua = suffix.startsWith('(') && suffix.endsWith(')') ? unquote(suffix.slice(1, -1)) : null;
+  if (suffix && ua === null) return null;
+  return tag ? {tag, url, ua} : null;
 }
 
-function embeddedTag(text: string): string | null {
-  const colon = text.indexOf(':');
-  if (colon === -1) return null;
-  if (text.startsWith('://', colon)) return host(text);
-  return text.slice(0, colon).trim();
-}
-
-function keyOf(line: string): {key: string; value: string} | null {
-  const found = /^\s*(?:'([^']*)'|"([^"]*)"|([^:\s]+))\s*:\s*(.*)$/.exec(uncomment(line));
-  return found ? {key: found[1] ?? found[2] ?? found[3], value: found[4].trim()} : null;
-}
-
-const unquote = (text: string) => quoted(text)?.value ?? text;
-
-export function readSubscriptions(text: string): SubscriptionEntry[] {
-  const lines = text.split('\n');
-  const block = topLevelBlock(lines, 'subscription');
-  if (!block) return [];
-  const entries: SubscriptionEntry[] = [];
-  for (let i = block.open + 1; i < block.close; i++) {
-    const code = uncomment(lines[i]);
-    const header = /^\s*(?:'([^']*)'|"([^"]*)"|([^:\s]+))\s*:\s*\{\s*$/.exec(code);
-    if (header) {
-      const tag = header[1] ?? header[2] ?? header[3];
-      let depth = 1;
-      let interval = DEFAULT_INTERVAL;
-      let url: string | null = null;
-      let j = i + 1;
-      for (; j < block.close && depth > 0; j++) {
-        const inner = uncomment(lines[j]);
-        depth += (inner.match(/\{/g) ?? []).length - (inner.match(/\}/g) ?? []).length;
-        const field = keyOf(inner);
-        if (field?.key === 'interval') interval = parseInterval(unquote(field.value)) ?? 0;
-        if (field?.key === 'url') url = unquote(field.value);
+function subscriptionRanges(text: string) {
+  const {blocks, tokens} = scanConfig(text);
+  const entries: SubscriptionRange[] = [];
+  // Entries are cut at token boundaries, not lines: two scalars may share a line.
+  for (const section of blocks.filter(block => block.name === 'subscription')) {
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token.from <= section.open || token.from >= section.close || token.depth !== section.depth + 1 || token.kind === 'comment') continue;
+      const lineStart = text.lastIndexOf('\n', token.from - 1) + 1;
+      const from = /^[ \t]*$/.test(text.slice(lineStart, token.from)) ? lineStart : token.from;
+      const block = section.children.find(block => block.from === token.from);
+      if (block) {
+        while (tokens[i + 1]?.from < block.to) i++;
+        if (block.line === block.endLine) continue;
+        const fields = blockFields(text, block, tokens);
+        const url = fields.find(field => field.name === 'url');
+        const interval = fields.find(field => field.name === 'interval');
+        entries.push({
+          from,
+          to: block.to,
+          block,
+          tag: block.name,
+          host: url ? host(unquote(url.value)) : null,
+          interval: interval ? (parseInterval(unquote(interval.value)) ?? 0) : DEFAULT_INTERVAL,
+          fields,
+          parts: null
+        });
+        continue;
       }
-      entries.push({tag, host: url ? host(url) : null, interval, from: i, to: j - 1});
-      i = j - 1;
-      continue;
+      const colon = tokens[i + 1];
+      if (colon && text.slice(colon.from, colon.to) === ':' && !text.slice(colon.to).startsWith('//')) i += 2;
+      const value = tokens[i];
+      if (!value || value.from >= section.close) break;
+      if (value.kind !== 'quoted') {
+        while (tokens[i + 1]?.from === tokens[i].to && !/[(){}]/.test(text.slice(tokens[i + 1].from, tokens[i + 1].to))) i++;
+      }
+      if (text[tokens[i + 1]?.from] === '(') {
+        i++;
+        while (tokens[i + 1] && !(text[tokens[i].from] === ')' && tokens[i].parens === 1)) i++;
+      }
+      let to = tokens[i].to;
+      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) to = tokens[++i].to;
+      const parts = scalarParts(text.slice(from, to));
+      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: DEFAULT_INTERVAL, fields: [], parts});
     }
-    const tag = scalarTag(code);
-    if (tag) entries.push({tag, host: host(scalarParts(code)?.url ?? ''), interval: DEFAULT_INTERVAL, from: i, to: i});
   }
   return entries;
 }
 
-// The pieces of a scalar entry that survive the move to block form: the URL and an optional `(UA)` suffix.
-function scalarParts(code: string): {url: string; ua: string | null} | null {
-  let text = code.trim();
-  const head = quoted(text);
-  if (head && /^\s*:/.test(text.slice(head.end))) text = text.slice(head.end).replace(/^\s*:\s*/, '');
-  else if (!head) {
-    const colon = text.indexOf(':');
-    if (colon !== -1 && !text.startsWith('://', colon)) text = text.slice(colon + 1).trim();
-  }
-  const value = quoted(text);
-  if (!value) return {url: text, ua: null};
-  const suffix = text.slice(value.end).trim();
-  const ua = /^\((.*)\)$/.exec(suffix);
-  const url = value.value.replace(/^(?!https?:\/\/)[^:]*:/, '');
-  return {url, ua: ua ? unquote(ua[1]) : null};
+export function readSubscriptions(text: string): SubscriptionEntry[] {
+  let offset = 0;
+  let line = 0;
+  return subscriptionRanges(text).map(entry => {
+    while (offset < entry.from) if (text[offset++] === '\n') line++;
+    const from = line;
+    while (offset < entry.to) if (text[offset++] === '\n') line++;
+    return {tag: entry.tag, host: entry.host, interval: entry.interval, from, to: line};
+  });
 }
 
-const quoteTag = (tag: string) => (/^[\w.-]+$/.test(tag) ? tag : `'${tag}'`);
-const quoteValue = (value: string) => `'${value.replace(/'/g, '')}'`;
-
-// Convert scalar entries to blocks; preserve other block fields while replacing, adding, or removing interval. Return unchanged text when the tag or value does not change.
 export function writeInterval(text: string, tag: string, seconds: number): string {
-  const entry = readSubscriptions(text).find(e => e.tag === tag);
+  const entry = subscriptionRanges(text).find(entry => entry.tag === tag);
   if (!entry || entry.interval === seconds) return text;
-  const lines = text.split('\n');
-  const indent = lines[entry.from].match(/^\s*/)?.[0] ?? '  ';
+  const indent = text.slice(entry.from, entry.to).match(/^[ \t]*/)?.[0] ?? '  ';
   const inner = indent + (indent.includes('\t') ? '\t' : '  ');
-  const intervalLine = `${inner}interval: '${seconds}s'`;
-  if (entry.from === entry.to) {
-    const parts = scalarParts(uncomment(lines[entry.from]));
-    if (!parts) return text;
-    const body = [`${indent}${quoteTag(tag)}: {`, `${inner}url: ${quoteValue(parts.url)}`];
-    if (parts.ua !== null) body.push(`${inner}ua: ${quoteValue(parts.ua)}`);
-    body.push(intervalLine, `${indent}}`);
-    lines.splice(entry.from, 1, ...body);
-    return lines.join('\n');
+  if (entry.parts) {
+    const body = [`${indent}${/^[\w.-]+$/.test(tag) ? tag : quote(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
+    if (entry.parts.ua !== null) body.push(`${inner}ua: ${quote(entry.parts.ua)}`);
+    body.push(`${inner}interval: '${seconds}s'`, `${indent}}`);
+    return text.slice(0, entry.from) + body.join('\n') + text.slice(entry.to);
   }
-  const at = lines.findIndex((line, i) => i > entry.from && i < entry.to && keyOf(line)?.key === 'interval');
-  if (at !== -1) lines.splice(at, 1, ...(seconds === DEFAULT_INTERVAL ? [] : [intervalLine]));
-  else if (seconds !== DEFAULT_INTERVAL) lines.splice(entry.to, 0, intervalLine);
-  return lines.join('\n');
+  const field = entry.fields.find(field => field.name === 'interval');
+  if (field) {
+    if (seconds !== DEFAULT_INTERVAL) return text.slice(0, field.valueFrom) + ` '${seconds}s'` + text.slice(field.valueTo);
+    const start = text.lastIndexOf('\n', field.from - 1) + 1;
+    const end = text.indexOf('\n', field.to);
+    const ownLine = /^[ \t]*$/.test(text.slice(start, field.from)) && end !== -1 && /^[ \t]*$/.test(text.slice(field.to, end));
+    return text.slice(0, ownLine ? start : field.from) + text.slice(ownLine ? end + 1 : field.to);
+  }
+  if (seconds === DEFAULT_INTERVAL || !entry.block) return text;
+  const at = text.lastIndexOf('\n', entry.block.close - 1) + 1;
+  return text.slice(0, at) + `${inner}interval: '${seconds}s'\n` + text.slice(at);
 }

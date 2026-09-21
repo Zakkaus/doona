@@ -8,6 +8,12 @@ export function useAction<K extends string>({scope, rethrow = false}: {scope?: u
   const [busy, setBusy] = useState<K | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const active = useRef<AbortController | null>(null);
+  const cancel = useCallback(() => {
+    active.current?.abort();
+    active.current = null;
+    setBusy(null);
+    setError(null);
+  }, []);
   useEffect(
     () => () => {
       active.current?.abort();
@@ -40,7 +46,7 @@ export function useAction<K extends string>({scope, rethrow = false}: {scope?: u
     },
     [rethrow]
   );
-  return {busy, error, setError, run};
+  return {busy, error, setError, run, cancel};
 }
 // If-Match carries the revision as a quoted entity tag.
 export const etag = (revision: string) => '"' + revision + '"';

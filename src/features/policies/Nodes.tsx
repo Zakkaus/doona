@@ -1,10 +1,11 @@
 // Virtualize lists above 12 items; smaller collections use plain tiles.
 import {useMemo, useState} from 'react';
-import {GridLayout, GridList, GridListItem, Size, Virtualizer, useFilter} from 'react-aria-components';
+import {Autocomplete, Menu, MenuSection, Header, ListLayout, GridLayout, GridList, GridListItem, Size, Virtualizer, useFilter} from 'react-aria-components';
 import {regionOf} from './geo';
 import {millis} from '../../api/u64';
 import {compareLatency, healthMillis} from '../../api/selectors';
-import {InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps, Empty} from '../../ui/ui';
+import {InlineSelect, ChoiceMenu, NodeTile, Switch, TextField, latencyTone, type NodeTileProps, Empty} from '../../ui/ui';
+import {MenuButton, MenuChoice, pickMenuKey} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
@@ -75,7 +76,7 @@ export function NodeGrid({
     <div className="rp-form">
       <div className="rp-toolbar">
         <TextField search label={t('policy.filter')} value={q} onChange={setQ} width={240} />
-        <MenuButton
+        <ChoiceMenu
           quiet
           label={t('policy.region')}
           value={region}
@@ -83,7 +84,7 @@ export function NodeGrid({
           items={[{id: 'all', label: t('policy.allRegions')}, ...facets.map(([r, c]) => ({id: r, label: r === '?' ? '—' : r, desc: String(c)}))]}
         >
           {region === 'all' ? t('policy.allRegions') : region}
-        </MenuButton>
+        </ChoiceMenu>
         <InlineSelect
           label={t('policy.sort')}
           value={sort}
@@ -141,6 +142,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
 
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
   const t = useT();
+  const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
   const items = useMemo(() => nodes.map(node => ({...node, id: node.name, label: node.name})), [nodes]);
   const sections = useMemo(() => {
@@ -163,24 +165,51 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       )
     }));
   }, [items, big]);
+  const item = (node: (typeof items)[number]) => (
+    <MenuChoice key={node.id} item={node}>
+      {node.alive === false ? (
+        <span className="desc err">{t('ui.unavailable')}</span>
+      ) : node.tcp === undefined ? (
+        <span className="desc">—</span>
+      ) : (
+        <span className={'desc ' + latencyTone(node.tcp)}>{t('ui.latency', {n: millis(node.tcp)})}</span>
+      )}
+    </MenuChoice>
+  );
+  const menu = (
+    <Menu
+      aria-label={label}
+      className="rp-menu-scroll"
+      selectionMode={big ? undefined : 'single'}
+      selectedKeys={big ? undefined : [value]}
+      onSelectionChange={big ? undefined : pickMenuKey(onChange)}
+    >
+      {sections
+        ? sections.map(section => (
+            <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[value]} onSelectionChange={pickMenuKey(onChange)}>
+              <Header className="rp-sec-h">{section.heading}</Header>
+              {section.items.map(item)}
+            </MenuSection>
+          ))
+        : items.map(item)}
+    </Menu>
+  );
   return (
     <MenuButton
       appearance="select"
       placement="bottom start"
       label={label}
-      value={value}
-      onChange={onChange}
-      items={items}
-      sections={sections}
-      searchLabel={big ? t('policy.filter') : undefined}
-      virtualizeAbove={BIG}
-      renderTrailing={node =>
-        node.alive === false ? (
-          <span className="desc err">{t('ui.unavailable')}</span>
-        ) : node.tcp === undefined ? (
-          <span className="desc">—</span>
+      content={
+        big ? (
+          <Autocomplete filter={contains}>
+            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the menu the user just opened */}
+            <TextField search label={t('policy.filter')} autoFocus className="rp-menu-search" />
+            <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
+              {menu}
+            </Virtualizer>
+          </Autocomplete>
         ) : (
-          <span className={'desc ' + latencyTone(node.tcp)}>{t('ui.latency', {n: millis(node.tcp)})}</span>
+          menu
         )
       }
     >

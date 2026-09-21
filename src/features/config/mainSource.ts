@@ -10,7 +10,7 @@ export type MainSourceEdit = {
   writable: boolean;
   busy: boolean;
   // Resolve true after reload, false for validation refusal or cancellation, and reject request failures. onInvalid receives the validation error count.
-  apply: (transform: (text: string) => string, onInvalid?: (errors: number) => void) => Promise<boolean>;
+  apply: (transform: (text: string) => string, onInvalid?: (errors: number) => void, origin?: ConfigSource) => Promise<boolean>;
 };
 
 export function useMainSourceEdit(): MainSourceEdit {
@@ -27,9 +27,9 @@ export function useMainSourceEdit(): MainSourceEdit {
     writable,
     busy: editor.busy !== null,
     apply: useCallback<MainSourceEdit['apply']>(
-      async (transform, onInvalid) => {
-        if (!main) return false;
-        const result = await apply(main, transform);
+      async (transform, onInvalid, origin = main ?? undefined) => {
+        if (!origin) return false;
+        const result = await apply(origin, transform);
         if (!result) return false;
         if (result.diagnostics) {
           onInvalid?.(result.diagnostics.filter(d => d.level === 'error').length);

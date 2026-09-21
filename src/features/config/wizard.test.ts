@@ -1,5 +1,31 @@
 import {describe, expect, it} from 'vitest';
 import {readState, writeState} from './wizard';
+import {readGroupEntries} from './groups';
+
+it('keeps template groups inside an inline group section', () => {
+  const text = 'subscription {}\ngroup { proxy { policy: fixed(2) } }\nrouting { fallback: proxy }\n';
+  const out = writeState(text, {...readState(text), rules: 'standard'});
+  expect(readGroupEntries(out).map(group => group.name)).toEqual(['proxy', 'auto', 'telegram', 'media', 'apple']);
+  expect(readGroupEntries(out)[0].policy).toBe('fixed(2)');
+  expect(writeState(out, {...readState(out), rules: 'standard'})).toBe(out);
+});
+
+it('keeps block subscriptions as indivisible raw entries', () => {
+  const text = "subscription {\n  paid: {\n    url: 'https://example.org/{#}'\n    interval: '2h'\n  }\n}\ngroup { proxy {} }\n";
+  const state = readState(text);
+  expect(state.subscriptions).toEqual([{name: '', url: '', section: 0, raw: "  paid: {\n    url: 'https://example.org/{#}'\n    interval: '2h'\n  }"}]);
+  expect(writeState(text, state)).toBe(text);
+  expect(writeState(text, {...state, subscriptions: []})).not.toContain('paid:');
+});
+
+it('adds new subscriptions to the last subscription section', () => {
+  const text = "subscription { a: 'https://a.example' }\nsubscription { b: 'https://b.example' }\ngroup { proxy {} }\n";
+  const state = readState(text);
+  state.subscriptions.push({name: 'c', url: 'https://c.example'});
+  const out = writeState(text, state);
+  expect(out.startsWith("subscription { a: 'https://a.example' }\n")).toBe(true);
+  expect(readState(out).subscriptions.find(item => item.name === 'c')?.section).toBe(1);
+});
 
 const main = `global {
   lan_interface: br-lan

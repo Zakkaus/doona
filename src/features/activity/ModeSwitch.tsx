@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useGroups} from '../../api/store';
 import {useMainSourceEdit} from '../config/mainSource';
-import {Button, Light, MenuButton, Segmented, errorText, toast} from '../../ui/ui';
+import {Button, Light, ChoiceMenu, Segmented, errorText, toast} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 import {readMode, sameMode, writeMode, type OutboundMode} from './mode';
@@ -30,10 +30,11 @@ export function ModeCards() {
   };
   const apply = async () => {
     if (!staged) return;
+    const submitted = staged;
     let written: boolean;
     try {
       written = await write(
-        text => writeMode(text, staged),
+        text => writeMode(text, submitted),
         errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
       );
     } catch (error) {
@@ -41,8 +42,8 @@ export function ModeCards() {
       return;
     }
     if (written) {
-      setStaged(null);
-      toast('positive', t('act.modeApplied', {mode: t(modeLabels[staged.mode])}));
+      setStaged(current => (current === submitted ? null : current));
+      toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
   };
   return (
@@ -80,15 +81,16 @@ export function ModeCards() {
             <Filter />
             {t('act.global')}
           </span>
-          <MenuButton
+          <ChoiceMenu
             quiet
+            isDisabled={busy || !writable || !main}
             label={t('act.global')}
             value={target}
             onChange={name => setStaged({mode: 'global', target: name})}
             items={list.map(g => ({id: g.name, label: g.name}))}
           >
             {target || '—'}
-          </MenuButton>
+          </ChoiceMenu>
         </div>
       </div>
     </>

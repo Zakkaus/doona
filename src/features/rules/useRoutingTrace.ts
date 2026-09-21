@@ -21,7 +21,7 @@ export function useRoutingTrace() {
     // Null until the backend says what it offers: live when it can resolve, else none.
     resolve: null as TraceResolve | null
   });
-  const [result, setResult] = useState<RoutingTraceResponse | null>(null);
+  const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
   const invalid: TraceProblem | null =
@@ -62,7 +62,19 @@ export function useRoutingTrace() {
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
     const response = await run('trace', signal => routingTrace(api, {input, resolve, recordTypes}, signal));
-    if (response) setResult(response);
+    if (response) setResult({response, input});
   }, [api, busy, canSubmit, form, resolve, recordTypes, run]);
-  return {form, resolve, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
+  return {
+    form,
+    resolve,
+    setForm,
+    result: accepted?.response ?? null,
+    input: accepted?.input,
+    error: error ?? capabilities.error,
+    busy: busy !== null,
+    submit,
+    invalid,
+    available,
+    modes
+  };
 }

@@ -4,7 +4,7 @@ import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
 import type {useConfigEditor} from '../../api/store';
 import {useSourceComplete} from '../../api/store/config';
-import {Button, LabeledSelect, TextField, toast} from '../../ui/ui';
+import {Button, LabeledSelect, TextField, errorText, toast} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, writeState, type RuleTemplate, type WizardState} from './wizard';
@@ -34,6 +34,7 @@ export function Wizard({
   // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
   const [origin] = useState(() => main);
   const complete = useSourceComplete(origin);
+  useEffect(() => editor.cancel, [editor.cancel]);
   const current = origin.content ?? '';
   const [state, setState] = useState<WizardState>(() => {
     const read = readState(current);
@@ -43,9 +44,16 @@ export function Wizard({
       subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]
     };
   });
-  const text = useMemo(() => (complete ? writeState(current, state) : current), [complete, current, state]);
+  const preview = useMemo(() => {
+    try {
+      return {text: complete ? writeState(current, state) : current, error: null};
+    } catch (error) {
+      return {text: current, error};
+    }
+  }, [complete, current, state]);
+  const {text} = preview;
   const busy = !!editor.busy;
-  const dirty = text !== current;
+  const dirty = preview.error !== null || text !== current;
   useEffect(() => {
     onDirty(dirty);
     return () => onDirty(false);
@@ -58,6 +66,10 @@ export function Wizard({
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
     if (busy) return;
+    if (preview.error) {
+      toast('negative', errorText(preview.error));
+      return;
+    }
     const result = await editor.apply(origin, text);
     if (!result) return;
     if (result.diagnostics) {
@@ -96,7 +108,13 @@ export function Wizard({
                     value={item.url}
                     width={520}
                     placeholder="https://example.org/sub?token=…"
-                    error={item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : undefined}
+                    error={
+                      item.url !== '' && !isSubscriptionUrl(item.url)
+                        ? t('config.wizardSubscriptionHelp')
+                        : preview.error
+                          ? errorText(preview.error)
+                          : undefined
+                    }
                     description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
                     onChange={url => setSubscription(index, {url})}
                   />
@@ -155,7 +173,7 @@ export function Wizard({
       <div className="rp-toolbar">
         <Button
           accent
-          isDisabled={!complete || !valid || busy || text === current}
+          isDisabled={!complete || !valid || busy || !dirty}
           isPending={editor.busy === 'save'}
           tip={complete === false ? t('config.incomplete') : undefined}
           onPress={() => void apply()}

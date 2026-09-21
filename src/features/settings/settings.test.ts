@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../../api/profiles';
+import {consumeProfileReadError, detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../../api/profiles';
 import {readSettings, shouldOpenSettings} from './settings';
 
 describe('backend URL normalization', () => {
@@ -89,6 +89,10 @@ it('normalizes saved profiles and falls back from a missing active id', () => {
   expect(readSettings(storage).api).toBe('mock');
   storage.setItem('doona-profiles', '{');
   expect(readProfiles(storage)).toEqual({profiles: [], activeId: ''});
+  expect(consumeProfileReadError()).toBe(true);
+  expect(readProfiles(storage)).toEqual({profiles: [], activeId: ''});
+  expect(consumeProfileReadError()).toBe(false);
+  expect(storage.getItem('doona-profiles')).toBe('{');
 });
 
 it('validates all backend URLs before writing and preserves appearance preferences', () => {

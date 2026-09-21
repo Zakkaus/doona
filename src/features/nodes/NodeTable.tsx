@@ -4,7 +4,7 @@ import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../api/store';
 import {preferredHealth, type OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
-import {Button, DataTable, LabeledSelect, MenuButton, TextField, TextTooltip, errorText, latencyTone, toast, useLinked, type TableSort} from '../../ui/ui';
+import {Button, DataTable, LabeledSelect, ChoiceMenu, TextField, TextTooltip, errorText, latencyTone, toast, useLinked, type TableSort} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
 import SpeedFast from '../../ui/icons/SpeedFast';
@@ -97,84 +97,111 @@ export function NodeTable({
         sort={sort}
         onSort={setSort}
         cols={[
-          {id: 'name', label: t('nodes.node'), minWidth: 150, grow: 2, isRowHeader: true, sortable: true},
-          {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true},
-          {id: 'latency', label: t('nodes.latency'), minWidth: 96, grow: 0, align: 'end', sortable: true},
-          {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1},
-          {id: 'actions', label: t('ui.actions'), minWidth: canManage ? 108 : 72, grow: 0}
+          {
+            id: 'name',
+            label: t('nodes.node'),
+            minWidth: 150,
+            grow: 2,
+            isRowHeader: true,
+            sortable: true,
+            render: node => (
+              <span className="rp-chain">
+                <TextTooltip>{node.name}</TextTooltip>
+              </span>
+            )
+          },
+          {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true, render: node => node.protocol ?? '—'},
+          {
+            id: 'latency',
+            label: t('nodes.latency'),
+            minWidth: 96,
+            grow: 0,
+            align: 'end',
+            sortable: true,
+            render: node => {
+              const health = preferredHealth(node);
+              return health?.state === 'healthy' && health.latency_ms != null ? (
+                <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: millis(health.latency_ms)})}</span>
+              ) : (
+                <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
+              );
+            }
+          },
+          {
+            id: 'groups',
+            label: t('nodes.groups'),
+            minWidth: 200,
+            drop: 1,
+            render: node => (
+              <TextTooltip>
+                {node.group_ids.length
+                  ? formatList(
+                      lang,
+                      node.group_ids.map(id => names.get(id) ?? id)
+                    )
+                  : '—'}
+              </TextTooltip>
+            )
+          },
+          {
+            id: 'actions',
+            label: t('ui.actions'),
+            minWidth: canManage ? 108 : 72,
+            grow: 0,
+            render: node => (
+              <span className="rp-chain">
+                {probe.canProbe && node.protocol !== 'direct' && node.protocol !== 'block' && (
+                  <Button
+                    small
+                    quiet
+                    icon
+                    isPending={probe.busy === node.id}
+                    isDisabled={!!probe.busy}
+                    label={t('nodes.probe', {name: node.name})}
+                    onPress={() => {
+                      void probe.probe(node.id).then(
+                        result => {
+                          if (!result) return;
+                          const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
+                          toast(
+                            sample ? 'positive' : 'negative',
+                            sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+                          );
+                        },
+                        error => toast('negative', errorText(error))
+                      );
+                    }}
+                  >
+                    <SpeedFast />
+                  </Button>
+                )}
+                {source.writable && (
+                  <ChoiceMenu
+                    quiet
+                    chevron={false}
+                    label={t('nodes.joinGroup', {name: node.name})}
+                    value=""
+                    isDisabled={source.busy}
+                    onChange={key => (key === NEW_GROUP ? onNewGroup(node) : joinGroup(node, key))}
+                    items={[
+                      ...groupEntries
+                        .filter(entry => !namedIn(entry).includes(node.name) && !node.group_ids.some(id => (names.get(id) ?? id) === entry.name))
+                        .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
+                      {id: NEW_GROUP, label: t('nodes.newGroup')}
+                    ]}
+                  >
+                    <AddCircle />
+                  </ChoiceMenu>
+                )}
+                {canManage && providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline') && (
+                  <Button small quiet isDisabled={busy} label={t('nodes.remove', {name: node.name})} onPress={() => onRemove(node)}>
+                    <Close />
+                  </Button>
+                )}
+              </span>
+            )
+          }
         ]}
-        render={node => {
-          const health = preferredHealth(node);
-          return [
-            <span className="rp-chain">
-              <TextTooltip>{node.name}</TextTooltip>
-            </span>,
-            node.protocol ?? '—',
-            health?.state === 'healthy' && health.latency_ms != null ? (
-              <span className={'ms ' + latencyTone(health.latency_ms)}>{t('ui.latency', {n: millis(health.latency_ms)})}</span>
-            ) : (
-              <span className="ms err">{health?.state === 'unavailable' ? t('ui.unavailable') : '—'}</span>
-            ),
-            <TextTooltip>
-              {node.group_ids.length
-                ? formatList(
-                    lang,
-                    node.group_ids.map(id => names.get(id) ?? id)
-                  )
-                : '—'}
-            </TextTooltip>,
-            <span className="rp-chain">
-              {probe.canProbe && node.protocol !== 'direct' && node.protocol !== 'block' && (
-                <Button
-                  small
-                  quiet
-                  icon
-                  isPending={probe.busy === node.id}
-                  isDisabled={!!probe.busy}
-                  label={t('nodes.probe', {name: node.name})}
-                  onPress={() => {
-                    void probe.probe(node.id).then(
-                      result => {
-                        if (!result) return;
-                        const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
-                        toast(
-                          sample ? 'positive' : 'negative',
-                          sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
-                        );
-                      },
-                      error => toast('negative', errorText(error))
-                    );
-                  }}
-                >
-                  <SpeedFast />
-                </Button>
-              )}
-              {source.writable && (
-                <MenuButton
-                  quiet
-                  chevron={false}
-                  label={t('nodes.joinGroup', {name: node.name})}
-                  value=""
-                  isDisabled={source.busy}
-                  onChange={key => (key === NEW_GROUP ? onNewGroup(node) : joinGroup(node, key))}
-                  items={[
-                    ...groupEntries
-                      .filter(entry => !namedIn(entry).includes(node.name) && !node.group_ids.some(id => (names.get(id) ?? id) === entry.name))
-                      .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
-                    {id: NEW_GROUP, label: t('nodes.newGroup')}
-                  ]}
-                >
-                  <AddCircle />
-                </MenuButton>
-              )}
-              {canManage && providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline') && (
-                <Button small quiet isDisabled={busy} label={t('nodes.remove', {name: node.name})} onPress={() => onRemove(node)}>
-                  <Close />
-                </Button>
-              )}
-            </span>
-          ];
-        }}
       />
     </>
   );

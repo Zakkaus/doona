@@ -74,7 +74,7 @@ export function Config({go, query}: PageProps) {
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
   const [dirty, updateDirty] = useState(false);
-  const guardDraft = useContext(DraftContext);
+  const {setDirty: guardDraft, revision} = useContext(DraftContext);
   const setDirty = useCallback(
     (value: boolean) => {
       guardDraft(value);
@@ -121,6 +121,7 @@ export function Config({go, query}: PageProps) {
       )}
       {config.data && (
         <Tabs
+          key={revision}
           label={t('nav.config')}
           value={tab}
           onChange={next => go('config', within(query, {tab: next}))}
@@ -233,6 +234,7 @@ function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirt
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const complete = useSourceComplete(source);
+  useEffect(() => editor.cancel, [editor.cancel]);
   const editing = draft !== null;
   // What the list shows: the last dry run, else the diagnostics a rejected save came back with, else the engine's.
   const saveErrors =
@@ -474,18 +476,26 @@ function ValidateTab(props: ValidateTabProps) {
         onSelect={setSelected}
         empty={t('config.noDiagnostics')}
         cols={[
-          {id: 'level', label: t('config.level'), minWidth: 96, grow: 0},
-          {id: 'where', label: t('config.where'), minWidth: 150, grow: 0},
-          {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true},
-          {id: 'code', label: t('config.code'), minWidth: 140, drop: 1}
-        ]}
-        render={item => [
-          <Light small tone={tones[item.level]}>
-            {t(levels[item.level])}
-          </Light>,
-          <span className="rp-code">{item.line !== null ? `${pathOf(item.source_id)}:${item.line}` : pathOf(item.source_id)}</span>,
-          <TextTooltip>{item.message}</TextTooltip>,
-          <span className="rp-code">{item.code}</span>
+          {
+            id: 'level',
+            label: t('config.level'),
+            minWidth: 96,
+            grow: 0,
+            render: item => (
+              <Light small tone={tones[item.level]}>
+                {t(levels[item.level])}
+              </Light>
+            )
+          },
+          {
+            id: 'where',
+            label: t('config.where'),
+            minWidth: 150,
+            grow: 0,
+            render: item => <span className="rp-code">{item.line !== null ? `${pathOf(item.source_id)}:${item.line}` : pathOf(item.source_id)}</span>
+          },
+          {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true, render: item => <TextTooltip>{item.message}</TextTooltip>},
+          {id: 'code', label: t('config.code'), minWidth: 140, drop: 1, render: item => <span className="rp-code">{item.code}</span>}
         ]}
       />
       {cur && (

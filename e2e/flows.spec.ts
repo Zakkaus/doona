@@ -27,29 +27,46 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(page.locator('.rp-panel')).toHaveCount(0);
 });
 
-test('the routing map lays the config out as lanes and a pinned item carries into the records', async ({page}) => {
+test('a pinned tree item carries into the records', async ({page}) => {
   await page.goto('/#/rules?tab=map');
-  const map = page.getByRole('region', {name: 'Traffic path'});
-  const lanes = map.locator('.rp-lane');
-  for (const group of ['proxy', 'Direct', 'skylink']) await expect(map.locator('strong', {hasText: new RegExp(`^${group}$`)})).toBeVisible();
-  await expect(lanes.filter({has: page.locator('strong', {hasText: /^skylink$/})})).toContainText('Selected');
-  const rule = map.getByRole('radio', {name: 'dip(geoip: private) 4', exact: true});
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'});
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar3$/);
-  await expect(rule).toHaveAttribute('aria-checked', 'true');
-  expect(await map.locator('.rp-lane[data-dim]').count()).toBeGreaterThan(0);
+  await expect(rule).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', {name: 'Show the 4 flows on this path', exact: true}).click();
   await expect(page).toHaveURL(/tab=flows/);
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(4);
   await expect(rows.first()).toContainText('dip(geoip: private)');
+  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: dip(geoip: private)');
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(() => rows.count()).toBeGreaterThan(4);
   await page.goto('/#/flows');
   await expect(page).toHaveURL(/#\/rules\?tab=map$/);
-  await expect(map).toBeVisible();
+  await expect(topology).toBeVisible();
+});
+
+test('a flow offers a rule for its target, prefilled in the rule list', async ({page}) => {
+  await page.goto('/#/rules?tab=flows&id=flow-1');
+  const panel = page.locator('.rp-panel');
+  await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org)');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
+  // A second seed after the first was dismissed still opens, with the list and config already cached.
+  await page.getByRole('tab', {name: 'Flow records', exact: true}).click();
+  await page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').filter({hasText: 'cdn.bilibili.com'}).first().click();
+  await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: cdn.bilibili.com)');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.goto('/#/rules?tab=list&add=dip:203.0.113.5');
+  await expect(page.getByRole('dialog', {name: 'Add rule', exact: true}).locator('.rp-code')).toHaveText('dip(203.0.113.5)');
 });
 
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
@@ -88,4 +105,95 @@ test('a flow record links its rule into the rule list', async ({page}) => {
   await link.click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
   await expect(page.locator('[role="row"][aria-selected="true"]')).toBeVisible();
+});
+
+test('the tree draws every configured rule, follows a hover along its branch and pins by keyboard and pointer', async ({page}) => {
+  await page.goto('/#/rules?tab=map');
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  for (const [stage, caption] of [
+    ['rule', 'Rule'],
+    ['outbound', 'Outbound'],
+    ['node', 'Node']
+  ]) {
+    await expect(topology.locator('.rp-tree-captions').getByText(caption, {exact: true})).toBeVisible();
+    await expect(topology.locator(`[data-stage="${stage}"]`).first()).toBeVisible();
+  }
+  // Every configured rule is drawn, unused ones included, grouped under its outbound.
+  const rules = topology.locator('[data-stage="rule"]');
+  await expect(rules).toHaveCount(10);
+  await expect(rules.filter({hasText: 'sip(10.0.0.0/24) && dport(25)'})).toContainText('0');
+  await expect(rules.filter({hasText: 'fallback: resilient'})).toHaveCount(1);
+  // Groups nothing routes to are still drawn, with a dashed connector to the node they select.
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'skylink'})).toBeVisible();
+  const links = topology.locator('.rp-tree-links path');
+  expect(await links.count()).toBeGreaterThan(8);
+  await expect(topology.locator('.rp-tree-links path[stroke-dasharray]').first()).toBeAttached();
+  // Hovering a rule lights its branch and dims the rest.
+  const item = topology.locator('[data-stage="rule"]').filter({hasText: 'domain(suffix: doubleclick.net)'});
+  await item.hover();
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'Block'})).not.toHaveClass(/dim/);
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).toHaveClass(/dim/);
+  await expect(topology.locator('.rp-tree-links path[data-state="active"]').first()).toBeAttached();
+  await expect(topology.locator('.rp-tree-links path[data-state="dim"]').first()).toBeAttached();
+  // A node pins too, and lights the groups and rules that reach it.
+  const node = topology.locator('[data-stage="node"]').filter({hasText: 'hk-01'});
+  await node.click();
+  await expect(page).toHaveURL(/path=node%3Ahk-01/);
+  await expect(node).toHaveAttribute('aria-pressed', 'true');
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).not.toHaveClass(/dim/);
+  await node.press('Escape');
+  await expect(page).not.toHaveURL(/path=/);
+  await expect(node).toHaveAttribute('aria-pressed', 'false');
+  await node.press('Enter');
+  await expect(page).toHaveURL(/path=node%3A/);
+  await expect(node).toHaveAttribute('aria-pressed', 'true');
+  await node.press('Space');
+  await expect(page).not.toHaveURL(/path=/);
+  await expect(node).toHaveAttribute('aria-pressed', 'false');
+  await node.click();
+  await expect(node).toHaveAttribute('aria-pressed', 'true');
+  await node.click();
+  await expect(page).not.toHaveURL(/path=/);
+  await expect(node).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('the tree can be seen by device, with the toggle in the address and pins carrying over', async ({page}) => {
+  await page.goto('/#/rules?tab=map');
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  await page.getByRole('radio', {name: 'By device', exact: true}).click();
+  await expect(page).toHaveURL(/by=client/);
+  await expect(topology.locator('.rp-tree-captions').getByText('Device', {exact: true})).toBeVisible();
+  await expect(topology.locator('[data-stage="rule"]')).toHaveCount(0);
+  const device = topology.locator('[data-stage="client"]').filter({hasText: '10.0.0.12'});
+  await expect(device).toHaveAttribute('aria-label', /^10\.0\.0\.12 · \d+ flows · → /);
+  await device.click();
+  await expect(page).toHaveURL(/path=client%3A10\.0\.0\.12/);
+  await page.getByRole('button', {name: /^Show the \d+ flows on this path$/}).click();
+  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: 10.0.0.12');
+  await page.goBack();
+  await expect(page).toHaveURL(/tab=map&by=client&path=client%3A10\.0\.0\.12/);
+  await page.getByRole('radio', {name: 'By rule', exact: true}).click();
+  await expect(page).not.toHaveURL(/by=|path=/);
+  await expect(topology.locator('[data-stage="rule"]').first()).toBeVisible();
+});
+
+test.describe('narrow screens', () => {
+  test.use({viewport: {width: 390, height: 844}});
+
+  test('the tree keeps its shape and pans inside its card instead of widening the page', async ({page}) => {
+    await page.goto('/#/rules?tab=map');
+    const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+    await expect(topology.locator('[data-stage="node"]').first()).toBeVisible();
+    const box = (await topology.locator('.rp-tree').evaluate(el => ({scroll: el.scrollWidth, client: el.clientWidth})))!;
+    expect(box.scroll).toBeGreaterThan(box.client);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Growing to a desktop width and back keeps the columns where the width says, not where they were.
+    await page.setViewportSize({width: 1280, height: 844});
+    await expect.poll(() => topology.locator('.rp-tree').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.setViewportSize({width: 390, height: 844});
+    await expect.poll(() => topology.locator('.rp-tree').evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+    const tiles = await topology.locator('.rp-tree-tile').evaluateAll(els => els.map(el => el.getBoundingClientRect()));
+    const overlaps = tiles.some((a, i) => tiles.some((b, j) => i < j && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+    expect(overlaps).toBe(false);
+  });
 });

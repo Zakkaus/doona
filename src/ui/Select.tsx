@@ -1,9 +1,5 @@
 import type {ReactNode} from 'react';
 import {
-  Autocomplete,
-  ListLayout,
-  Virtualizer,
-  useFilter,
   type PopoverProps,
   Button as RButton,
   ToggleButton,
@@ -11,8 +7,6 @@ import {
   Menu,
   MenuItem,
   MenuTrigger,
-  MenuSection,
-  Header,
   Popover,
   Select,
   SelectValue,
@@ -23,7 +17,7 @@ import {
 import ChevronDown from './icons/ChevronDown';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
-import {Check, TextField} from './Fields';
+import {Check} from './Fields';
 
 type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
 const ItemLabel = ({i}: {i: Item}) => (
@@ -66,103 +60,32 @@ function SelectBody({items, value, onChange, label, isDisabled, className}: Pick
   );
 }
 type Picked = {value: string; onChange: (k: string) => void};
-const pick = (on: (k: string) => void) => (k: 'all' | Set<Key>) => {
+export const pickMenuKey = (on: (k: string) => void) => (k: 'all' | Set<Key>) => {
   if (k === 'all') return;
   const v = [...k][0];
   if (v != null) on(String(v));
 };
-// `extra` is a second section with its own selection (a setting beside the main choice).
-export function MenuButton<T extends Item>({
-  children,
-  items,
-  sections,
-  value,
-  onChange,
-  onAction,
-  multiple = false,
-  label,
-  quiet,
-  chevron = true,
-  extra,
-  isDisabled,
-  appearance,
-  placement = 'bottom end',
-  searchLabel,
-  virtualizeAbove,
-  renderTrailing
-}: {
+export function MenuChoice({item, children}: {item: Item; children?: ReactNode}) {
+  return (
+    <MenuItem id={item.id} className="rp-item" textValue={item.label}>
+      <Check />
+      <ItemLabel i={item} />
+      {children ?? (item.desc && <span className="desc">{item.desc}</span>)}
+    </MenuItem>
+  );
+}
+
+type MenuButtonProps = {
   children: ReactNode;
-  items?: T[];
-  sections?: Array<{title: string; heading?: ReactNode; items: T[]}>;
-  value: string | string[];
-  onChange?: (k: string) => void;
-  onAction?: (k: string) => void;
-  multiple?: boolean;
+  content: ReactNode;
   label: string;
   quiet?: boolean;
   chevron?: boolean;
-  extra?: {title: string; items: Item[]} & Picked;
   isDisabled?: boolean;
   appearance?: 'select';
   placement?: PopoverProps['placement'];
-  searchLabel?: string;
-  virtualizeAbove?: number;
-  renderTrailing?: (item: T) => ReactNode;
-}) {
-  const {contains} = useFilter({sensitivity: 'base'});
-  const count = (sections ? sections.reduce((n, section) => n + section.items.length, 0) : (items?.length ?? 0)) + (extra?.items.length ?? 0);
-  const virtual = virtualizeAbove !== undefined && count > virtualizeAbove;
-  const item = (i: T) => (
-    <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}>
-      <Check />
-      <ItemLabel i={i} />
-      {renderTrailing ? renderTrailing(i) : i.desc && <span className="desc">{i.desc}</span>}
-    </MenuItem>
-  );
-  const list = (
-    <Menu
-      className={virtualizeAbove !== undefined || searchLabel ? 'rp-menu-scroll' : undefined}
-      selectionMode={sections ? undefined : multiple ? 'multiple' : 'single'}
-      selectedKeys={sections ? undefined : typeof value === 'string' ? [value] : value}
-      onSelectionChange={sections || multiple || !onChange ? undefined : pick(onChange)}
-      onAction={onAction ? key => onAction(String(key)) : !sections && multiple && onChange ? key => onChange(String(key)) : undefined}
-      shouldCloseOnSelect={!!sections || !multiple}
-      aria-label={label}
-    >
-      {sections
-        ? sections.map(sec => (
-            <MenuSection
-              key={sec.title}
-              id={sec.title}
-              selectionMode="single"
-              selectedKeys={typeof value === 'string' ? [value] : value}
-              onSelectionChange={onAction || !onChange ? undefined : pick(onChange)}
-            >
-              <Header className="rp-sec-h">{sec.heading ?? sec.title}</Header>
-              {sec.items.map(item)}
-            </MenuSection>
-          ))
-        : (items ?? []).map(item)}
-      {sections && extra && (
-        <MenuSection id={extra.title} selectionMode="single" selectedKeys={[extra.value]} onSelectionChange={pick(extra.onChange)}>
-          <Header className="rp-sec-h">{extra.title}</Header>
-          {extra.items.map(i => (
-            <MenuItem key={i.id} id={i.id} className="rp-item" textValue={i.label}>
-              <ItemBody i={i} />
-            </MenuItem>
-          ))}
-        </MenuSection>
-      )}
-    </Menu>
-  );
-  // Virtual row heights match the item and section-header heights in the theme.
-  const menu = virtual ? (
-    <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
-      {list}
-    </Virtualizer>
-  ) : (
-    list
-  );
+};
+export function MenuButton({children, content, label, quiet, chevron = true, isDisabled, appearance, placement = 'bottom end'}: MenuButtonProps) {
   return (
     <MenuTrigger>
       {appearance ? (
@@ -177,17 +100,41 @@ export function MenuButton<T extends Item>({
         </RButton>
       )}
       <Popover className="rp-popover" placement={placement}>
-        {searchLabel ? (
-          <Autocomplete filter={contains}>
-            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the menu the user just opened */}
-            <TextField search label={searchLabel} autoFocus className="rp-menu-search" />
-            {menu}
-          </Autocomplete>
-        ) : (
-          menu
-        )}
+        {content}
       </Popover>
     </MenuTrigger>
+  );
+}
+
+export function ChoiceMenu({
+  items,
+  value,
+  onChange,
+  onAction,
+  ...props
+}: Omit<MenuButtonProps, 'content'> & {
+  items: Item[];
+  value: string;
+  onChange?: (key: string) => void;
+  onAction?: (key: string) => void;
+}) {
+  return (
+    <MenuButton
+      {...props}
+      content={
+        <Menu
+          aria-label={props.label}
+          selectionMode="single"
+          selectedKeys={[value]}
+          onSelectionChange={onChange ? pickMenuKey(onChange) : undefined}
+          onAction={onAction ? key => onAction(String(key)) : undefined}
+        >
+          {items.map(item => (
+            <MenuChoice key={item.id} item={item} />
+          ))}
+        </Menu>
+      }
+    />
   );
 }
 export function InlineSelect({items, value, onChange, label}: {items: Item[]; value: string; onChange: (k: string) => void; label: string}) {

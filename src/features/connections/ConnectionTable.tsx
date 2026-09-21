@@ -1,72 +1,112 @@
-/*
- * Groups stay expanded and cannot be selected; row counts and keyboard navigation include their slots.
- * Connections always virtualize, keep .cell wrappers, and give the first visible column grow 1.
- * Type-ahead uses each row's text value; deep-linked selections reveal their flattened row.
- */
-import {useMemo, type ComponentProps} from 'react';
+import {useMemo, type ComponentProps, type ReactNode} from 'react';
+import {Table, ResizableTableContainer, TableBody, Row, Cell, Virtualizer, TableLayout} from 'react-aria-components';
 import {chainLabel, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
 import {useCapabilities} from '../../api/store';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, DataTable, TextTooltip, useFillHeight, RuleRef, type TableGroup} from '../../ui/ui';
+import {Badge, DataTable, TextTooltip, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
+import {TableColumns, fitColumns, selectedRow, tableLayout, useTableReveal} from '../../ui/Table';
 import {columns, tableRows, type ConnectionView} from './view';
 
 type Props = Pick<ComponentProps<typeof DataTable<Connection>>, 'rows' | 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
   view: ConnectionView;
   names: OutboundNames;
 };
-export function ConnectionTable({rows, view, names, ...props}: Props) {
+export function ConnectionTable({rows, view, names, loading, selected, onSelect, selectOnFocus, onSort}: Props) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [ref, height] = useFillHeight<HTMLDivElement>(442);
+  const [gridRef, width] = useContentWidth<HTMLElement>();
   const rulesListed = useCapabilities().data?.resources.rules.available === true;
-  const cols = useMemo(() => columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1})), [view.hidden, t]);
-  const collection = useMemo(() => {
-    const sorted: Connection[] = [];
-    const groups: TableGroup<Connection>[] = [];
-    for (const row of tableRows(rows, view, locale)) {
-      if ('connection' in row) sorted.push(row.connection);
-      else {
-        const totals: Record<string, React.ReactNode> = {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})};
-        const label = <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>;
-        groups.push({...row, textValue: row.group, render: (column, index) => (index === 0 ? label : totals[column.id])});
-      }
-    }
-    return {rows: sorted, groups: view.group === 'none' ? undefined : groups};
-  }, [rows, view, locale, t]);
+  const renderers: Record<string, (c: Connection) => ReactNode> = {
+    dst: c => <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
+    src: c => <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
+    chain: c => <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
+    rule: c => (
+      <span className="rp-rule">
+        <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
+        {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
+      </span>
+    ),
+    state: c => t(connectionStates[c.state]),
+    down: c => formatBytes(c.download_bytes),
+    age: c => relativeStart(c.started_at, locale)
+  };
+  const shown: TableColumn<Connection>[] = fitColumns(
+    columns.filter(c => !view.hidden.includes(c.id)),
+    width
+  ).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));
+  const collection = useMemo(() => tableRows(rows, view, locale), [rows, view, locale]);
+  const flatRows = collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children]));
+  const groupKeys = collection.filter(row => !('connection' in row)).map(row => row.id);
+  useTableReveal(selected ? flatRows.findIndex(row => row?.id === selected) : -1, gridRef);
+  const renderRow = (row: Connection) => (
+    <Row key={row.id} id={row.id} textValue={row.domain || row.dst || row.id}>
+      {shown.map(column => (
+        <Cell key={column.id} className={column.align}>
+          <span className="cell">{column.render(row)}</span>
+        </Cell>
+      ))}
+    </Row>
+  );
   return (
-    <div ref={ref}>
-      <DataTable
-        {...props}
-        {...collection}
-        label={t('nav.connections')}
-        cols={cols}
-        height={height}
-        sort={view.sort ? {column: String(view.sort.column), direction: view.sort.direction ?? 'ascending'} : null}
-        empty={t('conn.empty')}
-        virtualization="always"
-        rowHeader="first-visible"
-        reveal
-        getTextValue={c => c.domain || c.dst || c.id}
-        render={c => {
-          const cells: Record<string, React.ReactNode> = {
-            dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
-            src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-            chain: <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
-            rule: (
-              <span className="rp-rule">
-                <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
-                {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
-              </span>
-            ),
-            state: t(connectionStates[c.state]),
-            down: formatBytes(c.download_bytes),
-            age: relativeStart(c.started_at, locale)
-          };
-          return cols.map(column => <span className="cell">{cells[column.id]}</span>);
-        }}
-      />
+    <div
+      ref={ref}
+      onKeyDownCapture={event => {
+        // RAC scopes Home/End to cells unless the row itself has focus.
+        if (event.key === 'Home' || event.key === 'End')
+          (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]')?.focus({preventScroll: true});
+      }}
+    >
+      <ResizableTableContainer
+        className="rp-table"
+        style={{height: Math.min(height, 2 + tableLayout.headingHeight + Math.max(flatRows.length, 2) * tableLayout.rowHeight)}}
+      >
+        <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
+          <Table
+            ref={element => {
+              gridRef.current = element;
+            }}
+            aria-label={t('nav.connections')}
+            aria-rowcount={flatRows.length + 1}
+            expandedKeys={groupKeys}
+            disabledKeys={groupKeys}
+            treeColumn={view.group === 'none' ? undefined : shown[0]?.id}
+            selectionMode={onSelect ? 'single' : 'none'}
+            selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
+            selectedKeys={selected ? [selected] : []}
+            onSelectionChange={keys => onSelect?.(selectedRow(keys))}
+            disallowEmptySelection={!!onSelect}
+            sortDescriptor={view.sort ?? undefined}
+            onSortChange={descriptor => descriptor.direction && onSort?.({column: String(descriptor.column), direction: descriptor.direction})}
+          >
+            <TableColumns cols={shown} firstVisibleHeader />
+            <TableBody
+              items={collection}
+              dependencies={[shown]}
+              renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+            >
+              {row => {
+                if ('connection' in row) return renderRow(row.connection);
+                const totals: Record<string, ReactNode> = {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})};
+                return (
+                  <Row id={row.id} textValue={row.group}>
+                    {shown.map((column, index) => (
+                      <Cell key={column.id} className={column.align}>
+                        <span className="cell">
+                          {index === 0 ? <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong> : totals[column.id]}
+                        </span>
+                      </Cell>
+                    ))}
+                    {row.children.map(renderRow)}
+                  </Row>
+                );
+              }}
+            </TableBody>
+          </Table>
+        </Virtualizer>
+      </ResizableTableContainer>
     </div>
   );
 }

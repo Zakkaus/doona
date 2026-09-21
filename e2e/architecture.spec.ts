@@ -1,5 +1,7 @@
-import type {Page} from '@playwright/test';
+import {test as httpTest, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
+import {sha256} from '../src/api/hash';
+import {ApiError} from '../src/api/error';
 import {expect, test} from './fixtures';
 
 async function backend(page: Page) {
@@ -20,6 +22,9 @@ async function backend(page: Page) {
     runtime: () => api.runtime(),
     geodata: () => api.geodata(),
     'runtime/settings': () => api.runtimeSettings(),
+    'runtime/memory': () => api.runtimeMemory(),
+    'runtime/memory/history': () => api.memoryHistory(),
+    'runtime/traffic/history': () => api.trafficHistory(),
     'runtime/outbounds': () => api.runtimeOutbounds()
   };
   await page.route('**/api/v1/**', async route => {
@@ -176,6 +181,35 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   await expect(dialog).toBeVisible();
 });
 
+for (const action of ['add', 'remove'] as const) {
+  test(`${action} refuses a shifted source even when its generation and digest are current`, async ({page}) => {
+    const api = await backend(page);
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
+    main.content_sha256 = await sha256(main.content);
+    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+    let validations = 0;
+    await page.route('**/api/v1/config/validate', async route => {
+      validations++;
+      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+    });
+    await page.goto('/#/rules?tab=list');
+    if (action === 'add') {
+      await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('example.org');
+      await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+    } else {
+      await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
+      await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
+    }
+    await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+    expect(validations).toBe(0);
+    await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  });
+}
+
 test('routing map shows a failed rules request and retries it', async ({page}) => {
   await backend(page);
   await page.route('**/api/v1/rules', route => route.fulfill({contentType: 'application/json', body: 'invalid JSON'}), {times: 1});
@@ -204,4 +238,178 @@ test('node probe announcements retain sub-ten-millisecond precision', async ({pa
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('hk-01: 5.4 ms');
+});
+
+for (const tab of ['source', 'setup']) {
+  test(`discarding ${tab} inside Config cancels its transaction and releases the next editor`, async ({page}) => {
+    const api = await backend(page);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let settled!: () => void;
+    const handled = new Promise<void>(resolve => {
+      settled = resolve;
+    });
+    await page.route('**/api/v1/config/validate', async route => {
+      await gate;
+      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+      settled();
+    });
+    let writes = 0;
+    await page.route('**/api/v1/config/sources/*', async route => {
+      writes++;
+      await route.fulfill({status: 500, json: {code: 'unexpected_write', message: 'Discarded draft was written'}});
+    });
+    await page.goto(`/#/config?tab=${tab}`);
+    if (tab === 'source') {
+      await page.getByRole('button', {name: 'Edit', exact: true}).click();
+      await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
+    } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/discarded');
+    const validating = page.waitForRequest('**/config/validate');
+    await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+    await validating;
+    if (tab === 'source') {
+      await page.getByRole('button', {name: / Source$/}).click();
+      await page.getByRole('option', {name: /rules\.dae/}).click();
+    } else await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
+    try {
+      await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeEnabled();
+    } finally {
+      release();
+    }
+    await handled;
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(writes).toBe(0);
+    await expect(page.locator('.rp-toast')).toHaveCount(0);
+    await expect(page).toHaveURL(tab === 'source' ? /source=src-rules/ : /tab=source/);
+  });
+}
+
+test('global target cannot change during a pending mode apply', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await gate;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+  });
+  await page.route('**/api/v1/config/sources/*', async route => {
+    await route.fulfill({json: await api.replaceConfigSource('src-main', route.request().postDataJSON().content, route.request().headers()['if-match'])});
+  });
+  await page.route('**/api/v1/operations/*', async route => {
+    await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
+  });
+  await page.goto('/#/activity');
+  await page.getByRole('radio', {name: 'Global', exact: true}).click();
+  const validating = page.waitForRequest('**/config/validate');
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await validating;
+  try {
+    await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Global');
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeEnabled();
+});
+
+test('trace headings and selected leaves retain the submitted domain and network', async ({page}) => {
+  const api = await backend(page);
+  await api.selectGroup('proxy', {member_id: 'hk-01', network: 'tcp'});
+  await api.selectGroup('proxy', {member_id: 'sg-01', network: 'udp'});
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/routing/trace', async route => {
+    const response = await api.routingTrace(route.request().postDataJSON());
+    response.evaluations = [{...response.evaluations[0], dst_ip: null, outbound: 'proxy'}];
+    await gate;
+    await route.fulfill({json: response});
+  });
+  await page.goto('/#/rules?tab=trace');
+  await page.getByRole('button', {name: / Resolution mode$/}).click();
+  await page.getByRole('option', {name: /No resolution/}).click();
+  await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
+  const tracing = page.waitForRequest('**/routing/trace');
+  await page.getByRole('button', {name: 'Run trace', exact: true}).click();
+  await tracing;
+  await page.getByLabel('Domain', {exact: true}).fill('edited.example');
+  await page.getByRole('button', {name: / Network protocol$/}).click();
+  await page.getByRole('option', {name: 'UDP', exact: true}).click();
+  release();
+  const result = page.getByRole('region', {name: 'Simulation result', exact: true});
+  await expect(result.getByRole('heading', {name: 'submitted.example', exact: true})).toBeVisible();
+  await expect(result).toContainText('hk-01');
+  await expect(result).not.toContainText('sg-01');
+  await page.getByLabel('Domain', {exact: true}).fill('edited-again.example');
+  await expect(result.getByRole('heading', {name: 'submitted.example', exact: true})).toBeVisible();
+});
+
+test('search keeps the keyboard target when an earlier connection disappears', async ({page}) => {
+  const api = await backend(page);
+  const snapshot = await api.connections();
+  snapshot.tcp = snapshot.tcp.slice(0, 3).map((connection, index) => ({...connection, domain: `stable-${index}.example`}));
+  snapshot.udp = [];
+  await page.route('**/api/v1/connections**', route => route.fulfill({json: snapshot}));
+  await page.clock.install();
+  await page.goto('/#/config');
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('searchbox').fill('stable-');
+  const target = snapshot.tcp[1];
+  await dialog.getByRole('option', {name: new RegExp(target.domain!)}).focus();
+  snapshot.tcp.shift();
+  await page.clock.fastForward(6000);
+  await expect(dialog.getByRole('option')).toHaveCount(2);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`connections\\?id=${target.id}$`));
+});
+
+httpTest('policy drafts survive a completeness recheck and reject a changed original digest', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  const api = await backend(page);
+  const capabilities = await api.capabilities();
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/groups/*', async route => {
+    await route.fulfill({json: await api.group(new URL(route.request().url()).pathname.split('/').pop()!)});
+  });
+  let changed!: () => void;
+  const generation = new Promise<void>(resolve => {
+    changed = resolve;
+  });
+  await page.route('**/api/v1/events**', async route => {
+    await generation;
+    await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+  });
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await page.route('**/api/v1/config/sources/*', async route => {
+    expect(route.request().headers()['if-match']).toBe(`"${main.content_sha256}"`);
+    try {
+      await route.fulfill({json: await api.replaceConfigSource(main.id, route.request().postDataJSON().content, route.request().headers()['if-match'])});
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      await route.fulfill({status: error.status, json: {error: {code: error.code, message: error.message}}});
+    }
+  });
+  await page.goto('/#/policies');
+  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  const filter = dialog.getByRole('textbox', {name: 'Filter 1', exact: true});
+  await filter.fill('name(hk-01)');
+  await api.replaceConfigSource(main.id, main.content + '\n# concurrent edit\n', `"${main.content_sha256}"`);
+  const refreshed = page.waitForResponse('**/api/v1/config');
+  changed();
+  await refreshed;
+  await expect(filter).toHaveValue('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  await expect(filter).toHaveValue('name(hk-01)');
 });

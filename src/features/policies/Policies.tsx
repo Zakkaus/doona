@@ -87,7 +87,7 @@ function PolicyCard({
               )}
             </span>
             <span className="rp-cluster">
-              {source.writable && entry && <PolicyEdit name={g.name} source={source} entry={entry} />}
+              <PolicyEdit name={g.name} source={source} entry={entry} />
               <Button
                 isPending={control.busy === 'probe'}
                 isDisabled={!!control.busy || !control.canProbe}

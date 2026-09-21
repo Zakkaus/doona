@@ -1,20 +1,22 @@
 import {Login} from './Login';
 import {ApiError} from '../api/error';
+import {consumeProfileReadError} from '../api/profiles';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {I18nProvider, Link as RLink, Separator} from 'react-aria-components';
+import {I18nProvider, RouterProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
-import {About, engineLinks} from './About';
+import {About, wordmark, engineLinks} from './About';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
-import {Button, MenuButton, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
+import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
+import {MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
-import {DraftContext, useRoute} from './route';
+import {DraftContext, parseHash, useRoute} from './route';
 import {refetchAll, useCapabilities, useVersion} from '../api/store';
 import {features, navAvailable, warmPage} from './registry';
 import {SearchDialog} from './search/SearchDialog';
@@ -119,7 +121,7 @@ export function Shell() {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
   const ap = useAppearance(settings);
-  const {route, query, go, setDirty, pending, discard, cancel} = useRoute(settings.api);
+  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
   // A hash no page owns goes to the first page instead of showing it under the wrong address.
   useEffect(() => {
     if (!features.some(feature => feature.path === route)) go('activity');
@@ -139,23 +141,30 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <DraftContext.Provider value={setDirty}>
-          <Frame
-            settings={settings}
-            lang={lang}
-            pickLang={pickLang}
-            ap={ap}
-            route={route}
-            query={query}
-            go={go}
-            openSearch={() => setSearchOpen(true)}
-            mac={mac}
-          />
-        </DraftContext.Provider>
-        <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
-        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
-        <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
-        <ToastHost />
+        <RouterProvider
+          navigate={href => {
+            const next = parseHash(href);
+            go(next.route, next.query);
+          }}
+        >
+          <DraftContext.Provider value={{setDirty, revision}}>
+            <Frame
+              settings={settings}
+              lang={lang}
+              pickLang={pickLang}
+              ap={ap}
+              route={route}
+              query={query}
+              go={go}
+              openSearch={() => setSearchOpen(true)}
+              mac={mac}
+            />
+          </DraftContext.Provider>
+          <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
+          {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
+          <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+          <ToastHost />
+        </RouterProvider>
       </I18nProvider>
     </LangContext.Provider>
   );
@@ -189,6 +198,7 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
 function ToastHost() {
   const t = useT();
   useEffect(() => {
+    if (consumeProfileReadError()) toast('negative', t('settings.profilesCorrupt'));
     try {
       if (sessionStorage.getItem('doona-saved')) {
         sessionStorage.removeItem('doona-saved');
@@ -230,6 +240,7 @@ function Frame({
   const nav = navGroups.map(group => [group, features.filter(feature => feature.nav?.group === group)] as const);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
+  const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
@@ -240,11 +251,12 @@ function Frame({
     <div className="rp-shell">
       <header className="rp-top">
         <About
+          onHonk={() => setHonked(true)}
           trigger={
             <Button className="rp-brand" label={t('about.title')}>
               <img src={logo} alt="" />
               <span className="rp-brand-text">
-                <span>doona</span>
+                <span>{wordmark(honked)}</span>
                 <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
               </span>
             </Button>
@@ -285,7 +297,7 @@ function Frame({
             <Refresh />
           </Button>
           <Separator orientation="vertical" className="rp-vrule" />
-          <MenuButton
+          <ChoiceMenu
             quiet
             chevron={false}
             label={t('lang')}
@@ -294,23 +306,39 @@ function Frame({
             items={LANGS.map(([k, l]) => ({id: k, label: l}))}
           >
             <Translate />
-          </MenuButton>
+          </ChoiceMenu>
           <MenuButton
             quiet
             chevron={false}
             label={t('palette')}
-            value={ap.palette}
-            onChange={k => ap.pickPalette(k as PaletteId)}
-            sections={paletteSections}
-            extra={{
-              title: t('wordmark'),
-              value: ap.wordmark,
-              onChange: k => ap.pickWordmark(k as Wordmark),
-              items: [
-                {id: 'gradient', label: t('wordmark.gradient')},
-                {id: 'plain', label: t('wordmark.plain')}
-              ]
-            }}
+            content={
+              <Menu aria-label={t('palette')}>
+                {paletteSections.map(section => (
+                  <MenuSection
+                    key={section.title}
+                    id={section.title}
+                    selectionMode="single"
+                    selectedKeys={[ap.palette]}
+                    onSelectionChange={pickMenuKey(k => ap.pickPalette(k as PaletteId))}
+                  >
+                    <Header className="rp-sec-h">{section.title}</Header>
+                    {section.items.map(item => (
+                      <MenuChoice key={item.id} item={item} />
+                    ))}
+                  </MenuSection>
+                ))}
+                <MenuSection
+                  id="wordmark"
+                  selectionMode="single"
+                  selectedKeys={[ap.wordmark]}
+                  onSelectionChange={pickMenuKey(k => ap.pickWordmark(k as Wordmark))}
+                >
+                  <Header className="rp-sec-h">{t('wordmark')}</Header>
+                  <MenuChoice item={{id: 'gradient', label: t('wordmark.gradient')}} />
+                  <MenuChoice item={{id: 'plain', label: t('wordmark.plain')}} />
+                </MenuSection>
+              </Menu>
+            }
           >
             <Color />
           </MenuButton>

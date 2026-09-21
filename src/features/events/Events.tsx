@@ -47,20 +47,29 @@ export function Events() {
         rows={shown}
         empty={t('event.empty')}
         cols={[
-          {id: 't', label: t('ui.time'), minWidth: 200, grow: 0},
-          {id: 'k', label: t('event.kind'), minWidth: 168},
-          {id: 'm', label: t('event.summary'), minWidth: 240, isRowHeader: true}
+          {
+            id: 't',
+            label: t('ui.time'),
+            minWidth: 200,
+            grow: 0,
+            render: event => (
+              <TextTooltip className="rp-code" text={event.data.observed_at}>
+                {localTime(event.data.observed_at, locale)}
+              </TextTooltip>
+            )
+          },
+          {id: 'k', label: t('event.kind'), minWidth: 168, render: event => <TextTooltip text={event.event}>{t(eventKindLabels[event.event])}</TextTooltip>},
+          {
+            id: 'm',
+            label: t('event.summary'),
+            minWidth: 240,
+            isRowHeader: true,
+            render: event => {
+              const summary = eventSummary(event, t);
+              return t(summary.key, summary.params);
+            }
+          }
         ]}
-        render={event => {
-          const summary = eventSummary(event, t);
-          return [
-            <TextTooltip className="rp-code" text={event.data.observed_at}>
-              {localTime(event.data.observed_at, locale)}
-            </TextTooltip>,
-            <TextTooltip text={event.event}>{t(eventKindLabels[event.event])}</TextTooltip>,
-            t(summary.key, summary.params)
-          ];
-        }}
       />
     </div>
   );

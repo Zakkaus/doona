@@ -35,6 +35,13 @@ export function normalizeProfiles(value: unknown): Profile[] {
 }
 
 let cachedProfiles: {raw: string; profiles: Profile[]} | undefined;
+let profileReadError = false;
+
+export function consumeProfileReadError(): boolean {
+  const error = profileReadError;
+  profileReadError = false;
+  return error;
+}
 
 export function readProfiles(storage?: StoragePort): Profiles {
   try {
@@ -53,7 +60,16 @@ export function readProfiles(storage?: StoragePort): Profiles {
       store.removeItem('doona-api');
       store.removeItem('doona-api-token');
     }
-    if (cachedProfiles?.raw !== raw) cachedProfiles = {raw, profiles: normalizeProfiles(JSON.parse(raw))};
+    if (cachedProfiles?.raw !== raw) {
+      let profiles: Profile[];
+      try {
+        profiles = normalizeProfiles(JSON.parse(raw));
+      } catch {
+        profiles = [];
+        profileReadError = true;
+      }
+      cachedProfiles = {raw, profiles};
+    }
     const profiles = cachedProfiles.profiles;
     const id = store.getItem('doona-profile');
     return {profiles, activeId: profiles.find(profile => profile.id === id)?.id ?? profiles[0]?.id ?? ''};

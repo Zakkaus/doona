@@ -35,3 +35,14 @@ test('profiles add, rename, save on switch, and delete without losing the route'
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('[name=api]')).toHaveValue('');
 });
+
+test('corrupt stored profiles show one error without overwriting the stored data', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-profiles', '{'));
+  await page.goto('/#/activity');
+  const error = page.locator('.rp-toast.negative');
+  await expect(error).toHaveCount(1);
+  await expect(error).toContainText('saved backend profiles');
+  await page.goto('/#/settings');
+  await expect(error).toHaveCount(1);
+  expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe('{');
+});

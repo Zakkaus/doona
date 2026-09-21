@@ -2,9 +2,9 @@ import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {word} from '../flows/view';
 import {millis} from '../../api/u64';
-import type {GroupSummary, Node} from '../../api/model';
+import type {GroupSummary, Node, RoutingEvaluation} from '../../api/model';
 import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useGroups, useNodeProbe, useNodes} from '../../api/store';
+import {useCapabilities, useGroups, useNodeProbe, useNodes, useRules} from '../../api/store';
 import {useRoutingTrace, type TraceProblem, type TraceResolve} from './useRoutingTrace';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
@@ -81,10 +81,18 @@ function Trace() {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
+  const rules = useRules(resources?.rules.available === true);
   const probe = useNodeProbe(nodes.refetch);
+  // An undecided evaluation may still have matched a rule below the ones it could not decide: that rule's
+  // outbound is where the flow goes if none of those turn out to match.
+  const likely = (evaluation: RoutingEvaluation) => {
+    if (evaluation.decision === 'determinate' || evaluation.outbound || rules.data?.generation_id !== trace.result?.generation_id) return null;
+    const matched = evaluation.rules.find(rule => rule.result === 'matched');
+    return (matched && rules.data?.rules.find(rule => rule.rule_id === matched.rule_id)?.outbound) ?? null;
+  };
   const leaf = (outbound: string | null) => {
-    if (!outbound || outbound === 'direct' || outbound === 'block') return null;
-    const {chain, node} = leafOf(outbound, form.network, groups.data ?? [], nodes.data ?? []);
+    if (!trace.input || !outbound || outbound === 'direct' || outbound === 'block') return null;
+    const {chain, node} = leafOf(outbound, trace.input.network, groups.data ?? [], nodes.data ?? []);
     const health = node ? preferredHealth(node) : undefined;
     const reach = !node
       ? t('rule.noMember')
@@ -107,7 +115,7 @@ function Trace() {
           void trace.submit();
         }}
       >
-        <div className="rp-toolbar">
+        <div className="rp-toolbar top">
           <LabeledSelect
             label={t('ui.network')}
             value={form.network}
@@ -128,6 +136,7 @@ function Trace() {
           />
           <Button
             accent
+            className="rp-btn rp-field-row"
             isPending={trace.busy}
             isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(trace.resolve)}
             type="submit"
@@ -156,15 +165,17 @@ function Trace() {
           {trace.result.evaluations.map((evaluation, i) => (
             <section className="rp-card" key={i}>
               <div className="rp-row">
-                <h3 className="rp-h3">{evaluation.dst_ip ?? form.domain}</h3>
+                <h3 className="rp-h3">{evaluation.dst_ip ?? trace.input?.domain}</h3>
                 <Kv
                   inline
                   items={[
                     [t('rule.decision'), t(evaluation.decision === 'determinate' ? 'rule.determinate' : 'rule.result.indeterminate')],
-                    [t('ui.outbound'), outboundLabel(evaluation.outbound, t)],
+                    likely(evaluation)
+                      ? [t('rule.likelyOutbound'), outboundLabel(likely(evaluation), t)]
+                      : [t('ui.outbound'), outboundLabel(evaluation.outbound, t)],
                     ...(evaluation.missing_inputs.length ? [[t('rule.missing'), formatList(lang, evaluation.missing_inputs)] as [string, string]] : []),
                     ...(picked => (picked ? [[t('rule.node'), picked.chain] as [string, string], [t('rule.reach'), picked.reach] as [string, string]] : []))(
-                      leaf(evaluation.outbound)
+                      leaf(evaluation.outbound ?? likely(evaluation))
                     )
                   ]}
                 />
@@ -197,28 +208,41 @@ function Trace() {
                       </Button>
                     )
                   );
-                })(leaf(evaluation.outbound))}
+                })(leaf(evaluation.outbound ?? likely(evaluation)))}
               </div>
+              {likely(evaluation) && <p className="rp-label">{t('rule.likelyHelp', {inputs: formatList(lang, evaluation.missing_inputs)})}</p>}
               <DataTable
                 label={t('rule.evaluation', {n: i + 1})}
                 height={360}
                 rows={evaluation.rules.map(rule => ({...rule, id: rule.rule_id}))}
                 cols={[
-                  {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 2, isRowHeader: true},
-                  {id: 'result', label: t('rule.outcome'), minWidth: 120, grow: 0},
-                  {id: 'missing', label: t('rule.missing'), minWidth: 144}
-                ]}
-                render={rule => [
-                  <TextTooltip className="rp-code" text={rule.rule_id}>
-                    {rule.expression ?? rule.rule_id}
-                  </TextTooltip>,
-                  <Light
-                    small
-                    tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}
-                  >
-                    {outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result}
-                  </Light>,
-                  formatList(lang, rule.missing_inputs) || '—'
+                  {
+                    id: 'expression',
+                    label: t('rule.expression'),
+                    minWidth: 240,
+                    grow: 2,
+                    isRowHeader: true,
+                    render: rule => (
+                      <TextTooltip className="rp-code" text={rule.rule_id}>
+                        {rule.expression ?? rule.rule_id}
+                      </TextTooltip>
+                    )
+                  },
+                  {
+                    id: 'result',
+                    label: t('rule.outcome'),
+                    minWidth: 120,
+                    grow: 0,
+                    render: rule => (
+                      <Light
+                        small
+                        tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}
+                      >
+                        {outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result}
+                      </Light>
+                    )
+                  },
+                  {id: 'missing', label: t('rule.missing'), minWidth: 144, render: rule => formatList(lang, rule.missing_inputs) || '—'}
                 ]}
               />
             </section>

@@ -1,4 +1,4 @@
-import {blockFields, scanConfig} from './blocks';
+import {blockFields, quote, scanConfig} from './blocks';
 
 export type GroupEntry = {
   name: string;
@@ -26,7 +26,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
     );
 }
 
-const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : `'${value.replace(/'/g, '')}'`);
+const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : quote(value));
 
 export function writeGroupEntry(text: string, name: string, next: {filters: string[]; policy: string | null}): string {
   const {blocks, tokens} = scanConfig(text);

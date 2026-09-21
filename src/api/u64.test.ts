@@ -29,6 +29,12 @@ describe('UInt64 counters', () => {
     expect(formatBytes(9999500000000000n)).toBe('10 PB');
   });
   it.each(['-1', '01', '', '1.5', '1e3', '18446744073709551616'])('rejects noncanonical or out-of-range counter %s', value => {
-    expect(() => parseU64(value)).toThrow(RangeError);
+    expect(parseU64(value)).toBeNull();
+  });
+  it('renders malformed counters as unknown and propagates them through aggregates', () => {
+    expect(formatBytes('broken')).toBe('—');
+    expect(formatRate('broken')).toBe('—');
+    expect(addU64('1', 'broken')).toBeNull();
+    expect(pctU64('broken', '10')).toBeNull();
   });
 });

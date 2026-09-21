@@ -26,17 +26,20 @@ export function bucket<T extends Timed>(samples: T[], seconds: number, fold: Fol
   return [...groups.entries()].sort(([a], [b]) => a - b).map(([time, group]) => fold(group, time));
 }
 
-// A sample older than the newest one means the backend's clock went back or it restarted: the curve starts
-// over. Samples that fall out of the fine ring are folded into the minute bucket they belong to.
+// Retain the boundary minute in fine so each coarse bucket is folded once from raw samples.
 export function append<T extends Timed>(rings: Rings<T>, sample: T, fold: Fold<T>): Rings<T> {
   if (rings.fine.at(-1)?.time === sample.time) return rings;
-  if (rings.fine.length && sample.time < rings.fine[rings.fine.length - 1].time) return {fine: [sample], coarse: []};
+  if (rings.fine.length && sample.time < rings.fine[rings.fine.length - 1].time) return {fine: [sample], coarse: rings.coarse};
   const fine = [...rings.fine, sample];
-  const evicted = fine.length > fineLimit ? fine.splice(0, fine.length - fineLimit) : [];
+  const boundary = fine.length > fineLimit ? Math.floor(fine[fine.length - fineLimit].time / minute) * minute : -Infinity;
+  let count = 0;
+  while (count < fine.length && fine[count].time < boundary) count++;
+  const evicted = fine.splice(0, count);
   let coarse = rings.coarse;
   if (evicted.length) {
-    const from = Math.floor(evicted[0].time / minute) * minute;
-    coarse = [...coarse.filter(c => c.time < from), ...bucket([...coarse.filter(c => c.time >= from), ...evicted], 60, fold)].slice(-coarseLimit);
+    const byTime = new Map(bucket(evicted, 60, fold).map(sample => [sample.time, sample]));
+    for (const sample of coarse) byTime.set(sample.time, sample);
+    coarse = [...byTime.values()].sort((a, b) => a.time - b.time).slice(-coarseLimit);
   }
   return {fine, coarse};
 }

@@ -4,7 +4,7 @@ import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../api/store';
 import {addU64, formatBytes} from '../../api/u64';
 import {formatDuration, localTime, relativeStart} from '../../api/selectors';
-import {Badge, Button, DataTable, Light, MenuButton, TextTooltip, errorText, toast} from '../../ui/ui';
+import {Badge, Button, DataTable, Light, ChoiceMenu, TextTooltip, errorText, toast} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
 import Close from '../../ui/icons/Close';
 import type {MainSourceEdit} from '../config/mainSource';
@@ -80,90 +80,126 @@ export function ProviderTable({
         selectOnFocus
         empty={t('nodes.noProviders')}
         cols={[
-          {id: 'name', label: t('nodes.provider'), minWidth: 140, grow: 2, isRowHeader: true},
-          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 110, grow: 0, drop: 5},
-          {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6},
-          {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2},
-          {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3},
-          {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4},
-          {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1},
-          {id: 'status', label: t('ui.state'), minWidth: 96, grow: 0},
-          {id: 'actions', label: t('ui.actions'), minWidth: canManage ? 112 : 88, grow: 0}
-        ]}
-        render={item => {
-          const used = item.traffic ? {used: addU64(item.traffic.upload_bytes, item.traffic.download_bytes), total: item.traffic.total_bytes} : null;
-          const interval = item.kind === 'subscription' ? intervals.get(item.name) : undefined;
-          return [
-            <span className="rp-chain">
-              <TextTooltip text={item.url_redacted ?? undefined}>{item.name}</TextTooltip>
-            </span>,
-            <Badge>{t(kinds[item.kind])}</Badge>,
-            n(item.node_count),
-            used ? (used.total ? t('nodes.used', {used: formatBytes(used.used), total: formatBytes(used.total)}) : formatBytes(used.used)) : '—',
-            <TextTooltip text={item.updated_at ? localTime(item.updated_at, locale) : undefined}>{relativeStart(item.updated_at, locale)}</TextTooltip>,
-            interval === undefined ? (
-              '—'
-            ) : source.writable ? (
-              <MenuButton
-                quiet
-                label={t('nodes.intervalOf', {name: item.name})}
-                value={String(interval)}
-                isDisabled={source.busy}
-                onChange={key => {
-                  const seconds = Number(key);
-                  void source
-                    .apply(
-                      text => writeInterval(text, item.name, seconds),
-                      errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
-                    )
-                    .then(written => {
-                      if (written) toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalLabel(seconds)}));
-                    }, fail);
-                }}
-                items={[0, ...INTERVALS, ...(INTERVALS.includes(interval) || interval === 0 ? [] : [interval])].map(seconds => ({
-                  id: String(seconds),
-                  label: intervalLabel(seconds)
-                }))}
-              >
-                {intervalLabel(interval)}
-              </MenuButton>
-            ) : (
-              intervalLabel(interval)
-            ),
-            item.expires_at ? localTime(item.expires_at, locale) : '—',
-            item.kind === 'unknown' ? (
-              '—'
-            ) : (
-              <Light small tone={tones[item.status]}>
-                <TextTooltip text={item.last_error?.message}>{t(statuses[item.status])}</TextTooltip>
-              </Light>
-            ),
-            <span className="rp-chain">
-              {item.kind === 'subscription' && canRefresh && (
-                <Button
-                  small
+          {
+            id: 'name',
+            label: t('nodes.provider'),
+            minWidth: 140,
+            grow: 2,
+            isRowHeader: true,
+            render: item => (
+              <span className="rp-chain">
+                <TextTooltip text={item.url_redacted ?? undefined}>{item.name}</TextTooltip>
+              </span>
+            )
+          },
+          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 110, grow: 0, drop: 5, render: item => <Badge>{t(kinds[item.kind])}</Badge>},
+          {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6, render: item => n(item.node_count)},
+          {
+            id: 'usage',
+            label: t('nodes.usage'),
+            minWidth: 200,
+            drop: 2,
+            render: item => {
+              const used = item.traffic ? {used: addU64(item.traffic.upload_bytes, item.traffic.download_bytes), total: item.traffic.total_bytes} : null;
+              return used ? (used.total ? t('nodes.used', {used: formatBytes(used.used), total: formatBytes(used.total)}) : formatBytes(used.used)) : '—';
+            }
+          },
+          {
+            id: 'updated',
+            label: t('nodes.updated'),
+            minWidth: 140,
+            drop: 3,
+            render: item => (
+              <TextTooltip text={item.updated_at ? localTime(item.updated_at, locale) : undefined}>{relativeStart(item.updated_at, locale)}</TextTooltip>
+            )
+          },
+          {
+            id: 'interval',
+            label: t('nodes.interval'),
+            minWidth: 130,
+            grow: 0,
+            drop: 4,
+            render: item => {
+              const interval = item.kind === 'subscription' ? intervals.get(item.name) : undefined;
+              return interval === undefined ? (
+                '—'
+              ) : source.writable ? (
+                <ChoiceMenu
                   quiet
-                  icon
-                  isPending={refresh.busy === item.id}
-                  isDisabled={!!refresh.busy}
-                  label={t('nodes.refresh', {name: item.name})}
-                  onPress={() => {
-                    void refresh.refresh(item.id).then(result => {
-                      if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: n(result.node_count)}));
-                    }, fail);
+                  label={t('nodes.intervalOf', {name: item.name})}
+                  value={String(interval)}
+                  isDisabled={source.busy}
+                  onChange={key => {
+                    const seconds = Number(key);
+                    void source
+                      .apply(
+                        text => writeInterval(text, item.name, seconds),
+                        errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
+                      )
+                      .then(written => {
+                        if (written) toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalLabel(seconds)}));
+                      }, fail);
                   }}
+                  items={[0, ...INTERVALS, ...(INTERVALS.includes(interval) || interval === 0 ? [] : [interval])].map(seconds => ({
+                    id: String(seconds),
+                    label: intervalLabel(seconds)
+                  }))}
                 >
-                  <Refresh />
-                </Button>
-              )}
-              {canManage && item.kind !== 'inline' && item.kind !== 'unknown' && (
-                <Button small quiet isDisabled={busy} label={t('nodes.remove', {name: item.name})} onPress={() => onRemove(item)}>
-                  <Close />
-                </Button>
-              )}
-            </span>
-          ];
-        }}
+                  {intervalLabel(interval)}
+                </ChoiceMenu>
+              ) : (
+                intervalLabel(interval)
+              );
+            }
+          },
+          {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1, render: item => (item.expires_at ? localTime(item.expires_at, locale) : '—')},
+          {
+            id: 'status',
+            label: t('ui.state'),
+            minWidth: 96,
+            grow: 0,
+            render: item =>
+              item.kind === 'unknown' ? (
+                '—'
+              ) : (
+                <Light small tone={tones[item.status]}>
+                  <TextTooltip text={item.last_error?.message}>{t(statuses[item.status])}</TextTooltip>
+                </Light>
+              )
+          },
+          {
+            id: 'actions',
+            label: t('ui.actions'),
+            minWidth: canManage ? 112 : 88,
+            grow: 0,
+            render: item => (
+              <span className="rp-chain">
+                {item.kind === 'subscription' && canRefresh && (
+                  <Button
+                    small
+                    quiet
+                    icon
+                    isPending={refresh.busy === item.id}
+                    isDisabled={!!refresh.busy}
+                    label={t('nodes.refresh', {name: item.name})}
+                    onPress={() => {
+                      void refresh.refresh(item.id).then(result => {
+                        if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: n(result.node_count)}));
+                      }, fail);
+                    }}
+                  >
+                    <Refresh />
+                  </Button>
+                )}
+                {canManage && item.kind !== 'inline' && item.kind !== 'unknown' && (
+                  <Button small quiet isDisabled={busy} label={t('nodes.remove', {name: item.name})} onPress={() => onRemove(item)}>
+                    <Close />
+                  </Button>
+                )}
+              </span>
+            )
+          }
+        ]}
       />
     </>
   );

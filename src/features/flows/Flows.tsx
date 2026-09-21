@@ -1,8 +1,8 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
-import {FlowMap} from './FlowMap';
-import {flowMap, flowsThrough, nodeNames} from './map';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {flowsThrough, nodeNames, pinnedLabel, routingTree, type TreeBy} from './map';
+import Tree from './Tree';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp} from '../../api/selectors';
 import {flowStepFields, traceGaps} from './view';
 import {
   Badge,
@@ -23,6 +23,7 @@ import {
 } from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
+import type {FlowDetail} from '../../api/model';
 import {buildHash, within} from '../../shell/route';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
@@ -48,13 +49,14 @@ export function RoutingMap({go, query}: PageProps) {
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const rules = useRules(resources?.rules.available === true);
-  const map = useMemo(
-    () => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? []),
-    [resource.data, groups.data, nodes.data, rules.data]
+  const by: TreeBy = params.get('by') === 'client' ? 'client' : 'rule';
+  const tree = useMemo(
+    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? [], by),
+    [resource.data, groups.data, nodes.data, rules.data, by]
   );
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;
+  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? []), rules.data?.rules ?? []).length : 0;
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
       <ErrorMessage
@@ -66,12 +68,29 @@ export function RoutingMap({go, query}: PageProps) {
           rules.refetch();
         }}
       />
-      {resource.data || groups.data ? (
-        <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
-      ) : resource.error || groups.error ? null : (
-        <Loading />
-      )}
-      {resource.data && !resource.data.flows.length && <Empty>{t('flow.mapEmpty')}</Empty>}
+      <section className="rp-card rp-topology" aria-label={t('flow.topology')}>
+        <div className="rp-row">
+          <h2 className="rp-label">{t('flow.topology')}</h2>
+          <Segmented
+            label={t('flow.topology')}
+            value={by}
+            onChange={next => go('rules', within(query, {by: next === 'client' ? 'client' : null, path: null}))}
+            items={[
+              ['rule', t('flow.byRule')],
+              ['client', t('flow.byClient')]
+            ]}
+          />
+        </div>
+        {!resource.data && !rules.data && !groups.data ? (
+          resource.error ? null : (
+            <Loading />
+          )
+        ) : !tree.leaves.length && !tree.outbounds.length ? (
+          <Empty>{t('flow.mapEmpty')}</Empty>
+        ) : (
+          <Tree tree={tree} pinned={pinned} onPin={setPinned} />
+        )}
+      </section>
       {pinned && (
         <div className="rp-toolbar">
           <Button small onPress={() => go('rules', within(query, {tab: 'flows'}))}>
@@ -96,7 +115,15 @@ export function FlowRecords({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
-  const rulesListed = useCapabilities().data?.resources.rules.available === true;
+  const resources = useCapabilities().data?.resources;
+  const rulesListed = resources?.rules.available === true;
+  const rules = useRules(rulesListed);
+  // A flow's target becomes a new rule's condition: the domain as a suffix, else the destination address.
+  const ruleSeed = (flow: FlowDetail) => {
+    const ip = sourceIp(flow.input.dst ?? undefined);
+    return flow.input.domain ? 'domainSuffix:' + flow.input.domain : ip ? 'dip:' + ip : null;
+  };
+  const canAddRule = rulesListed && resources?.config.available === true && resources.config.writable === true;
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -106,10 +133,8 @@ export function FlowRecords({go, query}: PageProps) {
   const select = (value: string | null) => go('rules', within(query, {id: value}));
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  // A pinned map item is `stage:label`; the label is all the chip needs.
-  const pinnedLabel = pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
   const all = resource.data?.flows ?? [];
-  const shown = (pinned ? flowsThrough(all, pinned, names) : all).filter(
+  const shown = (pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all).filter(
     f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state)
   );
   return (
@@ -135,7 +160,7 @@ export function FlowRecords({go, query}: PageProps) {
         />
         {pinned && (
           <Button small label={t('flow.clearMapFilter')} onPress={() => setPinned(null)}>
-            {t('flow.mapFilter', {label: pinnedLabel ?? ''})}
+            {t('flow.mapFilter', {label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => outboundLabel(name, t))})}
             <Close />
           </Button>
         )}
@@ -158,23 +183,37 @@ export function FlowRecords({go, query}: PageProps) {
           selectOnFocus={wide}
           empty={t('flow.empty')}
           cols={[
-            {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true},
-            {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2},
-            {id: 'rule', label: t('conn.rule'), minWidth: 152, grow: 2, drop: 1},
-            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3},
-            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5},
-            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4}
-          ]}
-          render={f => [
-            <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
-            <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>,
-            <span className="rp-rule">
-              <RuleRef expression={f.rule_expression} ruleId={f.rule_id} linked={rulesListed} />
-              {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
-            </span>,
-            f.network.toUpperCase(),
-            t(connectionStates[f.state]),
-            relativeStart(f.started_at, locale)
+            {
+              id: 'target',
+              label: t('ui.target'),
+              minWidth: 128,
+              grow: 2,
+              isRowHeader: true,
+              render: f => <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>
+            },
+            {
+              id: 'chain',
+              label: t('conn.chain'),
+              minWidth: 96,
+              drop: 2,
+              render: f => <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>
+            },
+            {
+              id: 'rule',
+              label: t('conn.rule'),
+              minWidth: 152,
+              grow: 2,
+              drop: 1,
+              render: f => (
+                <span className="rp-rule">
+                  <RuleRef expression={f.rule_expression} ruleId={f.rule_id} linked={rulesListed} />
+                  {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
+                </span>
+              )
+            },
+            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: f => f.network.toUpperCase()},
+            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: f => t(connectionStates[f.state])},
+            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: f => relativeStart(f.started_at, locale)}
           ]}
         />
         <DetailPanel open={panelOpen} title={flow?.input?.domain || flow?.input?.dst || flow?.id || id || ''} onClose={() => select(null)}>
@@ -204,11 +243,18 @@ export function FlowRecords({go, query}: PageProps) {
                     : [])
                 ]}
               />
-              {flow.connection_id && (
-                <Link appearance="button" className="sm" href={buildHash('connections', 'id=' + encodeURIComponent(flow.connection_id))}>
-                  {t('flow.viewConnection')}
-                </Link>
-              )}
+              <div className="rp-cluster">
+                {flow.connection_id && (
+                  <Link appearance="button" className="sm" href={buildHash('connections', 'id=' + encodeURIComponent(flow.connection_id))}>
+                    {t('flow.viewConnection')}
+                  </Link>
+                )}
+                {canAddRule && ruleSeed(flow) && (
+                  <Link appearance="button" className="sm" href={buildHash('rules', 'tab=list&add=' + encodeURIComponent(ruleSeed(flow)!))}>
+                    {t('flow.addRule')}
+                  </Link>
+                )}
+              </div>
               <div className="rp-list">
                 {!flow.trace.steps.length && <Empty>{t('ui.empty')}</Empty>}
                 {[...flow.trace.steps]

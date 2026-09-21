@@ -93,20 +93,31 @@ export function BackendActionsCard() {
             rows={(geodata.data?.assets ?? []).map(asset => ({...asset, id: asset.kind}))}
             height={160}
             cols={[
-              {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true},
-              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end'},
-              {id: 'modified', label: t('nodes.updated'), minWidth: 140, grow: 0},
-              {id: 'sha', label: 'SHA-256', minWidth: 160, drop: 2},
-              {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1}
-            ]}
-            render={asset => [
-              asset.kind,
-              formatBytes(asset.size_bytes),
-              <TextTooltip text={asset.modified_at ? localTime(asset.modified_at, locale) : undefined}>{relativeStart(asset.modified_at, locale)}</TextTooltip>,
-              <TextTooltip text={asset.sha256}>
-                <span className="rp-code">{asset.sha256.slice(0, 12)}</span>
-              </TextTooltip>,
-              asset.source_redacted ?? '—'
+              {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
+              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => formatBytes(asset.size_bytes)},
+              {
+                id: 'modified',
+                label: t('nodes.updated'),
+                minWidth: 140,
+                grow: 0,
+                render: asset => (
+                  <TextTooltip text={asset.modified_at ? localTime(asset.modified_at, locale) : undefined}>
+                    {relativeStart(asset.modified_at, locale)}
+                  </TextTooltip>
+                )
+              },
+              {
+                id: 'sha',
+                label: 'SHA-256',
+                minWidth: 160,
+                drop: 2,
+                render: asset => (
+                  <TextTooltip text={asset.sha256}>
+                    <span className="rp-code">{asset.sha256.slice(0, 12)}</span>
+                  </TextTooltip>
+                )
+              },
+              {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1, render: asset => asset.source_redacted ?? '—'}
             ]}
           />
         </>
