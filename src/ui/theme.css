@@ -580,10 +580,27 @@
   --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 :root[data-family='glass'] body {
-  background: var(--rp-bg);
-  background-attachment: fixed;
+  background: none;
 }
+/* The picture, its grain and the readability scrim are fixed layers rather than a fixed body background: a
+   backdrop-filter above them then sees the same thing in every browser. */
 :root[data-family='glass'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--rp-bg);
+}
+:root[data-family='glass'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--rp-scrim);
+}
+:root[data-family='glass']::after {
   content: '';
   position: fixed;
   inset: 0;
@@ -593,25 +610,59 @@
   opacity: 0.14;
   mix-blend-mode: overlay;
 }
-/* One fixed frosted layer over the whole picture: the readability scrim and the chrome's tint in one sheet, so
-   header, sidebar and the strips around the panel are the same glass with no seam. It is not an ancestor of
-   anything, so the header's own blur below nests in no backdrop root (Firefox draws nested ones twice). */
-:root[data-family='glass'] body::after {
+/* The chrome is one piece of frosted glass: a fixed layer over the viewport, clipped to everything outside the
+   panel's rounded box (its corners traced with a few points), so no two blurs meet and the header part stays
+   put while the page scrolls under it. It sits above the page; the header and sidebar controls stack above it. */
+:root[data-family='glass'] .rp-shell::after {
+  --rp-shell-inset: max(0px, (100% - 1600px) / 2);
   content: '';
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
-  background: var(--rp-scrim), var(--rp-sheet);
+  background: var(--rp-sheet);
   backdrop-filter: blur(28px) saturate(1.6);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    calc(100% - 0px) 80px,
+    calc(100% - 1.22px) 73.88px,
+    calc(100% - 4.69px) 68.69px,
+    calc(100% - 9.88px) 65.22px,
+    calc(100% - 16px) 64px,
+    16px 64px,
+    9.88px 65.22px,
+    4.69px 68.69px,
+    1.22px 73.88px,
+    0px 80px
+  );
+}
+@media (min-width: 1024px) {
+  :root[data-family='glass'] .rp-shell::after {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 80px,
+      calc(100% - var(--rp-shell-inset) - 17.22px) 73.88px,
+      calc(100% - var(--rp-shell-inset) - 20.69px) 68.69px,
+      calc(100% - var(--rp-shell-inset) - 25.88px) 65.22px,
+      calc(100% - var(--rp-shell-inset) - 32px) 64px,
+      calc(var(--rp-shell-inset) + 256px) 64px,
+      calc(var(--rp-shell-inset) + 249.88px) 65.22px,
+      calc(var(--rp-shell-inset) + 244.69px) 68.69px,
+      calc(var(--rp-shell-inset) + 241.22px) 73.88px,
+      calc(var(--rp-shell-inset) + 240px) 80px,
+      calc(var(--rp-shell-inset) + 240px) 100%,
+      0 100%
+    );
+  }
 }
 :root[data-family='glass'] .rp-top,
 :root[data-family='glass'] .rp-side {
   background: transparent;
-}
-/* Content scrolls under the header; over the static frost the blur changes nothing. */
-:root[data-family='glass'] .rp-top {
-  backdrop-filter: blur(28px);
+  z-index: 2;
 }
 :root[data-family='glass'] .rp-main {
   background: var(--rp-sheet);
