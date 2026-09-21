@@ -114,9 +114,9 @@ export function BackendActionsCard() {
               {
                 id: 'source',
                 label: t('settings.geodataSource'),
-                minWidth: 240,
+                // Wide enough for a release URL: the table scrolls sideways rather than cutting the address.
+                minWidth: 640,
                 grow: 2,
-                drop: 1,
                 render: asset => (
                   <TextTooltip text={asset.source}>
                     <span className="rp-code">{asset.source}</span>
