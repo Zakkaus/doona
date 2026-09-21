@@ -15,8 +15,8 @@ The OpenWrt, Alpine and Nix recipes are unpublished templates. Replace every mar
 none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, and Nix needs the
 source hash from `nix-prefetch-github` and the dependency hash from the first build's mismatch message.
 
-The release workflow runs `tools/package.sh --git-version`: tag `v0.3.0-beta.1` produces
-`doona-v0.3.0-beta.1.tar.gz` and `doona-fonts-v0.3.0-beta.1.tar.gz`, matching the binary recipes.
+The release workflow runs `tools/package.sh --git-version`: tag `v0.3.0.beta.1` produces
+`doona-v0.3.0.beta.1.tar.gz` and `doona-fonts-v0.3.0.beta.1.tar.gz`, matching the binary recipes.
 The program archive has `index.html`, assets and notices at its root. The separate font archive has a
 `fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.

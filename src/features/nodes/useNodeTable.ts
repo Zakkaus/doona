@@ -9,7 +9,7 @@ import {namedIn, readGroupEntries} from '../config/groups';
 import type {MainSourceEdit} from '../config/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
 
-export type NodeTableInput = {
+type NodeTableInput = {
   nodes: Node[];
   providers: Provider[];
   names: OutboundNames;

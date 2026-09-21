@@ -46,6 +46,10 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
         error => toast('negative', errorText(error))
       );
   };
+  // Edits wait while a save is in flight; what was submitted is what the outcome describes.
+  const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
+    if (!source.busy) setDraft(prev => (prev ? update(prev) : prev));
+  };
   return {
     title: t('policy.editTitle', {name}),
     open: !!draft,
@@ -60,8 +64,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       value,
       label: t('policy.filterN', {n: id + 1}),
       removeLabel: t('policy.removeFilter', {n: id + 1}),
-      change: (value: string) => setDraft(prev => (prev ? {...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))} : prev)),
-      remove: () => setDraft(prev => (prev ? {...prev, filters: prev.filters.filter((_, i) => i !== id)} : prev))
+      change: (value: string) => edit(prev => ({...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))})),
+      remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
     })),
     show: () => {
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
@@ -70,8 +74,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       guard.clear();
       setDraft(null);
     },
-    setPolicy: policy => setDraft(prev => (prev ? {...prev, policy} : prev)),
-    add: () => setDraft(prev => (prev ? {...prev, filters: [...prev.filters, '']} : prev)),
+    setPolicy: policy => edit(prev => ({...prev, policy})),
+    add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
     save
   };
 }

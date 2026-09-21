@@ -18,8 +18,6 @@ for (const route of routes) {
 
     await page.goto('/#/activity');
     await expect(page.locator('.rp-strip')).toBeVisible();
-    // The first page paints from the shell chunks alone; the other pages arrive during idle time or on navigation.
-    const initialScripts = new Set(scripts);
     await page.waitForLoadState('networkidle');
 
     await page.evaluate(route => {
@@ -31,8 +29,13 @@ for (const route of routes) {
     await expect(page.locator(content)).toBeVisible();
     await page.waitForLoadState('networkidle');
 
+    // Each page is its own chunk, fetched during idle time after the first page or on navigation.
     if (route !== 'activity') {
-      expect([...scripts].filter(url => !initialScripts.has(url)).length, 'Lazy-route JS requests after first paint').toBeGreaterThanOrEqual(1);
+      const chunk = route[0].toUpperCase() + route.slice(1);
+      expect(
+        [...scripts].some(url => new RegExp(`/${chunk}-[^/]+\\.js$`).test(url)),
+        `${chunk} chunk requested`
+      ).toBe(true);
     }
     expect(failedResponses, 'Non-2xx responses').toHaveLength(0);
     expect(failedRequests, 'Failed requests').toHaveLength(0);
@@ -52,7 +55,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
   await expect(page.locator('.rp-strip')).toBeVisible();
   await requested;
   await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await page.clock.pauseAt(Date.now() + 1000);
   const frame = page.locator('.rp-top, .rp-side, .rp-head');
   const bounds = () => frame.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
   const before = await bounds();

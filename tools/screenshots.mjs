@@ -1,13 +1,10 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync} from 'node:fs';
+import {mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync('/scratch/ssd/pw-browsers')) {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = '/scratch/ssd/pw-browsers';
-}
 const require = createRequire(import.meta.url);
 let browserModule;
 try {

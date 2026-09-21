@@ -71,7 +71,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
   });
   return out;
 }
-export function groupsIn(text: string): Set<string> {
+function groupsIn(text: string): Set<string> {
   return new Set(
     scanConfig(text)
       .blocks.filter(block => block.name === 'group')

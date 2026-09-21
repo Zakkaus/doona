@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {Button, Light, ChoiceMenu, Segmented} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
-export type ModeCardsModel = {
+type ModeCardsModel = {
   mode: string;
   target: string;
   targetText: string;

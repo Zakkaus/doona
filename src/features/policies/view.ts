@@ -66,7 +66,7 @@ export type MemberView = {
   region: string;
 };
 // The tile's status slot: a group badge, a latency with its tone, or the state when there is no latency.
-export function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
+function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
   if (member.kind === 'group') return {text: t('ui.group'), badge: true};
   const tcp = healthMillis(member.health);
   if (tcp != null) return {text: t('ui.latency', {n: millis(tcp)}), tone: latencyTone(tcp)};

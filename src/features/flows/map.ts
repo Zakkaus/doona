@@ -6,11 +6,11 @@ import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../.
 // Seen by client instead, the leaves are the source addresses the flows came from.
 export type TreeBy = 'rule' | 'client';
 export type TreeItem = {id: string; label: string; count: number; unknown?: boolean};
-export type TreeLeaf = TreeItem & {outbound: string | null; must: boolean; fallback: boolean};
-export type TreeGroup = {name: string; kind: GroupSummary['policy']['kind']; policy: string};
+type TreeLeaf = TreeItem & {outbound: string | null; must: boolean; fallback: boolean};
+type TreeGroup = {name: string; kind: GroupSummary['policy']['kind']; policy: string};
 // A group's selection may be another group; `groups` is the whole chain, the first entry being the outbound itself.
-export type TreeOutbound = TreeItem & {kind: 'direct' | 'block' | 'group' | 'unknown'; groups: TreeGroup[]; node: string | null};
-export type TreeNode = TreeItem & {latency?: number; unavailable: boolean};
+type TreeOutbound = TreeItem & {kind: 'direct' | 'block' | 'group' | 'unknown'; groups: TreeGroup[]; node: string | null};
+type TreeNode = TreeItem & {latency?: number; unavailable: boolean};
 // A link with no count is one the config implies before any flow used it.
 export type TreeLink = {source: string; target: string; count: number};
 export type RoutingTree = {by: TreeBy; leaves: TreeLeaf[]; outbounds: TreeOutbound[]; nodes: TreeNode[]; links: TreeLink[]};
@@ -19,7 +19,7 @@ const stages = ['client', 'rule', 'outbound', 'node'] as const;
 type Stage = (typeof stages)[number];
 const terminal = (outbound: string | null) => outbound === 'direct' || outbound === 'block';
 
-export type NodeNames = ReadonlyMap<string, string>;
+type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
 // A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
 // matched even when two rules display alike; the expression is only the label. A retained flow from an

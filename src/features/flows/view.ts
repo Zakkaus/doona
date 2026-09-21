@@ -52,7 +52,7 @@ const flowWords: Record<string, Key> = {
   dns_mapping: 'flow.v.dnsMapping',
   explicit: 'flow.v.explicit'
 };
-export const traceGaps: Record<string, Key> = {
+const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',
   buffer_overflow: 'flow.m.bufferOverflow',
@@ -77,7 +77,7 @@ const inputLabels: Record<string, Key | string> = {
 export const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
 
-export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
+function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
   const text = (value: unknown) => (value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
   switch (step.stage) {
     case 'input':
@@ -148,7 +148,7 @@ export function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string 
 
 // What a routing-tree tile shows, shaped once so the tree only lays tiles out: the name, small notes beside it
 // (policy, nested groups, latency), a badge, and the flow count. The spoken label adds where the branch leads.
-export type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
+type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
 export type TileView = {id: string; stage: TreeBy | 'outbound' | 'node'; name: string; badge?: string; notes: TileNote[]; count: number; label: string};
 export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
   const unknown = (item: TreeItem, name: string) => (item.unknown ? t('flow.mapUnknown') : name);
@@ -219,7 +219,7 @@ export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'
   };
 }
 
-export type RoutingMapView = {tree: RoutingTree; state: 'loading' | 'empty' | 'ready' | 'error'; pinLabel: string | null};
+type RoutingMapView = {tree: RoutingTree; state: 'loading' | 'empty' | 'ready' | 'error'; pinLabel: string | null};
 export function routingMapView(tree: RoutingTree, ready: boolean, failed: boolean, pinned: string | null, count: number, t: Translator): RoutingMapView {
   return {
     tree,
@@ -239,7 +239,7 @@ const stages: Record<string, Key> = {
   reroute: 'flow.stage.reroute'
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
-export type FlowRow = {
+type FlowRow = {
   id: string;
   target: string;
   chain: string;
@@ -250,7 +250,7 @@ export type FlowRow = {
   state: string;
   started: string;
 };
-export type FlowDetailView = {
+type FlowDetailView = {
   title: string;
   status: string;
   tone: 'warn' | undefined;
@@ -260,7 +260,7 @@ export type FlowDetailView = {
   seedHref: string | null;
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
-export type FlowRecordsView = {rows: FlowRow[]; detail: FlowDetailView | null; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
+type FlowRecordsView = {rows: FlowRow[]; detail: FlowDetailView | null; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
 export function flowRecordsView(
   flows: FlowSummary[],
   detail: FlowDetail | undefined,

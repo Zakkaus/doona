@@ -146,7 +146,7 @@ export function ruleCondition(kind: ConditionKind, value: string): string {
 
 // The policy names honk documents, with the dae spellings each one accepts; an unknown spelling reads as selector.
 export const policyNames = ['selector', 'urltest', 'loadbalance', 'fallback', 'score'] as const;
-export type PolicyName = (typeof policyNames)[number];
+type PolicyName = (typeof policyNames)[number];
 const policyAliases: Record<string, PolicyName> = {
   select: 'selector',
   fixed: 'selector',

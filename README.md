@@ -45,7 +45,7 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Set `VERSION` to the downloaded release asset suffix, including the leading `v` for tagged releases. Then verify and extract the files into the directory the engine or web server will serve:
 
 ```sh
-VERSION=v0.3.0-beta.1  # replace with the downloaded release tag
+VERSION=v0.3.0.beta.1  # replace with the downloaded release tag
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
@@ -103,7 +103,7 @@ The activity page then shows the running engine. The usual route through the res
 3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
 4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
 
-Every configuration write goes through the engine: doona sends the hash it read the source at (`If-Match`; a file changed on disk answers 412 and nothing is written), the engine validates the whole source set before saving and reloading, and a failed reload keeps the previous generation active. Dry-run validation never writes, and redacted text is never written back.
+Every configuration-source write goes through the engine: doona sends the hash it read the source at (`If-Match`; a file changed on disk answers 412 and nothing is written), the engine validates the whole source set before saving and reloading, and a failed reload keeps the previous generation active. Dry-run validation never writes, and redacted text is never written back. Runtime settings and group selection are separate endpoints with their own checks.
 
 ## Pages
 

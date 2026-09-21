@@ -34,8 +34,8 @@ const kindHints: Record<ConditionKind, string> = {
   l4proto: 'udp'
 };
 const sources: Record<string, Key> = {kernel: 'rule.sourceKernel', recomputed: 'rule.sourceRecomputed', unknown: 'rule.sourceUnknown'};
-export type Choice = {id: string; label: string; desc?: string};
-export type DictionaryRow = {
+type Choice = {id: string; label: string; desc?: string};
+type DictionaryRow = {
   id: string;
   number: string;
   expression: string;
@@ -107,7 +107,7 @@ export function dictionaryView(
     outbounds: [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}))
   };
 }
-export type DistributionRow = {
+type DistributionRow = {
   id: string;
   ruleId: string;
   expression: string;
@@ -168,7 +168,7 @@ export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Trans
   };
 }
 
-export type RulesView = {tabs: {id: 'map' | 'list' | 'flows' | 'trace'; label: string}[]; tab: string};
+type RulesView = {tabs: {id: 'map' | 'list' | 'flows' | 'trace'; label: string}[]; tab: string};
 export function rulesView(resources: Capabilities['resources'] | undefined, requested: string | null, t: Translator): RulesView {
   const flows = resources?.flows.available !== false;
   const rules = resources?.rules.available === true;
@@ -187,7 +187,7 @@ const outcomes: Record<string, Key> = {
   skipped: 'rule.result.skipped',
   indeterminate: 'rule.result.indeterminate'
 };
-export type EvaluationView = {
+type EvaluationView = {
   heading: string;
   fields: [string, string][];
   hint: string | null;
@@ -243,7 +243,7 @@ export function evaluationView(
     }))
   };
 }
-export type DnsView = {id: string; heading: string; fields: [string, string][]};
+type DnsView = {id: string; heading: string; fields: [string, string][]};
 export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator, lang: Lang): DnsView {
   const phrase = (value: string | null) => {
     const result = word(value);

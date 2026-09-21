@@ -22,7 +22,7 @@ import {useNodeGrid} from './useNodeGrid';
 import {cx} from '../../ui/cx';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
-export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
+type NodeInfo = {name: string; tcp?: number; alive?: boolean};
 const BIG = 12;
 
 export function NodeGrid({
@@ -47,11 +47,11 @@ export function NodeGrid({
         {nodes.map(n =>
           onSelect ? (
             <ToggleButton key={n.id} className="rp-node" isSelected={selected === n.id} isDisabled={isDisabled} onChange={() => onSelect(n.id)}>
-              <MemberTile n={n} />
+              <NodeTile name={n.name} status={n.status} description={n.description} />
             </ToggleButton>
           ) : (
             <div key={n.id} className={cx('rp-node', cur === n.id && 'cur')}>
-              <MemberTile n={n} current={cur === n.id} />
+              <NodeTile name={n.name} status={n.status} description={n.description} current={cur === n.id} />
             </div>
           )
         )}
@@ -98,16 +98,13 @@ export function NodeGrid({
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', cur === n.id && !onSelect && 'cur')}>
-              <MemberTile n={n} current={!onSelect && cur === n.id} />
+              <NodeTile name={n.name} status={n.status} description={n.description} current={!onSelect && cur === n.id} />
             </GridListItem>
           )}
         </GridList>
       </Virtualizer>
     </div>
   );
-}
-function MemberTile({n, current}: {n: MemberView; current?: boolean}) {
-  return <NodeTile name={n.name} status={n.status} description={n.description} current={current} />;
 }
 
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {

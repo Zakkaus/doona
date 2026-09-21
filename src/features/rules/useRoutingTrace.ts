@@ -12,7 +12,7 @@ import {useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
-export type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
+type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 export function useRoutingTrace() {

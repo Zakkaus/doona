@@ -2,6 +2,7 @@ import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../index';
 import type {Api} from '../api';
 import type {ApiEvent} from '../model';
+import {ApiError} from '../error';
 import {inflight, normalizeResourceKey} from '../inflight';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -24,6 +25,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
     // The stream waits for the capability probe; a probe that fails is tried again with backoff, so a backend
     // that was down at boot still gets its stream once it answers.
     let pause = 5000;
+    let failed = false;
     const boot = () => {
       const request = inflight.acquire(api, normalizeResourceKey(['capabilities']), signal => api.capabilities(signal));
       shared.controller.signal.addEventListener('abort', request.release, {once: true});
@@ -38,7 +40,8 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
             signal: shared.controller.signal,
             onConnectionChange: connected => update({connected}),
             onEvent: event => {
-              const reconnected = event.event === 'stream.ready' && !!shared.ready;
+              // After a failed boot the first ready event is a recovery: resources that failed meanwhile refetch.
+              const reconnected = event.event === 'stream.ready' && (!!shared.ready || failed);
               if (event.event === 'stream.ready') {
                 shared.ready = event;
                 update({cursor: event.id, error: null});
@@ -51,8 +54,11 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
           request.release();
           shared.controller.signal.removeEventListener('abort', request.release);
           if (shared.controller.signal.aborted) return;
-          update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
-          const timer = setTimeout(boot, pause);
+          failed = true;
+          const error = reason instanceof Error ? reason : new Error(String(reason));
+          update({connected: false, error});
+          const wait = Math.max(pause, error instanceof ApiError && error.retryAfter ? error.retryAfter * 1000 : 0);
+          const timer = setTimeout(boot, wait);
           pause = Math.min(pause * 2, 30000);
           shared.controller.signal.addEventListener('abort', () => clearTimeout(timer), {once: true});
         });

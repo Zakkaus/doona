@@ -18,12 +18,17 @@ it('uses the same capability policy for navigation, the page select, shortcuts a
   expect(view.shortcutPaths.c).toBeUndefined();
   expect(view.content).toEqual({kind: 'unavailable'});
   expect(view.engine.text).toContain(version.engine.version);
-  expect(view.about.apiText).toContain(version.api.name);
+  expect(view.about.items.some(([, value]) => value.includes(version.api.name))).toBe(true);
 });
 it('waits for discovery and yields protected pages to login without blocking settings', () => {
   expect(shellView(settings, 'connections', undefined, null, undefined, null, t).content.kind).toBe('loading');
   const error = new ApiError(401, 'authentication_required', 'token required');
   const configured = {...settings, profiles: [{id: 'router', name: 'Router', api: 'https://router.test', token: 'old'}], activeId: 'router'};
-  expect(shellView(configured, 'connections', undefined, error, undefined, null, t).content).toEqual({kind: 'login', backend: 'Router', rejected: true});
+  expect(shellView(configured, 'connections', undefined, error, undefined, null, t).content).toEqual({
+    kind: 'login',
+    profileId: 'router',
+    backend: 'Router',
+    rejected: true
+  });
   expect(shellView(configured, 'settings', undefined, error, undefined, null, t).content.kind).toBe('page');
 });

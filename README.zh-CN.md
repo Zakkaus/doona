@@ -45,7 +45,7 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上；第一个标签发布之前，请按[开发](#开发)一节自行构建。把 `VERSION` 设为下载文件名中的发行标签，包括标签开头的 `v`。然后校验文件并解压到引擎或 Web 服务器要提供的目录：
 
 ```sh
-VERSION=v0.3.0-beta.1  # 替换为下载文件对应的发行标签
+VERSION=v0.3.0.beta.1  # 替换为下载文件对应的发行标签
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
@@ -103,7 +103,7 @@ experimental {
 3. **规则**：按评估顺序列出路由字典，附每条规则决定过的流程数。新增规则可以挑选依据与值（域名后缀、geosite 分类、端口、进程名称），也可以直接写表达式，插在任意一条之前或最后。
 4. **配置**：已接受的来源与其诊断。就地编辑文件，校验、保存、重载；快速设置覆盖主文件的常用项目。
 
-每一次配置写入都经过引擎：doona 带着读取时的哈希发送（`If-Match`；磁盘上已变动的文件会返回 412，不会写入），引擎先验证整组来源再保存并重载，重载失败时仍沿用先前的世代。预先验证不会写入，脱敏后的文本也不会写回。
+每一次配置来源的写入都经过引擎：doona 带着读取时的哈希发送（`If-Match`；磁盘上已变动的文件会返回 412，不会写入），引擎先验证整组来源再保存并重载，重载失败时仍沿用先前的世代。预先验证不会写入，脱敏后的文本也不会写回。运行时设置与组选择走各自的端点，各有检查。
 
 ## 页面
 
@@ -159,7 +159,7 @@ pnpm e2e                         # 对模拟后端的浏览器测试，根目录
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，输出无损 WebP，需要安装 `cwebp`。在生成对应的 WebP 前，现有截图仍引用 PNG。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
+`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，输出无损 WebP，需要安装 `cwebp`。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
 | 路径            | 用途                                               |
 | --------------- | -------------------------------------------------- |

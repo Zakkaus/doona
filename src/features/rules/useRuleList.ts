@@ -12,7 +12,7 @@ import {dictionaryView, distributionView, removalView, ruleDraftView, type Dicti
 import {useDraftGuard} from '../config/useDraftGuard';
 import {useLinked} from '../../ui/ui';
 
-type Dialog = {kind: 'add'; generation: string} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource};
+type Dialog = {kind: 'add'; generation: string} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource; generation: string};
 type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
 type RulePick = {on: boolean; kind: ConditionKind; value: string};
 export type RuleListModel = {
@@ -134,21 +134,16 @@ export function useRuleList({go, query}: PageProps) {
     return true;
   };
   const submit = async (dismiss: () => void) => {
-    if (dialog?.kind === 'remove') {
+    // Both writes address a line the dialog saw in one generation; a reload since then means starting over.
+    if (!dialog || !rules.data || !config.data || rules.data.generation_id !== dialog.generation || config.data.generation_id !== dialog.generation) {
+      stale();
+      return;
+    }
+    if (dialog.kind === 'remove') {
       if (await write(dialog.source, text => removeRule(text, dialog.rule))) {
         toast('positive', t('rule.removed'));
         dismiss();
       }
-      return;
-    }
-    if (
-      dialog?.kind !== 'add' ||
-      !rules.data ||
-      !config.data ||
-      rules.data.generation_id !== dialog.generation ||
-      config.data.generation_id !== dialog.generation
-    ) {
-      stale();
       return;
     }
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
@@ -188,7 +183,7 @@ export function useRuleList({go, query}: PageProps) {
     openRemove: (id: string) => {
       const rule = list.find(rule => rule.rule_id === id);
       const source = sources.find(source => source.id === rule?.source?.source_id);
-      if (rule && source) open({kind: 'remove', rule, source});
+      if (rule && source && rules.data) open({kind: 'remove', rule, source, generation: rules.data.generation_id});
     },
     openSource: (query: string) => go('config', query),
     submit,

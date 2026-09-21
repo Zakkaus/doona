@@ -2,6 +2,7 @@ import {useMemo} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../api/store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, toast} from '../../ui/ui';
+import {usePalette} from '../../ui/Charts';
 import {lifecycleActions, operationLabels, overviewExport, overviewView} from './view';
 
 export function useOverview() {
@@ -36,8 +37,12 @@ export function useOverview() {
       ),
     [data, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t]
   );
+  const palette = usePalette();
+  const tones = {err: palette.love, warn: palette.gold, ok: palette.cat[0]};
+  const memoryView = {...view.memory, bar: view.memory.bar ? {...view.memory.bar, color: tones[view.memory.bar.tone]} : null};
   return {
     ...view,
+    memory: memoryView,
     errors: {capabilities: capabilities.error, runtime: runtime.error, version: version.error, memory: memory.error, datapath: datapath.error},
     retry: runtime.refetch,
     actions: lifecycleActions(operations.canRun, operations.busy, kind => void run(kind), t),

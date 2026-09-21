@@ -32,7 +32,7 @@ export function RuleRef({expression, ruleId, linked}: {expression: string | null
 // A node's tile body: the name, one prepared status (a latency, a state or a badge) and a description line.
 // The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
 export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
-export type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean};
+type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean};
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
 export function NodeTile({name, status, description, current}: NodeTileProps) {
   const t = useT();
