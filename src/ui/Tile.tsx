@@ -17,15 +17,12 @@ export function CardLink({href, label, children}: {href: string; label: string; 
 export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
   const t = useT();
   if (!expression) return <>—</>;
+  const href = linked && ruleId ? '#/rules?tab=list&rule=' + encodeURIComponent(ruleId) : undefined;
   return (
     <>
       <TextTooltip text={expression}>{expression}</TextTooltip>
-      {linked && ruleId && (
-        <RLink
-          href={'#/rules?tab=list&rule=' + encodeURIComponent(ruleId)}
-          className="rp-btn quiet icon rp-rule-link"
-          aria-label={t('ui.openRule', {rule: expression})}
-        >
+      {href && (
+        <RLink href={href} className="rp-btn quiet icon rp-rule-link" aria-label={t('ui.openRule', {rule: expression})}>
           <ListBulleted />
         </RLink>
       )}
@@ -61,6 +58,7 @@ export function NodeTile({
   bodyOnly
 }: NodeTileProps) {
   const t = useT();
+  const latency = tcp == null ? '' : t('ui.latency', {n: millis(tcp)});
   const body = (
     <>
       <span className="top">
@@ -70,7 +68,7 @@ export function NodeTile({
         {nested ? (
           <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
+          <span className={cx('ms', latencyTone(tcp))}>{latency}</span>
         ) : (
           <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
         )}

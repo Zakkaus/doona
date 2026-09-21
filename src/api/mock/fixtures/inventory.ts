@@ -34,7 +34,9 @@ export function policyPick(group: Group): string {
   return ranked[0]?.member_id ?? group.members[0].id;
 }
 function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
-  for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
+  const memberIds = new Set(members);
+  const nodeIds = new Set(nodes.map(node => node.id));
+  for (const n of nodes) if (memberIds.has(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
   return {
     id: name,
@@ -42,7 +44,7 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
     icon: null,
     config_revision: '40',
     policy: {kind, native: kind},
-    members: members.map(id => ({id, name: id, kind: nodes.some(n => n.id === id) ? 'node' : 'group'})),
+    members: members.map(id => ({id, name: id, kind: nodeIds.has(id) ? 'node' : 'group'})),
     config: {
       default_member_id: kind === 'selector' ? leaf : null,
       final_outbound: null,
@@ -56,10 +58,10 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
       // The proxy group selects different members per network so the TCP/UDP switch has something to show.
       selection: {
         tcp: selection,
-        udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
+        udp: name === 'proxy' && memberIds.has('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
       },
       health: nodes
-        .filter(n => members.includes(n.id))
+        .filter(n => memberIds.has(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))
     },
     capabilities: {

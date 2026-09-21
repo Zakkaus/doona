@@ -1,6 +1,6 @@
+import './install';
 import {Login} from './Login';
-import {consumeProfileReadError} from '../api/profiles';
-import {Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState, type ContextType} from 'react';
+import {Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
@@ -10,105 +10,27 @@ import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
 import {About} from './About';
 import GitHub from '../ui/icons/GitHub';
-import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
-import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, toast, useSlider, withCrossfade, Link} from '../ui/ui';
+import {LangContext, LOCALE, useT, type Lang} from '../i18n';
+import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, Link} from '../ui/ui';
 import {MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
-import {DraftContext, parseHash, useRoute} from './route';
-import {features, warmPage} from './registry';
+import {DraftContext} from './route';
+import {warmPage} from './registry';
 import {SearchDialog} from './search/SearchDialog';
 import {SettingsContext} from '../features/settings/context';
-import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
+import type {PaletteId, Settings, Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
 import {AboutContext, useShell, type ShellModel} from './useShell';
-import {translate} from '../i18n';
+import {applyAppearance, readAppearance} from './useAppearance';
+import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
+import {languageItems} from './view';
 
-// Each entry pairs the light variant with a dark one; the description names both with their official variant names.
-const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
-  {
-    title: t('palette.rosePine'),
-    items: [
-      {id: 'rose-pine/main', label: t('palette.rosePine'), desc: t('palette.dawnMain')},
-      {id: 'rose-pine/moon', label: t('palette.moon'), desc: t('palette.dawnMoon')}
-    ]
-  },
-  {
-    title: t('palette.catppuccin'),
-    items: [
-      {id: 'catppuccin/frappe', label: t('palette.frappe'), desc: t('palette.latteFrappe')},
-      {id: 'catppuccin/macchiato', label: t('palette.macchiato'), desc: t('palette.latteMacchiato')},
-      {id: 'catppuccin/mocha', label: t('palette.mocha'), desc: t('palette.latteMocha')}
-    ]
-  },
-  {title: t('palette.nord'), items: [{id: 'nord/nord', label: t('palette.nord'), desc: t('palette.nordVariants')}]},
-  {title: t('palette.kary'), items: [{id: 'kary/kary', label: t('palette.kary'), desc: t('palette.lightDark')}]},
-  {title: t('palette.antd'), items: [{id: 'antd/antd', label: t('palette.antd'), desc: t('palette.defaultDark')}]},
-  {
-    title: t('palette.bytedance'),
-    items: [
-      {id: 'arco/arco', label: t('palette.arco'), desc: t('palette.lightDark')},
-      {id: 'semi/semi', label: t('palette.semi'), desc: t('palette.lightDark')}
-    ]
-  },
-  {title: t('palette.glassName'), items: [{id: 'glass/glass', label: t('palette.glassName'), desc: t('palette.glass')}]}
-];
-const paletteIds = new Set(palettes(translate.bind(null, 'en')).flatMap(section => section.items.map(item => item.id)));
-function readAppearance() {
-  const settings = readSettings();
-  return {...settings, palette: paletteIds.has(settings.palette) ? settings.palette : ('rose-pine/moon' as PaletteId)};
-}
-
-// Stamp the stored appearance on <html> before the first paint; done in a layout effect alone, the first frame would
-// paint the default palette and every control would then transition to the stored one (a visible flash on load).
+// The startup entry calls this before mounting React to avoid a palette flash.
 export function stampAppearance() {
   const {scheme, palette, wordmark} = readAppearance();
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const [family, flavour] = palette.split('/');
-  const d = document.documentElement.dataset;
-  d.scheme = dark ? 'dark' : 'light';
-  d.family = family;
-  d.flavour = flavour;
-  d.wordmark = wordmark;
-}
-function useAppearance(stored: Settings) {
-  const [scheme, setScheme] = useState<Scheme>(stored.scheme);
-  const [palette, setPalette] = useState<PaletteId>(stored.palette);
-  const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
-  const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const on = () => setSysDark(mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useLayoutEffect(() => {
-    const [family, flavour] = palette.split('/');
-    const d = document.documentElement.dataset;
-    d.scheme = dark ? 'dark' : 'light';
-    d.family = family;
-    d.flavour = flavour;
-    d.wordmark = wordmark;
-  }, [dark, palette, wordmark]);
-  const pickScheme = useCallback((next: Scheme) => {
-    withCrossfade(() => setScheme(next));
-    writeSetting('scheme', next);
-  }, []);
-  // Following the system flips to the opposite of the system; an override goes back to system.
-  const toggle = useCallback(() => pickScheme(scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'), [pickScheme, scheme, sysDark]);
-  const pickPalette = useCallback((p: PaletteId) => {
-    withCrossfade(() => setPalette(p));
-    writeSetting('palette', p);
-  }, []);
-  const pickWordmark = useCallback((w: Wordmark) => {
-    setWordmark(w);
-    writeSetting('wordmark', w);
-  }, []);
-  return useMemo(
-    () => ({scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark}),
-    [scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark]
-  );
+  applyAppearance(dark, palette, wordmark);
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
@@ -121,40 +43,8 @@ function SchemeIcon({dark}: {dark: boolean}) {
 }
 
 export function Shell() {
-  // One read of the stored settings at mount; the shell and the frame share it.
-  const [settings] = useState(readAppearance);
-  const [lang, setLang] = useState<Lang>(settings.lang);
-  useLayoutEffect(() => {
-    document.documentElement.lang = LOCALE[lang];
-  }, [lang]);
-  const ap = useAppearance(settings);
-  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
-  // A hash no page owns goes to the first page instead of showing it under the wrong address.
-  useEffect(() => {
-    if (!features.some(feature => feature.path === route)) go('activity');
-  }, [route, go]);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const pickLang = useCallback((l: Lang) => {
-    setLang(l);
-    writeSetting('lang', l);
-  }, []);
-  const openSearch = useCallback(() => setSearchOpen(true), []);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
-  const navigate = useCallback(
-    (href: string) => {
-      const next = parseHash(href);
-      go(next.route, next.query);
-    },
-    [go]
-  );
-  const draft = useMemo(() => ({setDirty, revision}), [setDirty, revision]);
-  const mac = navigator.platform.startsWith('Mac');
-  // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé") in the face the language
-  // renders with; otherwise the first open fetches one and the whole page relays out.
-  useEffect(() => {
-    const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
-  }, [lang]);
+  const {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac} =
+    useShellController();
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
@@ -197,16 +87,7 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
 }
 
 function ToastHost() {
-  const t = useT();
-  useEffect(() => {
-    if (consumeProfileReadError()) toast('negative', t('settings.profilesCorrupt'));
-    try {
-      if (sessionStorage.getItem('doona-saved')) {
-        sessionStorage.removeItem('doona-saved');
-        toast('positive', t('ui.saved'));
-      }
-    } catch {}
-  }, [t]);
+  useStartupToasts();
   return <Toasts />;
 }
 
@@ -232,9 +113,7 @@ function ShellFrame(props: FrameProps) {
 }
 function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
-  const paletteSections = useMemo(() => palettes(t), [t]);
-  const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections}), [lang, pickLang, ap, paletteSections]);
-  const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
+  const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
   const Page = view.current.Page;
   return (
     <div className="rp-shell">
@@ -268,14 +147,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
             <Refresh />
           </Button>
           <Separator orientation="vertical" className="rp-vrule" />
-          <ChoiceMenu
-            quiet
-            chevron={false}
-            label={t('lang')}
-            value={lang}
-            onChange={k => pickLang(k as Lang)}
-            items={LANGS.map(([k, l]) => ({id: k, label: l}))}
-          >
+          <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
             <Translate />
           </ChoiceMenu>
           <MenuButton
@@ -305,26 +177,22 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
                   onSelectionChange={pickMenuKey(k => ap.pickWordmark(k as Wordmark))}
                 >
                   <Header className="rp-sec-h">{t('wordmark')}</Header>
-                  <MenuChoice item={{id: 'gradient', label: t('wordmark.gradient')}} />
-                  <MenuChoice item={{id: 'plain', label: t('wordmark.plain')}} />
+                  {menu.wordmarks.map(item => (
+                    <MenuChoice key={item.id} item={item} />
+                  ))}
                 </MenuSection>
               </Menu>
             }
           >
             <Color />
           </MenuButton>
-          <Button
-            quiet
-            icon
-            label={t('shell.theme', {theme: ap.scheme === 'system' ? t('theme.system') : ap.dark ? t('theme.dark') : t('theme.light')})}
-            onPress={ap.toggle}
-          >
+          <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
             <SchemeIcon dark={ap.dark} />
           </Button>
         </div>
       </header>
       <nav className="rp-side" ref={navRef} aria-busy={view.busy || undefined}>
-        {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
+        {navStyle && <span className="rp-nav-slider" style={navStyle} />}
         {view.groups.map(group => (
           <div key={group.id} data-group={group.id}>
             <div className="rp-group">{group.label}</div>

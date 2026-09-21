@@ -80,3 +80,30 @@ test('shell reloads offline and fonts and icons are cached on first use', async 
     expect(cached).toEqual({status: 200, marker: 'hit'});
   }
 });
+
+test('an early install offer is consumed on dismissal and failures are reported', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+  await page.evaluate(() => {
+    const event = new Event('beforeinstallprompt', {cancelable: true});
+    Object.assign(event, {prompt: async () => {}, userChoice: Promise.resolve({outcome: 'dismissed'})});
+    dispatchEvent(event);
+  });
+  await page.locator('.rp-nav[href="#/settings"]').click();
+  const install = page.getByRole('button', {name: 'Install as an app', exact: true});
+  await install.click();
+  await expect(install).toBeHidden();
+  await page.evaluate(() => {
+    const event = new Event('beforeinstallprompt', {cancelable: true});
+    Object.assign(event, {
+      prompt: async () => {
+        throw new Error('Install prompt failed');
+      },
+      userChoice: Promise.resolve({outcome: 'dismissed'})
+    });
+    dispatchEvent(event);
+  });
+  await install.click();
+  await expect(install).toBeHidden();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Install prompt failed');
+});

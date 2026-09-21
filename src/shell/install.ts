@@ -1,4 +1,5 @@
 import {useSyncExternalStore} from 'react';
+import {toast, errorText} from '../ui/Feedback';
 
 // Cache beforeinstallprompt so a later button can trigger it. Chrome and Edge emit the event; unsupported browsers keep the button hidden.
 type InstallPrompt = Event & {prompt: () => Promise<void>; userChoice: Promise<{outcome: 'accepted' | 'dismissed'}>};
@@ -27,12 +28,15 @@ export function useInstallOffer(): (() => Promise<boolean>) | null {
   );
   if (!offer) return null;
   return async () => {
-    await offer.prompt();
-    const choice = await offer.userChoice;
-    if (choice.outcome === 'accepted') {
-      deferred = null;
-      notify();
+    if (deferred !== offer) return false;
+    deferred = null;
+    notify();
+    try {
+      await offer.prompt();
+      return (await offer.userChoice).outcome === 'accepted';
+    } catch (error) {
+      toast('negative', errorText(error));
+      return false;
     }
-    return choice.outcome === 'accepted';
   };
 }

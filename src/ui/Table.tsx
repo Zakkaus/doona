@@ -17,9 +17,7 @@ import {useContentWidth} from './hooks';
 import {TextTooltip} from './Button';
 import {Loading} from './Feedback';
 
-// Column minima include cell padding; grow weights their fractional share (zero keeps the minimum).
-// `drop` orders which columns give way first when the container is narrower than the minima add up to;
-// a column without it always stays. Tables never scroll sideways on a desktop.
+// Minima include padding; positive drop priorities yield in ascending order when columns cannot fit.
 type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
@@ -84,13 +82,10 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
   return cols.filter(column => kept.has(column.id));
 }
 
-// Long lists are virtualised: only the visible rows are in the DOM, so a rule list of thousands stays light.
-// Short ones render whole, which keeps every row reachable to assistive technology and find-in-page. A list
-// that once reached the threshold stays virtualised for the life of the table, so a growing feed or a filter
-// typed around the threshold does not remount the grid and lose focus, scroll and column widths.
 // Row and header heights match theme.css (8px padding twice, 20px line, 1px border).
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
 const virtualiseFrom = 200;
+// Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.
 export function DataTable<T extends {id: string}>({
   label,
   cols,
@@ -114,8 +109,7 @@ export function DataTable<T extends {id: string}>({
   onSelect?: (id: string | null) => void;
   // Arrow keys select as they move (a list with its detail beside it); otherwise Enter or Space selects.
   selectOnFocus?: boolean;
-  // Scroll the selected row into view when the selection arrives from outside (a deep link), whether or not
-  // the row is in the DOM yet: rows have one fixed height, so the offset is known without measuring.
+  // Fixed row heights allow revealing selected rows outside the DOM.
   reveal?: boolean;
   empty?: string;
   loading?: boolean;
@@ -128,9 +122,7 @@ export function DataTable<T extends {id: string}>({
   const keys: Selection = selected ? new Set([selected]) : new Set();
   const [ref, width] = useContentWidth<HTMLElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
-  // A short list takes only the height of its rows; `height` is the ceiling before the table scrolls.
-  // `.rp-table` is border-box with a 1px border top and bottom; the fit includes that frame so a short table
-  // holds its rows without a 2px scroll.
+  // Include the border-box frame to avoid a two-pixel scroll on short tables.
   const frame = 2;
   const fitted = Math.min(height, frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
   const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);

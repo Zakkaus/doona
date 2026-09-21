@@ -57,12 +57,12 @@ export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSec
   return {samples, since, until: now};
 }
 
-// One store per chart, keyed by the profile so another backend's curve is never mixed in. Writes are paced
-// to once a minute; a storage that throws (private mode, quota) only costs the persistence.
+// Persist each backend's history separately; storage failures only cost persistence.
 const stores = new Map<string, {key: string; rings: Rings<Timed>; saved: number}>();
 function storageKey(name: string) {
-  const {activeId} = readProfiles();
-  return `doona-rings-${name}-${activeId || 'mock'}`;
+  const {activeId, profiles} = readProfiles();
+  const api = profiles.find(profile => profile.id === activeId)?.api || 'mock';
+  return `doona-rings-${name}-${JSON.stringify([activeId, api])}`;
 }
 function load<T extends Timed>(name: string): {key: string; rings: Rings<T>; saved: number} {
   const key = storageKey(name);

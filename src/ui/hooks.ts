@@ -48,14 +48,23 @@ export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setHeight(Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap)));
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const next = Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap));
+      setHeight(previous => (previous === next ? previous : next));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(document.body);
-    window.addEventListener('resize', measure);
+    window.addEventListener('resize', schedule);
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', measure);
+      window.removeEventListener('resize', schedule);
+      cancelAnimationFrame(frame);
     };
   }, [min, gap]);
   return [ref, height] as const;

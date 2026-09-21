@@ -91,11 +91,12 @@ export function hostedRoot(loc: {origin: string; pathname: string}): string {
 }
 
 export async function detectHostedBackend(
-  storage: StoragePort = localStorage,
+  storage?: StoragePort,
   loc: {origin: string; pathname: string; protocol: string; host: string} = location,
   fetcher: typeof fetch = fetch
 ): Promise<boolean> {
   try {
+    storage ??= localStorage;
     if (storage.getItem('doona-profiles') !== null || storage.getItem('doona-api') !== null || !/^https?:$/.test(loc.protocol)) return false;
     const api = hostedRoot(loc);
     const response = await fetcher(`${api}/api`, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(3000)});

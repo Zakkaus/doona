@@ -103,7 +103,7 @@ The activity page then shows the running engine. The usual route through the res
 3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
 4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
 
-Every write goes through the engine: the text is validated in full, saved with the hash it was read at (a file changed on disk answers 412 instead of being overwritten), then reloaded. Secrets in a source are redacted on the way out and never written back.
+Every configuration write goes through the engine: doona sends the hash it read the source at (`If-Match`; a file changed on disk answers 412 and nothing is written), the engine validates the whole source set before saving and reloading, and a failed reload keeps the previous generation active. Dry-run validation never writes, and redacted text is never written back.
 
 ## Pages
 
@@ -159,7 +159,7 @@ pnpm e2e                         # browser tests against the mock, at the root a
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
-`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` captures pages and the palette sheet from a running build as lossless WebP using `cwebp`; without it, the script keeps PNG files and prints a warning. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` captures pages and the palette sheet from a running build as lossless WebP; it requires `cwebp`. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 | Path            | Purpose                                                                    |
 | --------------- | -------------------------------------------------------------------------- |

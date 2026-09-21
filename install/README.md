@@ -11,6 +11,14 @@ rather than with each other.
 | `nix/package.nix`                          | [nixpkgs](https://github.com/NixOS/nixpkgs) `pkgs/by-name/da/daed/package.nix` (the `web` derivation: `fetchPnpmDeps`, `pnpmConfigHook`, `pnpm build`) and the pnpm section of `doc/languages-frameworks/javascript.section.md` |
 | the AUR `doona-bin` (separate repository)  | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                                      |
 
-The hashes and versions inside them are filled in at each release: `PKG_HASH` from `SHA256SUMS`, `sha512sums`
-with `abuild checksum`, the Nix `src` hash with `nix-prefetch-github` and the `pnpmDeps` hash from the first
-build's mismatch message.
+The OpenWrt, Alpine and Nix recipes are unpublished templates. Replace every marked hash before submission;
+none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, and Nix needs the
+source hash from `nix-prefetch-github` and the dependency hash from the first build's mismatch message.
+
+The release workflow runs `tools/package.sh --git-version`: tag `v0.3.0-beta.1` produces
+`doona-v0.3.0-beta.1.tar.gz` and `doona-fonts-v0.3.0-beta.1.tar.gz`, matching the binary recipes.
+The program archive has `index.html`, assets and notices at its root. The separate font archive has a
+`fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
+separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.
+Nix builds the source tag instead, using `make install` and optional `make install-fonts` under `$out/share/doona`.
+The default local invocation uses `package.json` instead, so its archive names omit the leading `v`.

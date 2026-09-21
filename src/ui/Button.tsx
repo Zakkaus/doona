@@ -87,17 +87,19 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (text) return;
     const measure = () => setOverflow(el.scrollWidth > el.clientWidth);
-    // A nested tab stop would swallow its ancestor's press; grid navigation still focuses the cell's text.
-    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]'));
+    measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [children, text]);
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el) setOverflow(el.scrollWidth > el.clientWidth);
-  }, [children, text]);
+    // Nested tab stops swallow their ancestor's press; grid navigation still focuses cell text.
+    if (el)
+      setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]'));
+  }, []);
   return (
     <TooltipTrigger delay={400} isDisabled={!overflow && !text}>
       <Focusable>

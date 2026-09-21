@@ -47,3 +47,18 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await expect(page).toHaveURL(/#\/connections$/);
   await expect(help).toBeHidden();
 });
+
+test('chart data tooltips are reachable without pointer interaction', async ({page}) => {
+  await page.goto('/#/activity');
+  const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
+  const chart = traffic.getByRole('application');
+  await chart.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(traffic.locator('.recharts-tooltip-wrapper')).toBeVisible();
+  await expect(traffic.locator('.recharts-tooltip-item').first()).toContainText(/\d/);
+  const donut = page.locator('.rp-donut');
+  await donut.getByRole('application').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(donut.locator('.recharts-tooltip-wrapper')).toBeVisible();
+  await expect(donut.locator('.recharts-tooltip-item')).toContainText(/\d/);
+});

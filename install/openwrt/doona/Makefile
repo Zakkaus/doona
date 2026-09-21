@@ -11,10 +11,10 @@ PKG_RELEASE:=1
 PKG_SOURCE:=$(PKG_NAME)-v$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
 # Placeholder: replace with the program archive's SHA256SUMS entry after publication.
-PKG_HASH:=skip
+PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
 
 PKG_LICENSE:=GPL-3.0-only
-PKG_LICENSE_FILES:=LICENSE
+PKG_LICENSE_FILES:=web/LICENSE
 PKG_MAINTAINER:=Zakkaus <zakk@gentoozh.org>
 
 include $(INCLUDE_DIR)/package.mk
@@ -25,7 +25,7 @@ define Download/doona-fonts
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
 	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
-	HASH:=skip
+	HASH:=0000000000000000000000000000000000000000000000000000000000000000
 endef
 
 define Package/doona/template
@@ -74,9 +74,10 @@ define Build/Compile
 endef
 
 define Package/doona/install
-	$(INSTALL_DIR) $(1)/usr/share/doona
+	$(INSTALL_DIR) $(1)/usr/share/doona $(1)/usr/share/doc/doona
 	$(CP) $(PKG_BUILD_DIR)/web/* $(1)/usr/share/doona/
 	rm -f $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/web/LICENSE $(PKG_BUILD_DIR)/web/NOTICE $(1)/usr/share/doc/doona/
 endef
 
 define Package/doona-fonts/install

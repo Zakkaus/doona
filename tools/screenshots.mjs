@@ -1,7 +1,7 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync, rmSync} from 'node:fs';
+import {existsSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 
@@ -22,7 +22,8 @@ const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules?tab=list']
+  ['rules', 'light', '#/rules?tab=list'],
+  ['nodes', 'light', '#/nodes']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -46,19 +47,10 @@ const looks = [
   ['Glass · light', 'glass/glass', 'light'],
   ['Glass · dark', 'glass/glass', 'dark']
 ];
-let webp = true;
-try {
-  execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
-} catch (error) {
-  if (error.code !== 'ENOENT') throw error;
-  webp = false;
-  console.warn('cwebp is unavailable; keeping PNG screenshots.');
-}
+execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
 async function screenshot(page, path, options = {}) {
-  await page.screenshot({path: path + '.png', ...options});
-  if (!webp) return;
-  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', path + '.png', '-o', path + '.webp']);
-  rmSync(path + '.png');
+  const png = await page.screenshot(options);
+  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', '-o', path + '.webp', '--', '-'], {input: png});
 }
 const browser = await chromium.launch();
 try {
