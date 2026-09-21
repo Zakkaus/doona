@@ -67,7 +67,8 @@ it('offers observed and advertised record types without inventing log vocabulary
   const data = {observed_at: record.observed_at, total: 5, next_cursor: 'older', records: [{...record, question: {name: 'example.com.', type: 'CNAME'}}]};
   const view = dnsLogView(data, null, true, 'en-US', t, ['A']);
   expect(view.choices.map(choice => choice.id)).toEqual(['all', 'A', 'CNAME']);
-  expect(view.loaded).toContain('1 loaded record');
+  expect(view.loaded).toContain('1 loaded');
+  expect(dnsLogView({...data, next_cursor: null}, null, true, 'en-US', t, ['A']).loaded).toBe('');
   expect(view.total).toContain('5 records');
   expect(dnsLogView(undefined, null, true, 'en-US', t).choices.map(choice => choice.id)).toEqual(['all']);
 });

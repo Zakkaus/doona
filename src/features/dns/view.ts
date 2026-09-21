@@ -109,7 +109,8 @@ export function dnsLogView(data: DnsLogList | undefined, selected: string | null
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
     total: data ? t('dns.logTotal', {n: data.total}) : '',
-    loaded: data ? t('dns.logLoaded', {n: records.length}) : '',
+    // The loaded count only matters while older records remain on the backend.
+    loaded: data?.next_cursor ? t('dns.logLoaded', {n: records.length}) : '',
     empty: t(enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     detail: current ? details(current) : null,
     detailTitle: current?.question.name ?? '',

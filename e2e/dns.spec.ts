@@ -84,14 +84,15 @@ test('DNS logs load older pages and export only loaded records', async ({page}) 
     await route.fulfill({json: {...seed, total: 500, records: [records[cursor ? 1 : 0]], next_cursor: cursor ? null : 'older'}});
   });
   await page.goto('/#/dns?tab=log');
-  await expect(page.getByText('1 loaded record; export includes only this record', {exact: true})).toBeVisible();
+  await expect(page.getByText('1 loaded; the export covers loaded records only', {exact: true})).toBeVisible();
   await expect(page.getByText('500 records in the ring buffer', {exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Load older records'}).click();
-  await expect(page.getByText('2 loaded records; export includes only these records', {exact: true})).toBeVisible();
+  // Everything is loaded now, so the qualifier goes away.
+  await expect(page.getByText(/loaded; the export covers/)).toHaveCount(0);
   expect(cursors).toContain('older');
   await expect(page.getByRole('button', {name: 'Load older records'})).toHaveCount(0);
   const download = page.waitForEvent('download');
-  await page.getByRole('button', {name: 'Export loaded CSV'}).click();
+  await page.getByRole('button', {name: 'Export CSV'}).click();
   const stream = await (await download).createReadStream();
   let body = '';
   for await (const chunk of stream as AsyncIterable<Uint8Array>) body += new TextDecoder().decode(chunk);
