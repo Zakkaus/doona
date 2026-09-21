@@ -105,10 +105,10 @@
   cursor: pointer;
   min-height: var(--rp-control);
 }
-:where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
+:where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
   background-color: var(--rp-hl-med);
 }
-:is(.rp-select, .rp-selectbtn, .rp-search, .rp-nav, .rp-brand, .rp-link, .rp-input .clear, .rp-node)[data-pressed] {
+:is(.rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear, .rp-node)[data-pressed] {
   background-color: var(--rp-hl-high);
 }
 .rp-node[data-hovered]:not([data-disabled]) {

@@ -309,6 +309,26 @@
   pointer-events: none;
   clip-path: inset(8px 0);
 }
+.rp-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--rp-r-md);
+  color: var(--rp-subtle);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: none;
+}
+.rp-version[data-hovered] {
+  background: var(--rp-hl-low);
+}
 .rp-main {
   margin-inline-end: 0;
   padding: 32px 40px 48px;

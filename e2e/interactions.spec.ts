@@ -143,3 +143,10 @@ test('shared controls distinguish a held press from hover without moving', async
     await page.keyboard.press('Escape');
   }
 });
+
+test('the engine version link is a styled control, not a bare anchor', async ({page}) => {
+  await page.goto('/#/activity');
+  const link = page.locator('.rp-version');
+  await expect(link).toBeVisible();
+  expect(await link.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'inline-flex']);
+});
