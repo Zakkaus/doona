@@ -253,8 +253,7 @@ export const capabilitiesBase: Capabilities = {
   }
 };
 
-// honk's first native release (its plan's M1): runtime and connections only, connections observed by userspace
-// without close, every other resource declared unavailable. Nothing else on this backend answers.
+// The M1 profile exposes runtime and userspace-observed connections only, without close support.
 export const capabilitiesM1: Capabilities = {
   ...capabilities,
   profiles: ['base'],
@@ -266,8 +265,7 @@ export const capabilitiesM1: Capabilities = {
   } as Capabilities['resources']
 };
 
-// What PATCH /runtime/settings can change; the values start from the configuration and the ceilings are the
-// capabilities above.
+// Runtime-setting defaults come from configuration; capability values provide their ceilings.
 export const runtimeSettings: RuntimeSettings = {
   observed_at: observedAt,
   source: 'config',
@@ -276,8 +274,7 @@ export const runtimeSettings: RuntimeSettings = {
   flows: {max_flows: 4096, retention_seconds: 300}
 };
 
-// The demo routing dictionary the mock's trace evaluates and its flows refer to; /rules reads the same lines
-// back off the config text with their ids.
+// Trace, flow evidence, and /rules share this routing dictionary.
 export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 export {rules};
@@ -309,7 +306,6 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
   };
 }
-// What an automatic policy would pick on its own: the healthy member with the lowest latency, else the first.
 export function policyPick(group: Group): string {
   const ranked = group.runtime.health
     .filter(h => h.state === 'healthy' && h.transport === 'tcp' && h.latency_ms != null)
@@ -672,8 +668,6 @@ const configSubscription = `'香港 01 · IPLC': 'vless://<redacted>'
 const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
 skylink { filter: subtag(sub-c) }
 `;
-// Diagnostics the engine kept when it accepted the configuration: nothing fatal, the kind of thing a person
-// wants to know about before the next reload.
 export const configNotes: ConfigDiagnostic[] = [
   {
     level: 'warning',
@@ -703,7 +697,6 @@ export const configNotes: ConfigDiagnostic[] = [
     message: 'Subscription fetched 30 minutes ago; nodes come from the cache'
   }
 ];
-// Where nodes come from: the subscription the config names, and the nodes written by hand in config.dae.
 export const providers: Provider[] = [
   {
     id: 'sub-c',
@@ -732,7 +725,6 @@ export const providers: Provider[] = [
 ];
 // Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
 export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity'];
-// The geosite and geoip files the demo datapath was built from.
 export const geodata: GeoData = {
   observed_at: observedAt,
   assets: [
@@ -752,7 +744,6 @@ export const geodata: GeoData = {
     }
   ]
 };
-// What the engine logged while starting: the replay ring's first records.
 export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {fields?: LogRecord['fields']}> = [
   {level: 'info', target: 'honk::main', message: 'honk 0.9.3 starting.', fields: {pid: 4120}},
   {level: 'info', target: 'honk::config', message: 'Configuration accepted.', fields: {sources: 4, generation_id: '40'}},
@@ -764,9 +755,7 @@ export const logSeed: Array<Pick<LogRecord, 'level' | 'target' | 'message'> & {f
   {level: 'error', target: 'honk::group', message: 'Health check failed.', fields: {node: 'jp-01', error: 'connect timeout'}},
   {level: 'info', target: 'honk::api', message: 'Native API listening.', fields: {listen: '127.0.0.1:9090'}}
 ];
-// The demo's sources. The main config carries placeholder credentials in the clear, so it hashes to its own
-// digest and can be edited; the fetched subscription is served redacted, with the digest of the text on disk,
-// which is how a real backend hands out a file it will not let a client write back.
+// Editable sources hash served text; redacted subscriptions retain the on-disk digest and cannot be written back.
 export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},

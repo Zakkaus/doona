@@ -1,6 +1,3 @@
-/* Palettes: Rosé Pine, Catppuccin, Nord, Glass, Ant Design, Arco and Semi. data-family picks the family,
-   data-scheme picks light or dark; every component reads the same --rp-* roles. */
-
 :root,
 :root[data-family='rose-pine'] {
   --rp-base: #faf4ed;
@@ -574,8 +571,6 @@
   --rp-track: rgba(60, 60, 67, 0.1);
   --rp-grain-opacity: 0.25;
   --rp-underlay: rgba(20, 20, 30, 0.3);
-  /* The mode-dependent pieces of the material: the readability scrim, the main sheet, a hovered row, the
-     bevel on controls and the lit pill of a segmented control. Component rules below read only these. */
   --rp-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
   --rp-sheet: rgba(255, 255, 255, 0.14);
   --rp-sheet-rim: rgba(255, 255, 255, 0.35);
@@ -619,8 +614,6 @@
   pointer-events: none;
   background: var(--rp-scrim);
 }
-/* Over a photo the chrome becomes a vibrancy sheet (as macOS sidebars do): frosted, no border, so labels stay readable
-   whatever the picture. The gradient look keeps the chrome bare. */
 :root[data-family='glass'] .rp-top,
 :root[data-family='glass'] .rp-side {
   background: transparent;
@@ -701,7 +694,7 @@
 :root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-row-hover);
 }
-/* Controls are small pieces of the same glass: translucent fill, a light rim, a lit pill for the selected segment. */
+/* Controls are small pieces of the same glass: a translucent fill and nothing drawn around it. */
 :root[data-family='glass'] .rp-btn {
   background: var(--rp-ctl);
   border-color: var(--rp-ctl-border);
@@ -2619,7 +2612,7 @@ button.rp-node[data-focus-visible] {
     translate: 0 20px;
   }
 }
-/* ---- Toast stack (after S2 ToastContainer): bottom centre, newest on top, older toasts peek out behind; expanded = list over an underlay. ---- */
+/* ---- Toasts (after S2 ToastContainer): bottom centre, the newest in front and older ones peeking out behind; expanded = a list over an underlay. ---- */
 .rp-toast-underlay {
   appearance: none;
   border: 0;
@@ -2662,6 +2655,7 @@ button.rp-node[data-focus-visible] {
 }
 .rp-toast-controls {
   display: flex;
+/* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
   justify-content: flex-end;
   gap: 8px;
 }

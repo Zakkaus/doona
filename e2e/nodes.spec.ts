@@ -104,7 +104,6 @@ test('a subscription refresh interval is written into the configuration', async 
   await page.goto('/#/nodes');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
-  // The inline source keeps no interval of its own.
   await expect(sources.nth(1)).not.toContainText('Every');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();

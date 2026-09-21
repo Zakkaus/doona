@@ -2,15 +2,11 @@ import type {Runtime, TrafficHistory} from '../../api/model';
 import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 
-// One traffic sample on the chart: rates in KB/s, the connection count, and when the backend sampled it.
 export type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
-// The chart's windows in seconds. Live is what other dashboards call the last two minutes at full resolution;
-// the rest are the fixed spans a router page is read at. The backend's own ring covers ten minutes at one
-// second; the session's polls carry the longer spans, in minute buckets.
+// Windows are seconds; live is two minutes at full resolution. Backend history covers ten minutes, then session polls provide minute buckets for longer spans.
 export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 const rate = (value: string | null | undefined) => (value == null ? null : Number(parseU64(value)) / 1000);
 
-// A bucket averages the rates and keeps the highest connection count seen in it.
 export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
   time,
   up: mean(group.map(s => s.up)),

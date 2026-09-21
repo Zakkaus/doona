@@ -1,8 +1,6 @@
 import type {Capabilities} from './model';
 
-// Every resource key the contract pinned here declares. A backend built against an earlier pin (the first
-// honk release targets cb8ac07, before geodata and the management flags) simply omits the newer keys; they are
-// filled in as unavailable so pages can read `resources.<key>.available` without guarding each one.
+// Backends omit resources added after their contract pin; fill them as unavailable so callers need no guards.
 const resourceKeys = [
   'config',
   'config_validate',

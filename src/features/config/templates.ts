@@ -1,5 +1,4 @@
-// The rule templates of the quick setup, after ACL4SSR's online configurations. Data only: the writer is
-// wizard.ts. Group labels are ACL4SSR's own names, and the region patterns match node names in either script.
+// Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
 export const quote = (value: string) => "'" + value.replace(/'/g, '') + "'";
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
 export const defaultTemplate: RuleTemplate = 'standard';
@@ -23,9 +22,7 @@ const media = (target: string) => [
 ];
 const gfw = (target: string) => ['# ProxyGFWlist', `domain(geosite:gfw) -> ${target}`];
 
-// A group the template needs: honk's `group` syntax with the ACL4SSR name as the comment. `select` groups list
-// the nested groups they can switch to and every proxy node. honk injects `direct` and `block` into the node
-// pool, so "every node" is spelled as everything but those two; an unfiltered group would take them as well.
+// Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an unfiltered honk group would select them too.
 type GroupSpec = {name: string; label: string; lines: string[]};
 const everyNode = "filter: !name('direct', 'block')";
 const selectGroup = (name: string, label: string, nested: string[], fallback = nested[0]): GroupSpec => ({
@@ -50,25 +47,16 @@ const regions = [
 ];
 const service = (name: string, label: string, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
-// Templates in dae's own syntax, after ACL4SSR's online configurations: the same lists in the same order, as
-// the v2fly geosite/geoip categories Loyalsoldier/v2ray-rules-dat ships (the data set dae fetches by default).
-// Services ACL4SSR sends to a selector that defaults to DIRECT go direct here, since a honk group cannot hold
-// `direct` as a member; services it sends through the proxy get their own selector group. `{group}` is the
-// first group of the file, or `proxy` when it has none.
+// Preserve ACL4SSR rule order using dae's default geosite/geoip data. honk groups cannot contain direct, so DIRECT services remain direct and {group} names the file's first group.
 export const templates: Record<RuleTemplate, {rules: string[]; fallback: string; groups: GroupSpec[]}> = {
-  // Everything except the presets through the group.
   global: {rules: [...preset], fallback: '{group}', groups: []},
-  // Adverts dropped, mainland China direct, the rest through the group.
   bypass: {rules: [...preset, ...ads, ...chinaVendors, ...china], fallback: '{group}', groups: []},
-  // Only the GFW list and Telegram through the group; the rest direct.
   gfw: {rules: [...preset, ...ads, ...telegram('{group}'), ...gfw('{group}')], fallback: 'direct', groups: []},
-  // ACL4SSR_Online_Mini.
   mini: {
     rules: [...preset, ...ads, ...chinaVendors, ...telegram('proxy'), ...media('proxy'), ...gfw('proxy'), ...china],
     fallback: 'proxy',
     groups: [proxy, auto]
   },
-  // ACL4SSR_Online: Telegram, overseas media and Apple get their own selectors; Microsoft goes direct.
   standard: {
     rules: [
       ...preset,
@@ -86,8 +74,6 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
     fallback: 'proxy',
     groups: [proxy, auto, service('telegram', '电报消息'), service('media', '国外媒体'), service('apple', '苹果服务')]
   },
-  // ACL4SSR_Online_Full: region groups, AI, YouTube, Netflix and Bahamut selectors; games, Apple, Microsoft,
-  // NetEase Music and Bilibili direct.
   full: {
     rules: [
       ...preset,

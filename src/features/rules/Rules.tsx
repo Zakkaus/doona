@@ -35,8 +35,6 @@ const outcomes: Record<string, Key> = {
   indeterminate: 'rule.result.indeterminate'
 };
 
-// Everything about routing decisions on one page: the rule list, the config drawn as a map, the retained flow
-// records with their traces, and a simulator for a hypothetical input.
 export function Rules({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
@@ -73,7 +71,6 @@ function Trace() {
   const t = useT();
   const lang = useLang();
   const trace = useRoutingTrace();
-  // Engine words the flow pages translate read the same here; anything else stays as reported.
   const phrase = (value: ReturnType<typeof word>) => (typeof value === 'string' ? value : t(value.key, value.params));
   useEffect(() => {
     if (trace.error) toast('negative', errorText(trace.error));
@@ -83,7 +80,6 @@ function Trace() {
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const probe = useNodeProbe(nodes.refetch);
-  // What the decision means today: the member the outbound resolves to and its last measured health.
   const leaf = (outbound: string | null) => {
     if (!outbound || outbound === 'direct' || outbound === 'block') return null;
     const {chain, node} = leafOf(outbound, form.network, groups.data ?? [], nodes.data ?? []);

@@ -19,6 +19,8 @@ description: |
 depends:
   - doona
 contents:
-  - src: build/stage/doona-fonts/
-    dst: /
+  - src: build/stage/doona-fonts/usr/share/doona/fonts
+    dst: /usr/share/doona/fonts
     type: tree
+  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+    dst: /usr/share/doc/doona/OFL.txt

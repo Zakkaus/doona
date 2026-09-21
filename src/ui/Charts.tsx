@@ -1,13 +1,9 @@
-// Recharts drawn with the Rosé Pine variables (read from the document so they follow the theme switch).
 import {lazy, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
 import type {ComponentProps} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
-// Charts re-lay out once a resize settles rather than on every event; a drag then costs one render per
-// chart instead of dozens.
+// Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
-// The tooltip is shown only while the pointer is inside the chart's own box. Recharts hides it on its own
-// mouseleave, but a pointer that jumps out (a fast flick, a touchpad gesture, a re-render while it left)
-// can leave the last reading standing; the wrapper's pointer state settles it.
+// Track the wrapper pointer because Recharts can leave a stale tooltip after a fast exit or rerender.
 function useHover() {
   const [inside, setInside] = useState(false);
   return {inside, handlers: {onPointerEnter: () => setInside(true), onPointerLeave: () => setInside(false)}};
@@ -67,7 +63,6 @@ const niceMax = (v: number) => {
   const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10;
   return s * p;
 };
-// A step that divides the range into a few round intervals, for axes that do not start at zero.
 const niceStep = (range: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(Math.max(range, 1e-9))));
   const n = range / p;

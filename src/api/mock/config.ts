@@ -17,8 +17,7 @@ export async function stored({onDisk, ...draft}: Draft): Promise<Stored> {
   return {...draft, content_sha256: await sha256(text), bytes: new TextEncoder().encode(text).length, line_count: lineCount(text)};
 }
 
-// A small dae checker for the demo: braces must balance, sections must be known, routing lines must be
-// rules, includes or the fallback, and rule targets must be groups the candidate defines or built-ins.
+// Demo-only validation checks braces, sections, routing syntax, and outbound references.
 export function diagnose(sourceId: string, text: string, groups: Set<string>, mode: 'syntax' | 'full'): ConfigDiagnostic[] {
   const out: ConfigDiagnostic[] = [];
   const at = (line: number, column: number, level: ConfigDiagnostic['level'], code: string, message: string) =>
@@ -70,7 +69,6 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
   for (const left of stack) at(left.line, 1, 'error', 'section_not_closed', `Section "${left.name}" is never closed`);
   return out;
 }
-// Groups a candidate main source defines, for full validation.
 export function groupsIn(text: string): Set<string> {
   const names = new Set<string>();
   const body = /group\s*\{([\s\S]*?)\n\}/.exec(text)?.[1] ?? '';

@@ -1,10 +1,7 @@
 import {useState} from 'react';
 import {readProfiles} from './profiles';
 
-// Sample rings behind the home charts. The backend's own history covers ten minutes; the longer windows a
-// router page is read at come from the polls this session collects: an hour at the poll cadence, then a
-// week of minute buckets. The rings are kept for the whole session and in localStorage, so moving between
-// pages or reloading does not start the curve over.
+// Extend the backend's ten-minute history with session polls: one hour at poll cadence, then a week of minute buckets persisted per profile.
 export type Timed = {time: number};
 export type Rings<T extends Timed> = {fine: T[]; coarse: T[]};
 // How a bucket summarises its samples: the mean of a rate, the peak of a count.
@@ -99,7 +96,6 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
   }
   return store.rings;
 }
-// Test seam: forget every ring, in memory and in storage.
 export function resetRings() {
   for (const store of stores.values()) {
     try {
@@ -111,7 +107,8 @@ export function resetRings() {
   stores.clear();
 }
 
-// The source is compared by identity, so only a fresh poll appends a sample.
+// The store is the external system: a fresh poll (the source compared by identity) is recorded after render,
+// and the component reads the ring the store holds.
 export function useRings<S, T extends Timed>(name: string, source: S | undefined, sample: (source: S) => T | undefined, fold: Fold<T>): Rings<T> {
   const [observed, setObserved] = useState(source);
   const [rings, setRings] = useState<Rings<T>>(() => record(name, source && sample(source), fold));

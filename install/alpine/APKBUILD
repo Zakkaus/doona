@@ -1,0 +1,42 @@
+# Maintainer: Zakkaus <zakk@gentoozh.org>
+pkgname=doona
+pkgver=0.1.0
+pkgrel=0
+pkgdesc="Web UI for the daeuniverse engines"
+url="https://github.com/Zakkaus/doona"
+arch="noarch"
+license="GPL-3.0-only"
+subpackages="$pkgname-fonts:fonts:noarch"
+source="$pkgname-v$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-v$pkgver.tar.gz
+	$pkgname-fonts-v$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-fonts-v$pkgver.tar.gz
+	"
+options="!check" # static files
+builddir="$srcdir"
+
+# Both archives hold their files at the root: unpack each into its own directory.
+unpack() {
+	mkdir -p "$srcdir"/web "$srcdir"/fonts
+	tar -xzf "$srcdir"/$pkgname-v$pkgver.tar.gz -C "$srcdir"/web
+	tar -xzf "$srcdir"/$pkgname-fonts-v$pkgver.tar.gz -C "$srcdir"/fonts
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/share/doona
+	cp -a "$srcdir"/web/. "$pkgdir"/usr/share/doona/
+	rm -f "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
+	install -Dm644 "$srcdir"/web/NOTICE -t "$pkgdir"/usr/share/doc/$pkgname/
+}
+
+fonts() {
+	pkgdesc="Noto Sans TC/SC for doona"
+	license="OFL-1.1"
+	depends="$pkgname"
+	mkdir -p "$subpkgdir"/usr/share/doona
+	cp -a "$srcdir"/fonts/fonts "$subpkgdir"/usr/share/doona/
+}
+
+# Fill in with `abuild checksum` once the release is out.
+sha512sums="
+0  doona-v0.1.0.tar.gz
+0  doona-fonts-v0.1.0.tar.gz
+"

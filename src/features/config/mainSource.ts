@@ -2,17 +2,13 @@ import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
 import {candidate} from './names';
 import type {ConfigSource} from '../../api/model';
 
-// One path for a control that rewrites the main source as a whole: read it, transform its text, validate in
-// full, write it back with the hash it was read at, reload. The pages that stage a small edit (the outbound
-// mode, a subscription's refresh interval) share it instead of each carrying the sequence.
+// Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
 export type MainSourceEdit = {
-  // The writable main source with its text, or null while the backend offers none.
   main: ConfigSource | null;
   // Whether the backend lets this page write at all: configuration content and writes both offered.
   writable: boolean;
   busy: boolean;
-  // Resolves to true when the write reached the engine; false when validation refused it (the count of errors
-  // is handed to `onInvalid`) or the transform threw.
+  // Resolve true after reload, false for validation refusal or cancellation, and reject request failures. onInvalid receives the validation error count.
   apply: (transform: (text: string) => string, onInvalid?: (errors: number) => void) => Promise<boolean>;
 };
 

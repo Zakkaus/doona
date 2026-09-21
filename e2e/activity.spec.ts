@@ -54,7 +54,6 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  // Apply stays in place and only wakes up once a change is staged.
   const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
@@ -62,8 +61,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await apply.click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(apply).toBeDisabled();
-  // The write is in the configuration: the marked rule sits in the main source after the must presets. The
-  // editor only renders the lines in view, so the source is scrolled to its end first.
+  // The marked rule is near the source end, outside CodeMirror's initial viewport.
   const routing = async () => {
     await page.goto('/#/config');
     await page.locator('.cm-scroller').evaluate(el => el.scrollTo(0, el.scrollHeight));

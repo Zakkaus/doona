@@ -23,7 +23,7 @@ export type ResourceName =
   | 'geodata'
   | 'rules';
 
-// Cross-resource policy: release-task decisions, 2026-09-16; the schemas only define event payloads.
+// Event schemas do not define cross-resource invalidation, so the UI owns this policy.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
   'stream.ready': {now: 'all', poll: []},
   'runtime.updated': {

@@ -5,7 +5,6 @@ import {parseU64} from '../../api/u64';
 
 export type MemorySample = {time: number; rss: number | null; cgroup: number | null};
 
-// A bucket averages both levels.
 export const foldMemory: Fold<MemorySample> = (group, time) => ({time, rss: mean(group.map(s => s.rss)), cgroup: mean(group.map(s => s.cgroup))});
 
 export function memorySample(memory: RuntimeMemory): MemorySample | undefined {
@@ -28,7 +27,6 @@ export function historySamples(history: MemoryHistory): MemorySample[] {
   });
 }
 
-// The backend's ring merged with the polls collected in this session, over the chosen window.
 export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined, windowSeconds: number) {
   const history = useMemoryHistory(capabilities);
   const rings = useMemorySamples(memory);

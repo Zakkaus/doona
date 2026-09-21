@@ -46,7 +46,7 @@ export function warmPage(id: string) {
 type Feature = {
   id: string;
   path: string;
-  // hintKey: the one question the page answers, shown under its title so the pages do not read as duplicates.
+  // The question shown beneath a page title to distinguish similar pages.
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;

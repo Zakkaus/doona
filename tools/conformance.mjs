@@ -1,19 +1,5 @@
-/**
- * Usage: node tools/conformance.mjs <server-root> [--token T] [--only opId,...]
- *        [--skip opId,...] [--json] [--timeout ms] [--contract path/to/openapi.yaml]
- * --contract validates against another bundle (a backend built on an earlier pin).
- * Node 22+. Exit: 0 passes, 1 contract failures (including a check named by --only that the server cannot serve), 2 usage/unreachable server.
- * Discovery, version, and capabilities precede filters. Only GET observe operations
- * run after them: mutations, diagnostic DNS, and observe-owner-or-control are SKIP
- * by design. Missing observed ids/query values, unavailable capabilities, filters,
- * and requests after an unauthenticated 401 are also SKIP; no ids are invented.
- * Capability keys use x-capability when present, otherwise the first path segment
- * after /api/v1/ (the bundle has no mapping extension). Nested resources therefore
- * share that fallback key. The base may include a reverse-proxy prefix.
- * Follow one cursor page; close SSE after stream.ready and reconnect once.
- * The read-only walk cannot exercise 202: validateResponse also accepts control
- * operation responses for offline fixtures, without sending control requests.
- */
+/** Usage: node tools/conformance.mjs <server-root> [--token T] [--only ids] [--skip ids] [--json] [--timeout ms] [--contract path]; Node 22+; exits 0/1/2 for pass/contract failure/usage or unreachable.
+ * Read-only walk: discovery first, GET observe only, one cursor page and one SSE reconnect; skips unavailable, auth-blocked, unresolvable, and mutating operations, supports reverse-proxy prefixes and older --contract bundles. */
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';

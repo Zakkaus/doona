@@ -43,7 +43,6 @@ const sourceName = (source: ConfigSource, t: (key: Key) => string) => (redacted(
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 
-// The digest of a text, once computed; undefined until then or when there is no text.
 function useSha256(text: string | undefined): string | undefined {
   const [hashed, setHashed] = useState<{text: string; hash: string} | null>(null);
   useEffect(() => {
@@ -57,8 +56,6 @@ function useSha256(text: string | undefined): string | undefined {
   return hashed !== null && hashed.text === text ? hashed.hash : undefined;
 }
 
-// The accepted configuration: its sources, the diagnostics the engine kept, and one source's text; a
-// writable source with complete text can be edited and saved through validation, write and reload.
 export function Config({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -428,9 +425,6 @@ function SourceCard({
   );
 }
 
-// Every diagnostic in one table: what the engine kept for the accepted configuration, or the last dry run
-// over every source with text. A row opens its source at the line. Mirrors the archived validation page,
-// minus the disk-versus-running diff the contract cannot describe.
 function ValidateTab({
   config,
   editor,

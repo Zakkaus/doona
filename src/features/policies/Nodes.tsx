@@ -1,5 +1,4 @@
-// Node collections that stay usable at airport scale (hundreds of nodes): a filterable, virtualised grid for policy
-// groups and a searchable, region-sectioned menu for pickers. Small collections fall back to the plain tiles.
+// Virtualize lists above 12 items; smaller collections use plain tiles.
 import {useMemo, useState} from 'react';
 import {
   Autocomplete,
@@ -30,7 +29,6 @@ export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
 export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
 const BIG = 12;
 
-// Region facets for a node list, ordered by count.
 function regions(nodes: Array<{name: string}>) {
   const m = new Map<string, number>();
   for (const n of nodes) {
@@ -162,7 +160,6 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
   );
 }
 
-// Picker for one node out of many: the trigger shows flag and name; the menu is searchable and grouped by region.
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
   const t = useT();
   const {contains} = useFilter({sensitivity: 'base'});
@@ -218,8 +215,7 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
         : nodes.map(item)}
     </Menu>
   );
-  // A long list draws only the rows in view: opening it costs the same for eighty nodes as for eight. The
-  // row heights are the ones the stylesheet gives items and section headers.
+  // Virtualizer row heights must match the stylesheet's item and section-header heights.
   const menu = big ? (
     <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
       {list}

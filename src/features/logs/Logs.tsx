@@ -16,8 +16,7 @@ const labels: Record<LogLevel, Key> = {
   error: 'log.level.error'
 };
 
-// The engine's log as it happens: level floor and module prefix filter server-side, pause to read, export what
-// is on screen. The replay ring fills the list on connect; the runtime settings page sizes that ring.
+// Level and module filters run server-side; connecting replays the bounded ring, while pause keeps the stream open.
 export function Logs() {
   const t = useT();
   const locale = LOCALE[useLang()];

@@ -43,7 +43,6 @@ export function ConnectionTable({
       ),
     [view.hidden, width]
   );
-  // As tall as the screen allows, but no taller than the rows need.
   const [fillRef, fill] = useFillHeight<HTMLDivElement>(442);
   const rulesListed = useCapabilities().data?.resources.rules.available === true;
   const height = Math.min(fill, 2 + tableLayout.headingHeight + Math.max(flatRows.length, 2) * tableLayout.rowHeight);

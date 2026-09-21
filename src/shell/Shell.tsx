@@ -1,4 +1,3 @@
-// The shell: top bar, side navigation and a rounded main column, in plain CSS and react-aria-components.
 import {Login} from './Login';
 import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';

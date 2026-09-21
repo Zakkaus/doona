@@ -51,8 +51,11 @@ jobs:
           echo "${NFPM_SHA256}  $RUNNER_TEMP/nfpm.tar.gz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/nfpm.tar.gz" -C "$RUNNER_TEMP" nfpm
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      # SOURCE_DATE_EPOCH makes the packages reproducible. Alpine is served by install/alpine/APKBUILD instead:
+      # nfpm's apk output carries a directory mode apk-tools rejects.
       - name: Build the distribution packages
         run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
           make install DESTDIR=build/stage/doona
           make install-fonts DESTDIR=build/stage/doona-fonts
           for packager in deb rpm ipk archlinux; do

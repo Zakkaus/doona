@@ -5,10 +5,9 @@ test.use({viewport: {width: 390, height: 844}});
 test('mobile page select exposes and opens every page without horizontal overflow', async ({page}) => {
   await page.goto('/#/activity');
   const select = page.locator('.rp-mobile-nav').getByRole('button');
-  // The select lists the pages this backend offers, in navigation order; the mock offers every page.
+  // The mock offers every route, so the select should preserve registry order.
   await select.click();
   const listed = await page.getByRole('option').evaluateAll(items => items.map(item => item.getAttribute('data-key')));
-  // Pages the backend lacks are listed too; opening one shows the notice, which is fine here.
   await page.keyboard.press('Escape');
   const shown = routes.filter(route => listed.includes(route));
   expect(shown.length).toBe(listed.length);

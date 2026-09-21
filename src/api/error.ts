@@ -26,8 +26,7 @@ export async function responseError(response: Response): Promise<ApiError> {
   );
 }
 
-// A failure the client raises itself: an operation that ended without success, a request the backend cannot take.
-// The message is a message key, so errorText renders it in the page's language; `detail` is the backend's text.
+// Local failures carry a message key; detail preserves backend text.
 export class LocalError extends Error {
   constructor(
     public key: Key,

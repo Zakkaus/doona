@@ -31,7 +31,6 @@ test('the routing map lays the config out as lanes and a pinned item carries int
   await page.goto('/#/rules?tab=map');
   const map = page.getByRole('region', {name: 'Traffic path'});
   const lanes = map.locator('.rp-lane');
-  // One card per outbound: every configured group is there, used or not, with its selected node.
   for (const group of ['proxy', 'Direct', 'skylink']) await expect(map.locator('strong', {hasText: new RegExp(`^${group}$`)})).toBeVisible();
   await expect(lanes.filter({has: page.locator('strong', {hasText: /^skylink$/})})).toContainText('Selected');
   const rule = map.getByRole('radio', {name: 'dip(geoip: private) 4', exact: true});
@@ -48,7 +47,6 @@ test('the routing map lays the config out as lanes and a pinned item carries int
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(() => rows.count()).toBeGreaterThan(4);
-  // The old address still lands on the map.
   await page.goto('/#/flows');
   await expect(page).toHaveURL(/#\/rules\?tab=map$/);
   await expect(map).toBeVisible();

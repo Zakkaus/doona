@@ -1,5 +1,3 @@
-// Which backend the browser talks to: saved profiles, the active one, and the first-visit detection of a
-// backend that hosts doona itself.
 export type Profile = {id: string; name: string; api: string; token: string};
 export type Profiles = {profiles: Profile[]; activeId: string};
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -42,7 +40,7 @@ export function readProfiles(storage?: StoragePort): Profiles {
   try {
     const store = storage ?? localStorage;
     let raw = store.getItem('doona-profiles');
-    // Nothing stored stays nothing stored: a first visit is still one until a profile is written.
+    // Preserve first-visit state until a profile is explicitly written.
     if (raw === null && store.getItem('doona-api') === null) raw = '[]';
     else if (raw === null) {
       const api = store.getItem('doona-api')!;
@@ -70,9 +68,7 @@ export function writeProfiles({profiles, activeId}: Profiles, storage: StoragePo
   storage.setItem('doona-profile', normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '');
 }
 
-// Served by the backend itself, doona finds its API without a settings round: the root is the origin, or the
-// reverse-proxy prefix in front of /ui/. A first visit with nothing stored asks that root's discovery document;
-// a contract answer, or a bearer challenge from a backend that guards discovery too, becomes the hosted profile.
+// Strip the hosted /ui/ suffix while preserving any reverse-proxy prefix.
 export function hostedRoot(loc: {origin: string; pathname: string}): string {
   const prefix = /^(.*?)\/ui(?:\/|$)/.exec(loc.pathname)?.[1] ?? '';
   return loc.origin + prefix;

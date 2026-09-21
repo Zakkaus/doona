@@ -1,9 +1,6 @@
 import {topLevelBlock} from '../config/blocks';
 
-// The outbound mode as a staged configuration edit: honk keeps no native mode switch, so doona writes one
-// catch-all rule into the routing section and reloads. `rule` is the configuration as written; `direct`
-// sends everything the must-rules leave straight out; `global` sends it all through one outbound. The rule
-// carries a marker so it can be found, replaced and removed without touching the rest of the section.
+// honk has no native mode switch, so doona writes a marked catch-all rule into routing. The marker allows replacement or removal without touching other rules.
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};
 
 export const MODE_MARK = '# doona: outbound mode';

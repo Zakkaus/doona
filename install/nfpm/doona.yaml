@@ -22,6 +22,9 @@ recommends:
 suggests:
   - doona-fonts
 contents:
-  - src: build/stage/doona/
-    dst: /
+  - src: build/stage/doona/usr/share/doona
+    dst: /usr/share/doona
+    type: tree
+  - src: build/stage/doona/usr/share/doc/doona
+    dst: /usr/share/doc/doona
     type: tree

@@ -1,13 +1,9 @@
 import {expect, test} from './fixtures';
 
-// The pages that write the group and routing sections from what they show: a node joins a group, a group's
-// policy and filters are edited in place, and a rule condition is composed from a kind and its values.
-
 test('a node joins an existing group or a new one through the name filter', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Add jp-01 to a group', exact: true}).click();
   const menu = page.getByRole('menu');
-  // Groups the node is already in are not offered.
   await expect(menu.getByRole('menuitemradio', {name: /^gaming/})).toHaveCount(0);
   await menu.getByRole('menuitemradio', {name: /^resilient/}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('jp-01 added to resilient');

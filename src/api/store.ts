@@ -129,8 +129,7 @@ type Resource<T> = {
   acceptEvent?: (event: ApiEvent) => boolean;
 };
 
-// The last answer for every resource, per backend: a page that mounts again paints it at once and refreshes
-// behind it, instead of a loading placeholder that flashes before the same data arrives ten milliseconds later.
+// Reuse each backend's last response while refreshing it in the background to avoid loading-state flashes.
 const remembered = new WeakMap<Api, Map<string, unknown>>();
 function recall<T>(api: Api, name: string): T | undefined {
   return remembered.get(api)?.get(name) as T | undefined;
@@ -140,7 +139,6 @@ function remember(api: Api, name: string, data: unknown) {
   if (!store) remembered.set(api, (store = new Map()));
   store.set(name, data);
 }
-// Test seam: forget every remembered answer.
 export function forgetResources() {
   for (const api of [getApi()]) remembered.delete(api);
 }
@@ -216,8 +214,7 @@ function useResource<T>(resource: Resource<T>, {every = 5000, deps = [], enabled
       refresh.current = () => undefined;
     };
   }, [key]);
-  // A burst of events (one per flow change under load) becomes one refetch: the first event arms a short
-  // timer, later ones ride on it. Reconnection refetches at once.
+  // Coalesce event bursts into one delayed refetch; reconnects still refetch immediately.
   const armed = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -303,7 +300,6 @@ async function walk<P extends {next_cursor: string | null}, T>(
 // which leaves the backend's own default in force rather than guessing above its ceiling.
 const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(1000, max ?? 1000) : undefined);
 
-// Nodes and groups are fetched only when the backend declares them (honk's first release has neither).
 export function useNodes(enabled = true) {
   const api = getApi();
   return useResource(
@@ -318,7 +314,6 @@ export function useNodes(enabled = true) {
     {deps: [api], every: 30000, enabled}
   );
 }
-// Group and node ids as the config names them, for chains the backend reports by id.
 export function useOutboundNames(): OutboundNames {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
@@ -340,10 +335,7 @@ export function useConnections(src?: string, enabled = true) {
   );
 }
 
-// Closing one connection: the list refetches on success; a 409 is the backend saying it does not own the transport.
-// One action at a time per hook. The action gets a signal that aborts with the api, with `scope`, or on unmount;
-// a result after an abort is dropped, a failure is kept as `error` and, with `rethrow`, thrown again for the
-// caller's toast.
+// One action per hook; an abort drops the late result, a failure lands in `error` and rethrows when asked.
 function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
   const api = getApi();
   const [busy, setBusy] = useState<K | null>(null);
@@ -382,7 +374,6 @@ function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown;
 }
 // If-Match carries the revision as a quoted entity tag.
 const etag = (revision: string) => '"' + revision + '"';
-// The result of a finished operation of the expected kind; anything else is a failure carrying the backend's message.
 type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
 function finished<K extends Operation['kind']>(operation: OperationState, kind: K): SucceededResult<K> {
   if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as SucceededResult<K>;
@@ -458,7 +449,6 @@ export function useRoutingTrace() {
     ...(backendModes.includes('live') || capabilities.data?.resources.dns_query.available !== true ? [] : ['query' as const])
   ];
   const available = resource?.available !== false;
-  // Resolving when possible and there is a name to resolve; an explicit choice stands.
   const named = form.domain.trim() !== '' && !form.dst_ip.trim();
   const resolve: TraceResolve = form.resolve ?? (named && modes.includes('live') ? 'live' : named && modes.includes('query') ? 'query' : 'none');
   async function submit() {
@@ -595,10 +585,7 @@ export function useDatapath(enabled = true) {
   const api = getApi();
   return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {deps: [api], enabled});
 }
-// Runtime-adjustable settings: read with the usual poll, written as one merge PATCH; the response replaces
-// the cached copy so the form reflects what the backend actually kept.
-// A write's reply stands in for the polled value until a newer poll arrives, so the form does not flash back to
-// the old values. The reply is tied to the backend it came from; switching backends forgets it.
+// A write reply replaces the cached settings until a newer poll arrives, preventing a flash of stale values. Replies are scoped to their backend.
 const newest = <T extends {observed_at: string}>(written: T | null, polled: T | undefined) =>
   written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {
@@ -657,7 +644,6 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
   }, [api, available, level, target, limit]);
   return {records, connected, error, available, clear: () => setRecords([])};
 }
-// The outbound mode switch: read with the usual poll, set at once; the reply replaces the cached copy.
 export function useProviders(enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;
@@ -686,8 +672,7 @@ export function useProviderRefresh(refetch: () => void) {
     });
   return {busy, refresh};
 }
-// Adding and removing subscriptions and inline nodes: each call rewrites the managed main source and starts a new
-// generation, so the lists refetch on generation.changed; `refetch` covers a backend without events.
+// Managed node/provider writes create a generation; refetch covers backends without generation events.
 export function useNodeManage(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});
@@ -703,9 +688,7 @@ export function useNodeManage(refetch: () => void) {
     removeNode: (id: string) => run(id, signal => api.deleteNode(id, signal).then(then))
   };
 }
-// The one probe shape the UI sends: a warm TCP connect for data, over whatever IP versions the backend reaches
-// (a v6-only node is not a failure). Null when the backend does not advertise that probe. `members` picks a
-// group's direct members; a node target has none and the contract refuses the field there.
+// Request warm TCP data probes over all reachable IP versions; group targets use direct members, while node targets must omit members.
 export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
   const probes = capabilities?.resources.probes;
   if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
@@ -723,7 +706,6 @@ export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRe
   // the field on a node target.
   return request as ProbeRequest;
 }
-// One TCP probe of one node, for the node table; the group card probes whole groups.
 export function useNodeProbe(refetch: () => void) {
   const api = getApi();
   const capabilities = useCapabilities();
@@ -741,13 +723,11 @@ export function useNodeProbe(refetch: () => void) {
   };
   return {busy, canProbe, probe};
 }
-// Flushing the whole DNS cache, for pages that do not carry the DNS page's full control set.
 export function useDnsFlush() {
   const api = getApi();
   const {busy, run} = useAction<'flush'>({rethrow: true});
   return {busy: busy !== null, flush: () => run('flush', signal => api.flushDnsCache(signal))};
 }
-// The rule dictionary of the running generation; refetched on generation.changed.
 export function useRules(enabled = true) {
   const api = getApi();
   return useResource({key: ['rules'], fetch: signal => api.rules(signal)}, {deps: [api], enabled, every: 0});
@@ -765,7 +745,6 @@ export function useGeodata(enabled = true) {
     });
   return {...resource, busy: busy !== null, update};
 }
-// The accepted configuration: sources, diagnostics and the running generation; refetched on generation.changed.
 export function useConfig(enabled = true) {
   const api = getApi();
   return useResource({key: ['config'], fetch: signal => api.config(signal)}, {deps: [api], enabled, every: 0});
@@ -800,7 +779,6 @@ export function useRuntimeMemory(enabled = true) {
   const api = getApi();
   return useResource({key: ['runtimeMemory'], fetch: signal => api.runtimeMemory(signal)}, {deps: [api], enabled});
 }
-// The newest page of the resolver's ring, filtered server-side; the ring refreshes with the usual poll.
 export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true) {
   const api = getApi();
   const name = query.name?.trim() || undefined;

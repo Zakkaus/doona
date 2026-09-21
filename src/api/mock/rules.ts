@@ -1,4 +1,3 @@
-// The routing rules the demo's trace and flow evidence refer to, in config order.
 export type ConfigRule = {id: string; cond: string; target: string; must: boolean};
 export const rules: ConfigRule[] = [
   {id: 'r1', cond: 'domain(suffix: doubleclick.net)', target: 'block', must: false},

@@ -1,6 +1,4 @@
-// The line ranges of every top-level `name {` block, each exclusive of its braces. A section may repeat
-// (dae merges two `group` sections). Nested sections reuse names (dns has a routing block of its own), so the
-// depth is tracked from the start of the file and only a block opened at depth zero counts.
+// Return brace-exclusive ranges for top-level blocks only; repeated sections are valid and nested names must not match.
 export function topLevelBlocks(lines: string[], name: string): Array<{open: number; close: number}> {
   const header = new RegExp(`^\\s*${name}\\s*\\{\\s*$`);
   const blocks: Array<{open: number; close: number}> = [];

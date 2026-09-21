@@ -75,7 +75,6 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
   await page.mouse.move(0, 0);
   await cell.hover();
   await expect(page.getByRole('tooltip')).toHaveText(full);
-  // The tooltip is a box of its own, not bare text over the table.
   expect(await page.getByRole('tooltip').evaluate(el => [getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)', getComputedStyle(el).padding])).toEqual([
     true,
     '4px 8px'

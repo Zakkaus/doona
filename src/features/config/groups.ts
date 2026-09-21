@@ -4,7 +4,6 @@ import {topLevelBlocks} from './blocks';
 // in the subsection kept as written. No dae parser; subsections are cut by brace matching, one per line.
 export type GroupEntry = {
   name: string;
-  // Filter expressions as written, without the `filter:` key.
   filters: string[];
   policy: string | null;
   // Line range in the source, inclusive of the braces.
@@ -15,7 +14,6 @@ export type GroupEntry = {
 const uncomment = (line: string) => line.replace(/#.*$/, '');
 const name = /(?:'([^']*)'|"([^"]*)"|([^\s{}'"]+))/.source;
 const header = new RegExp(`^\\s*${name}\\s*\\{\\s*$`);
-// `name { filter: … policy: … }` on one line; its fields are cut at the keys the group reference lists.
 const oneLine = new RegExp(`^\\s*${name}\\s*\\{(.*)\\}\\s*$`);
 const keys = /\s+(?=(?:filter|policy|default|final|check_url|check_interval|tolerance|idle_timeout|interrupt_connections|interruption)\s*:)/;
 const field = /^\s*([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$/;
@@ -131,7 +129,6 @@ export function addNamesToGroup(text: string, group: string, names: string[]): s
   return writeGroupEntry(text, group, {filters, policy: entry?.policy ?? null});
 }
 
-// A routing condition from the pieces the rule dialog offers; the outbound is appended by the caller.
 export type ConditionKind = 'domain' | 'domainSuffix' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
 export const conditionKinds: ConditionKind[] = ['domainSuffix', 'domain', 'geosite', 'dip', 'geoip', 'sip', 'dport', 'sport', 'pname', 'l4proto'];
 export function ruleCondition(kind: ConditionKind, value: string): string {

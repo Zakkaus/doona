@@ -21,7 +21,6 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
-  // Append a line the way a person would: cursor to the end of the document, then type.
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('domain(geosite: netflix) -> nowhere');
@@ -80,7 +79,6 @@ test.describe('without configuration readback', () => {
 test('the quick setup rewrites subscriptions and keeps groups and rules', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
-  // The form starts from the main source: one subscription; the groups are left as written.
   await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
   await expect(card).toContainText('Templates route to proxy');
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');

@@ -29,7 +29,6 @@ import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 
-// "How does a name resolve, and is the cache in the way": a query tab and a cache tab over the same domain.
 export function Dns({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
@@ -222,8 +221,6 @@ export function Dns({go, query}: PageProps) {
   );
 }
 
-// "What did the resolver do for clients": the ring newest first, narrowed by name, type and client.
-// The record types the log can be narrowed to; the log has no capability of its own for this list.
 const logTypes = ['A', 'AAAA', 'HTTPS', 'TXT', 'MX', 'SRV', 'PTR'];
 function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string}) {
   const t = useT();
@@ -234,7 +231,6 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
   // Each text filter is a server-side query, so it reaches the request only after typing pauses.
   const log = useDnsLog({name: useDebounced(name, 300), type, src: useDebounced(src, 300)}, enabled);
   const rows = (log.data?.records ?? []).map(record => ({...record, id: record.id}));
-  // A record opens beside the table with everything the resolver did for it, the answers in full.
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const current = selected ? rows.find(record => record.id === selected) : undefined;

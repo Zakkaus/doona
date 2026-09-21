@@ -1,6 +1,4 @@
-// SHA-256 of a text as lowercase hex, the form the contract uses for content_sha256. WebCrypto is used when
-// the page runs on a secure origin; a panel served over plain http on a LAN falls back to the pure function,
-// so editing keeps working there.
+// Return contract-format SHA-256 hex; use the local implementation when insecure origins lack WebCrypto.
 export async function sha256(text: string): Promise<string> {
   const bytes = new TextEncoder().encode(text);
   const subtle = globalThis.crypto?.subtle;
@@ -62,8 +60,7 @@ export function sha256Bytes(input: Uint8Array): Uint8Array {
   return out;
 }
 
-// A random UUID v4. `crypto.randomUUID` exists only in secure contexts; a dashboard served over plain HTTP from a
-// router still has `getRandomValues`.
+// In insecure contexts, build UUID v4 values with getRandomValues because randomUUID is unavailable.
 export function uuid(): string {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   const bytes = crypto.getRandomValues(new Uint8Array(16));

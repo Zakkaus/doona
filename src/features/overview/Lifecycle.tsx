@@ -6,9 +6,7 @@ import {Button, errorText, toast} from '../../ui/ui';
 
 const operationLabels: Record<'reload' | 'suspend' | 'resume', Key> = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'};
 
-// Reload, and suspend or resume depending on the engine's state; each runs as an operation and reports the
-// terminal status in a toast. Renders nothing the backend cannot do. The page owns the runtime resource, so
-// the refetch after an operation reaches what the page shows.
+// Render only supported lifecycle operations and refetch the page-owned runtime resource after completion.
 export function LifecycleActions({runtime, capabilities}: {runtime: ReturnType<typeof useRuntime>; capabilities: Capabilities | undefined}) {
   const t = useT();
   const operations = useRuntimeOperations(runtime.data, capabilities, runtime.refetch);

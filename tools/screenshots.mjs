@@ -1,6 +1,5 @@
-// Captures the README screenshots from a running build: node tools/screenshots.mjs [URL] [DIR].
-// One set per language, light and dark for the activity page, plus one palette sheet: every palette in each
-// of its looks, tiled two across at half size. The mock backend supplies the data.
+// Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
+// Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
 import {existsSync, mkdirSync, rmSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -73,8 +72,7 @@ try {
     tiles.push(await page.screenshot());
     await context.close();
   }
-  // The sheet is a page of its own: captions under the tiles, two to a row. The tiles go in as data URLs; a
-  // blank page may not load files.
+  // Embed tiles as data URLs because the blank sheet page may not load local files.
   const sheet = await browser.newPage({viewport: {width: 1488, height: 800}});
   await sheet.setContent(`<!doctype html><style>
     body { margin: 0; padding: 16px; background: #fff; font: 500 15px/1 system-ui, sans-serif; color: #333; }
@@ -86,7 +84,7 @@ try {
   mkdirSync(dir, {recursive: true});
   await sheet.screenshot({path: join(dir, 'palettes.png'), fullPage: true});
   await sheet.close();
-  // The sheet is tall; lossless WebP is two thirds of the PNG with no artefacts. Without cwebp the PNG stays.
+  // Prefer lossless WebP when cwebp is available; otherwise keep the PNG.
   try {
     execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', join(dir, 'palettes.png'), '-o', join(dir, 'palettes.webp')]);
     rmSync(join(dir, 'palettes.png'));

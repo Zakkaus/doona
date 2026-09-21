@@ -17,7 +17,6 @@ function legacyFlows(query: string): Route {
   return {route: 'rules', query: params.toString()};
 }
 
-// A query string with some keys set or removed, for links that keep the rest of the page's state.
 export function within(query: string, patch: Record<string, string | null>): string {
   const next = new URLSearchParams(query);
   for (const [key, value] of Object.entries(patch)) {

@@ -2,9 +2,7 @@ import type {useConnectionClose} from '../../api/store';
 import {useT} from '../../i18n';
 import {Button, ModalDialog, errorText, toast} from '../../ui/ui';
 
-// Closes the listed connections behind a confirmation; the tally names what the backend did not own and
-// therefore skipped. The page owns `closing`, so its row buttons and this one share one busy state, and it
-// says whether its selection is one the bulk endpoint can express or a list to close one by one.
+// Share the page's closing state with row actions; use bulk close only when the current selection is expressible by that endpoint.
 export function CloseAllButton({
   count,
   selection,

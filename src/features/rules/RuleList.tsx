@@ -70,10 +70,7 @@ const sourceFor = (list: ConfigSource[], source: RuleSource | null | undefined) 
     ? (list.find(item => item.id === source.source_id) ?? list.find(item => item.path === source.file || item.path.endsWith('/' + source.file)))
     : undefined;
 
-// The rules as a list. With the backend's dictionary: every rule in evaluation order, where it is written and
-// how many retained flows it decided; a rule can be added before another or at the end, or removed, by
-// rewriting that line of the source through the same validate-then-save path the editor uses. Without the
-// dictionary, the retained flows are grouped by the rule that decided them.
+// Use the backend dictionary when available; otherwise group retained flows by deciding rule. Edits rewrite the owning source through validate-and-save.
 export function RuleList({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
   return resources?.rules.available === true ? <Dictionary go={go} query={query} /> : <Distribution />;
@@ -99,7 +96,6 @@ function Dictionary({go, query}: PageProps) {
   const hits = useMemo(() => new Map(ruleDistribution(flows.data?.flows ?? []).map(row => [row.id, row.count])), [flows.data]);
   const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule} | null>(null);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
-  // The condition is picked from a kind and its values, or typed as an expression; the pick fills the text.
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
   const list = rules.data?.rules ?? [];
@@ -145,7 +141,6 @@ function Dictionary({go, query}: PageProps) {
     return !!(await editor.save(source.id, content, source.content_sha256));
   };
   const add = async (close: () => void) => {
-    // The new line goes before the chosen rule, else before the fallback, in whichever source holds that line.
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
     const source = sourceFor(configSources, anchor?.source);
     if (!anchor?.source || !source || source.content === undefined) return;
@@ -338,7 +333,6 @@ function Dictionary({go, query}: PageProps) {
   );
 }
 
-// Without a dictionary: the retained flows grouped by the rule that decided them.
 function Distribution() {
   const resource = useFlows();
   const t = useT();

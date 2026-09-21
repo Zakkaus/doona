@@ -43,11 +43,9 @@ function PolicyCard({
   refreshNodes: () => void;
   onLoaded: (id: string) => void;
   source: MainSourceEdit;
-  // The group's subsection in the main source, when it is written there.
   entry: GroupEntry | undefined;
 }) {
   const t = useT();
-  // The edit dialog's draft: the documented policy name and one filter per row.
   const [draft, setDraft] = useState<{policy: string; filters: string[]} | null>(null);
   const saveDraft = (close: () => void) => {
     if (!draft) return;

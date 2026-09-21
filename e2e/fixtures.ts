@@ -3,9 +3,8 @@ import {test as base, expect, type Page} from '@playwright/test';
 // Route IDs from src/shell/registry.ts; importing it would load page components.
 export const routes = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules', 'nodes', 'config', 'events', 'logs', 'settings'] as const;
 
-// `DOONA_API` (and `DOONA_TOKEN`) point the read-only specs at a live backend instead of the mock:
-// DOONA_API=http://127.0.0.1:9527 DOONA_TOKEN=... pnpm e2e:live
-// The e2e tsconfig has no Node types; the environment is read through globalThis.
+// DOONA_API and optional DOONA_TOKEN run read-only specs against a live backend; e2e has no Node globals.
+// Example: DOONA_API=http://127.0.0.1:9527 DOONA_TOKEN=... pnpm e2e:live
 const env = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env ?? {};
 const live = env.DOONA_API ? {'doona-api': env.DOONA_API, 'doona-api-token': env.DOONA_TOKEN ?? ''} : {};
 

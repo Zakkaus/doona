@@ -18,10 +18,7 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
   full: ['config.wizardFull', 'config.wizardFullHelp']
 };
-// Subscriptions as a list, the way daed does it; rules stay text (kept, or swapped for a template). Groups are
-// left as written: the templates route to the first one, and a main source without any gets a single `proxy`.
-// The form starts from what the main source says and writes back only the sections it owns. `complete` is
-// whether the text hashes to the accepted digest: a redacted text is never written back.
+// Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
 export function Wizard({
   main,
   complete,
@@ -51,7 +48,6 @@ export function Wizard({
     };
   });
   const text = useMemo(() => writeState(current, state), [current, state]);
-  // A form that would write something different is unsaved work, guarded the same way as the editor's draft.
   const dirty = text !== current;
   useEffect(() => {
     onDirty(dirty);

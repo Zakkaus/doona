@@ -124,7 +124,6 @@ describe('native API conformance', () => {
       undefined,
       'instance-7:123'
     ]);
-    // One heartbeat per SSE resource: events and logs.
     expect(result.summary.heartbeats).toEqual([': heartbeat', ': heartbeat']);
   });
 
@@ -167,7 +166,6 @@ describe('native API conformance', () => {
       }
     });
     const result = await walk({baseUrl: server.baseUrl, only: ['getRuntime', 'listGroups', 'getGroup', 'listFlows', 'getFlow']});
-    // A selected check the server declares unavailable is a failure; an id the walk could not observe is a skip.
     expect(failures(result.checks)).toEqual(['getRuntime.request']);
     expect(result.checks).toContainEqual({
       id: 'getRuntime.request',

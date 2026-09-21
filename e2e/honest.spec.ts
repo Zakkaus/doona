@@ -6,7 +6,6 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  // The home card keeps the ticks out; the events page lists every one.
   const notifications = page.getByRole('region', {name: 'Notifications and issues'});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
@@ -87,7 +86,6 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections(),
     '/nodes': await api.nodes(),
-    // The mode cards read the main source and the groups.
     '/config': await api.config(),
     '/groups': await api.groups()
   };

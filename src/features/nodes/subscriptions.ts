@@ -1,8 +1,6 @@
 import {topLevelBlock} from '../config/blocks';
 
-// A subscription's refresh interval lives in the configuration: an entry written as `tag: 'url'` refreshes
-// every day, and only the block form `tag: { url: '…' interval: '3600s' }` can say otherwise. doona reads
-// the interval off the main source and rewrites one entry into block form when the user changes it.
+// Scalar subscriptions use the one-day default; only block entries can store another interval. Changing one rewrites that entry into block form.
 export const DEFAULT_INTERVAL = 86400;
 
 export type SubscriptionEntry = {
@@ -16,7 +14,6 @@ export type SubscriptionEntry = {
   to: number;
 };
 
-// A quoted string at the start of the text: its unquoted value and where it ends.
 function quoted(text: string): {value: string; end: number} | null {
   const quote = text[0];
   if (quote !== "'" && quote !== '"') return null;
@@ -53,9 +50,7 @@ function host(url: string): string | null {
   }
 }
 
-// The tag of a scalar entry line, following the engine's first-colon rule: a quoted head followed by a
-// colon is an explicit tag, otherwise the text before the first colon unless that colon starts `://`;
-// a tagless URL is named after its host.
+// A quoted head before the first colon is an explicit tag; otherwise use the text before that colon unless it begins ://. Name tagless URLs by host.
 function scalarTag(code: string): string | null {
   const text = code.trim();
   // A block squeezed onto one line is left alone: its interval is not read and it is not rewritten.
@@ -133,9 +128,7 @@ function scalarParts(code: string): {url: string; ua: string | null} | null {
 const quoteTag = (tag: string) => (/^[\w.-]+$/.test(tag) ? tag : `'${tag}'`);
 const quoteValue = (value: string) => `'${value.replace(/'/g, '')}'`;
 
-// The text with `tag`'s entry set to refresh every `seconds` (0 for manual only). A scalar entry becomes a
-// block; a block entry keeps its other fields and gets its interval line replaced, added or, at the default,
-// removed. Unchanged text when the tag is not there or already reads that interval.
+// Convert scalar entries to blocks; preserve other block fields while replacing, adding, or removing interval. Return unchanged text when the tag or value does not change.
 export function writeInterval(text: string, tag: string, seconds: number): string {
   const entry = readSubscriptions(text).find(e => e.tag === tag);
   if (!entry || entry.interval === seconds) return text;

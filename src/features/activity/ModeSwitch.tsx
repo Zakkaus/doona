@@ -11,9 +11,7 @@ import {readMode, sameMode, writeMode, type OutboundMode} from './mode';
 const order = ['rule', 'direct', 'global'] as const;
 const modeLabels: Record<(typeof order)[number], Key> = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'};
 
-// The two quick cards: the outbound mode and the outbound global mode sends everything through. Edits are
-// staged; Apply writes the main source and reloads, which is the only way an engine without a mode switch
-// takes them. Without a writable main source the cards say so.
+// Stage mode changes until Apply rewrites the main source and reloads. Disable the cards without a writable main source.
 export function ModeCards() {
   const t = useT();
   const resources = useCapabilities().data?.resources;

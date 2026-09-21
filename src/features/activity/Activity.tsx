@@ -80,8 +80,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   const polledTraffic = useTrafficSamples(runtimeResource.data);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
   const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
-  // The tiles' sparklines always show the last two minutes, whatever span the chart is set to, in five-second
-  // means: a hundred pixels cannot show a hundred and twenty seconds of one-second samples as anything but noise.
+  // Sparklines use 24 five-second means over the last two minutes, independent of the chart window.
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
   const [chosenNode, setNodeName] = useState('');
   // Until a node is chosen: the first with a measurement, else the first proxy node; the built-ins come last.
@@ -91,6 +90,7 @@ export function Activity({go}: {go: (page: string) => void}) {
   const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
   if (error)
     return (
+  // A failed refresh keeps what the page already shows, with the error above it.
       <ErrorMessage
         error={error}
         onRetry={() => {
@@ -114,10 +114,7 @@ export function Activity({go}: {go: (page: string) => void}) {
     // Only the engine's own block outbound is drawn as a refusal; a group may not take that name, but the kind says so.
     color: r.kind === 'builtin' && r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
-  // Only events a person acts on: an operation's outcome, a new generation, a real gap in the records, a lost
-  // and regained stream. The per-second runtime and flow ticks drive the charts, and the ring's own
-  // housekeeping is not a problem.
-  // As many as the card holds at its neighbours' height; past that the list scrolls inside the card.
+  // Show actionable events only; runtime/flow ticks and routine ring gaps are chart housekeeping. Limit the list to 30 so the card scrolls instead of stretching its row.
   const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 30);
   return (
     <>
