@@ -40,10 +40,10 @@ for (const route of routes) {
               ['#faf4ed', '#fffaf3', '#f2e9e1'].includes(check.data?.bgColor)
           ) &&
           // Matched in one evaluate: a locator would wait on a placeholder axe saw that has since been replaced.
-          (await page.evaluate(
-            ({target, selector}) => Array.from(document.querySelectorAll(target)).every(element => element.matches(selector)),
-            {target: node.target[0], selector: knownContrast}
-          ));
+          (await page.evaluate(({target, selector}) => Array.from(document.querySelectorAll(target)).every(element => element.matches(selector)), {
+            target: node.target[0],
+            selector: knownContrast
+          }));
         if (!known) unexpected.push(node);
       }
       if (unexpected.length) violations.push({...rule, nodes: unexpected});
