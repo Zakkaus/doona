@@ -5,7 +5,7 @@ import type {SettingsContext} from '../features/settings/context';
 import {LOCALE, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {useSlider} from '../ui/hooks';
-import {features, warmAllPages} from './registry';
+import {warmAllPages} from './registry';
 import {parseHash, useRoute} from './route';
 import {readAppearance, useAppearance} from './useAppearance';
 import {appearanceMenu, palettes} from './view';
@@ -18,9 +18,6 @@ export function useShellController() {
   }, [lang]);
   const ap = useAppearance(settings);
   const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
-  useEffect(() => {
-    if (!features.some(feature => feature.path === route)) go('activity');
-  }, [route, go]);
   const [searchOpen, setSearchOpen] = useState(false);
   const pickLang = useCallback((next: Lang) => {
     setLang(next);

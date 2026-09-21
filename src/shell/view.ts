@@ -105,7 +105,7 @@ export function shellView(
     },
     content,
     busy: !capabilities && !capabilityError,
-    error: capabilityError ? null : versionError,
+    error: (content.kind === 'login' ? null : capabilityError) ?? versionError,
     engine: {text: engineText, href: version ? `${org}/${version.engine.name}` : org},
     shortcuts,
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),

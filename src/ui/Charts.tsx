@@ -1,6 +1,7 @@
 import {lazy, memo, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
 import type {ComponentProps, FocusEvent} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
+import {LoadBoundary} from './LoadBoundary';
 // Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
 // Pointer exit hides stale tooltips without disabling Recharts keyboard navigation.
@@ -266,11 +267,13 @@ const LazyAreaChart = lazy(() =>
 
 export const AreaChart = memo(function AreaChart(props: ComponentProps<typeof LazyAreaChart>) {
   return (
-    <Suspense
-      fallback={<div style={props.fill ? {minHeight: props.height ?? 150, flex: '1 1 auto', width: '100%'} : {height: props.height ?? 150, width: '100%'}} />}
-    >
-      <LazyAreaChart {...props} />
-    </Suspense>
+    <LoadBoundary>
+      <Suspense
+        fallback={<div style={props.fill ? {minHeight: props.height ?? 150, flex: '1 1 auto', width: '100%'} : {height: props.height ?? 150, width: '100%'}} />}
+      >
+        <LazyAreaChart {...props} />
+      </Suspense>
+    </LoadBoundary>
   );
 });
 const LazySpark = lazy(() =>
@@ -322,9 +325,11 @@ const LazySpark = lazy(() =>
 
 export const Spark = memo(function Spark(props: ComponentProps<typeof LazySpark>) {
   return (
-    <Suspense fallback={<div style={{height: props.height ?? 32, width: '100%'}} />}>
-      <LazySpark {...props} />
-    </Suspense>
+    <LoadBoundary>
+      <Suspense fallback={<div style={{height: props.height ?? 32, width: '100%'}} />}>
+        <LazySpark {...props} />
+      </Suspense>
+    </LoadBoundary>
   );
 });
 // Scroll long legends so the chart does not stretch adjacent cards.
@@ -335,9 +340,11 @@ export const Donut = memo(
     return (
       <div className="rp-donut">
         <div className="box">
-          <Suspense fallback={null}>
-            <LazyDonut rows={rows} />
-          </Suspense>
+          <LoadBoundary>
+            <Suspense fallback={null}>
+              <LazyDonut rows={rows} />
+            </Suspense>
+          </LoadBoundary>
           <div className="center">{total}</div>
         </div>
         <div className="lst">

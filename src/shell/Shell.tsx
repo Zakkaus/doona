@@ -25,6 +25,7 @@ import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {languageItems} from './view';
+import {LoadBoundary} from '../ui/LoadBoundary';
 
 // The startup entry calls this before mounting React to avoid a palette flash.
 export function stampAppearance() {
@@ -230,7 +231,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               <LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={view.choices} bare />
             </div>
           </div>
-          <ErrorMessage error={view.error} />
+          <ErrorMessage error={view.error} onRetry={view.refresh} />
           <SettingsContext.Provider value={settingsValue}>
             {view.content.kind === 'login' ? (
               <Login profileId={view.content.profileId} backend={view.content.backend} rejected={view.content.rejected} />
@@ -242,9 +243,11 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
                 <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
               </Empty>
             ) : (
-              <Suspense key={view.current.id} fallback={<Loading />}>
-                <Page go={go} query={query} />
-              </Suspense>
+              <LoadBoundary key={view.current.id}>
+                <Suspense fallback={<Loading />}>
+                  <Page go={go} query={query} />
+                </Suspense>
+              </LoadBoundary>
             )}
           </SettingsContext.Provider>
         </div>

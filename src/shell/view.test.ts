@@ -32,3 +32,14 @@ it('waits for discovery and yields protected pages to login without blocking set
   });
   expect(shellView(configured, 'settings', undefined, error, undefined, null, t).content.kind).toBe('page');
 });
+
+it('surfaces discovery failures and suppresses authentication only on the login surface', () => {
+  const discovery = new ApiError(500, 'internal_error', 'Discovery failed');
+  const versionError = new Error('Version failed');
+  const view = shellView(settings, 'config', undefined, discovery, undefined, versionError, t);
+  expect(view.content.kind).toBe('page');
+  expect(view.error).toBe(discovery);
+  const auth = new ApiError(401, 'authentication_required', 'Token required');
+  expect(shellView(settings, 'config', undefined, auth, undefined, versionError, t).error).toBe(versionError);
+  expect(shellView(settings, 'settings', undefined, auth, undefined, null, t).error).toBe(auth);
+});

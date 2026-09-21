@@ -66,12 +66,6 @@ export function Shortcuts({
         }
         return;
       }
-      if (event.key === 'r') {
-        event.preventDefault();
-        reset();
-        refresh();
-        return;
-      }
       const pending = prefixAt;
       reset();
       if (pending !== null && performance.now() - pending <= 800) {
@@ -81,6 +75,12 @@ export function Shortcuts({
           go(path);
           return;
         }
+      }
+      if (event.key === 'r') {
+        event.preventDefault();
+        reset();
+        refresh();
+        return;
       }
       if (event.key === 'g') {
         event.preventDefault();

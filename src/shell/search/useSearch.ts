@@ -22,6 +22,11 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
     q,
     setQ,
     sections: view.sections,
+    partial: view.partial,
+    openConnections: () => {
+      go('connections');
+      onClose();
+    },
     empty: view.byId.size === 0,
     error: sources.find(source => source.error)?.error,
     loading: sources.some(source => source.loading && !source.data),

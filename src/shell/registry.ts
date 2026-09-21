@@ -143,7 +143,7 @@ export function navAvailable(path: string, capabilities: Capabilities | undefine
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
 
-// Tabs and cards the search can jump to directly; each is gated by its page's requirements.
+// Search applies the destination's tab availability before offering these links.
 export const subpages: Array<{path: string; query: string; titleKey: Key}> = [
   {path: 'rules', query: 'tab=map', titleKey: 'rule.map'},
   {path: 'rules', query: 'tab=list', titleKey: 'rule.listTitle'},

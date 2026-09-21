@@ -32,10 +32,13 @@ describe('hash routing', () => {
     ['#/flows', 'rules', 'tab=map'],
     ['#/flows?id=flow-1', 'rules', 'id=flow-1&tab=flows'],
     ['#/flows?connection_id=1', 'rules', 'connection_id=1&tab=flows'],
-    ['#/?id=a', 'activity', 'id=a'],
-    ['#/unknown?id=a', 'unknown', 'id=a']
+    ['#/?id=a', 'activity', 'id=a']
   ])('parses %s', (hash, route, query) => {
     expect(parseHash(hash)).toEqual({route, query});
+  });
+
+  it('maps an unknown destination to Activity without retaining the invalid route', () => {
+    expect(parseHash('#/unknown?id=a')).toEqual({route: 'activity', query: 'id=a'});
   });
 
   it.each<[string, string?]>([

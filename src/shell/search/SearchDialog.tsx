@@ -7,7 +7,7 @@ import {useSearch} from './useSearch';
 
 export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
-  const {q, setQ, sections, empty, error, loading, select} = useSearch(go, onClose);
+  const {q, setQ, sections, partial, openConnections, empty, error, loading, select} = useSearch(go, onClose);
   return (
     <ModalDialog
       title={t('search')}
@@ -25,6 +25,14 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
         </Button>
       </div>
       {error && <ErrorMessage error={error} />}
+      {partial && (
+        <div className="rp-note" role="status">
+          {partial}
+          <Button small quiet onPress={openConnections}>
+            {t('nav.connections')}
+          </Button>
+        </div>
+      )}
       {empty && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
       <ListBox aria-label={t('search')} className="rp-results" onAction={select}>
         {sections.map(section => (
