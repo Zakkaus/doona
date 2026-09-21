@@ -14,7 +14,7 @@ async function expectRowInView(row: Locator) {
     .poll(() =>
       row.evaluate(element => {
         const rect = element.getBoundingClientRect();
-        const grid = element.closest('[role="grid"]')!;
+        const grid = element.closest('[role="grid"], [role="treegrid"]')!;
         const header = grid.querySelector('[role="columnheader"]')!.getBoundingClientRect();
         return rect.top >= header.bottom && rect.bottom <= grid.getBoundingClientRect().bottom;
       })
@@ -73,6 +73,10 @@ test('connection selection follows clicks, arrows and Home/End across virtual ro
   await expectRowInView(selected);
   await page.keyboard.press('Home');
   await expect(selected).toHaveAttribute('data-key', 'c-0001');
+  await selected.focus();
+  await page.keyboard.press('d');
+  await expect(page.locator('.rp-table [role=row]:focus').getByRole('rowheader')).toHaveText('doubleclick.net');
+  await page.keyboard.press('Home');
   for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowDown');
   await expect(selected).toHaveAttribute('aria-rowindex', '22');
   await expectRowInView(selected);
@@ -206,6 +210,60 @@ test('column visibility, sorting and grouping persist without expanding the virt
     element.scrollTop = 0;
   });
   await expect(grid.locator('[role=row][aria-level="1"]').first()).toContainText('10.0.0.');
+});
+
+test('group slots stay expanded and unselectable across virtual keyboard navigation', async ({page}) => {
+  await page.goto('/#/connections');
+  await page.getByRole('button', {name: 'Group by'}).click();
+  await page.getByRole('option', {name: 'By client', exact: true}).click();
+  const grid = page.getByRole('treegrid', {name: 'Connections'});
+  const groups = grid.locator('[role=row][aria-level="1"]');
+  const selected = grid.locator('[aria-selected="true"]');
+  await expect(grid).toHaveAttribute('aria-rowcount', '1005');
+  await expect(groups.first()).toHaveAttribute('aria-expanded', 'true');
+  await groups.first().click({force: true});
+  await expect(selected).toHaveCount(0);
+  await grid.locator('[data-key="c-0001"]').getByRole('rowheader').click();
+  await page.keyboard.press('ArrowLeft');
+  await expect(groups.first()).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('End');
+  await expect(selected).toHaveAttribute('data-key', 'c-0400');
+  await expectRowInView(selected);
+  await page.keyboard.press('Home');
+  await expect(selected).toHaveAttribute('data-key', 'c-0001');
+  await page.evaluate(() => {
+    location.hash = '#/connections?id=c-0002';
+  });
+  await expect(selected).toHaveAttribute('data-key', 'c-0002');
+  await expectRowInView(selected);
+  await selected.getByRole('rowheader').click();
+  await page.keyboard.press('ArrowUp');
+  await expect(selected).toHaveAttribute('data-key', 'c-0397');
+  await page.keyboard.press('ArrowDown');
+  await expect(selected).toHaveAttribute('data-key', 'c-0002');
+  await expect(grid.locator('[role=row][aria-level="1"]:not([aria-expanded="true"])')).toHaveCount(0);
+  await expect(grid.locator('[role=rowheader]:not(:has(> .cell)), [role=gridcell]:not(:has(> .cell))')).toHaveCount(0);
+  expect(await grid.getByRole('row').count()).toBeLessThan(60);
+});
+
+test.describe('short connection lists', () => {
+  test.use({storage: {'doona-connections-view': JSON.stringify({hidden: ['dst'], sort: null, group: 'none'})}});
+
+  test('virtualizes immediately and keeps first-visible sizing and type-ahead', async ({page}) => {
+    await page.goto('/#/connections');
+    const grid = page.getByRole('grid', {name: 'Connections'});
+    await expect(grid).toHaveAttribute('aria-rowcount', '9');
+    expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
+    const source = grid.getByRole('columnheader', {name: 'Source'});
+    const chain = grid.getByRole('columnheader', {name: 'Chain'});
+    await expect(source).toBeVisible();
+    await expect.poll(async () => (await source.boundingBox())!.width / (await chain.boundingBox())!.width).toBeCloseTo(128 / 168, 2);
+    await expect(grid.locator('[data-key="1"]').getByRole('rowheader')).toHaveText('10.0.0.12');
+    await grid.locator('[data-key="1"]').focus();
+    await page.keyboard.press('d');
+    await expect(grid.locator('[role=row]:focus')).toHaveAttribute('data-key', '4');
+    await expect(grid.locator('[role=rowheader]:not(:has(> .cell)), [role=gridcell]:not(:has(> .cell))')).toHaveCount(0);
+  });
 });
 
 test.describe('default view', () => {
