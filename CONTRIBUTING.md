@@ -20,7 +20,6 @@ Create one folder for each feature under `src/features`. Keep a feature's pages,
 
 Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
 
-
 ## Commit and pull request flow
 
 Use commit subjects in this form:
