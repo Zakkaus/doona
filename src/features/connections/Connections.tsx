@@ -72,7 +72,7 @@ export function Connections({go, query}: PageProps) {
   const closing = useConnectionClose(resource.refetch);
   async function close(id: string, name: string) {
     try {
-      await closing.close(id);
+      if (!(await closing.close(id))) return;
       select(null);
       toast('positive', t('conn.closed', {name}));
     } catch (error) {
@@ -138,7 +138,7 @@ export function Connections({go, query}: PageProps) {
           quiet
           label={t('conn.pick')}
           value={[src ? 'src:' + src : '', rule !== 'all' ? 'rule:' + rule : '']}
-          onChange={id => {
+          onAction={id => {
             if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
             else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
           }}
@@ -201,7 +201,7 @@ export function Connections({go, query}: PageProps) {
                 : {ids: shown.map(c => c.id)}
             }
             closing={closing}
-            onStart={() => select(null)}
+            onClosed={() => select(null)}
           />
         )}
         <Button

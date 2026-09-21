@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {getApi} from '../index';
 import type {Capabilities, Operation, OperationState, ProbeRequest} from '../model';
 import {LocalError} from '../error';
@@ -15,28 +15,31 @@ export function useAction<K extends string>({scope, rethrow = false}: {scope?: u
     },
     [api, scope]
   );
-  async function run<T>(kind: K, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
-    if (active.current) return undefined;
-    const controller = new AbortController();
-    active.current = controller;
-    setBusy(kind);
-    setError(null);
-    try {
-      const result = await action(controller.signal);
-      return controller.signal.aborted ? undefined : result;
-    } catch (reason) {
-      if (controller.signal.aborted) return undefined;
-      const failure = reason instanceof Error ? reason : new Error(String(reason));
-      setError(failure);
-      if (rethrow) throw failure;
-      return undefined;
-    } finally {
-      if (active.current === controller) {
-        active.current = null;
-        setBusy(null);
+  const run = useCallback(
+    async <T>(kind: K, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> => {
+      if (active.current) return undefined;
+      const controller = new AbortController();
+      active.current = controller;
+      setBusy(kind);
+      setError(null);
+      try {
+        const result = await action(controller.signal);
+        return controller.signal.aborted ? undefined : result;
+      } catch (reason) {
+        if (controller.signal.aborted) return undefined;
+        const failure = reason instanceof Error ? reason : new Error(String(reason));
+        setError(failure);
+        if (rethrow) throw failure;
+        return undefined;
+      } finally {
+        if (active.current === controller) {
+          active.current = null;
+          setBusy(null);
+        }
       }
-    }
-  }
+    },
+    [rethrow]
+  );
   return {busy, error, setError, run};
 }
 // If-Match carries the revision as a quoted entity tag.

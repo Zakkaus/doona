@@ -97,6 +97,35 @@ test('connection filtering narrows the collection and renders an empty result', 
   expect(await page.locator('.rp-table [role="row"]').count()).toBeLessThan(60);
 });
 
+test('activating a checked source or rule removes that filter', async ({page}) => {
+  await page.goto('/#/connections');
+  const pick = page.getByRole('button', {name: 'Pick', exact: true});
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+  await pick.click();
+  const source = page.getByRole('menuitemradio').first();
+  const sourceName = await source.locator('.rp-il').innerText();
+  await source.click();
+  await expect(page.locator('.rp-toolbar input')).toHaveValue(sourceName);
+  await pick.click();
+  const selectedSource = page.getByRole('menuitemradio').filter({hasText: sourceName});
+  await expect(selectedSource).toHaveAttribute('aria-checked', 'true');
+  await selectedSource.click();
+  await expect(page.locator('.rp-toolbar input')).toHaveValue('');
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+  await pick.click();
+  const rule = page.getByRole('menuitemradio').filter({hasText: 'domain('}).first();
+  const ruleName = await rule.locator('.rp-il').innerText();
+  await rule.click();
+  await expect(page).toHaveURL(/rule=/);
+  await pick.click();
+  const selectedRule = page.getByRole('menuitemradio').filter({hasText: ruleName});
+  await expect(selectedRule).toHaveAttribute('aria-checked', 'true');
+  await selectedRule.click();
+  await expect(page).not.toHaveURL(/rule=/);
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+});
+
 test('connection selection survives a runtime poll', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/connections');

@@ -56,7 +56,15 @@ export function RoutingMap({go, query}: PageProps) {
   const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
-      <ErrorMessage error={resource.error ?? groups.error ?? nodes.error} />
+      <ErrorMessage
+        error={resource.error ?? groups.error ?? nodes.error ?? rules.error}
+        onRetry={() => {
+          resource.refetch();
+          groups.refetch();
+          nodes.refetch();
+          rules.refetch();
+        }}
+      />
       {resource.data || groups.data ? (
         <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
       ) : resource.error || groups.error ? null : (

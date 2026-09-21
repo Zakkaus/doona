@@ -7,12 +7,12 @@ export function CloseAllButton({
   count,
   selection,
   closing,
-  onStart
+  onClosed
 }: {
   count: number;
   selection: Parameters<ReturnType<typeof useConnectionClose>['closeAll']>[0];
   closing: ReturnType<typeof useConnectionClose>;
-  onStart?: () => void;
+  onClosed?: () => void;
 }) {
   const t = useT();
   return (
@@ -32,9 +32,12 @@ export function CloseAllButton({
             negative
             onPress={() => {
               close();
-              onStart?.();
               void closing.closeAll(selection).then(
-                tally => toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped})),
+                tally => {
+                  if (!tally) return;
+                  onClosed?.();
+                  toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+                },
                 (error: unknown) => toast('negative', t('conn.closeFailed', {error: errorText(error)}))
               );
             }}

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../../api';
@@ -16,7 +16,6 @@ import {
   LabeledSelect,
   Light,
   Loading,
-  ModalDialog,
   Segmented,
   Tabs,
   TextTooltip,
@@ -31,7 +30,7 @@ import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {candidate, fileName, groupNames, redacted} from './names';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
+import {DraftContext, within} from '../../shell/route';
 import {sha256} from '../../api/hash';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -89,20 +88,22 @@ export function Config({go, query}: PageProps) {
   const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
-  // Leaving an edit: the browser asks on reload or close; switching source or tab asks with the kit's dialog.
-  const [dirty, setDirty] = useState(false);
-  const [pending, setPending] = useState<string | null>(null);
+  const [dirty, updateDirty] = useState(false);
+  const guardDraft = useContext(DraftContext);
+  const setDirty = useCallback(
+    (value: boolean) => {
+      guardDraft(value);
+      updateDirty(value);
+    },
+    [guardDraft]
+  );
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     addEventListener('beforeunload', warn);
     return () => removeEventListener('beforeunload', warn);
   }, [dirty]);
-  const navigate = (next: string) => {
-    if (dirty) setPending(next);
-    else go('config', next);
-  };
-  const select = (id: string | null) => navigate(within(query, {source: id, line: null}));
+  const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
@@ -137,7 +138,7 @@ export function Config({go, query}: PageProps) {
         <Tabs
           label={t('nav.config')}
           value={tab}
-          onChange={next => navigate(within(query, {tab: next}))}
+          onChange={next => go('config', within(query, {tab: next}))}
           items={[
             ...(setupAvailable && mainSource
               ? [
@@ -227,32 +228,6 @@ export function Config({go, query}: PageProps) {
           ]}
         />
       )}
-      <ModalDialog
-        title={t('config.discardTitle')}
-        narrow
-        alert
-        isOpen={pending !== null}
-        onOpenChange={open => {
-          if (!open) setPending(null);
-        }}
-        footer={close => (
-          <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button
-              negative
-              onPress={() => {
-                const next = pending;
-                setPending(null);
-                if (next !== null) go('config', next);
-              }}
-            >
-              {t('config.discard')}
-            </Button>
-          </>
-        )}
-      >
-        <p>{t('config.discardHelp')}</p>
-      </ModalDialog>
     </div>
   );
 }
@@ -273,6 +248,7 @@ function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirt
   const t = useT();
   // If-Match uses the draft's original digest to reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; base: string} | null>(null);
+  const [saving, setSaving] = useState(false);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   // Content is only safe to edit when it is the complete accepted text: present and hashing to the accepted digest.
   const hash = useSha256(source.content);
@@ -331,14 +307,19 @@ function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirt
     return result.valid;
   };
   const save = async () => {
-    if (draft === null) return;
-    if (canValidate && !(await validate('failure'))) return;
-    const result = await editor.save(source.id, draft.text, draft.base);
-    // A rejected save carries its own diagnostics; drop the dry-run list so they show.
-    setFound(null);
-    if (result) {
-      toast('positive', t('config.saved', {path: sourceName(source, t)}));
-      setDraft(null);
+    if (draft === null || saving || editor.busy) return;
+    setSaving(true);
+    try {
+      if (canValidate && !(await validate('failure'))) return;
+      const result = await editor.save(source.id, draft.text, draft.base);
+      // A rejected save carries its own diagnostics; drop the dry-run list so they show.
+      setFound(null);
+      if (result) {
+        toast('positive', t('config.saved', {path: sourceName(source, t)}));
+        setDraft(null);
+      }
+    } finally {
+      setSaving(false);
     }
   };
   const edit = () => setDraft({text: source.content ?? '', base: source.content_sha256});
@@ -347,7 +328,7 @@ function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirt
     setFound(null);
   };
   const change = (value: string) => setDraft(prev => (prev ? {...prev, text: value} : prev));
-  return {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change};
+  return {editing, saving, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change};
 }
 
 function SourceCard(props: SourceCardProps) {
@@ -355,7 +336,8 @@ function SourceCard(props: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const n = (value: number) => formatNumber(value, locale);
-  const {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change} = useSourceCard(props);
+  const {editing, saving, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change} = useSourceCard(props);
+  const busy = saving || !!editor.busy;
   return (
     <section className="rp-card">
       <div className="rp-row">
@@ -370,24 +352,24 @@ function SourceCard(props: SourceCardProps) {
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button isPending={editor.busy === 'validate'} isDisabled={!!editor.busy || source.content === undefined} onPress={() => void validate()}>
+            <Button isPending={editor.busy === 'validate'} isDisabled={busy || source.content === undefined} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
           {canWrite && !editing && (
-            <Button isDisabled={!complete || !!editor.busy} tip={complete === false ? t('config.incomplete') : undefined} onPress={edit}>
+            <Button isDisabled={!complete || busy} tip={complete === false ? t('config.incomplete') : undefined} onPress={edit}>
               {t('config.edit')}
             </Button>
           )}
           {editing && (
             <>
-              <Button isDisabled={!!editor.busy} onPress={cancel}>
+              <Button isDisabled={busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
               <Button
                 accent
-                isPending={editor.busy === 'save'}
-                isDisabled={!!editor.busy || !dirty}
+                isPending={saving}
+                isDisabled={busy || !dirty}
                 tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
                 onPress={() => void save()}
               >
@@ -415,12 +397,12 @@ function SourceCard(props: SourceCardProps) {
         <CodeEditor
           label={sourceName(source, t)}
           value={text}
-          readOnly={!editing || editor.busy === 'save'}
+          readOnly={!editing || busy}
           onChange={editing ? change : undefined}
           marks={marks}
           focusLine={jump ?? focusLine}
           outbounds={outbounds}
-          onSave={editing && dirty && !editor.busy ? () => void save() : undefined}
+          onSave={editing && dirty && !busy ? () => void save() : undefined}
         />
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>

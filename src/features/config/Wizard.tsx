@@ -48,6 +48,8 @@ export function Wizard({
     };
   });
   const text = useMemo(() => writeState(current, state), [current, state]);
+  const [saving, setSaving] = useState(false);
+  const busy = saving || !!editor.busy;
   const dirty = text !== current;
   useEffect(() => {
     onDirty(dirty);
@@ -60,18 +62,25 @@ export function Wizard({
   const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
-    if (canValidate) {
-      const check = await editor.validate({sources: [candidate(main, text)], mode: 'full'});
-      if (!check) return;
-      if (!check.valid) {
-        toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
-        return;
+    if (busy) return;
+    setSaving(true);
+    try {
+      if (canValidate) {
+        const check = await editor.validate({sources: [candidate(main, text)], mode: 'full'});
+        if (!check) return;
+        if (!check.valid) {
+          toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
+          return;
+        }
       }
+      const result = await editor.save(main.id, text, origin.sha256);
+      if (!result) return;
+      toast('positive', t('config.saved', {path: main.path}));
+      onDirty(false);
+      onDone();
+    } finally {
+      setSaving(false);
     }
-    const result = await editor.save(main.id, text, origin.sha256);
-    if (!result) return;
-    toast('positive', t('config.saved', {path: main.path}));
-    onDone();
   };
   return (
     <section className="rp-card" aria-label={t('config.wizard')}>
@@ -88,8 +97,15 @@ export function Wizard({
                 <span className="rp-code rp-grow">{item.raw.trim()}</span>
               ) : (
                 <>
-                  <TextField label={t('config.wizardSubscriptionName')} value={item.name} width={140} onChange={name => setSubscription(index, {name})} />
                   <TextField
+                    isDisabled={busy}
+                    label={t('config.wizardSubscriptionName')}
+                    value={item.name}
+                    width={140}
+                    onChange={name => setSubscription(index, {name})}
+                  />
+                  <TextField
+                    isDisabled={busy}
                     label={t('config.wizardSubscription')}
                     value={item.url}
                     width={520}
@@ -101,6 +117,7 @@ export function Wizard({
                 </>
               )}
               <Button
+                isDisabled={busy}
                 quiet
                 small
                 label={t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})}
@@ -112,7 +129,11 @@ export function Wizard({
           )
         )}
         <div>
-          <Button small onPress={() => patch({subscriptions: [...state.subscriptions, {name: `sub-${state.subscriptions.length + 1}`, url: ''}]})}>
+          <Button
+            isDisabled={busy}
+            small
+            onPress={() => patch({subscriptions: [...state.subscriptions, {name: `sub-${state.subscriptions.length + 1}`, url: ''}]})}
+          >
             {t('config.wizardAddSubscription')}
           </Button>
         </div>
@@ -121,6 +142,7 @@ export function Wizard({
       <h3 className="rp-h3">{t('config.wizardTemplate')}</h3>
       <div className="rp-toolbar top">
         <LabeledSelect
+          isDisabled={busy}
           label={t('config.wizardTemplate')}
           value={state.rules}
           onChange={rules => patch({rules: rules as WizardState['rules']})}
@@ -130,7 +152,14 @@ export function Wizard({
           ]}
         />
         {!current.trim() && (
-          <TextField label={t('config.wizardLan')} value={state.lanInterface} width={140} placeholder="auto" onChange={lanInterface => patch({lanInterface})} />
+          <TextField
+            isDisabled={busy}
+            label={t('config.wizardLan')}
+            value={state.lanInterface}
+            width={140}
+            placeholder="auto"
+            onChange={lanInterface => patch({lanInterface})}
+          />
         )}
       </div>
       <span className="rp-label">{t('config.wizardGroupUsed', {name: state.group ?? defaultGroup})}</span>
@@ -140,8 +169,8 @@ export function Wizard({
       <div className="rp-toolbar">
         <Button
           accent
-          isDisabled={!complete || !valid || !!editor.busy || text === current}
-          isPending={editor.busy === 'save'}
+          isDisabled={!complete || !valid || busy || text === current}
+          isPending={saving}
           tip={complete === false ? t('config.incomplete') : undefined}
           onPress={() => void apply()}
         >

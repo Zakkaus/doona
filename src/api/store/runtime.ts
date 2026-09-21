@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {getApi} from '../index';
 import type {Api} from '../api';
 import type {Capabilities, Operation, Runtime, RuntimeSettings, RuntimeSettingsPatch} from '../model';
@@ -56,15 +56,19 @@ const newest = <T extends {observed_at: string}>(written: T | null, polled: T | 
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {deps: [api], enabled});
+  const {refetch} = resource;
   const {busy, run} = useAction<'save'>({rethrow: true});
   const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);
-  const save = (patch: RuntimeSettingsPatch) =>
-    run('save', async signal => {
-      const next = await api.patchRuntimeSettings(patch, signal);
-      setSaved({api, value: next});
-      resource.refetch();
-      return next;
-    });
+  const save = useCallback(
+    (patch: RuntimeSettingsPatch) =>
+      run('save', async signal => {
+        const next = await api.patchRuntimeSettings(patch, signal);
+        setSaved({api, value: next});
+        refetch();
+        return next;
+      }),
+    [api, run, refetch]
+  );
   return {...resource, data: newest(saved?.api === api ? saved.value : null, resource.data), busy: busy !== null, save};
 }
 export function useRuntimeMemory(enabled = true) {
@@ -75,20 +79,27 @@ type RuntimeAction = 'reload' | 'suspend' | 'resume';
 export function useRuntimeOperations(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
   const api = getApi();
   const action = useAction<RuntimeAction>({rethrow: true});
-  const canRun = (kind: RuntimeAction) =>
-    !!runtime &&
-    !!capabilities?.resources.operations.available &&
-    !!capabilities.resources[kind].available &&
-    (kind === 'reload' || runtime.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended'));
-  const run = (kind: RuntimeAction) => {
-    if (!canRun(kind)) return Promise.resolve(undefined);
-    return action.run(kind, async signal => {
-      const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal);
-      const terminal = await api.pollOperation(accepted, signal);
-      refetch();
-      finished(terminal, kind);
-      return terminal as Extract<Operation, {status: 'succeeded'}>;
-    });
-  };
+  const {run: act} = action;
+  const canRun = useCallback(
+    (kind: RuntimeAction) =>
+      !!runtime &&
+      !!capabilities?.resources.operations.available &&
+      !!capabilities.resources[kind].available &&
+      (kind === 'reload' || runtime.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended')),
+    [runtime, capabilities]
+  );
+  const run = useCallback(
+    (kind: RuntimeAction) => {
+      if (!canRun(kind)) return Promise.resolve(undefined);
+      return act(kind, async signal => {
+        const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal);
+        const terminal = await api.pollOperation(accepted, signal);
+        refetch();
+        finished(terminal, kind);
+        return terminal as Extract<Operation, {status: 'succeeded'}>;
+      });
+    },
+    [api, act, canRun, refetch]
+  );
   return {busy: action.busy, error: action.error, canRun, run};
 }

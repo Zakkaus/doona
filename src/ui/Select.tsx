@@ -78,6 +78,7 @@ export function MenuButton<T extends Item>({
   sections,
   value,
   onChange,
+  onAction,
   multiple = false,
   label,
   quiet,
@@ -94,7 +95,8 @@ export function MenuButton<T extends Item>({
   items?: T[];
   sections?: Array<{title: string; heading?: ReactNode; items: T[]}>;
   value: string | string[];
-  onChange: (k: string) => void;
+  onChange?: (k: string) => void;
+  onAction?: (k: string) => void;
   multiple?: boolean;
   label: string;
   quiet?: boolean;
@@ -122,8 +124,8 @@ export function MenuButton<T extends Item>({
       className={virtualizeAbove !== undefined || searchLabel ? 'rp-menu-scroll' : undefined}
       selectionMode={sections ? undefined : multiple ? 'multiple' : 'single'}
       selectedKeys={sections ? undefined : typeof value === 'string' ? [value] : value}
-      onSelectionChange={sections || multiple ? undefined : pick(onChange)}
-      onAction={!sections && multiple ? key => onChange(String(key)) : undefined}
+      onSelectionChange={sections || multiple || !onChange ? undefined : pick(onChange)}
+      onAction={onAction ? key => onAction(String(key)) : !sections && multiple && onChange ? key => onChange(String(key)) : undefined}
       shouldCloseOnSelect={!!sections || !multiple}
       aria-label={label}
     >
@@ -134,7 +136,7 @@ export function MenuButton<T extends Item>({
               id={sec.title}
               selectionMode="single"
               selectedKeys={typeof value === 'string' ? [value] : value}
-              onSelectionChange={pick(onChange)}
+              onSelectionChange={onAction || !onChange ? undefined : pick(onChange)}
             >
               <Header className="rp-sec-h">{sec.heading ?? sec.title}</Header>
               {sec.items.map(item)}

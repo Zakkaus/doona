@@ -1,5 +1,5 @@
-import {useLayoutEffect, useRef, useState, type ReactNode, type RefObject} from 'react';
-import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable} from 'react-aria-components';
+import {useLayoutEffect, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
+import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
 
 // accent / negative are the coloured variants; every neutral button shares one look.
@@ -31,7 +31,7 @@ export function Button({
   isPending?: boolean;
   tip?: string;
   type?: 'button' | 'submit' | 'reset';
-  appearance?: 'search' | 'version' | 'select' | 'brand';
+  appearance?: 'select';
   className?: string;
 }) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
@@ -40,13 +40,12 @@ export function Button({
     <RButton
       ref={ref}
       className={cx(
-        appearance ? `rp-${appearance}` : 'rp-btn',
+        className ?? (appearance ? `rp-${appearance}` : 'rp-btn'),
         quiet && 'quiet',
         small && 'sm',
         icon && 'icon',
         accent && 'accent',
-        negative && 'negative',
-        className
+        negative && 'negative'
       )}
       onPress={onPress}
       aria-label={label}
@@ -113,29 +112,23 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
 
 // Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
 export function Link({
-  href,
   external,
   appearance,
   label,
   className,
-  children
-}: {
-  href: string;
+  ...props
+}: ComponentPropsWithRef<typeof RLink> & {
   external?: boolean;
-  appearance?: 'button' | 'version';
+  appearance?: 'button' | 'version' | 'link';
   label?: string;
-  className?: string;
-  children: ReactNode;
 }) {
   return (
     <RLink
-      href={href}
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={label}
-      className={cx(appearance === 'button' ? 'rp-btn' : appearance === 'version' ? 'rp-version' : 'rp-link', className)}
-    >
-      {children}
-    </RLink>
+      {...props}
+      className={appearance ? composeRenderProps(className, value => cx(appearance === 'button' ? 'rp-btn' : `rp-${appearance}`, value)) : className}
+    />
   );
 }

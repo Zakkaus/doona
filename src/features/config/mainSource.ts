@@ -1,3 +1,4 @@
+import {useCallback} from 'react';
 import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
 import {candidate} from './names';
 import type {ConfigSource} from '../../api/model';
@@ -18,23 +19,27 @@ export function useMainSourceEdit(): MainSourceEdit {
   const config = useConfig(resources?.config.available === true);
   const editor = useConfigEditor(config.refetch, {rethrow: true});
   const main = config.data?.sources.find(source => source.kind === 'main' && source.writable && typeof source.content === 'string') ?? null;
+  const {validate, save} = editor;
   return {
     main,
     writable,
     busy: editor.busy !== null,
-    apply: async (transform, onInvalid) => {
-      if (!main) return false;
-      const content = transform(main.content!);
-      // The dry run is optional in the contract; without it the write's own validation answers instead.
-      if (resources?.config_validate.available && resources.config_validate.modes?.includes('full')) {
-        const check = await editor.validate({sources: [candidate(main, content)], mode: 'full'});
-        if (!check) return false;
-        if (!check.valid) {
-          onInvalid?.(check.diagnostics.filter(d => d.level === 'error').length);
-          return false;
+    apply: useCallback<MainSourceEdit['apply']>(
+      async (transform, onInvalid) => {
+        if (!main) return false;
+        const content = transform(main.content!);
+        // The dry run is optional in the contract; without it the write's own validation answers instead.
+        if (resources?.config_validate.available && resources.config_validate.modes?.includes('full')) {
+          const check = await validate({sources: [candidate(main, content)], mode: 'full'});
+          if (!check) return false;
+          if (!check.valid) {
+            onInvalid?.(check.diagnostics.filter(d => d.level === 'error').length);
+            return false;
+          }
         }
-      }
-      return !!(await editor.save(main.id, content, main.content_sha256));
-    }
+        return !!(await save(main.id, content, main.content_sha256));
+      },
+      [main, resources, validate, save]
+    )
   };
 }

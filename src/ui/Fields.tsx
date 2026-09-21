@@ -90,7 +90,10 @@ export function TextField({
   autoComplete,
   spellCheck,
   ...props
-}: Pick<ComponentProps<typeof RTextField>, 'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus'> &
+}: Pick<
+  ComponentProps<typeof RTextField>,
+  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled'
+> &
   Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> & {
     label: string;
     width?: number;

@@ -41,7 +41,9 @@ export function Login({backend, rejected}: {backend: string; rejected: boolean})
         <Button accent type="submit" isDisabled={!token.trim()}>
           {t('login.submit')}
         </Button>
-        <Link href="#/settings">{t('login.settings')}</Link>
+        <Link appearance="link" href="#/settings">
+          {t('login.settings')}
+        </Link>
       </div>
     </form>
   );

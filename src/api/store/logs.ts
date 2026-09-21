@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {getApi} from '../index';
 import type {ApiEvent, LogLevel, LogRecord} from '../model';
 import {useEvents} from './events';
@@ -56,5 +56,5 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
       });
     return () => controller.abort();
   }, [api, available, level, target, limit]);
-  return {records, connected, error, available, clear: () => setRecords([])};
+  return {records, connected, error, available, clear: useCallback(() => setRecords([]), [])};
 }

@@ -49,11 +49,11 @@ export function About({trigger}: {trigger: ReactElement}) {
         />
         <p className="rp-label">{t('about.credits')}</p>
         <div className="rp-cluster">
-          <Link href={import.meta.env.VITE_DOONA_REPO} external>
+          <Link appearance="link" href={import.meta.env.VITE_DOONA_REPO} external>
             <GitHub />
             doona
           </Link>
-          <Link href={org} external>
+          <Link appearance="link" href={org} external>
             <GitHub />
             {org.split('/').pop()}
           </Link>

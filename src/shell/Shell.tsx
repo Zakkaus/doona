@@ -31,7 +31,7 @@ import {
 } from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
-import {useRoute} from './route';
+import {DraftContext, useRoute} from './route';
 import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useVersion} from '../api/store';
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable, subpages, warmPage} from './registry';
@@ -268,7 +268,7 @@ export function Shell() {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
   const ap = useAppearance(settings);
-  const {route, query, go} = useRoute(settings.api);
+  const {route, query, go, setDirty, pending, discard, cancel} = useRoute(settings.api);
   // A hash no page owns goes to the first page instead of showing it under the wrong address.
   useEffect(() => {
     if (!features.some(feature => feature.path === route)) go('activity');
@@ -288,22 +288,50 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <Frame
-          settings={settings}
-          lang={lang}
-          pickLang={pickLang}
-          ap={ap}
-          route={route}
-          query={query}
-          go={go}
-          openSearch={() => setSearchOpen(true)}
-          mac={mac}
-        />
+        <DraftContext.Provider value={setDirty}>
+          <Frame
+            settings={settings}
+            lang={lang}
+            pickLang={pickLang}
+            ap={ap}
+            route={route}
+            query={query}
+            go={go}
+            openSearch={() => setSearchOpen(true)}
+            mac={mac}
+          />
+        </DraftContext.Provider>
+        <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
         {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
         <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
         <ToastHost />
       </I18nProvider>
     </LangContext.Provider>
+  );
+}
+
+function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () => void; cancel: () => void}) {
+  const t = useT();
+  return (
+    <ModalDialog
+      title={t('config.discardTitle')}
+      narrow
+      alert
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open) cancel();
+      }}
+      footer={close => (
+        <>
+          <Button onPress={close}>{t('ui.cancel')}</Button>
+          <Button negative onPress={discard}>
+            {t('config.discard')}
+          </Button>
+        </>
+      )}
+    >
+      <p>{t('config.discardHelp')}</p>
+    </ModalDialog>
   );
 }
 
@@ -370,7 +398,7 @@ function Frame({
       <header className="rp-top">
         <About
           trigger={
-            <Button appearance="brand" label={t('about.title')}>
+            <Button className="rp-brand" label={t('about.title')}>
               <img src={logo} alt="" />
               <span className="rp-brand-text">
                 <span>doona</span>
@@ -380,7 +408,7 @@ function Frame({
           }
         />
         <div className="rp-search-wrap">
-          <Button appearance="search" onPress={openSearch}>
+          <Button className="rp-search" onPress={openSearch}>
             <Search />
             <span className="grow">{t('search')}</span>
             <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>

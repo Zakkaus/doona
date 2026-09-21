@@ -84,6 +84,59 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
 });
 
+test('navigation cancels a connection probe without a timeout toast', async ({page}) => {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => {
+    resolve = done;
+  });
+  await page.route('**/slow-backend/api', async route => {
+    await promise;
+    await route.fulfill({json: {api_major: 1}});
+  });
+  await page.goto('/#/settings');
+  await page.locator('[name=api]').fill(new URL(page.url()).origin + '/slow-backend');
+  const request = page.waitForRequest('**/slow-backend/api');
+  await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
+  await request;
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  await expect(page.getByRole('heading', {name: 'Connections', exact: true})).toBeVisible();
+  resolve();
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+});
+
+test('a pairing link cancels the old probe and clears its result', async ({page}) => {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => {
+    resolve = done;
+  });
+  await page.route('**/old-backend/api', async route => {
+    await promise;
+    await route.fulfill({json: {api_major: 1}});
+  });
+  await page.route('**/new-backend/api', route => route.fulfill({json: {api_major: 2}}));
+  await page.goto('/#/settings');
+  const origin = new URL(page.url()).origin;
+  await page.locator('[name=api]').fill(origin + '/old-backend');
+  const request = page.waitForRequest('**/old-backend/api');
+  const probe = page.getByRole('button', {name: t('settings.test'), exact: true});
+  await probe.click();
+  await request;
+  await page.evaluate(api => {
+    location.hash = '#/settings?api=' + encodeURIComponent(api) + '&token=paired';
+  }, origin + '/new-backend');
+  await expect(page.locator('[name=api]')).toHaveValue(origin + '/new-backend');
+  await expect(probe).toBeEnabled();
+  resolve();
+  await expect(page.locator('form').getByRole('status')).toHaveCount(0);
+  await probe.click();
+  await expect(page.locator('form').getByRole('status')).toContainText('API v2');
+  await page.evaluate(() => {
+    location.hash = '#/settings?api=mock';
+  });
+  await expect(page.locator('[name=api]')).toHaveValue('mock');
+  await expect(page.locator('form').getByRole('status')).toHaveCount(0);
+});
+
 // A raw browser test: 401 and 404 responses log console errors by design here.
 browserTest('a backend that answers 401 gets a token form instead of the page', async ({page}) => {
   let authorization: string | null = null;

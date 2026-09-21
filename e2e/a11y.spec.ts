@@ -1,11 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import {expect, offered, routes, test} from './fixtures';
 
-// Dawn contrast remains a palette decision; other violations must fail this gate.
-const KNOWN: Record<string, string> = {
-  'color-contrast':
-    'Rosé Pine Dawn is used with its official values: subtle text (#797593) reaches 4.0:1 and the gold current-page mark 2.1:1. Labels use subtle, never muted.'
-};
+// Dawn retains its official subtle text and navigation accents on these existing surfaces.
+const knownContrast =
+  '[data-family="rose-pine"][data-scheme="light"] :is(.rp-brand-version, .rp-search > .grow, .rp-kbd, .rp-side .rp-group, .rp-nav, .rp-version, .rp-head .rp-hint, .rp-tile-head, .rp-seg > .rp-btn[aria-checked="false"], .rp-legend > .it, .rp-card .rp-label, .rp-donut .r > span:nth-child(3), .rp-donut .r > .p, .rp-bar > .top > .v, .rp-note)';
 
 for (const route of routes) {
   test(route, async ({page}, testInfo) => {
@@ -21,13 +19,31 @@ for (const route of routes) {
         rule.id,
         {
           count: rule.nodes.length,
-          reason: KNOWN[rule.id] ?? null,
+          reason: rule.id === 'color-contrast' ? knownContrast : null,
           nodes: rule.nodes.map(node => ({target: node.target, html: node.html, summary: node.failureSummary}))
         }
       ])
     );
     await testInfo.attach('axe.json', {body: JSON.stringify({route, findings}, null, 2), contentType: 'application/json'});
-    const violations = results.violations.filter(rule => !Object.hasOwn(KNOWN, rule.id));
+    const violations = [];
+    for (const rule of results.violations) {
+      const unexpected = [];
+      for (const node of rule.nodes) {
+        const known =
+          rule.id === 'color-contrast' &&
+          node.target.length === 1 &&
+          typeof node.target[0] === 'string' &&
+          node.any.every(
+            check =>
+              check.id === 'color-contrast' &&
+              ['#797593', '#907aa9', '#b4637a', '#ea9d34'].includes(check.data?.fgColor) &&
+              ['#faf4ed', '#fffaf3', '#f2e9e1'].includes(check.data?.bgColor)
+          ) &&
+          (await page.locator(node.target[0]).evaluate((element, selector) => element.matches(selector), knownContrast));
+        if (!known) unexpected.push(node);
+      }
+      if (unexpected.length) violations.push({...rule, nodes: unexpected});
+    }
     expect(
       violations.map(rule => rule.id),
       'Unexpected rules; see axe.json for affected nodes'

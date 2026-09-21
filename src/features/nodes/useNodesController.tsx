@@ -1,4 +1,4 @@
-import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../api/store';
@@ -46,11 +46,9 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
   const manage = useNodeManage(reload);
   const source = useMainSourceEdit();
   const probe = useNodeProbe(refetchNodes);
-  // Store actions are recreated on render; event handlers use their latest committed versions.
-  const actions = useRef({apply: source.apply, refresh: refresh.refresh, probe: probe.probe});
-  useLayoutEffect(() => {
-    actions.current = {apply: source.apply, refresh: refresh.refresh, probe: probe.probe};
-  }, [source.apply, refresh.refresh, probe.probe]);
+  const {apply} = source;
+  const {refresh: refreshProvider} = refresh;
+  const {probe: probeNode} = probe;
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const intervals = useMemo(() => new Map(entries.map(e => [e.tag, e.interval])), [entries]);
   const intervalLabel = useCallback(
@@ -64,30 +62,26 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
   );
   const setInterval = useCallback(
     (name: string, seconds: number) => {
-      void actions.current
-        .apply(
-          text => writeInterval(text, name, seconds),
-          errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
-        )
-        .then(written => {
-          if (written) toast('positive', t('nodes.intervalSet', {name, interval: intervalLabel(seconds)}));
-        }, fail);
+      void apply(
+        text => writeInterval(text, name, seconds),
+        errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
+      ).then(written => {
+        if (written) toast('positive', t('nodes.intervalSet', {name, interval: intervalLabel(seconds)}));
+      }, fail);
     },
-    [t, n, intervalLabel]
+    [apply, t, n, intervalLabel]
   );
   const groupEntries = useMemo(() => readGroupEntries(source.main?.content ?? ''), [source.main?.content]);
   const joinGroup = useCallback(
     (node: Node, group: string) => {
-      void actions.current
-        .apply(
-          text => addNamesToGroup(text, group, [node.name]),
-          errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
-        )
-        .then(written => {
-          if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
-        }, fail);
+      void apply(
+        text => addNamesToGroup(text, group, [node.name]),
+        errors => toast('negative', t('nodes.writeInvalid', {n: n(errors)}))
+      ).then(written => {
+        if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
+      }, fail);
     },
-    [t, n]
+    [apply, t, n]
   );
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const names = useOutboundNames();
@@ -196,7 +190,7 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
               isDisabled={!!refreshBusy}
               label={t('nodes.refresh', {name: item.name})}
               onPress={() => {
-                void actions.current.refresh(item.id).then(result => {
+                void refreshProvider(item.id).then(result => {
                   if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: n(result.node_count)}));
                 }, fail);
               }}
@@ -212,7 +206,7 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
         </span>
       ];
     },
-    [intervals, t, n, locale, writable, sourceBusy, setInterval, intervalLabel, canRefresh, refreshBusy, canManageProviders, manageBusy, open]
+    [intervals, t, n, locale, writable, sourceBusy, setInterval, intervalLabel, canRefresh, refreshBusy, canManageProviders, manageBusy, open, refreshProvider]
   );
   const renderNode = useCallback(
     (node: Node) => {
@@ -245,12 +239,12 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
               isDisabled={!!probeBusy}
               label={t('nodes.probe', {name: node.name})}
               onPress={() => {
-                void actions.current.probe(node.id).then(result => {
+                void probeNode(node.id).then(result => {
                   if (!result) return;
                   const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
                   toast(
                     sample ? 'positive' : 'negative',
-                    sample ? t('nodes.probed', {name: node.name, n: n(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+                    sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
                   );
                 }, fail);
               }}
@@ -284,7 +278,7 @@ export function useNodesController({go, query}: PageProps, open: (dialog: NodeDi
         </span>
       ];
     },
-    [t, lang, names, canProbe, probeBusy, n, writable, sourceBusy, open, joinGroup, groupEntries, canManageNodes, inlineId, synthetic, manageBusy]
+    [t, lang, names, canProbe, probeBusy, writable, sourceBusy, open, joinGroup, groupEntries, canManageNodes, inlineId, synthetic, manageBusy, probeNode]
   );
 
   return {

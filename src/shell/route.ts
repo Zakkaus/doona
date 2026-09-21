@@ -1,8 +1,9 @@
-import {useEffect, useState} from 'react';
+import {createContext, useCallback, useEffect, useRef, useState} from 'react';
 import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
 
 type Route = {route: string; query: string};
+export const DraftContext = createContext<(dirty: boolean) => void>(() => {});
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
@@ -50,13 +51,30 @@ function currentHash(api: string | null): string {
 
 export function useRoute(api: string | null) {
   const [loc, setLoc] = useState(() => parseHash(currentHash(api)));
+  const dirty = useRef(false);
+  const setDirty = useCallback((value: boolean) => {
+    dirty.current = value;
+  }, []);
+  const [pending, setPending] = useState<Route | null>(null);
   useEffect(() => {
     const on = () => {
       const hash = currentHash(api);
-      setLoc(current => updateRoute(current, hash));
+      const next = updateRoute(loc, hash);
+      if (next === loc) return;
+      if (dirty.current) {
+        history.replaceState(null, '', buildHash(loc.route, loc.query));
+        setPending(next);
+      } else setLoc(next);
     };
     addEventListener('hashchange', on);
     return () => removeEventListener('hashchange', on);
-  }, [api]);
-  return {...loc, go};
+  }, [api, loc]);
+  const discard = () => {
+    if (!pending) return;
+    dirty.current = false;
+    history.replaceState(null, '', buildHash(pending.route, pending.query));
+    setLoc(pending);
+    setPending(null);
+  };
+  return {...loc, go, setDirty, pending, discard, cancel: () => setPending(null)};
 }

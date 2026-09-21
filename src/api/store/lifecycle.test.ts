@@ -51,7 +51,7 @@ it('shows loading only until data exists and keeps refresh promises pending thro
   const resource = consumer(0);
   expect(resource.publish).toHaveBeenLastCalledWith({data: undefined, loading: true, error: null});
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   resource.publish.mockClear();
   const next = deferred<Version>();
   resource.fetch.mockImplementation(() => next.promise);
@@ -99,14 +99,14 @@ it('starts a changed key in loading state and ignores a disposed key’s late re
   expect(resource.publish).not.toHaveBeenCalled();
   expect(publish).toHaveBeenCalledOnce();
   next.resolve(version);
-  await replacement.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   expect(publish).toHaveBeenLastCalledWith({data: version, loading: false, error: null});
 });
 
 it('does not carry data across keys or flash loading when remounting a remembered key', async () => {
   const resource = consumer();
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   resource.dispose();
   const next = deferred<Version>();
   const publish = vi.fn();
@@ -120,14 +120,14 @@ it('does not carry data across keys or flash loading when remounting a remembere
   await vi.advanceTimersByTimeAsync(0);
   expect(publish).not.toHaveBeenCalled();
   next.resolve(version);
-  await remembered.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   expect(publish).toHaveBeenLastCalledWith({data: version, loading: false, error: null});
 });
 
 it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an event at %i ms', async eventAt => {
   const resource = consumer();
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   resource.publish.mockClear();
   const next = deferred<Version>();
   resource.fetch.mockImplementation(() => next.promise);
@@ -142,7 +142,7 @@ it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an e
   expect(resource.fetch).toHaveBeenCalledTimes(2);
   expect(resource.publish).not.toHaveBeenCalled();
   next.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   await vi.advanceTimersByTimeAsync(4999);
   expect(resource.fetch).toHaveBeenCalledTimes(2);
   await vi.advanceTimersByTimeAsync(1);
@@ -152,7 +152,7 @@ it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an e
 it.each(['manual', 'reconnect'] as const)('%s refresh clears an armed invalidation and resets polling', async trigger => {
   const resource = consumer();
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   await vi.advanceTimersByTimeAsync(1000);
   resource.invalidate(false);
   await vi.advanceTimersByTimeAsync(500);
@@ -172,7 +172,6 @@ it('follows a fetch that was in flight during invalidations with one more fetch,
   resource.invalidate(false);
   await vi.advanceTimersByTimeAsync(1000);
   resource.invalidate(true);
-  void resource.refetch();
   await vi.advanceTimersByTimeAsync(10000);
   expect(resource.fetch).toHaveBeenCalledTimes(1);
   // The running request may predate the change; the follow-up comes once, coalesced, after it settles.
@@ -189,7 +188,7 @@ it('follows a fetch that was in flight during invalidations with one more fetch,
 it('suspends polls and event bursts while hidden and refreshes once when visible', async () => {
   const resource = consumer();
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   hide(true);
   await vi.advanceTimersByTimeAsync(15000);
   resource.invalidate(false);
@@ -209,7 +208,7 @@ it('suspends polls and event bursts while hidden and refreshes once when visible
 it('refreshes a hidden non-polling resource only when invalidated, and permits manual refresh while hidden', async () => {
   const resource = consumer(0);
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   hide(true);
   hide(false);
   await vi.advanceTimersByTimeAsync(10000);
@@ -233,12 +232,44 @@ it('refreshes a hidden non-polling resource only when invalidated, and permits m
 it('does not resume disposed consumers on visibility changes, timers or global refresh', async () => {
   const resource = consumer();
   resource.response.resolve(version);
-  await resource.refetch();
+  await vi.advanceTimersByTimeAsync(0);
   resource.invalidate(false);
   hide(true);
   resource.dispose();
   hide(false);
   await refetchAll();
   await vi.advanceTimersByTimeAsync(10000);
+  expect(resource.fetch).toHaveBeenCalledTimes(1);
+});
+
+it.each(['success', 'failure'] as const)('explicit refresh during initial %s waits for one follow-up response', async outcome => {
+  const resource = consumer(0);
+  await vi.advanceTimersByTimeAsync(0);
+  const next = deferred<Version>();
+  resource.fetch.mockImplementation(() => next.promise);
+  const done = vi.fn();
+  const refresh = resource.refetch()!.then(done);
+  const joined = resource.refetch();
+  if (outcome === 'success') resource.response.resolve(version);
+  else resource.response.reject(new Error('Offline'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(resource.fetch).toHaveBeenCalledTimes(2);
+  expect(done).not.toHaveBeenCalled();
+  const updated = {...version, engine: {...version.engine, version: 'after-write'}};
+  next.resolve(updated);
+  await Promise.all([refresh, joined]);
+  expect(done).toHaveBeenCalledOnce();
+  expect(resource.publish).toHaveBeenLastCalledWith({data: updated, loading: false, error: null});
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(resource.fetch).toHaveBeenCalledTimes(2);
+});
+
+it('disposal cancels a queued explicit refresh', async () => {
+  const resource = consumer(0);
+  await vi.advanceTimersByTimeAsync(0);
+  const refresh = resource.refetch();
+  resource.dispose();
+  resource.response.resolve(version);
+  await refresh;
   expect(resource.fetch).toHaveBeenCalledTimes(1);
 });

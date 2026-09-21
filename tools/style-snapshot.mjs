@@ -84,10 +84,20 @@ for (const palette of palettes) {
       },
       [palette, scheme]
     );
-    const page = await context.newPage();
     for (const route of routes) {
+      const page = await context.newPage();
+      await page.clock.setFixedTime(new Date('2026-09-16T00:00:00Z'));
       await page.goto(base + '/#/' + route);
-      await page.waitForTimeout(600);
+      await page.locator('.rp-content > :not(.rp-head):not([role="status"])').first().waitFor();
+      await page.locator('.rp-content').waitFor({state: 'visible'});
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('.rp-content [role="status"]')].every(element => !element.checkVisibility({visibilityProperty: true}))
+      );
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      await page.waitForFunction(() =>
+        document.getAnimations().every(animation => animation.effect?.getComputedTiming().iterations === Infinity || animation.playState === 'finished')
+      );
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const rows = await page.evaluate(props => {
         const out = [];
         const path = el => {
@@ -107,6 +117,7 @@ for (const palette of palettes) {
       }, props);
       const key = `${palette}/${scheme}/${route}`;
       result[key] = {hash: createHash('sha256').update(rows.join('\n')).digest('hex').slice(0, 16), count: rows.length, rows};
+      await page.close();
     }
     await context.close();
   }

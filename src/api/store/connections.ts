@@ -1,3 +1,4 @@
+import {useCallback} from 'react';
 import {getApi} from '../index';
 import type {BulkCloseQuery, BulkCloseResult} from '../model';
 import {ApiError} from '../error';
@@ -15,32 +16,39 @@ export function useConnectionClose(refetch: () => void) {
   const {busy, run} = useAction<string>({rethrow: true});
   // Bulk close for a selection the contract can express (network and source IP); anything narrower (a text
   // or outbound filter) closes one by one, where a 409 or 404 is a connection the backend no longer owns.
-  const closeAll = (selection: {query: BulkCloseQuery} | {ids: string[]}): Promise<BulkCloseResult> =>
-    run('all', async signal => {
-      try {
-        if ('query' in selection) return await api.closeConnections(selection.query, signal);
-        const tally = {closed: 0, skipped: 0};
-        for (const id of selection.ids) {
-          try {
-            await api.closeConnection(id, signal);
-            tally.closed += 1;
-          } catch (error) {
-            if (error instanceof ApiError && (error.status === 409 || error.status === 404)) tally.skipped += 1;
-            else throw error;
+  const closeAll = useCallback(
+    (selection: {query: BulkCloseQuery} | {ids: string[]}): Promise<BulkCloseResult | undefined> =>
+      run('all', async signal => {
+        try {
+          if ('query' in selection) return await api.closeConnections(selection.query, signal);
+          const tally = {closed: 0, skipped: 0};
+          for (const id of selection.ids) {
+            try {
+              await api.closeConnection(id, signal);
+              tally.closed += 1;
+            } catch (error) {
+              if (error instanceof ApiError && (error.status === 409 || error.status === 404)) tally.skipped += 1;
+              else throw error;
+            }
           }
+          return tally;
+        } finally {
+          refetch();
         }
-        return tally;
-      } finally {
-        refetch();
-      }
-    }).then(result => result ?? {closed: 0, skipped: 0});
+      }),
+    [api, run, refetch]
+  );
   return {
     busy,
-    close: (id: string) =>
-      run(id, async signal => {
-        await api.closeConnection(id, signal);
-        refetch();
-      }),
+    close: useCallback(
+      (id: string) =>
+        run(id, async signal => {
+          await api.closeConnection(id, signal);
+          refetch();
+          return true;
+        }),
+      [api, run, refetch]
+    ),
     closeAll
   };
 }

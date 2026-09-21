@@ -1,3 +1,4 @@
+import {useCallback} from 'react';
 import {getApi} from '../index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../model';
 import {pageSize, useResource, walk} from './resource';
@@ -36,45 +37,54 @@ export function useProviders(enabled = true) {
 export function useProviderRefresh(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});
-  const one = async (id: string, signal: AbortSignal) => {
-    const accepted = await api.refreshProvider(id, signal);
-    const result = await api.pollOperation(accepted, signal);
-    refetch();
-    return finished(result, 'provider_refresh');
-  };
-  const refresh = (id: string) => run(id, signal => one(id, signal));
+  const one = useCallback(
+    async (id: string, signal: AbortSignal) => {
+      const accepted = await api.refreshProvider(id, signal);
+      const result = await api.pollOperation(accepted, signal);
+      refetch();
+      return finished(result, 'provider_refresh');
+    },
+    [api, refetch]
+  );
+  const refresh = useCallback((id: string) => run(id, signal => one(id, signal)), [run, one]);
   // One batch under one signal; the result lists the refreshes that finished before an abort.
-  const refreshMany = (ids: string[], onFailure: (id: string, error: unknown) => void) =>
-    run('*', async signal => {
-      let done = 0;
-      for (const id of ids) {
-        if (signal.aborted) break;
-        try {
-          await one(id, signal);
-          done += 1;
-        } catch (error) {
+  const refreshMany = useCallback(
+    (ids: string[], onFailure: (id: string, error: unknown) => void) =>
+      run('*', async signal => {
+        let done = 0;
+        for (const id of ids) {
           if (signal.aborted) break;
-          onFailure(id, error);
+          try {
+            await one(id, signal);
+            done += 1;
+          } catch (error) {
+            if (signal.aborted) break;
+            onFailure(id, error);
+          }
         }
-      }
-      return done;
-    });
+        return done;
+      }),
+    [run, one]
+  );
   return {busy, refresh, refreshMany};
 }
 // Managed node/provider writes create a generation; refetch covers backends without generation events.
 export function useNodeManage(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});
-  const then = <T>(result: T) => {
-    refetch();
-    return result;
-  };
+  const then = useCallback(
+    <T>(result: T) => {
+      refetch();
+      return result;
+    },
+    [refetch]
+  );
   return {
     busy,
-    addProvider: (request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then)),
-    removeProvider: (id: string) => run(id, signal => api.deleteProvider(id, signal).then(then)),
-    addNode: (request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then)),
-    removeNode: (id: string) => run(id, signal => api.deleteNode(id, signal).then(then))
+    addProvider: useCallback((request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then)), [api, run, then]),
+    removeProvider: useCallback((id: string) => run(id, signal => api.deleteProvider(id, signal).then(then)), [api, run, then]),
+    addNode: useCallback((request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then)), [api, run, then]),
+    removeNode: useCallback((id: string) => run(id, signal => api.deleteNode(id, signal).then(then)), [api, run, then])
   };
 }
 export function useNodeProbe(refetch: () => void) {
@@ -82,28 +92,35 @@ export function useNodeProbe(refetch: () => void) {
   const capabilities = useCapabilities();
   const {busy, run} = useAction<string>({rethrow: true});
   const canProbe = tcpProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
-  const probe = (nodeId: string) => {
-    const request = tcpProbe(capabilities.data, {type: 'node', node_id: nodeId});
-    if (!request) return Promise.resolve(undefined);
-    return run(nodeId, async signal => {
-      const accepted = await api.startProbe(request, signal);
-      const result = await api.pollOperation(accepted, signal);
-      refetch();
-      return finished(result, 'probe');
-    });
-  };
+  const probe = useCallback(
+    (nodeId: string) => {
+      const request = tcpProbe(capabilities.data, {type: 'node', node_id: nodeId});
+      if (!request) return Promise.resolve(undefined);
+      return run(nodeId, async signal => {
+        const accepted = await api.startProbe(request, signal);
+        const result = await api.pollOperation(accepted, signal);
+        refetch();
+        return finished(result, 'probe');
+      });
+    },
+    [api, capabilities.data, run, refetch]
+  );
   return {busy, canProbe, probe};
 }
 export function useGeodata(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['geodata'], fetch: signal => api.geodata(signal)}, {deps: [api], enabled, every: 0});
+  const {refetch} = resource;
   const {busy, run} = useAction<'update'>({rethrow: true});
-  const update = () =>
-    run('update', async signal => {
-      const accepted = await api.updateGeodata(signal);
-      const result = await api.pollOperation(accepted, signal);
-      resource.refetch();
-      return finished(result, 'geodata_update');
-    });
+  const update = useCallback(
+    () =>
+      run('update', async signal => {
+        const accepted = await api.updateGeodata(signal);
+        const result = await api.pollOperation(accepted, signal);
+        refetch();
+        return finished(result, 'geodata_update');
+      }),
+    [api, run, refetch]
+  );
   return {...resource, busy: busy !== null, update};
 }

@@ -146,6 +146,12 @@ function Dictionary({go, query}: PageProps) {
     return !!(await editor.save(source.id, content, source.content_sha256));
   };
   const add = async (close: () => void) => {
+    if (!rules.data || !config.data || rules.data.generation_id !== config.data.generation_id) {
+      toast('negative', t('rule.stale'));
+      rules.refetch();
+      config.refetch();
+      return;
+    }
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
     const source = sourceFor(configSources, anchor?.source);
     if (!anchor?.source || !source || source.content === undefined) return;

@@ -38,9 +38,6 @@ export function remember(api: Api, name: string, data: unknown, parameterised: b
     }
   }
 }
-export function forgetResources() {
-  for (const api of [getApi()]) remembered.delete(api);
-}
 
 type ResourceState<T> = {data: T | undefined; loading: boolean; error: Error | null};
 
@@ -52,6 +49,7 @@ export function watchResource<T>(
   let data = recall<T>(api, name);
   let pending: RequestLease<T> | undefined;
   let settled: Promise<void> | undefined;
+  let followup: Promise<void> | undefined;
   let disposed = false;
   let dirty = false;
   let stale = false;
@@ -80,7 +78,8 @@ export function watchResource<T>(
       Math.max(0, at - Date.now())
     );
   };
-  const load = () => {
+  const load = (): Promise<void> | undefined => {
+    if (disposed) return;
     if (pending) return settled;
     clear();
     dirty = false;
@@ -111,6 +110,16 @@ export function watchResource<T>(
       });
     return settled;
   };
+  const refetch = () => {
+    if (!pending) return load();
+    if (!followup) {
+      followup = settled!.then(() => {
+        followup = undefined;
+        return load();
+      });
+    }
+    return followup;
+  };
   const invalidate = (reconnected: boolean) => {
     // A request already running may predate the change; one more follows once it settles.
     if (pending) stale = true;
@@ -128,15 +137,15 @@ export function watchResource<T>(
   };
   let listeners = refreshers.get(api);
   if (!listeners) refreshers.set(api, (listeners = new Set()));
-  listeners.add(load);
+  listeners.add(refetch);
   document.addEventListener('visibilitychange', visibility);
   load();
   return {
-    refetch: load,
+    refetch,
     invalidate,
     dispose() {
       disposed = true;
-      listeners.delete(load);
+      listeners.delete(refetch);
       document.removeEventListener('visibilitychange', visibility);
       pending?.release();
       clear();

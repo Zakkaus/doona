@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useT, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
@@ -23,6 +23,8 @@ export function useBackendForm(query: string) {
   const [api, setApi] = useState(saved.api ?? '');
   const [token, setToken] = useState(saved.token);
   const [paired, setPaired] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [pending, setPending] = useState(false);
   // Pairing links also fill an already-open form without saving the credentials.
   const [lastQuery, setLastQuery] = useState<string | null>(null);
   if (lastQuery !== query) {
@@ -32,6 +34,8 @@ export function useBackendForm(query: string) {
       setPaired(true);
       setApi(pair.api);
       setToken(pair.token);
+      setPending(false);
+      setResult(null);
     }
   }
   useEffect(() => {
@@ -46,19 +50,31 @@ export function useBackendForm(query: string) {
   }, [query]);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [invalid, setInvalid] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
-  const [pending, setPending] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveLock = useRef(false);
   const request = useRef<AbortController | null>(null);
-  useEffect(() => () => request.current?.abort(), []);
+  useEffect(
+    () => () => {
+      const controller = request.current;
+      request.current = null;
+      controller?.abort();
+    },
+    []
+  );
 
-  const resetProbe = () => {
-    request.current?.abort();
+  const resetProbe = useCallback(() => {
+    const controller = request.current;
     request.current = null;
+    controller?.abort();
     setPending(false);
     setResult(null);
-  };
+  }, []);
+  useLayoutEffect(() => {
+    if (!readPairing(query)) return;
+    const controller = request.current;
+    request.current = null;
+    controller?.abort();
+  }, [query]);
   const validate = (value: string) => {
     try {
       const base = normalizeApi(value);
@@ -134,7 +150,8 @@ export function useBackendForm(query: string) {
     } catch (error) {
       if (request.current !== controller) return;
       let failure: Result;
-      if (controller.signal.aborted) failure = {key: 'settings.timeout'};
+      if (controller.signal.aborted && controller.signal.reason?.name === 'TimeoutError') failure = {key: 'settings.timeout'};
+      else if (controller.signal.aborted) return;
       else if (error instanceof ApiError) {
         if (error.status === 401) failure = {key: 'settings.unauthorized'};
         else if (error.code === 'empty_response') failure = {key: 'settings.nonJson'};

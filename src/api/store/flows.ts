@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../index';
 import type {FlowList, RoutingTraceRequest, RoutingTraceResponse} from '../model';
@@ -47,8 +47,9 @@ export function useRoutingTrace() {
   const available = resource?.available !== false;
   const named = form.domain.trim() !== '' && !form.dst_ip.trim();
   const resolve: TraceResolve = form.resolve ?? (named && modes.includes('live') ? 'live' : named && modes.includes('query') ? 'query' : 'none');
-  async function submit() {
-    if (busy || invalid || !available || !modes.includes(resolve)) return;
+  const canSubmit = !invalid && available && modes.includes(resolve);
+  const submit = useCallback(async () => {
+    if (busy || !canSubmit) return;
     setResult(null);
     const input: RoutingTraceRequest['input'] = {
       network: form.network,
@@ -92,7 +93,7 @@ export function useRoutingTrace() {
       return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
     });
     if (response) setResult(response);
-  }
+  }, [api, busy, canSubmit, form, resolve, run]);
   return {form, resolve, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
 }
 
