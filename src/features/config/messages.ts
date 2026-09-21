@@ -1,4 +1,4 @@
-import {defineMessages} from '../../i18n';
+import {defineMessages} from '../../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
@@ -18,6 +18,7 @@ export const messages = defineMessages({
     'config.edit': '編輯',
     'config.save': '應用並重載',
     'config.incomplete': '內容不完整或已遮蔽，不能在此編輯',
+    'config.unquotable': '無法寫入：值含單引號、換行或結尾反斜線，無法無損轉為單引號字串。',
     'config.contentHidden': '後端未提供內容；capabilities.resources.config.content 為 false。',
     'config.contentCredential': '這份來源含後端 API 憑證，後端不回內容也不接受寫入。把 native_api 區段搬到獨立的 include 檔，主檔就能編輯。',
     'config.valid': '校驗通過',
@@ -106,6 +107,7 @@ export const messages = defineMessages({
     'config.edit': '编辑',
     'config.save': '应用并重载',
     'config.incomplete': '内容不完整或已脱敏，不能在此编辑',
+    'config.unquotable': '无法写入：值含单引号、换行或结尾反斜线，无法无损转为单引号字符串。',
     'config.contentHidden': '后端未提供内容；capabilities.resources.config.content 为 false。',
     'config.contentCredential': '这份来源含后端 API 凭据，后端不回内容也不接受写入。把 native_api 区段搬到独立的 include 文件，主文件就能编辑。',
     'config.valid': '校验通过',
@@ -194,6 +196,7 @@ export const messages = defineMessages({
     'config.edit': 'Edit',
     'config.save': 'Apply and reload',
     'config.incomplete': 'The text is incomplete or redacted; it cannot be edited here',
+    'config.unquotable': 'Cannot write this value losslessly as a single-quoted string: it contains an apostrophe, line break, or trailing backslash.',
     'config.contentHidden': 'The backend withholds the text; capabilities.resources.config.content is false.',
     'config.contentCredential':
       'This source carries the backend API credential, so the backend returns no text and accepts no write. Move the native_api section into a separate include and the main file becomes editable.',
@@ -269,3 +272,22 @@ export const messages = defineMessages({
     'config.level.info': 'Info'
   }
 });
+
+// Native ACL4SSR labels and match patterns are configuration data, not translated UI copy.
+export const templateText = {
+  proxy: '节点选择',
+  auto: '自动选择',
+  hk: ['香港节点', '港|HK|Hong Kong|HongKong'],
+  jp: ['日本节点', '日|JP|Japan|Tokyo'],
+  us: ['美国节点', '美|US|United States|America'],
+  tw: ['台湾节点', '台|TW|Taiwan'],
+  sg: ['狮城节点', '新加坡|獅城|狮城|SG|Singapore'],
+  kr: ['韩国节点', '韓|韩|KR|Korea'],
+  telegram: '电报消息',
+  media: '国外媒体',
+  apple: '苹果服务',
+  ai: 'Ai平台',
+  youtube: '油管视频',
+  netflix: '奈飞视频',
+  bahamut: '巴哈姆特'
+} as const;

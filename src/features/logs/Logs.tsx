@@ -95,26 +95,37 @@ export function Logs() {
         loading={!capabilities.error && !feed.error && !feed.connected && !feed.records.length}
         empty={t('log.empty')}
         cols={[
-          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0},
-          {id: 'level', label: t('log.level'), minWidth: 90, grow: 0},
-          {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1},
-          {id: 'message', label: t('log.message'), minWidth: 280, grow: 3, isRowHeader: true}
-        ]}
-        render={record => [
-          <span className="rp-code">{localTime(record.ts, locale)}</span>,
-          <Light small tone={tones[record.level]}>
-            {t(labels[record.level])}
-          </Light>,
-          <span className="rp-code">{record.target}</span>,
-          <TextTooltip text={record.fields ? JSON.stringify(record.fields) : undefined}>
-            {record.message}
-            {record.fields
-              ? ' ' +
-                Object.entries(record.fields)
-                  .map(([key, value]) => `${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`)
-                  .join(' ')
-              : ''}
-          </TextTooltip>
+          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, render: record => <span className="rp-code">{localTime(record.ts, locale)}</span>},
+          {
+            id: 'level',
+            label: t('log.level'),
+            minWidth: 90,
+            grow: 0,
+            render: record => (
+              <Light small tone={tones[record.level]}>
+                {t(labels[record.level])}
+              </Light>
+            )
+          },
+          {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target}</span>},
+          {
+            id: 'message',
+            label: t('log.message'),
+            minWidth: 280,
+            grow: 3,
+            isRowHeader: true,
+            render: record => (
+              <TextTooltip text={record.fields ? JSON.stringify(record.fields) : undefined}>
+                {record.message}
+                {record.fields
+                  ? ' ' +
+                    Object.entries(record.fields)
+                      .map(([key, value]) => `${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`)
+                      .join(' ')
+                  : ''}
+              </TextTooltip>
+            )
+          }
         ]}
       />
     </div>

@@ -1,3 +1,10 @@
+import {LocalError} from '../../api/error';
+
+export function quote(value: string): string {
+  // honk skips escaped delimiters but retains the backslash in the value.
+  if (value.includes("'") || /[\r\n]|(^|[^\\])(?:\\\\)*\\$/.test(value)) throw new LocalError('config.unquotable');
+  return `'${value}'`;
+}
 export type TextToken = {from: number; to: number; line: number; kind: 'text' | 'quoted' | 'comment' | 'symbol'; depth: number; parens: number};
 export type TextBlock = {
   name: string;
@@ -119,6 +126,26 @@ export function blockBody(text: string, block: TextBlock): string[] {
         .replace(/^[^\S\n]*\n/, '')
         .replace(/\n[^\S\n]*$/, '')
         .split('\n');
+}
+
+export function blockEntries(text: string, block: TextBlock): Array<{from: number; to: number; block?: TextBlock}> {
+  const entries: Array<{from: number; to: number; block?: TextBlock}> = [];
+  let from = block.open + 1;
+  if (/^[^\S\n]*\n/.test(text.slice(from, block.close))) from = text.indexOf('\n', from) + 1;
+  const lastLine = text.lastIndexOf('\n', block.close - 1) + 1;
+  const end = lastLine > from && /^[ \t]*$/.test(text.slice(lastLine, block.close)) ? lastLine - 1 : block.close;
+  while (from <= end) {
+    const newline = text.indexOf('\n', from);
+    let to = newline === -1 ? end : Math.min(newline, end);
+    const child = block.children.find(child => child.from >= from && child.from <= to);
+    if (child) {
+      const after = text.indexOf('\n', child.to);
+      to = after === -1 ? end : Math.min(after, end);
+    }
+    entries.push({from, to, block: child});
+    from = to + 1;
+  }
+  return entries;
 }
 
 export function topLevelBlocks(lines: string[], name: string): Array<{open: number; close: number}> {

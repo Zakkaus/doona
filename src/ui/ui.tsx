@@ -3,8 +3,8 @@ export {useSlider, useContentWidth, useFillHeight, useDebounced, useMediaQuery, 
 export {exportName, downloadFile, csvLine} from './files';
 export {Button, TextTooltip, Link} from './Button';
 export {TextField, Switch, Check, Segmented} from './Fields';
-export {InlineSelect, LabeledSelect, MenuButton, Chips} from './Select';
+export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, Chips} from './Select';
 export {ModalDialog, DetailPanel, Disclosure, DisclosureGroup, Tabs} from './Dialog';
-export {DataTable, fitColumns, tableLayout, type TableSort, type TableGroup} from './Table';
+export {DataTable, fitColumns, tableLayout, type TableSort, type TableColumn} from './Table';
 export {Empty, Loading, errorText, ErrorMessage, toast, Toasts, Light, Badge, Bar, Kv} from './Feedback';
 export {NodeTile, type NodeTileProps, latencyTone, CardLink, RuleRef} from './Tile';

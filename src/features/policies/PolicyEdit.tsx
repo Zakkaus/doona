@@ -8,7 +8,7 @@ import {Button, LabeledSelect, ModalDialog, TextField, errorText, toast} from '.
 
 export function PolicyEdit({name, source, entry}: {name: string; source: MainSourceEdit; entry: GroupEntry}) {
   const t = useT();
-  const [draft, setDraft] = useState<{policy: string; filters: string[]} | null>(null);
+  const [draft, setDraft] = useState<{policy: string | null; filters: string[]} | null>(null);
   const saveDraft = (close: () => void) => {
     if (!draft) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
@@ -36,7 +36,7 @@ export function PolicyEdit({name, source, entry}: {name: string; source: MainSou
         if (!isOpen) setDraft(null);
       }}
       trigger={
-        <Button quiet isDisabled={source.busy} onPress={() => setDraft({policy: canonicalPolicy(entry.policy), filters: entry.filters})}>
+        <Button quiet isDisabled={source.busy} onPress={() => setDraft({policy: entry.policy, filters: entry.filters})}>
           {t('policy.edit')}
         </Button>
       }
@@ -54,7 +54,7 @@ export function PolicyEdit({name, source, entry}: {name: string; source: MainSou
           <span className="rp-label">{t('policy.editHelp')}</span>
           <LabeledSelect
             label={t('policy.policy')}
-            value={draft.policy}
+            value={canonicalPolicy(draft.policy)}
             onChange={policy => setDraft({...draft, policy})}
             items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name]), desc: name}))}
           />

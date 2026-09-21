@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {useCapabilities, useGroups} from '../../api/store';
 import {useMainSourceEdit} from '../config/mainSource';
-import {Button, Light, MenuButton, Segmented, errorText, toast} from '../../ui/ui';
+import {Button, Light, ChoiceMenu, Segmented, errorText, toast} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 import {readMode, sameMode, writeMode, type OutboundMode} from './mode';
@@ -80,7 +80,7 @@ export function ModeCards() {
             <Filter />
             {t('act.global')}
           </span>
-          <MenuButton
+          <ChoiceMenu
             quiet
             label={t('act.global')}
             value={target}
@@ -88,7 +88,7 @@ export function ModeCards() {
             items={list.map(g => ({id: g.name, label: g.name}))}
           >
             {target || '—'}
-          </MenuButton>
+          </ChoiceMenu>
         </div>
       </div>
     </>

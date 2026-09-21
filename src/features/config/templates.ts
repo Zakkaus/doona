@@ -1,5 +1,6 @@
 // Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
-export const quote = (value: string) => "'" + value.replace(/'/g, '') + "'";
+import {quote} from './blocks';
+import {templateText} from './messages';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
 export const defaultTemplate: RuleTemplate = 'standard';
 // The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
@@ -35,16 +36,9 @@ const region = (name: string, label: string, pattern: string): GroupSpec => ({
   label,
   lines: [`filter: name(regex: ${quote(pattern)})`, 'policy: min_moving_avg']
 });
-const proxy = selectGroup('proxy', '节点选择', ['auto']);
-const auto: GroupSpec = {name: 'auto', label: '自动选择', lines: [everyNode, 'policy: min_moving_avg']};
-const regions = [
-  region('hk', '香港节点', '港|HK|Hong Kong|HongKong'),
-  region('jp', '日本节点', '日|JP|Japan|Tokyo'),
-  region('us', '美国节点', '美|US|United States|America'),
-  region('tw', '台湾节点', '台|TW|Taiwan'),
-  region('sg', '狮城节点', '新加坡|獅城|狮城|SG|Singapore'),
-  region('kr', '韩国节点', '韓|韩|KR|Korea')
-];
+const proxy = selectGroup('proxy', templateText.proxy, ['auto']);
+const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: min_moving_avg']};
+const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1]));
 const service = (name: string, label: string, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
 // Preserve ACL4SSR rule order using dae's default geosite/geoip data. honk groups cannot contain direct, so DIRECT services remain direct and {group} names the file's first group.
@@ -72,7 +66,7 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
       ...china
     ],
     fallback: 'proxy',
-    groups: [proxy, auto, service('telegram', '电报消息'), service('media', '国外媒体'), service('apple', '苹果服务')]
+    groups: [proxy, auto, service('telegram', templateText.telegram), service('media', templateText.media), service('apple', templateText.apple)]
   },
   full: {
     rules: [
@@ -104,15 +98,15 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
     ],
     fallback: 'proxy',
     groups: [
-      selectGroup('proxy', '节点选择', ['auto', ...regions.map(r => r.name)]),
+      selectGroup('proxy', templateText.proxy, ['auto', ...regions.map(r => r.name)]),
       auto,
       ...regions,
-      service('telegram', '电报消息', ['proxy', 'auto', ...regions.map(r => r.name)]),
-      service('ai', 'Ai平台', ['proxy', 'auto', ...regions.map(r => r.name)]),
-      service('youtube', '油管视频', ['proxy', 'auto', ...regions.map(r => r.name)]),
-      service('netflix', '奈飞视频', ['proxy', 'auto', ...regions.map(r => r.name)]),
-      service('bahamut', '巴哈姆特', ['tw', 'proxy', 'auto']),
-      service('media', '国外媒体', ['proxy', 'auto', ...regions.map(r => r.name)])
+      service('telegram', templateText.telegram, ['proxy', 'auto', ...regions.map(r => r.name)]),
+      service('ai', templateText.ai, ['proxy', 'auto', ...regions.map(r => r.name)]),
+      service('youtube', templateText.youtube, ['proxy', 'auto', ...regions.map(r => r.name)]),
+      service('netflix', templateText.netflix, ['proxy', 'auto', ...regions.map(r => r.name)]),
+      service('bahamut', templateText.bahamut, ['tw', 'proxy', 'auto']),
+      service('media', templateText.media, ['proxy', 'auto', ...regions.map(r => r.name)])
     ]
   }
 };

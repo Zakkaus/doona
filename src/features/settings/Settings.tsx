@@ -1,8 +1,9 @@
 import {useContext, useState} from 'react';
+import {Menu, MenuSection, Header} from 'react-aria-components';
 import {useCapabilities, useVersion} from '../../api/store';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {uuid} from '../../api/hash';
-import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, ModalDialog, TextField, toast} from '../../ui/ui';
+import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField, toast} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from './settings';
 import {SettingsContext} from './context';
 import {useBackendForm} from './backendForm';
@@ -145,7 +146,27 @@ export function Settings({query}: PageProps) {
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           <div className="rp-field">
             <span className="lbl">{t('palette')}</span>
-            <MenuButton label={t('palette')} value={ap.palette} onChange={value => ap.pickPalette(value as PaletteId)} sections={paletteSections}>
+            <MenuButton
+              label={t('palette')}
+              content={
+                <Menu aria-label={t('palette')}>
+                  {paletteSections.map(section => (
+                    <MenuSection
+                      key={section.title}
+                      id={section.title}
+                      selectionMode="single"
+                      selectedKeys={[ap.palette]}
+                      onSelectionChange={pickMenuKey(value => ap.pickPalette(value as PaletteId))}
+                    >
+                      <Header className="rp-sec-h">{section.title}</Header>
+                      {section.items.map(item => (
+                        <MenuChoice key={item.id} item={item} />
+                      ))}
+                    </MenuSection>
+                  ))}
+                </Menu>
+              }
+            >
               {paletteSections.find(section => section.items.some(item => item.id === ap.palette))?.items.find(item => item.id === ap.palette)?.label ??
                 ap.palette}
             </MenuButton>

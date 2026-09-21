@@ -25,6 +25,7 @@ import {fileName} from '../config/names';
 import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
+import {ruleAnchor, sourceFor} from './source';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -62,13 +63,6 @@ const ruleOrder = (a: string | null, b: string | null) => {
   if (a === null || b === null) return Number(a === null) - Number(b === null);
   return a.localeCompare(b, undefined, {numeric: true});
 };
-
-// The accepted source a rule came from: by id when the backend names it, else by its `file` label, a redacted
-// basename matched against the end of each source's path.
-const sourceFor = (list: ConfigSource[], source: RuleSource | null | undefined) =>
-  source
-    ? (list.find(item => item.id === source.source_id) ?? list.find(item => item.path === source.file || item.path.endsWith('/' + source.file)))
-    : undefined;
 
 // Use the backend dictionary when available; otherwise group retained flows by deciding rule. Edits rewrite the owning source through validate-and-save.
 export function RuleList({go, query}: PageProps) {
@@ -151,13 +145,19 @@ function Dictionary({go, query}: PageProps) {
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
     const source = sourceToEdit(anchor);
     if (!anchor?.source || !source) return;
-    const at = anchor.source.line - 1;
+    const stale = () => {
+      toast('negative', t('rule.stale'));
+      rules.refetch();
+      config.refetch();
+    };
     if (
       await write(source, text => {
-        const lines = text.replace(/\n$/, '').split('\n');
-        const indent = /^\s*/.exec(lines[at] ?? '')?.[0] ?? '';
-        lines.splice(at, 0, `${indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}`);
-        return [...lines, ''].join('\n');
+        const range = ruleAnchor(text, anchor);
+        if (!range) {
+          stale();
+          return null;
+        }
+        return text.slice(0, range.from) + `${range.indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}\n` + text.slice(range.from);
       })
     ) {
       toast('positive', t('rule.added'));
@@ -166,18 +166,16 @@ function Dictionary({go, query}: PageProps) {
   };
   const remove = async (rule: RoutingRule, source: ConfigSource, close: () => void) => {
     if (!rule.source) return;
-    const at = rule.source.line - 1;
     if (
       await write(source, text => {
-        const lines = text.replace(/\n$/, '').split('\n');
-        if (!lines[at]?.includes('->')) {
+        const range = ruleAnchor(text, rule);
+        if (!range) {
           toast('negative', t('rule.stale'));
           rules.refetch();
           config.refetch();
           return null;
         }
-        lines.splice(at, 1);
-        return [...lines, ''].join('\n');
+        return text.slice(0, range.from) + text.slice(range.to);
       })
     ) {
       toast('positive', t('rule.removed'));
@@ -229,41 +227,64 @@ function Dictionary({go, query}: PageProps) {
         height={560}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3},
-          {id: 'expression', label: t('rule.expression'), minWidth: 160, grow: 3, isRowHeader: true},
-          {id: 'outbound', label: t('ui.outbound'), minWidth: 100, grow: 0},
-          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2},
-          {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1},
-          {id: 'actions', label: t('ui.actions'), minWidth: canWrite ? 96 : 56, grow: 0}
-        ]}
-        render={rule => [
-          rule.kind === 'fallback' ? '—' : String(rule.index + 1),
-          <TextTooltip className="rp-code">{rule.expression}</TextTooltip>,
-          <span className="rp-chain">
-            {rule.outbound}
-            {rule.must && <Badge>must</Badge>}
-          </span>,
-          rule.source ? position(rule.source) : '—',
-          hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
-          <span className="rp-chain">
-            {rule.source && sourceFor(configSources, rule.source) && (
-              <Button small quiet icon label={t('rule.openSource')} onPress={() => openSource(rule)}>
-                <FileText />
-              </Button>
-            )}
-            {canWrite && rule.kind === 'rule' && writable(rule) && (
-              <Button
-                small
-                quiet
-                icon
-                isDisabled={!!editor.busy}
-                label={t('rule.remove')}
-                onPress={() => open({kind: 'remove', rule, source: sourceToEdit(rule)!})}
-              >
-                <Close />
-              </Button>
-            )}
-          </span>
+          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: rule => (rule.kind === 'fallback' ? '—' : String(rule.index + 1))},
+          {
+            id: 'expression',
+            label: t('rule.expression'),
+            minWidth: 160,
+            grow: 3,
+            isRowHeader: true,
+            render: rule => <TextTooltip className="rp-code">{rule.expression}</TextTooltip>
+          },
+          {
+            id: 'outbound',
+            label: t('ui.outbound'),
+            minWidth: 100,
+            grow: 0,
+            render: rule => (
+              <span className="rp-chain">
+                {rule.outbound}
+                {rule.must && <Badge>must</Badge>}
+              </span>
+            )
+          },
+          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: rule => (rule.source ? position(rule.source) : '—')},
+          {
+            id: 'hits',
+            label: t('rule.hits'),
+            minWidth: 60,
+            grow: 0,
+            align: 'end',
+            drop: 1,
+            render: rule => (hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—')
+          },
+          {
+            id: 'actions',
+            label: t('ui.actions'),
+            minWidth: canWrite ? 96 : 56,
+            grow: 0,
+            render: rule => (
+              <span className="rp-chain">
+                {rule.source && sourceFor(configSources, rule.source) && (
+                  <Button small quiet icon label={t('rule.openSource')} onPress={() => openSource(rule)}>
+                    <FileText />
+                  </Button>
+                )}
+                {canWrite && rule.kind === 'rule' && writable(rule) && (
+                  <Button
+                    small
+                    quiet
+                    icon
+                    isDisabled={!!editor.busy}
+                    label={t('rule.remove')}
+                    onPress={() => open({kind: 'remove', rule, source: sourceToEdit(rule)!})}
+                  >
+                    <Close />
+                  </Button>
+                )}
+              </span>
+            )
+          }
         ]}
       />
       <ModalDialog
@@ -404,18 +425,18 @@ function Distribution() {
         rows={filtered.map(row => ({...row, ruleId: row.id, id: row.key}))}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2},
-          {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 3, isRowHeader: true},
-          {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1},
-          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end'},
-          {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3}
-        ]}
-        render={row => [
-          row.ruleId ?? '—',
-          <TextTooltip className={row.expression ? 'rp-code' : undefined}>{row.expression ?? t('rule.unknownRule')}</TextTooltip>,
-          <Badge>{t(sources[row.source])}</Badge>,
-          formatNumber(row.count, locale),
-          formatNumber(row.share * 100, locale, 1) + '%'
+          {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId ?? '—'},
+          {
+            id: 'expression',
+            label: t('rule.expression'),
+            minWidth: 240,
+            grow: 3,
+            isRowHeader: true,
+            render: row => <TextTooltip className={row.expression ? 'rp-code' : undefined}>{row.expression ?? t('rule.unknownRule')}</TextTooltip>
+          },
+          {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{t(sources[row.source])}</Badge>},
+          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => formatNumber(row.count, locale)},
+          {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => formatNumber(row.share * 100, locale, 1) + '%'}
         ]}
       />
     </div>

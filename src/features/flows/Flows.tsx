@@ -166,23 +166,37 @@ export function FlowRecords({go, query}: PageProps) {
           selectOnFocus={wide}
           empty={t('flow.empty')}
           cols={[
-            {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true},
-            {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2},
-            {id: 'rule', label: t('conn.rule'), minWidth: 152, grow: 2, drop: 1},
-            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3},
-            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5},
-            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4}
-          ]}
-          render={f => [
-            <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>,
-            <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>,
-            <span className="rp-rule">
-              <RuleRef expression={f.rule_expression} ruleId={f.rule_id} linked={rulesListed} />
-              {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
-            </span>,
-            f.network.toUpperCase(),
-            t(connectionStates[f.state]),
-            relativeStart(f.started_at, locale)
+            {
+              id: 'target',
+              label: t('ui.target'),
+              minWidth: 128,
+              grow: 2,
+              isRowHeader: true,
+              render: f => <TextTooltip>{f.input?.domain || f.input?.dst || f.id}</TextTooltip>
+            },
+            {
+              id: 'chain',
+              label: t('conn.chain'),
+              minWidth: 96,
+              drop: 2,
+              render: f => <TextTooltip className="rp-chain">{chainLabel(f, t, names)}</TextTooltip>
+            },
+            {
+              id: 'rule',
+              label: t('conn.rule'),
+              minWidth: 152,
+              grow: 2,
+              drop: 1,
+              render: f => (
+                <span className="rp-rule">
+                  <RuleRef expression={f.rule_expression} ruleId={f.rule_id} linked={rulesListed} />
+                  {f.rule_source === 'recomputed' && <small className="rp-provenance">{t('conn.recomputed')}</small>}
+                </span>
+              )
+            },
+            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: f => f.network.toUpperCase()},
+            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: f => t(connectionStates[f.state])},
+            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: f => relativeStart(f.started_at, locale)}
           ]}
         />
         <DetailPanel open={panelOpen} title={flow?.input?.domain || flow?.input?.dst || flow?.id || id || ''} onClose={() => select(null)}>

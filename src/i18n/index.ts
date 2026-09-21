@@ -12,14 +12,6 @@ export const LANGS: Array<[Lang, string]> = [
 ];
 export const LOCALE: Record<Lang, string> = {'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US'};
 
-export function defineMessages<TW extends Record<string, Message>, CN extends Record<keyof TW, Message>, EN extends Record<keyof TW, Message>>(messages: {
-  'zh-TW': TW;
-  'zh-CN': CN & Record<Exclude<keyof CN, keyof TW>, never>;
-  en: EN & Record<Exclude<keyof EN, keyof TW>, never>;
-}): Record<Lang, Record<keyof TW, Message>> {
-  return messages;
-}
-
 export const LangContext = createContext<Lang>('zh-TW');
 export function useLang() {
   return useContext(LangContext);

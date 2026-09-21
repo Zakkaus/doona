@@ -1,4 +1,5 @@
 import {useMemo, useState} from 'react';
+import {Menu, MenuSection, Header} from 'react-aria-components';
 import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../api/store';
 import {ApiError} from '../../api/error';
 import {chainNames, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
@@ -11,6 +12,7 @@ import {
   LabeledSelect,
   Light,
   MenuButton,
+  MenuChoice,
   Segmented,
   TextField,
   ErrorMessage,
@@ -138,15 +140,32 @@ export function Connections({go, query}: PageProps) {
         <MenuButton
           quiet
           label={t('conn.pick')}
-          value={[src ? 'src:' + src : '', rule !== 'all' ? 'rule:' + rule : '']}
-          onAction={id => {
-            if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
-            else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
-          }}
-          sections={[
-            {title: t('ui.source'), items: clients.map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))},
-            {title: t('conn.rule'), items: rules.map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))}
-          ]}
+          content={
+            <Menu
+              aria-label={t('conn.pick')}
+              onAction={key => {
+                const id = String(key);
+                if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
+                else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
+              }}
+            >
+              {[
+                {title: t('ui.source'), value: 'src:' + src, items: clients.map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))},
+                {
+                  title: t('conn.rule'),
+                  value: 'rule:' + rule,
+                  items: rules.map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))
+                }
+              ].map(section => (
+                <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[section.value]}>
+                  <Header className="rp-sec-h">{section.title}</Header>
+                  {section.items.map(item => (
+                    <MenuChoice key={item.id} item={item} />
+                  ))}
+                </MenuSection>
+              ))}
+            </Menu>
+          }
         >
           {t('conn.pick')}
         </MenuButton>
@@ -163,13 +182,23 @@ export function Connections({go, query}: PageProps) {
         />
         <MenuButton
           label={t('conn.columns')}
-          multiple
-          value={columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id)}
-          items={columns.map(column => ({id: column.id, label: t(column.label)}))}
-          onChange={id => {
-            const hidden = view.hidden.includes(id) ? view.hidden.filter(value => value !== id) : [...view.hidden, id];
-            if (hidden.length < columns.length) updateView({hidden});
-          }}
+          content={
+            <Menu
+              aria-label={t('conn.columns')}
+              selectionMode="multiple"
+              shouldCloseOnSelect={false}
+              selectedKeys={columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id)}
+              onAction={key => {
+                const id = String(key);
+                const hidden = view.hidden.includes(id) ? view.hidden.filter(value => value !== id) : [...view.hidden, id];
+                if (hidden.length < columns.length) updateView({hidden});
+              }}
+            >
+              {columns.map(column => (
+                <MenuChoice key={column.id} item={{id: column.id, label: t(column.label)}} />
+              ))}
+            </Menu>
+          }
         >
           {t('conn.columns')}
         </MenuButton>

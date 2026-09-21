@@ -204,21 +204,33 @@ function Trace() {
                 height={360}
                 rows={evaluation.rules.map(rule => ({...rule, id: rule.rule_id}))}
                 cols={[
-                  {id: 'expression', label: t('rule.expression'), minWidth: 240, grow: 2, isRowHeader: true},
-                  {id: 'result', label: t('rule.outcome'), minWidth: 120, grow: 0},
-                  {id: 'missing', label: t('rule.missing'), minWidth: 144}
-                ]}
-                render={rule => [
-                  <TextTooltip className="rp-code" text={rule.rule_id}>
-                    {rule.expression ?? rule.rule_id}
-                  </TextTooltip>,
-                  <Light
-                    small
-                    tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}
-                  >
-                    {outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result}
-                  </Light>,
-                  formatList(lang, rule.missing_inputs) || '—'
+                  {
+                    id: 'expression',
+                    label: t('rule.expression'),
+                    minWidth: 240,
+                    grow: 2,
+                    isRowHeader: true,
+                    render: rule => (
+                      <TextTooltip className="rp-code" text={rule.rule_id}>
+                        {rule.expression ?? rule.rule_id}
+                      </TextTooltip>
+                    )
+                  },
+                  {
+                    id: 'result',
+                    label: t('rule.outcome'),
+                    minWidth: 120,
+                    grow: 0,
+                    render: rule => (
+                      <Light
+                        small
+                        tone={rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral'}
+                      >
+                        {outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result}
+                      </Light>
+                    )
+                  },
+                  {id: 'missing', label: t('rule.missing'), minWidth: 144, render: rule => formatList(lang, rule.missing_inputs) || '—'}
                 ]}
               />
             </section>

@@ -1,7 +1,7 @@
 import {Login} from './Login';
 import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {I18nProvider, Link as RLink, Separator} from 'react-aria-components';
+import {I18nProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
@@ -11,7 +11,8 @@ import logo from '../logo.svg';
 import {About, engineLinks} from './About';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
-import {Button, MenuButton, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
+import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
+import {MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {DraftContext, useRoute} from './route';
@@ -285,7 +286,7 @@ function Frame({
             <Refresh />
           </Button>
           <Separator orientation="vertical" className="rp-vrule" />
-          <MenuButton
+          <ChoiceMenu
             quiet
             chevron={false}
             label={t('lang')}
@@ -294,23 +295,39 @@ function Frame({
             items={LANGS.map(([k, l]) => ({id: k, label: l}))}
           >
             <Translate />
-          </MenuButton>
+          </ChoiceMenu>
           <MenuButton
             quiet
             chevron={false}
             label={t('palette')}
-            value={ap.palette}
-            onChange={k => ap.pickPalette(k as PaletteId)}
-            sections={paletteSections}
-            extra={{
-              title: t('wordmark'),
-              value: ap.wordmark,
-              onChange: k => ap.pickWordmark(k as Wordmark),
-              items: [
-                {id: 'gradient', label: t('wordmark.gradient')},
-                {id: 'plain', label: t('wordmark.plain')}
-              ]
-            }}
+            content={
+              <Menu aria-label={t('palette')}>
+                {paletteSections.map(section => (
+                  <MenuSection
+                    key={section.title}
+                    id={section.title}
+                    selectionMode="single"
+                    selectedKeys={[ap.palette]}
+                    onSelectionChange={pickMenuKey(k => ap.pickPalette(k as PaletteId))}
+                  >
+                    <Header className="rp-sec-h">{section.title}</Header>
+                    {section.items.map(item => (
+                      <MenuChoice key={item.id} item={item} />
+                    ))}
+                  </MenuSection>
+                ))}
+                <MenuSection
+                  id="wordmark"
+                  selectionMode="single"
+                  selectedKeys={[ap.wordmark]}
+                  onSelectionChange={pickMenuKey(k => ap.pickWordmark(k as Wordmark))}
+                >
+                  <Header className="rp-sec-h">{t('wordmark')}</Header>
+                  <MenuChoice item={{id: 'gradient', label: t('wordmark.gradient')}} />
+                  <MenuChoice item={{id: 'plain', label: t('wordmark.plain')}} />
+                </MenuSection>
+              </Menu>
+            }
           >
             <Color />
           </MenuButton>

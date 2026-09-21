@@ -208,12 +208,11 @@ export function Overview() {
                   rows={attachments}
                   empty={t('ov.unknown')}
                   cols={[
-                    {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true},
-                    {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2},
-                    {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1},
-                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0}
+                    {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true, render: a => a.name},
+                    {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2, render: a => a.interface},
+                    {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1, render: a => datapathValue(a.direction, t)},
+                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0, render: a => datapathValue(a.state, t)}
                   ]}
-                  render={a => [a.name, a.interface, datapathValue(a.direction, t), datapathValue(a.state, t)]}
                 />
               )}
               {(datapath.data.errors.length > 0 || datapath.data.ebpf?.last_error) && (

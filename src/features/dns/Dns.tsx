@@ -223,32 +223,50 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
         loading={(dns.cache.loading || dns.capabilities.loading) && !dns.cache.data}
         empty={resources?.dns_cache.available && resources.dns_cache.read ? t('dns.empty') : t('dns.cacheUnavailable')}
         cols={[
-          {id: 'q', label: t('ui.domain'), minWidth: 192, isRowHeader: true},
-          {id: 't', label: t('ui.type'), minWidth: 64, grow: 0},
-          {id: 's', label: t('ui.state'), minWidth: 104, grow: 0},
-          {id: 'e', label: t('dns.expires'), minWidth: 96},
-          {id: 'st', label: t('dns.staleUntil'), minWidth: 104},
-          {id: 'a', label: t('ui.delete'), minWidth: 56, grow: 0}
-        ]}
-        render={entry => [
-          <TextTooltip className="rp-code" text={entry.entry_id}>
-            {entry.domain}
-          </TextTooltip>,
-          entry.type,
-          entry.status,
-          <TextTooltip text={entry.expires_at}>{relativeStart(entry.expires_at, locale)}</TextTooltip>,
-          <TextTooltip text={entry.stale_until ?? undefined}>{relativeStart(entry.stale_until, locale)}</TextTooltip>,
-          <Button
-            quiet
-            icon
-            small
-            label={t('dns.deleteEntry', {id: entry.entry_id})}
-            isPending={dns.busy === entry.entry_id}
-            isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry}
-            onPress={() => void remove(entry.entry_id)}
-          >
-            <Delete />
-          </Button>
+          {
+            id: 'q',
+            label: t('ui.domain'),
+            minWidth: 192,
+            isRowHeader: true,
+            render: entry => (
+              <TextTooltip className="rp-code" text={entry.entry_id}>
+                {entry.domain}
+              </TextTooltip>
+            )
+          },
+          {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
+          {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
+          {
+            id: 'e',
+            label: t('dns.expires'),
+            minWidth: 96,
+            render: entry => <TextTooltip text={entry.expires_at}>{relativeStart(entry.expires_at, locale)}</TextTooltip>
+          },
+          {
+            id: 'st',
+            label: t('dns.staleUntil'),
+            minWidth: 104,
+            render: entry => <TextTooltip text={entry.stale_until ?? undefined}>{relativeStart(entry.stale_until, locale)}</TextTooltip>
+          },
+          {
+            id: 'a',
+            label: t('ui.delete'),
+            minWidth: 56,
+            grow: 0,
+            render: entry => (
+              <Button
+                quiet
+                icon
+                small
+                label={t('dns.deleteEntry', {id: entry.entry_id})}
+                isPending={dns.busy === entry.entry_id}
+                isDisabled={!!dns.busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry}
+                onPress={() => void remove(entry.entry_id)}
+              >
+                <Delete />
+              </Button>
+            )
+          }
         ]}
       />
     </>
@@ -327,34 +345,45 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
           loading={log.loading && !log.data}
           empty={enabled ? t('dns.logEmpty') : t('dns.logUnavailable')}
           cols={[
-            {id: 't', label: t('ui.time'), minWidth: 96, grow: 0},
-            {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true},
-            {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3},
-            {id: 's', label: t('ui.source'), minWidth: 128, drop: 2},
-            {id: 'r', label: t('dns.result'), minWidth: 160, grow: 2},
-            {id: 'u', label: t('ui.upstream'), minWidth: 128, drop: 1},
-            {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4}
-          ]}
-          render={record => [
-            <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>,
-            <TextTooltip>{record.question.name}</TextTooltip>,
-            record.question.type,
-            <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>,
-            record.status !== 'NOERROR' ? (
-              <Light small tone="err">
-                {record.status}
-              </Light>
-            ) : (
-              <TextTooltip className="rp-code">{record.answers.map(answer => answer.data).join(', ') || '—'}</TextTooltip>
-            ),
-            record.cached ? (
-              <Light small tone="ok">
-                {t('dns.hit')}
-              </Light>
-            ) : (
-              <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
-            ),
-            t('ui.latency', {n: millis(record.elapsed_ms)})
+            {
+              id: 't',
+              label: t('ui.time'),
+              minWidth: 96,
+              grow: 0,
+              render: record => <TextTooltip text={localTime(record.observed_at, locale)}>{relativeStart(record.observed_at, locale)}</TextTooltip>
+            },
+            {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.question.name}</TextTooltip>},
+            {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.question.type},
+            {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.src ?? '—'}</TextTooltip>},
+            {
+              id: 'r',
+              label: t('dns.result'),
+              minWidth: 160,
+              grow: 2,
+              render: record =>
+                record.status !== 'NOERROR' ? (
+                  <Light small tone="err">
+                    {record.status}
+                  </Light>
+                ) : (
+                  <TextTooltip className="rp-code">{record.answers.map(answer => answer.data).join(', ') || '—'}</TextTooltip>
+                )
+            },
+            {
+              id: 'u',
+              label: t('ui.upstream'),
+              minWidth: 128,
+              drop: 1,
+              render: record =>
+                record.cached ? (
+                  <Light small tone="ok">
+                    {t('dns.hit')}
+                  </Light>
+                ) : (
+                  <TextTooltip>{record.upstream ?? '—'}</TextTooltip>
+                )
+            },
+            {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4, render: record => t('ui.latency', {n: millis(record.elapsed_ms)})}
           ]}
         />
         <DetailPanel open={!!current} title={current?.question.name ?? ''} onClose={() => setSelected(null)}>

@@ -1,5 +1,6 @@
 import type {Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
+import {sha256} from '../src/api/hash';
 import {expect, test} from './fixtures';
 
 async function backend(page: Page) {
@@ -175,6 +176,35 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   expect(writes).toBe(0);
   await expect(dialog).toBeVisible();
 });
+
+for (const action of ['add', 'remove'] as const) {
+  test(`${action} refuses a shifted source even when its generation and digest are current`, async ({page}) => {
+    const api = await backend(page);
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
+    main.content_sha256 = await sha256(main.content);
+    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+    let validations = 0;
+    await page.route('**/api/v1/config/validate', async route => {
+      validations++;
+      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+    });
+    await page.goto('/#/rules?tab=list');
+    if (action === 'add') {
+      await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('example.org');
+      await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+    } else {
+      await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
+      await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
+    }
+    await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+    expect(validations).toBe(0);
+    await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  });
+}
 
 test('routing map shows a failed rules request and retries it', async ({page}) => {
   await backend(page);
