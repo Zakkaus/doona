@@ -1,4 +1,15 @@
-import {useCapabilities, useConnectionClose, useConnections, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../api/store';
+import {
+  useCapabilities,
+  useConnectionClose,
+  useConnections,
+  useDnsFlush,
+  useGeodata,
+  useProviderRefresh,
+  useProviders,
+  useRuntime,
+  useRuntimeOperations
+} from '../../api/store';
+import {lifecycleActions, operationLabels} from '../overview/view';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
 import {geodataRows} from './view';
@@ -13,6 +24,7 @@ export function useBackendActions() {
   const connections = useConnections(undefined, resources?.connections.available === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
+  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const geodata = useGeodata(resources?.geodata.available ?? false);
   const fail = (error: unknown) => toast('negative', errorText(error));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
@@ -36,11 +48,34 @@ export function useBackendActions() {
         if (done !== undefined)
           toast(done ? 'positive' : 'negative', t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)}));
       }, fail);
+  const runOperation = (kind: keyof typeof operationLabels) =>
+    void operations.run(kind).then(
+      result => {
+        if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
+      },
+      error => toast('negative', t('ov.operationError', {error: errorText(error)}))
+    );
+  const closeAll = () =>
+    void closing.closeAll({query: {all: true}}).then(tally => {
+      if (tally) toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+    }, fail);
   return {
-    capabilities,
-    runtime,
-    closing,
-    flushing: flushing.busy,
+    runtimeError: runtime.error,
+    lifecycle: lifecycleActions(operations.canRun, operations.busy, runOperation, t),
+    flush: {
+      confirmationText: t('dns.flushConfirmAll'),
+      busy: flushing.busy,
+      onFlush: () =>
+        void flushing.flush().then(result => {
+          if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+        }, fail)
+    },
+    closeAll: {
+      confirmationText: t('conn.closeAllHelp', {n: liveCount}),
+      disabled: !liveCount || !!closing.busy,
+      pending: closing.busy === 'all',
+      run: closeAll
+    },
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,
     geodataLoading: geodata.loading && !geodata.data,
@@ -57,10 +92,6 @@ export function useBackendActions() {
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: !!resources?.geodata.available,
     rows: geodataRows(geodata.data?.assets ?? [], locale),
-    flush: () =>
-      void flushing.flush().then(result => {
-        if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-      }, fail),
     update: () =>
       void geodata.update().then(result => {
         if (result) toast('positive', t('settings.geodataUpdated'));

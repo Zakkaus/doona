@@ -7,15 +7,14 @@ import {useBackendActions} from './useBackendActions';
 export function BackendActionsCard() {
   const t = useT();
   const {
-    capabilities,
-    runtime,
-    closing,
-    flushing,
+    runtimeError,
+    lifecycle,
+    flush,
+    closeAll,
     geodataBusy,
     geodataBlocked,
     geodataLoading,
     geodataError,
-    liveCount,
     note,
     refreshingAll,
     refreshAll,
@@ -27,7 +26,6 @@ export function BackendActionsCard() {
     canUpdate,
     hasGeodata,
     rows,
-    flush,
     update
   } = useBackendActions();
   return (
@@ -36,18 +34,18 @@ export function BackendActionsCard() {
         {t('settings.actions')}
       </h2>
       <span className="rp-label">{note}</span>
-      <ErrorMessage error={runtime.error} />
+      <ErrorMessage error={runtimeError} />
       <div className="rp-toolbar">
-        <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
+        <LifecycleActions actions={lifecycle} />
       </div>
       <div className="rp-toolbar">
-        {canFlush && <FlushCacheButton count={null} busy={flushing} onFlush={flush} />}
+        {canFlush && <FlushCacheButton {...flush} />}
         {canRefresh && (
           <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
             {refreshLabel}
           </Button>
         )}
-        {canClose && <CloseAllButton count={liveCount} selection={{query: {all: true}}} closing={closing} />}
+        {canClose && <CloseAllButton {...closeAll} />}
         {canUpdate && (
           <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
             {t('settings.geodataUpdate')}

@@ -16,8 +16,22 @@ export function usePolicies(query: string) {
   const entries = useMemo(() => new Map(readGroupEntries(source.main?.content ?? '').map(entry => [entry.name, entry])), [source.main?.content]);
   const cards = useMemo(() => (groups.data ?? []).map(group => ({id: group.id, name: group.name, entry: entries.get(group.name)})), [groups.data, entries]);
   const ready = !!groups.data;
+  // Cards above the linked one grow as their details mount, so the target is followed until the layout settles.
   useEffect(() => {
-    if (focus && ready) document.getElementById('group-' + focus)?.scrollIntoView({block: 'start'});
+    const target = focus && ready ? document.getElementById('group-' + focus) : null;
+    if (!target) return;
+    const scroll = () => target.scrollIntoView({block: 'start'});
+    scroll();
+    const observer = new ResizeObserver(scroll);
+    for (const card of target.parentElement?.children ?? []) {
+      if (card === target) break;
+      observer.observe(card);
+    }
+    const settle = setTimeout(() => observer.disconnect(), 3000);
+    return () => {
+      clearTimeout(settle);
+      observer.disconnect();
+    };
   }, [focus, ready]);
   const {refetch: refreshGroups} = groups;
   const {refetch: refreshNodes} = nodes;
