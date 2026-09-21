@@ -34,6 +34,8 @@ export function useContentWidth<E extends HTMLElement>() {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Measured before the first paint, so a table never shows its minimum widths for one frame.
+    setWidth(Math.floor(el.clientWidth));
     const observer = new ResizeObserver(entries => setWidth(Math.floor(entries[0].contentRect.width)));
     observer.observe(el);
     return () => observer.disconnect();

@@ -5,7 +5,7 @@ import type {SettingsContext} from '../features/settings/context';
 import {LOCALE, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {useSlider} from '../ui/hooks';
-import {features} from './registry';
+import {features, warmAllPages} from './registry';
 import {parseHash, useRoute} from './route';
 import {readAppearance, useAppearance} from './useAppearance';
 import {appearanceMenu, palettes} from './view';
@@ -42,6 +42,7 @@ export function useShellController() {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
     document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
   }, [lang]);
+  useEffect(warmAllPages, []);
   return {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac};
 }
 
