@@ -1,0 +1,98 @@
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {flushSync} from 'react-dom';
+
+export function withCrossfade(fn: () => void) {
+  const d = document as Document & {startViewTransition?: (cb: () => void) => void};
+  if (!d.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return fn();
+  d.startViewTransition(() => flushSync(fn));
+}
+
+export function useSlider(value: string, selector = '[data-selected]') {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{x: number; y: number; w: number; h: number} | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const sel = el.querySelector<HTMLElement>(selector);
+      if (!sel) return setPos(null);
+      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight};
+      setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [value, selector]);
+  return [ref, pos] as const;
+}
+
+// The content width of an element, tracked through resizes; null until measured.
+export function useContentWidth<E extends HTMLElement>() {
+  const ref = useRef<E>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => setWidth(Math.floor(entries[0].contentRect.width)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+// The height that takes an element to the bottom of the viewport, never below `min`: a page whose table is
+// its last content shows as many rows as the screen holds instead of a fixed box over empty page.
+export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
+  const ref = useRef<E>(null);
+  const [height, setHeight] = useState(min);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setHeight(Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [min, gap]);
+  return [ref, height] as const;
+}
+
+// From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
+// selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
+export const panelQuery = '(min-width: 1200px)';
+
+// A draft seeded from the URL: a new linked value (a search-dialog jump) replaces the draft, while a
+// navigation that keeps the same value leaves what was typed since. The rewrite runs during render, so the
+// draft never shows the stale value for a frame.
+export function useLinked<T>(linked: T, apply: (value: T) => void) {
+  const [last, setLast] = useState(linked);
+  if (last !== linked) {
+    setLast(linked);
+    apply(linked);
+  }
+}
+
+// The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it.
+export function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+export function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const on = () => setMatches(list.matches);
+    on();
+    list.addEventListener('change', on);
+    return () => list.removeEventListener('change', on);
+  }, [query]);
+  return matches;
+}
