@@ -16,9 +16,7 @@ homepage: https://github.com/Zakkaus/doona
 license: GPL-3.0-only
 description: |
   Web UI for the daeuniverse engines.
-  Static files for /usr/share/doona; point the engine's `ui` setting at that directory.
-recommends:
-  - honk
+  Static files for /usr/share/doona; configure the engine or a web server to serve that directory.
 suggests:
   - doona-fonts
 contents:

@@ -1,8 +1,25 @@
 import type {Connection} from '../../api/model';
-import {addU64, parseU64} from '../../api/u64';
-import {sourceIp} from '../../api/selectors';
+import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
+import {localTime, sourceIp, type MessageRef} from '../../api/selectors';
+import {word} from '../flows/view';
 import type {Key} from '../../i18n/messages';
 import type {SortDescriptor} from 'react-aria-components';
+export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
+  return [
+    ['ui.source', c.src ?? '—'],
+    ['conn.f.dst', c.dst ?? '—'],
+    ['ui.domain', c.domain ?? '—'],
+    ['conn.f.ingress', word(c.ingress)],
+    ['conn.f.domainSource', word(c.domain_source)],
+    ['ui.process', c.pname ?? '—'],
+    ['conn.f.observedBy', c.observed_by],
+    ['ui.upload', formatBytes(c.upload_bytes)],
+    ['ui.download', formatBytes(c.download_bytes)],
+    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second)],
+    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second)],
+    ['conn.f.started', localTime(c.started_at, locale)]
+  ];
+}
 
 // `drop` orders which columns give way first when the table is narrower than the minima (see fitColumns);
 // the target column always stays.

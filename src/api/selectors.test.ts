@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent} from './model';
-import {probeSummary, routineGap, shortId} from './selectors';
+import {routineGap, shortId} from './selectors';
+import {probeSummary} from '../features/policies/view';
 
 const gap = (reason: string, resource_id: string | null): ApiEvent =>
   ({

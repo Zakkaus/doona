@@ -1,9 +1,11 @@
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
-import {localTime, outboundLabel, preferredHealth, word} from '../../api/selectors';
+import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
+import {word} from '../flows/view';
 import {millis} from '../../api/u64';
 import type {GroupSummary, Node} from '../../api/model';
 import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace, type TraceProblem, type TraceResolve} from '../../api/store';
+import {useCapabilities, useGroups, useNodeProbe, useNodes} from '../../api/store';
+import {useRoutingTrace, type TraceProblem, type TraceResolve} from './useRoutingTrace';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';

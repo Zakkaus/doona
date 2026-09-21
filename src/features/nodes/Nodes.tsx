@@ -1,8 +1,19 @@
-import {useCallback, useState} from 'react';
-import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, LabeledSelect, ModalDialog, TextField, toast} from '../../ui/ui';
+import {useCallback, useMemo, useState} from 'react';
+import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../api/store';
+import type {Node, Provider} from '../../api/model';
+import {Button, ErrorMessage, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
+import {useMainSourceEdit} from '../config/mainSource';
+import {addNamesToGroup} from '../config/groups';
 import type {PageProps} from '../types';
-import {fail, useNodesController, type NodeDialog} from './useNodesController';
+import {readSubscriptions} from './subscriptions';
+import {ownedNodes, providerRows} from './view';
+import {ProviderTable} from './ProviderTable';
+import {NodeTable} from './NodeTable';
+
+type NodeDialog =
+  {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
+const fail = (error: unknown) => toast('negative', errorText(error));
 
 export function Nodes({go, query}: PageProps) {
   const t = useT();
@@ -12,38 +23,39 @@ export function Nodes({go, query}: PageProps) {
     setForm({name: '', value: ''});
     setDialog(next);
   }, []);
-  const {
-    providers,
-    nodes,
-    reload,
-    manage,
-    source,
-    joinGroup,
-    n,
-    names,
-    list,
-    selectedId,
-    provider,
-    select,
-    search,
-    setSearch,
-    group,
-    setGroup,
-    protocol,
-    setProtocol,
-    sort,
-    setSort,
-    owned,
-    groups,
-    protocols,
-    members,
-    canManageProviders,
-    canManageNodes,
-    providerColumns,
-    nodeColumns,
-    renderProvider,
-    renderNode
-  } = useNodesController({go, query}, open);
+  const locale = LOCALE[useLang()];
+  const resources = useCapabilities().data?.resources;
+  const providers = useProviders(resources?.providers.available !== false);
+  const nodes = useNodes(resources?.nodes.available !== false);
+  const names = useOutboundNames();
+  const {refetch: refetchProviders} = providers;
+  const {refetch: refetchNodes} = nodes;
+  const reload = useCallback(() => {
+    refetchProviders();
+    refetchNodes();
+  }, [refetchProviders, refetchNodes]);
+  const manage = useNodeManage(reload);
+  const source = useMainSourceEdit();
+  const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const {list} = useMemo(
+    () => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t('ui.unknown')),
+    [providers.data, nodes.data, entries, t]
+  );
+  const params = useMemo(() => new URLSearchParams(query), [query]);
+  const selectedId = params.get('provider') ?? list[0]?.id ?? null;
+  const provider = list.find(item => item.id === selectedId) ?? null;
+  const ownerId = provider?.kind === 'unknown' ? null : provider?.id;
+  const owned = ownedNodes(nodes.data ?? [], ownerId);
+  const joinGroup = (node: Node, group: string) => {
+    void source
+      .apply(
+        text => addNamesToGroup(text, group, [node.name]),
+        errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
+      )
+      .then(written => {
+        if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
+      }, fail);
+  };
   const submit = async (close: () => void) => {
     if (!dialog) return;
     try {
@@ -64,7 +76,6 @@ export function Nodes({go, query}: PageProps) {
       fail(error);
     }
   };
-  // What the dialog is about: its title, whether it adds or removes, and when its form is complete.
   const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode';
   const dialogTitle =
     dialog === null
@@ -88,60 +99,40 @@ export function Nodes({go, query}: PageProps) {
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
       <ErrorMessage error={providers.error ?? nodes.error} onRetry={reload} />
-      {canManageProviders && (
-        <div className="rp-toolbar">
-          <span className="rp-grow" />
-          <Button small onPress={() => open({kind: 'provider'})}>
-            {t('nodes.addProvider')}
-          </Button>
-        </div>
-      )}
-      <DataTable
-        label={t('nodes.providers')}
-        loading={providers.loading && !providers.data}
+      <ProviderTable
         rows={list}
-        height={280}
+        loading={providers.loading && !providers.data}
         selected={selectedId}
-        onSelect={select}
-        selectOnFocus
-        empty={t('nodes.noProviders')}
-        cols={providerColumns}
-        render={renderProvider}
+        onSelect={id => {
+          if (!id) return;
+          const next = new URLSearchParams(query);
+          next.set('provider', id);
+          go('nodes', next.toString());
+        }}
+        canManage={!!resources?.providers.can_manage}
+        canRefresh={!!resources?.providers.can_refresh}
+        busy={!!manage.busy}
+        source={source}
+        entries={entries}
+        reload={reload}
+        onAdd={() => open({kind: 'provider'})}
+        onRemove={item => open({kind: 'removeProvider', item})}
       />
-      <div className="rp-toolbar">
-        <TextField label={t('nodes.search')} search value={search} width={220} onChange={setSearch} />
-        <LabeledSelect
-          label={t('nodes.group')}
-          side
-          value={group}
-          onChange={setGroup}
-          items={[{id: '', label: t('nodes.anyGroup')}, ...groups.map(id => ({id, label: names.get(id) ?? id}))]}
-        />
-        <LabeledSelect
-          label={t('nodes.protocol')}
-          side
-          value={protocol}
-          onChange={setProtocol}
-          items={[{id: '', label: t('nodes.anyProtocol')}, ...protocols.map(id => ({id, label: id}))]}
-        />
-        <span className="rp-label">{t('nodes.shown', {n: n(members.length), total: n(owned.length)})}</span>
-        <span className="rp-grow" />
-        {canManageNodes && (
-          <Button small onPress={() => open({kind: 'node'})}>
-            {t('nodes.addNode')}
-          </Button>
-        )}
-      </div>
-      <DataTable
-        label={provider ? t('nodes.of', {name: provider.name}) : t('nav.nodes')}
+      <NodeTable
+        nodes={owned}
+        providers={providers.data?.providers ?? []}
+        names={names}
         loading={nodes.loading && !nodes.data}
-        rows={members}
-        height={520}
-        empty={t('nodes.empty')}
-        sort={sort}
-        onSort={setSort}
-        cols={nodeColumns}
-        render={renderNode}
+        label={provider ? t('nodes.of', {name: provider.name}) : t('nav.nodes')}
+        query={params.get('q')}
+        source={source}
+        canManage={!!resources?.nodes.can_manage}
+        busy={!!manage.busy}
+        reload={refetchNodes}
+        joinGroup={joinGroup}
+        onAdd={() => open({kind: 'node'})}
+        onNewGroup={item => open({kind: 'group', item})}
+        onRemove={item => open({kind: 'removeNode', item})}
       />
       <ModalDialog
         title={dialogTitle}

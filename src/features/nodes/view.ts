@@ -3,7 +3,7 @@ import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors
 import type {TableSort} from '../../ui/ui';
 import type {SubscriptionEntry} from './subscriptions';
 
-export const INLINE = 'inline';
+export type ProviderRow = Provider | (Omit<Provider, 'kind'> & {kind: 'unknown'});
 // Names sort by pinyin, numeric value, then case-insensitive text.
 export const collator = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
@@ -17,7 +17,7 @@ function redactedHost(url: string | null): string | null {
   }
 }
 
-export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], inlineName: string) {
+export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], unknownName: string) {
   // Match by node tag, then unique URL host, then the sole unclaimed entry.
   const tags = new Map<string, string>();
   for (const node of nodes) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
@@ -36,13 +36,15 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
   const claimed = new Set(named.values());
   const unclaimed = entries.filter(entry => !claimed.has(entry.tag));
   if (unnamed.length === 1 && unclaimed.length === 1) named.set(unnamed[0].id, unclaimed[0].tag);
-  const rows = providers.map(item => (named.has(item.id) ? {...item, name: named.get(item.id)!} : item));
-  const loose = nodes.filter(node => node.provider_id === null).length;
-  if (!loose || rows.some(item => item.kind === 'inline')) return {list: rows, synthetic: false};
-  const inline: Provider = {
-    id: INLINE,
-    name: inlineName,
-    kind: 'inline',
+  const rows: ProviderRow[] = providers.map(item => (named.has(item.id) ? {...item, name: named.get(item.id)!} : item));
+  const loose = nodes.filter(node => node.provider_id == null).length;
+  if (!loose) return {list: rows};
+  let id = 'unknown';
+  while (providers.some(provider => provider.id === id)) id += '-';
+  const unknown: ProviderRow = {
+    id,
+    name: unknownName,
+    kind: 'unknown',
     url_redacted: null,
     node_count: loose,
     updated_at: null,
@@ -51,12 +53,12 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
     status: 'ok',
     last_error: null
   };
-  return {list: [inline, ...rows], synthetic: true};
+  return {list: [unknown, ...rows]};
 }
 
 // Undefined means no provider filter; null selects nodes without a provider.
 export function ownedNodes(nodes: Node[], ownerId: string | null | undefined) {
-  return nodes.filter(node => ownerId === undefined || node.provider_id === ownerId);
+  return nodes.filter(node => ownerId === undefined || (ownerId === null ? node.provider_id == null : node.provider_id === ownerId));
 }
 
 export function nodeRows(owned: Node[], search: string, group: string, protocol: string, sort: TableSort) {

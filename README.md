@@ -36,13 +36,13 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 
 | Component | Requirement                                                                                                                                         |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend   | honk with `native_api` enabled (see [Install](#install)); nothing else runs on the server                                                           |
+| Backend   | An engine implementing the pinned native API contract above, with its API listener enabled (see [Install](#install))                                |
 | Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the CSS build targets; the JavaScript target is ES2022. Automated tests use Chromium |
 | Build     | Node 22 or later and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                                                     |
 
 ## Install
 
-Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Set `VERSION` to the downloaded release asset suffix, including the leading `v` for tagged releases. Then verify and extract the files into the directory honk or the web server will serve:
+Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Set `VERSION` to the downloaded release asset suffix, including the leading `v` for tagged releases. Then verify and extract the files into the directory the engine or web server will serve:
 
 ```sh
 VERSION=v0.3.0.beta.1  # replace with the downloaded release tag
@@ -79,9 +79,9 @@ Keep this block in its own include (`include { api.dae }`): a main file that car
 <details>
 <summary><strong>Any static server or reverse proxy</strong></summary>
 
-Serve the extracted files at the web root or under a prefix such as `/ui/`; the pages use hash routes (`/ui/#/activity`), so no rewrite rules are needed. A UI served from a different origin than honk must appear in honk's `allow_origins`, and a token is required unless the listener is loopback with anonymous access switched on explicitly.
+Serve the extracted files at the web root or under a prefix such as `/ui/`; the pages use hash routes (`/ui/#/activity`), so no rewrite rules are needed. If the UI and engine have different origins, configure the engine to allow the UI's origin. Follow the engine's documentation for its native API listener, CORS and authentication settings.
 
-A reverse proxy in front of both keeps them same-origin: forward `/api/` to honk's listener and serve the files under `/ui/`.
+A reverse proxy in front of both keeps them same-origin: forward `/api/` to the engine's listener and serve the files under `/ui/`.
 
 </details>
 
@@ -94,7 +94,7 @@ None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages b
 
 ## First run
 
-Open `/ui/` on the honk host. On a first visit doona asks the origin it was served from for `/api`; when honk answers it becomes the saved backend and a token prompt follows. Served from elsewhere, or to reach another honk, open Settings and enter the server root (`http://router:9527`, without `/api/v1`) and the token; Test Connection checks discovery before saving, and saving reloads the page. A pairing link fills the form for you: `/ui/#/settings?api=http://router:9527&token=…`, and the token leaves the address bar on load.
+Open `/ui/` on the engine host. On a first visit doona asks the origin it was served from for `/api`; when the engine answers it becomes the saved backend and a token prompt follows. Served from elsewhere, or to reach another engine, open Settings and enter the server root (`http://router:9527`, without `/api/v1`) and the token; Test Connection checks discovery before saving, and saving reloads the page. A pairing link fills the form for you: `/ui/#/settings?api=http://router:9527&token=…`, and the token leaves the address bar on load.
 
 The activity page then shows the running engine. The usual route through the rest:
 
@@ -103,7 +103,7 @@ The activity page then shows the running engine. The usual route through the res
 3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
 4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
 
-Every write goes through honk: the text is validated in full, saved with the hash it was read at (a file changed on disk answers 412 instead of being overwritten), then reloaded. Secrets in a source are redacted on the way out and never written back.
+Every write goes through the engine: the text is validated in full, saved with the hash it was read at (a file changed on disk answers 412 instead of being overwritten), then reloaded. Secrets in a source are redacted on the way out and never written back.
 
 ## Pages
 
@@ -129,7 +129,7 @@ Every page remains in navigation. A page is marked unavailable only when every r
 
 ## Data and settings
 
-doona has no server-side store for its own UI settings. Configuration and runtime changes are written through honk; doona's UI settings live in the browser's `localStorage` for the site's origin:
+doona has no server-side store for its own UI settings. Configuration and runtime changes are written through the engine; doona's UI settings live in the browser's `localStorage` for the site's origin:
 
 | Setting       | Key              | Values                                                                                                                                                                                                                                         |
 | ------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -178,7 +178,7 @@ pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<
 
 ## Support
 
-Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/issues). Backend behaviour belongs to [honk](https://github.com/daeuniverse/honk).
+Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/issues). Report backend issues to the connected engine's project: [honk](https://github.com/daeuniverse/honk) or [dae](https://github.com/daeuniverse/dae).
 
 ## License and credits
 

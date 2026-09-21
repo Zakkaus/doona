@@ -2,7 +2,8 @@ import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
 import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough, nodeNames} from './map';
-import {chainLabel, connectionStates, flowStepFields, localTime, outboundLabel, relativeStart, traceGaps} from '../../api/selectors';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {flowStepFields, traceGaps} from './view';
 import {
   Badge,
   Button,
