@@ -24,10 +24,11 @@ export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n
 // A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
 // matched even when two rules display alike; the expression is only the label. A retained flow from an
 // earlier generation whose id now names a different rule keeps its own entry, keyed by id and expression.
+const HISTORICAL = '\u0000';
 function ruleKey(flow: FlowSummary, rules: RoutingRule[]): string | undefined {
   if (!flow.rule_id) return undefined;
   const current = rules.find(rule => rule.rule_id === flow.rule_id);
-  return current && current.expression !== flow.rule_expression ? flow.rule_id + '|' + flow.rule_expression : flow.rule_id;
+  return current?.expression === flow.rule_expression ? flow.rule_id : flow.rule_id + HISTORICAL + flow.rule_expression;
 }
 function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames, rules: RoutingRule[]): {label: string; unknown: boolean; key?: string} | null {
   switch (stage) {
@@ -61,7 +62,8 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames,
 // the client's address.
 export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
   const [stage, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
-  if (stage === 'rule') return key.includes('|') ? key.slice(key.indexOf('|') + 1) : (rules.find(rule => rule.rule_id === key)?.expression ?? key);
+  if (stage === 'rule')
+    return key.includes(HISTORICAL) ? key.slice(key.indexOf(HISTORICAL) + 1) : (rules.find(rule => rule.rule_id === key)?.expression ?? key);
   if (stage === 'node') return names.get(key) ?? key;
   if (stage === 'client') return key;
   return label(key);

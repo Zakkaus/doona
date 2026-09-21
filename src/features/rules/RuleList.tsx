@@ -130,7 +130,7 @@ function Dictionary({go, query}: PageProps) {
   // `?add=kind:value` (from a flow) opens the add dialog with that condition once the list and the config are
   // there; the address keeps the seed until the dialog closes.
   const seed = new URLSearchParams(query).get('add');
-  const wanted = canWrite && rules.data && config.data && positions.length > 0 ? seed : null;
+  const wanted = canWrite && rules.data && config.data && rules.data.generation_id === config.data.generation_id && positions.length > 0 ? seed : null;
   // Applied whenever a seed appears, on the first render too: the data is often already cached.
   const [seen, setSeen] = useState<string | null>(null);
   if (seen !== wanted) {

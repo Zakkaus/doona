@@ -53,7 +53,7 @@ export function PolicyEdit({name, source, entry}: {name: string; source: MainSou
       footer={close => (
         <>
           <Button onPress={close}>{t('ui.cancel')}</Button>
-          <Button accent isDisabled={!draft || (!draft.policy && !draft.filters.some(f => f.trim()))} isPending={source.busy} onPress={() => saveDraft(close)}>
+          <Button accent isDisabled={!draft} isPending={source.busy} onPress={() => saveDraft(close)}>
             {t('policy.save')}
           </Button>
         </>

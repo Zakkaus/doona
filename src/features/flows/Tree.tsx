@@ -1,13 +1,10 @@
 import {useEffect, useMemo, useState} from 'react';
-import type {ReactNode} from 'react';
 import {ToggleButton} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {millis} from '../../api/u64';
-import {outboundLabel} from '../../api/selectors';
-import {policyKindLabels} from '../policies/view';
-import {Badge, Button, cx, latencyTone, useContentWidth} from '../../ui/ui';
+import {Badge, Button, cx, useContentWidth} from '../../ui/ui';
 import {treeRows} from './map';
-import type {RoutingTree, TreeBy, TreeItem, TreeLink, TreeNode, TreeOutbound, TreeLeaf} from './map';
+import type {RoutingTree, TreeBy, TreeLink} from './map';
+import {tileViews, type TileView} from './view';
 
 const FEW = 30;
 // Below this the diagram keeps its shape and pans sideways instead of squeezing the columns.
@@ -64,77 +61,39 @@ export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: 
     document.addEventListener('keydown', clear);
     return () => document.removeEventListener('keydown', clear);
   }, [pinned, onPin]);
-  const tile = (item: TreeItem, stage: Stage, name: string, body: ReactNode, style?: {top: number; left: number; width: number}) => (
+  const tiles = useMemo(() => tileViews(shown, t), [shown, t]);
+  const tile = (view: TileView, style: {top: number; left: number; width: number}) => (
     <ToggleButton
-      key={item.id}
-      aria-label={describe(item, name)}
-      className={cx('rp-tree-tile', !!active && !active.items.has(item.id) && 'dim')}
-      data-id={item.id}
-      data-stage={stage}
+      key={view.id}
+      aria-label={view.label}
+      className={cx('rp-tree-tile', !!active && !active.items.has(view.id) && 'dim')}
+      data-id={view.id}
+      data-stage={view.stage}
       style={style}
-      isSelected={pinned === item.id}
-      onChange={() => onPin(pinned === item.id ? null : item.id)}
-      onHoverStart={() => setHovered(item.id)}
+      isSelected={pinned === view.id}
+      onChange={() => onPin(pinned === view.id ? null : view.id)}
+      onHoverStart={() => setHovered(view.id)}
       onHoverEnd={() => setHovered(null)}
-      onFocus={() => setHovered(item.id)}
+      onFocus={() => setHovered(view.id)}
       onBlur={() => setHovered(null)}
     >
-      {body}
-    </ToggleButton>
-  );
-  const leafName = (leaf: TreeLeaf) => (leaf.unknown ? t('flow.mapUnknown') : leaf.label);
-  const leafBody = (leaf: TreeLeaf) => (
-    <>
-      <span className="l">{leafName(leaf)}</span>
-      {leaf.must && <Badge>must</Badge>}
-      <span className="c">{leaf.count}</span>
-    </>
-  );
-  const outboundName = (outbound: TreeOutbound) => (outbound.unknown ? t('flow.mapUnknown') : outboundLabel(outbound.label, t));
-  const outboundBody = (outbound: TreeOutbound) => (
-    <>
       <span className="l">
-        <b>{outboundName(outbound)}</b>
-        {outbound.groups.slice(1).map(group => (
-          <span className="s" key={group.name}>
-            › {group.name}
+        {view.stage === 'rule' || view.stage === 'client' ? view.name : <b>{view.name}</b>}
+        {view.notes.map((note, i) => (
+          <span className={cx('s', note.tone)} key={i}>
+            {note.text}
           </span>
         ))}
-        {outbound.groups.length > 0 && <span className="s">{t(policyKindLabels[outbound.groups[outbound.groups.length - 1].kind])}</span>}
-        {outbound.kind === 'group' && !outbound.node && <span className="s">{t('flow.treeNoNode')}</span>}
       </span>
-      <span className="c">{outbound.count}</span>
-    </>
-  );
-  const nodeName = (node: TreeNode) => (node.unknown ? t('flow.mapUnknown') : node.label);
-  const nodeBody = (node: TreeNode) => (
-    <>
-      <span className="l">
-        <b>{nodeName(node)}</b>
-        {node.latency != null ? (
-          <span className={cx('s', latencyTone(node.latency))}>{t('ui.latency', {n: millis(node.latency)})}</span>
-        ) : (
-          node.unavailable && <span className="s err">{t('ui.unavailable')}</span>
-        )}
-      </span>
-      <span className="c">{node.count}</span>
-    </>
+      {view.badge && <Badge>{view.badge}</Badge>}
+      <span className="c">{view.count}</span>
+    </ToggleButton>
   );
   const more = tree.leaves.length > FEW && (
     <Button small quiet onPress={() => setShowAll(value => !value)}>
       {showAll ? t('flow.treeFewer', {n: FEW}) : t('flow.treeShowAll', {n: tree.leaves.length})}
     </Button>
   );
-  // What a screen reader gets for a tile: the name, the flow count and where the branch leads.
-  const describe = (item: TreeItem, name: string) => {
-    const next = tree.links.filter(link => link.source === item.id).map(link => link.target);
-    const to = [...shown.outbounds.filter(o => next.includes(o.id)).map(outboundName), ...shown.nodes.filter(n => next.includes(n.id)).map(nodeName)];
-    return [name, t('flow.treeFlows', {n: item.count}), ...(to.length ? ['→ ' + to.join(', ')] : [])].join(' · ');
-  };
-  const leafTile = (leaf: TreeLeaf, style?: {top: number; left: number; width: number}) => tile(leaf, tree.by, leafName(leaf), leafBody(leaf), style);
-  const outboundTile = (outbound: TreeOutbound, style?: {top: number; left: number; width: number}) =>
-    tile(outbound, 'outbound', outboundName(outbound), outboundBody(outbound), style);
-  const nodeTile = (node: TreeNode, style?: {top: number; left: number; width: number}) => tile(node, 'node', nodeName(node), nodeBody(node), style);
   // Column geometry from the measured width; rows from the layout. The connectors use the same numbers.
   const unit = width == null ? 0 : (width - 2 * GAP) / shares.reduce((sum, share) => sum + share);
   const column = (stage: Stage) => {
@@ -181,9 +140,7 @@ export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: 
             })}
           </svg>
         )}
-        {width != null && shown.leaves.map(leaf => leafTile(leaf, place(leaf.id, 'rule')))}
-        {width != null && shown.outbounds.map(outbound => outboundTile(outbound, place(outbound.id, 'outbound')))}
-        {width != null && shown.nodes.map(node => nodeTile(node, place(node.id, 'node')))}
+        {width != null && tiles.map(view => tile(view, place(view.id, view.stage)))}
       </div>
       {more}
     </div>

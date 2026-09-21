@@ -218,3 +218,23 @@ it('shows a 503 that persists past three retries', async () => {
   expect(calls).toBe(4);
   expect(resource.getSnapshot().error?.message).toBe('not now');
 });
+
+it('answers a refresh asked during the hold with the outcome of the retry', async () => {
+  const api = createMockApi();
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    if (calls === 1) throw new ApiError(503, 'temporarily_unavailable', 'not now', null, null, 2);
+    return 'entries';
+  };
+  const resource = watchResource(api, {key: ['dnsCache'], every: 0, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  const asked = resource.refetch();
+  await vi.advanceTimersByTimeAsync(1999);
+  expect(calls).toBe(1);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(asked).resolves.toMatchObject({ok: true});
+  expect(calls).toBeLessThanOrEqual(3);
+  expect(resource.getSnapshot()).toMatchObject({data: 'entries', error: null});
+});

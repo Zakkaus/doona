@@ -86,7 +86,7 @@ function Trace() {
   // An undecided evaluation may still have matched a rule below the ones it could not decide: that rule's
   // outbound is where the flow goes if none of those turn out to match.
   const likely = (evaluation: RoutingEvaluation) => {
-    if (evaluation.decision === 'determinate' || evaluation.outbound) return null;
+    if (evaluation.decision === 'determinate' || evaluation.outbound || rules.data?.generation_id !== trace.result?.generation_id) return null;
     const matched = evaluation.rules.find(rule => rule.result === 'matched');
     return (matched && rules.data?.rules.find(rule => rule.rule_id === matched.rule_id)?.outbound) ?? null;
   };

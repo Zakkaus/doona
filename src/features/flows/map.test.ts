@@ -105,7 +105,7 @@ it('keeps a retained flow from an earlier generation apart from the rule that no
   const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression && rules.rules.some(rule => rule.rule_id === flow.rule_id))!;
   const stale = {...matched, id: 'stale', rule_expression: 'domain(suffix: old.example)'};
   const tree = routingTree([...flows.flows, stale], groups, nodes.nodes, rules.rules);
-  const historical = tree.leaves.find(leaf => leaf.id === `rule:${matched.rule_id}|domain(suffix: old.example)`)!;
+  const historical = tree.leaves.find(leaf => leaf.id === `rule:${matched.rule_id}\u0000domain(suffix: old.example)`)!;
   expect(historical).toMatchObject({label: 'domain(suffix: old.example)', count: 1, outbound: null});
   expect(tree.leaves.find(leaf => leaf.id === 'rule:' + matched.rule_id)?.label).toBe(matched.rule_expression);
   const names = nodeNames(nodes.nodes);
