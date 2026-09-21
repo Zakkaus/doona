@@ -143,11 +143,18 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
         <TextField search label={t('ui.source')} value={vm.src} onChange={vm.setSrc} placeholder="10.0.0.12" width={160} />
         {vm.total && <span className="rp-label">{vm.total}</span>}
+        {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
         <span className="rp-grow" />
         <Button isDisabled={!vm.rows.length} onPress={vm.export}>
           <Download />
           {t('dns.exportLog')}
         </Button>
+        <Button onPress={vm.refresh}>{t('refresh')}</Button>
+        {vm.hasOlder && (
+          <Button isPending={vm.loadingOlder} onPress={vm.loadOlder}>
+            {t('dns.loadOlder')}
+          </Button>
+        )}
       </div>
       {vm.error && <ErrorMessage error={vm.error} />}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>

@@ -2,11 +2,13 @@ import {useMemo, useState} from 'react';
 import {getApi} from '../../api';
 import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../api/store';
 import {useAction} from '../../api/store/action';
-import type {DnsQueryResponse} from '../../api/model';
+import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
-import {dnsCacheView, dnsLogView, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
+import {within} from '../../shell/route';
+import {pageSize} from '../../api/store/resource';
 import {queryTypes} from './query';
 
 export function useDns({go, query}: PageProps) {
@@ -23,8 +25,7 @@ export function useDns({go, query}: PageProps) {
   const resources = capabilities.data?.resources;
   const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
   const setTab = (tab: string, extra?: Record<string, string>) => {
-    const next = new URLSearchParams({tab, ...extra});
-    go('dns', next.toString());
+    go('dns', within(query, {tab, ...extra}));
   };
   const submit = async () => {
     try {
@@ -57,7 +58,7 @@ export function useDns({go, query}: PageProps) {
     filterDomain: params.get('domain') ?? '',
     logEnabled: resources?.dns_log.available === true,
     viewCache: () => setTab('cache', {domain: result?.domain ?? ''}),
-    clearCacheFilter: () => setTab('cache')
+    clearCacheFilter: () => go('dns', within(query, {tab: 'cache', domain: null}))
   };
 }
 
@@ -102,10 +103,38 @@ export function useDnsLog(enabled: boolean, initialName: string) {
   useLinked(initialName, setName);
   const [type, setType] = useState('all');
   const [src, setSrc] = useState('');
-  const log = useDnsLogResource({name: useDebounced(name, 300), type, src: useDebounced(src, 300)}, enabled);
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const filter = {name: useDebounced(name, 300), type, src: useDebounced(src, 300)};
+  const key = JSON.stringify(filter);
+  const log = useDnsLogResource(filter, enabled);
+  const [older, setOlder] = useState<DnsLogList | null>(null);
+  const paging = useAction<'older'>({scope: key});
+  useLinked(key, () => {
+    setOlder(null);
+    paging.cancel();
+  });
+  const data = older ?? log.data;
+  const loadOlder = () =>
+    void paging.run('older', async signal => {
+      if (!data?.next_cursor) return;
+      const limit = pageSize(capabilities.data, capabilities.data?.resources.dns_log.max_page_size);
+      const page = await api.dnsLog(
+        {
+          name: filter.name.trim() || undefined,
+          type: type === 'all' ? undefined : type,
+          src: filter.src.trim() || undefined,
+          cursor: data.next_cursor,
+          limit: limit === undefined ? undefined : Math.min(200, limit)
+        },
+        signal
+      );
+      if (!signal.aborted) setOlder(appendDnsLog(data, page));
+    });
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
-  const view = useMemo(() => dnsLogView(log.data, selected, enabled, locale, t), [log.data, selected, enabled, locale, t]);
+  const types = capabilities.data?.resources.dns_query.record_types;
+  const view = useMemo(() => dnsLogView(data, selected, enabled, locale, t, types), [data, selected, enabled, locale, t, types]);
   return {
     ...view,
     name,
@@ -117,8 +146,16 @@ export function useDnsLog(enabled: boolean, initialName: string) {
     selected: view.detail ? selected : null,
     setSelected,
     wide,
-    error: log.error,
-    loading: log.loading && !log.data,
-    export: () => downloadFile(exportName('dns-log', 'csv'), view.exportContent, 'text/csv;charset=utf-8')
+    error: paging.error ?? log.error,
+    loading: log.loading && !data,
+    hasOlder: !!data?.next_cursor,
+    loadingOlder: !!paging.busy,
+    loadOlder,
+    refresh: () => {
+      paging.cancel();
+      setOlder(null);
+      log.refetch();
+    },
+    export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')
   };
 }

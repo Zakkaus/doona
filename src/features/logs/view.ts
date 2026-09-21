@@ -38,11 +38,19 @@ export function logView(
     })),
     levels: levels.map(id => ({id, label: t(labels[id])})),
     status: {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')},
-    exportBase: `${engine || 'engine'}-log`,
-    exportContent:
-      [...records]
-        .reverse()
-        .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)
-        .join('\n') + '\n'
+    exportBase: `${engine || 'engine'}-log`
   };
+}
+
+export function logLevel(level: LogLevel, levels: LogLevel[] = []): LogLevel | undefined {
+  return levels.includes(level) ? level : levels.includes('info') ? 'info' : levels[0];
+}
+
+export function logsExport(records: LogRecord[]) {
+  return (
+    [...records]
+      .reverse()
+      .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)
+      .join('\n') + '\n'
+  );
 }

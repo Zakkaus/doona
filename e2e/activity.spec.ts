@@ -1,5 +1,6 @@
 import {expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {test as browserTest} from '@playwright/test';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
@@ -203,4 +204,79 @@ test.describe('many outbounds', () => {
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
   });
+});
+
+test('staged mode changes require discard before navigation', async ({page}) => {
+  await page.goto('/#/activity');
+  const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
+  await page.locator('.rp-nav[href="#/overview"]').click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await page.locator('.rp-nav[href="#/overview"]').click();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/overview$/);
+  await page.locator('.rp-nav[href="#/activity"]').click();
+  await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+});
+
+test('local traffic renders without history and duplicate node names retain independent latency', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  for (const resource of Object.values(capabilities.resources)) resource.available = false;
+  capabilities.resources.nodes.available = true;
+  const nodes = await api.nodes();
+  const healthy = nodes.nodes.find(node => node.name === 'hk-01')!;
+  const unavailable = nodes.nodes.find(node => node.name === 'jp-01')!;
+  nodes.nodes = [
+    {...healthy, id: 'a/hk', name: 'HK', subscription_tag: 'provider-a'},
+    {...unavailable, id: 'b/hk', name: 'HK', subscription_tag: 'provider-b'}
+  ];
+  const responses: Record<string, unknown> = {'/capabilities': capabilities, '/version': await api.version(), '/nodes': nodes};
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (path === '/runtime') {
+      const runtime = await api.runtime();
+      runtime.traffic.sampled_at = new Date().toISOString();
+      return route.fulfill({json: runtime});
+    }
+    return route.fulfill({json: responses[path]});
+  });
+  await page.goto('/#/activity');
+  await expect(page.getByRole('region', {name: 'Traffic', exact: true}).locator('.recharts-surface')).toBeVisible();
+  const trigger = page.getByRole('button', {name: 'Node', exact: true});
+  await trigger.click();
+  await page.getByRole('menuitemradio').filter({hasText: 'provider-b'}).click();
+  const card = trigger.locator('xpath=ancestor::div[contains(@class,"rp-card")][1]');
+  await expect(card.locator('.rp-big')).toHaveText('—');
+  await trigger.click();
+  await expect(page.getByRole('menuitemradio').filter({hasText: 'provider-b'})).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('menuitemradio').filter({hasText: 'provider-a'}).click();
+  await expect(card.locator('.rp-big')).toContainText('ms');
+});
+
+browserTest('configuration read failures are shown instead of write restrictions', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  for (const [key, resource] of Object.entries(capabilities.resources)) if (key !== 'config') resource.available = false;
+  const responses: Record<string, unknown> = {'/capabilities': capabilities, '/version': await api.version(), '/runtime': await api.runtime()};
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-lang', 'en');
+  });
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (path === '/config')
+      return route.fulfill({status: 500, json: {error: {code: 'internal_error', message: 'Configuration storage failed'}, request_id: 'config-read'}});
+    return route.fulfill({json: responses[path]});
+  });
+  await page.goto('/#/activity');
+  await expect(page.getByRole('alert').filter({hasText: 'Configuration storage failed'})).toBeVisible();
+  await expect(page.getByText('Needs a writable main configuration', {exact: true})).toHaveCount(0);
+  expect(errors).toEqual([]);
 });

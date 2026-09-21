@@ -1,16 +1,18 @@
 import {useT} from '../../i18n';
 import {Button, ModalDialog} from '../../ui/ui';
 
-type CloseAllAction = {confirmationText: string; disabled: boolean; pending: boolean; run: () => void};
-export function CloseAllButton({confirmationText, disabled, pending, run}: CloseAllAction) {
+type CloseAllAction = {confirmationText: string; disabled: boolean; pending: boolean; run: () => void; open?: boolean; setOpen?: (open: boolean) => void};
+export function CloseAllButton({confirmationText, disabled, pending, run, open, setOpen}: CloseAllAction) {
   const t = useT();
   return (
     <ModalDialog
       title={t('conn.closeAll')}
       narrow
       alert
+      isOpen={open}
+      onOpenChange={setOpen}
       trigger={
-        <Button negative quiet isDisabled={disabled} isPending={pending}>
+        <Button negative quiet isDisabled={disabled} isPending={pending} onPress={setOpen ? () => setOpen(true) : undefined}>
           {t('conn.closeAll')}
         </Button>
       }

@@ -168,7 +168,9 @@ export function overviewView(
     },
     memory: {
       state: section(!!memory, loading.capabilities || loading.memory),
-      fields: memory ? memoryFields(memory, t, ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit']) : [],
+      fields: memory
+        ? memoryFields(memory, t, percent === null ? ['ov.f.cgroupPercent'] : ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit'])
+        : [],
       bar:
         percent === null
           ? null

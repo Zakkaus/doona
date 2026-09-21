@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {capabilities, dnsCache} from '../../api/mock/fixtures';
 import type {DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {dnsAnswerView, dnsCacheView, dnsLogView, dnsQueryView} from './view';
+import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const record: DnsLogRecord = {
   id: 'dns-1',
@@ -31,7 +31,7 @@ it('uses the same nullable field and answer projection for queries and log detai
   expect(query.cards[0].fields).toContainEqual([t('ui.elapsed'), t('ui.latency', {n: '0'})]);
   expect(dnsAnswerView({...record, answers: undefined}, t).answers).toEqual([]);
   expect(log.rows[0]).toMatchObject({source: '—', result: '192.0.2.1', cached: true});
-  expect(log.exportContent).toContain('192.0.2.1');
+  expect(dnsLogsExport([record])).toContain('192.0.2.1');
 });
 
 it('disables unsupported query types and omits explicitly unavailable tabs', () => {
@@ -61,4 +61,22 @@ it('shows DNS failures instead of answer text and clears missing log selections'
   );
   expect(log.rows[0]).toMatchObject({resultError: true, result: 'NXDOMAIN', upstream: '—'});
   expect(log.detail).toBeNull();
+});
+
+it('offers observed and advertised record types without inventing log vocabulary', () => {
+  const data = {observed_at: record.observed_at, total: 5, next_cursor: 'older', records: [{...record, question: {name: 'example.com.', type: 'CNAME'}}]};
+  const view = dnsLogView(data, null, true, 'en-US', t, ['A']);
+  expect(view.choices.map(choice => choice.id)).toEqual(['all', 'A', 'CNAME']);
+  expect(view.loaded).toContain('1 loaded record');
+  expect(view.total).toContain('5 records');
+  expect(dnsLogView(undefined, null, true, 'en-US', t).choices.map(choice => choice.id)).toEqual(['all']);
+});
+
+it('appends older pages without duplicating overlapping records or changing the snapshot total', () => {
+  const first = {observed_at: record.observed_at, total: 5, next_cursor: 'older', records: [record]};
+  const merged = appendDnsLog(first, {...first, total: 6, next_cursor: null, records: [record, {...record, id: 'dns-2'}]});
+  expect(merged.records.map(row => row.id)).toEqual(['dns-1', 'dns-2']);
+  expect(merged.total).toBe(5);
+  expect(merged.next_cursor).toBeNull();
+  expect(dnsLogsExport(merged.records).trim().split('\n')).toHaveLength(3);
 });

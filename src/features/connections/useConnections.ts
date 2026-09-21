@@ -29,16 +29,17 @@ export function useConnections({go, query}: PageProps) {
     }
   };
   const q = useMemo(() => new URLSearchParams(query), [query]);
-  const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
+  const [text, setText] = useState(q.get('q') ?? '');
   const network = q.get('network') ?? 'all';
   const out = q.get('out') ?? 'all';
   const rule = q.get('rule') ?? 'all';
   const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
   const sel = q.get('id');
-  useLinked(q.get('q') ?? q.get('src'), value => setText(value ?? ''));
+  const [confirmed, setConfirmed] = useState<{ids: string[]} | null>(null);
+  useLinked(q.get('q'), value => setText(value ?? ''));
   const select = (id: string | null) => go('connections', within(query, {id}));
   const settledText = useDebounced(text, 300);
-  const src = ipLiteral(settledText);
+  const src = ipLiteral(q.get('src') ?? '');
   const resource = useConnectionResource(src);
   const capabilities = useCapabilities();
   const canClose = capabilities.data?.resources.connections.can_close === true;
@@ -46,7 +47,7 @@ export function useConnections({go, query}: PageProps) {
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
-  const needle = (src || ipLiteral(text) ? settledText : text).trim().toLowerCase();
+  const needle = text.trim().toLowerCase();
   const shown = useMemo(
     () =>
       rows.filter(
@@ -54,14 +55,13 @@ export function useConnections({go, query}: PageProps) {
           (network === 'all' || c.network === network) &&
           (out === 'all' || c.outbound === out) &&
           (rule === 'all' || c.rule_expression === rule) &&
-          (src ||
-            !needle ||
+          (!needle ||
             [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
       ),
-    [rows, network, out, rule, src, needle, names]
+    [rows, network, out, rule, needle, names]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const model = useMemo(() => connectionsView(rows, shown, cur, resource.data, src, rule, locale, t), [rows, shown, cur, resource.data, src, rule, locale, t]);
+  const model = useMemo(() => connectionsView(rows, cur, resource.data, src, rule, locale, t), [rows, cur, resource.data, src, rule, locale, t]);
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
@@ -77,8 +77,9 @@ export function useConnections({go, query}: PageProps) {
     }
   };
   const closeAll = async () => {
+    if (!confirmed) return;
     try {
-      const tally = await closing.closeAll(closeSelection(shown, network, out, rule, src, needle, !!resource.data?.truncated));
+      const tally = await closing.closeAll(confirmed);
       if (!tally) return;
       select(null);
       toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
@@ -102,8 +103,10 @@ export function useConnections({go, query}: PageProps) {
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {
       const id = String(key);
-      if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
-      else if (id.startsWith('rule:')) setFilter('rule', rule === id.slice(5) ? 'all' : id.slice(5));
+      if (id.startsWith('src:')) {
+        setText('');
+        go('connections', within(query, {src: src === id.slice(4) ? null : id.slice(4), q: null}));
+      } else if (id.startsWith('rule:')) setFilter('rule', rule === id.slice(5) ? 'all' : id.slice(5));
     },
     columns: columns.map(column => ({id: column.id, label: t(column.label)})),
     visibleColumns: columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id),
@@ -112,7 +115,7 @@ export function useConnections({go, query}: PageProps) {
       const hidden = view.hidden.includes(id) ? view.hidden.filter(value => value !== id) : [...view.hidden, id];
       if (hidden.length < columns.length) updateView({hidden});
     },
-    filtered: network !== 'all' || out !== 'all' || rule !== 'all' || text.trim() !== '',
+    filtered: network !== 'all' || out !== 'all' || rule !== 'all' || !!src || text.trim() !== '',
     clear: () => {
       setText('');
       go('connections', within(query, {network: null, out: null, rule: null, q: null, src: null}));
@@ -123,7 +126,9 @@ export function useConnections({go, query}: PageProps) {
     truncated: !!resource.data?.truncated,
     canClose,
     closeAll: {
-      confirmationText: model.closeConfirmation,
+      confirmationText: t('conn.closeAllHelp', {n: confirmed?.ids.length ?? 0}),
+      open: !!confirmed,
+      setOpen: (open: boolean) => setConfirmed(open ? closeSelection(shown) : null),
       disabled: !shown.length || !!closing.busy || text !== settledText,
       pending: closing.busy === 'all',
       run: () => void closeAll()
@@ -133,7 +138,10 @@ export function useConnections({go, query}: PageProps) {
       if (model.detail) go('rules', model.detail.flowQuery);
     },
     onlyClient: () => {
-      if (model.detail?.source) setText(model.detail.source);
+      if (model.detail?.source) {
+        setText('');
+        go('connections', within(query, {src: model.detail.source, q: null}));
+      }
     },
     canExport: shown.length > 0,
     export: () => downloadFile(exportName('connections', 'csv'), connectionsExport(shown, names), 'text/csv;charset=utf-8'),
