@@ -85,7 +85,7 @@ experimental {
 <details>
 <summary><strong>发行版软件包</strong></summary>
 
-尚未发布。每个发行版本附 [nfpm](install/nfpm) 从 `make install` 打出的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的写法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表达式；AUR 的 `doona-bin` 另有仓库。发行版本另附 `doona-<tag>-deps.tar.xz`（装好的 `node_modules`），给必须离线构建的软件包用，原生模块只有 x86_64 glibc。其他打包方式从 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts` 入手。
+尚未发布。每个发行版本附 [nfpm](install/nfpm) 从 `make install` 打出的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的写法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表达式；AUR 的 `doona-bin` 另有仓库。发行版本另附 `doona-<tag>-deps.tar.xz`（装好的 `node_modules`），给必须离线构建的软件包用，原生模块涵盖 Linux x86_64 与 aarch64、glibc 与 musl。其他打包方式从 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts` 入手。
 
 </details>
 

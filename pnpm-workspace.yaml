@@ -1,2 +1,8 @@
 allowBuilds:
   esbuild: true
+# The native build helpers (esbuild, rollup, lightningcss) for every platform the release deps tarball
+# serves: Linux x86_64 and aarch64, glibc and musl, the same set honk is built for.
+supportedArchitectures:
+  os: [linux]
+  cpu: [x64, arm64]
+  libc: [glibc, musl]
