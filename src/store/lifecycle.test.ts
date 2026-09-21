@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
-import * as apiSelection from '../index';
-import type {Api} from '../api';
-import {normalizeResourceKey, type ResourceKey} from '../inflight';
-import {createMockApi} from '../mock';
-import {version} from '../mock/fixtures';
-import type {Version} from '../model';
+import * as apiSelection from '../api/index';
+import type {Api} from '../api/api';
+import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
+import {createMockApi} from '../api/mock';
+import {version} from '../api/mock/fixtures';
+import type {Version} from '../api/model';
 import {refetchAll, watchResource as subscribeResource} from './resource';
 
 vi.mock('./events', () => ({subscribeEvents: () => () => {}}));

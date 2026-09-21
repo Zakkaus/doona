@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
+import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../store';
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {fmtRate, usePalette} from '../../ui/Charts';

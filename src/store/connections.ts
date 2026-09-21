@@ -1,7 +1,7 @@
 import {useCallback} from 'react';
-import {getApi} from '../index';
-import type {BulkCloseQuery, BulkCloseResult} from '../model';
-import {ApiError} from '../error';
+import {getApi} from '../api/index';
+import type {BulkCloseQuery, BulkCloseResult} from '../api/model';
+import {ApiError} from '../api/error';
 import {useResource} from './resource';
 import {useAction} from './action';
 export function useConnections(src?: string, enabled = true) {

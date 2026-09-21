@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../api/store';
+import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
 import {ApiError} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral} from '../../api/selectors';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';

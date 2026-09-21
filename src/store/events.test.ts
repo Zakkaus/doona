@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
-import {createMockApi} from '../mock';
-import {ApiError} from '../error';
-import {capabilities} from '../mock/fixtures';
+import {createMockApi} from '../api/mock';
+import {ApiError} from '../api/error';
+import {capabilities} from '../api/mock/fixtures';
 import {eventStatus, subscribeEvents} from './events';
 import {watchResource} from './resource';
 

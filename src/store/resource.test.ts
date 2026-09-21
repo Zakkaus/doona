@@ -1,11 +1,11 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
-import type {Api} from '../api';
-import type {ResourceKey} from '../inflight';
-import {createMockApi} from '../mock';
-import * as apiSelection from '../index';
+import type {Api} from '../api/api';
+import type {ResourceKey} from '../api/inflight';
+import {createMockApi} from '../api/mock';
+import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
 import {refetchAll, watchResource} from './resource';
-import {ApiError} from '../error';
+import {ApiError} from '../api/error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
 const disposers: Array<() => void> = [];

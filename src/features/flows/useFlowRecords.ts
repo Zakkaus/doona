@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../api/store';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
 import {outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';

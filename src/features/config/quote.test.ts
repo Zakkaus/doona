@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {quote, unquote} from './blocks';
-import {addNamesToGroup, namedIn, readGroupEntries} from './groups';
+import {quote, unquote} from '../../dae/text';
+import {addNamesToGroup, namedIn, readGroupEntries} from '../../dae/groups';
 import {readState, writeState} from './wizard';
 import {writeInterval} from '../nodes/subscriptions';
 import {LocalError} from '../../api/error';

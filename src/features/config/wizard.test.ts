@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {readState, validSubscriptions, writeState} from './wizard';
-import {readGroupEntries} from './groups';
+import {readGroupEntries} from '../../dae/groups';
 
 it('keeps template groups inside an inline group section', () => {
   const text = 'subscription {}\ngroup { proxy { policy: fixed(2) } }\nrouting { fallback: proxy }\n';

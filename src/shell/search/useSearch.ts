@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import type {Key} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../api/store';
+import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
 import type {PageProps} from '../../features/types';
 import {searchView} from './view';
 

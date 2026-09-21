@@ -1,6 +1,6 @@
 import type {Group, Node, Provider} from '../model';
-import {blockFields, quote, scanConfig, unquote} from '../../features/config/blocks';
-import {namedIn, readGroupEntries, writeGroupEntry} from '../../features/config/groups';
+import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
+import {namedIn, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 
 // The demo engine's view of a native policy expression: which contract kind it behaves as.
 const policyKinds: Record<string, Group['policy']['kind']> = {

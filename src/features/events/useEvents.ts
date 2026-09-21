@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {EVENT_FEED_LIMIT, useEventFeed} from '../../api/store';
+import {EVENT_FEED_LIMIT, useEventFeed} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';

@@ -1,6 +1,6 @@
 import {useCallback, useMemo} from 'react';
-import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
-import {useSourceComplete} from '../../api/store/config';
+import {useCapabilities, useConfig, useConfigEditor} from '../../store';
+import {useSourceComplete} from '../../store/config';
 import type {ConfigSource} from '../../api/model';
 import {LocalError} from '../../api/error';
 

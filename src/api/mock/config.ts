@@ -1,8 +1,8 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../model';
 import {ApiError} from '../error';
 import {sha256} from '../hash';
-import * as vocab from '../daeVocab';
-import {blockEntries, scanConfig, uncomment, type TextBlock} from '../../features/config/blocks';
+import * as vocab from '../../dae/vocab';
+import {blockEntries, scanConfig, uncomment, type TextBlock} from '../../dae/text';
 
 // `onDisk` is the text the digest and size describe when the served content is a redacted copy of it.
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};

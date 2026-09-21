@@ -1,14 +1,14 @@
 import {useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../api/store';
-import {useAction} from '../../api/store/action';
+import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
+import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
 import {within} from '../../shell/route';
-import {pageSize} from '../../api/store/resource';
+import {pageSize} from '../../store/resource';
 import {queryTypes} from './query';
 
 export function useDns({go, query}: PageProps) {

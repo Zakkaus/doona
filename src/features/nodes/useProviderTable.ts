@@ -1,6 +1,6 @@
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
-import {useProviderRefresh} from '../../api/store';
+import {useProviderRefresh} from '../../store';
 import {errorText, toast} from '../../ui/ui';
 import type {MainSourceEdit} from '../config/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';

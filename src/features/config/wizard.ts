@@ -1,5 +1,5 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from './blocks';
-import {quoteName, readGroupEntries} from './groups';
+import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from '../../dae/text';
+import {quoteName, readGroupEntries} from '../../dae/groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
 type Subscription = {name: string; url: string; raw?: string; section?: number; tag?: string};

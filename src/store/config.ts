@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useState} from 'react';
-import {getApi} from '../index';
-import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../model';
-import {LocalError} from '../error';
-import {sha256} from '../hash';
+import {getApi} from '../api/index';
+import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
+import {LocalError} from '../api/error';
+import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {etag, finished, useAction} from './action';

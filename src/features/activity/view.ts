@@ -68,13 +68,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   });
   const node =
     options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => n.name !== 'direct' && n.name !== 'block') ?? options[0];
-  const menu = menuViews(options, t);
-  menu.items.forEach((item, index) => {
-    item.id = options[index].id;
-    item.label = options[index].label;
-  });
   return {
-    menu,
+    menu: menuViews(options, t),
     big: options.length > 12,
     id: node?.id ?? '',
     name: node?.name ?? '',

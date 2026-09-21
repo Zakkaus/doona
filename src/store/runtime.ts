@@ -1,7 +1,7 @@
 import {useCallback, useState} from 'react';
-import {getApi} from '../index';
-import type {Api} from '../api';
-import type {Capabilities, Operation, Runtime, RuntimeSettings, RuntimeSettingsPatch} from '../model';
+import {getApi} from '../api/index';
+import type {Api} from '../api/api';
+import type {Capabilities, Operation, Runtime, RuntimeSettings, RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
 import {finished, useAction} from './action';
 export function useVersion() {

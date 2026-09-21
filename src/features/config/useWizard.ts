@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
-import {useSourceComplete} from '../../api/store/config';
+import {useSourceComplete} from '../../store/config';
 import {errorText, toast, useLinked} from '../../ui/ui';
 import {validSubscriptions, writeState, type RuleTemplate, type WizardState} from './wizard';
 import {wizardInitial, wizardRows} from './view';

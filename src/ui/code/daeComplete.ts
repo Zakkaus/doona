@@ -1,6 +1,6 @@
 import {autocompletion, type Completion, type CompletionContext, type CompletionResult} from '@codemirror/autocomplete';
-import * as vocab from '../../api/daeVocab';
-import {scanConfig} from '../../features/config/blocks';
+import * as vocab from '../../dae/vocab';
+import {scanConfig} from '../../dae/text';
 
 const sections = ['global', 'subscription', 'node', 'group', 'dns', 'routing'].map(label => ({label, type: 'keyword'}));
 const globalKeys = vocab.globalKeys.map(label => ({label, type: 'property', apply: label + ': '}));

@@ -1,7 +1,7 @@
-import {getApi} from '../index';
-import type {Api} from '../api';
-import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../model';
-import {ApiError} from '../error';
+import {getApi} from '../api/index';
+import type {Api} from '../api/api';
+import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
+import {ApiError} from '../api/error';
 import {pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
 

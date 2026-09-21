@@ -5,7 +5,7 @@ import {formatNumber, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {fileName, redacted} from './names';
 import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, type WizardState} from './wizard';
-import {blockFields, scanConfig, type TextBlock, type TextToken} from './blocks';
+import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {buildHash} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 

@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {getApi} from '../../api';
-import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
+import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {localTime} from '../../api/selectors';
@@ -9,7 +9,7 @@ import {downloadFile, errorText, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
-import {useSourceComplete} from '../../api/store/config';
+import {useSourceComplete} from '../../store/config';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
 import {useDraftGuard} from './useDraftGuard';
 import {useValidationSources} from './useValidationSources';

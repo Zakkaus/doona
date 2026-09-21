@@ -1,4 +1,4 @@
-import {conditionKinds, type ConditionKind} from '../config/groups';
+import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {buildHash} from '../../shell/route';
 
 export type RuleSeed = {kind: ConditionKind; value: string};

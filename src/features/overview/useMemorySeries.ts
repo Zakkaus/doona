@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import type {Capabilities, RuntimeMemory} from '../../api/model';
-import {useMemoryHistory} from '../../api/store';
+import {useMemoryHistory} from '../../store';
 import {historySamples, memoryWindow, useMemorySamples} from './memory';
 
 export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined, windowSeconds: number) {

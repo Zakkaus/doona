@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {completeSource} from '../../api/store/config';
+import {completeSource} from '../../store/config';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';

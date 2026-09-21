@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {useCapabilities, useRuntimeSettings} from '../../api/store';
+import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {toast, errorText, useLinked} from '../../ui/ui';

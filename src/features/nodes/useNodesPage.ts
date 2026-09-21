@@ -1,10 +1,10 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../api/store';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
 import {errorText, toast} from '../../ui/ui';
 import {useMainSourceEdit} from '../config/mainSource';
-import {addNamesToGroup} from '../config/groups';
+import {addNamesToGroup} from '../../dae/groups';
 import type {PageProps} from '../types';
 import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';

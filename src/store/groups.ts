@@ -1,7 +1,7 @@
 import {useCallback, useState} from 'react';
-import {getApi} from '../index';
-import type {GroupSelectionRequest} from '../model';
-import {LocalError} from '../error';
+import {getApi} from '../api/index';
+import type {GroupSelectionRequest} from '../api/model';
+import {LocalError} from '../api/error';
 import {useResource} from './resource';
 import {etag, finished, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';

@@ -16,7 +16,19 @@ Before opening a pull request, run the same gates as CI from the repository root
 
 ## Organize changes
 
-Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Access backend data only through `src/api`.
+The source tree has one folder per concern:
+
+| Folder         | Holds                                                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/api`      | The transport client, contract types, error model, selectors and the demo backend (`mock/`)                                                                          |
+| `src/store`    | Resource watching and action hooks; the only place that talks to `src/api` at runtime                                                                                |
+| `src/dae`      | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend                                                     |
+| `src/features` | One folder per page: a controller hook (`use*.ts`) owns store hooks, URL state and actions; `view.ts` holds pure projections with unit tests; components only render |
+| `src/shell`    | Routing, navigation, appearance, shortcuts and search                                                                                                                |
+| `src/ui`       | The presentational kit and its stylesheets                                                                                                                           |
+| `src/i18n`     | Message loading and formatting                                                                                                                                       |
+
+Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Read backend data through `src/store` hooks from a feature's controller; components receive prepared values and callbacks and never fetch, guard or format on their own.
 
 Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
 

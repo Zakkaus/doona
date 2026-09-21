@@ -1,4 +1,4 @@
-import {useCapabilities} from '../../api/store';
+import {useCapabilities} from '../../store';
 import {useT} from '../../i18n';
 import type {PageProps} from '../types';
 import {rulesView} from './view';

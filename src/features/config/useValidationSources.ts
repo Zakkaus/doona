@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {ConfigSource} from '../../api/model';
-import {completeSource} from '../../api/store/config';
+import {completeSource} from '../../store/config';
 import {validationSources} from './names';
 
 export function useValidationSources(sources: ConfigSource[], replacement?: {id: string; content: string}) {

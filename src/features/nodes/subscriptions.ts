@@ -1,4 +1,4 @@
-import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
+import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../../dae/text';
 
 export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null; from: number; to: number};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};

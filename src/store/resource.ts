@@ -1,10 +1,10 @@
 import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
-import {getApi} from '../index';
-import type {Api} from '../api';
-import type {ApiEvent, Capabilities} from '../model';
-import {ApiError} from '../error';
-import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../inflight';
-import {shouldRefetch} from '../invalidation';
+import {getApi} from '../api/index';
+import type {Api} from '../api/api';
+import type {ApiEvent, Capabilities} from '../api/model';
+import {ApiError} from '../api/error';
+import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../api/inflight';
+import {shouldRefetch} from '../api/invalidation';
 import {subscribeEvents} from './events';
 
 type RefreshOutcome = {key: string} & ({ok: true} | {ok: false; error: Error});

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {blockFields, scanConfig, uncomment} from './blocks';
-import {groupNames} from './names';
+import {blockFields, scanConfig, uncomment} from './text';
+import {groupNames} from '../features/config/names';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
   const text = `# group { fake {} }

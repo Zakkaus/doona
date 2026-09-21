@@ -1,7 +1,7 @@
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
-import {writeGroupEntry, type GroupEntry} from '../config/groups';
-import {policies} from '../../api/daeVocab';
+import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
+import {policies} from '../../dae/vocab';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {errorText, toast, useLinked} from '../../ui/ui';

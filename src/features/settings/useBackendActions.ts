@@ -8,7 +8,7 @@ import {
   useProviders,
   useRuntime,
   useRuntimeOperations
-} from '../../api/store';
+} from '../../store';
 import {lifecycleActions, operationLabels} from '../overview/view';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
@@ -73,7 +73,7 @@ export function useBackendActions() {
         }, fail)
     },
     closeAll: {
-      confirmationText: liveCount === null ? '' : t('conn.closeAllHelp', {n: liveCount}),
+      confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
       disabled: !connectionsReady || !liveCount || !!closing.busy,
       pending: closing.busy === 'all',
       run: closeAll

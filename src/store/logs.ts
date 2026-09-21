@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
-import {getApi} from '../index';
-import type {ApiEvent, LogLevel, LogRecord} from '../model';
+import {getApi} from '../api/index';
+import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
 import {eventStatus, subscribeEvents} from './events';
 import {useCapabilities} from './runtime';
 import {createFeed} from './feed';

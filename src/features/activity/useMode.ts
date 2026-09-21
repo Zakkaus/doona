@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useGroups} from '../../api/store';
+import {useCapabilities, useGroups} from '../../store';
 import {useMainSourceEdit} from '../config/mainSource';
 import {useT} from '../../i18n';
 import {errorText, toast, useLinked} from '../../ui/ui';

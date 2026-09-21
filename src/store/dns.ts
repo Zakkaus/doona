@@ -1,6 +1,6 @@
 import {useCallback} from 'react';
-import {getApi} from '../index';
-import type {DnsCacheList} from '../model';
+import {getApi} from '../api/index';
+import type {DnsCacheList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';

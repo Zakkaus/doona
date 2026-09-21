@@ -1,4 +1,4 @@
-import {blockFields, quote, scanConfig} from './blocks';
+import {blockFields, quote, scanConfig} from './text';
 
 export type GroupEntry = {
   name: string;

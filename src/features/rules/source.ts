@@ -1,5 +1,5 @@
 import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
-import {scanConfig} from '../config/blocks';
+import {scanConfig} from '../../dae/text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;

@@ -3,7 +3,7 @@ import {configNotes} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {sourceView, diagnosticRows, wizardInitial, wizardRows, sectionSummaries, sectionRange, sectionMarks, sourceMarks, splice} from './view';
-import {scanConfig} from './blocks';
+import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from './names';
 const t: Translator = (key, params) => translate('en', key, params);

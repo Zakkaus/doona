@@ -1,7 +1,7 @@
 import {expect, it, vi} from 'vitest';
-import {createMockApi} from '../mock';
+import {createMockApi} from '../api/mock';
 import {routingTrace} from './flows';
-import type {DnsQueryResponse} from '../model';
+import type {DnsQueryResponse} from '../api/model';
 
 function query(addresses: string[]): DnsQueryResponse {
   return {

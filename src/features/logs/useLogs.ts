@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useLogFeed, useVersion} from '../../api/store';
+import {useCapabilities, useLogFeed, useVersion} from '../../store';
 import type {LogLevel} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useDebounced} from '../../ui/ui';

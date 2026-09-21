@@ -85,10 +85,11 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     region: regionOf(member.name) ?? '?'
   }));
 }
-export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: boolean}>, t: Translator) {
+// `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
+export function menuViews(nodes: Array<{id?: string; name: string; label?: string; tcp?: number; alive?: boolean}>, t: Translator) {
   const items = nodes.map(node => ({
-    id: node.name,
-    label: node.name,
+    id: node.id ?? node.name,
+    label: node.label ?? node.name,
     tcp: node.tcp,
     region: regionOf(node.name) ?? '—',
     description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)}),

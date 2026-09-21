@@ -1,6 +1,6 @@
 import {useCallback} from 'react';
-import {getApi} from '../index';
-import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../model';
+import {getApi} from '../api/index';
+import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {finished, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
