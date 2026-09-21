@@ -160,7 +160,6 @@ export function connectionsView(
   src: string | undefined,
   rule: string,
   locale: string,
-  names: OutboundNames,
   t: LabelFn
 ) {
   const seen = (values: Array<string | null | undefined>) => {
@@ -202,28 +201,32 @@ export function connectionsView(
           source: current.src ? (sourceIp(current.src) ?? current.src) : null,
           closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
         }
-      : null,
-    exportContent:
-      [
-        csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
-        ...shown.map(c =>
-          csvLine([
-            c.id,
-            c.dst,
-            c.domain,
-            c.src,
-            c.network,
-            c.state,
-            c.outbound,
-            chainNames(c.chain, names).join(' > '),
-            c.rule_expression,
-            c.upload_bytes,
-            c.download_bytes,
-            c.started_at
-          ])
-        )
-      ].join('\n') + '\n'
+      : null
   };
+}
+
+export function connectionsExport(shown: Array<Connection & {network: string}>, names: OutboundNames) {
+  return (
+    [
+      csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
+      ...shown.map(c =>
+        csvLine([
+          c.id,
+          c.dst,
+          c.domain,
+          c.src,
+          c.network,
+          c.state,
+          c.outbound,
+          chainNames(c.chain, names).join(' > '),
+          c.rule_expression,
+          c.upload_bytes,
+          c.download_bytes,
+          c.started_at
+        ])
+      )
+    ].join('\n') + '\n'
+  );
 }
 
 export function closeSelection(

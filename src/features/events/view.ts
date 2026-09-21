@@ -22,6 +22,10 @@ export function eventsView(events: ApiEvent[], kind: string, connected: boolean,
       text: t(available === false ? 'event.unavailable' : connected ? 'event.connected' : 'event.reconnecting')
     },
     limitText: t('event.limit', {n: formatNumber(limit, locale)}),
-    exportContent: JSON.stringify(shown, null, 2) + '\n'
+    shown
   };
+}
+
+export function eventsExport(events: ApiEvent[]) {
+  return JSON.stringify(events, null, 2) + '\n';
 }

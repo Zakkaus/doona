@@ -62,18 +62,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     status: t(node?.alive ? 'act.good' : node?.unavailable ? 'act.timeout' : 'act.unknown')
   };
 }
-export function activityView(
-  runtime: Runtime | undefined,
-  memory: RuntimeMemory | undefined,
-  outbounds: RuntimeOutbounds | undefined,
-  connections: ConnectionList | undefined,
-  by: string,
-  locale: string,
-  colors: {cat: string[]; love: string},
-  t: LabelFn
-) {
+export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn) {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
-  const usage = outboundUsage(outbounds);
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
@@ -89,22 +79,29 @@ export function activityView(
         : {
             tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const),
             text: t(percent > 90 ? 'act.memoryNearLimit' : percent > 75 ? 'act.memoryHigh' : 'act.memoryOk')
-          },
-    outbounds: {
-      since: outbounds ? t('act.since', {t: localTime(outbounds.counter_since, locale)}) : '',
-      total: formatBytes(usage.total),
-      rows: usage.rows.map((row, i) => ({
-        name: outboundLabel(row.name, t),
-        value: row.percent === null ? null : Math.round(row.percent),
-        text: formatBytes(row.bytes),
-        color: row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[i % colors.cat.length]
-      }))
-    },
-    ranking: connectionRanking(connections, by).map((row, i) => ({
-      name: row.name,
-      value: row.percent === null ? formatBytes(row.download) : t('ui.share', {bytes: formatBytes(row.download), percent: row.percent}),
-      pct: row.percent ?? 0,
-      color: colors.cat[i % colors.cat.length]
+          }
+  };
+}
+
+export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, locale: string, colors: {cat: string[]; love: string}, t: LabelFn) {
+  const usage = outboundUsage(outbounds);
+  return {
+    since: outbounds ? t('act.since', {t: localTime(outbounds.counter_since, locale)}) : '',
+    total: formatBytes(usage.total),
+    rows: usage.rows.map((row, i) => ({
+      name: outboundLabel(row.name, t),
+      value: row.percent === null ? null : Math.round(row.percent),
+      text: formatBytes(row.bytes),
+      color: row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[i % colors.cat.length]
     }))
   };
+}
+
+export function activityRanking(connections: ConnectionList | undefined, by: string, colors: {cat: string[]}, t: LabelFn) {
+  return connectionRanking(connections, by).map((row, i) => ({
+    name: row.name,
+    value: row.percent === null ? formatBytes(row.download) : t('ui.share', {bytes: formatBytes(row.download), percent: row.percent}),
+    pct: row.percent ?? 0,
+    color: colors.cat[i % colors.cat.length]
+  }));
 }

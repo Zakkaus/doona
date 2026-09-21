@@ -6,7 +6,7 @@ import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, us
 import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../types';
-import {columns, readView, viewKey, closeSelection, connectionsView, connectionTableView, type ConnectionView} from './view';
+import {columns, readView, viewKey, closeSelection, connectionsExport, connectionsView, connectionTableView, type ConnectionView} from './view';
 
 export function useConnections({go, query}: PageProps) {
   const t = useT();
@@ -61,10 +61,7 @@ export function useConnections({go, query}: PageProps) {
     [rows, network, out, rule, src, needle, names]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const model = useMemo(
-    () => connectionsView(rows, shown, cur, resource.data, src, rule, locale, names, t),
-    [rows, shown, cur, resource.data, src, rule, locale, names, t]
-  );
+  const model = useMemo(() => connectionsView(rows, shown, cur, resource.data, src, rule, locale, t), [rows, shown, cur, resource.data, src, rule, locale, t]);
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
@@ -139,7 +136,7 @@ export function useConnections({go, query}: PageProps) {
       if (model.detail?.source) setText(model.detail.source);
     },
     canExport: shown.length > 0,
-    export: () => downloadFile(exportName('connections', 'csv'), model.exportContent, 'text/csv;charset=utf-8'),
+    export: () => downloadFile(exportName('connections', 'csv'), connectionsExport(shown, names), 'text/csv;charset=utf-8'),
     detailTitle: model.detail?.title ?? '',
     notInSnapshot: !!sel && !cur && !!resource.data
   };

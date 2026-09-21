@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../api/store';
 import {useMainSourceEdit} from '../config/mainSource';
 import {useT} from '../../i18n';
@@ -11,7 +11,8 @@ export function useMode() {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
   const {main, writable, busy, apply: write} = useMainSourceEdit();
-  const current: OutboundMode = main ? readMode(main.content!) : {mode: 'rule'};
+  const content = main?.content;
+  const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
   const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t);
   const apply = async () => {

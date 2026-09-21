@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {connections} from '../../api/mock/fixtures';
-import {closeSelection, columns, connectionDetails, connectionsView, connectionTableView, readView, tableRows} from './view';
+import {closeSelection, columns, connectionDetails, connectionsExport, connectionsView, connectionTableView, readView, tableRows} from './view';
 import {fitColumns} from '../../ui/ui';
 import {translate, type Translator} from '../../i18n';
 const t: Translator = (key, params) => translate('en', key, params);
@@ -71,9 +71,9 @@ it('restricts bulk close to exactly representable, complete snapshots', () => {
 
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
-  const model = connectionsView([row], [row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', new Map(), t);
+  const model = connectionsView([row], [row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
   expect(model.detail?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
-  expect(model.exportContent).toContain('9007199254740993');
+  expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
   expect(model.closeConfirmation).toBe(t('conn.closeAllHelp', {n: 1}));
 });

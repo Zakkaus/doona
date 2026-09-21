@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {ToggleButton} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Badge, Button, cx, useContentWidth} from '../../ui/ui';
@@ -42,6 +42,56 @@ function reach(index: TreeIndex, id: string) {
 
 const stroke = (count: number) => Math.min(8, 1.5 + Math.log2(1 + count) * 1.25);
 
+type Placement = {top: number; left: number; width: number};
+function columnAt(width: number, stage: Stage) {
+  const unit = (width - 2 * GAP) / shares.reduce((sum, share) => sum + share);
+  const index = columns[stage];
+  return {left: shares.slice(0, index).reduce((sum, share) => sum + share * unit + GAP, 0), width: shares[index] * unit};
+}
+// A tile re-renders only when its own highlight or selection changes, not on every hover elsewhere.
+const TreeTile = memo(function TreeTile({
+  view,
+  style,
+  dim,
+  selected,
+  pin,
+  hover
+}: {
+  view: TileView;
+  style: Placement;
+  dim: boolean;
+  selected: boolean;
+  pin: (id: string) => void;
+  hover: (id: string | null) => void;
+}) {
+  return (
+    <ToggleButton
+      aria-label={view.label}
+      className={cx('rp-tree-tile', dim && 'dim')}
+      data-id={view.id}
+      data-stage={view.stage}
+      style={style}
+      isSelected={selected}
+      onChange={() => pin(view.id)}
+      onHoverStart={() => hover(view.id)}
+      onHoverEnd={() => hover(null)}
+      onFocus={() => hover(view.id)}
+      onBlur={() => hover(null)}
+    >
+      <span className="l">
+        {view.stage === 'rule' || view.stage === 'client' ? view.name : <b>{view.name}</b>}
+        {view.notes.map((note, i) => (
+          <span className={cx('s', note.tone)} key={i}>
+            {note.text}
+          </span>
+        ))}
+      </span>
+      {view.badge && <Badge>{view.badge}</Badge>}
+      <span className="c">{view.count}</span>
+    </ToggleButton>
+  );
+});
+
 export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: string | null; onPin: (id: string | null) => void}) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
@@ -62,46 +112,20 @@ export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: 
     return () => document.removeEventListener('keydown', clear);
   }, [pinned, onPin]);
   const tiles = useMemo(() => tileViews(shown, t), [shown, t]);
-  const tile = (view: TileView, style: {top: number; left: number; width: number}) => (
-    <ToggleButton
-      key={view.id}
-      aria-label={view.label}
-      className={cx('rp-tree-tile', !!active && !active.items.has(view.id) && 'dim')}
-      data-id={view.id}
-      data-stage={view.stage}
-      style={style}
-      isSelected={pinned === view.id}
-      onChange={() => onPin(pinned === view.id ? null : view.id)}
-      onHoverStart={() => setHovered(view.id)}
-      onHoverEnd={() => setHovered(null)}
-      onFocus={() => setHovered(view.id)}
-      onBlur={() => setHovered(null)}
-    >
-      <span className="l">
-        {view.stage === 'rule' || view.stage === 'client' ? view.name : <b>{view.name}</b>}
-        {view.notes.map((note, i) => (
-          <span className={cx('s', note.tone)} key={i}>
-            {note.text}
-          </span>
-        ))}
-      </span>
-      {view.badge && <Badge>{view.badge}</Badge>}
-      <span className="c">{view.count}</span>
-    </ToggleButton>
+  const pin = useCallback((id: string) => onPin(pinned === id ? null : id), [pinned, onPin]);
+  const tile = (view: TileView, style: Placement) => (
+    <TreeTile key={view.id} view={view} style={style} dim={!!active && !active.items.has(view.id)} selected={pinned === view.id} pin={pin} hover={setHovered} />
   );
   const more = tree.leaves.length > FEW && (
     <Button small quiet onPress={() => setShowAll(value => !value)}>
       {showAll ? t('flow.treeFewer', {n: FEW}) : t('flow.treeShowAll', {n: tree.leaves.length})}
     </Button>
   );
-  const unit = width == null ? 0 : (width - 2 * GAP) / shares.reduce((sum, share) => sum + share);
-  const column = (stage: Stage) => {
-    const index = columns[stage];
-    const left = shares.slice(0, index).reduce((sum, share) => sum + share * unit + GAP, 0);
-    return {left, width: shares[index] * unit};
-  };
-  const top = (id: string) => layout.at.get(id)! * PITCH;
-  const place = (id: string, stage: Stage) => ({top: top(id), ...column(stage)});
+  const column = (stage: Stage) => columnAt(width ?? 0, stage);
+  const placed = useMemo(
+    () => tiles.map(view => ({view, style: {top: layout.at.get(view.id)! * PITCH, ...columnAt(width ?? 0, view.stage)}})),
+    [tiles, layout, width]
+  );
   const height = layout.rows * PITCH - (PITCH - TILE);
   const outbounds = useMemo(() => new Map(shown.outbounds.map(outbound => [outbound.id, outbound])), [shown]);
   const geometry = useMemo(() => {
@@ -151,7 +175,7 @@ export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: 
             ))}
           </svg>
         )}
-        {width != null && tiles.map(view => tile(view, place(view.id, view.stage)))}
+        {width != null && placed.map(({view, style}) => tile(view, style))}
       </div>
       {more}
     </div>

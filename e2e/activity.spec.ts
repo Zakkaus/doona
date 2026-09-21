@@ -144,6 +144,25 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
 });
 
+test('hidden notices keep their published snapshot until the 200-event window is revealed', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/activity');
+  const notices = page.getByRole('region', {name: 'Notifications and issues'});
+  const ready = notices.getByRole('listitem').filter({hasText: 'stream.ready'});
+  await expect(ready).toHaveCount(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(1000100);
+  await expect(ready).toHaveCount(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: false});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(notices.getByRole('listitem')).toHaveCount(0);
+});
+
 test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {

@@ -7,7 +7,7 @@ import {useMemorySeries} from '../overview/useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
-import {activityView} from './view';
+import {activityOutbounds, activityRanking, activityView} from './view';
 
 export function useActivity() {
   const t = useT();
@@ -46,14 +46,15 @@ export function useActivity() {
   const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
   const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
-  const view = useMemo(
-    () => activityView(runtime.data, memory.data, outbounds.data, connections.data, by, locale, p, t),
-    [runtime.data, memory.data, outbounds.data, connections.data, by, locale, p, t]
-  );
+  const view = useMemo(() => activityView(runtime.data, memory.data, t), [runtime.data, memory.data, t]);
+  const outboundView = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
+  const ranking = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
   const notices = useNotices();
   const mode = useMode();
   return {
     ...view,
+    outbounds: outboundView,
+    ranking,
     mode,
     notices,
     range,
@@ -84,13 +85,13 @@ export function useActivity() {
     },
     outboundState: {
       error: outbounds.error,
-      state: resources?.runtime_outbounds.available === false ? 'unavailable' : !outbounds.data ? 'loading' : !view.outbounds.rows.length ? 'empty' : 'ready'
+      state: resources?.runtime_outbounds.available === false ? 'unavailable' : !outbounds.data ? 'loading' : !outboundView.rows.length ? 'empty' : 'ready'
     },
     rankingState: {
       error: connections.error,
       truncated: !!connections.data?.truncated,
       state: connections.data
-        ? view.ranking.length
+        ? ranking.length
           ? 'ready'
           : 'empty'
         : connections.error

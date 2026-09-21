@@ -1,28 +1,24 @@
 import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {activityView, modeView, nodeView, noticeRows} from './view';
+import {activityOutbounds, activityRanking, activityView, modeView, nodeView, noticeRows} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
 it('distinguishes missing metrics from zero and keeps block traffic separate from named groups', () => {
-  const missing = activityView(undefined, undefined, undefined, undefined, 'dev', 'en-US', colors, t);
+  const missing = activityView(undefined, undefined, t);
   expect(missing.connections).toBe('—');
   expect(missing.memoryBadge).toBeNull();
   const model = activityView(
     {...runtime, traffic: {...runtime.traffic, connections: {tcp: 0, udp: 0, total: 0}}},
     {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: '91', limit_bytes: '100'}},
-    runtimeOutbounds,
-    connections,
-    'dev',
-    'en-US',
-    colors,
     t
   );
   expect(model.connections).toBe(0);
   expect(model.memoryBadge?.tone).toBe('err');
-  expect(model.outbounds.rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
-  expect(model.ranking[0].pct).toBeGreaterThan(model.ranking[1].pct);
+  expect(activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
+  const ranking = activityRanking(connections, 'dev', colors, t);
+  expect(ranking[0].pct).toBeGreaterThan(ranking[1].pct);
 });
 
 it('chooses measured nodes and preserves an explicitly selected unavailable node', () => {
