@@ -16,7 +16,7 @@ import {useMemorySeries} from '../overview/memory';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {ModeCards} from './ModeSwitch';
 import {connectionRanking} from './ranking';
-import {Notices} from './Notices';
+import {Notices, useNotices} from './Notices';
 
 export function Activity() {
   const t = useT();
@@ -64,6 +64,7 @@ export function Activity() {
   // Sparklines use 24 five-second means over the last two minutes, independent of the chart window.
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
   const [chosenNode, setNodeName] = useState('');
+  const notices = useNotices();
   // Until a node is chosen: the first with a measurement, else the first proxy node; the built-ins come last.
   const node =
     NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
@@ -328,7 +329,7 @@ export function Activity() {
             </div>
           )}
         </section>
-        <Notices />
+        <Notices {...notices} />
       </div>
     </>
   );

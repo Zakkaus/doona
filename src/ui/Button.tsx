@@ -90,7 +90,7 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     if (!el) return;
     const measure = () => setOverflow(el.scrollWidth > el.clientWidth);
     // A nested tab stop would swallow its ancestor's press; grid navigation still focuses the cell's text.
-    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="radio"], [role="row"]'));
+    setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]'));
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();

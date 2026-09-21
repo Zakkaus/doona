@@ -54,6 +54,7 @@ export function watchResource<T>(
   let settled: Promise<void> | undefined;
   let disposed = false;
   let dirty = false;
+  let stale = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
   const clear = () => {
@@ -80,9 +81,10 @@ export function watchResource<T>(
     );
   };
   const load = () => {
+    if (pending) return settled;
     clear();
     dirty = false;
-    if (pending) return settled;
+    stale = false;
     if (data === undefined) publish({data, loading: true, error: null});
     const request = inflight.acquire(api, name, fetch);
     pending = request;
@@ -102,12 +104,17 @@ export function watchResource<T>(
         request.release();
         if (disposed) return;
         clear();
-        if (every > 0) schedule(Date.now() + every);
+        if (stale) {
+          stale = false;
+          schedule(Date.now() + 2000);
+        } else if (every > 0) schedule(Date.now() + every);
       });
     return settled;
   };
   const invalidate = (reconnected: boolean) => {
-    if (document.hidden) {
+    // A request already running may predate the change; one more follows once it settles.
+    if (pending) stale = true;
+    else if (document.hidden) {
       dirty = true;
       clear();
     } else if (reconnected) load();

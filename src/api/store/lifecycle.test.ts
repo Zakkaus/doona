@@ -166,19 +166,23 @@ it.each(['manual', 'reconnect'] as const)('%s refresh clears an armed invalidati
   expect(resource.fetch).toHaveBeenCalledTimes(3);
 });
 
-it('lets an in-flight fetch satisfy invalidations without overlapping or catch-up requests', async () => {
-  const resource = consumer();
+it('follows a fetch that was in flight during invalidations with one more fetch, never overlapping', async () => {
+  const resource = consumer(0);
   await vi.advanceTimersByTimeAsync(1000);
   resource.invalidate(false);
   await vi.advanceTimersByTimeAsync(1000);
   resource.invalidate(true);
+  void resource.refetch();
   await vi.advanceTimersByTimeAsync(10000);
   expect(resource.fetch).toHaveBeenCalledTimes(1);
+  // The running request may predate the change; the follow-up comes once, coalesced, after it settles.
   resource.response.resolve(version);
-  await resource.refetch();
-  await vi.advanceTimersByTimeAsync(4999);
+  await vi.advanceTimersByTimeAsync(1999);
   expect(resource.fetch).toHaveBeenCalledTimes(1);
   await vi.advanceTimersByTimeAsync(1);
+  expect(resource.fetch).toHaveBeenCalledTimes(2);
+  // A non-polling resource then rests.
+  await vi.advanceTimersByTimeAsync(60000);
   expect(resource.fetch).toHaveBeenCalledTimes(2);
 });
 

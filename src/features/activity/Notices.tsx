@@ -8,8 +8,8 @@ import {useT} from '../../i18n';
 import {buildHash} from '../../shell/route';
 import {Empty, ErrorMessage, Light, Link, Loading} from '../../ui/ui';
 
-export function Notices() {
-  const t = useT();
+// The subscription lives in the page from its first render, so nothing arriving while the page still loads is lost.
+export function useNotices() {
   const api = getApi();
   const [previousApi, setPreviousApi] = useState(api);
   const [events, setEvents] = useState<ApiEvent[]>([]);
@@ -41,6 +41,10 @@ export function Notices() {
     ring.current.shown = next;
     setEvents(next);
   });
+  return {feed, events};
+}
+export function Notices({feed, events}: ReturnType<typeof useNotices>) {
+  const t = useT();
   return (
     <section className="rp-card" aria-label={t('act.issues')}>
       <div className="rp-row">
