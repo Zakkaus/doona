@@ -1,49 +1,12 @@
-import {useState} from 'react';
-import {useT, useLang, LOCALE} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {useCapabilities, useLogFeed, useVersion} from '../../api/store';
-import type {LogLevel} from '../../api/model';
-import {localTime} from '../../api/selectors';
-import {
-  Button,
-  DataTable,
-  ErrorMessage,
-  LabeledSelect,
-  Light,
-  Switch,
-  TextField,
-  TextTooltip,
-  downloadFile,
-  exportName,
-  useDebounced,
-  Empty
-} from '../../ui/ui';
+import {useT} from '../../i18n';
+import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, Empty} from '../../ui/ui';
+import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
 
-const tones: Record<LogLevel, 'muted' | 'neutral' | 'info' | 'warn' | 'err'> = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'};
-const labels: Record<LogLevel, Key> = {
-  trace: 'log.level.trace',
-  debug: 'log.level.debug',
-  info: 'log.level.info',
-  warn: 'log.level.warn',
-  error: 'log.level.error'
-};
-
-// Level and module filters run server-side; connecting replays the bounded ring, while pause keeps the stream open.
 export function Logs() {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const capabilities = useCapabilities();
-  const version = useVersion();
-  const resources = capabilities.data?.resources;
-  const [level, setLevel] = useState<LogLevel>('info');
-  const [target, setTarget] = useState('');
-  // The module filter restarts the stream, so it follows the field only after typing pauses.
-  const targetFilter = useDebounced(target.trim(), 300);
-  const [paused, setPaused] = useState(false);
-  const feed = useLogFeed({level, target: targetFilter, paused});
-  const levels = resources?.logs.levels ?? ['trace', 'debug', 'info', 'warn', 'error'];
-  if (resources && !resources.logs.available)
+  const vm = useLogs();
+  if (vm.unavailable)
     return (
       <div className="rp-page">
         <Empty>{t('log.unavailable')}</Empty>
@@ -52,58 +15,40 @@ export function Logs() {
   return (
     <div className="rp-page">
       <div className="rp-toolbar">
-        <LabeledSelect
-          side
-          label={t('log.level')}
-          value={level}
-          onChange={value => setLevel(value as LogLevel)}
-          items={levels.map(id => ({id, label: t(labels[id])}))}
-        />
-        <TextField search label={t('log.target')} value={target} width={220} placeholder={t('log.targetPlaceholder')} onChange={setTarget} />
-        <Switch isSelected={paused} onChange={setPaused}>
+        <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
+        <TextField search label={t('log.target')} value={vm.target} width={220} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
+        <Switch isSelected={vm.paused} onChange={vm.setPaused}>
           {t('log.pause')}
         </Switch>
-        <Light small tone={feed.connected ? 'ok' : 'warn'}>
-          {feed.connected ? t('log.connected') : t('log.reconnecting')}
+        <Light small tone={vm.status.tone}>
+          {vm.status.text}
         </Light>
         <span className="rp-grow" />
-        <Button small isDisabled={!feed.records.length} onPress={feed.clear}>
+        <Button small isDisabled={!vm.rows.length} onPress={vm.clear}>
           {t('log.clear')}
         </Button>
-        <Button
-          isDisabled={!feed.records.length}
-          onPress={() =>
-            downloadFile(
-              exportName(`${version.data?.engine.name || 'engine'}-log`, 'txt'),
-              [...feed.records]
-                .reverse()
-                .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)
-                .join('\n') + '\n',
-              'text/plain;charset=utf-8'
-            )
-          }
-        >
+        <Button isDisabled={!vm.rows.length} onPress={vm.export}>
           <Download />
           {t('log.export')}
         </Button>
       </div>
-      <ErrorMessage error={capabilities.error ?? feed.error} />
+      <ErrorMessage error={vm.error} />
       <DataTable
         label={t('nav.logs')}
-        rows={feed.records}
+        rows={vm.rows}
         height={640}
-        loading={!capabilities.error && !feed.error && !feed.connected && !feed.records.length}
+        loading={vm.loading}
         empty={t('log.empty')}
         cols={[
-          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, render: record => <span className="rp-code">{localTime(record.ts, locale)}</span>},
+          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, render: record => <span className="rp-code">{record.timestamp}</span>},
           {
             id: 'level',
             label: t('log.level'),
             minWidth: 90,
             grow: 0,
             render: record => (
-              <Light small tone={tones[record.level]}>
-                {t(labels[record.level])}
+              <Light small tone={record.tone}>
+                {record.levelText}
               </Light>
             )
           },
@@ -114,17 +59,7 @@ export function Logs() {
             minWidth: 280,
             grow: 3,
             isRowHeader: true,
-            render: record => (
-              <TextTooltip text={record.fields ? JSON.stringify(record.fields) : undefined}>
-                {record.message}
-                {record.fields
-                  ? ' ' +
-                    Object.entries(record.fields)
-                      .map(([key, value]) => `${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`)
-                      .join(' ')
-                  : ''}
-              </TextTooltip>
-            )
+            render: record => <TextTooltip text={record.tooltip}>{record.message}</TextTooltip>
           }
         ]}
       />

@@ -1,7 +1,8 @@
-import type {Datapath, RuntimeMemory} from '../../api/model';
+import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n/messages';
-import type {LabelFn} from '../../api/selectors';
+import {formatDuration, lifecycleStates, lifecycleTone, localTime, shortId} from '../../api/selectors';
 import {formatBytes, pctU64} from '../../api/u64';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -68,4 +69,151 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] 
     ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null)]
   ];
   return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
+}
+
+const resourceLabels = {
+  connections: 'nav.connections',
+  flows: 'rule.flows',
+  routing_trace: 'ov.r.routingTrace',
+  dns_query: 'ov.r.dnsQuery',
+  dns_cache: 'ov.r.dnsCache',
+  events: 'nav.events',
+  probes: 'ov.r.probes',
+  traffic_history: 'ov.r.trafficHistory',
+  memory_history: 'ov.r.memoryHistory',
+  runtime_outbounds: 'ov.r.outbounds',
+  logs: 'nav.logs',
+  providers: 'nodes.providers',
+  config: 'nav.config',
+  runtime_settings: 'settings.runtime',
+  geodata: 'settings.geodata'
+} as const satisfies Record<string, Key>;
+
+export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;
+export type LifecycleAction = {id: string; label: string; pending: boolean; disabled: boolean; run: () => void};
+export function lifecycleActions(
+  canRun: (kind: keyof typeof operationLabels) => boolean,
+  busy: string | null,
+  run: (kind: keyof typeof operationLabels) => void,
+  t: LabelFn
+): LifecycleAction[] {
+  return (Object.keys(operationLabels) as Array<keyof typeof operationLabels>)
+    .filter(kind => canRun(kind) || busy === kind)
+    .map(kind => ({id: kind, label: t(operationLabels[kind]), pending: busy === kind, disabled: !!busy, run: () => run(kind)}));
+}
+
+export function overviewView(
+  data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath},
+  loading: {capabilities: boolean; runtime: boolean; version: boolean; memory: boolean; datapath: boolean},
+  locale: string,
+  t: LabelFn
+) {
+  const {capabilities, runtime, version, memory, datapath} = data;
+  const state = runtime?.lifecycle.state;
+  const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
+  const reload = runtime?.last_reload;
+  const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
+  const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
+  const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
+  return {
+    status: {
+      tone: lifecycleTone(state) as 'ok' | 'err' | 'warn',
+      text: state ? t(lifecycleStates[state]) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown')
+    },
+    strip: [
+      [t('ov.config'), shortId(revision), revision],
+      [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
+      [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
+    ] as Array<[string, string] | [string, string, string]>,
+    reload: reload
+      ? {
+          tooltip: reload.operation_id,
+          tone: reload.status === 'succeeded' ? ('ok' as const) : reload.status === 'failed' ? ('err' as const) : ('warn' as const),
+          text: t(reload.status === 'succeeded' ? 'ov.succeeded' : reload.status === 'failed' ? 'ov.failed' : 'ov.running')
+        }
+      : null,
+    engine: {
+      state: section(!!version && !!runtime, loading.capabilities || loading.version || loading.runtime),
+      fields:
+        version && runtime
+          ? ([
+              [t('ov.f.engine'), version.engine.name + ' ' + version.engine.version],
+              [t('ov.f.api'), `${version.api.name} v${version.api.major} · ${version.api.status}`],
+              [t('ov.f.build'), [version.build?.revision, version.build?.target].filter(Boolean).join(' · ') || '—'],
+              [t('ov.f.instance'), runtime.instance_id],
+              [t('ov.f.started'), localTime(runtime.lifecycle.started_at, locale)],
+              [t('ov.f.activated'), runtime.generation.activated_at ? localTime(runtime.generation.activated_at, locale) : '—']
+            ] as Array<[string, string]>)
+          : [],
+      profiles: capabilities?.profiles.map(id => ({id, text: t(id === 'base' ? 'ov.profileBase' : 'ov.profileFull')})) ?? []
+    },
+    counters: {
+      state: section(!!runtime, loading.capabilities || loading.runtime),
+      fields: runtime
+        ? ([
+            [t('ov.f.tcp'), count(runtime.traffic.connections.tcp)],
+            [t('ov.f.udp'), count(runtime.traffic.connections.udp)],
+            [t('ov.f.total'), count(runtime.traffic.connections.total)],
+            [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload)],
+            [t('ui.download'), formatBytes(runtime.traffic.bytes.download)],
+            [t('ov.f.rateWindow'), t('ui.seconds', {n: runtime.traffic.rates ? formatNumber(runtime.traffic.rates.window_seconds, locale, 1) : '—'})]
+          ] as Array<[string, string]>)
+        : [],
+      since: runtime
+        ? t('ov.countersSince', {
+            t: localTime(runtime.traffic.counter_since, locale),
+            scope: t(runtime.traffic.scope === 'visible' ? 'ov.scopeVisible' : 'ov.scopeAll')
+          })
+        : ''
+    },
+    memory: {
+      state: section(!!memory, loading.capabilities || loading.memory),
+      fields: memory ? memoryFields(memory, t, ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit']) : [],
+      bar:
+        percent === null
+          ? null
+          : {
+              label: t('ov.f.cgroupPercent'),
+              value: formatBytes(memory?.cgroup?.current_bytes ?? null) + ' / ' + formatBytes(memory?.cgroup?.limit_bytes ?? null),
+              pct: percent,
+              tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const)
+            }
+    },
+    datapath: {
+      state: section(!!datapath, loading.capabilities || loading.datapath),
+      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t) : [],
+      showAttachments: !!datapath?.ebpf,
+      attachments: (datapath?.ebpf?.attachments ?? []).map((a, i) => ({
+        id: String(i),
+        name: a.name,
+        interface: a.interface,
+        direction: datapathValue(a.direction, t),
+        state: datapathValue(a.state, t)
+      })),
+      errors: datapath?.errors.map(error => ({tooltip: error.code, text: error.message})) ?? [],
+      warning: datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error) ? datapath.ebpf.last_error : null
+    },
+    resources: {
+      state: section(!!capabilities, loading.capabilities),
+      rows: capabilities
+        ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>).map(id => {
+            const available = capabilities.resources[id].available !== false;
+            return {
+              id,
+              label: t(resourceLabels[id]),
+              tone: available ? ('ok' as const) : ('muted' as const),
+              text: t(available ? 'ov.available' : 'ov.notAvailable')
+            };
+          })
+        : []
+    },
+    canExport: !!runtime
+  };
+}
+
+export function overviewExport(
+  data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath},
+  exportedAt: string
+) {
+  return JSON.stringify({exported_at: exportedAt, ...data}, null, 2);
 }

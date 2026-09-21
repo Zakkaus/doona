@@ -1,9 +1,11 @@
-import type {Connection} from '../../api/model';
+import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
-import {localTime, sourceIp, type MessageRef} from '../../api/selectors';
+import {chainLabel, chainNames, connectionStates, localTime, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import type {Translator as LabelFn} from '../../i18n';
 import {word} from '../flows/view';
 import type {Key} from '../../i18n/messages';
 import type {SortDescriptor} from 'react-aria-components';
+import {csvLine} from '../../ui/ui';
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
     ['ui.source', c.src ?? '—'],
@@ -37,10 +39,10 @@ export type GroupRow = {id: number; group: string; children: Connection[]; activ
 export type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = 'doona-connections-view';
 
-export function readView(): ConnectionView {
+export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
   try {
-    const value = JSON.parse(localStorage.getItem(viewKey) ?? 'null');
+    const value = JSON.parse(stored ?? 'null');
     if (!value || typeof value !== 'object') return defaults;
     const hidden = columns.filter(column => Array.isArray(value.hidden) && value.hidden.includes(column.id)).map(column => column.id);
     const sort = value.sort;
@@ -103,4 +105,137 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
     active: children.filter(c => c.state === 'active').length,
     download: addU64(...children.map(c => c.download_bytes))
   }));
+}
+
+export type ConnectionRowView = {
+  id: string;
+  target: string;
+  source: string;
+  chain: string;
+  rule: {expression: string | null; ruleId: string | null; linked: boolean};
+  recomputed: string | null;
+  state: string;
+  download: string;
+  age: string;
+};
+export type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
+export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
+export function connectionTableView(
+  rows: Connection[],
+  view: ConnectionView,
+  locale: string,
+  names: OutboundNames,
+  rulesListed: boolean,
+  t: LabelFn
+): ConnectionTableRow[] {
+  const project = (c: Connection): ConnectionRowView => ({
+    id: c.id,
+    target: c.domain || c.dst || '—',
+    source: c.src ?? '—',
+    chain: chainLabel(c, t, names),
+    rule: {expression: c.rule_expression, ruleId: c.rule_id, linked: rulesListed},
+    recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
+    state: t(connectionStates[c.state]),
+    download: formatBytes(c.download_bytes),
+    age: relativeStart(c.started_at, locale)
+  });
+  return tableRows(rows, view, locale).map(row =>
+    'connection' in row
+      ? {id: row.id, connection: project(row.connection)}
+      : {
+          id: row.id,
+          group: row.group,
+          children: row.children.map(project),
+          label: t('conn.groupCount', {name: row.group, n: row.children.length}),
+          totals: {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})}
+        }
+  );
+}
+
+export function connectionsView(
+  rows: Array<Connection & {network: string}>,
+  shown: Array<Connection & {network: string}>,
+  current: (Connection & {network: string}) | undefined,
+  data: ConnectionList | undefined,
+  src: string | undefined,
+  rule: string,
+  locale: string,
+  names: OutboundNames,
+  t: LabelFn
+) {
+  const seen = (values: Array<string | null | undefined>) => {
+    const counts = new Map<string, number>();
+    for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+  };
+  return {
+    networks: [
+      ['all', t('ui.allCount', {n: rows.length})],
+      ['tcp', t('ui.tcp')],
+      ['udp', t('ui.udp')]
+    ] as Array<[string, string]>,
+    outbounds: [{id: 'all', label: t('conn.allOutbounds')}, ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: id}))],
+    picks: [
+      {
+        title: t('ui.source'),
+        value: 'src:' + src,
+        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))
+      },
+      {
+        title: t('conn.rule'),
+        value: 'rule:' + rule,
+        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))
+      }
+    ],
+    visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null,
+    closeConfirmation: t('conn.closeAllHelp', {n: shown.length}),
+    detail: current
+      ? {
+          id: current.id,
+          title: current.domain || current.dst || current.id,
+          tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
+          status: `${t(connectionStates[current.state])} · ${current.network.toUpperCase()}`,
+          fields: connectionDetails(current, locale).map(
+            ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
+          ),
+          flowQuery: 'tab=flows&' + (current.flow_id ? 'id=' + encodeURIComponent(current.flow_id) : 'connection_id=' + encodeURIComponent(current.id)),
+          source: current.src ? (sourceIp(current.src) ?? current.src) : null,
+          closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
+        }
+      : null,
+    exportContent:
+      [
+        csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
+        ...shown.map(c =>
+          csvLine([
+            c.id,
+            c.dst,
+            c.domain,
+            c.src,
+            c.network,
+            c.state,
+            c.outbound,
+            chainNames(c.chain, names).join(' > '),
+            c.rule_expression,
+            c.upload_bytes,
+            c.download_bytes,
+            c.started_at
+          ])
+        )
+      ].join('\n') + '\n'
+  };
+}
+
+export function closeSelection(
+  shown: Connection[],
+  network: string,
+  out: string,
+  rule: string,
+  src: string | undefined,
+  needle: string,
+  truncated: boolean
+): {query: BulkCloseQuery} | {ids: string[]} {
+  return out === 'all' && rule === 'all' && (src || !needle) && !truncated
+    ? {query: {type: network as 'all' | 'tcp' | 'udp', src, all: true}}
+    : {ids: shown.map(c => c.id)};
 }

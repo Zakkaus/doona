@@ -1,48 +1,41 @@
 import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {Table, ResizableTableContainer, TableBody, Row, Cell, Virtualizer, TableLayout} from 'react-aria-components';
-import {chainLabel, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
-import {useCapabilities} from '../../api/store';
-import type {Connection} from '../../api/model';
-import {formatBytes} from '../../api/u64';
-import {LOCALE, useLang, useT} from '../../i18n';
+import {useT} from '../../i18n';
 import {Badge, DataTable, TextTooltip, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
 import {TableColumns, fitColumns, selectedRow, tableLayout, useTableReveal} from '../../ui/Table';
-import {columns, tableRows, type ConnectionView} from './view';
+import {columns, type ConnectionView, type ConnectionRowView, type ConnectionTableRow} from './view';
 
-type Props = Pick<ComponentProps<typeof DataTable<Connection>>, 'rows' | 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
+type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
   view: ConnectionView;
-  names: OutboundNames;
+  collection: ConnectionTableRow[];
 };
-export function ConnectionTable({rows, view, names, loading, selected, onSelect, selectOnFocus, onSort}: Props) {
+export function ConnectionTable({collection, view, loading, selected, onSelect, selectOnFocus, onSort}: Props) {
   const t = useT();
-  const locale = LOCALE[useLang()];
   const [ref, height] = useFillHeight<HTMLDivElement>(442);
   const [gridRef, width] = useContentWidth<HTMLElement>();
-  const rulesListed = useCapabilities().data?.resources.rules.available === true;
-  const renderers: Record<string, (c: Connection) => ReactNode> = {
-    dst: c => <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
-    src: c => <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-    chain: c => <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
-    rule: c => (
-      <span className="rp-rule">
-        <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
-        {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
-      </span>
-    ),
-    state: c => t(connectionStates[c.state]),
-    down: c => formatBytes(c.download_bytes),
-    age: c => relativeStart(c.started_at, locale)
-  };
-  const shown: TableColumn<Connection>[] = fitColumns(
-    columns.filter(c => !view.hidden.includes(c.id)),
-    width
-  ).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));
-  const collection = useMemo(() => tableRows(rows, view, locale), [rows, view, locale]);
-  const flatRows = collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children]));
-  const groupKeys = collection.filter(row => !('connection' in row)).map(row => row.id);
+  const definitions = useMemo(() => {
+    const renderers: Record<string, (c: ConnectionRowView) => ReactNode> = {
+      dst: c => <TextTooltip>{c.target}</TextTooltip>,
+      src: c => <TextTooltip className="rp-code">{c.source}</TextTooltip>,
+      chain: c => <TextTooltip className="rp-chain">{c.chain}</TextTooltip>,
+      rule: c => (
+        <span className="rp-rule">
+          <RuleRef {...c.rule} />
+          {c.recomputed && <Badge>{c.recomputed}</Badge>}
+        </span>
+      ),
+      state: c => c.state,
+      down: c => c.download,
+      age: c => c.age
+    };
+    return columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));
+  }, [view.hidden, t]);
+  const shown: TableColumn<ConnectionRowView>[] = useMemo(() => fitColumns(definitions, width), [definitions, width]);
+  const flatRows = useMemo(() => collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children])), [collection]);
+  const groupKeys = useMemo(() => collection.filter(row => !('connection' in row)).map(row => row.id), [collection]);
   useTableReveal(selected ? flatRows.findIndex(row => row?.id === selected) : -1, gridRef);
-  const renderRow = (row: Connection) => (
-    <Row key={row.id} id={row.id} textValue={row.domain || row.dst || row.id}>
+  const renderRow = (row: ConnectionRowView) => (
+    <Row key={row.id} id={row.id} textValue={row.target}>
       {shown.map(column => (
         <Cell key={column.id} className={column.align}>
           <span className="cell">{column.render(row)}</span>
@@ -89,14 +82,11 @@ export function ConnectionTable({rows, view, names, loading, selected, onSelect,
             >
               {row => {
                 if ('connection' in row) return renderRow(row.connection);
-                const totals: Record<string, ReactNode> = {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})};
                 return (
                   <Row id={row.id} textValue={row.group}>
                     {shown.map((column, index) => (
                       <Cell key={column.id} className={column.align}>
-                        <span className="cell">
-                          {index === 0 ? <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong> : totals[column.id]}
-                        </span>
+                        <span className="cell">{index === 0 ? <strong>{row.label}</strong> : row.totals[column.id]}</span>
                       </Cell>
                     ))}
                     {row.children.map(renderRow)}

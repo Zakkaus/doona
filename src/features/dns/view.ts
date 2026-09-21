@@ -1,0 +1,149 @@
+import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import {localTime, relativeStart} from '../../api/selectors';
+import type {Translator as LabelFn} from '../../i18n';
+import {millis} from '../../api/u64';
+import {csvLine} from '../../ui/ui';
+
+type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
+export function dnsAnswerView(result: Result, t: LabelFn) {
+  return {
+    fields: [
+      [t('ui.state'), result.status],
+      [t('ui.upstream'), result.upstream ?? '—'],
+      [t('dns.routeSource'), result.route.source],
+      [t('dns.routeRule'), result.route.rule ?? '—'],
+      [t('ui.elapsed'), t('ui.latency', {n: millis(result.elapsed_ms)})]
+    ] as Array<[string, string]>,
+    answers: (result.answers ?? []).map(answer => t('dns.answer', {name: answer.name, type: answer.type, ttl: answer.ttl, data: answer.data})),
+    cacheText: t(result.cached ? 'dns.hit' : 'dns.miss'),
+    cacheTone: result.cached ? undefined : ('warn' as const)
+  };
+}
+export function dnsQueryView(
+  result: DnsQueryResponse | null,
+  resources: Capabilities['resources'] | undefined,
+  type: string,
+  domain: string,
+  busy: boolean,
+  t: LabelFn
+) {
+  const types = resources?.dns_query.record_types ?? ['A', 'AAAA', 'HTTPS', 'TXT', 'MX'];
+  return {
+    types,
+    choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
+    disabled: busy || !resources?.dns_query.available || !(type === 'all' ? types.length > 0 : types.includes(type)) || !domain.trim(),
+    unavailable: !!resources && !resources.dns_query.available,
+    showCache: !!resources?.dns_cache.available,
+    cards: result?.results.map(item => ({id: item.type, title: `${result.domain} · ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
+    tabs: [
+      ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query')}] : []),
+      ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log')}] : []),
+      ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache')}] : [])
+    ]
+  };
+}
+export function dnsCacheView(
+  data: DnsCacheList | undefined,
+  resources: Capabilities['resources'] | undefined,
+  domain: string,
+  busy: string | null,
+  locale: string,
+  t: LabelFn
+) {
+  const filter = domain.toLowerCase();
+  return {
+    fields: [[t('dns.entries'), data ? String(data.total) : '—']] as Array<[string, string]>,
+    coverage: data
+      ? (['positive', 'negative', 'persistent'] as const)
+          .filter(key => !data.coverage[key])
+          .map(key => ({
+            id: key,
+            text: t('ui.valuePair', {
+              label: t(
+                {positive: 'dns.positive', negative: 'dns.negative', persistent: 'dns.persistent'}[key] as 'dns.positive' | 'dns.negative' | 'dns.persistent'
+              ),
+              value: t('dns.notCovered')
+            })
+          }))
+      : [],
+    filterText: filter ? t('dns.cacheFilter', {domain}) : '',
+    confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
+    flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
+    empty: t(resources?.dns_cache.available && resources.dns_cache.read ? 'dns.empty' : 'dns.cacheUnavailable'),
+    rows: (data?.entries ?? [])
+      .filter(entry => !filter || entry.domain.toLowerCase().includes(filter))
+      .map(entry => ({
+        id: entry.entry_id,
+        domain: entry.domain,
+        type: entry.type,
+        status: entry.status,
+        expires: relativeStart(entry.expires_at, locale),
+        expiresTooltip: entry.expires_at,
+        stale: relativeStart(entry.stale_until, locale),
+        staleTooltip: entry.stale_until ?? undefined,
+        deleteLabel: t('dns.deleteEntry', {id: entry.entry_id}),
+        pending: busy === entry.entry_id,
+        disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
+      }))
+  };
+}
+export function dnsLogView(data: DnsLogList | undefined, selected: string | null, enabled: boolean, locale: string, t: LabelFn) {
+  const records = data?.records ?? [];
+  const current = records.find(record => record.id === selected);
+  const details = (record: DnsLogRecord) => {
+    const answer = dnsAnswerView(record, t);
+    return {
+      id: record.id,
+      title: record.question.name,
+      answers: answer.answers,
+      fields: [
+        [t('ui.type'), record.question.type],
+        [t('ui.source'), record.src ?? '—'],
+        answer.fields[0],
+        [t('ui.cache'), answer.cacheText],
+        ...answer.fields.slice(1),
+        [t('ui.time'), localTime(record.observed_at, locale)]
+      ] as Array<[string, string]>
+    };
+  };
+  return {
+    choices: [{id: 'all', label: t('dns.allTypes')}, ...['A', 'AAAA', 'HTTPS', 'TXT', 'MX', 'SRV', 'PTR'].map(id => ({id, label: id}))],
+    total: data ? t('dns.logTotal', {n: data.total}) : '',
+    empty: t(enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
+    detail: current ? details(current) : null,
+    detailTitle: current?.question.name ?? '',
+    rows: records.map(record => ({
+      id: record.id,
+      time: relativeStart(record.observed_at, locale),
+      timeTooltip: localTime(record.observed_at, locale),
+      name: record.question.name,
+      type: record.question.type,
+      source: record.src ?? '—',
+      resultError: record.status !== 'NOERROR',
+      result: record.status !== 'NOERROR' ? record.status : record.answers.map(answer => answer.data).join(', ') || '—',
+      cached: record.cached,
+      upstream: record.cached ? t('dns.hit') : (record.upstream ?? '—'),
+      elapsed: t('ui.latency', {n: millis(record.elapsed_ms)})
+    })),
+    exportContent:
+      [
+        csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
+        ...records.map(r =>
+          csvLine([
+            r.id,
+            r.observed_at,
+            r.src,
+            r.question.name,
+            r.question.type,
+            r.status,
+            r.cached ? 'true' : 'false',
+            r.upstream,
+            r.route.source,
+            r.route.rule,
+            r.elapsed_ms,
+            r.answers.map(answer => answer.data).join(' ')
+          ])
+        )
+      ].join('\n') + '\n'
+  };
+}

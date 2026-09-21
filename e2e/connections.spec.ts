@@ -1,5 +1,6 @@
 import type {Locator} from '@playwright/test';
 import {expect, test} from './fixtures';
+import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
 // At 1440px the detail opens beside the table and the table keeps its main columns.
@@ -367,4 +368,46 @@ test('a linked filter clears when the address loses it', async ({page}) => {
   await expect(filter).toHaveValue('hk-01');
   await page.goto('/#/connections');
   await expect(filter).toHaveValue('');
+});
+
+test('source edits debounce requests and keep rows on the settled source', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/runtime': await api.runtime(),
+    '/groups': await api.groups(),
+    '/nodes': await api.nodes()
+  };
+  const sources: Array<string | null> = [];
+  await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace('/api/v1', '');
+    if (path === '/connections') {
+      const src = url.searchParams.get('src');
+      sources.push(src);
+      return route.fulfill({json: await api.connections({src: src ?? undefined})});
+    }
+    return route.fulfill({json: responses[path]});
+  });
+  await page.goto('/#/connections?src=10.0.0.12');
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  await expect(grid.getByRole('rowheader').first()).toHaveText('api.telegram.org');
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  sources.length = 0;
+  const field = page.getByRole('searchbox', {name: 'Filter'});
+  await field.fill('10.0.0.2');
+  await page.clock.runFor(100);
+  await field.fill('10.0.0.7');
+  await page.clock.runFor(100);
+  expect(sources).toEqual([]);
+  await expect(field).toHaveValue('10.0.0.7');
+  await expect(grid.getByRole('rowheader').first()).toHaveText('api.telegram.org');
+  await page.clock.runFor(250);
+  await expect.poll(() => sources).toEqual(['10.0.0.7']);
+  await expect(grid.getByRole('rowheader').first()).toHaveText('cdn.bilibili.com');
 });

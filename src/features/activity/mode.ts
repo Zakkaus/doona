@@ -4,7 +4,7 @@ import {scanConfig, type TextBlock, type TextToken} from '../config/blocks';
 // The marker lets mode changes remove their catch-all without touching authored rules.
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};
 
-export const MODE_MARK = '# doona: outbound mode';
+const MODE_MARK = '# doona: outbound mode';
 const modeLine = /^(\s*)l4proto\(tcp, udp\) -> (\S+)\s*# doona: outbound mode\s*$/;
 
 function modeRanges(text: string, blocks: TextBlock[], tokens: TextToken[]) {
