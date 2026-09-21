@@ -6,4 +6,3 @@ contract
 node_modules
 pnpm-lock.yaml
 *.html
-reference
