@@ -51,3 +51,18 @@ it('compares modes by target only for global', () => {
   expect(sameMode({mode: 'direct'}, {mode: 'direct'})).toBe(true);
   expect(sameMode({mode: 'rule'}, {mode: 'direct'})).toBe(false);
 });
+
+it('ignores quoted and nested routing text and supports a single-line routing section', () => {
+  const source = `node { n: 'https://example.org/{#}' }
+dns { routing { request {
+  l4proto(tcp, udp) -> nested # doona: outbound mode
+} } }
+routing { fallback: proxy }
+`;
+  expect(readMode(source)).toEqual({mode: 'rule'});
+  const written = writeMode(source, {mode: 'direct'});
+  expect(written).toContain(source.slice(0, source.lastIndexOf('routing {')));
+  expect(written).toContain('routing {\n    l4proto(tcp, udp) -> direct # doona: outbound mode\n fallback: proxy }');
+  expect(readMode(written)).toEqual({mode: 'direct'});
+  expect(writeMode(written, {mode: 'rule'})).toContain('l4proto(tcp, udp) -> nested # doona: outbound mode');
+});

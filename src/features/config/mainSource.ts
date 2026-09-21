@@ -1,6 +1,6 @@
 import {useCallback} from 'react';
 import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
-import {candidate} from './names';
+import {useSourceComplete} from '../../api/store/config';
 import type {ConfigSource} from '../../api/model';
 
 // Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
@@ -18,8 +18,10 @@ export function useMainSourceEdit(): MainSourceEdit {
   const writable = resources?.config.available === true && resources.config.writable === true && resources.config.content === true;
   const config = useConfig(resources?.config.available === true);
   const editor = useConfigEditor(config.refetch, {rethrow: true});
-  const main = config.data?.sources.find(source => source.kind === 'main' && source.writable && typeof source.content === 'string') ?? null;
-  const {validate, save} = editor;
+  const source = config.data?.sources.find(source => source.kind === 'main' && source.writable) ?? null;
+  const complete = useSourceComplete(source);
+  const main = complete ? source : null;
+  const {apply} = editor;
   return {
     main,
     writable,
@@ -27,19 +29,15 @@ export function useMainSourceEdit(): MainSourceEdit {
     apply: useCallback<MainSourceEdit['apply']>(
       async (transform, onInvalid) => {
         if (!main) return false;
-        const content = transform(main.content!);
-        // The dry run is optional in the contract; without it the write's own validation answers instead.
-        if (resources?.config_validate.available && resources.config_validate.modes?.includes('full')) {
-          const check = await validate({sources: [candidate(main, content)], mode: 'full'});
-          if (!check) return false;
-          if (!check.valid) {
-            onInvalid?.(check.diagnostics.filter(d => d.level === 'error').length);
-            return false;
-          }
+        const result = await apply(main, transform);
+        if (!result) return false;
+        if (result.diagnostics) {
+          onInvalid?.(result.diagnostics.filter(d => d.level === 'error').length);
+          return false;
         }
-        return !!(await save(main.id, content, main.content_sha256));
+        return true;
       },
-      [main, resources, validate, save]
+      [main, apply]
     )
   };
 }

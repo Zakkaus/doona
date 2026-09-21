@@ -1,7 +1,8 @@
-// Rewrite owned subscription/routing sections and append required groups; preserve unrecognized lines and all other sections verbatim. This uses brace matching, not a dae parser.
+import {blockBody, blockFields, scanConfig, uncomment} from './blocks';
+import {readGroupEntries} from './groups';
 import {defaultTemplate, quote, templates, type RuleTemplate} from './templates';
 
-type Subscription = {name: string; url: string; raw?: string};
+type Subscription = {name: string; url: string; raw?: string; section?: number};
 export type {RuleTemplate};
 export {defaultTemplate};
 export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
@@ -9,43 +10,20 @@ export type WizardState = {subscriptions: Subscription[]; group: string | null; 
 const ident = (value: string) => value.trim().replace(/[^\w-]/g, '-');
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 
-type Section = {name: string; start: number; end: number; body: string[]};
-function sections(lines: string[]): Section[] {
-  const out: Section[] = [];
-  let open: {name: string; start: number; depth: number} | null = null;
-  lines.forEach((raw, index) => {
-    const code = raw.replace(/#.*$/, '');
-    if (!open) {
-      const match = /^([A-Za-z_][\w.-]*)\s*\{/.exec(code.trim());
-      if (!match) return;
-      open = {name: match[1], start: index, depth: 0};
-    }
-    open.depth += (code.match(/\{/g) ?? []).length - (code.match(/\}/g) ?? []).length;
-    if (open.depth === 0) {
-      // A section written on one line (`node { 'a': '...' }`) has its body between the braces of that line.
-      const body = open.start === index ? [code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'))] : lines.slice(open.start + 1, index);
-      out.push({name: open.name, start: open.start, end: index, body});
-      open = null;
-    }
-  });
-  return out;
-}
-
-function groupNames(body: string[]): string[] {
-  return body.map(line => /^[ \t]*([^\s{}]+)[ \t]*\{/.exec(line.replace(/#.*$/, ''))?.[1]).filter((name): name is string => !!name);
-}
 export function readState(text: string): WizardState {
-  const lines = text.split('\n');
-  const found = sections(lines);
+  const {blocks, tokens} = scanConfig(text);
   const subscriptions: Subscription[] = [];
-  for (const line of found.find(s => s.name === 'subscription')?.body ?? []) {
-    const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(line.replace(/#.*$/, ''));
-    // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
-    if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
-    else subscriptions.push({name: '', url: '', raw: line});
+  for (const [section, block] of blocks.filter(block => block.name === 'subscription').entries()) {
+    for (const line of blockBody(text, block)) {
+      const match = /^\s*(?:'([^']*)'|([\w.-]+))\s*:\s*'([^']*)'\s*$/.exec(uncomment(line));
+      // Only an http(s) URL is edited in the form; a file or any other shape stays as written.
+      if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line, section});
+      else subscriptions.push({name: '', url: '', raw: line, section});
+    }
   }
-  const group = groupNames(found.find(s => s.name === 'group')?.body ?? [])[0] ?? null;
-  const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
+  const group = readGroupEntries(text)[0]?.name ?? null;
+  const global = blocks.find(block => block.name === 'global');
+  const lan = global ? blockFields(text, global, tokens).find(field => field.name === 'lan_interface')?.value : undefined;
   return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
 }
 
@@ -110,27 +88,37 @@ export function writeState(current: string, state: WizardState): string {
       ''
     ].join('\n');
   }
-  const lines = current.replace(/\n$/, '').split('\n');
-  const found = sections(lines);
-  const replacements = new Map<string, string[]>([['subscription', subscriptionBlock(state)]]);
-  const groupSection = found.find(section => section.name === 'group');
-  const missing = groupLines(groupNames(groupSection?.body ?? []), state.rules);
-  if (!groupSection) replacements.set('group', ['group {', ...missing, '}']);
-  else if (missing.length) replacements.set('group', [...lines.slice(groupSection.start, groupSection.end), ...missing, lines[groupSection.end]]);
-  if (state.rules !== 'keep') replacements.set('routing', routingBlock(state, state.rules));
-  const out: string[] = [];
-  const done = new Set<string>();
-  let index = 0;
-  for (const section of found) {
-    out.push(...lines.slice(index, section.start));
-    const replacement = replacements.get(section.name);
-    if (replacement && !done.has(section.name)) {
-      out.push(...replacement);
-      done.add(section.name);
-    } else out.push(...lines.slice(section.start, section.end + 1));
-    index = section.end + 1;
+  const {blocks} = scanConfig(current);
+  const edits: Array<{from: number; to: number; text: string}> = [];
+  const subscriptionSections = blocks.filter(block => block.name === 'subscription');
+  for (const [section, block] of subscriptionSections.entries()) {
+    const subscriptions = state.subscriptions.filter(item => (item.section ?? 0) === section);
+    const body = subscriptions.map(item => item.raw ?? `  ${ident(item.name) || 'sub'}: ${quote(item.url.trim())}`);
+    if (body.join('\n') !== blockBody(current, block).join('\n')) {
+      edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
+    }
   }
-  out.push(...lines.slice(index));
-  for (const [name, block] of replacements) if (!done.has(name)) out.push('', ...block);
-  return out.join('\n') + '\n';
+  const appended: string[] = [];
+  if (!subscriptionSections.length) appended.push(subscriptionBlock(state).join('\n'));
+  const groupSection = blocks.find(block => block.name === 'group');
+  const missing = groupLines(
+    readGroupEntries(current).map(entry => entry.name),
+    state.rules
+  );
+  if (!groupSection) appended.push(['group {', ...missing, '}'].join('\n'));
+  else if (missing.length) {
+    const at = current.lastIndexOf('\n', groupSection.close - 1) + 1;
+    const inline = !/^[ \t]*$/.test(current.slice(at, groupSection.close));
+    edits.push({from: inline ? groupSection.close : at, to: inline ? groupSection.close : at, text: (inline ? '\n' : '') + missing.join('\n') + '\n'});
+  }
+  if (state.rules !== 'keep') {
+    const routing = blocks.find(block => block.name === 'routing');
+    const text = routingBlock(state, state.rules).join('\n');
+    if (routing) edits.push({from: routing.from, to: routing.to, text});
+    else appended.push(text);
+  }
+  let out = current;
+  for (const edit of edits.sort((a, b) => b.from - a.from)) out = out.slice(0, edit.from) + edit.text + out.slice(edit.to);
+  if (appended.length) out = out.replace(/\n$/, '') + '\n\n' + appended.join('\n\n') + '\n';
+  return out;
 }

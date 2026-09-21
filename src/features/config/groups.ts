@@ -1,109 +1,76 @@
-import {topLevelBlocks} from './blocks';
+import {blockFields, scanConfig} from './blocks';
 
-// The `group {}` section as the pages edit it: each named subsection's filters and policy, everything else
-// in the subsection kept as written. No dae parser; subsections are cut by brace matching, one per line.
 export type GroupEntry = {
   name: string;
   filters: string[];
   policy: string | null;
-  // Line range in the source, inclusive of the braces.
   from: number;
   to: number;
 };
 
-const uncomment = (line: string) => line.replace(/#.*$/, '');
-const name = /(?:'([^']*)'|"([^"]*)"|([^\s{}'"]+))/.source;
-const header = new RegExp(`^\\s*${name}\\s*\\{\\s*$`);
-const oneLine = new RegExp(`^\\s*${name}\\s*\\{(.*)\\}\\s*$`);
-const keys = /\s+(?=(?:filter|policy|default|final|check_url|check_interval|tolerance|idle_timeout|interrupt_connections|interruption)\s*:)/;
-const field = /^\s*([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$/;
-
 export function readGroupEntries(text: string): GroupEntry[] {
-  const lines = text.split('\n');
-  const entries: GroupEntry[] = [];
-  for (const block of topLevelBlocks(lines, 'group')) readBlock(lines, block, entries);
-  return entries;
-}
-function readBlock(lines: string[], block: {open: number; close: number}, entries: GroupEntry[]) {
-  for (let i = block.open + 1; i < block.close; i++) {
-    const code = uncomment(lines[i]);
-    const filters: string[] = [];
-    let policy: string | null = null;
-    const take = (kv: RegExpExecArray | null) => {
-      if (kv?.[1] === 'filter') filters.push(kv[2]);
-      else if (kv?.[1] === 'policy') policy = kv[2];
-    };
-    const single = oneLine.exec(code);
-    if (single) {
-      single[4]
-        .trim()
-        .split(keys)
-        .forEach(part => take(field.exec(part)));
-      entries.push({name: single[1] ?? single[2] ?? single[3], filters, policy, from: i, to: i});
-      continue;
-    }
-    const head = header.exec(code);
-    if (!head) continue;
-    let depth = 1;
-    let j = i + 1;
-    for (; j < block.close && depth > 0; j++) {
-      const inner = uncomment(lines[j]);
-      depth += (inner.match(/\{/g) ?? []).length - (inner.match(/\}/g) ?? []).length;
-      take(field.exec(inner));
-    }
-    entries.push({name: head[1] ?? head[2] ?? head[3], filters, policy, from: i, to: j - 1});
-    i = j - 1;
-  }
+  const {blocks, tokens} = scanConfig(text);
+  return blocks
+    .filter(block => block.name === 'group')
+    .flatMap(block =>
+      block.children.map(entry => {
+        const fields = blockFields(text, entry, tokens);
+        return {
+          name: entry.name,
+          filters: fields.filter(field => field.name === 'filter').map(field => field.value),
+          policy: fields.filter(field => field.name === 'policy').at(-1)?.value ?? null,
+          from: entry.line,
+          to: entry.endLine
+        };
+      })
+    );
 }
 
 const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : `'${value.replace(/'/g, '')}'`);
 
-// The text with `name`'s filters and policy set: a known group keeps every other line and its indentation, a
-// new one is appended to the section, and a source without a `group` section gains one at the end.
 export function writeGroupEntry(text: string, name: string, next: {filters: string[]; policy: string | null}): string {
-  const lines = text.split('\n');
-  const entry = readGroupEntries(text).find(e => e.name === name);
+  const {blocks, tokens} = scanConfig(text);
+  const sections = blocks.filter(block => block.name === 'group');
+  const entry = sections.flatMap(block => block.children).find(entry => entry.name === name);
   if (entry) {
-    const indent = lines[entry.from].match(/^\s*/)?.[0] ?? '    ';
-    const single = oneLine.exec(uncomment(lines[entry.from]));
-    // A one-line entry unfolds with the file's own step: as far in from its header as the header is from `group`.
-    const step = indent || '    ';
-    const old = single
-      ? single[4]
-          .trim()
-          .split(keys)
-          .map(part => indent + step + part.trim())
-      : lines.slice(entry.from + 1, entry.to);
-    const inner = old.find(line => line.trim())?.match(/^\s*/)?.[0] ?? indent + step;
-    const kept = old.filter(line => {
-      const kv = field.exec(uncomment(line));
-      return kv?.[1] !== 'filter' && kv?.[1] !== 'policy';
-    });
-    const body = [...next.filters.map(filter => `${inner}filter: ${filter}`), ...(next.policy ? [`${inner}policy: ${next.policy}`] : []), ...kept];
-    if (single) lines.splice(entry.from, 1, `${indent}${quoteName(name)} {`, ...body, `${indent}}`);
-    else lines.splice(entry.from + 1, entry.to - entry.from - 1, ...body);
-    return lines.join('\n');
+    const lineStart = text.lastIndexOf('\n', entry.from - 1) + 1;
+    const prefix = text.slice(lineStart, entry.from);
+    const indent = /^\s*$/.test(prefix) ? prefix : '  ';
+    const fields = blockFields(text, entry, tokens);
+    const bodyStart = entry.open + 1;
+    const old = text.slice(bodyStart, entry.close);
+    const inner = old.match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent || '    ');
+    let kept = old;
+    for (const field of fields.filter(field => field.name === 'filter' || field.name === 'policy').reverse()) {
+      let from = field.from - bodyStart;
+      let to = field.to - bodyStart;
+      const start = old.lastIndexOf('\n', from - 1) + 1;
+      const end = old.indexOf('\n', to);
+      if (/^[ \t]*$/.test(old.slice(start, from)) && end !== -1 && /^[ \t]*$/.test(old.slice(to, end))) {
+        from = start;
+        to = end + 1;
+      }
+      kept = kept.slice(0, from) + kept.slice(to);
+    }
+    const rest = entry.line === entry.endLine ? (kept.trim() ? `${inner}${kept.trim()}\n` : '') : kept.replace(/^[ \t]*\n/, '').replace(/[ \t]*$/, '');
+    const body = [...next.filters.map(filter => `${inner}filter: ${filter}`), ...(next.policy ? [`${inner}policy: ${next.policy}`] : [])];
+    const replacement = '\n' + (body.length ? body.join('\n') + '\n' : '') + rest + indent;
+    return text.slice(0, bodyStart) + replacement + text.slice(entry.close);
   }
-  const block = topLevelBlocks(lines, 'group').at(-1) ?? null;
-  const indent = block
-    ? (lines
-        .slice(block.open + 1, block.close)
-        .find(line => line.trim())
-        ?.match(/^\s*/)?.[0] ?? '    ')
-    : '    ';
-  const inner = indent + indent;
+  const block = sections.at(-1);
+  const indent = block ? (text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? '    ') : '    ';
   const body = [
     `${indent}${quoteName(name)} {`,
-    ...next.filters.map(filter => `${inner}filter: ${filter}`),
-    ...(next.policy ? [`${inner}policy: ${next.policy}`] : []),
+    ...next.filters.map(filter => `${indent}${indent}filter: ${filter}`),
+    ...(next.policy ? [`${indent}${indent}policy: ${next.policy}`] : []),
     `${indent}}`
-  ];
+  ].join('\n');
   if (block) {
-    lines.splice(block.close, 0, ...body);
-    return lines.join('\n');
+    const closeLine = text.lastIndexOf('\n', block.close - 1) + 1;
+    const at = /^[ \t]*$/.test(text.slice(closeLine, block.close)) ? closeLine : block.close;
+    return text.slice(0, at) + (text[at - 1] === '\n' ? '' : '\n') + body + '\n' + text.slice(at);
   }
-  const trimmed = text.replace(/\n+$/, '');
-  return `${trimmed}\n\ngroup {\n${body.join('\n')}\n}\n`;
+  return `${text.replace(/\n+$/, '')}\n\ngroup {\n${body}\n}\n`;
 }
 
 // The node names a group's plain `name(...)` filter lists; keyword and regex forms select differently.
