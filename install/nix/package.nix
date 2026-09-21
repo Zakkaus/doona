@@ -1,45 +1,57 @@
-# nixpkgs-style expression for the release archives: `callPackage ./package.nix { }`.
-# Both archives hold their files at the root, so each is unpacked into its own directory.
+# nixpkgs-style expression, built from source the way nixpkgs builds daed's web UI: the pnpm store is a
+# fixed-output derivation, the build runs offline, `make install` lays out $out/share/doona.
 {
   lib,
   stdenvNoCC,
-  fetchurl,
+  fetchFromGitHub,
+  fetchPnpmDeps,
+  pnpmConfigHook,
+  pnpm_11,
+  nodejs,
   withFonts ? true,
 }:
-
+let
+  pnpm = pnpm_11;
+in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doona";
   version = "0.1.0";
 
-  src = fetchurl {
-    url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-v${finalAttrs.version}.tar.gz";
-    hash = "";
+  src = fetchFromGitHub {
+    owner = "Zakkaus";
+    repo = "doona";
+    tag = "v${finalAttrs.version}";
+    hash = ""; # nix-prefetch-github Zakkaus doona --rev v<version>
   };
 
-  fonts = fetchurl {
-    url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-fonts-v${finalAttrs.version}.tar.gz";
-    hash = "";
+  pnpmDeps = fetchPnpmDeps {
+    inherit (finalAttrs) pname version src;
+    inherit pnpm;
+    fetcherVersion = 4;
+    hash = ""; # changes with pnpm-lock.yaml; the first build prints the value
   };
 
-  unpackPhase = ''
-    runHook preUnpack
-    mkdir source
-    tar -xzf $src -C source
-    runHook postUnpack
+  nativeBuildInputs = [
+    nodejs
+    pnpmConfigHook
+    pnpm
+  ];
+
+  buildPhase = ''
+    runHook preBuild
+
+    pnpm build
+
+    runHook postBuild
   '';
-  sourceRoot = "source";
-
-  dontBuild = true;
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/share/doona $out/share/doc/doona
-    cp -r . $out/share/doona
-    mv $out/share/doona/{LICENSE,NOTICE,README.md,CHANGELOG.md} $out/share/doc/doona/
+
+    make install PREFIX=$out
   ''
   + lib.optionalString withFonts ''
-    tar -xzf ${finalAttrs.fonts} -C $out/share/doona
-    mv $out/share/doona/fonts/OFL.txt $out/share/doc/doona/
+    make install-fonts PREFIX=$out
   ''
   + ''
     runHook postInstall
@@ -49,6 +61,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     description = "Web UI for the daeuniverse engines";
     homepage = "https://github.com/Zakkaus/doona";
     license = with lib.licenses; [ gpl3Only ] ++ lib.optional withFonts ofl;
-    platforms = lib.platforms.all;
+    platforms = lib.platforms.linux;
   };
 })
