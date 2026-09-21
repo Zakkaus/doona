@@ -1,8 +1,7 @@
 import {useState} from 'react';
-import {Link} from 'react-aria-components';
 import {useT} from '../i18n';
 import {readProfiles, writeProfiles} from '../api/profiles';
-import {Button, TextField} from '../ui/ui';
+import {Button, Link, TextField} from '../ui/ui';
 
 // Save the token into the active profile and restart against the backend; show rejection when that token already failed.
 export function Login({backend, rejected}: {backend: string; rejected: boolean}) {
@@ -42,9 +41,7 @@ export function Login({backend, rejected}: {backend: string; rejected: boolean})
         <Button accent type="submit" isDisabled={!token.trim()}>
           {t('login.submit')}
         </Button>
-        <Link className="rp-link" href="#/settings">
-          {t('login.settings')}
-        </Link>
+        <Link href="#/settings">{t('login.settings')}</Link>
       </div>
     </form>
   );

@@ -1,8 +1,8 @@
-import {useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
 import {outboundLabel, policyKindLabels, preferredHealth} from '../../api/selectors';
-import {Button, Chips, Light, NodeTile} from '../../ui/ui';
+import {Chips, Disclosure, Light, NodeTile} from '../../ui/ui';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 
 const kindOf = (outbound: MapNode) => (outbound.unknown ? 'unknown' : outbound.label === 'direct' ? 'direct' : outbound.label === 'block' ? 'block' : 'group');
@@ -25,7 +25,6 @@ export function FlowMap({
   const locale = LOCALE[useLang()];
   const rows = useMemo(() => lanes(map), [map]);
   // A row shows a handful of rules; the rest unfold on demand so a big config stays one screen.
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const shownRules = 6;
   const policy = useMemo(() => new Map(groups.map(group => [group.name, t(policyKindLabels[group.policy.kind])])), [groups, t]);
   const health = useMemo(() => new Map(nodes.map(node => [node.name, preferredHealth(node)])), [nodes]);
@@ -39,6 +38,14 @@ export function FlowMap({
         const dim = pinned !== null && !members.includes(pinned);
         const nodeHealth = lane.node ? health.get(lane.node.node.label) : undefined;
         const facts = [policy.get(lane.outbound.label), t('flow.laneFlows', {n: n(lane.outbound.count)})].filter(Boolean).join(' · ');
+        const chips = (rules: typeof lane.rules) => (
+          <Chips
+            label={t('flow.mapRule')}
+            items={rules.map(rule => ({id: rule.node.id, label: label(rule.node), count: n(rule.count), countLabel: t('flow.laneFlows', {n: n(rule.count)})}))}
+            value={pinned && rules.some(rule => rule.node.id === pinned) ? pinned : null}
+            onChange={onPin}
+          />
+        );
         return (
           <div className="rp-lane" key={lane.outbound.id} data-dim={dim ? '' : undefined}>
             <div className="rp-lane-title">
@@ -49,31 +56,9 @@ export function FlowMap({
             </div>
             {lane.rules.length ? (
               <div className="rp-cluster">
-                <Chips
-                  label={t('flow.mapRule')}
-                  items={(expanded.has(lane.outbound.id) ? lane.rules : lane.rules.slice(0, shownRules)).map(rule => ({
-                    id: rule.node.id,
-                    label: label(rule.node),
-                    count: n(rule.count),
-                    countLabel: t('flow.laneFlows', {n: n(rule.count)})
-                  }))}
-                  value={pinned && lane.rules.some(rule => rule.node.id === pinned) ? pinned : null}
-                  onChange={onPin}
-                />
+                {chips(lane.rules.slice(0, shownRules))}
                 {lane.rules.length > shownRules && (
-                  <Button
-                    small
-                    onPress={() =>
-                      setExpanded(prev => {
-                        const next = new Set(prev);
-                        if (next.has(lane.outbound.id)) next.delete(lane.outbound.id);
-                        else next.add(lane.outbound.id);
-                        return next;
-                      })
-                    }
-                  >
-                    {expanded.has(lane.outbound.id) ? t('flow.fewerRules') : t('flow.moreRules', {n: lane.rules.length - shownRules})}
-                  </Button>
+                  <Disclosure title={t('flow.moreRules', {n: lane.rules.length - shownRules})}>{chips(lane.rules.slice(shownRules))}</Disclosure>
                 )}
               </div>
             ) : (

@@ -414,6 +414,7 @@ export function useConnectionClose(refetch: () => void) {
   };
 }
 
+export type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 export function useRoutingTrace() {
   const api = getApi();
@@ -432,14 +433,18 @@ export function useRoutingTrace() {
   const [result, setResult] = useState<RoutingTraceResponse | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
-  const invalid: Key | null =
+  const invalid: TraceProblem | null =
     !form.domain.trim() && !form.dst_ip.trim()
-      ? 'rule.invalidTarget'
-      : !portValid(form.dst_port) || (form.src_port.trim() && !portValid(form.src_port))
-        ? 'rule.invalidPort'
-        : (form.resolve === 'live' || form.resolve === 'query') && (!form.domain.trim() || form.dst_ip.trim())
-          ? 'rule.invalidLive'
-          : null;
+      ? {field: 'domain', key: 'rule.invalidTarget'}
+      : !portValid(form.dst_port)
+        ? {field: 'dst_port', key: 'rule.invalidPort'}
+        : form.src_port.trim() && !portValid(form.src_port)
+          ? {field: 'src_port', key: 'rule.invalidPort'}
+          : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
+            ? {field: 'domain', key: 'rule.invalidLive'}
+            : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
+              ? {field: 'dst_ip', key: 'rule.invalidLive'}
+              : null;
   const resource = capabilities.data?.resources.routing_trace;
   // honk simulates without resolving; when it also answers DNS diagnostics, doona resolves the name through
   // `/dns/query` and simulates each address itself, the `query` mode.
@@ -663,14 +668,30 @@ export function useProviders(enabled = true) {
 export function useProviderRefresh(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});
-  const refresh = (id: string) =>
-    run(id, async signal => {
-      const accepted = await api.refreshProvider(id, signal);
-      const result = await api.pollOperation(accepted, signal);
-      refetch();
-      return finished(result, 'provider_refresh');
+  const one = async (id: string, signal: AbortSignal) => {
+    const accepted = await api.refreshProvider(id, signal);
+    const result = await api.pollOperation(accepted, signal);
+    refetch();
+    return finished(result, 'provider_refresh');
+  };
+  const refresh = (id: string) => run(id, signal => one(id, signal));
+  // One batch under one signal; the result lists the refreshes that finished before an abort.
+  const refreshMany = (ids: string[], onFailure: (id: string, error: unknown) => void) =>
+    run('*', async signal => {
+      let done = 0;
+      for (const id of ids) {
+        if (signal.aborted) break;
+        try {
+          await one(id, signal);
+          done += 1;
+        } catch (error) {
+          if (signal.aborted) break;
+          onFailure(id, error);
+        }
+      }
+      return done;
     });
-  return {busy, refresh};
+  return {busy, refresh, refreshMany};
 }
 // Managed node/provider writes create a generation; refetch covers backends without generation events.
 export function useNodeManage(refetch: () => void) {
@@ -749,11 +770,10 @@ export function useConfig(enabled = true) {
   const api = getApi();
   return useResource({key: ['config'], fetch: signal => api.config(signal)}, {deps: [api], enabled, every: 0});
 }
-// Dry-run validation and single-source replacement. Saving follows the contract's editor flow: the server
-// validates in full before writing; a 422 comes back as an error whose details carry the diagnostics.
-export function useConfigEditor(refetch: () => void) {
+// Save through optional full validation and single-source replacement; 422 details carry diagnostics. rethrow also rejects for callers that report failures themselves.
+export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const api = getApi();
-  const {busy, error, run} = useAction<'validate' | 'save'>();
+  const {busy, error, run} = useAction<'validate' | 'save'>({rethrow});
   // The source the last action concerned, so only that source's card shows a rejected save's diagnostics.
   const [sourceId, setSourceId] = useState<string | null>(null);
   return {

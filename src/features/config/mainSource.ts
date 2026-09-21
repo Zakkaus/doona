@@ -16,7 +16,7 @@ export function useMainSourceEdit(): MainSourceEdit {
   const resources = useCapabilities().data?.resources;
   const writable = resources?.config.available === true && resources.config.writable === true && resources.config.content === true;
   const config = useConfig(resources?.config.available === true);
-  const editor = useConfigEditor(config.refetch);
+  const editor = useConfigEditor(config.refetch, {rethrow: true});
   const main = config.data?.sources.find(source => source.kind === 'main' && source.writable && typeof source.content === 'string') ?? null;
   return {
     main,

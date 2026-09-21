@@ -15,13 +15,15 @@ import {
   Kv,
   LabeledSelect,
   Light,
+  Loading,
   ModalDialog,
   Segmented,
   Tabs,
   TextTooltip,
   downloadFile,
   errorText,
-  toast
+  toast,
+  Empty
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
@@ -104,7 +106,8 @@ export function Config({go, query}: PageProps) {
   }, [editor.error, t]);
   return (
     <div className="rp-page">
-      <ErrorMessage error={config.error} />
+      <ErrorMessage error={config.error} onRetry={config.refetch} />
+      {config.loading && !config.data && <Loading />}
       {config.data && (
         <div className="rp-toolbar">
           <Kv
@@ -407,7 +410,7 @@ function SourceCard({
       )}
       {source.content === undefined ? (
         // With content on, a withheld source is the one holding the API credential.
-        <span className="rp-empty">{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</span>
+        <Empty>{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</Empty>
       ) : (
         <CodeEditor
           label={sourceName(source, t)}

@@ -25,7 +25,9 @@ import {
   toast,
   visibleErrors,
   useSlider,
-  withCrossfade
+  withCrossfade,
+  Empty,
+  Link
 } from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
@@ -34,7 +36,7 @@ import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNo
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable, subpages, warmPage} from './registry';
 import {SettingsContext} from '../features/settings/Settings';
-import {readSettings, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
+import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
 
 // Each entry pairs the light variant with a dark one; the description names both with their official variant names.
@@ -100,33 +102,21 @@ function useAppearance(stored: Settings) {
     d.flavour = flavour;
     d.wordmark = wordmark;
   }, [dark, palette, wordmark]);
-  // Same rule as the docs site: following the system flips to the opposite of the system; an override goes back to system.
-  const toggle = () => {
-    const next: Scheme = scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system';
+  const pickScheme = (next: Scheme) => {
     withCrossfade(() => setScheme(next));
-    try {
-      localStorage.setItem('doona-scheme', next);
-    } catch {
-      /* private mode */
-    }
+    writeSetting('scheme', next);
   };
+  // Following the system flips to the opposite of the system; an override goes back to system.
+  const toggle = () => pickScheme(scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system');
   const pickPalette = (p: PaletteId) => {
     withCrossfade(() => setPalette(p));
-    try {
-      localStorage.setItem('doona-palette', p);
-    } catch {
-      /* private mode */
-    }
+    writeSetting('palette', p);
   };
   const pickWordmark = (w: Wordmark) => {
     setWordmark(w);
-    try {
-      localStorage.setItem('doona-wordmark', w);
-    } catch {
-      /* private mode */
-    }
+    writeSetting('wordmark', w);
   };
-  return {scheme, dark, toggle, palette, pickPalette, wordmark, pickWordmark};
+  return {scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark};
 }
 
 function SchemeIcon({dark}: {dark: boolean}) {
@@ -178,7 +168,9 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
     rules: (rules.data?.rules ?? []).filter(rule => rule.kind === 'rule' && match(rule.expression, rule.outbound)).slice(0, limit),
     pages: places.filter(place => match(place.title, place.parent && place.parent + ' ' + place.title)).slice(0, limit)
   };
-  const error = connections.error ?? nodes.error ?? groups.error ?? capabilities.error;
+  const sources = [capabilities, connections, nodes, groups, providers, config, rules];
+  const error = sources.find(source => source.error)?.error;
+  const loading = sources.some(source => source.loading && !source.data);
   const total = Object.values(hits).reduce((sum, list) => sum + list.length, 0);
   const pick = (k: string) => {
     const [kind, ...rest] = k.split(':');
@@ -226,7 +218,7 @@ function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']})
         </Button>
       </div>
       {error && <ErrorMessage error={error} />}
-      {total === 0 && <div className="rp-empty">{t('search.none')}</div>}
+      {total === 0 && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
       <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
         {section(
           'pages',
@@ -284,11 +276,7 @@ export function Shell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const pickLang = (l: Lang) => {
     setLang(l);
-    try {
-      localStorage.setItem('doona-lang', l);
-    } catch {
-      /* private mode */
-    }
+    writeSetting('lang', l);
   };
   const mac = navigator.platform.startsWith('Mac');
   // Warm the font subsets the menus need (accented Latin such as "Rosé", "Frappé") in the face the language
@@ -490,10 +478,10 @@ function Frame({
           </div>
         ))}
         <div className="rp-side-grow" />
-        <Button appearance="version" onPress={() => window.open(engineLinks(version.data?.engine.name).repo, '_blank', 'noreferrer')} label={t('github')}>
+        <Link appearance="version" href={engineLinks(version.data?.engine.name).repo} external label={t('github')}>
           <GitHub />
           {version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—'}
-        </Button>
+        </Link>
       </nav>
       <main className="rp-main">
         <div className="rp-content">
@@ -532,10 +520,10 @@ function Frame({
               // Pages mount once the capabilities are known, so none asks for a resource the backend lacks.
               <Loading />
             ) : capabilities.data && !navAvailable(feature.path, capabilities.data) ? (
-              <div className="rp-empty">
+              <Empty>
                 {t('shell.notOffered')}
                 <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-              </div>
+              </Empty>
             ) : (
               <Suspense key={feature.id} fallback={<Loading />}>
                 <Page go={go} query={query} />

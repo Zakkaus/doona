@@ -213,6 +213,10 @@ export function DisclosureGroup({children}: {children: ReactNode}) {
   );
 }
 
+export function Empty({children}: {children: ReactNode}) {
+  return <div className="rp-empty">{children}</div>;
+}
+
 export function Loading({children}: {children?: ReactNode}) {
   const t = useT();
   const [visible, setVisible] = useState(false);
@@ -515,6 +519,8 @@ export function TextField({
   }) {
   const t = useT();
   const errorId = useId();
+  // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
+  const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   if (search) {
     return (
       <RSearchField {...props} aria-label={label} className={cx('rp-input', large && 'lg', className)} style={width ? {width} : undefined}>
@@ -532,7 +538,7 @@ export function TextField({
     </span>
   );
   return (
-    <RTextField {...props} className={cx(side ? 'rp-cluster' : 'rp-field', className)} style={width ? {width} : undefined}>
+    <RTextField {...validity} {...props} className={cx(side ? 'rp-cluster' : 'rp-field', className)} style={width ? {width} : undefined}>
       <Label className="rp-label">{label}</Label>
       {action ? (
         <div className="rp-toolbar">
@@ -590,6 +596,34 @@ export function LabeledSelect({
 }
 export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
   return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
+}
+// Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
+export function Link({
+  href,
+  external,
+  appearance,
+  label,
+  className,
+  children
+}: {
+  href: string;
+  external?: boolean;
+  appearance?: 'button' | 'version';
+  label?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <RLink
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+      aria-label={label}
+      className={cx(appearance === 'button' ? 'rp-btn' : appearance === 'version' ? 'rp-version' : 'rp-link', className)}
+    >
+      {children}
+    </RLink>
+  );
 }
 // A whole card as one link: a tile that opens the page it summarises.
 export function CardLink({href, label, children}: {href: string; label: string; children: ReactNode}) {
@@ -767,6 +801,7 @@ export function DataTable<T extends {id: string}>({
   selected,
   onSelect,
   selectOnFocus,
+  reveal,
   empty,
   loading,
   sort,
@@ -781,6 +816,9 @@ export function DataTable<T extends {id: string}>({
   onSelect?: (id: string | null) => void;
   // Arrow keys select as they move (a list with its detail beside it); otherwise Enter or Space selects.
   selectOnFocus?: boolean;
+  // Scroll the selected row into view when the selection arrives from outside (a deep link), whether or not
+  // the row is in the DOM yet: rows have one fixed height, so the offset is known without measuring.
+  reveal?: boolean;
   empty?: string;
   loading?: boolean;
   // Header clicks on sortable columns; the caller orders `rows`.
@@ -799,8 +837,24 @@ export function DataTable<T extends {id: string}>({
   const fitted = Math.min(height, frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
   const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
+  const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;
+  // A virtualized grid scrolls itself, a native table its container; the virtual height lands a frame later.
+  const grid = useRef<HTMLTableElement>(null);
+  useEffect(() => {
+    if (at < 0) return;
+    const frame = requestAnimationFrame(() => {
+      const box = virtual ? grid.current : ref.current;
+      if (!box) return;
+      const top = tableLayout.headingHeight + at * tableLayout.rowHeight;
+      const bottom = top + tableLayout.rowHeight;
+      if (top < box.scrollTop + tableLayout.headingHeight) box.scrollTop = top - tableLayout.headingHeight;
+      else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [at, virtual, ref]);
   const table = (
     <Table
+      ref={grid}
       aria-label={label}
       selectionMode={onSelect ? 'single' : 'none'}
       selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
@@ -893,8 +947,8 @@ export function ModalDialog({
 }) {
   const modal = (
     <ModalOverlay className="rp-underlay" isDismissable={!alert} isOpen={isOpen} onOpenChange={onOpenChange}>
-      <Modal>
-        <Dialog className={cx('rp-dialog', narrow && 'narrow')} role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
+      <Modal className={cx('rp-modal', narrow && 'narrow')}>
+        <Dialog className="rp-dialog" role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
           {({close}) => (
             <>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
@@ -1103,6 +1157,17 @@ export function csvLine(values: Array<string | number | null | undefined>): stri
   return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
 }
 
+// A draft seeded from the URL: a new linked value (a search-dialog jump) replaces the draft, while a
+// navigation that keeps the same value leaves what was typed since. The rewrite runs during render, so the
+// draft never shows the stale value for a frame.
+export function useLinked<T>(linked: T, apply: (value: T) => void) {
+  const [last, setLast] = useState(linked);
+  if (last !== linked) {
+    setLast(linked);
+    apply(linked);
+  }
+}
+
 // The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it.
 export function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
@@ -1155,8 +1220,8 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
     );
   return (
     <ModalOverlay className="rp-underlay rp-drawer-underlay" isDismissable isOpen onOpenChange={o => !o && onClose()}>
-      <Modal>
-        <Dialog className="rp-dialog rp-drawer" aria-label={title}>
+      <Modal className="rp-modal rp-drawer">
+        <Dialog className="rp-dialog" aria-label={title}>
           {head}
           {children}
         </Dialog>

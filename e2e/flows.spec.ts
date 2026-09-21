@@ -17,7 +17,7 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
   expect(await panel.locator('.rp-step').count()).toBeGreaterThan(3);
   await expect(panel.locator('.rp-step').first()).toContainText('Input');
-  await panel.getByRole('button', {name: 'View connection', exact: true}).click();
+  await panel.getByRole('link', {name: 'View connection', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections\?id=1$/);
   await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await page.locator('.rp-panel').getByRole('button', {name: 'View flow', exact: true}).click();

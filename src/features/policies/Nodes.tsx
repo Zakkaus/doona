@@ -20,7 +20,8 @@ import {
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {regionOf} from './geo';
 import {millis} from '../../api/u64';
-import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
+import {compareLatency, healthMillis} from '../../api/selectors';
+import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps, Empty} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
@@ -37,7 +38,7 @@ function regions(nodes: Array<{name: string}>) {
   }
   return [...m].sort((a, b) => b[1] - a[1]);
 }
-const byLatency = (a: NodeInfo, b: NodeInfo) => (a.alive ? (a.tcp ?? 0) : 1e9) - (b.alive ? (b.tcp ?? 0) : 1e9);
+const byLatency = (a: NodeInfo, b: NodeInfo) => compareLatency(a.tcp, b.tcp);
 
 export function NodeGrid({
   nodes,
@@ -64,17 +65,12 @@ export function NodeGrid({
     const list = nodes.filter(
       n => (!q || contains(n.name, q)) && (region === 'all' || (regionOf(n.name) ?? '?') === region) && (!aliveOnly || n.health?.state === 'healthy')
     );
-    if (sort === 'latency')
-      list.sort(
-        (a, b) =>
-          (a.health?.state === 'healthy' ? (a.health.latency_ms ?? Infinity) : Infinity) -
-          (b.health?.state === 'healthy' ? (b.health.latency_ms ?? Infinity) : Infinity)
-      );
+    if (sort === 'latency') list.sort((a, b) => compareLatency(healthMillis(a.health), healthMillis(b.health)));
     else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [nodes, big, q, region, sort, aliveOnly, contains]);
   const facets = useMemo(() => regions(nodes), [nodes]);
-  if (!nodes.length) return <div className="rp-empty">{t('policy.none')}</div>;
+  if (!nodes.length) return <Empty>{t('policy.none')}</Empty>;
   if (!big) {
     return (
       <div className="rp-nodes">
@@ -134,7 +130,7 @@ export function NodeGrid({
             const v = [...k][0];
             if (v != null) onSelect(String(v));
           }}
-          renderEmptyState={() => <div className="rp-empty">{t('policy.none')}</div>}
+          renderEmptyState={() => <Empty>{t('policy.none')}</Empty>}
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={'rp-node' + (cur === n.id && !onSelect ? ' cur' : '')}>
@@ -153,7 +149,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
       {...props}
       name={n.name}
       nested={n.kind === 'group'}
-      tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
+      tcp={healthMillis(health)}
       unavailable={health?.state === 'unavailable'}
       description={health ? health.transport.toUpperCase() + ' · ' + health.purpose : ' '}
     />

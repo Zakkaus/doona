@@ -1,24 +1,25 @@
 import {createContext, useContext, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
-import GitHub from '../../ui/icons/GitHub';
 import {useCapabilities, useVersion} from '../../api/store';
 import {LANGS, useT, type Lang, type Params} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
-import {Button, ErrorMessage, Kv, LabeledSelect, Light, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
+import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {readSettings, type PaletteId, type Scheme, type Wordmark} from './settings';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {useInstallOffer} from '../../shell/install';
+import {About} from '../../shell/About';
 import type {PageProps} from '../types';
 
 type Appearance = {
   scheme: Scheme;
   dark: boolean;
   toggle: () => void;
+  pickScheme: (value: Scheme) => void;
   palette: PaletteId;
   pickPalette: (value: PaletteId) => void;
   wordmark: Wordmark;
@@ -258,8 +259,6 @@ export function Settings({query}: PageProps) {
             error={invalid ? t('settings.invalidUrl') : undefined}
             name="api"
             value={api}
-            isInvalid={invalid}
-            validationBehavior="aria"
             onChange={value => {
               setApi(value);
               validate(value);
@@ -312,10 +311,16 @@ export function Settings({query}: PageProps) {
                 ap.palette}
             </MenuButton>
           </div>
-          <div className="rp-field">
-            <span className="lbl">{t('settings.scheme')}</span>
-            <Button onPress={ap.toggle}>{t(ap.scheme === 'system' ? 'theme.system' : ap.dark ? 'theme.dark' : 'theme.light')}</Button>
-          </div>
+          <LabeledSelect
+            label={t('settings.scheme')}
+            value={ap.scheme}
+            onChange={value => ap.pickScheme(value as Scheme)}
+            items={[
+              {id: 'system', label: t('theme.system')},
+              {id: 'light', label: t('theme.light')},
+              {id: 'dark', label: t('theme.dark')}
+            ]}
+          />
           <LabeledSelect
             label={t('wordmark')}
             value={ap.wordmark}
@@ -331,30 +336,13 @@ export function Settings({query}: PageProps) {
         <h2 className="rp-h3" id="settings-about">
           {t('settings.about')}
         </h2>
-        <Kv
-          items={[
-            [t('settings.version'), import.meta.env.VITE_DOONA_VERSION],
-            [t('settings.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT],
-            ...(version.data
-              ? [
-                  [
-                    t('settings.engine'),
-                    `${version.data.engine.name} ${version.data.engine.version} · API ${version.data.api.major} (${version.data.api.status})`
-                  ] as [string, string]
-                ]
-              : [])
-          ]}
-        />
         {version.data && version.data.api.major !== 1 && (
           <Light small tone="warn">
             {t('settings.apiMajor', {major: String(version.data.api.major)})}
           </Light>
         )}
         <div className="rp-cluster">
-          <Button onPress={() => window.open(import.meta.env.VITE_DOONA_REPO, '_blank', 'noreferrer')}>
-            <GitHub />
-            {t('github')}
-          </Button>
+          <About trigger={<Button>{t('about.title')}</Button>} />
           {install && (
             <Button
               onPress={() => {

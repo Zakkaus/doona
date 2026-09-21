@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useSyncExternalStore} from 'react';
 import {readProfiles} from './profiles';
 
 // Extend the backend's ten-minute history with session polls: one hour at poll cadence, then a week of minute buckets persisted per profile.
@@ -78,12 +78,20 @@ function load<T extends Timed>(name: string): {key: string; rings: Rings<T>; sav
   stores.set(name, store);
   return store;
 }
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
 export function record<T extends Timed>(name: string, sample: T | undefined, fold: Fold<T>): Rings<T> {
   const store = load<T>(name);
   if (!sample) return store.rings;
   const next = append(store.rings, sample, fold);
   if (next !== store.rings) {
     store.rings = next;
+    for (const listener of listeners) listener();
     const now = Date.now();
     if (now - store.saved >= minute) {
       store.saved = now;
@@ -100,21 +108,17 @@ export function resetRings() {
   for (const store of stores.values()) {
     try {
       localStorage.removeItem(store.key);
-    } catch {
-      // Nothing stored.
-    }
+    } catch {}
   }
   stores.clear();
+  for (const listener of listeners) listener();
 }
 
 // The store is the external system: a fresh poll (the source compared by identity) is recorded after render,
 // and the component reads the ring the store holds.
 export function useRings<S, T extends Timed>(name: string, source: S | undefined, sample: (source: S) => T | undefined, fold: Fold<T>): Rings<T> {
-  const [observed, setObserved] = useState(source);
-  const [rings, setRings] = useState<Rings<T>>(() => record(name, source && sample(source), fold));
-  if (observed !== source) {
-    setObserved(source);
-    setRings(record(name, source && sample(source), fold));
-  }
-  return rings;
+  useEffect(() => {
+    record(name, source && sample(source), fold);
+  }, [name, source, sample, fold]);
+  return useSyncExternalStore(subscribe, () => load<T>(name).rings);
 }

@@ -27,10 +27,18 @@ export type Settings = {
 };
 
 const keys = {
+  lang: 'doona-lang',
   scheme: 'doona-scheme',
   palette: 'doona-palette',
   wordmark: 'doona-wordmark'
 } as const;
+
+// A storage that throws (private mode, quota) costs the persistence, not the change.
+export function writeSetting(key: keyof typeof keys, value: string, storage?: StoragePort) {
+  try {
+    (storage ?? localStorage).setItem(keys[key], value);
+  } catch {}
+}
 
 export function readSettings(storage?: StoragePort): Settings {
   const read = (key: string): string | null => {

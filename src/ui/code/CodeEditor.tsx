@@ -204,6 +204,7 @@ export function CodeEditor({
   const editable = useRef(new Compartment());
   const t = useT();
   const language = useRef(new Compartment());
+  const naming = useRef(new Compartment());
   useEffect(() => {
     const instance = new EditorView({
       parent: host.current!,
@@ -251,7 +252,7 @@ export function CodeEditor({
           language.current.of(phrasesFor(t)),
           // A viewer's text is not editable, so it stops being focusable; keep it in the tab order so a long
           // or wide source can still be scrolled from the keyboard.
-          EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'}),
+          naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
           EditorView.updateListener.of(update => {
             if (update.docChanged) change.current?.(update.state.doc.toString());
           })
@@ -273,6 +274,9 @@ export function CodeEditor({
   useEffect(() => {
     view.current?.dispatch({effects: language.current.reconfigure(phrasesFor(t))});
   }, [t]);
+  useEffect(() => {
+    view.current?.dispatch({effects: naming.current.reconfigure(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'}))});
+  }, [label]);
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;

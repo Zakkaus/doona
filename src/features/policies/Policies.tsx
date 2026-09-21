@@ -23,7 +23,8 @@ import {
   Switch,
   TextField,
   errorText,
-  toast
+  toast,
+  Empty
 } from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import type {PageProps} from '../types';
@@ -55,12 +56,15 @@ function PolicyCard({
         text => writeGroupEntry(text, entry!.name, {filters, policy: draft.policy}),
         errors => toast('negative', t('policy.editInvalid', {n: errors}))
       )
-      .then(written => {
-        if (written) {
-          toast('positive', t('policy.updated', {name: entry!.name}));
-          close();
-        }
-      });
+      .then(
+        written => {
+          if (written) {
+            toast('positive', t('policy.updated', {name: entry!.name}));
+            close();
+          }
+        },
+        error => toast('negative', errorText(error))
+      );
   };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
   // A failed control toasts once; a failed load shows inline and does not repeat on every poll.
@@ -321,7 +325,7 @@ export function Policies({query}: PageProps) {
         }}
       />
       {groups.loading && !groups.data && <Loading />}
-      {groups.data?.length === 0 && <p className="rp-empty">{t('policy.empty')}</p>}
+      {groups.data?.length === 0 && <Empty>{t('policy.empty')}</Empty>}
       <DisclosureGroup>
         {groups.data?.map(g => (
           <PolicyCard

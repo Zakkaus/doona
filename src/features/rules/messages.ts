@@ -32,6 +32,7 @@ export const messages = defineMessages({
     'rule.removeTitle': '移除這條規則？',
     'rule.removeHelp': '將刪除 {file} 第 {line} 行，先校驗再儲存並重載。',
     'rule.removed': '規則已移除，正在重載',
+    'rule.stale': '規則列表與設定不同步，已重新載入，請再試一次',
     'rule.note': '模擬目前配置的路由結果，不代表實際連線。域名與目的 IP 至少填寫一項；即時解析時，目的 IP 必須留空。',
     'rule.dstPort': '目的連接埠',
     'rule.srcPort': '來源連接埠',
@@ -112,6 +113,7 @@ export const messages = defineMessages({
     'rule.removeTitle': '移除这条规则？',
     'rule.removeHelp': '将删除 {file} 第 {line} 行，先校验再保存并重载。',
     'rule.removed': '规则已移除，正在重载',
+    'rule.stale': '规则列表与配置不同步，已重新加载，请再试一次',
     'rule.note': '模拟当前配置的路由结果，不代表实际连接。域名与目标 IP 至少填写一项；实时解析时，目标 IP 必须留空。',
     'rule.dstPort': '目标端口',
     'rule.srcPort': '来源端口',
@@ -192,6 +194,7 @@ export const messages = defineMessages({
     'rule.removeTitle': 'Remove this rule?',
     'rule.removeHelp': 'Deletes line {line} of {file}; validated, saved and reloaded.',
     'rule.removed': 'Rule removed; reloading',
+    'rule.stale': 'The rule list and the configuration are out of step; reloaded, try again',
     'rule.note':
       'Simulates routing with the current config, not an actual connection. Enter a domain or destination IP. Leave the destination IP empty for live resolution.',
     'rule.dstPort': 'Destination port',

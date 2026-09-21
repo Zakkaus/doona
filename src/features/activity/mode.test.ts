@@ -1,3 +1,4 @@
+import {LocalError} from '../../api/error';
 import {expect, it} from 'vitest';
 import {readMode, sameMode, writeMode} from './mode';
 
@@ -42,7 +43,7 @@ it('inserts the catch-all after the last must rule and replaces or removes it cl
 it('goes to the top of a routing section without must rules and refuses a text without one', () => {
   const plain = 'routing {\n  fallback: direct\n}\n';
   expect(writeMode(plain, {mode: 'direct'})).toBe('routing {\n  l4proto(tcp, udp) -> direct # doona: outbound mode\n  fallback: direct\n}\n');
-  expect(() => writeMode('global {}\n', {mode: 'direct'})).toThrow('no routing section');
+  expect(() => writeMode('global {}\n', {mode: 'direct'})).toThrow(LocalError);
 });
 
 it('compares modes by target only for global', () => {

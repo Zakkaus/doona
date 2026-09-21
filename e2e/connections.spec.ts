@@ -224,3 +224,37 @@ test('connection filters live in the URL and survive a reload', async ({page}) =
   await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page).not.toHaveURL(/network=/);
 });
+
+test('close all with a rule filter closes the listed rows only', async ({page}) => {
+  await page.goto('/#/connections');
+  const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
+  const listed = async () => Number(await grid.getAttribute('aria-rowcount')) - 1;
+  await expect.poll(listed).toBeGreaterThan(0);
+  const total = await listed();
+  await page.getByRole('button', {name: 'Pick', exact: true}).click();
+  // The telegram rule routes through a proxy group, so its connections are userspace-observed and closable.
+  await page.getByRole('menu').getByRole('menuitemradio').filter({hasText: 'telegram'}).first().click();
+  await expect(page).toHaveURL(/rule=/);
+  await expect.poll(listed).toBeLessThan(total);
+  const shown = await listed();
+  expect(shown).toBeGreaterThan(0);
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
+  const toast = page.locator('.rp-toast');
+  await expect(toast).toContainText(/Closed \d+, skipped \d+/);
+  const [, closed, skipped] = /Closed (\d+), skipped (\d+)/.exec((await toast.textContent()) ?? '')!.map(Number);
+  expect(closed).toBeGreaterThan(0);
+  expect(closed + skipped).toBe(shown);
+  // The page lists at most 1000 rows, so the unfiltered count can only bound what was closed.
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await expect(page).not.toHaveURL(/rule=/);
+  await expect.poll(listed).toBeGreaterThanOrEqual(total - closed);
+});
+
+test('a linked filter clears when the address loses it', async ({page}) => {
+  await page.goto('/#/connections?q=hk-01');
+  const filter = page.getByRole('searchbox', {name: 'Filter'});
+  await expect(filter).toHaveValue('hk-01');
+  await page.goto('/#/connections');
+  await expect(filter).toHaveValue('');
+});

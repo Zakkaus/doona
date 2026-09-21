@@ -8,7 +8,9 @@ import {useCapabilities, useConnections, useEventFeed, useNodes, useRuntime, use
 import {
   connectionRows,
   eventSummary,
+  healthMillis,
   lifecycleStates,
+  lifecycleTone,
   localTime,
   outboundLabel,
   outboundUsage,
@@ -18,14 +20,15 @@ import {
 } from '../../api/selectors';
 import {addU64, formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Button, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
+import {Badge, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, Empty, Link} from '../../ui/ui';
+import {buildHash} from '../../shell/route';
 import {NodeMenu} from '../policies/Nodes';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {ModeCards} from './ModeSwitch';
 
-export function Activity({go}: {go: (page: string) => void}) {
+export function Activity() {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -55,7 +58,7 @@ export function Activity({go}: {go: (page: string) => void}) {
       (nodesResource.data ?? []).map(n => {
         const health = preferredHealth(n);
         const alive = health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined;
-        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive, unavailable: health?.state === 'unavailable'};
+        return {id: n.id, name: n.name, tcp: healthMillis(health), alive, unavailable: health?.state === 'unavailable'};
       }),
     [nodesResource.data]
   );
@@ -87,20 +90,19 @@ export function Activity({go}: {go: (page: string) => void}) {
   const node =
     NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
   const nodeName = node?.name ?? '';
-  const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
-  if (error)
-    return (
   // A failed refresh keeps what the page already shows, with the error above it.
-      <ErrorMessage
-        error={error}
-        onRetry={() => {
-          capabilities.refetch();
-          runtimeResource.refetch();
-          nodesResource.refetch();
-        }}
-      />
-    );
-  if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return <Loading>{t('act.loading')}</Loading>;
+  const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
+  const alert = error && (
+    <ErrorMessage
+      error={error}
+      onRetry={() => {
+        capabilities.refetch();
+        runtimeResource.refetch();
+        nodesResource.refetch();
+      }}
+    />
+  );
+  if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return alert || <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const usage = outboundUsage(outbounds.data);
   const traffic = [
@@ -118,14 +120,15 @@ export function Activity({go}: {go: (page: string) => void}) {
   const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 30);
   return (
     <>
+      {alert}
       <div className="rp-quick">
         <ModeCards />
         <div className="rp-card">
           <div className="rp-row">
-            <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
-            <Button quiet onPress={() => go('overview')}>
+            <Light tone={lifecycleTone(liveRuntime.lifecycle.state)}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
+            <Link appearance="button" className="quiet" href={buildHash('overview')}>
               {t('act.viewDetails')}
-            </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -235,7 +238,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : !history.data ? (
             <Loading>{t('act.loading')}</Loading>
           ) : !history.data.samples.length ? (
-            <span className="rp-empty">{t('act.emptyHistory')}</span>
+            <Empty>{t('act.emptyHistory')}</Empty>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
@@ -265,7 +268,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : !outbounds.data ? (
             <Loading>{t('act.loading')}</Loading>
           ) : !OUT.length ? (
-            <span className="rp-empty">{t('ui.empty')}</span>
+            <Empty>{t('ui.empty')}</Empty>
           ) : (
             <Donut rows={OUT} total={formatBytes(usage.total)} />
           )}
@@ -298,10 +301,10 @@ export function Activity({go}: {go: (page: string) => void}) {
             connections.error ? null : hasConnections ? (
               <Loading>{t('act.loading')}</Loading>
             ) : (
-              <span className="rp-empty">{t('shell.notOfferedShort')}</span>
+              <Empty>{t('shell.notOfferedShort')}</Empty>
             )
           ) : ranking.length === 0 ? (
-            <span className="rp-empty">{t('act.rankingEmpty')}</span>
+            <Empty>{t('act.rankingEmpty')}</Empty>
           ) : (
             <div className="rp-list">
               {ranking.map((row, i) => (
@@ -321,9 +324,9 @@ export function Activity({go}: {go: (page: string) => void}) {
             <h3 className="rp-h3" id="activity-memory">
               {t('act.memory')}
             </h3>
-            <Button quiet small onPress={() => go('overview')}>
+            <Link appearance="button" className="quiet sm" href={buildHash('overview')}>
               {t('act.viewDetails')}
-            </Button>
+            </Link>
           </div>
           {memory.error || memoryHistory.error ? (
             <ErrorMessage error={memory.error ?? memoryHistory.error} />
@@ -342,7 +345,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               />
             </>
           ) : capabilities.data?.resources.runtime_memory.available === false ? (
-            <span className="rp-empty">{t('act.noHistory')}</span>
+            <Empty>{t('act.noHistory')}</Empty>
           ) : (
             <div className="rp-chart-wait">
               <Loading>{t('act.sampling')}</Loading>
@@ -355,15 +358,15 @@ export function Activity({go}: {go: (page: string) => void}) {
               <h3 className="rp-h3">{t('act.issues')}</h3>
               {events.length > 0 && <span className="rp-label">{events.length}</span>}
             </div>
-            <Button quiet small onPress={() => go('events')}>
+            <Link appearance="button" className="quiet sm" href={buildHash('events')}>
               {t('act.viewAll')}
-            </Button>
+            </Link>
           </div>
           {feed.error && <ErrorMessage error={feed.error} />}
           {!feed.error && feed.available === null ? (
             <Loading />
           ) : events.length === 0 ? (
-            <span className="rp-empty">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
+            <Empty>{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</Empty>
           ) : (
             <div className="rp-list rp-feed" role="list">
               {events.map(event => {

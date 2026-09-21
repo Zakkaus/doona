@@ -4,7 +4,20 @@ import type {Key} from '../../i18n/messages';
 import {useCapabilities, useLogFeed} from '../../api/store';
 import type {LogLevel} from '../../api/model';
 import {localTime} from '../../api/selectors';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, downloadFile, exportName, useDebounced} from '../../ui/ui';
+import {
+  Button,
+  DataTable,
+  ErrorMessage,
+  LabeledSelect,
+  Light,
+  Switch,
+  TextField,
+  TextTooltip,
+  downloadFile,
+  exportName,
+  useDebounced,
+  Empty
+} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 
 const tones: Record<LogLevel, 'muted' | 'neutral' | 'info' | 'warn' | 'err'> = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'};
@@ -32,7 +45,7 @@ export function Logs() {
   if (resources && !resources.logs.available)
     return (
       <div className="rp-page">
-        <span className="rp-empty">{t('log.unavailable')}</span>
+        <Empty>{t('log.unavailable')}</Empty>
       </div>
     );
   return (

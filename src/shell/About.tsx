@@ -1,8 +1,7 @@
 import {useState, type ReactElement} from 'react';
-import {Link} from 'react-aria-components';
 import {useT} from '../i18n';
 import {useVersion} from '../api/store';
-import {Button, Kv, ModalDialog, cx} from '../ui/ui';
+import {Button, Kv, Link, ModalDialog, cx} from '../ui/ui';
 import logo from '../logo.svg';
 import night from '../duck-night.webp';
 import GitHub from '../ui/icons/GitHub';
@@ -44,16 +43,17 @@ export function About({trigger}: {trigger: ReactElement}) {
           items={[
             [t('about.engine'), engine + build],
             [t('about.api'), version.data ? `${version.data.api.name} v${version.data.api.major} · ${version.data.api.status}` : '—'],
+            [t('about.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT],
             [t('about.license'), 'GPL-3.0-only']
           ]}
         />
         <p className="rp-label">{t('about.credits')}</p>
         <div className="rp-cluster">
-          <Link className="rp-link" href={import.meta.env.VITE_DOONA_REPO} target="_blank" rel="noreferrer">
+          <Link href={import.meta.env.VITE_DOONA_REPO} external>
             <GitHub />
             doona
           </Link>
-          <Link className="rp-link" href={org} target="_blank" rel="noreferrer">
+          <Link href={org} external>
             <GitHub />
             {org.split('/').pop()}
           </Link>

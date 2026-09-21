@@ -94,7 +94,8 @@ function Dictionary({go, query}: PageProps) {
     if (editor.error) toast('negative', errorText(editor.error));
   }, [editor.error]);
   const hits = useMemo(() => new Map(ruleDistribution(flows.data?.flows ?? []).map(row => [row.id, row.count])), [flows.data]);
-  const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule} | null>(null);
+  // The removal keeps the source as it was when the dialog opened, so a file changed meanwhile answers 412.
+  const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource} | null>(null);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
@@ -105,9 +106,6 @@ function Dictionary({go, query}: PageProps) {
   const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
   const selected = picked.landed === landed ? picked.row : landed;
   const setSelected = (row: string | null) => setPicked({landed, row});
-  useEffect(() => {
-    if (landed && rules.data) document.querySelector(`[role="row"][data-key="${CSS.escape(landed)}"]`)?.scrollIntoView({block: 'nearest'});
-  }, [landed, rules.data]);
   const configSources = config.data?.sources ?? [];
   const writable = (rule: RoutingRule) => {
     const source = sourceFor(configSources, rule.source);
@@ -123,6 +121,13 @@ function Dictionary({go, query}: PageProps) {
   ];
   const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
   const open = (next: NonNullable<typeof dialog>) => {
+    // Line numbers come from the rule list and the text from the config; they must describe the same generation.
+    if (rules.data?.generation_id !== config.data?.generation_id) {
+      toast('negative', t('rule.stale'));
+      rules.refetch();
+      config.refetch();
+      return;
+    }
     setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
     setPick({on: true, kind: 'domainSuffix', value: ''});
     setDialog(next);
@@ -153,10 +158,15 @@ function Dictionary({go, query}: PageProps) {
       close();
     }
   };
-  const remove = async (rule: RoutingRule, close: () => void) => {
-    const source = sourceFor(configSources, rule.source);
-    if (!rule.source || !source || source.content === undefined) return;
+  const remove = async (rule: RoutingRule, source: ConfigSource, close: () => void) => {
+    if (!rule.source || source.content === undefined) return;
     const lines = source.content.replace(/\n$/, '').split('\n');
+    if (!lines[rule.source.line - 1]?.includes('->')) {
+      toast('negative', t('rule.stale'));
+      rules.refetch();
+      config.refetch();
+      return;
+    }
     lines.splice(rule.source.line - 1, 1);
     if (await write(source, [...lines, ''])) {
       toast('positive', t('rule.removed'));
@@ -203,6 +213,7 @@ function Dictionary({go, query}: PageProps) {
         loading={rules.loading && !rules.data}
         rows={list.map(rule => ({...rule, id: rule.rule_id}))}
         selected={selected}
+        reveal
         onSelect={setSelected}
         height={560}
         empty={t('rule.distributionEmpty')}
@@ -230,7 +241,14 @@ function Dictionary({go, query}: PageProps) {
               </Button>
             )}
             {canWrite && rule.kind === 'rule' && writable(rule) && (
-              <Button small quiet icon isDisabled={!!editor.busy} label={t('rule.remove')} onPress={() => open({kind: 'remove', rule})}>
+              <Button
+                small
+                quiet
+                icon
+                isDisabled={!!editor.busy}
+                label={t('rule.remove')}
+                onPress={() => open({kind: 'remove', rule, source: sourceFor(configSources, rule.source)!})}
+              >
                 <Close />
               </Button>
             )}
@@ -249,7 +267,7 @@ function Dictionary({go, query}: PageProps) {
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
             {dialog?.kind === 'remove' ? (
-              <Button negative isPending={!!editor.busy} onPress={() => void remove(dialog.rule, close)}>
+              <Button negative isPending={!!editor.busy} onPress={() => void remove(dialog.rule, dialog.source, close)}>
                 {t('rule.remove')}
               </Button>
             ) : (

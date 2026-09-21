@@ -94,7 +94,6 @@ export function Wizard({
                     value={item.url}
                     width={520}
                     placeholder="https://example.org/sub?token=…"
-                    isInvalid={item.url !== '' && !isSubscriptionUrl(item.url)}
                     error={item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : undefined}
                     description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
                     onChange={url => setSubscription(index, {url})}

@@ -4,7 +4,7 @@ import type {Key} from '../../i18n/messages';
 import {useCapabilities, useNodeManage, useNodeProbe, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
 import {addU64, formatBytes, millis} from '../../api/u64';
-import {formatDuration, localTime, preferredHealth, relativeStart} from '../../api/selectors';
+import {compareLatency, formatDuration, healthMillis, localTime, preferredHealth, relativeStart} from '../../api/selectors';
 import {useMainSourceEdit} from '../config/mainSource';
 import {readSubscriptions, writeInterval} from './subscriptions';
 import {addNamesToGroup, namedIn, readGroupEntries} from '../config/groups';
@@ -22,6 +22,7 @@ import {
   errorText,
   latencyTone,
   toast,
+  useLinked,
   type TableSort
 } from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
@@ -50,10 +51,7 @@ const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
 const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
 // Names sort the way a person reads them: Chinese by pinyin, digits by value, case ignored.
 const collator = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
-const latencyOf = (node: Node) => {
-  const health = preferredHealth(node);
-  return health?.state === 'healthy' && health.latency_ms != null ? health.latency_ms : Infinity;
-};
+const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 
 export function Nodes({go, query}: PageProps) {
   const t = useT();
@@ -154,12 +152,7 @@ export function Nodes({go, query}: PageProps) {
   const [search, setSearch] = useState(() => params.get('q') ?? '');
   // A q arriving in the URL (a search-dialog jump) replaces the typed filter; a provider switch keeps the
   // same q and must not reset what was typed since.
-  const linked = params.get('q');
-  const [lastLinked, setLastLinked] = useState(linked);
-  if (lastLinked !== linked) {
-    setLastLinked(linked);
-    if (linked !== null) setSearch(linked);
-  }
+  useLinked(params.get('q'), value => setSearch(value ?? ''));
   const [group, setGroup] = useState('');
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
@@ -183,7 +176,7 @@ export function Nodes({go, query}: PageProps) {
     const by: Record<string, (a: Node, b: Node) => number> = {
       name: (a, b) => collator.compare(a.name, b.name),
       protocol: (a, b) => collator.compare(a.protocol ?? '', b.protocol ?? ''),
-      latency: (a, b) => latencyOf(a) - latencyOf(b) || collator.compare(a.name, b.name)
+      latency: (a, b) => compareLatency(latencyOf(a), latencyOf(b)) || collator.compare(a.name, b.name)
     };
     return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
   }, [owned, search, group, protocol, sort]);

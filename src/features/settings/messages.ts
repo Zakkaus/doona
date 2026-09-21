@@ -62,9 +62,6 @@ export const messages = defineMessages({
     'settings.paired': '已從連結帶入後端網址與 token；儲存後生效。',
     'settings.install': '安裝為應用程式',
     'settings.installed': '已安裝',
-    'settings.version': 'doona 版本',
-    'settings.contract': '契約提交',
-    'settings.engine': '後端',
     'settings.apiMajor': '後端的 API 主版本為 {major}，本面板依 1 版契約寫成；欄位可能對不上。'
   },
   'zh-CN': {
@@ -128,9 +125,6 @@ export const messages = defineMessages({
     'settings.paired': '已从链接带入后端网址与 token；保存后生效。',
     'settings.install': '安装为应用',
     'settings.installed': '已安装',
-    'settings.version': 'doona 版本',
-    'settings.contract': '契约提交',
-    'settings.engine': '后端',
     'settings.apiMajor': '后端的 API 主版本为 {major}，本面板按 1 版契约编写；字段可能对不上。'
   },
   en: {
@@ -196,9 +190,6 @@ export const messages = defineMessages({
     'settings.paired': 'Backend URL and token were filled in from the link; they take effect once saved.',
     'settings.install': 'Install as an app',
     'settings.installed': 'Installed',
-    'settings.version': 'doona version',
-    'settings.contract': 'Contract commit',
-    'settings.engine': 'Backend',
     'settings.apiMajor': 'The backend speaks API major {major}; this panel is written against major 1, so fields may not line up.'
   }
 });

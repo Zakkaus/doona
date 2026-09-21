@@ -23,7 +23,9 @@ import {
   useDebounced,
   DetailPanel,
   panelQuery,
-  useMediaQuery
+  useLinked,
+  useMediaQuery,
+  Empty
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
@@ -36,6 +38,8 @@ export function Dns({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const [domain, setDomain] = useState(params.get('domain') ?? '');
   const [type, setType] = useState(params.get('type') ?? 'A');
+  useLinked(params.get('domain'), value => setDomain(value ?? ''));
+  useLinked(params.get('type'), value => setType(value ?? 'A'));
   const dns = useDnsControl();
   const resources = dns.capabilities.data?.resources;
   const types = resources?.dns_query.record_types ?? ['A', 'AAAA', 'HTTPS', 'TXT', 'MX'];
@@ -131,7 +135,7 @@ export function Dns({go, query}: PageProps) {
                   ))}
                 </div>
               ) : (
-                <span className="rp-empty">{t('dns.noAnswers')}</span>
+                <Empty>{t('dns.noAnswers')}</Empty>
               )}
             </section>
           ))}
@@ -226,6 +230,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
+  useLinked(initialName, setName);
   const [type, setType] = useState('all');
   const [src, setSrc] = useState('');
   // Each text filter is a server-side query, so it reaches the request only after typing pauses.
@@ -348,7 +353,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string})
                   ))}
                 </div>
               ) : (
-                <span className="rp-empty">{t('dns.noAnswers')}</span>
+                <Empty>{t('dns.noAnswers')}</Empty>
               )}
             </>
           )}

@@ -36,8 +36,8 @@ export function ModeCards() {
         text => writeMode(text, staged),
         errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
       );
-    } catch {
-      toast('negative', t('act.modeNoRouting'));
+    } catch (error) {
+      toast('negative', errorText(error));
       return;
     }
     if (written) {

@@ -16,11 +16,13 @@ import {
   Segmented,
   panelQuery,
   useMediaQuery,
-  RuleRef
+  RuleRef,
+  Empty,
+  Link
 } from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
+import {buildHash, within} from '../../shell/route';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import Close from '../../ui/icons/Close';
@@ -54,13 +56,13 @@ export function RoutingMap({go, query}: PageProps) {
   const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
-      {resource.error && <ErrorMessage error={resource.error} />}
+      <ErrorMessage error={resource.error ?? groups.error ?? nodes.error} />
       {resource.data || groups.data ? (
         <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
       ) : resource.error || groups.error ? null : (
         <Loading />
       )}
-      {resource.data && !resource.data.flows.length && <span className="rp-empty">{t('flow.mapEmpty')}</span>}
+      {resource.data && !resource.data.flows.length && <Empty>{t('flow.mapEmpty')}</Empty>}
       {pinned && (
         <div className="rp-toolbar">
           <Button small onPress={() => go('rules', within(query, {tab: 'flows'}))}>
@@ -90,6 +92,8 @@ export function FlowRecords({go, query}: PageProps) {
   const id = params.get('id');
   const detail = useFlow(id);
   const flow = detail.data;
+  // The panel stays for a record still loading or one that failed, so the error and its retry have a place.
+  const panelOpen = !!id && (!!flow || detail.loading || !!detail.error);
   const select = (value: string | null) => go('rules', within(query, {id: value}));
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
@@ -134,7 +138,7 @@ export function FlowRecords({go, query}: PageProps) {
         )}
         {resource.data && <Coverage data={resource.data} />}
       </div>
-      <div className="rp-with-panel" data-open={flow || (id && detail.loading) ? '' : undefined}>
+      <div className="rp-with-panel" data-open={panelOpen ? '' : undefined}>
         <DataTable
           label={t('rule.flows')}
           loading={resource.loading && !resource.data}
@@ -164,12 +168,8 @@ export function FlowRecords({go, query}: PageProps) {
             relativeStart(f.started_at, locale)
           ]}
         />
-        <DetailPanel
-          open={!!flow || (!!id && detail.loading)}
-          title={flow?.input?.domain || flow?.input?.dst || flow?.id || id || ''}
-          onClose={() => select(null)}
-        >
-          {detail.error && <ErrorMessage error={detail.error} />}
+        <DetailPanel open={panelOpen} title={flow?.input?.domain || flow?.input?.dst || flow?.id || id || ''} onClose={() => select(null)}>
+          {detail.error && <ErrorMessage error={detail.error} onRetry={detail.refetch} />}
           {!flow && detail.loading && <Loading>{t('flow.detailLoading')}</Loading>}
           {flow && (
             <>
@@ -196,12 +196,12 @@ export function FlowRecords({go, query}: PageProps) {
                 ]}
               />
               {flow.connection_id && (
-                <Button small onPress={() => go('connections', 'id=' + encodeURIComponent(flow.connection_id ?? ''))}>
+                <Link appearance="button" className="sm" href={buildHash('connections', 'id=' + encodeURIComponent(flow.connection_id))}>
                   {t('flow.viewConnection')}
-                </Button>
+                </Link>
               )}
               <div className="rp-list">
-                {!flow.trace.steps.length && <div className="rp-empty">{t('ui.empty')}</div>}
+                {!flow.trace.steps.length && <Empty>{t('ui.empty')}</Empty>}
                 {[...flow.trace.steps]
                   .sort((a, b) => a.seq - b.seq)
                   .map(step => {

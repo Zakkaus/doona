@@ -14,7 +14,7 @@ import type {
   RuntimeMemory
 } from './model';
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
-import type {RuntimeOutbounds, TrafficHistory} from './model';
+import type {RuntimeOutbounds} from './model';
 
 // Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
@@ -32,6 +32,9 @@ export function preferredObservation<T extends HealthObservation>(health: T[]): 
   return health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
 }
 export const preferredHealth = (node: Node) => preferredObservation(node.health);
+export const healthMillis = (health: Pick<HealthObservation, 'state' | 'latency_ms'> | undefined) =>
+  health?.state === 'healthy' && health.latency_ms != null ? health.latency_ms : undefined;
+export const compareLatency = (a: number | undefined, b: number | undefined) => (a ?? Infinity) - (b ?? Infinity) || 0;
 
 export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   const total = snapshot ? addU64(...snapshot.outbounds.map(row => row.download_bytes)) : null;
@@ -43,17 +46,6 @@ export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   }));
   rows.sort((a, b) => (a.bytes === b.bytes ? 0 : a.bytes === null ? 1 : b.bytes === null ? -1 : a.bytes > b.bytes ? -1 : 1));
   return {rows, total};
-}
-
-export function trafficSeries(history: TrafficHistory | undefined) {
-  const rate = (value: string | null) => (value === null ? null : Number(parseU64(value)) / 1000);
-  const samples = history?.samples ?? [];
-  return {
-    timestamps: samples.map(s => Date.parse(s.sampled_at)),
-    down: samples.map(s => rate(s.download_bytes_per_second)),
-    up: samples.map(s => rate(s.upload_bytes_per_second)),
-    connections: samples.map(s => s.connections)
-  };
 }
 
 export function ipLiteral(text: string): string | undefined {
@@ -99,6 +91,7 @@ export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   degraded: 'lifecycle.degraded',
   failed: 'lifecycle.failed'
 };
+export const lifecycleTone = (state: Runtime['lifecycle']['state'] | undefined) => (state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn');
 export const connectionStates: Record<Connection['state'], Key> = {
   observed: 'conn.state.observed',
   routing: 'conn.state.routing',
