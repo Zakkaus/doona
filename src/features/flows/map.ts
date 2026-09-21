@@ -1,27 +1,28 @@
 import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
-import {sourceIp} from '../../api/selectors';
+import {healthMillis, preferredHealth} from '../../api/selectors';
 
-// The routing pipeline as the config lays it out, weighted by the flows the backend retained:
-// client → rule → outbound (a policy group, or direct / block) → the node the flow used.
-export const mapStages = ['client', 'rule', 'outbound', 'node'] as const;
-export type MapStage = (typeof mapStages)[number];
-export type MapNode = {id: string; stage: MapStage; label: string; count: number; unknown?: boolean; others?: boolean};
-// `configured` marks a link the config implies (a group to its selected node) even before a flow used it.
-export type MapLink = {source: string; target: string; count: number; configured?: boolean};
-export type FlowMap = {nodes: MapNode[]; links: MapLink[]; paths: string[][]};
+// The routing tree as the config lays it out, weighted by the flows the backend retained:
+// rule → outbound (a policy group, or direct / block) → the node the outbound currently selects.
+export type TreeItem = {id: string; label: string; count: number; unknown?: boolean};
+export type TreeRule = TreeItem & {outbound: string | null; must: boolean; fallback: boolean};
+export type TreeGroup = {name: string; kind: GroupSummary['policy']['kind']; policy: string};
+// A group's selection may be another group; `groups` is the whole chain, the first entry being the outbound itself.
+export type TreeOutbound = TreeItem & {kind: 'direct' | 'block' | 'group' | 'unknown'; groups: TreeGroup[]; node: string | null};
+export type TreeNode = TreeItem & {latency?: number; unavailable: boolean};
+// A link with no count is one the config implies before any flow used it.
+export type TreeLink = {source: string; target: string; count: number};
+export type RoutingTree = {rules: TreeRule[]; outbounds: TreeOutbound[]; nodes: TreeNode[]; links: TreeLink[]};
 
+const stages = ['rule', 'outbound', 'node'] as const;
+type Stage = (typeof stages)[number];
 const terminal = (outbound: string | null) => outbound === 'direct' || outbound === 'block';
 
 export type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
 // A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
 // matched even when two rules display alike; the expression is only the label.
-function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {label: string; unknown: boolean; key?: string} | null {
+function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames): {label: string; unknown: boolean; key?: string} | null {
   switch (stage) {
-    case 'client': {
-      const client = sourceIp(flow.input?.src ?? undefined);
-      return {label: client ?? 'unknown', unknown: !client};
-    }
     case 'rule':
       return flow.rule_expression ? {label: flow.rule_expression, unknown: false, key: flow.rule_id ?? undefined} : {label: 'unknown', unknown: true};
     case 'outbound':
@@ -33,101 +34,112 @@ function stageLabel(flow: FlowSummary, stage: MapStage, names: NodeNames): {labe
     }
   }
 }
-
-export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[] = []): FlowMap {
-  const byId = new Map<string, MapNode>();
-  const linkById = new Map<string, MapLink>();
-  const links: MapLink[] = [];
-  const paths = new Map<string, string[]>();
-  const node = (stage: MapStage, label: string, unknown = false, key = label) => {
-    const id = stage + ':' + key;
-    let entry = byId.get(id);
-    if (!entry) byId.set(id, (entry = {id, stage, label, count: 0, unknown: unknown || undefined}));
-    return entry;
-  };
-  const link = (source: string, target: string, configured = false) => {
-    const id = source + '>' + target;
-    let entry = linkById.get(id);
-    if (!entry) {
-      linkById.set(id, (entry = {source, target, count: 0, configured: configured || undefined}));
-      links.push(entry);
-    }
-    return entry;
-  };
-  // Config first: every rule, group and selected node exists even before a flow went through them.
-  const names = nodeNames(nodes);
-  for (const group of groups) {
-    const outbound = node('outbound', group.name);
-    const selected = group.selection.tcp_member_id ?? group.selection.udp_member_id;
-    if (selected) link(outbound.id, node('node', names.get(selected) ?? selected).id, true);
-  }
-  for (const rule of rules) if (rule.outbound) link(node('rule', rule.expression, false, rule.rule_id).id, node('outbound', rule.outbound).id, true);
-  for (const flow of flows) {
-    let previous: MapNode | undefined;
-    const path: string[] = [];
-    for (const stage of mapStages) {
-      const part = stageLabel(flow, stage, names);
-      if (!part) break;
-      const current = node(stage, part.label, part.unknown, part.key);
-      current.count++;
-      path.push(current.id);
-      if (previous) link(previous.id, current.id).count++;
-      previous = current;
-    }
-    paths.set(JSON.stringify(path), path);
-  }
-  // Groups the config knows but nothing used keep their place at the bottom of the column.
-  const order = (a: MapNode, b: MapNode) => b.count - a.count || Number(!!a.unknown) - Number(!!b.unknown) || a.label.localeCompare(b.label);
-  return {nodes: [...byId.values()].sort(order), links, paths: [...paths.values()]};
-}
-
-export function pinMembers(id: string): string[] {
-  if (!id.startsWith('others:')) return [id];
-  try {
-    const members: unknown = JSON.parse(id.slice(7));
-    return Array.isArray(members) && members.every(member => typeof member === 'string') ? members : [];
-  } catch {
-    return [];
-  }
-}
+const stageId = (stage: Stage, part: {label: string; key?: string}) => stage + ':' + (part.key ?? part.label);
 
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames): FlowSummary[] {
-  const members = new Set(pinMembers(id));
   return flows.filter(flow =>
-    mapStages.some(stage => {
-      const part = stageLabel(flow, stage, names);
-      return part && members.has(stage + ':' + (part.key ?? part.label));
+    stages.some(stage => {
+      const part = stagePart(flow, stage, names);
+      return part && stageId(stage, part) === id;
     })
   );
 }
 
-// Only retained traffic belongs in the Sankey; configured, unused links are dropped here.
-export function topologyMap(map: FlowMap): FlowMap {
-  const nodes: MapNode[] = [];
-  const ids = new Map<string, string>();
-  for (const stage of mapStages) {
-    const column = map.nodes.filter(node => node.stage === stage && node.count > 0);
-    const visible = column.length > 12 ? column.slice(0, 11) : column;
-    for (const node of visible) {
-      nodes.push(node);
-      ids.set(node.id, node.id);
+// The label the flow records show for a pinned tree id.
+export function pinnedLabel(id: string, rules: RoutingRule[]): string {
+  const [stage, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
+  return (stage === 'rule' && rules.find(rule => rule.rule_id === key)?.expression) || key;
+}
+
+export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[]): RoutingTree {
+  const names = nodeNames(nodes);
+  const byId = new Map(groups.map(group => [group.id, group]));
+  const ruleItems = new Map<string, TreeRule>();
+  const outboundItems = new Map<string, TreeOutbound>();
+  const nodeItems = new Map<string, TreeNode>();
+  const links = new Map<string, TreeLink>();
+  const link = (source: string, target: string) => {
+    const key = source + '>' + target;
+    let entry = links.get(key);
+    if (!entry) links.set(key, (entry = {source, target, count: 0}));
+    return entry;
+  };
+  const nodeItem = (label: string, unknown = false) => {
+    const id = 'node:' + label;
+    let entry = nodeItems.get(id);
+    if (!entry) {
+      const node = nodes.find(n => n.name === label);
+      const health = node && preferredHealth(node);
+      nodeItems.set(
+        id,
+        (entry = {id, label, count: 0, unknown: unknown || undefined, latency: healthMillis(health), unavailable: health?.state === 'unavailable'})
+      );
     }
-    if (column.length > 12) {
-      const rest = column.slice(11);
-      const id = 'others:' + JSON.stringify(rest.map(node => node.id));
-      nodes.push({id, stage, label: '', others: true, count: rest.reduce((sum, node) => sum + node.count, 0)});
-      for (const node of rest) ids.set(node.id, id);
+    return entry;
+  };
+  // An outbound that names a group follows its selection through nested groups to the node it ends at.
+  const outboundItem = (name: string, unknown = false) => {
+    const id = 'outbound:' + name;
+    let entry = outboundItems.get(id);
+    if (entry) return entry;
+    const chain: TreeGroup[] = [];
+    let group = groups.find(g => g.name === name);
+    let leaf: string | null = null;
+    while (group && chain.length < 8) {
+      chain.push({name: group.name, kind: group.policy.kind, policy: group.policy.native});
+      const member = group.selection.tcp_member_id ?? group.selection.udp_member_id;
+      const next = member ? byId.get(member) : undefined;
+      if (!next) {
+        leaf = member ? (names.get(member) ?? member) : null;
+        break;
+      }
+      group = next;
+    }
+    const kind = unknown ? 'unknown' : name === 'direct' || name === 'block' ? name : chain.length ? 'group' : 'unknown';
+    entry = {id, label: name, count: 0, unknown: unknown || undefined, kind, groups: chain, node: leaf && nodeItem(leaf).id};
+    outboundItems.set(id, entry);
+    if (entry.node) link(id, entry.node);
+    return entry;
+  };
+  const ruleItem = (id: string, label: string, unknown = false) => {
+    let entry = ruleItems.get(id);
+    if (!entry) ruleItems.set(id, (entry = {id, label, count: 0, unknown: unknown || undefined, outbound: null, must: false, fallback: false}));
+    return entry;
+  };
+  // Config first, in evaluation order: every rule, its outbound and the selected node exist before a flow used them.
+  for (const rule of rules) {
+    const entry = ruleItem('rule:' + rule.rule_id, rule.expression);
+    entry.must = rule.must;
+    entry.fallback = rule.kind === 'fallback';
+    if (rule.outbound) {
+      entry.outbound = outboundItem(rule.outbound).id;
+      link(entry.id, entry.outbound);
     }
   }
-  const links = new Map<string, MapLink>();
-  for (const link of map.links) {
-    if (!link.count) continue;
-    const source = ids.get(link.source)!;
-    const target = ids.get(link.target)!;
-    const key = JSON.stringify([source, target]);
-    const existing = links.get(key);
-    if (existing) existing.count += link.count;
-    else links.set(key, {source, target, count: link.count});
+  for (const flow of flows) {
+    let previous: TreeItem | undefined;
+    for (const stage of stages) {
+      const part = stagePart(flow, stage, names);
+      if (!part) break;
+      const current =
+        stage === 'rule'
+          ? ruleItem(stageId(stage, part), part.label, part.unknown)
+          : stage === 'outbound'
+            ? outboundItem(part.label, part.unknown)
+            : nodeItem(part.label, part.unknown);
+      current.count++;
+      if (previous) link(previous.id, current.id).count++;
+      previous = current;
+    }
   }
-  return {nodes, links: [...links.values()], paths: map.paths.map(path => path.map(id => ids.get(id)!))};
+  // Groups nothing routes to still belong on the tree, after the used ones; a group only reached through
+  // another group's selection is drawn inside that outbound instead.
+  const nested = new Set([...outboundItems.values()].flatMap(outbound => outbound.groups.slice(1).map(group => group.name)));
+  for (const group of groups) if (!nested.has(group.name)) outboundItem(group.name);
+  return {
+    rules: [...ruleItems.values()],
+    outbounds: [...outboundItems.values()],
+    nodes: [...nodeItems.values()],
+    links: [...links.values()]
+  };
 }

@@ -27,10 +27,10 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(page.locator('.rp-panel')).toHaveCount(0);
 });
 
-test('a pinned topology item carries into the records', async ({page}) => {
+test('a pinned tree item carries into the records', async ({page}) => {
   await page.goto('/#/rules?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
-  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'}).first();
+  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'}).getByRole('button');
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar3$/);
@@ -40,6 +40,7 @@ test('a pinned topology item carries into the records', async ({page}) => {
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(4);
   await expect(rows.first()).toContainText('dip(geoip: private)');
+  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: dip(geoip: private)');
   await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(() => rows.count()).toBeGreaterThan(4);
@@ -86,31 +87,45 @@ test('a flow record links its rule into the rule list', async ({page}) => {
   await expect(page.locator('[role="row"][aria-selected="true"]')).toBeVisible();
 });
 
-test('topology columns trace retained paths and pin by keyboard and pointer', async ({page}) => {
+test('the tree draws every configured rule, follows a hover along its branch and pins by keyboard and pointer', async ({page}) => {
   await page.goto('/#/rules?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   for (const [stage, caption] of [
-    ['client', 'Client'],
     ['rule', 'Rule'],
     ['outbound', 'Outbound'],
     ['node', 'Node']
   ]) {
-    await expect(topology.locator('.rp-topology-captions').getByText(caption, {exact: true})).toBeVisible();
+    await expect(topology.locator('.rp-tree-col').getByText(caption, {exact: true})).toBeVisible();
     await expect(topology.locator(`[data-stage="${stage}"]`).first()).toBeVisible();
-    expect(await topology.locator(`[data-stage="${stage}"]`).count()).toBeLessThanOrEqual(12);
   }
-  const node = topology.locator('[data-stage="client"]').filter({hasText: '10.0.0.12'}).first();
-  await node.hover();
-  await expect(topology.locator('.rp-topology-link[opacity="0.5"]').first()).toBeVisible();
-  await expect(topology.locator('.rp-topology-link[opacity="0.06"]').first()).toBeVisible();
+  // Rules keep their evaluation order, unused ones included, and the fallback closes the column.
+  const rules = topology.locator('[data-stage="rule"]');
+  await expect(rules.first()).toContainText('domain(suffix: doubleclick.net)');
+  await expect(rules.filter({hasText: 'sip(10.0.0.0/24) && dport(25)'})).toContainText('0');
+  await expect(rules.filter({hasText: 'fallback: resilient'})).toHaveCount(1);
+  // Groups nothing routes to are still drawn, with a dashed connector to the node they select.
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'skylink'})).toBeVisible();
+  const links = topology.locator('.rp-tree-links path');
+  expect(await links.count()).toBeGreaterThan(8);
+  await expect(topology.locator('.rp-tree-links path[stroke-dasharray]').first()).toBeAttached();
+  // Hovering a rule lights its branch and dims the rest.
+  const item = topology.locator('[data-stage="rule"]').filter({hasText: 'domain(suffix: doubleclick.net)'});
+  await item.hover();
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'Block'})).not.toHaveClass(/dim/);
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).toHaveClass(/dim/);
+  await expect(topology.locator('.rp-tree-links path[data-state="active"]').first()).toBeAttached();
+  await expect(topology.locator('.rp-tree-links path[data-state="dim"]').first()).toBeAttached();
+  // A node pins too, and lights the groups and rules that reach it.
+  const node = topology.locator('[data-stage="node"]').filter({hasText: 'hk-01'}).getByRole('button');
   await node.click();
-  await expect(page).toHaveURL(/path=client%3A10\.0\.0\.12/);
+  await expect(page).toHaveURL(/path=node%3Ahk-01/);
   await expect(node).toHaveAttribute('aria-pressed', 'true');
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).not.toHaveClass(/dim/);
   await node.press('Escape');
   await expect(page).not.toHaveURL(/path=/);
   await expect(node).toHaveAttribute('aria-pressed', 'false');
   await node.press('Enter');
-  await expect(page).toHaveURL(/path=client%3A/);
+  await expect(page).toHaveURL(/path=node%3A/);
   await expect(node).toHaveAttribute('aria-pressed', 'true');
   await node.press('Space');
   await expect(page).not.toHaveURL(/path=/);
@@ -120,14 +135,20 @@ test('topology columns trace retained paths and pin by keyboard and pointer', as
   await node.click();
   await expect(page).not.toHaveURL(/path=/);
   await expect(node).toHaveAttribute('aria-pressed', 'false');
-  await topology.locator('h2').hover();
-  const ribbon = topology.locator('.rp-topology-link').first();
-  await ribbon.hover();
-  await expect(topology.locator('.rp-topology-link[opacity="0.06"]').first()).toBeVisible();
-  const others = topology.getByRole('button', {name: 'Others · 22 flows', exact: true});
-  await others.click();
-  await expect(page.getByRole('button', {name: 'Show the 22 flows on this path', exact: true})).toBeVisible();
-  await page.getByRole('button', {name: 'Show the 22 flows on this path', exact: true}).click();
-  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: Others');
-  await expect(page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]')).toHaveCount(22);
+});
+
+test.describe('narrow screens', () => {
+  test.use({viewport: {width: 390, height: 844}});
+
+  test('the tree stacks each outbound with its rules above and its node below', async ({page}) => {
+    await page.goto('/#/rules?tab=map');
+    const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+    await expect(topology.locator('.rp-tree-links')).toHaveCount(0);
+    const branch = topology.locator('.rp-tree-branch').filter({has: page.locator('[data-stage="outbound"]', {hasText: 'Block'})});
+    await expect(branch.locator('[data-stage="rule"]')).toHaveCount(2);
+    await expect(branch.locator('[data-stage="node"]')).toHaveCount(0);
+    const proxy = topology.locator('.rp-tree-branch').filter({has: page.locator('[data-stage="outbound"]', {hasText: 'proxy'})});
+    await expect(proxy.locator('[data-stage="node"]')).toContainText('hk-01');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
 });

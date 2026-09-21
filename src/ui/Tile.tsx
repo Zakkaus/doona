@@ -43,7 +43,9 @@ export type NodeTileProps = {
   tcp?: number;
   alive?: boolean;
   unavailable?: boolean;
-  description?: string;
+  description?: ReactNode;
+  // Replaces the latency slot with the caller's own annotation.
+  aside?: ReactNode;
   nested?: boolean;
   selected?: boolean;
   cur?: boolean;
@@ -58,6 +60,7 @@ export function NodeTile({
   alive = true,
   unavailable = !alive || tcp == null,
   description,
+  aside,
   nested,
   selected,
   cur,
@@ -72,7 +75,9 @@ export function NodeTile({
         <span className="n">
           <TextTooltip>{name}</TextTooltip>
         </span>
-        {nested ? (
+        {aside !== undefined ? (
+          aside
+        ) : nested ? (
           <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
           <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>

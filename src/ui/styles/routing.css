@@ -5,33 +5,108 @@
 .rp-topology h2 {
   margin: 0;
 }
-.rp-topology-captions {
+/* The routing tree: three columns of tiles with the connectors drawn over them once the tiles have a position. */
+.rp-tree {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) 8px;
-  padding: 0 16px;
-  white-space: nowrap;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+  gap: 64px;
+  align-items: start;
 }
-.rp-topology-captions > :last-child {
-  justify-self: end;
+.rp-tree-links {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--rp-muted);
+  stroke-linecap: round;
+  transition: opacity 0.15s;
 }
-.rp-topology-chart {
-  width: 100%;
+.rp-tree-links path {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.rp-tree-links path[data-kind='direct'] {
+  stroke: var(--rp-foam);
+}
+.rp-tree-links path[data-kind='block'] {
+  stroke: var(--rp-love);
+}
+.rp-tree-links path[data-kind='group'] {
+  stroke: var(--rp-iris);
+}
+.rp-tree-links path[data-kind='node'] {
+  stroke: var(--rp-pine);
+}
+.rp-tree-links path[data-state='active'] {
+  opacity: 1;
+}
+.rp-tree-links path[data-state='dim'] {
+  opacity: 0.12;
+}
+.rp-tree-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   min-width: 0;
 }
-.rp-topology-node {
-  cursor: pointer;
-  outline: none;
+.rp-tree-col > .rp-label,
+.rp-tree-branch > .rp-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.rp-topology-node text {
-  fill: var(--rp-text);
-  font-family: inherit;
-  font-size: 12px;
+.rp-tree-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  transition: opacity 0.15s;
 }
-.rp-topology-count {
-  fill: var(--rp-subtle);
+.rp-tree-item.dim {
+  opacity: 0.35;
 }
-.rp-topology-node:focus-visible .rp-topology-bar,
-.rp-topology-node[aria-pressed='true'] .rp-topology-bar {
-  stroke: var(--rp-text);
-  stroke-width: 2px;
+.rp-tree-item .rp-node {
+  height: auto;
+  min-height: 56px;
+}
+.rp-tree-item[data-stage='rule'] .rp-node .n {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+}
+.rp-tree-item .rp-node .s {
+  align-items: center;
+  justify-content: flex-start;
+}
+.rp-tree-count {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--rp-subtle);
+}
+.rp-tree-nested {
+  margin-inline-start: 16px;
+}
+.rp-tree-nested .rp-node {
+  min-height: 48px;
+  border-style: dashed;
+  border-color: var(--rp-line);
+  background: transparent;
+}
+.rp-tree.stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
+}
+.rp-tree-branch {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--rp-line);
 }

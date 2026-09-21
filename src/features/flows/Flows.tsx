@@ -1,6 +1,7 @@
-import {lazy, Suspense, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
-import {flowMap, flowsThrough, nodeNames} from './map';
+import {flowsThrough, nodeNames, pinnedLabel, routingTree} from './map';
+import Tree from './Tree';
 import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
 import {flowStepFields, traceGaps} from './view';
 import {
@@ -27,8 +28,6 @@ import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import Close from '../../ui/icons/Close';
 
-const Topology = lazy(() => import('./Topology'));
-
 const stages: Record<string, Key> = {
   input: 'flow.stage.input',
   route: 'flow.stage.route',
@@ -49,8 +48,8 @@ export function RoutingMap({go, query}: PageProps) {
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const rules = useRules(resources?.rules.available === true);
-  const map = useMemo(
-    () => flowMap(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? []),
+  const tree = useMemo(
+    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? []),
     [resource.data, groups.data, nodes.data, rules.data]
   );
   const pinned = params.get('path');
@@ -73,12 +72,10 @@ export function RoutingMap({go, query}: PageProps) {
           resource.error ? null : (
             <Loading />
           )
-        ) : !resource.data.flows.length ? (
+        ) : !tree.rules.length && !tree.outbounds.length ? (
           <Empty>{t('flow.mapEmpty')}</Empty>
         ) : (
-          <Suspense fallback={<Loading />}>
-            <Topology map={map} pinned={pinned} onPin={setPinned} />
-          </Suspense>
+          <Tree tree={tree} pinned={pinned} onPin={setPinned} />
         )}
       </section>
       {pinned && (
@@ -106,6 +103,7 @@ export function FlowRecords({go, query}: PageProps) {
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
   const rulesListed = useCapabilities().data?.resources.rules.available === true;
+  const rules = useRules(rulesListed);
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -115,7 +113,6 @@ export function FlowRecords({go, query}: PageProps) {
   const select = (value: string | null) => go('rules', within(query, {id: value}));
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  const pinnedLabel = pinned?.startsWith('others:') ? t('flow.others') : pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
   const all = resource.data?.flows ?? [];
   const shown = (pinned ? flowsThrough(all, pinned, names) : all).filter(
     f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state)
@@ -143,7 +140,7 @@ export function FlowRecords({go, query}: PageProps) {
         />
         {pinned && (
           <Button small label={t('flow.clearMapFilter')} onPress={() => setPinned(null)}>
-            {t('flow.mapFilter', {label: pinnedLabel ?? ''})}
+            {t('flow.mapFilter', {label: pinnedLabel(pinned, rules.data?.rules ?? [])})}
             <Close />
           </Button>
         )}
