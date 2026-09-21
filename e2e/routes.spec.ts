@@ -74,3 +74,26 @@ test('narrow tables retain readable columns and stop scrolling after a desktop r
   await expect.poll(() => table.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
   expect(await domain.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(160);
 });
+
+// A scroll container that overflows by a pixel grows a scrollbar; every palette family is held to zero overflow.
+for (const palette of ['glass/glass', 'rose-pine/moon', 'catppuccin/mocha']) {
+  test.describe(`${palette} scroll containers`, () => {
+    test.use({storage: {'doona-palette': palette}});
+    test('no scroll container overflows sideways without content that needs it', async ({page}) => {
+      for (const route of ['overview', 'connections', 'dns?tab=cache', 'rules?tab=list', 'nodes', 'events', 'logs', 'settings']) {
+        await page.goto(`/#/${route}`);
+        await expect(page.locator('.rp-content').getByRole('heading').first()).toBeVisible();
+        await page.waitForFunction(() => !document.querySelector('.rp-content [role=status]'));
+        const spurious = await page.evaluate(() =>
+          [...document.querySelectorAll<HTMLElement>('.rp-content *')]
+            .filter(el => {
+              const overflow = getComputedStyle(el).overflowX;
+              return (overflow === 'auto' || overflow === 'scroll') && el.scrollWidth > el.clientWidth && el.scrollWidth - el.clientWidth < 4;
+            })
+            .map(el => `${route}: ${el.className}`)
+        );
+        expect(spurious).toEqual([]);
+      }
+    });
+  });
+}

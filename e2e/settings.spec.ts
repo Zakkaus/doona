@@ -181,11 +181,11 @@ test('five taps on the duck honk, and the header wears the long name for the ses
   const brand = page.locator('.rp-brand .rp-brand-text > span').first();
   await expect(brand).toHaveText('doona');
   await page.locator('.rp-brand').click();
-  const duck = page.getByRole('dialog', {name: 'About doona', exact: true}).getByRole('button', {name: 'The duck', exact: true});
+  const duck = page.getByRole('dialog', {name: 'About doona', exact: true}).getByRole('button', {name: 'Pet me', exact: true});
   for (let i = 0; i < 4; i++) await duck.click();
   await expect(brand).toHaveText('doona');
   await duck.click();
-  await expect(page.getByText('Duck sound', {exact: true})).toBeVisible();
+  await expect(page.getByText('Honk!', {exact: true})).toBeVisible();
   await expect(brand).toHaveText('doooooona');
   await page.getByRole('dialog').getByRole('button', {name: 'Close', exact: true}).click();
   await expect(brand).toHaveText('doooooona');

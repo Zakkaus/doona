@@ -226,10 +226,14 @@
   opacity: var(--rp-grain-opacity);
   mix-blend-mode: overlay;
 }
+/* A scroll container cannot carry the rim: a child reaching 1px outside it adds a scrollbar. Tables use a
+   plain border instead. */
+:root[data-family='glass'] .rp-table {
+  border-color: var(--rp-sheet-rim);
+}
 :root[data-family='glass'] .rp-card::after,
 :root[data-family='glass'] .rp-popover::after,
-:root[data-family='glass'] .rp-modal::after,
-:root[data-family='glass'] .rp-table::after {
+:root[data-family='glass'] .rp-modal::after {
   content: '';
   position: absolute;
   inset: -1px;

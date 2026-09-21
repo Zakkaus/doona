@@ -23,7 +23,9 @@ export function useMainSourceEdit(): MainSourceEdit {
   const source = config.data?.sources.find(source => source.kind === 'main' && source.writable) ?? null;
   const complete = useSourceComplete(source);
   const main = complete ? source : null;
-  const error = useMemo(() => config.error ?? (main ? null : new LocalError('config.incomplete')), [config.error, main]);
+  // While the digest check is still running nothing is wrong yet; the notice waits for a verdict.
+  const incomplete = complete === false || (!!config.data && !source);
+  const error = useMemo(() => config.error ?? (incomplete ? new LocalError('config.incomplete') : null), [config.error, incomplete]);
   const {apply} = editor;
   return {
     main,
