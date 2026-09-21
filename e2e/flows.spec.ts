@@ -137,18 +137,43 @@ test('the tree draws every configured rule, follows a hover along its branch and
   await expect(node).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('the tree can be seen by device, with the toggle in the address and pins carrying over', async ({page}) => {
+  await page.goto('/#/rules?tab=map');
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  await page.getByRole('radio', {name: 'By device', exact: true}).click();
+  await expect(page).toHaveURL(/by=client/);
+  await expect(topology.locator('.rp-tree-captions').getByText('Device', {exact: true})).toBeVisible();
+  await expect(topology.locator('[data-stage="rule"]')).toHaveCount(0);
+  const device = topology.locator('[data-stage="client"]').filter({hasText: '10.0.0.12'});
+  await expect(device).toHaveAttribute('aria-label', /^10\.0\.0\.12 · \d+ flows · → /);
+  await device.click();
+  await expect(page).toHaveURL(/path=client%3A10\.0\.0\.12/);
+  await page.getByRole('button', {name: /^Show the \d+ flows on this path$/}).click();
+  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: 10.0.0.12');
+  await page.goBack();
+  await expect(page).toHaveURL(/tab=map&by=client&path=client%3A10\.0\.0\.12/);
+  await page.getByRole('radio', {name: 'By rule', exact: true}).click();
+  await expect(page).not.toHaveURL(/by=|path=/);
+  await expect(topology.locator('[data-stage="rule"]').first()).toBeVisible();
+});
+
 test.describe('narrow screens', () => {
   test.use({viewport: {width: 390, height: 844}});
 
-  test('the tree stacks each outbound with its rules above and its node below', async ({page}) => {
+  test('the tree keeps its shape and pans inside its card instead of widening the page', async ({page}) => {
     await page.goto('/#/rules?tab=map');
     const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
-    await expect(topology.locator('.rp-tree-links')).toHaveCount(0);
-    const branch = topology.locator('.rp-tree-branch').filter({has: page.locator('[data-stage="outbound"]', {hasText: 'Block'})});
-    await expect(branch.locator('[data-stage="rule"]')).toHaveCount(2);
-    await expect(branch.locator('[data-stage="node"]')).toHaveCount(0);
-    const proxy = topology.locator('.rp-tree-branch').filter({has: page.locator('[data-stage="outbound"]', {hasText: 'proxy'})});
-    await expect(proxy.locator('[data-stage="node"]')).toContainText('hk-01');
+    await expect(topology.locator('[data-stage="node"]').first()).toBeVisible();
+    const box = (await topology.locator('.rp-tree').evaluate(el => ({scroll: el.scrollWidth, client: el.clientWidth})))!;
+    expect(box.scroll).toBeGreaterThan(box.client);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Growing to a desktop width and back keeps the columns where the width says, not where they were.
+    await page.setViewportSize({width: 1280, height: 844});
+    await expect.poll(() => topology.locator('.rp-tree').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.setViewportSize({width: 390, height: 844});
+    await expect.poll(() => topology.locator('.rp-tree').evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+    const tiles = await topology.locator('.rp-tree-tile').evaluateAll(els => els.map(el => el.getBoundingClientRect()));
+    const overlaps = tiles.some((a, i) => tiles.some((b, j) => i < j && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+    expect(overlaps).toBe(false);
   });
 });

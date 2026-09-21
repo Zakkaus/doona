@@ -363,13 +363,13 @@
   box-shadow: var(--rp-glow), var(--rp-shadow-lg);
 }
 :root[data-family='glass'] .rp-toast.positive {
-  background: var(--rp-sheen), color-mix(in srgb, var(--rp-pine) 84%, transparent);
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-foam) 84%, transparent);
 }
 :root[data-family='glass'] .rp-toast.negative {
   background: var(--rp-sheen), color-mix(in srgb, var(--rp-love) 84%, transparent);
 }
 :root[data-family='glass'] .rp-toast.info {
-  background: var(--rp-sheen), color-mix(in srgb, var(--rp-foam) 84%, transparent);
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-pine) 84%, transparent);
 }
 :root[data-family='glass'] .rp-underlay {
   backdrop-filter: blur(8px);

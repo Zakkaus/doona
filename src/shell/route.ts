@@ -100,8 +100,9 @@ export function useRoute(api: string | null) {
         setLoc(next);
       }
     };
-    addEventListener('hashchange', on);
-    return () => removeEventListener('hashchange', on);
+    // popstate, not hashchange: it also fires when two entries share a hash, so the cursor never drifts.
+    addEventListener('popstate', on);
+    return () => removeEventListener('popstate', on);
   }, [api, loc]);
   const discard = () => {
     if (!pending) return;

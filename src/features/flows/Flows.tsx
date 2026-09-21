@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
-import {flowsThrough, nodeNames, pinnedLabel, routingTree} from './map';
+import {flowsThrough, nodeNames, pinnedLabel, routingTree, type TreeBy} from './map';
 import Tree from './Tree';
 import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
 import {flowStepFields, traceGaps} from './view';
@@ -48,13 +48,14 @@ export function RoutingMap({go, query}: PageProps) {
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
   const rules = useRules(resources?.rules.available === true);
+  const by: TreeBy = params.get('by') === 'client' ? 'client' : 'rule';
   const tree = useMemo(
-    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? []),
-    [resource.data, groups.data, nodes.data, rules.data]
+    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? [], by),
+    [resource.data, groups.data, nodes.data, rules.data, by]
   );
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? [])).length : 0;
+  const pinnedCount = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? []), rules.data?.rules ?? []).length : 0;
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
       <ErrorMessage
@@ -67,12 +68,23 @@ export function RoutingMap({go, query}: PageProps) {
         }}
       />
       <section className="rp-card rp-topology" aria-label={t('flow.topology')}>
-        <h2 className="rp-label">{t('flow.topology')}</h2>
+        <div className="rp-row">
+          <h2 className="rp-label">{t('flow.topology')}</h2>
+          <Segmented
+            label={t('flow.topology')}
+            value={by}
+            onChange={next => go('rules', within(query, {by: next === 'client' ? 'client' : null, path: null}))}
+            items={[
+              ['rule', t('flow.byRule')],
+              ['client', t('flow.byClient')]
+            ]}
+          />
+        </div>
         {!resource.data && !rules.data && !groups.data ? (
           resource.error ? null : (
             <Loading />
           )
-        ) : !tree.rules.length && !tree.outbounds.length ? (
+        ) : !tree.leaves.length && !tree.outbounds.length ? (
           <Empty>{t('flow.mapEmpty')}</Empty>
         ) : (
           <Tree tree={tree} pinned={pinned} onPin={setPinned} />
@@ -114,7 +126,7 @@ export function FlowRecords({go, query}: PageProps) {
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
   const all = resource.data?.flows ?? [];
-  const shown = (pinned ? flowsThrough(all, pinned, names) : all).filter(
+  const shown = (pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all).filter(
     f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state)
   );
   return (

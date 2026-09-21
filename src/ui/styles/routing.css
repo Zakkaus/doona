@@ -11,6 +11,8 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 .rp-tree-captions {
   position: relative;
@@ -120,23 +122,4 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--rp-subtle);
-}
-.rp-tree.stacked {
-  gap: 24px;
-}
-.rp-tree.stacked .rp-tree-tile {
-  position: static;
-  width: 100%;
-}
-.rp-tree-branch {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding-inline-start: 12px;
-  border-inline-start: 3px solid var(--rp-line);
-}
-.rp-tree-branch > .rp-label {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
