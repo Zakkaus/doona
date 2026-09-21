@@ -17,7 +17,7 @@
 
 doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 honk，dae 实现同一份契约后亦可。它由引擎自己或任意 Web 服务器提供，显示引擎当前的状态，并管理节点、群组、路由规则与配置文件。
 
-![活动页](docs/screenshots/zh-CN/activity-light.png)
+![活动页](docs/screenshots/zh-CN/activity-light.webp)
 
 <details>
 <summary><strong>全部配色</strong></summary>
@@ -107,7 +107,7 @@ experimental {
 
 ## 页面
 
-<img src="docs/screenshots/zh-CN/policies-light.png" alt="策略页" width="100%">
+<img src="docs/screenshots/zh-CN/policies-light.webp" alt="策略页" width="100%">
 
 | 页面 | 内容                                                                       | 需要的资源                          |
 | ---- | -------------------------------------------------------------------------- | ----------------------------------- |
@@ -125,7 +125,7 @@ experimental {
 
 所有页面都保留在导航栏中。只有 [registry.ts](src/shell/registry.ts) 为页面列出的资源全部不可用时，页面才会标为不可用；打开后会显示不可用提示。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。
 
-<img src="docs/screenshots/zh-CN/rules-light.png" alt="规则页" width="100%">
+<img src="docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
 
 ## 数据与设置
 
@@ -144,7 +144,7 @@ doona 没有用于存储自身界面设置的服务器端存储。配置与运�
 
 在 HTTPS 或 localhost 下，service worker 预先缓存应用外壳，并缓存字体与图标，离线也能打开页面，网站可安装为应用。API 响应一律不缓存。安全问题的报告方式见 [SECURITY.md](SECURITY.md)。
 
-![深色模式的活动页](docs/screenshots/zh-CN/activity-dark.png)
+![深色模式的活动页](docs/screenshots/zh-CN/activity-dark.webp)
 
 ## 开发
 

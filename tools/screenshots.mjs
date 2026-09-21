@@ -22,8 +22,7 @@ const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules?tab=list'],
-  ['nodes', 'light', '#/nodes']
+  ['rules', 'light', '#/rules?tab=map']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
