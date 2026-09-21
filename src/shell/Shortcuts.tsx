@@ -7,12 +7,14 @@ import type {ShortcutView} from './view';
 export function Shortcuts({
   go,
   openSearch,
+  refresh,
   mac,
   entries,
   paths
 }: {
   go: PageProps['go'];
   openSearch: () => void;
+  refresh: () => void;
   mac: boolean;
   entries: ShortcutView[];
   paths: Record<string, string>;
@@ -53,6 +55,23 @@ export function Shortcuts({
         setOpen(true);
         return;
       }
+      // The page's own filter field, where it has one.
+      if (event.key === '/') {
+        const field = document.querySelector<HTMLInputElement>('.rp-content input[type="search"]');
+        if (field) {
+          event.preventDefault();
+          reset();
+          field.focus();
+          field.select();
+        }
+        return;
+      }
+      if (event.key === 'r') {
+        event.preventDefault();
+        reset();
+        refresh();
+        return;
+      }
       const pending = prefixAt;
       reset();
       if (pending !== null && performance.now() - pending <= 800) {
@@ -76,7 +95,7 @@ export function Shortcuts({
       removeEventListener('blur', reset);
       removeEventListener('focusin', reset);
     };
-  }, [go, openSearch, paths]);
+  }, [go, openSearch, refresh, paths]);
   return (
     <ModalDialog
       title={t('shell.shortcuts')}
@@ -95,6 +114,14 @@ export function Shortcuts({
           <span>{t('shell.shortcutHelp')}</span>
           <kbd className="rp-kbd">?</kbd>
         </div>
+        <div className="rp-row">
+          <span>{t('shell.shortcutFilter')}</span>
+          <kbd className="rp-kbd">/</kbd>
+        </div>
+        <div className="rp-row">
+          <span>{t('refresh')}</span>
+          <kbd className="rp-kbd">r</kbd>
+        </div>
         {entries.map(entry => (
           <div className="rp-row" key={entry.id}>
             <span>{entry.label}</span>
@@ -102,6 +129,8 @@ export function Shortcuts({
           </div>
         ))}
       </div>
+      <p className="rp-note">{t('shell.shortcutTables')}</p>
+      <p className="rp-note">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
     </ModalDialog>
   );
 }

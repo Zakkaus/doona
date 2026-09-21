@@ -107,7 +107,7 @@ function ShellFrame(props: FrameProps) {
   return (
     <AboutContext.Provider value={view.about}>
       <Frame {...props} view={view} />
-      <Shortcuts go={props.go} openSearch={props.openSearch} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
+      <Shortcuts go={props.go} openSearch={props.openSearch} refresh={view.refresh} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
     </AboutContext.Provider>
   );
 }

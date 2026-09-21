@@ -62,3 +62,22 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await expect(donut.locator('.recharts-tooltip-wrapper')).toBeVisible();
   await expect(donut.locator('.recharts-tooltip-item')).toContainText(/\d/);
 });
+
+test('slash focuses the page filter and r refreshes everything', async ({page}) => {
+  await page.goto('/#/connections');
+  const filter = page.locator('.rp-content input[type="search"]').first();
+  await expect(filter).toBeVisible();
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  await page.keyboard.press('/');
+  await expect(filter).toBeFocused();
+  await filter.fill('10.0');
+  // Inside a field the keys type; nothing else fires.
+  await page.keyboard.press('r');
+  await expect(filter).toHaveValue('10.0r');
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({position: {x: 5, y: 5}});
+  await page.keyboard.press('r');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed');
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog', {name: 'Keyboard shortcuts'})).toContainText('Tables and lists');
+});
