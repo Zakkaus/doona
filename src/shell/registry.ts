@@ -43,6 +43,13 @@ const Settings = lazy(loaders.settings);
 export function warmPage(id: string) {
   void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
 }
+// Once the first page is up and the browser is idle, the other page chunks come in so a first visit only waits
+// for its data.
+export function warmAllPages() {
+  const warm = () => Object.keys(loaders).forEach(warmPage);
+  if ('requestIdleCallback' in window) requestIdleCallback(warm, {timeout: 3000});
+  else setTimeout(warm, 1000);
+}
 
 type Feature = {
   id: string;

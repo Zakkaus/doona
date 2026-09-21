@@ -191,11 +191,6 @@
   font-weight: 700;
   line-height: 28px;
 }
-.rp-delta {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--rp-subtle);
-}
 /* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
 .rp-tile-head > svg,
 .rp-qlabel > svg {
@@ -253,12 +248,6 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.rp-delta.good {
-  color: var(--rp-pine);
-}
-.rp-delta.bad {
-  color: var(--rp-rose);
 }
 .rp-spark {
   flex: 1 1 64px;

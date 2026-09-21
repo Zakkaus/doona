@@ -1,4 +1,4 @@
-export type NoticesModel = {
+type NoticesModel = {
   rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string}>;
   error: Error | null;
   loading: boolean;

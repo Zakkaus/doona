@@ -148,5 +148,5 @@ test('the engine version link is a styled control, not a bare anchor', async ({p
   await page.goto('/#/activity');
   const link = page.locator('.rp-version');
   await expect(link).toBeVisible();
-  expect(await link.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'inline-flex']);
+  expect(await link.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'flex']);
 });

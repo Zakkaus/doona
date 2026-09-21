@@ -17,7 +17,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 doona is a static web UI for the native API the daeuniverse engines share: honk today, dae once it implements the same contract. The engine serves it itself or any web server does; it shows what the engine is doing and manages nodes, groups, routing rules and configuration files.
 
-![The activity page](docs/screenshots/en/activity-light.png)
+![The activity page](docs/screenshots/en/activity-light.webp)
 
 <details>
 <summary><strong>Every palette</strong></summary>
@@ -103,11 +103,11 @@ The activity page then shows the running engine. The usual route through the res
 3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
 4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
 
-Every configuration write goes through the engine: doona sends the hash it read the source at (`If-Match`; a file changed on disk answers 412 and nothing is written), the engine validates the whole source set before saving and reloading, and a failed reload keeps the previous generation active. Dry-run validation never writes, and redacted text is never written back.
+Every configuration-source write goes through the engine: doona sends the hash it read the source at (`If-Match`; a file changed on disk answers 412 and nothing is written), the engine validates the whole source set before saving and reloading, and a failed reload keeps the previous generation active. Dry-run validation never writes, and redacted text is never written back. Runtime settings and group selection are separate endpoints with their own checks.
 
 ## Pages
 
-<img src="docs/screenshots/en/policies-light.png" alt="The policies page" width="100%">
+<img src="docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
 
 | Page          | Shows                                                                                                                                                                                        | Needs                               |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -125,7 +125,7 @@ Every configuration write goes through the engine: doona sends the hash it read 
 
 Every page remains in navigation. A page is marked unavailable only when every resource listed for it in [registry.ts](src/shell/registry.ts) is unavailable; opening it shows an unavailable notice. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
 
-<img src="docs/screenshots/en/rules-light.png" alt="The rules page" width="100%">
+<img src="docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
 ## Data and settings
 
@@ -144,7 +144,7 @@ The saved theme and language are applied before the first paint, so a reload doe
 
 Over HTTPS or on localhost a service worker precaches the application shell and caches fonts and icons, so the pages open offline and the site can be installed as an app. API responses are never cached. See [SECURITY.md](SECURITY.md) for reporting a vulnerability.
 
-![The activity page in dark mode](docs/screenshots/en/activity-dark.png)
+![The activity page in dark mode](docs/screenshots/en/activity-dark.webp)
 
 ## Development
 

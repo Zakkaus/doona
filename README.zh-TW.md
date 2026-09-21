@@ -17,7 +17,7 @@
 
 doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 honk，dae 實作同一份契約後亦可。它由引擎自己或任一 Web 伺服器提供，顯示引擎當下的狀態，並管理節點、群組、路由規則與配置檔。
 
-![活動頁](docs/screenshots/zh-TW/activity-light.png)
+![活動頁](docs/screenshots/zh-TW/activity-light.webp)
 
 <details>
 <summary><strong>全部配色</strong></summary>
@@ -103,11 +103,11 @@ experimental {
 3. **規則**：依評估順序列出路由字典，附每條規則決定過的流程數。新增規則可以挑選依據與值（網域後綴、geosite 分類、埠、程序名稱），也可以直接寫表達式，插在任一條之前或最後。
 4. **配置**：已接受的來源與其診斷。就地編輯檔案，校驗、儲存、重載；快速設定涵蓋主檔的常用項目。
 
-每一次組態寫入都經過引擎。doona 帶著讀取時的雜湊送出（`If-Match`）；磁碟上已變動的檔案會回 412，不會寫入。引擎先驗證整組來源，再儲存並重載；重載失敗時仍沿用先前的世代。預先驗證不會寫入，遮蔽後的文字也不會寫回。
+每一次組態來源的寫入都經過引擎。doona 帶著讀取時的雜湊送出（`If-Match`）；磁碟上已變動的檔案會回 412，不會寫入。引擎先驗證整組來源，再儲存並重載；重載失敗時仍沿用先前的世代。預先驗證不會寫入，遮蔽後的文字也不會寫回。執行期設定與群組選擇走各自的端點，各有檢查。
 
 ## 頁面
 
-<img src="docs/screenshots/zh-TW/policies-light.png" alt="策略頁" width="100%">
+<img src="docs/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
 
 | 頁面 | 內容                                                                                                       | 需要的資源                          |
 | ---- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -125,7 +125,7 @@ experimental {
 
 所有頁面都保留在導覽列中。只有 [registry.ts](src/shell/registry.ts) 為頁面列出的資源全部不可用時，頁面才會標為不可用；開啟後會顯示不可用提示。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。
 
-<img src="docs/screenshots/zh-TW/rules-light.png" alt="規則頁" width="100%">
+<img src="docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
 
 ## 資料與設定
 
@@ -144,7 +144,7 @@ doona 沒有供自身介面設定使用的伺服器端儲存空間。配置與�
 
 在 HTTPS 或 localhost 下，service worker 預先快取應用外殼，並快取字型與圖示，離線也能開頁面，網站可安裝成應用程式。API 回應一律不快取。安全問題的回報方式見 [SECURITY.md](SECURITY.md)。
 
-![深色模式的活動頁](docs/screenshots/zh-TW/activity-dark.png)
+![深色模式的活動頁](docs/screenshots/zh-TW/activity-dark.webp)
 
 ## 開發
 
@@ -159,7 +159,7 @@ pnpm e2e                         # 對模擬後端的瀏覽器測試，根目錄
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置擷取頁面截圖與配色總覽，輸出無失真的 WebP，需要安裝 `cwebp`。在產生對應的 WebP 前，現有截圖仍引用 PNG。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
+`pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置擷取頁面截圖與配色總覽，輸出無失真的 WebP，需要安裝 `cwebp`。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
 
 | 路徑            | 用途                                                 |
 | --------------- | ---------------------------------------------------- |

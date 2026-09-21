@@ -2,12 +2,10 @@ import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
 import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
-import {usePalette} from '../../ui/Charts';
 import {LifecycleActions} from './Lifecycle';
 export function Overview() {
   const t = useT();
   const vm = useOverview();
-  const palette = usePalette();
   return (
     <div className="rp-page">
       {vm.errors.capabilities && <ErrorMessage error={vm.errors.capabilities} />}
@@ -77,14 +75,7 @@ export function Overview() {
           {vm.errors.memory && <ErrorMessage error={vm.errors.memory} />}
           {vm.memory.state === 'ready' ? (
             <>
-              {vm.memory.bar && (
-                <Bar
-                  label={vm.memory.bar.label}
-                  value={vm.memory.bar.value}
-                  pct={vm.memory.bar.pct}
-                  color={{err: palette.love, warn: palette.gold, ok: palette.cat[0]}[vm.memory.bar.tone]}
-                />
-              )}
+              {vm.memory.bar && <Bar label={vm.memory.bar.label} value={vm.memory.bar.value} pct={vm.memory.bar.pct} color={vm.memory.bar.color} />}
               <Kv items={vm.memory.fields} />
             </>
           ) : vm.memory.state === 'loading' ? (

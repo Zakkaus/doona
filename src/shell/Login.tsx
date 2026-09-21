@@ -2,9 +2,9 @@ import {useT} from '../i18n';
 import {useLogin} from './useLogin';
 import {Button, Link, TextField} from '../ui/ui';
 
-export function Login({backend, rejected}: {backend: string; rejected: boolean}) {
+export function Login({profileId, backend, rejected}: {profileId: string; backend: string; rejected: boolean}) {
   const t = useT();
-  const view = useLogin(backend, rejected);
+  const view = useLogin(profileId, backend, rejected);
   return (
     <form
       className="rp-card rp-login"

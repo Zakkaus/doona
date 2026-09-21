@@ -1,4 +1,4 @@
-export type SseFrame = {id?: string; event: string; data: string};
+type SseFrame = {id?: string; event: string; data: string};
 
 /** Dispatch complete frames only; CRLF and UTF-8 may cross fetch chunks. */
 export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame: SseFrame) => void, signal?: AbortSignal): Promise<void> {

@@ -51,6 +51,7 @@ export const messages = defineMessages({
     'settings.about': '關於',
     'settings.actions': '後端操作',
     'settings.actionsNote': '此處集中提供各頁面的單次操作；僅在後端宣告支援對應功能時顯示按鈕。',
+    'settings.groupLifecycle': '服務',
     'settings.actionsNone': '此後端未宣告任何可執行的動作。',
     'settings.refreshAll': '重新整理全部訂閱（{n}）',
     'settings.refreshedAll': '已重新整理 {n} 筆訂閱，共 {total} 筆',
@@ -116,6 +117,7 @@ export const messages = defineMessages({
     'settings.about': '关于',
     'settings.actions': '后端操作',
     'settings.actionsNote': '此处集中提供各页面的单次操作；仅在后端声明支持对应功能时显示按钮。',
+    'settings.groupLifecycle': '服务',
     'settings.actionsNone': '此后端未声明任何可执行的动作。',
     'settings.refreshAll': '刷新全部订阅（{n}）',
     'settings.refreshedAll': '已刷新 {n} 条订阅，共 {total} 条',
@@ -182,6 +184,7 @@ export const messages = defineMessages({
     'settings.actions': 'Backend actions',
     'settings.actionsNote':
       'This section provides the individual actions available on other pages. Buttons appear only for capabilities advertised by the backend.',
+    'settings.groupLifecycle': 'Service',
     'settings.actionsNone': 'This backend advertises no action to run.',
     'settings.refreshAll': {one: 'Refresh subscription ({n})', other: 'Refresh all subscriptions ({n})'},
     'settings.refreshedAll': 'Subscriptions refreshed: {n} of {total}',

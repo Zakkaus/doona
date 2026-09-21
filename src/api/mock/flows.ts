@@ -2,7 +2,7 @@ import type {Connection, FlowDetail, FlowStep} from '../model';
 import {rules} from './rules';
 import {configRules} from './fixtures/configuration';
 
-export type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
+type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
 export type ConnectionSeed = Omit<Connection, keyof FlowFields>;
 
 export function flowFields(input: FlowDetail['input'], steps: FlowStep[]): FlowFields {

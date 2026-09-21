@@ -3,8 +3,8 @@ import type {Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
 import {features, navAvailable, subpages} from '../registry';
 
-export type SearchHit = {id: string; label: string; description: string | undefined; route: string; query: string};
-export type SearchView = {sections: Array<{id: string; title: string; items: SearchHit[]}>; byId: Map<string, SearchHit>};
+type SearchHit = {id: string; label: string; description: string | undefined; route: string; query: string};
+type SearchView = {sections: Array<{id: string; title: string; items: SearchHit[]}>; byId: Map<string, SearchHit>};
 export type SearchSources = {
   capabilities: {data: Capabilities | undefined};
   connections: {data: ConnectionList | undefined};

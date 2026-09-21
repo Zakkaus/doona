@@ -107,7 +107,7 @@ function ShellFrame(props: FrameProps) {
   return (
     <AboutContext.Provider value={view.about}>
       <Frame {...props} view={view} />
-      <Shortcuts go={props.go} openSearch={props.openSearch} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
+      <Shortcuts go={props.go} openSearch={props.openSearch} refresh={view.refresh} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
     </AboutContext.Provider>
   );
 }
@@ -233,7 +233,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           <ErrorMessage error={view.error} />
           <SettingsContext.Provider value={settingsValue}>
             {view.content.kind === 'login' ? (
-              <Login backend={view.content.backend} rejected={view.content.rejected} />
+              <Login profileId={view.content.profileId} backend={view.content.backend} rejected={view.content.rejected} />
             ) : view.content.kind === 'loading' ? (
               <Loading />
             ) : view.content.kind === 'unavailable' ? (

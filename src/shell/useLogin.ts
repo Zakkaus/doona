@@ -2,7 +2,9 @@ import {useState} from 'react';
 import {useT} from '../i18n';
 import {readProfiles, writeProfiles} from '../api/profiles';
 
-export function useLogin(backend: string, rejected: boolean) {
+// The token goes to the profile that raised the challenge, not to whichever profile is active by the time
+// the form is submitted.
+export function useLogin(profileId: string, backend: string, rejected: boolean) {
   const t = useT();
   const [token, setToken] = useState('');
   const [shown, setShown] = useState(false);
@@ -11,8 +13,8 @@ export function useLogin(backend: string, rejected: boolean) {
     if (!token.trim()) return;
     try {
       const {profiles, activeId} = readProfiles();
-      if (!profiles.some(profile => profile.id === activeId)) throw new Error('Missing active profile');
-      writeProfiles({profiles: profiles.map(item => (item.id === activeId ? {...item, token: token.trim()} : item)), activeId});
+      if (!profiles.some(profile => profile.id === profileId)) throw new Error('Missing profile');
+      writeProfiles({profiles: profiles.map(item => (item.id === profileId ? {...item, token: token.trim()} : item)), activeId});
     } catch {
       setFailed(true);
       return;

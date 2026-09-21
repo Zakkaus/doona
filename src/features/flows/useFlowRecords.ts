@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules} from '../../api/store';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../api/store';
 import {outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';
@@ -11,12 +11,12 @@ import {flowRecordsView} from './view';
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
-  const [network, setNetwork] = useState('all');
-  const [state, setState] = useState('all');
+  const [network, setNetwork] = useState<NonNullable<FlowFilter['network']>>('all');
+  const [state, setState] = useState<NonNullable<FlowFilter['state']>>('all');
   const wide = useMediaQuery(panelQuery);
   const params = new URLSearchParams(query);
   const connectionId = params.get('connection_id') ?? undefined;
-  const resource = useFlows(connectionId);
+  const resource = useFlows({connection_id: connectionId, network, state});
   const resources = useCapabilities().data?.resources;
   const rulesListed = resources?.rules.available === true;
   const rules = useRules(rulesListed);
@@ -26,16 +26,14 @@ export function useFlowRecords({go, query}: PageProps) {
   const detail = useFlow(id);
   const pinned = params.get('path');
   const all = resource.data?.flows ?? [];
-  const shown = (pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all).filter(
-    flow => (network === 'all' || flow.network === network) && (state === 'all' || flow.state === state)
-  );
+  const shown = pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all;
   const view = flowRecordsView(shown, detail.data ?? undefined, resource.data, names, canAdd, t, lang);
   return {
     ...view,
     network,
-    setNetwork,
+    setNetwork: (value: string) => setNetwork(value as NonNullable<FlowFilter['network']>),
     state,
-    setState,
+    setState: (value: string) => setState(value as NonNullable<FlowFilter['state']>),
     wide,
     id,
     rulesListed,

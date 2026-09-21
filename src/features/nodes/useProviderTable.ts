@@ -6,7 +6,7 @@ import type {MainSourceEdit} from '../config/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
 
-export type ProviderTableInput = {
+type ProviderTableInput = {
   rows: ProviderRow[];
   loading: boolean;
   selected: string | null;

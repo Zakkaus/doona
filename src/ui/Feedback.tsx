@@ -83,8 +83,7 @@ export function Badge({children, tone, className}: {children: ReactNode; tone?: 
   return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
 }
 
-// `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
-// A third element is the full value behind a shortened one, shown as a tooltip.
+// `row` keeps label and value on one line; a third element is the full value, shown as a tooltip.
 export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
   return (
     <div className={cx('rp-kv', (inline || row) && 'inline', row && 'row')}>
@@ -104,9 +103,7 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
   );
 }
 
-// Toasts: react-aria's queue, rendered once by the shell as S2's ToastContainer does: the newest in front with
-// the rest stacked behind it, and a "show all" that lays them out as a list over an underlay. Timers pause
-// while the region is hovered or focused and while the list is open.
+// Toasts: react-aria's queue rendered like S2's ToastContainer; timers pause while hovered, focused or listed.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastMessage = {kind: ToastKind; text: string};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});

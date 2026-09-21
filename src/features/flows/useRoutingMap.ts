@@ -9,7 +9,7 @@ import {routingMapView} from './view';
 export function useRoutingMap({go, query}: PageProps) {
   const t = useT();
   const params = new URLSearchParams(query);
-  const resource = useFlows(undefined);
+  const resource = useFlows();
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);

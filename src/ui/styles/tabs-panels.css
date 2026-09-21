@@ -1,4 +1,4 @@
-/* ---- Tabs: an underlined tab strip that shares the segmented control's sliding marker. ---- */
+/* Tabs share the segmented control's sliding marker. */
 .rp-tabs {
   display: flex;
   flex-direction: column;

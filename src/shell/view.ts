@@ -14,9 +14,6 @@ export type AboutView = {
   quack: string;
   tagline: string;
   credits: string;
-  engineText: string;
-  apiText: string;
-  contractText: string;
   versionText: string;
   items: Array<[string, string]>;
   repositories: Array<{href: string; label: string}>;
@@ -36,7 +33,7 @@ export type ShellView = {
   groups: Array<{id: string; label: string; items: NavItem[]}>;
   choices: Array<{id: string; label: string; desc: string | undefined}>;
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
-  content: {kind: 'login'; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
+  content: {kind: 'login'; profileId: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
   error: Error | null;
   engine: {text: string; href: string};
@@ -80,7 +77,7 @@ export function shellView(
   const needsToken = capabilityError instanceof ApiError && (capabilityError.status === 401 || capabilityError.status === 403);
   const content: ShellView['content'] =
     needsToken && feature.id !== 'settings'
-      ? {kind: 'login', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
+      ? {kind: 'login', profileId: profile?.id ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
       : !capabilities && !capabilityError && feature.id !== 'settings'
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)
@@ -119,9 +116,6 @@ export function shellView(
       quack: t('about.quack'),
       tagline: t('about.tagline', {engine: org.split('/').pop()!}),
       credits: t('about.credits'),
-      engineText: engineText + build,
-      apiText,
-      contractText,
       versionText: `v${import.meta.env.VITE_DOONA_VERSION}`,
       items: [
         [t('about.engine'), engineText + build],

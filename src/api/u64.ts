@@ -1,4 +1,4 @@
-export type U64 = string | bigint | null;
+type U64 = string | bigint | null;
 const MAX = (1n << 64n) - 1n;
 
 export function parseU64(s: string | null): bigint | null {

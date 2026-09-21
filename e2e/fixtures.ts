@@ -8,7 +8,7 @@ export const routes = ['activity', 'overview', 'connections', 'dns', 'policies',
 const env = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env ?? {};
 const live = env.DOONA_API ? {'doona-api': env.DOONA_API, 'doona-api-token': env.DOONA_TOKEN ?? ''} : {};
 
-// A live backend hides the pages it has no capability for and may have nothing to list; the mock offers every page.
+// A live backend marks the pages it has no capability for unavailable and may have nothing to list; the mock offers every page.
 export const isLive = !!env.DOONA_API;
 export const offered = async (page: Page, route: string) => {
   if (!isLive) return true;

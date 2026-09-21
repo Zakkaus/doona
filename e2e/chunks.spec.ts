@@ -19,7 +19,6 @@ for (const route of routes) {
     await page.goto('/#/activity');
     await expect(page.locator('.rp-strip')).toBeVisible();
     await page.waitForLoadState('networkidle');
-    const initialScripts = new Set(scripts);
 
     await page.evaluate(route => {
       location.hash = `#/${route}`;
@@ -30,8 +29,13 @@ for (const route of routes) {
     await expect(page.locator(content)).toBeVisible();
     await page.waitForLoadState('networkidle');
 
+    // Each page is its own chunk, fetched during idle time after the first page or on navigation.
     if (route !== 'activity') {
-      expect([...scripts].filter(url => !initialScripts.has(url)).length, 'New lazy-route JS requests').toBeGreaterThanOrEqual(1);
+      const chunk = route[0].toUpperCase() + route.slice(1);
+      expect(
+        [...scripts].some(url => new RegExp(`/${chunk}-[^/]+\\.js$`).test(url)),
+        `${chunk} chunk requested`
+      ).toBe(true);
     }
     expect(failedResponses, 'Non-2xx responses').toHaveLength(0);
     expect(failedRequests, 'Failed requests').toHaveLength(0);
@@ -39,25 +43,26 @@ for (const route of routes) {
 }
 
 test('slow page chunks delay the loading treatment without hiding the frame', async ({page}) => {
-  await page.goto('/#/activity');
-  await page.waitForLoadState('networkidle');
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  // The gate is up before the shell warms the page chunks, so the policies chunk stays in flight.
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
   await page.route('**/assets/Policies-*.js', async route => {
     await gate;
     await route.continue();
   });
+  const requested = page.waitForRequest('**/assets/Policies-*.js');
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-strip')).toBeVisible();
+  await requested;
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
   const frame = page.locator('.rp-top, .rp-side, .rp-head');
   const bounds = () => frame.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
   const before = await bounds();
   try {
-    const requested = page.waitForRequest('**/assets/Policies-*.js');
     await page.evaluate(() => {
       location.hash = '#/policies';
     });
-    await requested;
     await expect(page.locator('.rp-nav[href="#/policies"]')).toHaveAttribute('aria-current', 'page');
     const fallback = page.locator('.rp-content > .rp-empty');
     await page.clock.runFor(149);

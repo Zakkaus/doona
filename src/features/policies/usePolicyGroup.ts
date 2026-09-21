@@ -25,7 +25,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (control.actionError) toast('negative', errorText(control.actionError));
   }, [control.actionError]);
   const g = control.data;
-  const members = useMemo(() => memberViews(memberHealth(g, health)), [g, health]);
+  const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, entry);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;

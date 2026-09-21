@@ -35,8 +35,8 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 5}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
-export type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
-export type TableRow = {id: string; connection: Connection} | GroupRow;
+type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
+type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = 'doona-connections-view';
 
 export function readView(stored: string | null): ConnectionView {
@@ -118,7 +118,7 @@ export type ConnectionRowView = {
   download: string;
   age: string;
 };
-export type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
+type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
 export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
 export function connectionTableView(
   rows: Connection[],

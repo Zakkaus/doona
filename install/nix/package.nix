@@ -20,7 +20,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   src = fetchFromGitHub {
     owner = "Zakkaus";
     repo = "doona";
-    tag = "v${finalAttrs.version}";
+    # The release tag follows honk's shape: dots, no hyphen.
+    tag = "v0.1.0-beta.1";
     hash = lib.fakeHash; # Placeholder: replace with the published tag's source hash.
   };
 

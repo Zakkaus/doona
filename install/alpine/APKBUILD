@@ -1,14 +1,15 @@
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0-beta.1
+pkgver=0.1.0_beta1
+_tag=v0.1.0-beta.1
 pkgrel=0
 pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
 license="GPL-3.0-only"
 subpackages="$pkgname-fonts:fonts:noarch"
-source="$pkgname-v$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-v$pkgver.tar.gz
-	$pkgname-fonts-v$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-fonts-v$pkgver.tar.gz
+source="$pkgname-$_tag.tar.gz::$url/releases/download/$_tag/$pkgname-$_tag.tar.gz
+	$pkgname-fonts-$_tag.tar.gz::$url/releases/download/$_tag/$pkgname-fonts-$_tag.tar.gz
 	"
 options="!check" # static files
 builddir="$srcdir"
@@ -16,8 +17,8 @@ builddir="$srcdir"
 # Both archives hold their files at the root: unpack each into its own directory.
 unpack() {
 	mkdir -p "$srcdir"/web "$srcdir"/fonts
-	tar -xzf "$srcdir"/$pkgname-v$pkgver.tar.gz -C "$srcdir"/web
-	tar -xzf "$srcdir"/$pkgname-fonts-v$pkgver.tar.gz -C "$srcdir"/fonts
+	tar -xzf "$srcdir"/$pkgname-$_tag.tar.gz -C "$srcdir"/web
+	tar -xzf "$srcdir"/$pkgname-fonts-$_tag.tar.gz -C "$srcdir"/fonts
 }
 
 package() {

@@ -70,7 +70,7 @@ test('a consumed rule seed keeps edits across generation misalignment and accept
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(values).toHaveValue('edited.example');
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+  await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect(values).toHaveValue('edited.example');
   await page.evaluate(() => {
     location.hash = '/rules?tab=list&add=dip:2001:db8::1';

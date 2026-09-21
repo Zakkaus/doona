@@ -27,8 +27,8 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
     hasContent: source.content !== undefined
   };
 }
-export type SourceView = {id: string; label: string; kind: string; editable: string; tone: 'ok' | 'muted'; facts: string; hasContent: boolean};
-export type DiagnosticRow = {
+type SourceView = {id: string; label: string; kind: string; editable: string; tone: 'ok' | 'muted'; facts: string; hasContent: boolean};
+type DiagnosticRow = {
   id: string;
   level: ConfigDiagnostic['level'];
   tone: 'err' | 'warn' | 'info';
@@ -41,7 +41,7 @@ export type DiagnosticRow = {
   inline: string;
   detail: string;
 };
-export type WizardRow = {index: number; name: string; url: string; raw: string | null; error?: string; description?: string; removeLabel: string};
+type WizardRow = {index: number; name: string; url: string; raw: string | null; error?: string; description?: string; removeLabel: string};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {

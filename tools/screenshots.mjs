@@ -1,13 +1,10 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync} from 'node:fs';
+import {mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync('.cache/pw-browsers')) {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = '.cache/pw-browsers';
-}
 const require = createRequire(import.meta.url);
 let browserModule;
 try {
@@ -22,8 +19,7 @@ const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules?tab=list'],
-  ['nodes', 'light', '#/nodes']
+  ['rules', 'light', '#/rules?tab=map']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
