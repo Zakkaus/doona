@@ -25,9 +25,9 @@ test('profiles add, rename, save on switch, and delete without losing the route'
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
   await page.getByRole('button', {name: 'Delete profile', exact: true}).click();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('alertdialog')).toBeHidden();
+  await expect(page.getByRole('alertdialog', {name: 'Delete profile'})).toBeHidden();
   await page.getByRole('button', {name: 'Delete profile', exact: true}).click();
-  await Promise.all([page.waitForEvent('load'), page.getByRole('alertdialog').getByRole('button', {name: 'Delete profile'}).click()]);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('alertdialog', {name: 'Delete profile'}).getByRole('button', {name: 'Delete profile'}).click()]);
   await expect(page.locator('[name=token]')).toHaveValue('office-secret');
   await page.getByRole('button', {name: 'Delete profile', exact: true}).click();
   await Promise.all([page.waitForEvent('load'), page.getByRole('alertdialog').getByRole('button', {name: 'Delete profile'}).click()]);

@@ -1,4 +1,5 @@
 import {
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -15,6 +16,12 @@ import {flushSync} from 'react-dom';
 import {
   Button as RButton,
   Link as RLink,
+  UNSTABLE_Toast as RToast,
+  UNSTABLE_ToastContent as ToastContent,
+  UNSTABLE_ToastList as ToastList,
+  UNSTABLE_ToastQueue as ToastQueue,
+  UNSTABLE_ToastRegion as ToastRegion,
+  UNSTABLE_ToastStateContext as ToastStateContext,
   ToggleButton,
   ToggleButtonGroup,
   Menu,
@@ -60,7 +67,8 @@ import {
   Dialog,
   Heading,
   type Key,
-  type Selection
+  type Selection,
+  type ToastState
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
@@ -912,71 +920,27 @@ export function ModalDialog({
 // the rest stacked behind it, and a "show all" that lays them out as a list over an underlay. Timers pause
 // while the region is hovered or focused and while the list is open.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
-type ToastItem = {id: number; kind: ToastKind; msg: string; exiting?: boolean; timer?: ReturnType<typeof setTimeout>; left: number; since: number};
-let listeners: Array<(t: ToastItem[]) => void> = [];
-let queue: ToastItem[] = [];
-let seq = 0;
-let paused = false;
-const publish = () => listeners.forEach(l => l(queue));
-const EXIT_MS = 400;
-const TIMEOUT_MS = 5000;
-const arm = (t: ToastItem) => {
-  t.since = Date.now();
-  t.timer = setTimeout(() => dismiss(t.id), t.left);
-};
-const disarm = (t: ToastItem) => {
-  if (t.timer) {
-    clearTimeout(t.timer);
-    t.timer = undefined;
-    t.left = Math.max(1000, t.left - (Date.now() - t.since));
-  }
-};
-const setPaused = (p: boolean) => {
-  if (p === paused) return;
-  paused = p;
-  queue.forEach(t => {
-    if (t.exiting) return;
-    if (p) disarm(t);
-    else if (!t.timer) arm(t);
-  });
-};
-const dismiss = (id: number) => {
-  const t = queue.find(t => t.id === id);
-  if (!t || t.exiting) return;
-  disarm(t);
-  queue = queue.map(x => (x.id === id ? {...x, exiting: true} : x));
-  publish();
-  setTimeout(() => {
-    queue = queue.filter(x => x.id !== id);
-    publish();
-  }, EXIT_MS);
-};
-const clearAll = () => queue.forEach(t => dismiss(t.id));
-export const toast = (kind: ToastKind, msg: string) => {
-  const t: ToastItem = {id: ++seq, kind, msg, left: TIMEOUT_MS, since: Date.now()};
-  if (!paused) arm(t);
-  queue = [...queue, t];
-  publish();
+type ToastMessage = {kind: ToastKind; text: string};
+const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
+export const toast = (kind: ToastKind, text: string) => {
+  toasts.add({kind, text}, {timeout: 5000});
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 export function Toasts() {
-  const tr = useT();
-  const [items, setItems] = useState(queue);
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
-    const listener = (items: ToastItem[]) => {
-      setItems(items);
-      if (!items.some(t => !t.exiting)) setExpanded(false);
-    };
-    listeners.push(listener);
-    return () => {
-      listeners = listeners.filter(l => l !== listener);
-    };
-  }, []);
-  const live = items.filter(t => !t.exiting);
-  useEffect(() => {
-    setPaused(expanded);
+    if (expanded) toasts.pauseAll();
+    else toasts.resumeAll();
   }, [expanded]);
+  // The list closes with its last toast; the region itself unmounts then.
+  useEffect(
+    () =>
+      toasts.subscribe(() => {
+        if (toasts.visibleToasts.length === 0) setExpanded(false);
+      }),
+    []
+  );
   useEffect(() => {
     if (!expanded) return;
     const on = (e: KeyboardEvent) => {
@@ -985,64 +949,61 @@ export function Toasts() {
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
   }, [expanded]);
-  if (items.length === 0) return null;
-  // Newest first: index 0 is the main toast, the rest stack behind it when collapsed.
-  const ordered = [...items].reverse();
   return (
-    <>
-      {expanded && <RButton className="rp-toast-underlay" aria-label={tr('toast.collapse')} onPress={() => setExpanded(false)} />}
-      <div
-        className={cx('rp-toasts', expanded && 'expanded')}
-        role="region"
-        aria-live="polite"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => {
-          if (!expanded) setPaused(false);
-        }}
-      >
-        {expanded && (
-          <div className="rp-toast-controls">
-            <RButton className="rp-btn sm" onPress={clearAll}>
-              {tr('toast.clearAll')}
-            </RButton>
-            <RButton className="rp-btn sm" onPress={() => setExpanded(false)}>
-              {tr('toast.collapse')}
-            </RButton>
-          </div>
-        )}
-        <div className="rp-toast-list">
-          {ordered.map((t, i) => {
-            const idx = t.exiting ? 0 : live.length - 1 - live.indexOf(t);
-            const Icon = TOAST_ICON[t.kind];
-            const background = !expanded && idx > 0;
-            return (
-              <div
-                key={t.id}
-                className={cx('rp-toast', t.kind, t.exiting && 'exiting', background && 'background')}
-                style={{zIndex: ordered.length - i, '--i': Math.min(idx, 3)} as CSSProperties}
-                aria-hidden={background || undefined}
-                inert={background || t.exiting || undefined}
-              >
-                <div className="main">
-                  <span className="body">
-                    {Icon && <Icon />}
-                    <span className="grow">{t.msg}</span>
-                  </span>
-                  {!expanded && idx === 0 && live.length > 1 && (
-                    <RButton className="rp-btn sm quiet more" onPress={() => setExpanded(true)}>
-                      {tr('toast.showAllCount', {n: live.length})}
-                    </RButton>
-                  )}
-                </div>
-                <RButton className="rp-btn quiet icon close" aria-label={tr('close')} onPress={() => dismiss(t.id)}>
-                  <Close />
-                </RButton>
-              </div>
-            );
-          })}
+    <ToastRegion queue={toasts} className={cx('rp-toasts', expanded && 'expanded')}>
+      {expanded && <RButton className="rp-toast-underlay" aria-label={t('toast.collapse')} onPress={() => setExpanded(false)} />}
+      {expanded && (
+        <div className="rp-toast-controls">
+          <RButton className="rp-btn sm" onPress={() => toasts.clear()}>
+            {t('toast.clearAll')}
+          </RButton>
+          <RButton className="rp-btn sm" onPress={() => setExpanded(false)}>
+            {t('toast.collapse')}
+          </RButton>
         </div>
-      </div>
-    </>
+      )}
+      <ToastStack expanded={expanded} onExpand={() => setExpanded(true)} />
+    </ToastRegion>
+  );
+}
+function ToastStack({expanded, onExpand}: {expanded: boolean; onExpand: () => void}) {
+  const t = useT();
+  const state = useContext(ToastStateContext) as ToastState<ToastMessage>;
+  const visible = state.visibleToasts;
+  return (
+    <ToastList<ToastMessage> className="rp-toast-list">
+      {({toast: item}) => {
+        // The queue lists the newest first; behind it, the depth sets a toast's offset and scale.
+        const depth = visible.indexOf(item);
+        const background = !expanded && depth > 0;
+        const Icon = TOAST_ICON[item.content.kind];
+        return (
+          <RToast
+            toast={item}
+            className={cx('rp-toast', item.content.kind, background && 'background')}
+            style={{zIndex: visible.length - depth, '--i': Math.min(depth, 3)} as CSSProperties}
+            inert={background || undefined}
+          >
+            <div className="main">
+              <ToastContent className="body">
+                {Icon && <Icon />}
+                <Text slot="title" className="grow">
+                  {item.content.text}
+                </Text>
+              </ToastContent>
+              {!expanded && depth === 0 && visible.length > 1 && (
+                <RButton className="rp-btn sm quiet more" onPress={onExpand}>
+                  {t('toast.showAllCount', {n: visible.length})}
+                </RButton>
+              )}
+            </div>
+            <RButton slot="close" className="rp-btn quiet icon close" aria-label={t('close')}>
+              <Close />
+            </RButton>
+          </RToast>
+        );
+      }}
+    </ToastList>
   );
 }
 
