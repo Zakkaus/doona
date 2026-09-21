@@ -43,8 +43,8 @@
   --rp-sheet: rgba(0, 0, 0, 0.18);
   --rp-sheet-rim: rgba(255, 255, 255, 0.08);
   --rp-row-hover: rgba(255, 255, 255, 0.05);
-  --rp-knob: rgba(120, 120, 128, 0.62);
-  --rp-knob-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.45);
+  --rp-knob: rgba(255, 255, 255, 0.16);
+  --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   --rp-bg:
     radial-gradient(circle 320px at 24% 26%, rgba(46, 84, 230, 0.7) 0 22%, rgba(46, 84, 230, 0) 70%),
     radial-gradient(circle 280px at 74% 18%, rgba(150, 50, 140, 0.6) 0 20%, rgba(150, 50, 140, 0) 70%),
@@ -97,8 +97,8 @@
   --rp-sheet: rgba(255, 255, 255, 0.14);
   --rp-sheet-rim: rgba(255, 255, 255, 0.35);
   --rp-row-hover: rgba(255, 255, 255, 0.18);
-  --rp-knob: rgba(255, 255, 255, 0.85);
-  --rp-knob-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18);
+  --rp-knob: rgba(255, 255, 255, 0.5);
+  --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   --rp-bg:
     radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
     radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
@@ -330,6 +330,7 @@
   background: var(--rp-knob);
   border-color: transparent;
   box-shadow: var(--rp-knob-shadow);
+  backdrop-filter: blur(12px);
 }
 :root[data-family='glass'] .rp-switch .track {
   background: var(--rp-track);
