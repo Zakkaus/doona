@@ -1,6 +1,5 @@
-import {useMemo, useState} from 'react';
+import {lazy, Suspense, useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
-import {FlowMap} from './FlowMap';
 import {flowMap, flowsThrough, nodeNames} from './map';
 import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
 import {flowStepFields, traceGaps} from './view';
@@ -27,6 +26,8 @@ import {buildHash, within} from '../../shell/route';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import Close from '../../ui/icons/Close';
+
+const Topology = lazy(() => import('./Topology'));
 
 const stages: Record<string, Key> = {
   input: 'flow.stage.input',
@@ -66,12 +67,20 @@ export function RoutingMap({go, query}: PageProps) {
           rules.refetch();
         }}
       />
-      {resource.data || groups.data ? (
-        <FlowMap map={map} groups={groups.data ?? []} nodes={nodes.data ?? []} pinned={pinned} onPin={setPinned} />
-      ) : resource.error || groups.error ? null : (
-        <Loading />
-      )}
-      {resource.data && !resource.data.flows.length && <Empty>{t('flow.mapEmpty')}</Empty>}
+      <section className="rp-card rp-topology" aria-label={t('flow.topology')}>
+        <h2 className="rp-label">{t('flow.topology')}</h2>
+        {!resource.data ? (
+          resource.error ? null : (
+            <Loading />
+          )
+        ) : !resource.data.flows.length ? (
+          <Empty>{t('flow.mapEmpty')}</Empty>
+        ) : (
+          <Suspense fallback={<Loading />}>
+            <Topology map={map} pinned={pinned} onPin={setPinned} />
+          </Suspense>
+        )}
+      </section>
       {pinned && (
         <div className="rp-toolbar">
           <Button small onPress={() => go('rules', within(query, {tab: 'flows'}))}>
@@ -106,8 +115,7 @@ export function FlowRecords({go, query}: PageProps) {
   const select = (value: string | null) => go('rules', within(query, {id: value}));
   const pinned = params.get('path');
   const setPinned = (value: string | null) => go('rules', within(query, {path: value}));
-  // A pinned map item is `stage:label`; the label is all the chip needs.
-  const pinnedLabel = pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
+  const pinnedLabel = pinned?.startsWith('others:') ? t('flow.others') : pinned ? pinned.slice(pinned.indexOf(':') + 1) : null;
   const all = resource.data?.flows ?? [];
   const shown = (pinned ? flowsThrough(all, pinned, names) : all).filter(
     f => (network === 'all' || f.network === network) && (state === 'all' || f.state === state)
