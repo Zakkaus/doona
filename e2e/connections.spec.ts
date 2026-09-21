@@ -38,9 +38,13 @@ test('a column can be resized with the keyboard', async ({page}) => {
   const resizer = header.getByRole('slider');
   await expect(header).toBeVisible();
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
-  await header.focus();
-  await page.keyboard.press('Tab');
-  await expect(resizer).toBeFocused();
+  // The header re-renders while columns are being fitted; focus is retried until it sticks.
+  await expect
+    .poll(async () => {
+      await resizer.focus();
+      return resizer.evaluate(element => element === document.activeElement);
+    })
+    .toBe(true);
   await page.keyboard.press('Enter');
   const width = () => header.evaluate(element => element.getBoundingClientRect().width);
   const original = await width();

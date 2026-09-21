@@ -139,8 +139,9 @@ test.describe('many outbounds', () => {
     await expect(trigger).toContainText(name!);
     await expect(trigger).toBeFocused();
     await trigger.click();
-    await expect(menu.getByRole('menuitemradio', {name: new RegExp(name!)})).toHaveAttribute('aria-checked', 'true');
+    // The virtual list renders the selected row only once the filter narrows it into view.
     await search.fill(name!);
+    await expect(menu.getByRole('menuitemradio', {name: new RegExp(name!)})).toHaveAttribute('aria-checked', 'true');
     await expect(menu.locator('.desc')).toHaveText(health);
     await page.keyboard.press('Escape');
     await expect(search).toHaveValue('');
