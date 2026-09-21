@@ -37,12 +37,12 @@ export function useRoutingTrace() {
               ? {field: 'dst_ip', key: 'rule.invalidLive'}
               : null;
   const resource = capabilities.data?.resources.routing_trace;
-  // honk simulates without resolving; when it also answers DNS diagnostics, doona resolves the name through
-  // `/dns/query` and simulates each address itself, the `query` mode.
-  const backendModes: TraceResolve[] = resource?.resolve_modes ?? ['none', 'live'];
+  const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
+  const dnsQuery = capabilities.data?.resources.dns_query;
+  const recordTypes = (dnsQuery?.record_types ?? []).filter(type => type === 'A' || type === 'AAAA');
   const modes: TraceResolve[] = [
     ...backendModes,
-    ...(backendModes.includes('live') || capabilities.data?.resources.dns_query.available !== true ? [] : ['query' as const])
+    ...(!backendModes.includes('live') && backendModes.includes('none') && dnsQuery?.available && recordTypes.length ? ['query' as const] : [])
   ];
   const available = resource?.available !== false;
   const named = form.domain.trim() !== '' && !form.dst_ip.trim();
@@ -62,9 +62,7 @@ export function useRoutingTrace() {
     if (form.pname.trim()) input.pname = form.pname.trim();
     const response = await run('trace', async signal => {
       if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
-      // The name resolved through the engine's own DNS, then one simulation per address family; the answers are
-      // reported the way a backend resolution would be, so the page reads them alike.
-      const lookup = await api.dnsQuery(input.domain!, ['A', 'AAAA'], signal);
+      const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
       const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
         lookup_id: `query:${item.type}`,
         parent_lookup_id: null,
@@ -93,7 +91,7 @@ export function useRoutingTrace() {
       return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
     });
     if (response) setResult(response);
-  }, [api, busy, canSubmit, form, resolve, run]);
+  }, [api, busy, canSubmit, form, resolve, recordTypes, run]);
   return {form, resolve, setForm, result, error: error ?? capabilities.error, busy: busy !== null, submit, invalid, available, modes};
 }
 
@@ -103,31 +101,27 @@ export function useFlows(connection_id?: string, enabled = true) {
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
   return useResource(
     {
-      key: ['flows', {connection_id}],
+      key: ['flows', {connection_id, limit}],
+      every: 15000,
       fetch: signal =>
         walk(
           cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit, detail: 'full'}, signal),
           (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
         )
     },
-    // Every list request opens a bounded snapshot on the backend (honk keeps eight for 30 s), so this polls at
-    // a third of the usual cadence; events still refetch it the moment a flow changes.
-    {deps: [api, connection_id, limit], enabled, every: 15000}
+    {enabled}
   );
 }
 
 export function useFlow(id: string | null) {
   const api = getApi();
-  return useResource(
-    {
-      key: ['flow', {id}],
-      fetch: signal => (id ? api.flow(id, signal) : Promise.resolve(null)),
-      acceptEvent: event => event.event !== 'flow.updated' || event.data.resource_id === id
-    },
-    {deps: [api, id]}
-  );
+  return useResource({
+    key: ['flow', {id}],
+    fetch: signal => (id ? api.flow(id, signal) : Promise.resolve(null)),
+    acceptEvent: event => event.event !== 'flow.updated' || event.data.resource_id === id
+  });
 }
 export function useRules(enabled = true) {
   const api = getApi();
-  return useResource({key: ['rules'], fetch: signal => api.rules(signal)}, {deps: [api], enabled, every: 0});
+  return useResource({key: ['rules'], every: 0, fetch: signal => api.rules(signal)}, {enabled});
 }

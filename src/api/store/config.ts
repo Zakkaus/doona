@@ -5,7 +5,7 @@ import {useResource} from './resource';
 import {etag, finished, useAction} from './action';
 export function useConfig(enabled = true) {
   const api = getApi();
-  return useResource({key: ['config'], fetch: signal => api.config(signal)}, {deps: [api], enabled, every: 0});
+  return useResource({key: ['config'], every: 0, fetch: signal => api.config(signal)}, {enabled});
 }
 // Save through optional full validation and single-source replacement; 422 details carry diagnostics. rethrow also rejects for callers that report failures themselves.
 export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {

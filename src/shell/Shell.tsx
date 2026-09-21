@@ -23,7 +23,6 @@ import {
   Loading,
   errorText,
   toast,
-  visibleErrors,
   useSlider,
   withCrossfade,
   Empty,
@@ -380,14 +379,6 @@ function Frame({
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
   const refreshLock = useRef(false);
-  const [refreshed, setRefreshed] = useState(0);
-  const announcedRefresh = useRef(0);
-  useEffect(() => {
-    if (refreshed === announcedRefresh.current) return;
-    announcedRefresh.current = refreshed;
-    const error = visibleErrors.values().next().value;
-    toast(error ? 'negative' : 'positive', error ? t('ui.refreshFailed', {error: errorText(error)}) : t('ui.refreshed'));
-  }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
   // A 401 or 403 from the capability probe means the backend wants a token; the page yields to the login form.
@@ -430,8 +421,9 @@ function Frame({
               refreshLock.current = true;
               setSpinning(true);
               try {
-                await refetchAll();
-                setRefreshed(value => value + 1);
+                const outcomes = await refetchAll();
+                const failure = outcomes.find(outcome => !outcome.ok);
+                toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure.error)}) : t('ui.refreshed'));
               } finally {
                 refreshLock.current = false;
                 setSpinning(false);

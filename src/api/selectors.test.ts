@@ -12,7 +12,7 @@ const gap = (reason: string, resource_id: string | null): ApiEvent =>
 it('treats the ring making room as housekeeping and a record losing its history as a gap', () => {
   expect(routineGap(gap('evicted', null))).toBe(true);
   expect(routineGap(gap('sampled', null))).toBe(true);
-  expect(routineGap(gap('buffer_overflow', null))).toBe(true);
+  expect(routineGap(gap('buffer_overflow', null))).toBe(false);
   expect(routineGap(gap('buffer_overflow', 'flow-1'))).toBe(false);
   expect(routineGap(gap('recording_changed', null))).toBe(false);
   expect(routineGap({id: 'y', event: 'stream.ready', data: {instance_id: 'i', observed_at: ''}} as ApiEvent)).toBe(false);

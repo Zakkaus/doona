@@ -101,6 +101,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
     counts[path] = (counts[path] ?? 0) + 1;
     if (path === '/version') await hold;
     if (path === '/runtime' && brokenRuntime) return route.fulfill({contentType: 'application/json', body: '{'});
+    if (path === '/dns/query') return route.fulfill({contentType: 'application/json', body: '{'});
     await route.fulfill({json: responses[path]});
   });
   await page.goto('/#/activity');
@@ -144,4 +145,16 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');
+  await page.goto('/#/dns');
+  await page.clock.fastForward(6000);
+  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  await page.getByRole('textbox', {name: 'Domain', exact: true}).fill('example.com');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  const actionError = page.locator('.rp-content').getByRole('alert');
+  await expect(actionError).toBeVisible();
+  const actionFailure = await actionError.textContent();
+  await refresh.click();
+  await expect(refresh).not.toHaveAttribute('data-pending');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed.');
+  await expect(actionError).toHaveText(actionFailure!);
 });

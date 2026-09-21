@@ -1,10 +1,23 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import * as apiSelection from '../index';
-import {normalizeResourceKey} from '../inflight';
+import type {Api} from '../api';
+import {normalizeResourceKey, type ResourceKey} from '../inflight';
 import {createMockApi} from '../mock';
 import {version} from '../mock/fixtures';
 import type {Version} from '../model';
-import {refetchAll, watchResource} from './resource';
+import {refetchAll, watchResource as subscribeResource} from './resource';
+
+vi.mock('./events', () => ({subscribeEvents: () => () => {}}));
+
+function watchResource(
+  {api, key, every}: {api: Api; key: ResourceKey; every: number},
+  fetch: (signal: AbortSignal) => Promise<Version>,
+  publish: (state: {data: Version | undefined; loading: boolean; error: Error | null}) => void
+) {
+  const resource = subscribeResource(api, {key, every, fetch}, () => publish(resource.getSnapshot()));
+  if (resource.getSnapshot().loading) publish(resource.getSnapshot());
+  return resource;
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -41,7 +54,7 @@ function consumer(every = 5000) {
   const response = deferred<Version>();
   const fetch = vi.spyOn(api, 'version').mockImplementation(() => response.promise);
   const publish = vi.fn();
-  const key = {api, name: normalizeResourceKey(['version']), every, parameterised: false};
+  const key = {api, key: ['version'] as ResourceKey, every};
   const watcher = watchResource(key, signal => api.version(signal), publish);
   disposers.push(watcher.dispose);
   return {api, key, response, fetch, publish, ...watcher};
@@ -75,8 +88,8 @@ it('shows loading only until data exists and keeps refresh promises pending thro
   const error = new Error('Offline');
   failure.reject(error);
   await all;
-  await expect(single).resolves.toBeUndefined();
-  expect(allDone).toHaveBeenCalledOnce();
+  await expect(single).resolves.toEqual({key: normalizeResourceKey(['version']), ok: false, error});
+  expect(allDone).toHaveBeenCalledExactlyOnceWith([{key: normalizeResourceKey(['version']), ok: false, error}]);
   expect(resource.publish).toHaveBeenLastCalledWith({data: updated, loading: false, error});
   resource.fetch.mockResolvedValue(updated);
   await refetchAll();
@@ -90,7 +103,7 @@ it('starts a changed key in loading state and ignores a disposed key’s late re
   expect(resource.fetch.mock.calls[0][0]!.aborted).toBe(true);
   const next = deferred<Version>();
   const publish = vi.fn();
-  const replacement = watchResource({...resource.key, name: normalizeResourceKey(['version', {id: 'new'}]), parameterised: true}, () => next.promise, publish);
+  const replacement = watchResource({...resource.key, key: ['version', {id: 'new'}]}, () => next.promise, publish);
   disposers.push(replacement.dispose);
   expect(publish).toHaveBeenLastCalledWith({data: undefined, loading: true, error: null});
   resource.publish.mockClear();
@@ -110,7 +123,7 @@ it('does not carry data across keys or flash loading when remounting a remembere
   resource.dispose();
   const next = deferred<Version>();
   const publish = vi.fn();
-  const changed = watchResource({...resource.key, name: normalizeResourceKey(['version', {id: 'new'}]), parameterised: true}, () => next.promise, publish);
+  const changed = watchResource({...resource.key, key: ['version', {id: 'new'}]}, () => next.promise, publish);
   disposers.push(changed.dispose);
   expect(publish).toHaveBeenLastCalledWith({data: undefined, loading: true, error: null});
   changed.dispose();

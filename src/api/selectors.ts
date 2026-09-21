@@ -427,8 +427,8 @@ export const eventKindLabels: Record<EventKind, Key> = {
 // Suppress routine eviction and sampling gaps; report lost history or recording-scope changes.
 export function routineGap(event: ApiEvent): boolean {
   if (event.event !== 'flow.gap') return false;
-  const {reason, resource_id} = event.data;
-  return reason === 'evicted' || reason === 'sampled' || (reason === 'buffer_overflow' && resource_id == null);
+  const {reason} = event.data;
+  return reason === 'evicted' || reason === 'sampled';
 }
 const gapReasons: Record<string, Key> = {
   buffer_overflow: 'event.gap.overflow',

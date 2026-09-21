@@ -1,4 +1,4 @@
-import {useContext, useEffect, useId, useLayoutEffect, useState, type CSSProperties, type ReactNode} from 'react';
+import {useContext, useEffect, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
   UNSTABLE_Toast as RToast,
@@ -47,18 +47,9 @@ export function errorText(error: unknown) {
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
 }
 
-// Resource refetch promises settle on both success and failure; refresh feedback uses committed inline errors.
-export const visibleErrors = new Map<string, Error>();
 // Retry refetches the failed resource rather than reloading the page.
 export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
   const t = useT();
-  const id = useId();
-  useLayoutEffect(() => {
-    if (error) visibleErrors.set(id, error);
-    return () => {
-      visibleErrors.delete(id);
-    };
-  }, [error, id]);
   return error ? (
     <p role="alert" className="rp-alert">
       {t('ui.loadFailed', {error: errorText(error)})}
