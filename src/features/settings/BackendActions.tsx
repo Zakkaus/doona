@@ -111,7 +111,18 @@ export function BackendActionsCard() {
                   </TextTooltip>
                 )
               },
-              {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1, render: asset => asset.source}
+              {
+                id: 'source',
+                label: t('settings.geodataSource'),
+                minWidth: 240,
+                grow: 2,
+                drop: 1,
+                render: asset => (
+                  <TextTooltip text={asset.source}>
+                    <span className="rp-code">{asset.source}</span>
+                  </TextTooltip>
+                )
+              }
             ]}
           />
         </div>
