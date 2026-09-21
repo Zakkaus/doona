@@ -1,0 +1,164 @@
+.rp-table {
+  width: 100%;
+  min-width: 0;
+  height: 442px;
+  border: 1px solid var(--rp-hl-med);
+  border-radius: var(--rp-r-md);
+  background: var(--rp-surface);
+  overflow: auto;
+  outline: none;
+}
+.rp-table table {
+  --rp-cell-padding: 8px;
+}
+.rp-table table,
+.rp-table [role='grid'] {
+  /* RAC sets min-content inline; fractional columns must fill the scrollport. */
+  width: 100% !important;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+.rp-table [role='columnheader'] {
+  text-align: start;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: var(--rp-pine);
+  padding: 8px var(--rp-cell-padding, 16px);
+  background: var(--rp-base);
+  border-bottom: 1px solid var(--rp-hl-med);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: sticky;
+  top: 0;
+  /* Above row content that forms its own stacking context (translated marks). */
+  z-index: 1;
+  outline: none;
+}
+.rp-table [role='row'][data-selected] {
+  background: var(--rp-selected);
+}
+/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
+.rp-th {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.rp-resizer {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  border-inline-end: 2px solid transparent;
+  outline: none;
+}
+.rp-resizer[data-hovered],
+.rp-resizer[data-resizing],
+.rp-resizer[data-focus-visible] {
+  border-inline-end-color: var(--rp-pine);
+}
+.rp-table [role='columnheader'][data-resizing] {
+  color: var(--rp-pine);
+}
+.rp-table [role='row'][data-hovered]:not([data-selected]) {
+  background: var(--rp-hl-low);
+}
+.rp-table [role='row'][data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: -2px;
+}
+.rp-table [role='rowheader'],
+.rp-table [role='gridcell'] {
+  padding: 0 var(--rp-cell-padding, 16px);
+  height: 40px;
+  border-bottom: 1px solid var(--rp-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  outline: none;
+  vertical-align: middle;
+}
+.rp-table [role='row'][data-selection-mode='single'] {
+  cursor: default;
+}
+.rp-table .end {
+  text-align: end;
+}
+/* Virtualized tables use divs; only their layout differs from native cells. */
+.rp-table > div[role='grid'],
+.rp-table > div[role='treegrid'] {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  outline: none;
+}
+.rp-table div[role='row'],
+.rp-table div[role='columnheader'],
+.rp-table div[role='rowgroup'] {
+  height: 100%;
+}
+.rp-table div[role='columnheader'] {
+  position: static;
+}
+.rp-table div[role='rowheader'],
+.rp-table div[role='gridcell'] {
+  display: flex;
+  align-items: center;
+  max-width: none;
+}
+.rp-table .cell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rp-dialog .foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+.rp-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+}
+.rp-modal.narrow {
+  width: min(480px, 90vw);
+}
+.rp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rp-table [role='gridcell']:has(.rp-btn) {
+  overflow: visible;
+}
+.rp-kv.inline {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.rp-kv.row {
+  gap: 16px;
+}
+.rp-kv.row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rp-kv.row .k {
+  line-height: 20px;
+}

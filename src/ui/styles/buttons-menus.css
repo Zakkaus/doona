@@ -1,0 +1,172 @@
+/* Controls on react-aria-components */
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--rp-control);
+  padding: 0 12px;
+  border-radius: var(--rp-r-md);
+  border: 1px solid transparent;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.rp-btn[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-btn[data-pressed] {
+  background: var(--rp-hl-high);
+}
+.rp-btn[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-btn.quiet {
+  background: transparent;
+}
+.rp-btn.quiet[data-hovered] {
+  background: var(--rp-hl-low);
+}
+.rp-btn:not(.icon) > .rp-icon {
+  width: 16px;
+  height: 16px;
+}
+.rp-btn.sm {
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.rp-btn.icon {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.rp-btn.accent {
+  background: var(--rp-pine);
+  color: var(--rp-on-accent);
+}
+.rp-btn.accent[data-hovered] {
+  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
+}
+.rp-btn.accent[data-pressed] {
+  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
+}
+
+.rp-seg .rp-btn[data-hovered] {
+  color: var(--rp-text);
+  transition-delay: 0ms;
+}
+/* Chips: a wrapping row of small toggles; the chosen one takes the selection tint. */
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-chips .rp-btn {
+  max-width: 100%;
+  min-width: 0;
+  border-color: var(--rp-hl-med);
+}
+.rp-chips .rp-btn .n {
+  color: var(--rp-subtle);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.rp-chips .rp-btn[data-selected] {
+  background: var(--rp-selected);
+  border-color: var(--rp-pine);
+}
+.rp-seg .rp-btn[data-selected] {
+  /* The slider draws the selection; the button itself stays flat. */
+  background: transparent;
+  border-color: transparent;
+  color: var(--rp-pine);
+}
+.rp-sec-h {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+  padding: 8px 8px 2px 32px;
+}
+.rp-popover [role='menu'],
+.rp-popover [role='listbox'],
+.rp-popover [role='dialog'] {
+  outline: none;
+}
+/* A slim overlay-like scrollbar so a long menu keeps its 8px inset on both sides. */
+.rp-popover::-webkit-scrollbar {
+  width: 6px;
+}
+.rp-popover::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--rp-hl-high);
+}
+.rp-popover::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+/* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
+.rp-popover {
+  background: var(--rp-surface);
+  border: 1px solid var(--rp-popover-border);
+  border-radius: var(--rp-r-lg);
+  padding: 8px;
+  overflow: hidden auto;
+  scrollbar-color: var(--rp-hl-high) transparent;
+  box-shadow: var(--rp-elevated);
+  min-width: 160px;
+}
+.rp-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  min-height: var(--rp-control);
+  padding: 0 8px 0 8px;
+  border-radius: var(--rp-r-md);
+  cursor: default;
+  outline: none;
+  color: var(--rp-text);
+}
+.rp-item[data-focused],
+.rp-item[data-hovered] {
+  background: var(--rp-hl-low);
+}
+.rp-item[data-pressed] {
+  background: var(--rp-hl-med);
+}
+.rp-item[data-selected] {
+  font-weight: 600;
+}
+.rp-item .rp-check-mark {
+  width: 16px;
+  height: 16px;
+  visibility: hidden;
+  color: var(--rp-text);
+}
+.rp-item[data-selected] .rp-check-mark {
+  visibility: visible;
+}
+.rp-item.plain {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-inline-start: 12px;
+}
+.rp-item .desc {
+  color: var(--rp-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rp-item .desc.ok {
+  color: var(--rp-foam);
+}
+.rp-item .desc.warn {
+  color: var(--rp-gold);
+}
+.rp-item .desc.err {
+  color: var(--rp-love);
+}

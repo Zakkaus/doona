@@ -1,0 +1,377 @@
+.rp-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .rp-shell {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+.rp-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 24px;
+  padding: 0 24px;
+  min-height: 64px;
+  background: var(--rp-base);
+}
+@media (min-width: 1024px) {
+  .rp-top {
+    grid-template-columns: 216px minmax(0, 1fr) auto;
+  }
+}
+.rp-brand {
+  grid-column: 1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  gap: 12px;
+  /* The hover pill hugs the duck and the name, not the whole column. */
+  margin: -4px -8px -4px -6px;
+  padding: 4px 8px 4px 6px;
+  border: 0;
+  border-radius: var(--rp-r-lg);
+  background: none;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--rp-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.rp-brand[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+/* The about box. The duck hops on a tap; after five it honks and the name cycles its colours for a while. */
+.rp-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.rp-about-duck {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.rp-about-duck:focus-visible {
+  outline: 2px solid var(--rp-pine);
+}
+.rp-about-duck img {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+/* The painting sits over the drawing and fades in when the duck is tapped past its honk. */
+.rp-about-duck .night {
+  position: absolute;
+  inset: 8px;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--rp-r-lg);
+  object-fit: cover;
+  opacity: 0;
+  scale: 0.9;
+  transition:
+    opacity 400ms var(--rp-ease),
+    scale 400ms var(--rp-ease-out);
+  pointer-events: none;
+}
+.rp-about-duck.painted .night {
+  opacity: 1;
+  scale: 1;
+}
+.rp-about-duck img.hop {
+  animation: rp-hop 360ms var(--rp-ease-out);
+}
+@keyframes rp-hop {
+  30% {
+    translate: 0 -14px;
+    rotate: -8deg;
+  }
+  60% {
+    translate: 0 0;
+    rotate: 4deg;
+  }
+}
+.rp-about-bubble {
+  position: absolute;
+  top: -4px;
+  right: -28px;
+  padding: 4px 10px;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-pine);
+  color: var(--rp-on-accent);
+  font-weight: 700;
+  animation: rp-pop 240ms var(--rp-ease-out);
+}
+@keyframes rp-pop {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+/* The facts stack one under another; a build string wraps only at its spaces. */
+.rp-about .rp-kv {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.rp-about .rp-kv .v {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+.rp-about-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.rp-about.honked .rp-brand-text > span:first-child {
+  animation: rp-hue 3s linear infinite;
+}
+@keyframes rp-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+.rp-brand img {
+  width: 28px;
+  height: 28px;
+}
+/* The name and its version share one baseline; only the name takes the gradient. */
+.rp-brand-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rp-brand-version {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--rp-subtle);
+}
+.rp-search-wrap {
+  grid-column: 2;
+  display: none;
+  justify-content: center;
+}
+@media (min-width: 1024px) {
+  .rp-search-wrap {
+    display: flex;
+  }
+}
+.rp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+  height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--rp-hl-high);
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-surface);
+  color: var(--rp-subtle);
+  cursor: text;
+  text-align: start;
+}
+.rp-search[data-hovered],
+.rp-search[data-focus-visible] {
+  border-color: var(--rp-muted);
+}
+.rp-search .grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rp-kbd {
+  font-size: 11px;
+  line-height: 16px;
+  padding: 2px 8px;
+  border: 1px solid var(--rp-hl-high);
+  border-radius: var(--rp-r-pill);
+  color: var(--rp-subtle);
+}
+.rp-actions {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.rp-search-compact {
+  display: inline-flex;
+}
+@media (min-width: 1024px) {
+  .rp-search-compact {
+    display: none;
+  }
+}
+.rp-vrule {
+  width: 2px;
+  height: 32px;
+  margin: 0 4px;
+  background: var(--rp-hl-med);
+  border-radius: 1px;
+}
+.rp-side {
+  display: none;
+  flex-direction: column;
+  padding: 16px 12px 16px 24px;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow: auto;
+}
+@media (min-width: 1024px) {
+  .rp-side {
+    display: flex;
+  }
+}
+.rp-side-grow {
+  flex: 1;
+}
+.rp-group {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+  margin: 0 0 4px;
+}
+.rp-side > div + div {
+  margin-top: 16px;
+}
+.rp-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--rp-control);
+  padding: 0 12px;
+  border-radius: var(--rp-r-md);
+  color: var(--rp-subtle);
+  text-decoration: none;
+  position: relative;
+}
+/* A page the backend has no capability for stays listed, dimmed; opening it says so. */
+.rp-nav[data-unavailable] {
+  color: var(--rp-muted);
+}
+.rp-nav[data-unavailable] > svg {
+  opacity: 0.6;
+}
+.rp-nav[data-hovered] {
+  background: var(--rp-hl-low);
+  color: var(--rp-text);
+}
+
+.rp-nav-slider {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--rp-group, var(--rp-pine));
+  transition:
+    translate 200ms var(--rp-ease-out),
+    height 200ms var(--rp-ease-out),
+    background-color 200ms var(--rp-ease);
+  pointer-events: none;
+  clip-path: inset(8px 0);
+}
+.rp-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--rp-r-md);
+  color: var(--rp-subtle);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: none;
+}
+.rp-version[data-hovered] {
+  background: var(--rp-hl-low);
+}
+.rp-main {
+  margin-inline-end: 0;
+  padding: 32px 40px 48px;
+  background: var(--rp-surface);
+  border-radius: var(--rp-r-xl) var(--rp-r-xl) 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (min-width: 1024px) {
+  .rp-main {
+    margin-inline-end: 16px;
+  }
+}
+.rp-content {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.rp-head {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rp-mobile-nav {
+  display: block;
+}
+.rp-mobile-nav .rp-selectbtn {
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .rp-mobile-nav {
+    display: none;
+  }
+}
+.rp-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.rp-hint {
+  color: var(--rp-subtle);
+  font-size: 13px;
+  line-height: 20px;
+}
+.rp-h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 36px;
+  color: var(--rp-text);
+}

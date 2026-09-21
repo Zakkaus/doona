@@ -1,0 +1,169 @@
+/* ---- Toasts (after S2 ToastContainer): bottom centre, the newest in front and older ones peeking out behind; expanded = a list over an underlay. ---- */
+.rp-toast-underlay {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  text-align: inherit;
+  position: fixed;
+  inset: 0;
+  background: var(--rp-underlay);
+  animation: rp-fade-in 250ms var(--rp-ease);
+}
+.rp-toasts {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 16px;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  z-index: 20;
+  outline: none;
+}
+.rp-toasts.expanded {
+  bottom: 0;
+  top: 0;
+  padding: 16px 8px;
+  max-height: 100vh;
+}
+/* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
+.rp-toast-list {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-toasts.expanded .rp-toast-list {
+  overflow: auto;
+  padding: 8px;
+  margin: 0 -8px;
+}
+.rp-toast-controls {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.rp-toast {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 8px 12px 16px;
+  min-height: 56px;
+  width: 336px;
+  max-width: 90vw;
+  border-radius: var(--rp-r-lg);
+  background: var(--rp-text);
+  color: var(--rp-on-text);
+  font-size: 14px;
+  line-height: 20px;
+  box-shadow: var(--rp-shadow-lg);
+  flex-shrink: 0;
+  transition:
+    translate 400ms var(--rp-ease),
+    scale 400ms var(--rp-ease),
+    opacity 400ms var(--rp-ease);
+}
+.rp-toast[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-toast .main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.rp-toast .body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rp-toast .body > svg {
+  flex: none;
+}
+.rp-toast .grow {
+  flex: 1;
+  min-width: 0;
+}
+.rp-toast .more {
+  color: inherit;
+  flex: none;
+  margin-inline-start: -8px;
+}
+.rp-toast .more[data-hovered],
+.rp-toast .close[data-hovered] {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.rp-toast > .close {
+  color: inherit;
+  width: 32px;
+  height: var(--rp-control);
+  min-width: 0;
+  flex: none;
+  align-self: flex-start;
+  margin-top: -2px;
+}
+.rp-toast > .close > svg {
+  width: 12px;
+  height: 12px;
+}
+.rp-toast.negative {
+  background: var(--rp-love);
+  color: var(--rp-on-accent);
+}
+.rp-toast.positive {
+  background: var(--rp-pine);
+  color: var(--rp-on-accent);
+}
+.rp-toast.info {
+  background: var(--rp-foam);
+  color: var(--rp-on-accent);
+}
+
+/* Collapsed stack: toasts behind the main one sit on it, pushed up and shrunk by their depth; only three show. */
+.rp-toast.background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
+  translate: 0 calc(var(--i) * -10px);
+  scale: calc(1 - var(--i) * 0.06);
+  /* The fourth card back (--i 3) is fully faded; the ones in front stay opaque. */
+  opacity: clamp(0, 3 - var(--i), 1);
+}
+.rp-toast.background > * {
+  visibility: hidden;
+}
+.rp-toasts:not(.expanded) .rp-toast-list {
+  cursor: default;
+}
+.rp-toast:not(.background) {
+  animation: rp-toast-in 400ms var(--rp-ease);
+}
+@keyframes rp-toast-in {
+  from {
+    opacity: 0;
+    translate: 0 calc(100% + 12px);
+  }
+}
+/* The sidebar marker slides to the active page; palette and scheme changes crossfade (view transitions). Page changes themselves are instant, as in S2. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+}
+@keyframes rp-spin {
+  to {
+    rotate: 360deg;
+  }
+}

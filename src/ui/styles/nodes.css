@@ -1,0 +1,70 @@
+/* Node tiles */
+
+button.rp-node {
+  cursor: pointer;
+}
+button.rp-node[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-node[data-selected],
+.rp-node.cur {
+  border-color: var(--rp-pine);
+  background: var(--rp-selected);
+}
+.rp-node .top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-node .n {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-node .ms {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rp-node .ms.ok {
+  color: var(--rp-foam);
+}
+.rp-node .ms.warn {
+  color: var(--rp-gold);
+}
+.rp-node .ms.err {
+  color: var(--rp-love);
+}
+.rp-node .s {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-node .cur {
+  color: var(--rp-pine);
+  font-weight: 600;
+}
+.rp-nodegrid {
+  height: 376px;
+  overflow: auto;
+  outline: none;
+  border-radius: var(--rp-r-md);
+}
+.rp-nodegrid .rp-node {
+  cursor: default;
+  outline: none;
+}
+.rp-nodegrid .rp-node[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: -2px;
+}

@@ -1,0 +1,176 @@
+/* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
+
+.rp-btn,
+.rp-nav,
+.rp-item,
+.rp-select,
+.rp-selectbtn,
+.rp-search,
+.rp-input,
+.rp-version,
+.rp-brand,
+.rp-input .clear,
+.rp-table [role='row'],
+.rp-switch,
+.rp-badge {
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
+  transition-duration: var(--rp-duration);
+  transition-timing-function: var(--rp-ease);
+}
+/* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
+:root {
+  --iconPrimary: currentColor;
+  color-scheme: light;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --rp-underlay: rgba(0, 0, 0, 0.32);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12);
+  --rp-popover-border: transparent;
+  --rp-on-accent: var(--rp-surface);
+  --rp-on-text: var(--rp-surface);
+  --rp-line: var(--rp-hl-low);
+  --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
+  --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
+  --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
+  --rp-r-sm: 6px;
+  --rp-r-md: 8px;
+  --rp-r-lg: 10px;
+  --rp-r-xl: 16px;
+  --rp-r-2xl: 20px;
+  --rp-r-pill: 999px;
+  --rp-control: 32px;
+  --rp-duration: 150ms;
+  --rp-duration-panel: 200ms;
+  --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
+  --rp-ink-mix: #000;
+}
+/* A finger needs more than a pointer does; table rows are already 40px. */
+@media (pointer: coarse) {
+  :root {
+    --rp-control: 36px;
+  }
+}
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --rp-underlay: rgba(0, 0, 0, 0.55);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36);
+  --rp-popover-border: var(--rp-hl-med);
+  --rp-ink-mix: #fff;
+}
+.rp-bar .fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 200ms var(--rp-ease-out);
+}
+/* Segmented control: the selection slides between items (200ms, ease-out). */
+.rp-seg {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  background: var(--rp-overlay);
+  border-radius: var(--rp-r-lg);
+  padding: 2px;
+  position: relative;
+}
+.rp-slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: var(--rp-r-md);
+  background: var(--rp-surface);
+  border: 2px solid var(--rp-pine);
+  /* Animate layout to avoid text rasterisation flicker from a composited slider beneath the labels. */
+  transition:
+    left 200ms var(--rp-ease-out),
+    width 200ms var(--rp-ease-out);
+  pointer-events: none;
+}
+.rp-seg .rp-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 8px;
+  height: var(--rp-control);
+  background: transparent;
+  color: var(--rp-subtle);
+  border-radius: var(--rp-r-md);
+  border: 2px solid transparent;
+  position: relative;
+  z-index: 1;
+  /* Like a tab: the label recolours as the slider arrives. */
+  transition: color 120ms var(--rp-ease) 100ms;
+}
+/* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
+.rp-popover,
+.rp-tip {
+  transition:
+    opacity 200ms var(--rp-ease),
+    translate 200ms var(--rp-ease);
+}
+.rp-popover[data-entering],
+.rp-tip[data-entering] {
+  animation: rp-pop-in 200ms var(--rp-ease);
+}
+.rp-popover[data-exiting],
+.rp-tip[data-exiting] {
+  animation: rp-pop-out 200ms var(--rp-ease-in);
+  pointer-events: none;
+}
+.rp-popover[data-placement='top'],
+.rp-tip[data-placement='top'] {
+  --rp-drift: 0 4px;
+}
+.rp-popover[data-placement='bottom'],
+.rp-tip[data-placement='bottom'] {
+  --rp-drift: 0 -4px;
+}
+.rp-popover[data-placement='left'],
+.rp-tip[data-placement='left'] {
+  --rp-drift: 4px 0;
+}
+.rp-popover[data-placement='right'],
+.rp-tip[data-placement='right'] {
+  --rp-drift: -4px 0;
+}
+@keyframes rp-pop-in {
+  from {
+    opacity: 0;
+    translate: var(--rp-drift, 0 -4px);
+  }
+}
+
+@keyframes rp-pop-out {
+  to {
+    opacity: 0;
+    translate: var(--rp-drift, 0 -4px);
+  }
+}
+/* Modal: underlay fades, the dialog follows with a short delay and a 20px rise. */
+.rp-underlay[data-entering] {
+  animation: rp-fade-in 250ms var(--rp-ease);
+}
+.rp-underlay[data-exiting] {
+  animation: rp-fade-out 130ms var(--rp-ease);
+}
+.rp-underlay[data-entering] .rp-modal {
+  animation: rp-dialog-in 250ms var(--rp-ease) 160ms both;
+}
+.rp-underlay[data-exiting] .rp-modal {
+  animation: rp-fade-out 130ms var(--rp-ease) both;
+}
+@keyframes rp-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rp-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rp-dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 20px;
+  }
+}

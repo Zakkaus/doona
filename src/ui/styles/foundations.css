@@ -1,0 +1,80 @@
+/* Pixel-sized icons stay aligned with the fixed 14px type regardless of the browser's default font size. */
+.rp-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+@media not ((hover: hover) and (pointer: fine)) {
+  .rp-icon {
+    width: 25px;
+    height: 25px;
+  }
+}
+.rp-icon-stack {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.rp-icon-stack > svg {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+}
+.rp-icon-stack > .sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+.rp-icon-stack[data-dark] > .sun {
+  opacity: 1;
+  transform: none;
+}
+.rp-icon-stack[data-dark] > .moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+.rp-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--rp-subtle);
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--rp-base);
+  color: var(--rp-text);
+}
+/* Reserve a gutter above phone width so scroll locking cannot shift menus and dialogs sideways. */
+@media (min-width: 640px) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
+/* Integer line heights everywhere so 1px rules land on whole pixels. */
+body {
+  font:
+    14px/20px 'Noto Sans TC',
+    'Noto Sans SC',
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. */
+:lang(zh-CN) body,
+body:lang(zh-CN) {
+  font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rp-hl-high) transparent;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+}

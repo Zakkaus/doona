@@ -1,0 +1,112 @@
+.rp-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--rp-control);
+  padding: 0 8px;
+  border-radius: var(--rp-r-md);
+  background: transparent;
+  border: 0;
+  color: var(--rp-text);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 16px;
+}
+.rp-select[data-hovered] {
+  background: var(--rp-hl-low);
+}
+/* The box is the modal; the dialog scrolls inside it, so the surface and its rim never scroll away. */
+.rp-modal {
+  position: relative;
+  background: var(--rp-surface);
+  border-radius: var(--rp-r-xl);
+  width: min(720px, 90vw);
+  max-height: calc(100vh - 12vh - 24px);
+  display: flex;
+  overflow: hidden;
+}
+.rp-dialog {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px;
+  overflow: hidden auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  outline: none;
+}
+.rp-underlay {
+  position: fixed;
+  inset: 0;
+  background: var(--rp-underlay);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 10;
+}
+.rp-input {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  height: var(--rp-control);
+  padding: 0 12px;
+  border: 1px solid var(--rp-hl-high);
+  border-radius: var(--rp-r-md);
+  background: var(--rp-base);
+}
+.rp-input.lg {
+  height: 40px;
+  border-radius: var(--rp-r-lg);
+}
+/* The field's own glyphs match button icons: 16px in the 32px field, 20px in the large header search. */
+.rp-input .rp-icon {
+  width: 16px;
+  height: 16px;
+}
+.rp-input.lg > .rp-icon {
+  width: 20px;
+  height: 20px;
+}
+.rp-input .clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--rp-subtle);
+  cursor: pointer;
+}
+.rp-input .clear[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-input[data-empty] .clear {
+  display: none;
+}
+.rp-input input {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+.rp-input input::-webkit-search-cancel-button {
+  display: none;
+}
+.rp-results {
+  max-height: 420px;
+  overflow: auto;
+  padding-inline-end: 12px;
+}
+.rp-section-h {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+  padding: 8px 12px 4px;
+}

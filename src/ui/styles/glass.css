@@ -1,0 +1,375 @@
+/* Glass uses thin tints, high blur and saturation, a gradient rim, grain, and a soft shadow. Cards blur the wallpaper directly; the content sheet has no blur. */
+
+:root[data-family='glass'][data-scheme='dark'] {
+  --rp-base: rgba(255, 255, 255, 0.05);
+  --rp-surface: rgba(24, 24, 32, 0.45);
+  --rp-overlay: rgba(255, 255, 255, 0.1);
+  --rp-muted: #8e8e93;
+  --rp-subtle: #d0d0d6;
+  --rp-text: #f2f2f7;
+  --rp-love: #ff453a;
+  --rp-gold: #ff9f0a;
+  --rp-rose: #ffb340;
+  --rp-pine: #0a84ff;
+  --rp-foam: #30d158;
+  --rp-iris: #bf5af2;
+  --rp-c1: #0a84ff;
+  --rp-c2: #30d158;
+  --rp-c3: #bf5af2;
+  --rp-c4: #ff9f0a;
+  --rp-c5: #64d2ff;
+  --rp-c6: #ff375f;
+  --rp-c7: #ffd60a;
+  --rp-c8: #ff453a;
+  --rp-hl-low: rgba(255, 255, 255, 0.07);
+  --rp-hl-med: rgba(255, 255, 255, 0.14);
+  --rp-hl-high: rgba(255, 255, 255, 0.24);
+  --rp-on-accent: #ffffff;
+  --rp-on-text: #1c1c1e;
+  --rp-line: rgba(255, 255, 255, 0.12);
+  --rp-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
+  --rp-glass: rgba(18, 20, 30, 0.56);
+  --rp-glass-strong: rgba(22, 24, 34, 0.74);
+  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.09) 40%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.16) 100%);
+  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0) 60%);
+  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 28px rgba(255, 255, 255, 0.03);
+  --rp-ctl: rgba(255, 255, 255, 0.09);
+  --rp-ctl-border: rgba(255, 255, 255, 0.1);
+  --rp-track: rgba(0, 0, 0, 0.32);
+  --rp-grain-opacity: 0.35;
+  --rp-underlay: rgba(0, 0, 0, 0.45);
+  --rp-scrim: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%);
+  --rp-sheet: rgba(0, 0, 0, 0.18);
+  --rp-sheet-rim: rgba(255, 255, 255, 0.08);
+  --rp-row-hover: rgba(255, 255, 255, 0.05);
+  --rp-knob: rgba(120, 120, 128, 0.62);
+  --rp-knob-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.45);
+  --rp-bg:
+    radial-gradient(circle 320px at 24% 26%, rgba(46, 84, 230, 0.7) 0 22%, rgba(46, 84, 230, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(150, 50, 140, 0.6) 0 20%, rgba(150, 50, 140, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(190, 96, 40, 0.42) 0 22%, rgba(190, 96, 40, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(16, 140, 120, 0.6) 0 20%, rgba(16, 140, 120, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(100, 70, 220, 0.55) 0 20%, rgba(100, 70, 220, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.06) 46%, rgba(255, 255, 255, 0.06) 49%, transparent 61%),
+    linear-gradient(135deg, #090d24 0%, #1c0f38 32%, #1b1230 64%, #05201c 100%);
+}
+:root[data-family='glass'] {
+  --rp-base: rgba(255, 255, 255, 0.3);
+  --rp-surface: rgba(255, 255, 255, 0.4);
+  --rp-overlay: rgba(255, 255, 255, 0.42);
+  --rp-muted: #8e8e93;
+  --rp-subtle: #48484a;
+  --rp-text: #1c1c1e;
+  --rp-love: #ff3b30;
+  --rp-gold: #ff9500;
+  --rp-rose: #ff9f0a;
+  --rp-pine: #007aff;
+  --rp-foam: #34c759;
+  --rp-iris: #af52de;
+  --rp-c1: #007aff;
+  --rp-c2: #34c759;
+  --rp-c3: #af52de;
+  --rp-c4: #ff9500;
+  --rp-c5: #5ac8fa;
+  --rp-c6: #ff2d55;
+  --rp-c7: #ffcc00;
+  --rp-c8: #ff3b30;
+  --rp-hl-low: rgba(255, 255, 255, 0.3);
+  --rp-hl-med: rgba(255, 255, 255, 0.55);
+  --rp-hl-high: rgba(60, 60, 67, 0.28);
+  --rp-on-accent: #ffffff;
+  --rp-on-text: #ffffff;
+  --rp-line: rgba(60, 60, 67, 0.14);
+  --rp-shadow: 0 8px 32px rgba(31, 38, 135, 0.16);
+  --rp-shadow-lg: 0 24px 64px rgba(31, 38, 135, 0.3);
+  --rp-glass: rgba(255, 255, 255, 0.32);
+  --rp-glass-strong: rgba(255, 255, 255, 0.58);
+  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0.55) 100%);
+  --rp-sheen: linear-gradient(115deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0) 60%);
+  --rp-glow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 28px rgba(255, 255, 255, 0.22);
+  --rp-ctl: rgba(255, 255, 255, 0.38);
+  --rp-ctl-border: rgba(255, 255, 255, 0.55);
+  --rp-track: rgba(60, 60, 67, 0.1);
+  --rp-grain-opacity: 0.25;
+  --rp-underlay: rgba(20, 20, 30, 0.3);
+  --rp-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
+  --rp-sheet: rgba(255, 255, 255, 0.14);
+  --rp-sheet-rim: rgba(255, 255, 255, 0.35);
+  --rp-row-hover: rgba(255, 255, 255, 0.18);
+  --rp-knob: rgba(255, 255, 255, 0.85);
+  --rp-knob-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18);
+  --rp-bg:
+    radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
+    radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
+    radial-gradient(circle 360px at 82% 80%, rgba(255, 196, 110, 0.8) 0 22%, rgba(255, 196, 110, 0) 70%),
+    radial-gradient(circle 300px at 16% 86%, rgba(110, 220, 190, 0.8) 0 20%, rgba(110, 220, 190, 0) 70%),
+    radial-gradient(circle 220px at 52% 58%, rgba(180, 150, 255, 0.7) 0 20%, rgba(180, 150, 255, 0) 70%),
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.55) 46%, rgba(255, 255, 255, 0.55) 49%, transparent 61%),
+    linear-gradient(135deg, #dfeeff 0%, #f3ddff 32%, #ffe6d6 64%, #dcf6ec 100%);
+  --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root[data-family='glass'] body {
+  background: none;
+}
+/* Fixed layers keep the backdrop-filter input consistent across browsers. */
+:root[data-family='glass'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--rp-bg);
+}
+:root[data-family='glass'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--rp-scrim);
+}
+:root[data-family='glass']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--rp-grain);
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+}
+/* One fixed, clipped layer prevents blur seams and keeps the chrome stationary above scrolling content. */
+:root[data-family='glass'] .rp-shell::after {
+  --rp-shell-inset: max(0px, (100% - 1600px) / 2);
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--rp-sheet);
+  backdrop-filter: blur(28px) saturate(1.6);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    calc(100% - 0px) 80px,
+    calc(100% - 1.22px) 73.88px,
+    calc(100% - 4.69px) 68.69px,
+    calc(100% - 9.88px) 65.22px,
+    calc(100% - 16px) 64px,
+    16px 64px,
+    9.88px 65.22px,
+    4.69px 68.69px,
+    1.22px 73.88px,
+    0px 80px
+  );
+}
+@media (min-width: 1024px) {
+  :root[data-family='glass'] .rp-shell::after {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 80px,
+      calc(100% - var(--rp-shell-inset) - 17.22px) 73.88px,
+      calc(100% - var(--rp-shell-inset) - 20.69px) 68.69px,
+      calc(100% - var(--rp-shell-inset) - 25.88px) 65.22px,
+      calc(100% - var(--rp-shell-inset) - 32px) 64px,
+      calc(var(--rp-shell-inset) + 256px) 64px,
+      calc(var(--rp-shell-inset) + 249.88px) 65.22px,
+      calc(var(--rp-shell-inset) + 244.69px) 68.69px,
+      calc(var(--rp-shell-inset) + 241.22px) 73.88px,
+      calc(var(--rp-shell-inset) + 240px) 80px,
+      calc(var(--rp-shell-inset) + 240px) 100%,
+      0 100%
+    );
+  }
+}
+:root[data-family='glass'] .rp-top,
+:root[data-family='glass'] .rp-side {
+  background: transparent;
+  z-index: 2;
+}
+:root[data-family='glass'] .rp-main {
+  background: var(--rp-sheet);
+  border: 1px solid var(--rp-sheet-rim);
+  border-bottom: 0;
+}
+:root[data-family='glass'] .rp-search {
+  background: var(--rp-ctl);
+  border-color: var(--rp-ctl-border);
+}
+:root[data-family='glass'] .rp-vrule {
+  background: var(--rp-ctl-border);
+}
+/* The material. ::before carries the grain, ::after the gradient rim (a 1px ring cut out with a mask). */
+:root[data-family='glass'] .rp-card,
+:root[data-family='glass'] .rp-table,
+:root[data-family='glass'] .rp-popover,
+:root[data-family='glass'] .rp-modal {
+  position: relative;
+  isolation: isolate;
+  background: var(--rp-sheen), var(--rp-glass);
+  backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid transparent;
+  box-shadow: var(--rp-glow), var(--rp-shadow);
+}
+:root[data-family='glass'] .rp-card::before,
+:root[data-family='glass'] .rp-popover::before,
+:root[data-family='glass'] .rp-modal::before,
+:root[data-family='glass'] .rp-table::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: var(--rp-grain);
+  opacity: var(--rp-grain-opacity);
+  mix-blend-mode: overlay;
+}
+:root[data-family='glass'] .rp-card::after,
+:root[data-family='glass'] .rp-popover::after,
+:root[data-family='glass'] .rp-modal::after,
+:root[data-family='glass'] .rp-table::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  padding: 1px;
+  background: var(--rp-rim);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+:root[data-family='glass'] .rp-card {
+  border-radius: var(--rp-r-2xl);
+}
+/* Scrolling panels use a plain border so grain and rim cannot scroll away or create overflow. */
+:root[data-family='glass'] .rp-panel::before,
+:root[data-family='glass'] .rp-panel::after {
+  content: none;
+}
+:root[data-family='glass'] .rp-panel {
+  border-color: var(--rp-sheet-rim);
+}
+:root[data-family='glass'] .rp-popover::after,
+:root[data-family='glass'] .rp-modal::after {
+  inset: 0;
+}
+:root[data-family='glass'] .rp-popover,
+:root[data-family='glass'] .rp-modal {
+  background: var(--rp-sheen), var(--rp-glass-strong);
+  backdrop-filter: blur(40px) saturate(1.8);
+  box-shadow: var(--rp-glow), var(--rp-shadow-lg);
+}
+:root[data-family='glass'] .rp-table [role='columnheader'] {
+  background: transparent;
+}
+:root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
+  background: var(--rp-row-hover);
+}
+/* Controls are small pieces of the same glass: a translucent fill and nothing drawn around it. */
+:root[data-family='glass'] .rp-btn {
+  background: var(--rp-ctl);
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-family='glass'] .rp-btn[data-hovered] {
+  background: var(--rp-hl-med);
+}
+:root[data-family='glass'] .rp-btn.quiet {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-family='glass'] .rp-btn.quiet[data-hovered] {
+  background: var(--rp-hl-low);
+}
+:root[data-family='glass'] .rp-btn.accent {
+  background: var(--rp-pine);
+  border-color: transparent;
+  box-shadow: none;
+}
+/* The glass rules outrank the generic disabled ones, so the disabled looks are restated here. */
+:root[data-family='glass'] .rp-btn[data-disabled] {
+  background: var(--rp-hl-low);
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-family='glass'] .rp-btn.accent[data-disabled] {
+  background: var(--rp-hl-med);
+  color: var(--rp-muted);
+}
+:root[data-family='glass'] .rp-btn.accent[data-hovered] {
+  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
+}
+:root[data-family='glass'] .rp-btn.accent[data-pressed] {
+  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
+}
+:root[data-family='glass'] .rp-seg,
+:root[data-family='glass'] .rp-tabbar {
+  background: var(--rp-track);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+:root[data-family='glass'] .rp-seg .rp-btn,
+:root[data-family='glass'] .rp-seg .rp-btn[data-hovered] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-family='glass'] .rp-seg .rp-btn[data-selected],
+:root[data-family='glass'] .rp-tab[data-selected] {
+  color: var(--rp-text);
+}
+:root[data-family='glass'] .rp-slider {
+  background: var(--rp-knob);
+  border-color: transparent;
+  box-shadow: var(--rp-knob-shadow);
+}
+:root[data-family='glass'] .rp-switch .track {
+  background: var(--rp-track);
+}
+:root[data-family='glass'] .rp-switch[data-selected] .track {
+  background: var(--rp-pine);
+}
+:root[data-family='glass'] .rp-switch .track::after {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+:root[data-family='glass'] .rp-node {
+  background: var(--rp-ctl);
+  border-color: var(--rp-ctl-border);
+}
+:root[data-family='glass'] .rp-node[data-selected],
+:root[data-family='glass'] .rp-node.cur {
+  border-color: var(--rp-pine);
+  background: color-mix(in srgb, var(--rp-pine) 14%, var(--rp-ctl));
+}
+:root[data-family='glass'] .rp-input {
+  background: var(--rp-ctl);
+  border-color: var(--rp-ctl-border);
+}
+:root[data-family='glass'] .rp-selectbtn {
+  background: var(--rp-ctl);
+}
+:root[data-family='glass'] .rp-toast {
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-text) 84%, transparent);
+  box-shadow: var(--rp-glow), var(--rp-shadow-lg);
+}
+:root[data-family='glass'] .rp-toast.positive {
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-pine) 84%, transparent);
+}
+:root[data-family='glass'] .rp-toast.negative {
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-love) 84%, transparent);
+}
+:root[data-family='glass'] .rp-toast.info {
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-foam) 84%, transparent);
+}
+:root[data-family='glass'] .rp-underlay {
+  backdrop-filter: blur(8px);
+}
