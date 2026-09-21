@@ -1,5 +1,5 @@
 import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
-import {healthMillis, preferredHealth, sourceIp} from '../../api/selectors';
+import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../api/selectors';
 
 // The routing tree as the config lays it out, weighted by the flows the backend retained:
 // rule → outbound (a policy group, or direct / block) → the node the outbound currently selects.
@@ -25,12 +25,17 @@ export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n
 // matched even when two rules display alike; the expression is only the label. A retained flow from an
 // earlier generation whose id now names a different rule keeps its own entry, keyed by id and expression.
 const HISTORICAL = '\u0000';
-function ruleKey(flow: FlowSummary, rules: RoutingRule[]): string | undefined {
+function ruleKey(flow: FlowSummary, rules: ReadonlyMap<string, RoutingRule>): string | undefined {
   if (!flow.rule_id) return undefined;
-  const current = rules.find(rule => rule.rule_id === flow.rule_id);
+  const current = rules.get(flow.rule_id);
   return current?.expression === flow.rule_expression ? flow.rule_id : flow.rule_id + HISTORICAL + flow.rule_expression;
 }
-function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames, rules: RoutingRule[]): {label: string; unknown: boolean; key?: string} | null {
+function stagePart(
+  flow: FlowSummary,
+  stage: Stage,
+  names: NodeNames,
+  rules: ReadonlyMap<string, RoutingRule>
+): {label: string; unknown: boolean; key?: string} | null {
   switch (stage) {
     case 'client': {
       const client = sourceIp(flow.input?.src ?? undefined);
@@ -50,12 +55,13 @@ function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames, rules: Rou
 const stageId = (stage: Stage, part: {label: string; key?: string}) => stage + ':' + (part.key ?? part.label);
 
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames, rules: RoutingRule[]): FlowSummary[] {
-  return flows.filter(flow =>
-    stages.some(stage => {
-      const part = stagePart(flow, stage, names, rules);
-      return part && stageId(stage, part) === id;
-    })
-  );
+  const stage = id.slice(0, id.indexOf(':')) as Stage;
+  if (!stages.includes(stage)) return [];
+  const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
+  return flows.filter(flow => {
+    const part = stagePart(flow, stage, names, rulesById);
+    return part !== null && stageId(stage, part) === id;
+  });
 }
 
 // What the flow records call a pinned tree id: the rule's expression, the node's name, the outbound as shown,
@@ -72,6 +78,9 @@ export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, 
 export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[], by: TreeBy = 'rule'): RoutingTree {
   const names = nodeNames(nodes);
   const byId = new Map(groups.map(group => [group.id, group]));
+  const groupsByName = new Map(groups.map(group => [group.name, group]));
+  const nodesById = new Map(nodes.map(node => [node.id, node]));
+  const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
   const leafItems = new Map<string, TreeLeaf>();
   const outboundItems = new Map<string, TreeOutbound>();
   const nodeItems = new Map<string, TreeNode>();
@@ -87,7 +96,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     const id = 'node:' + key;
     let entry = nodeItems.get(id);
     if (!entry) {
-      const node = nodes.find(n => n.id === key);
+      const node = nodesById.get(key);
       const health = node && preferredHealth(node);
       nodeItems.set(
         id,
@@ -102,20 +111,10 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     const id = 'outbound:' + name;
     let entry = outboundItems.get(id);
     if (entry) return entry;
-    const chain: TreeGroup[] = [];
-    let group = groups.find(g => g.name === name);
-    const transport = group?.selection.tcp_member_id ? 'tcp_member_id' : 'udp_member_id';
-    let leaf: string | null = null;
-    while (group && chain.length < 8) {
-      chain.push({name: group.name, kind: group.policy.kind, policy: group.policy.native});
-      const member = group.selection[transport];
-      const next = member ? byId.get(member) : undefined;
-      if (!next) {
-        leaf = member;
-        break;
-      }
-      group = next;
-    }
+    const group = groupsByName.get(name);
+    const selected = resolveSelectedLeaf(name, group?.selection.tcp_member_id ? 'tcp' : 'udp', groupsByName, byId, nodesById);
+    const chain: TreeGroup[] = selected.groups.map(group => ({name: group.name, kind: group.policy.kind, policy: group.policy.native}));
+    const leaf = selected.member;
     const kind = unknown ? 'unknown' : name === 'direct' || name === 'block' ? name : chain.length ? 'group' : 'unknown';
     entry = {id, label: name, count: 0, unknown: unknown || undefined, kind, groups: chain, node: leaf && nodeItem(leaf, names.get(leaf) ?? leaf).id};
     outboundItems.set(id, entry);
@@ -142,7 +141,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   for (const flow of flows) {
     let previous: TreeItem | undefined;
     for (const stage of path) {
-      const part = stagePart(flow, stage, names, rules);
+      const part = stagePart(flow, stage, names, rulesById);
       if (!part) break;
       const current =
         stage === 'outbound'
@@ -171,10 +170,37 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   };
 }
 
-// Where a leaf or outbound hangs on the tree: its configured target, else the one its flows mostly went to.
+export type TreeIndex = {outgoing: Map<string, TreeLink[]>; incoming: Map<string, TreeLink[]>; parents: Map<string, string>};
+const indexes = new WeakMap<RoutingTree, TreeIndex>();
+export function treeIndex(tree: RoutingTree): TreeIndex {
+  const cached = indexes.get(tree);
+  if (cached) return cached;
+  const outgoing = new Map<string, TreeLink[]>();
+  const incoming = new Map<string, TreeLink[]>();
+  const strongest = new Map<string, TreeLink>();
+  for (const link of tree.links) {
+    for (const [map, id] of [
+      [outgoing, link.source],
+      [incoming, link.target]
+    ] as const) {
+      let links = map.get(id);
+      if (!links) map.set(id, (links = []));
+      links.push(link);
+    }
+    if (!strongest.has(link.source) || strongest.get(link.source)!.count < link.count) strongest.set(link.source, link);
+  }
+  const parents = new Map<string, string>();
+  for (const item of [...tree.leaves, ...tree.outbounds]) {
+    const parent = ('groups' in item ? item.node : item.outbound) ?? strongest.get(item.id)?.target;
+    if (parent) parents.set(item.id, parent);
+  }
+  const index = {outgoing, incoming, parents};
+  indexes.set(tree, index);
+  return index;
+}
+
 export function parentOf(tree: RoutingTree, item: TreeLeaf | TreeOutbound): string | null {
-  const configured = 'groups' in item ? item.node : item.outbound;
-  return configured ?? tree.links.filter(link => link.source === item.id).sort((a, b) => b.count - a.count)[0]?.target ?? null;
+  return treeIndex(tree).parents.get(item.id) ?? null;
 }
 
 // Rows of the drawn tree: one leaf per row in config order, grouped under their outbound; a parent sits level
@@ -183,9 +209,14 @@ export function treeRows(tree: RoutingTree): {rows: number; at: Map<string, numb
   const at = new Map<string, number>();
   let row = 0;
   const children = new Map<string, string[]>();
+  const {parents} = treeIndex(tree);
   for (const item of [...tree.leaves, ...tree.outbounds]) {
-    const parent = parentOf(tree, item);
-    if (parent) children.set(parent, [...(children.get(parent) ?? []), item.id]);
+    const parent = parents.get(item.id);
+    if (parent) {
+      let under = children.get(parent);
+      if (!under) children.set(parent, (under = []));
+      under.push(item.id);
+    }
   }
   const place = (id: string) => {
     const under = children.get(id) ?? [];
@@ -197,13 +228,10 @@ export function treeRows(tree: RoutingTree): {rows: number; at: Map<string, numb
     at.set(id, (at.get(under[0])! + at.get(under[under.length - 1])!) / 2);
   };
   // Roots in the order their branches first appear in the config.
-  const roots: string[] = [];
-  for (const outbound of tree.outbounds) {
-    const root = parentOf(tree, outbound) ?? outbound.id;
-    if (!roots.includes(root)) roots.push(root);
-  }
-  for (const node of tree.nodes) if (!roots.includes(node.id)) roots.push(node.id);
-  for (const leaf of tree.leaves) if (!parentOf(tree, leaf)) roots.push(leaf.id);
+  const roots = new Set<string>();
+  for (const outbound of tree.outbounds) roots.add(parents.get(outbound.id) ?? outbound.id);
+  for (const node of tree.nodes) roots.add(node.id);
+  for (const leaf of tree.leaves) if (!parents.has(leaf.id)) roots.add(leaf.id);
   for (const root of roots) place(root);
   return {rows: row, at};
 }

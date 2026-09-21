@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource, RoutingRule} from '../../api/model';
-import {ruleAnchor, sourceFor} from './source';
+import {addRule, removeRule, ruleAnchor, sourceFor} from './source';
 
 const rule: RoutingRule = {
   rule_id: 'r1',
@@ -36,4 +36,15 @@ it('links basename-only sources only when the match is unique', () => {
   expect(sourceFor(sources.slice(1), source)?.id).toBe('b');
   expect(sourceFor(sources, {...source, source_id: 'a'})?.id).toBe('a');
   expect(sourceFor(sources, {...source, source_id: 'missing'})).toBeUndefined();
+});
+
+it('adds and removes only an unchanged complete rule anchor', () => {
+  const text = "routing {\n  domain('a#b') -> proxy(must) # keep\n  fallback: proxy\n}\n";
+  expect(addRule(text, rule, 'dip(2001:db8::1)', 'direct', false)).toBe(
+    "routing {\n  dip(2001:db8::1) -> direct\n  domain('a#b') -> proxy(must) # keep\n  fallback: proxy\n}\n"
+  );
+  expect(removeRule(text, rule)).toBe('routing {\n  fallback: proxy\n}\n');
+  const changed = text.replace('proxy(must)', 'block');
+  expect(addRule(changed, rule, 'dip(a)', 'direct', true)).toBeNull();
+  expect(removeRule(changed, rule)).toBeNull();
 });

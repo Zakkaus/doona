@@ -29,3 +29,13 @@ export function ruleAnchor(text: string, rule: RoutingRule): {from: number; to: 
   const newline = text.indexOf('\n', last.to);
   return {from, to: newline === -1 ? text.length : newline + 1, indent: text.slice(from, first.from)};
 }
+
+export function addRule(text: string, anchor: RoutingRule, condition: string, outbound: string, must: boolean): string | null {
+  const range = ruleAnchor(text, anchor);
+  return range ? text.slice(0, range.from) + `${range.indent}${condition} -> ${outbound}${must ? '(must)' : ''}\n` + text.slice(range.from) : null;
+}
+
+export function removeRule(text: string, rule: RoutingRule): string | null {
+  const range = ruleAnchor(text, rule);
+  return range ? text.slice(0, range.from) + text.slice(range.to) : null;
+}

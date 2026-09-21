@@ -1,4 +1,5 @@
 import {expect, test} from './fixtures';
+import {createMockApi} from '../src/api/mock';
 
 const rows = (page: import('@playwright/test').Page) =>
   page.getByRole('tabpanel', {name: 'Rule list'}).locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
@@ -37,4 +38,45 @@ test('a rule is added before the fallback and removed again through validate, sa
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
   await expect(list).toHaveCount(9);
   await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('generation 42');
+});
+
+test('a consumed rule seed keeps edits across generation misalignment and accepts a new navigation', async ({page}) => {
+  const api = createMockApi();
+  const [capabilities, rules, config] = await Promise.all([api.capabilities(), api.rules(), api.config()]);
+  for (const resource of Object.values(capabilities.resources)) resource.available = false;
+  capabilities.resources.rules.available = true;
+  capabilities.resources.config.available = true;
+  capabilities.resources.config.writable = true;
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/rules?tab=list&add=domainSuffix:seed.example');
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  const values = dialog.getByRole('textbox', {name: 'Values', exact: true});
+  await expect(values).toHaveValue('seed.example');
+  await values.fill('edited.example');
+  rules.generation_id = '41';
+  // Refresh while the modal is open simulates a background resource invalidation.
+  const refresh = page.getByRole('button', {name: 'Refresh', exact: true, includeHidden: true});
+  await refresh.evaluate((button: HTMLButtonElement) => button.click());
+  await expect(page.getByRole('tabpanel', {name: 'Rule list', includeHidden: true})).toContainText('generation 41');
+  await expect(values).toHaveValue('edited.example');
+  config.generation_id = '41';
+  const updated = page.waitForResponse('**/api/v1/config');
+  await refresh.evaluate((button: HTMLButtonElement) => button.click());
+  await updated;
+  await expect(refresh).not.toHaveAttribute('data-pending');
+  await expect(values).toHaveValue('edited.example');
+  await page.evaluate(() => {
+    location.hash = '/rules?tab=list&add=dip:2001:db8::1';
+  });
+  await expect(values).toHaveValue('2001:db8::1');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
+  await page.evaluate(() => {
+    location.hash = '/rules?tab=list&add=dip:2001:db8::1';
+  });
+  await expect(values).toHaveValue('2001:db8::1');
 });
