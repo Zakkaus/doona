@@ -35,7 +35,7 @@ export function createMockApi(): Api {
     () => inventory.groupNames()
   );
   const lifecycle = createLifecycle(capabilities.resources.logs, runtime.runtime, configuration.logSettings, configuration.revision);
-  const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision);
+  const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot);
   const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt);
   return {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
 }

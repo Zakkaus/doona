@@ -3,5 +3,5 @@ export {capabilities, capabilitiesBase, capabilitiesM1} from './fixtures/capabil
 export {trafficHistory, runtimeOutbounds, version, runtime, datapath, runtimeMemory} from './fixtures/runtime';
 export {nodeFixtures, policyPick, providers, linkSchemes, geodata} from './fixtures/inventory';
 export {flows, connections, flowDroppedRecords, flowSummaryOmitsInput, connectionFixtures, dnsCache} from './fixtures/network';
-export {runtimeSettings, configRules, rules, configNotes, configSources, type MockConfigRules} from './fixtures/configuration';
+export {runtimeSettings, configRules, rules, configNotes, configSources} from './fixtures/configuration';
 export {logSeed} from './fixtures/lifecycle';

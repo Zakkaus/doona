@@ -20,7 +20,7 @@ import {Loading} from './Feedback';
 // Column minima include cell padding; grow weights their fractional share (zero keeps the minimum).
 // `drop` orders which columns give way first when the container is narrower than the minima add up to;
 // a column without it always stays. Tables never scroll sideways on a desktop.
-export type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
+type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
 

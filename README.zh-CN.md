@@ -15,7 +15,7 @@
 
 </div>
 
-doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。它对接 daeuniverse 引擎共用的原生 API：现在是 honk，dae 实现同一份契约后亦可。它显示引擎当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
+doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 honk，dae 实现同一份契约后亦可。它由引擎自己或任意 Web 服务器提供，显示引擎当前的状态，并管理节点、群组、路由规则与配置文件。
 
 ![活动页](docs/screenshots/zh-CN/activity-light.png)
 
@@ -45,7 +45,7 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上；第一个标签发布之前，请按[开发](#开发)一节自行构建。把 `VERSION` 设为下载文件名中的发行标签，包括标签开头的 `v`。然后校验文件并解压到引擎或 Web 服务器要提供的目录：
 
 ```sh
-VERSION=v0.3.0.beta.1  # 替换为下载文件对应的发行标签
+VERSION=v0.3.0-beta.1  # 替换为下载文件对应的发行标签
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
@@ -152,12 +152,13 @@ doona 没有用于存储自身界面设置的服务器端存储。配置与运�
 pnpm install --frozen-lockfile
 pnpm build                       # 输出 dist/
 pnpm check                       # 类型、lint、翻译、格式、单元测试、生成的 API 类型
+pnpm check:size                  # dist/ 构建的 gzip 大小限制
 pnpm e2e:install --with-deps     # 浏览器测试只需安装一次
 pnpm e2e                         # 对模拟后端的浏览器测试，根目录与 /ui/ 各一轮
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建重新生成上面的截图（配色总览需要 `cwebp`）。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
+`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，通过 `cwebp` 输出无损 WebP；未安装时保留 PNG 并显示警告。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
 | 路径            | 用途                                               |
 | --------------- | -------------------------------------------------- |

@@ -1,6 +1,6 @@
 import {EditorState} from '@codemirror/state';
 import {expect, it} from 'vitest';
-import {toDiagnostics} from './CodeEditor';
+import {toDiagnostics} from './diagnostics';
 
 it('maps one-based UTF-8 columns to UTF-16 positions on non-ASCII lines', () => {
   const prefix = '  café € 𐐀 ';

@@ -3,9 +3,8 @@ import type {Capabilities, ConfigSource, RuleList, Runtime, RuntimeSettingsPatch
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
-import {diagnose, stored, validate} from './config';
+import {diagnose, sectionLines, stored, validate} from './config';
 import type {MockLifecycle} from './lifecycle';
-import {uncomment} from '../../features/config/blocks';
 
 type ConfigurationApi = Pick<
   Api,
@@ -41,64 +40,54 @@ export function createConfiguration(
     if (!main) return;
     Object.assign(main, await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()}));
   }
+  // Preserve fixture IDs for unchanged rules; new rules use their source location.
+  const ruleSnapshot = async (): Promise<RuleList> => {
+    const list = await loadSources();
+    const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
+    const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
+    const entries: RuleList['rules'] = [];
+    let fallback: RuleList['fallback'] | null = null;
+    const read = (file: (typeof list)[number], bare: boolean) => {
+      sectionLines(file.content, 'routing', bare).forEach(({code, line}) => {
+        const include = /^include\s+(\S+)$/.exec(code);
+        if (include) {
+          const target = byPath.get(include[1]);
+          if (target) read(target, true);
+          return;
+        }
+        const fb = /^fallback:\s*(\S+)$/.exec(code);
+        const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
+        if (!fb && !rule) return;
+        const source = {file: file.path.split('/').pop()!, source_id: file.id, line};
+        if (fb) {
+          fallback = {outbound: fb[1], source};
+          entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
+          return;
+        }
+        const must = rule![2].endsWith('(must)');
+        const outbound = rule![2].replace(/\(must\)$/, '');
+        // The condition alone, as honk renders it and as flows quote it; the outbound is its own field.
+        entries.push({
+          rule_id: known.get(code) ?? `${source.file}:${source.line}`,
+          index: entries.length,
+          expression: rule![1],
+          outbound,
+          must,
+          source,
+          kind: 'rule'
+        });
+      });
+    };
+    const main = list.find(item => item.kind === 'main');
+    if (main) read(main, false);
+    if (!fallback) throw new ApiError(409, 'snapshot_unavailable', 'The routing section has no fallback');
+    return {generation_id: String(configRevision), rules: entries, fallback};
+  };
   const api: ConfigurationApi = {
-    // Rebuild rules in evaluation order from accepted text; preserve known fixture IDs and derive new IDs from file and line.
     rules: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
-      const list = await loadSources();
-      const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
-      const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
-      const entries: RuleList['rules'] = [];
-      let fallback: RuleList['fallback'] | null = null;
-      const read = (file: (typeof list)[number], bare: boolean) => {
-        let depth = 0;
-        file.content.split('\n').forEach((raw, i) => {
-          const code = uncomment(raw).trim();
-          if (!bare) {
-            if (/^routing\s*\{/.test(code)) {
-              depth = 1;
-              return;
-            }
-            if (depth === 0) return;
-            if (code === '}') {
-              depth = 0;
-              return;
-            }
-          }
-          const include = /^include\s+(\S+)$/.exec(code);
-          if (include) {
-            const target = byPath.get(include[1]);
-            if (target) read(target, true);
-            return;
-          }
-          const fb = /^fallback:\s*(\S+)$/.exec(code);
-          const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
-          if (!fb && !rule) return;
-          const source = {file: file.path.split('/').pop()!, source_id: file.id, line: i + 1};
-          if (fb) {
-            fallback = {outbound: fb[1], source};
-            entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
-            return;
-          }
-          const must = rule![2].endsWith('(must)');
-          const outbound = rule![2].replace(/\(must\)$/, '');
-          // The condition alone, as honk renders it and as flows quote it; the outbound is its own field.
-          entries.push({
-            rule_id: known.get(code) ?? `${source.file}:${source.line}`,
-            index: entries.length,
-            expression: rule![1],
-            outbound,
-            must,
-            source,
-            kind: 'rule'
-          });
-        });
-      };
-      const main = list.find(item => item.kind === 'main');
-      if (main) read(main, false);
-      if (!fallback) throw new ApiError(409, 'snapshot_unavailable', 'The routing section has no fallback');
-      return {generation_id: String(configRevision), rules: entries, fallback};
+      return ruleSnapshot();
     },
     config: async signal => {
       signal?.throwIfAborted();
@@ -212,5 +201,5 @@ export function createConfiguration(
       });
     }
   };
-  return {api, advance, editMain, revision: () => String(configRevision), logSettings: () => settings.log};
+  return {api, ruleSnapshot, advance, editMain, revision: () => String(configRevision), logSettings: () => settings.log};
 }

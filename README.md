@@ -15,14 +15,14 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a set of static files that the engine serves itself, or any web server does. It talks to the native API the daeuniverse engines share: honk today, dae once it implements the same contract. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
+doona is a static web UI for the native API the daeuniverse engines share: honk today, dae once it implements the same contract. The engine serves it itself or any web server does; it shows what the engine is doing and manages nodes, groups, routing rules and configuration files.
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
+Eleven palettes support light and dark modes; Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
 
 <img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -45,7 +45,7 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Set `VERSION` to the downloaded release asset suffix, including the leading `v` for tagged releases. Then verify and extract the files into the directory the engine or web server will serve:
 
 ```sh
-VERSION=v0.3.0.beta.1  # replace with the downloaded release tag
+VERSION=v0.3.0-beta.1  # replace with the downloaded release tag
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
@@ -152,12 +152,13 @@ Over HTTPS or on localhost a service worker precaches the application shell and 
 pnpm install --frozen-lockfile
 pnpm build                       # writes dist/
 pnpm check                       # types, lint, translations, formatting, unit tests, generated API types
+pnpm check:size                  # gzip budgets for the dist/ build
 pnpm e2e:install --with-deps     # once, for the browser tests
 pnpm e2e                         # browser tests against the mock, at the root and under /ui/
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
-`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` refreshes the images above from a running build (the palette sheet needs `cwebp`). See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+`pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` captures pages and the palette sheet from a running build as lossless WebP using `cwebp`; without it, the script keeps PNG files and prints a warning. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 | Path            | Purpose                                                                    |
 | --------------- | -------------------------------------------------------------------------- |

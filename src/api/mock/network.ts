@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {Capabilities, DnsLogRecord, FlowDetail, RuntimeOutbounds} from '../model';
+import type {Capabilities, DnsLogRecord, FlowDetail, RuleList, RuntimeOutbounds} from '../model';
 import {ApiError} from '../error';
 import {ipLiteral, sourceIp} from '../selectors';
 import * as fixtures from './fixtures/network';
@@ -45,7 +45,14 @@ type NetworkApi = Pick<
   | 'deleteDnsEntry'
   | 'flushDnsCache'
 >;
-export function createNetwork(capabilities: Capabilities, big: boolean, profile: string | null, outbounds: RuntimeOutbounds, revision: () => string) {
+export function createNetwork(
+  capabilities: Capabilities,
+  big: boolean,
+  profile: string | null,
+  outbounds: RuntimeOutbounds,
+  revision: () => string,
+  ruleSnapshot: () => Promise<RuleList>
+) {
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
@@ -134,7 +141,7 @@ export function createNetwork(capabilities: Capabilities, big: boolean, profile:
     routingTrace: async (request, signal) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.routing_trace.available) throw new ApiError(404, 'capability_not_supported', 'Routing trace is unavailable');
-      return routingTrace(request, revision());
+      return routingTrace(request, await ruleSnapshot(), dnsCache);
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();

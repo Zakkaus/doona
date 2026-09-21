@@ -5,12 +5,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_VERSION:=0.1.0
+PKG_VERSION:=0.3.0-beta.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-v$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
-# Fill in from the release's SHA256SUMS; skip only while there is no release.
+# Placeholder: replace with the program archive's SHA256SUMS entry after publication.
 PKG_HASH:=skip
 
 PKG_LICENSE:=GPL-3.0-only
@@ -24,6 +24,7 @@ define Download/doona-fonts
 	URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
+	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
 	HASH:=skip
 endef
 

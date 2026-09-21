@@ -2,8 +2,6 @@ import type {ReactNode} from 'react';
 import {
   type PopoverProps,
   Button as RButton,
-  ToggleButton,
-  ToggleButtonGroup,
   Menu,
   MenuItem,
   MenuTrigger,
@@ -110,25 +108,17 @@ export function ChoiceMenu({
   items,
   value,
   onChange,
-  onAction,
   ...props
 }: Omit<MenuButtonProps, 'content'> & {
   items: Item[];
   value: string;
-  onChange?: (key: string) => void;
-  onAction?: (key: string) => void;
+  onChange: (key: string) => void;
 }) {
   return (
     <MenuButton
       {...props}
       content={
-        <Menu
-          aria-label={props.label}
-          selectionMode="single"
-          selectedKeys={[value]}
-          onSelectionChange={onChange ? pickMenuKey(onChange) : undefined}
-          onAction={onAction ? key => onAction(String(key)) : undefined}
-        >
+        <Menu aria-label={props.label} selectionMode="single" selectedKeys={[value]} onSelectionChange={pickMenuKey(onChange)}>
           {items.map(item => (
             <MenuChoice key={item.id} item={item} />
           ))}
@@ -172,42 +162,5 @@ export function LabeledSelect({
       <span className="lbl">{label}</span>
       {sel}
     </div>
-  );
-}
-
-// A wrapping row of toggle chips with one selectable at a time; a count sits after the label when given.
-export function Chips({
-  label,
-  items,
-  value,
-  onChange
-}: {
-  label: string;
-  items: Array<{id: string; label: string; count?: string; countLabel?: string}>;
-  value: string | null;
-  onChange: (id: string | null) => void;
-}) {
-  return (
-    <ToggleButtonGroup
-      className="rp-chips"
-      aria-label={label}
-      selectionMode="single"
-      selectedKeys={value ? [value] : []}
-      onSelectionChange={keys => {
-        const next = [...keys][0];
-        onChange(next == null ? null : String(next));
-      }}
-    >
-      {items.map(item => (
-        <ToggleButton key={item.id} id={item.id} className="rp-btn sm">
-          <span className="rp-truncate">{item.label}</span>
-          {item.count !== undefined && (
-            <span className="n" title={item.countLabel}>
-              {item.count}
-            </span>
-          )}
-        </ToggleButton>
-      ))}
-    </ToggleButtonGroup>
   );
 }

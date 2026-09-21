@@ -11,8 +11,8 @@ export const runtimeSettings: RuntimeSettings = {
   flows: {max_flows: 4096, retention_seconds: 300}
 };
 
-// Trace, flow evidence, and /rules share this routing dictionary.
-export type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
+// Initial routing dictionary for fixture flow evidence and stable rule IDs.
+type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
 export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 export {rules};
 const configMain = `global {

@@ -60,27 +60,6 @@
   color: var(--rp-text);
   transition-delay: 0ms;
 }
-/* Chips: a wrapping row of small toggles; the chosen one takes the selection tint. */
-.rp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-.rp-chips .rp-btn {
-  max-width: 100%;
-  min-width: 0;
-  border-color: var(--rp-hl-med);
-}
-.rp-chips .rp-btn .n {
-  color: var(--rp-subtle);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-.rp-chips .rp-btn[data-selected] {
-  background: var(--rp-selected);
-  border-color: var(--rp-pine);
-}
 .rp-seg .rp-btn[data-selected] {
   /* The slider draws the selection; the button itself stays flat. */
   background: transparent;

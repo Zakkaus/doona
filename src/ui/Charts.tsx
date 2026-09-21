@@ -9,7 +9,7 @@ function useHover() {
   return {inside, handlers: {onPointerEnter: () => setInside(true), onPointerLeave: () => setInside(false)}};
 }
 
-export type Series = {label: string; color: string; values: Array<number | null>};
+type Series = {label: string; color: string; values: Array<number | null>};
 const VARS = [
   'base',
   'surface',
@@ -28,7 +28,7 @@ const VARS = [
   'hl-med',
   'hl-high'
 ] as const;
-export type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
+type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
 function read(): Palette {
   const cs = getComputedStyle(document.documentElement);
   return {
@@ -72,7 +72,7 @@ const niceStep = (range: number) => {
 // Tick marks on round clock values for a fixed window: the step that yields three to six marks. Marks within
 // a few percent of either edge are dropped, since their labels would hang outside the axis.
 const tickSteps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400].map(s => s * 1000);
-export function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
+function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
   const span = until - since;
   const step = tickSteps.find(s => span / s <= 6) ?? tickSteps[tickSteps.length - 1];
   // Day and longer steps align to local midnight; shorter ones to the epoch, which lands on round minutes.
@@ -126,7 +126,9 @@ const LazyAreaChart = lazy(() =>
       const uid = useId();
       const hover = useHover();
       const span = window ? window.until - window.since : timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
-      const marks = window ? clockTicks(window.since, window.until) : undefined;
+      const since = window?.since;
+      const until = window?.until;
+      const marks = useMemo(() => (since !== undefined && until !== undefined ? clockTicks(since, until) : undefined), [since, until]);
       const withSeconds = marks ? marks.step < 60000 : span < 3 * 60 * 1000;
       // Day marks sit on midnight, so they read as dates; anything finer reads as a 24-hour clock, with seconds
       // when the marks are closer than a minute.
@@ -144,26 +146,31 @@ const LazyAreaChart = lazy(() =>
         [locale, withSeconds, withDate]
       );
       const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
+      const data = useMemo(() => timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])])), [timestamps, series]);
+      const {yDomain, yTicks} = useMemo(() => {
+        const values = series.flatMap(s => s.values.filter((v): v is number => v !== null));
+        let lo = 0;
+        let max = niceMax(Math.max(1, ...values) * 1.08);
+        if (baseline === 'auto' && values.length) {
+          const min = Math.min(...values);
+          const top = Math.max(...values);
+          const step = niceStep(Math.max(top - min, top * 0.02, 1));
+          lo = Math.max(0, Math.floor(min / step) * step - step);
+          max = Math.ceil(top / step) * step + step;
+        }
+        return {yDomain: [lo, max], yTicks: baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max]};
+      }, [series, baseline]);
+      const ticks = useMemo(() => {
+        const last = timestamps.length - 1;
+        return marks
+          ? marks.ticks
+          : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
+      }, [marks, withSeconds, timestamps]);
+      const domain = useMemo<[number | string, number | string]>(
+        () => (since !== undefined && until !== undefined ? [since, until] : ['dataMin', 'dataMax']),
+        [since, until]
+      );
       if (!timestamps.length) return null;
-      const last = timestamps.length - 1;
-      const data = timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])]));
-      const values = series.flatMap(s => s.values.filter((v): v is number => v !== null));
-      let lo = 0;
-      let max = niceMax(Math.max(1, ...values) * 1.08);
-      if (baseline === 'auto' && values.length) {
-        const min = Math.min(...values);
-        const top = Math.max(...values);
-        const step = niceStep(Math.max(top - min, top * 0.02, 1));
-        lo = Math.max(0, Math.floor(min / step) * step - step);
-        max = Math.ceil(top / step) * step + step;
-      }
-      const yTicks = baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max];
-      // A fixed window gets ticks on round clock marks (every 30 s, 2 min, 15 min, 1 h, 6 h, 1 d); a free axis
-      // shows its ends and thirds.
-      const ticks = marks
-        ? marks.ticks
-        : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
-      const domain: [number | string, number | string] = window ? [window.since, window.until] : ['dataMin', 'dataMax'];
       return (
         <div style={{height, width: '100%', flex: fill ? '1 1 auto' : undefined}} {...hover.handlers}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
@@ -193,7 +200,7 @@ const LazyAreaChart = lazy(() =>
               <YAxis
                 orientation="right"
                 ticks={yTicks}
-                domain={[lo, max]}
+                domain={yDomain}
                 tickFormatter={v => fmt(v)}
                 tick={{fontSize: 11, fill: p.subtle}}
                 axisLine={false}
@@ -255,11 +262,15 @@ const LazySpark = lazy(() =>
       floor?: number;
     }) {
       const uid = useId();
-      const known = values.filter((v): v is number => v !== null);
-      if (!known.length) return null;
-      const data = values.map((v, i) => ({t: timestamps[i], v}));
-      const lo = floor > 0 ? 0 : Math.min(...known) * 0.85,
-        hi = Math.max(Math.max(...known) * 1.05 || 1, floor);
+      const data = useMemo(() => values.map((v, i) => ({t: timestamps[i], v})), [values, timestamps]);
+      const {domain, hasValues} = useMemo(() => {
+        const known = values.filter((v): v is number => v !== null);
+        return {
+          hasValues: known.length > 0,
+          domain: [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)]
+        };
+      }, [values, floor]);
+      if (!hasValues) return null;
       return (
         <div style={{height, width: '100%'}}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
@@ -271,7 +282,7 @@ const LazySpark = lazy(() =>
                 </linearGradient>
               </defs>
               <XAxis hide dataKey="t" type="number" domain={['dataMin', 'dataMax']} />
-              <YAxis hide domain={[lo, hi]} />
+              <YAxis hide domain={domain} />
               <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#${uid})`} dot={false} isAnimationActive={false} />
             </RAreaChart>
           </ResponsiveContainer>
@@ -320,7 +331,7 @@ const LazyDonut = lazy(() =>
       const t = useT();
       const p = usePalette();
       const hover = useHover();
-      const data = rows.filter(r => r.value !== null && r.value > 0);
+      const data = useMemo(() => rows.filter(r => r.value !== null && r.value > 0), [rows]);
       return (
         <div style={{height: '100%', width: '100%'}} {...hover.handlers}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
