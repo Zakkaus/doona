@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {useCapabilities, useFlow, useFlows, useGroups, useNodes, useOutboundNames, useRules} from '../../api/store';
 import {flowsThrough, nodeNames, pinnedLabel, routingTree, type TreeBy} from './map';
 import Tree from './Tree';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart} from '../../api/selectors';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp} from '../../api/selectors';
 import {flowStepFields, traceGaps} from './view';
 import {
   Badge,
@@ -23,6 +23,7 @@ import {
 } from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
+import type {FlowDetail} from '../../api/model';
 import {buildHash, within} from '../../shell/route';
 import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import type {Key} from '../../i18n/messages';
@@ -114,8 +115,15 @@ export function FlowRecords({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows(connectionId);
-  const rulesListed = useCapabilities().data?.resources.rules.available === true;
+  const resources = useCapabilities().data?.resources;
+  const rulesListed = resources?.rules.available === true;
   const rules = useRules(rulesListed);
+  // A flow's target becomes a new rule's condition: the domain as a suffix, else the destination address.
+  const ruleSeed = (flow: FlowDetail) => {
+    const ip = sourceIp(flow.input.dst ?? undefined);
+    return flow.input.domain ? 'domainSuffix:' + flow.input.domain : ip ? 'dip:' + ip : null;
+  };
+  const canAddRule = rulesListed && resources?.config.available === true && resources.config.writable === true;
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -235,11 +243,18 @@ export function FlowRecords({go, query}: PageProps) {
                     : [])
                 ]}
               />
-              {flow.connection_id && (
-                <Link appearance="button" className="sm" href={buildHash('connections', 'id=' + encodeURIComponent(flow.connection_id))}>
-                  {t('flow.viewConnection')}
-                </Link>
-              )}
+              <div className="rp-cluster">
+                {flow.connection_id && (
+                  <Link appearance="button" className="sm" href={buildHash('connections', 'id=' + encodeURIComponent(flow.connection_id))}>
+                    {t('flow.viewConnection')}
+                  </Link>
+                )}
+                {canAddRule && ruleSeed(flow) && (
+                  <Link appearance="button" className="sm" href={buildHash('rules', 'tab=list&add=' + encodeURIComponent(ruleSeed(flow)!))}>
+                    {t('flow.addRule')}
+                  </Link>
+                )}
+              </div>
               <div className="rp-list">
                 {!flow.trace.steps.length && <Empty>{t('ui.empty')}</Empty>}
                 {[...flow.trace.steps]

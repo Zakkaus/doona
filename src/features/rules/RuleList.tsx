@@ -16,7 +16,8 @@ import {
   TextField,
   TextTooltip,
   errorText,
-  toast
+  toast,
+  useLinked
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
@@ -25,6 +26,7 @@ import {fileName} from '../config/names';
 import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
+import {within} from '../../shell/route';
 import {ruleAnchor, sourceFor} from './source';
 
 const kindLabels: Record<ConditionKind, Key> = {
@@ -114,7 +116,7 @@ function Dictionary({go, query}: PageProps) {
       .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
   ];
   const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
-  const open = (next: NonNullable<typeof dialog>) => {
+  const open = (next: NonNullable<typeof dialog>, preset?: {kind: ConditionKind; value: string}) => {
     // Line numbers come from the rule list and the text from the config; they must describe the same generation.
     if (rules.data?.generation_id !== config.data?.generation_id) {
       toast('negative', t('rule.stale'));
@@ -123,9 +125,18 @@ function Dictionary({go, query}: PageProps) {
       return;
     }
     setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
-    setPick({on: true, kind: 'domainSuffix', value: ''});
+    setPick({on: true, kind: 'domainSuffix', value: '', ...preset});
     setDialog(next);
   };
+  // `?add=kind:value` (from a flow) opens the add dialog with that condition once the list and the config are
+  // there; the address keeps the seed until the dialog closes.
+  const seed = new URLSearchParams(query).get('add');
+  const ready = canWrite && !!rules.data && !!config.data && positions.length > 0;
+  useLinked(seed && ready ? seed : null, value => {
+    if (!value) return;
+    const [kind, ...rest] = value.split(':');
+    if (conditionKinds.includes(kind as ConditionKind)) open({kind: 'add'}, {kind: kind as ConditionKind, value: rest.join(':')});
+  });
   const write = async (source: ConfigSource, transform: (text: string) => string | null) => {
     const result = await editor.apply(source, transform);
     if (!result) return false;
@@ -293,7 +304,9 @@ function Dictionary({go, query}: PageProps) {
         alert={dialog?.kind === 'remove'}
         isOpen={dialog !== null}
         onOpenChange={isOpen => {
-          if (!isOpen) setDialog(null);
+          if (isOpen) return;
+          setDialog(null);
+          if (seed) go('rules', within(query, {add: null}));
         }}
         footer={close => (
           <>

@@ -49,6 +49,20 @@ test('a pinned tree item carries into the records', async ({page}) => {
   await expect(topology).toBeVisible();
 });
 
+test('a flow offers a rule for its target, prefilled in the rule list', async ({page}) => {
+  await page.goto('/#/rules?tab=flows&id=flow-1');
+  const panel = page.locator('.rp-panel');
+  await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org)');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
+  await page.goto('/#/rules?tab=list&add=dip:203.0.113.5');
+  await expect(page.getByRole('dialog', {name: 'Add rule', exact: true}).locator('.rp-code')).toHaveText('dip(203.0.113.5)');
+});
+
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
   await page.goto('/#/rules?tab=flows');
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
