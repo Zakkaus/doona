@@ -21,10 +21,14 @@ export function getApi(): Api {
   const key = JSON.stringify([activeId, base, token]);
   if (!selected || configuration !== key) {
     if (base && base !== 'mock') selected = createApi(base, token ?? undefined);
-    else {
-      if (!mockFactory) throw new Error('API initialization has not completed');
-      selected = mockFactory();
-    }
+    else if (mockFactory) selected = mockFactory();
+    else if (selected) {
+      // Switched to the mock from another tab: keep serving the current backend until the mock has loaded.
+      void import('./mock').then(module => {
+        mockFactory = module.createMockApi;
+      });
+      return selected;
+    } else throw new Error('API initialization has not completed');
     configuration = key;
   }
   return selected;

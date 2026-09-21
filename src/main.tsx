@@ -8,7 +8,7 @@ import {initializeApi} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {readLang, translate} from './i18n';
+import {LangContext, readLang, translate} from './i18n';
 
 stampAppearance();
 let startup: Promise<unknown> | undefined;
@@ -32,17 +32,19 @@ function Startup() {
   }, []);
   if (ready) return <Shell />;
   return (
-    <div className="rp-shell">
-      <header className="rp-top">
-        <div className="rp-brand">
-          <img src={logo} alt="" />
-          <span>doona</span>
-        </div>
-      </header>
-      <main className="rp-main">
-        <div className="rp-content">{error ? <ErrorMessage error={error} /> : <Loading />}</div>
-      </main>
-    </div>
+    <LangContext.Provider value={readLang()}>
+      <div className="rp-shell">
+        <header className="rp-top">
+          <div className="rp-brand">
+            <img src={logo} alt="" />
+            <span>doona</span>
+          </div>
+        </header>
+        <main className="rp-main">
+          <div className="rp-content">{error ? <ErrorMessage error={error} /> : <Loading />}</div>
+        </main>
+      </div>
+    </LangContext.Provider>
   );
 }
 createRoot(document.getElementById('root')!).render(

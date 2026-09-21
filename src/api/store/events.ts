@@ -21,33 +21,43 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
       shared.status = {...shared.status, ...change};
       shared.statuses.forEach(fn => fn());
     };
-    const request = inflight.acquire(api, normalizeResourceKey(['capabilities']), signal => api.capabilities(signal));
-    shared.controller.signal.addEventListener('abort', request.release, {once: true});
-    void request.promise
-      .then(capabilities => {
-        request.release();
-        shared.controller.signal.removeEventListener('abort', request.release);
-        if (shared.controller.signal.aborted) return;
-        update({available: capabilities.resources.events.available});
-        if (!capabilities.resources.events.available) return;
-        return api.subscribeEvents({
-          signal: shared.controller.signal,
-          onConnectionChange: connected => update({connected}),
-          onEvent: event => {
-            const reconnected = event.event === 'stream.ready' && !!shared.ready;
-            if (event.event === 'stream.ready') {
-              shared.ready = event;
-              update({cursor: event.id, error: null});
+    // The stream waits for the capability probe; a probe that fails is tried again with backoff, so a backend
+    // that was down at boot still gets its stream once it answers.
+    let pause = 5000;
+    const boot = () => {
+      const request = inflight.acquire(api, normalizeResourceKey(['capabilities']), signal => api.capabilities(signal));
+      shared.controller.signal.addEventListener('abort', request.release, {once: true});
+      void request.promise
+        .then(capabilities => {
+          request.release();
+          shared.controller.signal.removeEventListener('abort', request.release);
+          if (shared.controller.signal.aborted) return;
+          update({available: capabilities.resources.events.available, error: null});
+          if (!capabilities.resources.events.available) return;
+          return api.subscribeEvents({
+            signal: shared.controller.signal,
+            onConnectionChange: connected => update({connected}),
+            onEvent: event => {
+              const reconnected = event.event === 'stream.ready' && !!shared.ready;
+              if (event.event === 'stream.ready') {
+                shared.ready = event;
+                update({cursor: event.id, error: null});
+              }
+              shared.listeners.forEach(fn => fn(event, reconnected));
             }
-            shared.listeners.forEach(fn => fn(event, reconnected));
-          }
+          });
+        })
+        .catch(reason => {
+          request.release();
+          shared.controller.signal.removeEventListener('abort', request.release);
+          if (shared.controller.signal.aborted) return;
+          update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
+          const timer = setTimeout(boot, pause);
+          pause = Math.min(pause * 2, 30000);
+          shared.controller.signal.addEventListener('abort', () => clearTimeout(timer), {once: true});
         });
-      })
-      .catch(reason => {
-        request.release();
-        shared.controller.signal.removeEventListener('abort', request.release);
-        if (!shared.controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
-      });
+    };
+    boot();
   }
   stream.listeners.add(listener);
   if (notify) stream.statuses.add(notify);
