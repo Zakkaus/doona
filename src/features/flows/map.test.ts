@@ -8,14 +8,14 @@ it('lays the config out as a tree and weights it with retained flows', async () 
   const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
   const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules);
   // Rules keep their evaluation order and every configured rule is there, used or not, joined to its outbound.
-  expect(tree.leaves.slice(0, rules.rules.length).map(rule => rule.id)).toEqual(rules.rules.map(rule => 'rule:value:' + rule.rule_id));
+  expect(tree.leaves.slice(0, rules.rules.length).map(rule => rule.id)).toEqual(rules.rules.map(rule => 'rule:' + rule.rule_id));
   for (const rule of rules.rules) {
-    const entry = tree.leaves.find(item => item.id === 'rule:value:' + rule.rule_id)!;
+    const entry = tree.leaves.find(item => item.id === 'rule:' + rule.rule_id)!;
     expect(entry.label).toBe(rule.expression);
     expect(entry.must).toBe(rule.must);
-    expect(tree.links.some(link => link.source === entry.id && link.target === 'outbound:value:' + rule.outbound)).toBe(true);
+    expect(tree.links.some(link => link.source === entry.id && link.target === 'outbound:' + rule.outbound)).toBe(true);
   }
-  expect(tree.leaves.find(rule => rule.fallback)?.outbound).toBe('outbound:value:' + rules.fallback.outbound);
+  expect(tree.leaves.find(rule => rule.fallback)?.outbound).toBe('outbound:' + rules.fallback.outbound);
   // Every configured group is an outbound with its selected node linked before any flow used it.
   for (const group of groups) {
     const outbound = tree.outbounds.find(item => item.label === group.name)!;
@@ -25,18 +25,18 @@ it('lays the config out as a tree and weights it with retained flows', async () 
   }
   // Counts flow along the tree: the rule column adds up to the flow total; terminal outbounds have no node hop.
   expect(tree.leaves.reduce((sum, rule) => sum + rule.count, 0)).toBe(flows.flows.length);
-  expect(tree.outbounds.find(outbound => outbound.id === 'outbound:value:direct')).toMatchObject({kind: 'direct', node: null});
-  expect(tree.links.some(link => link.source === 'outbound:value:direct')).toBe(false);
+  expect(tree.outbounds.find(outbound => outbound.id === 'outbound:direct')).toMatchObject({kind: 'direct', node: null});
+  expect(tree.links.some(link => link.source === 'outbound:direct')).toBe(false);
   const direct = flows.flows.filter(flow => flow.outbound === 'direct');
-  expect(flowsThrough(flows.flows, 'outbound:value:direct', nodeNames(nodes.nodes), rules.rules)).toHaveLength(direct.length);
+  expect(flowsThrough(flows.flows, 'outbound:direct', nodeNames(nodes.nodes), rules.rules)).toHaveLength(direct.length);
   // A flow that names a rule id lands on that entry rather than on a second one with the same text.
   const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression)!;
-  expect(tree.leaves.filter(rule => rule.id === 'rule:value:' + matched.rule_id)).toHaveLength(1);
-  expect(flowsThrough(flows.flows, 'rule:value:' + matched.rule_id, nodeNames(nodes.nodes), rules.rules)).toContain(matched);
+  expect(tree.leaves.filter(rule => rule.id === 'rule:' + matched.rule_id)).toHaveLength(1);
+  expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes), rules.rules)).toContain(matched);
   const label = (name: string | null) => (name === 'direct' ? 'Direct' : String(name));
-  expect(pinnedLabel('rule:value:' + matched.rule_id, rules.rules, nodeNames(nodes.nodes), label)).toBe(matched.rule_expression);
-  expect(pinnedLabel('outbound:value:direct', rules.rules, nodeNames(nodes.nodes), label)).toBe('Direct');
-  expect(pinnedLabel('node:value:' + nodes.nodes[0].id, rules.rules, nodeNames(nodes.nodes), label)).toBe(nodes.nodes[0].name);
+  expect(pinnedLabel('rule:' + matched.rule_id, rules.rules, nodeNames(nodes.nodes), label)).toBe(matched.rule_expression);
+  expect(pinnedLabel('outbound:direct', rules.rules, nodeNames(nodes.nodes), label)).toBe('Direct');
+  expect(pinnedLabel('node:' + nodes.nodes[0].id, rules.rules, nodeNames(nodes.nodes), label)).toBe(nodes.nodes[0].name);
 });
 
 it('follows a nested selection to its node and draws the inner group inside the outbound', async () => {
@@ -47,7 +47,7 @@ it('follows a nested selection to its node and draws the inner group inside the 
   const tree = routingTree([], nested, nodes.nodes, rules.rules);
   const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
   expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'resilient']);
-  expect(proxy.node).toBe('node:value:' + inner.selection.tcp_member_id);
+  expect(proxy.node).toBe('node:' + inner.selection.tcp_member_id);
   // The inner group is only drawn inside proxy unless a rule names it directly.
   const named = rules.rules.some(rule => rule.outbound === 'resilient');
   expect(tree.outbounds.some(outbound => outbound.label === 'resilient')).toBe(named);
@@ -59,8 +59,8 @@ it('takes a one-element chain as the leaf node the flow left through', async () 
   const routed = flows.flows.find(flow => flow.chain.length > 1)!;
   const leaf = routed.chain[routed.chain.length - 1];
   const single = routingTree([{...routed, chain: [leaf]}], groups, nodes.nodes, []);
-  expect(single.links.some(link => link.target === 'node:value:' + leaf && link.count === 1)).toBe(true);
-  expect(single.nodes.find(node => node.id === 'node:value:' + leaf)?.label).toBe(nodeNames(nodes.nodes).get(leaf));
+  expect(single.links.some(link => link.target === 'node:' + leaf && link.count === 1)).toBe(true);
+  expect(single.nodes.find(node => node.id === 'node:' + leaf)?.label).toBe(nodeNames(nodes.nodes).get(leaf));
   expect(single.nodes.some(node => node.unknown)).toBe(false);
 });
 
@@ -95,7 +95,7 @@ it('keeps one transport through a nested chain and hides a group only reached th
   const tree = routingTree([], nested, nodes.nodes, rules.rules);
   const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
   expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'gaming']);
-  expect(proxy.node).toBe('node:value:' + inner.selection.udp_member_id);
+  expect(proxy.node).toBe('node:' + inner.selection.udp_member_id);
   expect(tree.outbounds.some(outbound => outbound.label === 'gaming')).toBe(rules.rules.some(rule => rule.outbound === 'gaming'));
 });
 
@@ -105,9 +105,9 @@ it('keeps a retained flow from an earlier generation apart from the rule that no
   const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression && rules.rules.some(rule => rule.rule_id === flow.rule_id))!;
   const stale = {...matched, id: 'stale', rule_expression: 'domain(suffix: old.example)'};
   const tree = routingTree([...flows.flows, stale], groups, nodes.nodes, rules.rules);
-  const historical = tree.leaves.find(leaf => leaf.id === `rule:value:${matched.rule_id}\u0000domain(suffix: old.example)`)!;
+  const historical = tree.leaves.find(leaf => leaf.id === `rule:${matched.rule_id}\u0000domain(suffix: old.example)`)!;
   expect(historical).toMatchObject({label: 'domain(suffix: old.example)', count: 1, outbound: null});
-  expect(tree.leaves.find(leaf => leaf.id === 'rule:value:' + matched.rule_id)?.label).toBe(matched.rule_expression);
+  expect(tree.leaves.find(leaf => leaf.id === 'rule:' + matched.rule_id)?.label).toBe(matched.rule_expression);
   const names = nodeNames(nodes.nodes);
   expect(flowsThrough([...flows.flows, stale], historical.id, names, rules.rules)).toEqual([stale]);
   expect(pinnedLabel(historical.id, rules.rules, names, String)).toBe('domain(suffix: old.example)');
@@ -121,7 +121,7 @@ it('seen by device, the leaves are client addresses joined to outbounds by flows
   expect(tree.leaves.every(leaf => leaf.id.startsWith('client:') && leaf.outbound === null && !leaf.must)).toBe(true);
   expect(tree.leaves.reduce((sum, leaf) => sum + leaf.count, 0)).toBe(flows.flows.length);
   const device = tree.leaves.find(leaf => leaf.label === '10.0.0.12')!;
-  expect(tree.links.some(link => link.source === device.id && link.target.startsWith('outbound:value:') && link.count > 0)).toBe(true);
+  expect(tree.links.some(link => link.source === device.id && link.target.startsWith('outbound:') && link.count > 0)).toBe(true);
   expect(flowsThrough(flows.flows, device.id, nodeNames(nodes.nodes), rules.rules)).toHaveLength(device.count);
   // Groups and their selected nodes still come from the config.
   expect(tree.outbounds.some(outbound => outbound.label === 'skylink' && outbound.count === 0)).toBe(true);

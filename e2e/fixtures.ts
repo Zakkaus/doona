@@ -88,6 +88,12 @@ export async function fulfillAccepted(route: Route, accepted: OperationAccepted)
 }
 
 type MockHandler = (request: Request) => Promise<unknown>;
+// Wire parameters are strings; the in-process mock takes the typed query the client would send.
+const query = (request: Request) => {
+  const params = Object.fromEntries(new URL(request.url()).searchParams) as Record<string, string | number>;
+  if (typeof params.limit === 'string') params.limit = Number(params.limit);
+  return params as never;
+};
 
 export async function mockBackend(page: Page) {
   const api = createMockApi();
@@ -104,15 +110,15 @@ export async function mockBackend(page: Page) {
     config: () => api.config(),
     rules: () => api.rules(),
     groups: () => api.groups(),
-    nodes: request => api.nodes(Object.fromEntries(new URL(request.url()).searchParams)),
+    nodes: request => api.nodes(query(request)),
     providers: () => api.providers(),
     flows: () => api.flows(),
     connections: () => api.connections(),
     runtime: () => api.runtime(),
     datapath: () => api.datapath(),
     geodata: () => api.geodata(),
-    'dns/cache': request => api.dnsCache(Object.fromEntries(new URL(request.url()).searchParams)),
-    'dns/log': request => api.dnsLog(Object.fromEntries(new URL(request.url()).searchParams)),
+    'dns/cache': request => api.dnsCache(query(request)),
+    'dns/log': request => api.dnsLog(query(request)),
     'runtime/settings': () => api.runtimeSettings(),
     'runtime/memory': () => api.runtimeMemory(),
     'runtime/memory/history': () => api.memoryHistory(),

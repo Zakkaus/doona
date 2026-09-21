@@ -626,8 +626,8 @@ test('routing map selections separate missing outbounds from a backend name of u
   snapshot.next_cursor = null;
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules?tab=map');
-  const missing = page.locator('.rp-tree-tile[data-id="outbound:missing"]');
-  const known = page.locator('.rp-tree-tile[data-id="outbound:value:unknown"]');
+  const missing = page.locator('.rp-tree-tile[data-id="outbound:"]');
+  const known = page.locator('.rp-tree-tile[data-id="outbound:unknown"]');
   await expect(missing).toBeVisible();
   await expect(known).toBeVisible();
   await expect(missing.locator('.c')).toHaveText('1');

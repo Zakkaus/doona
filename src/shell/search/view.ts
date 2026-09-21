@@ -43,11 +43,10 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
     if (owner.kind !== 'builtin' && owner.kind !== 'unattributed') continue;
     for (const node of ownedNodes(nodeList, null, owner.kind)) syntheticOwners.set(node.id, owner.id);
   }
+  // The nodes page filters by owner and name; the owner comes from the same projection the page uses.
   const nodeQuery = (node: Node) => {
     const owner = node.provider_id ?? syntheticOwners.get(node.id);
-    const params = new URLSearchParams({node: node.id, q: node.name});
-    if (owner !== undefined) params.set('provider', owner);
-    return params.toString();
+    return (owner === undefined ? '' : 'provider=' + encodeURIComponent(owner) + '&') + 'q=' + encodeURIComponent(node.name);
   };
   const byId = new Map<string, SearchHit>();
   const hit = (id: string, label: string, description: string | undefined, route: string, query = ''): SearchHit => {

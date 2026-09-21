@@ -23,7 +23,6 @@ it('keeps destination identity and encoded queries when different hit types have
   expect(nodeHit.route).toBe('nodes');
   expect(new URLSearchParams(nodeHit.query).get('q')).toBe(label);
   expect(new URLSearchParams(nodeHit.query).get('provider')).toBe('provider & one');
-  expect(new URLSearchParams(nodeHit.query).get('node')).toBe(node.id);
   expect(groupHit.route).toBe('policies');
   expect(new URLSearchParams(groupHit.query).get('group')).toBe(group.id);
   expect(view.sections.flatMap(section => section.items).map(item => item.id)).toEqual([nodeHit.id, groupHit.id]);
@@ -74,7 +73,7 @@ it('resolves loose nodes through collision-safe provider rows and qualifies an e
   const t = translate.bind(null, 'en');
   const hit = searchView('orphan', sources, t).byId.get('node:orphan')!;
   expect(new URLSearchParams(hit.query).get('provider')).toBe('unattributed-');
-  expect(new URLSearchParams(hit.query).get('node')).toBe('orphan');
+  expect(new URLSearchParams(hit.query).get('q')).toBe('orphan');
   const empty = searchView('nothing-matches-this', sources, t);
   expect(empty.sections).toEqual([]);
   expect(empty.partial).not.toBeNull();

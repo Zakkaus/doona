@@ -52,8 +52,9 @@ function stagePart(
     }
   }
 }
-const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) =>
-  stage + ':' + (part.unknown ? 'missing' : 'value:' + (part.key ?? part.label));
+// A missing entry has an empty identity, which no backend id or label can be, so it never collides with a value
+// literally named "unknown".
+const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => stage + ':' + (part.unknown ? '' : (part.key ?? part.label));
 
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames, rules: RoutingRule[]): FlowSummary[] {
   const stage = id.slice(0, id.indexOf(':')) as Stage;
@@ -69,9 +70,8 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames,
 // the client's address.
 export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
   const stage = id.slice(0, id.indexOf(':'));
-  const identity = id.slice(id.indexOf(':') + 1);
-  if (identity === 'missing') return label(null);
-  const key = identity.slice('value:'.length);
+  const key = id.slice(id.indexOf(':') + 1);
+  if (key === '') return label(null);
   if (stage === 'rule')
     return key.includes(HISTORICAL) ? key.slice(key.indexOf(HISTORICAL) + 1) : (rules.find(rule => rule.rule_id === key)?.expression ?? key);
   if (stage === 'node') return names.get(key) ?? key;

@@ -27,7 +27,7 @@ test('search opens a node in its source, a group on its card, a subscription and
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   let dialog = await open(page, 'jp-01');
   await dialog.getByRole('option', {name: /^jp-01/}).click();
-  await expect(page).toHaveURL(/#\/nodes\?node=[^&]+&q=jp-01&provider=inline$/);
+  await expect(page).toHaveURL(/#\/nodes\?provider=inline&q=jp-01$/);
   await expect(page.getByLabel('Search nodes')).toHaveValue('jp-01');
   await expect(page.locator('.rp-table').nth(1).locator('[role=row][data-key]')).toHaveCount(1);
   dialog = await open(page, 'gaming');
@@ -94,7 +94,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
   await expect(dialog.getByRole('option', {name: /Trace simulation/})).toHaveCount(0);
   await dialog.locator('input').fill('orphan');
   await dialog.getByRole('option', {name: /^orphan/}).click();
-  await expect(page).toHaveURL(/node=orphan-id&q=orphan&provider=unattributed-$/);
+  await expect(page).toHaveURL(/provider=unattributed-&q=orphan$/);
   await expect(page.getByRole('rowheader', {name: 'orphan', exact: true})).toBeVisible();
   dialog = await open(page, 'nothing-matches-this');
   await expect(dialog.getByRole('option')).toHaveCount(0);
