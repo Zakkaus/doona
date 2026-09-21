@@ -69,7 +69,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(apply).toBeDisabled();
   // The marked rule is near the source end, outside CodeMirror's initial viewport.
   const routing = async () => {
-    await page.goto('/#/config');
+    await page.goto('/#/config?tab=source');
     await page.locator('.cm-scroller').evaluate(el => el.scrollTo(0, el.scrollHeight));
     return page.locator('.cm-content');
   };

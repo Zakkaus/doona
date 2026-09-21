@@ -110,7 +110,7 @@ test('a subscription refresh interval is written into the configuration', async 
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('sub-c auto-refresh written to the configuration and reloaded: Every 6 hours');
   await expect(sources.first()).toContainText('Every 6 hours');
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
     "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
   );
