@@ -1,4 +1,5 @@
 import {expect, test} from './fixtures';
+import {test as browserTest} from '@playwright/test';
 
 test('profiles add, rename, save on switch, and delete without losing the route', async ({page}) => {
   await page.goto('/#/settings?from=connections');
@@ -45,4 +46,38 @@ test('corrupt stored profiles show one error without overwriting the stored data
   await page.goto('/#/settings');
   await expect(error).toHaveCount(1);
   expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe('{');
+});
+
+browserTest('a token draft survives persistence failure and can be retried', async ({page}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-lang', 'en');
+    if (!localStorage.getItem('doona-profiles')) {
+      localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: ''}]));
+      localStorage.setItem('doona-profile', 'home');
+    }
+  });
+  await page.route('**/api/v1/**', route =>
+    route.fulfill({
+      status: 401,
+      json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'login'}
+    })
+  );
+  await page.goto('/#/activity');
+  const token = page.getByLabel('Token', {exact: true});
+  await token.fill('retain-this-token');
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'doona-profiles') {
+        Storage.prototype.setItem = setItem;
+        throw new DOMException('Storage denied', 'QuotaExceededError');
+      }
+      return setItem.call(this, key, value);
+    };
+  });
+  await page.getByRole('button', {name: 'Connect', exact: true}).click();
+  await expect(page.locator('.rp-login [role="alert"]')).toBeVisible();
+  await expect(token).toHaveValue('retain-this-token');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!)[0].token)).toBe('retain-this-token');
 });

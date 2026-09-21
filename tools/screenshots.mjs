@@ -1,7 +1,7 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync, rmSync} from 'node:fs';
+import {existsSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 
@@ -23,7 +23,7 @@ const shots = [
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
   ['rules', 'light', '#/rules?tab=list'],
-  ['nodes', 'light', '#/nodes?provider=inline']
+  ['nodes', 'light', '#/nodes']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -47,6 +47,11 @@ const looks = [
   ['Glass · light', 'glass/glass', 'light'],
   ['Glass · dark', 'glass/glass', 'dark']
 ];
+execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
+async function screenshot(page, path, options = {}) {
+  const png = await page.screenshot(options);
+  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', '-o', path + '.webp', '--', '-'], {input: png});
+}
 const browser = await chromium.launch();
 try {
   const tiles = [];
@@ -82,13 +87,8 @@ try {
   </style><main>${looks.map(([label], i) => `<figure><img src="data:image/png;base64,${tiles[i].toString('base64')}"><figcaption>${label}</figcaption></figure>`).join('')}</main>`);
   await sheet.waitForTimeout(500);
   mkdirSync(dir, {recursive: true});
-  await sheet.screenshot({path: join(dir, 'palettes.png'), fullPage: true});
+  await screenshot(sheet, join(dir, 'palettes'), {fullPage: true});
   await sheet.close();
-  // Prefer lossless WebP when cwebp is available; otherwise keep the PNG.
-  try {
-    execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', join(dir, 'palettes.png'), '-o', join(dir, 'palettes.webp')]);
-    rmSync(join(dir, 'palettes.png'));
-  } catch {}
   for (const lang of ['en', 'zh-TW', 'zh-CN']) {
     mkdirSync(join(dir, lang), {recursive: true});
     for (const [name, scheme, route] of shots) {
@@ -104,7 +104,7 @@ try {
       const page = await context.newPage();
       await page.goto(`${baseURL}/${route}`);
       await page.waitForTimeout(1500);
-      await page.screenshot({path: join(dir, lang, `${name}-${scheme}.png`)});
+      await screenshot(page, join(dir, lang, `${name}-${scheme}`));
       await context.close();
     }
   }

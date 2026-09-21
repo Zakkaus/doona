@@ -1,11 +1,14 @@
-import type {FlowStep} from '../../api/model';
+import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
 import type {Key} from '../../i18n/messages';
-import type {Translator} from '../../i18n';
-import {connectionStates, outboundLabel, type MessageRef} from '../../api/selectors';
+import {formatList, LOCALE, type Lang, type Translator} from '../../i18n';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {latencyTone} from '../../ui/ui';
 import {policyKindLabels} from '../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
+import {treeIndex} from './map';
+import {buildHash} from '../../shell/route';
+import {ruleSeedHref} from '../rules/seed';
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
   userspace: 'flow.v.userspace',
@@ -185,9 +188,146 @@ export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
   ];
   const names = new Map(tiles.map(tile => [tile.id, tile.name]));
   return tiles.map(tile => {
-    const to = tree.links.filter(link => link.source === tile.id).map(link => names.get(link.target)!);
+    const to = (treeIndex(tree).outgoing.get(tile.id) ?? []).map(link => names.get(link.target)!);
     const parts = [tile.name, ...(tile.badge ? [tile.badge] : []), ...tile.notes.map(note => note.text), t('flow.treeFlows', {n: tile.count})];
     if (to.length) parts.push('→ ' + to.join(', '));
     return {...tile, label: parts.join(' · ')};
   });
+}
+
+const scopes: Record<string, Key> = {
+  userspace_tcp: 'flow.userspaceTcp',
+  userspace_udp: 'flow.userspaceUdp',
+  kernel_direct: 'flow.kernelDirect',
+  kernel_block: 'flow.kernelBlock',
+  dns_intercept: 'flow.dnsIntercept',
+  kernel_bypass: 'flow.kernelBypass'
+};
+const visibility: Record<string, Key> = {full: 'flow.full', partial: 'flow.partialVisibility', none: 'ui.none'};
+export type CoverageView = {summary: string | null; detail: string; dropped: string | null};
+export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'>, t: Translator, lang: Lang): CoverageView | null {
+  const partial = Object.entries(data.coverage).filter(([, value]) => value !== 'full');
+  const dropped = data.dropped_records !== null && BigInt(data.dropped_records) > 0n ? t('flow.dropped', {n: data.dropped_records}) : null;
+  if (!partial.length && !dropped) return null;
+  return {
+    summary: partial.length ? t('flow.coverageSummary', {n: partial.length}) : null,
+    detail: formatList(
+      lang,
+      partial.map(([scope, value]) => t('ui.valuePair', {label: scopes[scope] ? t(scopes[scope]) : scope, value: t(visibility[value])}))
+    ),
+    dropped
+  };
+}
+
+export type RoutingMapView = {tree: RoutingTree; state: 'loading' | 'empty' | 'ready' | 'error'; pinLabel: string | null};
+export function routingMapView(tree: RoutingTree, ready: boolean, failed: boolean, pinned: string | null, count: number, t: Translator): RoutingMapView {
+  return {
+    tree,
+    state: !ready ? (failed ? 'error' : 'loading') : !tree.leaves.length && !tree.outbounds.length ? 'empty' : 'ready',
+    pinLabel: pinned ? t('flow.viewPinned', {n: count}) : null
+  };
+}
+
+const stages: Record<string, Key> = {
+  input: 'flow.stage.input',
+  route: 'flow.stage.route',
+  dial_mode: 'flow.stage.dialMode',
+  dns: 'flow.stage.dns',
+  outbound: 'flow.stage.outbound',
+  connection: 'flow.stage.connection',
+  datapath: 'flow.stage.datapath',
+  reroute: 'flow.stage.reroute'
+};
+const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
+export type FlowRow = {
+  id: string;
+  target: string;
+  chain: string;
+  expression: string | null;
+  ruleId: string | null;
+  recomputed: boolean;
+  network: string;
+  state: string;
+  started: string;
+};
+export type FlowDetailView = {
+  title: string;
+  status: string;
+  tone: 'warn' | undefined;
+  revision: string;
+  fields: [string, string][];
+  connectionHref: string | null;
+  seedHref: string | null;
+  steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
+};
+export type FlowRecordsView = {rows: FlowRow[]; detail: FlowDetailView | null; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
+export function flowRecordsView(
+  flows: FlowSummary[],
+  detail: FlowDetail | undefined,
+  list: FlowList | undefined,
+  names: OutboundNames,
+  canAdd: boolean,
+  t: Translator,
+  lang: Lang
+): FlowRecordsView {
+  const locale = LOCALE[lang];
+  const ip = detail ? sourceIp(detail.input.dst ?? undefined) : undefined;
+  const seed = detail?.input.domain ? {kind: 'domainSuffix' as const, value: detail.input.domain} : ip ? {kind: 'dip' as const, value: ip} : null;
+  return {
+    rows: flows.map(flow => ({
+      id: flow.id,
+      target: flow.input?.domain || flow.input?.dst || flow.id,
+      chain: chainLabel(flow, t, names),
+      expression: flow.rule_expression,
+      ruleId: flow.rule_id,
+      recomputed: flow.rule_source === 'recomputed',
+      network: flow.network.toUpperCase(),
+      state: t(connectionStates[flow.state]),
+      started: relativeStart(flow.started_at, locale)
+    })),
+    coverage: list ? coverageView(list, t, lang) : null,
+    stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))],
+    detail: detail
+      ? {
+          title: detail.input.domain || detail.input.dst || detail.id,
+          status: t(traceStates[detail.trace.status]),
+          tone: detail.trace.status === 'complete' ? undefined : 'warn',
+          revision: t('flow.revision', {n: detail.revision}),
+          fields: [
+            [t('ui.state'), t(connectionStates[detail.state])],
+            [t('ui.outbound'), outboundLabel(detail.outbound, t)],
+            ...(detail.trace.missing.length
+              ? [
+                  [
+                    t('flow.missing'),
+                    formatList(
+                      lang,
+                      detail.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
+                    )
+                  ] as [string, string]
+                ]
+              : [])
+          ],
+          connectionHref: detail.connection_id ? buildHash('connections', 'id=' + encodeURIComponent(detail.connection_id)) : null,
+          seedHref: canAdd && seed ? ruleSeedHref(seed) : null,
+          steps: [...detail.trace.steps]
+            .sort((a, b) => a.seq - b.seq)
+            .map(step => {
+              const fields = flowStepFields(step);
+              return {
+                id: step.seq,
+                stage: stages[step.stage] ? t(stages[step.stage]) : step.stage,
+                observed: localTime(step.observed_at, locale),
+                elapsed: t('ui.microseconds', {n: step.elapsed_us ?? '—'}),
+                fields:
+                  fields?.map(([key, value]) => [
+                    typeof key === 'string' ? t(key) : t(key.key, key.params),
+                    typeof value === 'string' ? value : t(value.key, value.params)
+                  ]) ?? null,
+                raw: fields ? '' : JSON.stringify(step.data, null, 2)
+              };
+            })
+        }
+      : null
+  };
 }

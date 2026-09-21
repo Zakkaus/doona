@@ -20,6 +20,6 @@ function merge<T extends Record<Lang, Record<string, Message>>[]>(...modules: T)
     [L in Lang]: Intersection<T[number][L]>;
   };
 }
-export const modules = [shell, ui, activity, overview, connections, flows, policies, nodes, rules, config, dns, events, logs, settings] as const;
+const modules = [shell, ui, activity, overview, connections, flows, policies, nodes, rules, config, dns, events, logs, settings] as const;
 export const table = merge(...modules);
 export type Key = keyof (typeof table)['zh-TW'];

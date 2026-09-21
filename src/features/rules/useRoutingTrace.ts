@@ -1,15 +1,35 @@
-import {useCallback, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../../api';
 import type {RoutingTraceRequest, RoutingTraceResponse} from '../../api/model';
 import {useAction} from '../../api/store/action';
 import {useCapabilities} from '../../api/store/runtime';
 import {routingTrace} from '../../api/store/flows';
+import {useGroups, useNodeProbe, useNodes, useRules} from '../../api/store';
+import {resolveSelectedLeaf} from '../../api/selectors';
+import {millis} from '../../api/u64';
+import {useLang, useT} from '../../i18n';
+import {errorText, toast} from '../../ui/ui';
+import {dnsView, evaluationView, traceStatusView} from './view';
+import {queryTypes} from '../dns/query';
 export type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
+const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 export function useRoutingTrace() {
+  const t = useT();
+  const lang = useLang();
+  const [advanced, setAdvanced] = useState(false);
   const api = getApi();
   const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const groups = useGroups(resources?.groups.available === true);
+  const nodes = useNodes(resources?.nodes.available === true);
+  const rules = useRules(resources?.rules.available === true);
+  const probe = useNodeProbe(nodes.refetch);
+  const groupsByName = useMemo(() => new Map(groups.data?.map(group => [group.name, group]) ?? []), [groups.data]);
+  const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
+  const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
+  const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
   const [form, setForm] = useState({
     network: 'tcp' as 'tcp' | 'udp',
     domain: 'api.telegram.org',
@@ -24,6 +44,10 @@ export function useRoutingTrace() {
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
+  const problem = error ?? capabilities.error;
+  useEffect(() => {
+    if (problem) toast('negative', errorText(problem));
+  }, [problem]);
   const invalid: TraceProblem | null =
     !form.domain.trim() && !form.dst_ip.trim()
       ? {field: 'domain', key: 'rule.invalidTarget'}
@@ -41,6 +65,7 @@ export function useRoutingTrace() {
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
   const dnsQuery = capabilities.data?.resources.dns_query;
   const recordTypes = (dnsQuery?.record_types ?? []).filter(type => type === 'A' || type === 'AAAA');
+  const maxTypes = dnsQuery?.limits?.max_types_per_request ?? 1;
   const modes: TraceResolve[] = [
     ...backendModes,
     ...(!backendModes.includes('live') && backendModes.includes('none') && dnsQuery?.available && recordTypes.length ? ['query' as const] : [])
@@ -61,20 +86,66 @@ export function useRoutingTrace() {
     if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    const response = await run('trace', signal => routingTrace(api, {input, resolve, recordTypes}, signal));
+    const response = await run('trace', signal =>
+      routingTrace(
+        {
+          ...api,
+          dnsQuery: (domain, types) => queryTypes(api.dnsQuery, domain, types, maxTypes, signal)
+        },
+        {input, resolve, recordTypes},
+        signal
+      )
+    );
     if (response) setResult({response, input});
-  }, [api, busy, canSubmit, form, resolve, recordTypes, run]);
+  }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
+  const evaluations =
+    accepted?.response.evaluations.map((evaluation, index) => {
+      const matched = evaluation.rules.find(rule => rule.result === 'matched');
+      const likely =
+        evaluation.decision !== 'determinate' && !evaluation.outbound && rules.data?.generation_id === accepted.response.generation_id
+          ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
+          : null;
+      const outbound = evaluation.outbound ?? likely;
+      const selected =
+        outbound && outbound !== 'direct' && outbound !== 'block'
+          ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById)
+          : null;
+      return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
+    }) ?? [];
+  const probeNode = async (id: string) => {
+    const node = nodesById.get(id);
+    if (!node) return;
+    try {
+      const result = await probe.probe(id);
+      if (!result) return;
+      const sample = result.results.find(item => item.member_id === id && item.state === 'healthy' && item.latency_ms != null);
+      toast(
+        sample ? 'positive' : 'negative',
+        sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+      );
+    } catch (error) {
+      toast('negative', errorText(error));
+    }
+  };
   return {
     form,
     resolve,
     setForm,
-    result: accepted?.response ?? null,
-    input: accepted?.input,
-    error: error ?? capabilities.error,
     busy: busy !== null,
+    canSubmit: !busy && canSubmit,
     submit,
-    invalid,
     available,
-    modes
+    modes: modes.map(id => ({id, label: t(resolveLabels[id])})),
+    errors: {
+      domain: invalid?.field === 'domain' ? t(invalid.key) : undefined,
+      dst_ip: invalid?.field === 'dst_ip' ? t(invalid.key) : undefined,
+      dst_port: invalid?.field === 'dst_port' ? t(invalid.key) : undefined,
+      src_port: invalid?.field === 'src_port' ? t(invalid.key) : undefined
+    },
+    advanced: advanced || invalid?.field === 'src_port',
+    setAdvanced,
+    ipOnly: !invalid && !!form.dst_ip.trim() && !form.domain.trim(),
+    result: accepted ? {status: traceStatusView(accepted.response, t, lang), evaluations, dns: accepted.response.dns.map(dns => dnsView(dns, t, lang))} : null,
+    probeNode
   };
 }

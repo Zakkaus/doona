@@ -6,8 +6,9 @@ import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
-import {errorText, toast} from '../../ui/ui';
+import {errorText, toast, useLinked} from '../../ui/ui';
 import {readSettings} from './settings';
+import {useDraftGuard} from '../config/useDraftGuard';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
@@ -26,6 +27,12 @@ export function useBackendForm(query: string) {
   const [result, setResult] = useState<Result | null>(null);
   const [pending, setPending] = useState(false);
   // Pairing links also fill an already-open form without saving the credentials.
+  const guard = useDraftGuard(api !== (saved.api ?? '') || token !== saved.token);
+  useLinked(guard.revision, () => {
+    setApi(saved.api ?? '');
+    setToken(saved.token);
+    setPaired(false);
+  });
   const [lastQuery, setLastQuery] = useState<string | null>(null);
   if (lastQuery !== query) {
     setLastQuery(query);
@@ -108,6 +115,7 @@ export function useBackendForm(query: string) {
       return;
     }
     try {
+      guard.clear();
       sessionStorage.setItem('doona-saved', '1');
     } catch {}
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
@@ -172,5 +180,52 @@ export function useBackendForm(query: string) {
     }
   };
 
-  return {saved, active, api, changeApi, token, changeToken, paired, invalid, result, pending, saving, persist, editedProfiles, save, testConnection};
+  const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
+  const [name, setName] = useState('');
+  const confirmProfile = () => {
+    if (dialog === 'delete') {
+      const profiles = saved.profiles.filter(profile => profile.id !== active?.id);
+      persist(profiles, profiles[0]?.id ?? '');
+      return;
+    }
+    const profiles = dialog === 'add' && !active ? [] : editedProfiles();
+    if (!profiles) {
+      setDialog(null);
+      toast('negative', t('settings.invalidUrl'));
+      return;
+    }
+    if (!name.trim()) return;
+    if (dialog === 'add') {
+      const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
+      persist([...profiles, profile], profile.id);
+    } else {
+      persist(
+        profiles.map(profile => (profile.id === active?.id ? {...profile, name: name.trim()} : profile)),
+        saved.activeId
+      );
+    }
+  };
+
+  return {
+    dialog,
+    setDialog,
+    name,
+    setName,
+    confirmProfile,
+    saved,
+    active,
+    api,
+    changeApi,
+    token,
+    changeToken,
+    paired,
+    invalid,
+    result,
+    pending,
+    saving,
+    persist,
+    editedProfiles,
+    save,
+    testConnection
+  };
 }

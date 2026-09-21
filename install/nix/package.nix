@@ -15,20 +15,20 @@ let
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doona";
-  version = "0.1.0";
+  version = "0.1.0-beta.1";
 
   src = fetchFromGitHub {
     owner = "Zakkaus";
     repo = "doona";
     tag = "v${finalAttrs.version}";
-    hash = ""; # nix-prefetch-github Zakkaus doona --rev v<version>
+    hash = lib.fakeHash; # Placeholder: replace with the published tag's source hash.
   };
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
     inherit pnpm;
     fetcherVersion = 4;
-    hash = ""; # changes with pnpm-lock.yaml; the first build prints the value
+    hash = lib.fakeHash; # Placeholder: replace with the pnpm dependency hash after publication.
   };
 
   nativeBuildInputs = [

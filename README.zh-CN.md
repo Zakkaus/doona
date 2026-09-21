@@ -15,7 +15,7 @@
 
 </div>
 
-doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。它对接 daeuniverse 引擎共用的原生 API：现在是 honk，dae 实现同一份契约后亦可。它显示引擎当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
+doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 honk，dae 实现同一份契约后亦可。它由引擎自己或任意 Web 服务器提供，显示引擎当前的状态，并管理节点、群组、路由规则与配置文件。
 
 ![活动页](docs/screenshots/zh-CN/activity-light.png)
 
@@ -103,7 +103,7 @@ experimental {
 3. **规则**：按评估顺序列出路由字典，附每条规则决定过的流程数。新增规则可以挑选依据与值（域名后缀、geosite 分类、端口、进程名称），也可以直接写表达式，插在任意一条之前或最后。
 4. **配置**：已接受的来源与其诊断。就地编辑文件，校验、保存、重载；快速设置覆盖主文件的常用项目。
 
-每一次写入都经过引擎：全文校验，带着读取时的哈希保存（磁盘上已变动的文件会返回 412，不会被覆盖），再重载。来源里的密钥在返回时已脱敏，也不会被写回。
+每一次配置写入都经过引擎：doona 带着读取时的哈希发送（`If-Match`；磁盘上已变动的文件会返回 412，不会写入），引擎先验证整组来源再保存并重载，重载失败时仍沿用先前的世代。预先验证不会写入，脱敏后的文本也不会写回。
 
 ## 页面
 
@@ -152,12 +152,14 @@ doona 没有用于存储自身界面设置的服务器端存储。配置与运�
 pnpm install --frozen-lockfile
 pnpm build                       # 输出 dist/
 pnpm check                       # 类型、lint、翻译、格式、单元测试、生成的 API 类型
+pnpm check:size                  # dist/ 构建的 gzip 大小限制
+pnpm perf <url>                  # 测量已提供的构建：首屏、脚本、轮询与滚动成本，CPU 降速四倍
 pnpm e2e:install --with-deps     # 浏览器测试只需安装一次
 pnpm e2e                         # 对模拟后端的浏览器测试，根目录与 /ui/ 各一轮
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建重新生成上面的截图（配色总览需要 `cwebp`）。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
+`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，输出无损 WebP，需要安装 `cwebp`。在生成对应的 WebP 前，现有截图仍引用 PNG。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
 | 路径            | 用途                                               |
 | --------------- | -------------------------------------------------- |

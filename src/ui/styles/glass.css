@@ -1,4 +1,4 @@
-/* Glass uses thin tints, high blur and saturation, a gradient rim, grain, and a soft shadow. Cards blur the wallpaper directly; the content sheet has no blur. */
+/* Blur and grain are reserved for fixed chrome and overlays; scrolling surfaces use translucent fills. */
 
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.05);
@@ -211,14 +211,11 @@
   position: relative;
   isolation: isolate;
   background: var(--rp-sheen), var(--rp-glass);
-  backdrop-filter: blur(28px) saturate(1.8);
   border: 1px solid transparent;
   box-shadow: var(--rp-glow), var(--rp-shadow);
 }
-:root[data-family='glass'] .rp-card::before,
 :root[data-family='glass'] .rp-popover::before,
-:root[data-family='glass'] .rp-modal::before,
-:root[data-family='glass'] .rp-table::before {
+:root[data-family='glass'] .rp-modal::before {
   content: '';
   position: absolute;
   inset: 0;

@@ -1,5 +1,5 @@
 import type {Key} from '../i18n/messages';
-import type {ApiEvent, Connection, ConnectionList, EventKind, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
+import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
 // Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
@@ -175,3 +175,23 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
 }
 
 export const shortId = (id: string) => (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id) ? id.slice(0, 8) : id);
+
+export function resolveSelectedLeaf(
+  outbound: string,
+  network: 'tcp' | 'udp',
+  groupsByName: ReadonlyMap<string, GroupSummary>,
+  groupsById: ReadonlyMap<string, GroupSummary>,
+  nodesById: ReadonlyMap<string, Node>
+): {groups: GroupSummary[]; member: string | null; node: Node | null} {
+  const groups: GroupSummary[] = [];
+  let group = groupsByName.get(outbound);
+  while (group && groups.length < 8) {
+    groups.push(group);
+    const member = network === 'udp' ? group.selection.udp_member_id : group.selection.tcp_member_id;
+    if (!member) return {groups, member: null, node: null};
+    const next = groupsById.get(member);
+    if (!next) return {groups, member, node: nodesById.get(member) ?? null};
+    group = next;
+  }
+  return {groups, member: null, node: null};
+}

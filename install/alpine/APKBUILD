@@ -1,6 +1,6 @@
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0
+pkgver=0.1.0-beta.1
 pkgrel=0
 pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
@@ -35,8 +35,8 @@ fonts() {
 	cp -a "$srcdir"/fonts/fonts "$subpkgdir"/usr/share/doona/
 }
 
-# Fill in with `abuild checksum` once the release is out.
+# Placeholder SHA-512 values: replace both with `abuild checksum` after publication.
 sha512sums="
-0  doona-v0.1.0.tar.gz
-0  doona-fonts-v0.1.0.tar.gz
+0  doona-v0.1.0-beta.1.tar.gz
+0  doona-fonts-v0.1.0-beta.1.tar.gz
 "

@@ -17,11 +17,16 @@ test('home charts collect memory polls and change the traffic history range', as
     '/groups': await api.groups()
   };
   let memoryPoll = 0;
+  let releaseNodes: () => void = () => {};
+  const nodesReady = new Promise<void>(resolve => {
+    releaseNodes = resolve;
+  });
   await page.clock.install();
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api/v1', '');
+    if (path === '/nodes') await nodesReady;
     if (path === '/runtime/memory') {
       const memory = await api.runtimeMemory();
       memory.observed_at = new Date(Date.parse(memory.observed_at) + memoryPoll++ * 5000).toISOString();
@@ -36,6 +41,7 @@ test('home charts collect memory polls and change the traffic history range', as
   const memory = page.getByRole('region', {name: 'Memory', exact: true});
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
+  releaseNodes();
   // One sample is not a curve yet; the second poll draws it.
   await expect(memory.getByRole('status')).toContainText('Sampling');
   await page.clock.fastForward(5100);
@@ -136,6 +142,25 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await expect(page.getByRole('gridcell', {name: 'Stream ready', exact: true})).toBeVisible();
   await page.clock.fastForward(5100);
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
+});
+
+test('hidden notices keep their published snapshot until the 200-event window is revealed', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/activity');
+  const notices = page.getByRole('region', {name: 'Notifications and issues'});
+  const ready = notices.getByRole('listitem').filter({hasText: 'stream.ready'});
+  await expect(ready).toHaveCount(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(1000100);
+  await expect(ready).toHaveCount(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: false});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(notices.getByRole('listitem')).toHaveCount(0);
 });
 
 test.describe('many outbounds', () => {

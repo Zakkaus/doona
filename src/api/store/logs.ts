@@ -1,60 +1,71 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../index';
 import type {ApiEvent, LogLevel, LogRecord} from '../model';
-import {useEvents} from './events';
+import {eventStatus, subscribeEvents} from './events';
 import {useCapabilities} from './runtime';
-// How many events the feed keeps; the page's caption quotes the same number.
+import {createFeed} from './feed';
+
 export const EVENT_FEED_LIMIT = 200;
 export function useEventFeed() {
   const api = getApi();
-  const [events, setEvents] = useState<ApiEvent[]>([]);
-  const [previousApi, setPreviousApi] = useState(api);
-  if (previousApi !== api) {
-    setPreviousApi(api);
-    setEvents([]);
-  }
-  const status = useEvents(event => setEvents(previous => [event, ...previous.filter(item => item.id !== event.id)].slice(0, EVENT_FEED_LIMIT)));
-  return {...status, events};
+  const stream = useMemo(() => {
+    const feed = createFeed<ApiEvent, typeof status>(EVENT_FEED_LIMIT, status, 'replace');
+    return {
+      getSnapshot: feed.getSnapshot,
+      subscribe(notify: () => void) {
+        const stopPublishing = feed.subscribe(notify);
+        const stopStream = subscribeEvents(api, feed.append, () => feed.update(eventStatus(api)));
+        feed.update(eventStatus(api));
+        return () => {
+          stopStream();
+          stopPublishing();
+        };
+      }
+    };
+  }, [api]);
+  const {records: events, ...state} = useSyncExternalStore(stream.subscribe, stream.getSnapshot);
+  return {...state, events};
 }
-// The engine's log stream, newest first, bounded; filters restart the stream from the ring. Paused keeps the
-// stream open but stops appending, so the list can be read.
+const status = {connected: false, cursor: null as string | null, error: null as Error | null, available: null as boolean | null};
+
 export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLevel; target?: string; paused: boolean; limit?: number}) {
   const api = getApi();
   const capabilities = useCapabilities();
   const available = capabilities.data?.resources.logs.available;
-  const [records, setRecords] = useState<Array<LogRecord & {id: string}>>([]);
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  // A filter change starts a new stream; the list is emptied during render, not inside the effect.
-  const [filterKey, setFilterKey] = useState({api, level, target});
-  if (filterKey.api !== api || filterKey.level !== level || filterKey.target !== target) {
-    setFilterKey({api, level, target});
-    setRecords([]);
-    setError(null);
-  }
   const hold = useRef(paused);
   useEffect(() => {
     hold.current = paused;
   }, [paused]);
-  useEffect(() => {
-    if (!available) return;
-    const controller = new AbortController();
-    api
-      .subscribeLogs({
-        level,
-        target: target || undefined,
-        signal: controller.signal,
-        onConnectionChange: setConnected,
-        onRecord: record => {
-          if (hold.current) return;
-          // A resumed stream may replay the record the cursor pointed at; the id keeps it single.
-          setRecords(previous => (previous.some(item => item.id === record.id) ? previous : [record, ...previous].slice(0, limit)));
-        }
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(reason instanceof Error ? reason : new Error(String(reason)));
-      });
-    return () => controller.abort();
+  const stream = useMemo(() => {
+    const feed = createFeed<LogRecord & {id: string}, {connected: boolean; error: Error | null}>(limit, {connected: false, error: null}, 'ignore');
+    return {
+      getSnapshot: feed.getSnapshot,
+      clear: feed.clear,
+      subscribe(notify: () => void) {
+        const stopPublishing = feed.subscribe(notify);
+        const controller = new AbortController();
+        if (available)
+          void api
+            .subscribeLogs({
+              level,
+              target: target || undefined,
+              signal: controller.signal,
+              onConnectionChange: connected => {
+                if (!controller.signal.aborted) feed.update({connected});
+              },
+              onRecord: record => {
+                if (!controller.signal.aborted && !hold.current) feed.append(record);
+              }
+            })
+            .catch((reason: unknown) => {
+              if (!controller.signal.aborted) feed.update({error: reason instanceof Error ? reason : new Error(String(reason))});
+            });
+        return () => {
+          controller.abort();
+          stopPublishing();
+        };
+      }
+    };
   }, [api, available, level, target, limit]);
-  return {records, connected, error, available, clear: useCallback(() => setRecords([]), [])};
+  return {...useSyncExternalStore(stream.subscribe, stream.getSnapshot), available, clear: stream.clear};
 }

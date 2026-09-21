@@ -120,7 +120,7 @@ test('a subscription refresh interval is written into the configuration', async 
   await expect(sources.first()).toContainText('Manual only');
 });
 
-test('unknown node provenance stays visible without granting inline deletion', async ({page}) => {
+test('built-in and unattributed provenance stay separate without granting inline deletion', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
@@ -131,6 +131,8 @@ test('unknown node provenance stays visible without granting inline deletion', a
   const snapshot = await api.nodes();
   const node = snapshot.nodes[0];
   snapshot.nodes = [
+    {...node, id: 'direct', name: 'direct', protocol: 'direct', provider_id: null},
+    {...node, id: 'block', name: 'block', protocol: 'block', provider_id: null},
     {...node, id: 'null-owner', name: 'Null owner', provider_id: null},
     {...node, id: 'omitted-owner', name: 'Omitted owner', provider_id: undefined},
     {...node, id: 'inline-owner', name: 'Inline owner', provider_id: inline.id}
@@ -143,6 +145,12 @@ test('unknown node provenance stays visible without granting inline deletion', a
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/nodes');
   const list = rows(page.locator('.rp-table').nth(1));
+  const sources = rows(page.locator('.rp-table').first());
+  await expect(sources.first()).toContainText('Built-in');
+  await expect(list).toHaveCount(2);
+  await expect(list).toContainText(['block', 'direct']);
+  await expect(sources.first().getByRole('button', {name: /Refresh|Remove/})).toHaveCount(0);
+  await sources.filter({hasText: 'Unattributed'}).click();
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['Null owner', 'Omitted owner']);
   await expect(page.getByRole('button', {name: /^Remove .* owner$/})).toHaveCount(0);

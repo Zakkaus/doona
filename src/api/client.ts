@@ -47,7 +47,13 @@ export function createApi(base: string, token?: string): Api {
     while (true) {
       await wait(delay, signal);
       const response = await fetch(url, {headers, cache: 'no-store', signal});
-      if (!response.ok) throw await responseError(response);
+      if (!response.ok) {
+        const error = await responseError(response);
+        // Rate limited or briefly unavailable: the accepted operation is still running, so keep polling.
+        if (!error.transient) throw error;
+        delay = error.retryAfter!;
+        continue;
+      }
       const operation: OperationState = await response.json();
       if (operation.status === 'succeeded' || operation.status === 'failed') return operation;
       delay = retryAfter(response);

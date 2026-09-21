@@ -1,19 +1,8 @@
-import type {useConnectionClose} from '../../api/store';
 import {useT} from '../../i18n';
-import {Button, ModalDialog, errorText, toast} from '../../ui/ui';
+import {Button, ModalDialog} from '../../ui/ui';
 
-// Share the page's closing state with row actions; use bulk close only when the current selection is expressible by that endpoint.
-export function CloseAllButton({
-  count,
-  selection,
-  closing,
-  onClosed
-}: {
-  count: number;
-  selection: Parameters<ReturnType<typeof useConnectionClose>['closeAll']>[0];
-  closing: ReturnType<typeof useConnectionClose>;
-  onClosed?: () => void;
-}) {
+export type CloseAllAction = {confirmationText: string; disabled: boolean; pending: boolean; run: () => void};
+export function CloseAllButton({confirmationText, disabled, pending, run}: CloseAllAction) {
   const t = useT();
   return (
     <ModalDialog
@@ -21,7 +10,7 @@ export function CloseAllButton({
       narrow
       alert
       trigger={
-        <Button negative quiet isDisabled={!count || !!closing.busy} isPending={closing.busy === 'all'}>
+        <Button negative quiet isDisabled={disabled} isPending={pending}>
           {t('conn.closeAll')}
         </Button>
       }
@@ -32,14 +21,7 @@ export function CloseAllButton({
             negative
             onPress={() => {
               close();
-              void closing.closeAll(selection).then(
-                tally => {
-                  if (!tally) return;
-                  onClosed?.();
-                  toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
-                },
-                (error: unknown) => toast('negative', t('conn.closeFailed', {error: errorText(error)}))
-              );
+              run();
             }}
           >
             {t('conn.closeAll')}
@@ -47,7 +29,7 @@ export function CloseAllButton({
         </>
       )}
     >
-      <span className="rp-label">{t('conn.closeAllHelp', {n: count})}</span>
+      <span className="rp-label">{confirmationText}</span>
     </ModalDialog>
   );
 }

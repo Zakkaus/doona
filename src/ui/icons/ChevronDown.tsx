@@ -1,5 +1,6 @@
 // Adobe Spectrum icon, Apache-2.0; fill adapted to currentColor.
 import type {SVGProps} from 'react';
+import {cx} from '../cx';
 
 export default function ChevronDown({className, ...props}: SVGProps<SVGSVGElement>) {
   return (
@@ -10,7 +11,7 @@ export default function ChevronDown({className, ...props}: SVGProps<SVGSVGElemen
       viewBox="0 0 20 20"
       aria-hidden="true"
       focusable="false"
-      className={className ? 'rp-icon ' + className : 'rp-icon'}
+      className={cx('rp-icon', className)}
       {...props}
     >
       <path

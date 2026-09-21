@@ -1,136 +1,55 @@
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
-import {formatDuration, lifecycleStates, lifecycleTone, localTime, shortId} from '../../api/selectors';
-import {datapathFields, datapathValue, memoryFields} from './view';
-import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName, Empty} from '../../ui/ui';
+import {useOverview} from './useOverview';
+import {useT} from '../../i18n';
+import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {usePalette} from '../../ui/Charts';
 import {LifecycleActions} from './Lifecycle';
-import {formatBytes, parseU64, pctU64} from '../../api/u64';
-import {formatNumber} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import type {Capabilities} from '../../api/model';
-
-// The optional resources a backend may leave out; the always-present ones are not worth a row.
-const resourceLabels = {
-  connections: 'nav.connections',
-  flows: 'rule.flows',
-  routing_trace: 'ov.r.routingTrace',
-  dns_query: 'ov.r.dnsQuery',
-  dns_cache: 'ov.r.dnsCache',
-  events: 'nav.events',
-  probes: 'ov.r.probes',
-  traffic_history: 'ov.r.trafficHistory',
-  memory_history: 'ov.r.memoryHistory',
-  runtime_outbounds: 'ov.r.outbounds',
-  logs: 'nav.logs',
-  providers: 'nodes.providers',
-  config: 'nav.config',
-  runtime_settings: 'settings.runtime',
-  geodata: 'settings.geodata'
-} as const satisfies Record<string, Key>;
-function resourceRows(capabilities: Capabilities): Array<[keyof typeof resourceLabels, boolean]> {
-  return (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>).map(key => [key, capabilities.resources[key].available !== false]);
-}
-
 export function Overview() {
   const t = useT();
-  const lang = useLang();
-  const locale = LOCALE[lang];
-  const capabilities = useCapabilities();
-  const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
-  const datapath = useDatapath(!!resources?.datapath.available);
-  const memory = useRuntimeMemory(!!resources?.runtime_memory.available);
-  const version = useVersion();
+  const vm = useOverview();
   const palette = usePalette();
-  const state = runtime.data?.lifecycle.state;
-  const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
-  const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
-  const revision = runtime.data?.generation.config_revision ?? runtime.data?.generation.active_id ?? '—';
-  const reload = runtime.data?.last_reload;
-  const attachments = (datapath.data?.ebpf?.attachments ?? []).map((a, i) => ({...a, id: String(i)}));
   return (
     <div className="rp-page">
-      {capabilities.error && <ErrorMessage error={capabilities.error} />}
+      {vm.errors.capabilities && <ErrorMessage error={vm.errors.capabilities} />}
       <div className="rp-between">
         <div className="rp-cluster">
-          <Light tone={lifecycleTone(state)}>
-            {state ? t(lifecycleStates[state]) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}
-          </Light>
-          <Kv
-            row
-            items={[
-              // A revision is a UUID; the strip shows its first block, the whole value sits in the tooltip.
-              [t('ov.config'), shortId(revision), revision],
-              [t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)],
-              [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
-            ]}
-          />
-          {reload && (
-            <TextTooltip text={reload.operation_id}>
-              <Light small tone={reload.status === 'succeeded' ? 'ok' : reload.status === 'failed' ? 'err' : 'warn'}>
-                {t(reload.status === 'succeeded' ? 'ov.succeeded' : reload.status === 'failed' ? 'ov.failed' : 'ov.running')}
+          <Light tone={vm.status.tone}>{vm.status.text}</Light>
+          <Kv row items={vm.strip} />
+          {vm.reload && (
+            <TextTooltip text={vm.reload.tooltip}>
+              <Light small tone={vm.reload.tone}>
+                {vm.reload.text}
               </Light>
             </TextTooltip>
           )}
         </div>
         <div className="rp-cluster">
-          <Button
-            isDisabled={!runtime.data}
-            onPress={() =>
-              downloadFile(
-                exportName('doona-state', 'json'),
-                JSON.stringify(
-                  {
-                    exported_at: new Date().toISOString(),
-                    version: version.data,
-                    capabilities: capabilities.data,
-                    runtime: runtime.data,
-                    datapath: datapath.data,
-                    memory: memory.data
-                  },
-                  null,
-                  2
-                ),
-                'application/json'
-              )
-            }
-          >
+          <Button isDisabled={!vm.canExport} onPress={vm.export}>
             <Download />
             {t('ov.export')}
           </Button>
-          <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
+          <LifecycleActions actions={vm.actions} />
         </div>
       </div>
-      {runtime.error && <ErrorMessage error={runtime.error} onRetry={runtime.refetch} />}
+      {vm.errors.runtime && <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry} />}
       <div className="rp-g3">
         <section className="rp-card" aria-labelledby="overview-engine">
           <h3 className="rp-h3" id="overview-engine">
             {t('ov.engine')}
           </h3>
-          {version.error && <ErrorMessage error={version.error} />}
-          {version.data && runtime.data ? (
+          {vm.errors.version && <ErrorMessage error={vm.errors.version} />}
+          {vm.engine.state === 'ready' ? (
             <>
-              <Kv
-                items={[
-                  [t('ov.f.engine'), version.data.engine.name + ' ' + version.data.engine.version],
-                  [t('ov.f.api'), `${version.data.api.name} v${version.data.api.major} · ${version.data.api.status}`],
-                  [t('ov.f.build'), [version.data.build?.revision, version.data.build?.target].filter(Boolean).join(' · ') || '—'],
-                  [t('ov.f.instance'), runtime.data.instance_id],
-                  [t('ov.f.started'), localTime(runtime.data.lifecycle.started_at, locale)],
-                  [t('ov.f.activated'), runtime.data.generation.activated_at ? localTime(runtime.data.generation.activated_at, locale) : '—']
-                ]}
-              />
-              {capabilities.data && (
+              <Kv items={vm.engine.fields} />
+              {vm.engine.profiles.length > 0 && (
                 <div className="rp-cluster">
-                  {capabilities.data.profiles.map(profile => (
-                    <Badge key={profile}>{t(profile === 'base' ? 'ov.profileBase' : 'ov.profileFull')}</Badge>
+                  {vm.engine.profiles.map(profile => (
+                    <Badge key={profile.id}>{profile.text}</Badge>
                   ))}
                 </div>
               )}
             </>
-          ) : capabilities.loading || version.loading || runtime.loading ? (
+          ) : vm.engine.state === 'loading' ? (
             <Loading />
           ) : (
             <Empty>{t('ov.unavailable')}</Empty>
@@ -140,29 +59,12 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-counters">
             {t('ov.counters')}
           </h3>
-          {runtime.data ? (
+          {vm.counters.state === 'ready' ? (
             <>
-              <Kv
-                items={[
-                  [t('ov.f.tcp'), count(runtime.data.traffic.connections.tcp)],
-                  [t('ov.f.udp'), count(runtime.data.traffic.connections.udp)],
-                  [t('ov.f.total'), count(runtime.data.traffic.connections.total)],
-                  [t('ui.upload'), formatBytes(runtime.data.traffic.bytes.upload)],
-                  [t('ui.download'), formatBytes(runtime.data.traffic.bytes.download)],
-                  [
-                    t('ov.f.rateWindow'),
-                    t('ui.seconds', {n: runtime.data.traffic.rates ? formatNumber(runtime.data.traffic.rates.window_seconds, locale, 1) : '—'})
-                  ]
-                ]}
-              />
-              <span className="rp-label">
-                {t('ov.countersSince', {
-                  t: localTime(runtime.data.traffic.counter_since, locale),
-                  scope: t(runtime.data.traffic.scope === 'visible' ? 'ov.scopeVisible' : 'ov.scopeAll')
-                })}
-              </span>
+              <Kv items={vm.counters.fields} />
+              <span className="rp-label">{vm.counters.since}</span>
             </>
-          ) : capabilities.loading || runtime.loading ? (
+          ) : vm.counters.state === 'loading' ? (
             <Loading />
           ) : (
             <Empty>{t('ov.unavailable')}</Empty>
@@ -172,20 +74,20 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-memory">
             {t('ov.memory')}
           </h3>
-          {memory.error && <ErrorMessage error={memory.error} />}
-          {memory.data ? (
+          {vm.errors.memory && <ErrorMessage error={vm.errors.memory} />}
+          {vm.memory.state === 'ready' ? (
             <>
-              {cgroupPercent !== null && (
+              {vm.memory.bar && (
                 <Bar
-                  label={t('ov.f.cgroupPercent')}
-                  value={formatBytes(memory.data.cgroup?.current_bytes ?? null) + ' / ' + formatBytes(memory.data.cgroup?.limit_bytes ?? null)}
-                  pct={cgroupPercent}
-                  color={cgroupPercent > 90 ? palette.love : cgroupPercent > 75 ? palette.gold : palette.cat[0]}
+                  label={vm.memory.bar.label}
+                  value={vm.memory.bar.value}
+                  pct={vm.memory.bar.pct}
+                  color={{err: palette.love, warn: palette.gold, ok: palette.cat[0]}[vm.memory.bar.tone]}
                 />
               )}
-              <Kv items={memoryFields(memory.data, t, ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit'])} />
+              <Kv items={vm.memory.fields} />
             </>
-          ) : capabilities.loading || memory.loading ? (
+          ) : vm.memory.state === 'loading' ? (
             <Loading />
           ) : (
             <Empty>{t('ov.unavailable')}</Empty>
@@ -197,42 +99,42 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-datapath">
             {t('ov.datapath')}
           </h3>
-          {datapath.error && <ErrorMessage error={datapath.error} />}
-          {datapath.data ? (
+          {vm.errors.datapath && <ErrorMessage error={vm.errors.datapath} />}
+          {vm.datapath.state === 'ready' ? (
             <>
-              <Kv items={datapathFields(datapath.data, t('ov.unknown'), t)} />
-              {datapath.data.ebpf && (
+              <Kv items={vm.datapath.fields} />
+              {vm.datapath.showAttachments && (
                 <DataTable
                   label={t('ov.attachments')}
                   height={250}
-                  rows={attachments}
+                  rows={vm.datapath.attachments}
                   empty={t('ov.unknown')}
                   cols={[
                     {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true, render: a => a.name},
                     {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2, render: a => a.interface},
-                    {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1, render: a => datapathValue(a.direction, t)},
-                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0, render: a => datapathValue(a.state, t)}
+                    {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1, render: a => a.direction},
+                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0, render: a => a.state}
                   ]}
                 />
               )}
-              {(datapath.data.errors.length > 0 || datapath.data.ebpf?.last_error) && (
+              {(vm.datapath.errors.length > 0 || vm.datapath.warning) && (
                 <div className="rp-cluster">
-                  {datapath.data.errors.map((error, i) => (
-                    <TextTooltip key={i} text={error.code}>
+                  {vm.datapath.errors.map((error, i) => (
+                    <TextTooltip key={i} text={error.tooltip}>
                       <Light small tone="err">
-                        {error.message}
+                        {error.text}
                       </Light>
                     </TextTooltip>
                   ))}
-                  {datapath.data.ebpf?.last_error && !datapath.data.errors.some(error => error.message === datapath.data?.ebpf?.last_error) && (
+                  {vm.datapath.warning && (
                     <Light small tone="warn">
-                      {datapath.data.ebpf.last_error}
+                      {vm.datapath.warning}
                     </Light>
                   )}
                 </div>
               )}
             </>
-          ) : capabilities.loading || datapath.loading ? (
+          ) : vm.datapath.state === 'loading' ? (
             <Loading />
           ) : (
             <Empty>{t('ov.unavailable')}</Empty>
@@ -242,18 +144,18 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-resources">
             {t('ov.resources')}
           </h3>
-          {capabilities.data ? (
+          {vm.resources.state === 'ready' ? (
             <div className="rp-list rp-list-columns">
-              {resourceRows(capabilities.data).map(([key, available]) => (
-                <div key={key} className="rp-row">
-                  <span>{t(resourceLabels[key])}</span>
-                  <Light small tone={available ? 'ok' : 'muted'}>
-                    {t(available ? 'ov.available' : 'ov.notAvailable')}
+              {vm.resources.rows.map(row => (
+                <div key={row.id} className="rp-row">
+                  <span>{row.label}</span>
+                  <Light small tone={row.tone}>
+                    {row.text}
                   </Light>
                 </div>
               ))}
             </div>
-          ) : capabilities.loading ? (
+          ) : vm.resources.state === 'loading' ? (
             <Loading />
           ) : (
             <Empty>{t('ov.unavailable')}</Empty>

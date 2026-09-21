@@ -2,7 +2,7 @@ import type {Runtime, TrafficHistory} from '../../api/model';
 import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 
-export type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
+type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
 // Windows are seconds; live is two minutes at full resolution. Backend history covers ten minutes, then session polls provide minute buckets for longer spans.
 export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 const rate = (value: string | null | undefined) => {
@@ -10,14 +10,14 @@ const rate = (value: string | null | undefined) => {
   return parsed === null ? null : Number(parsed) / 1000;
 };
 
-export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
+const foldTraffic: Fold<TrafficSample> = (group, time) => ({
   time,
   up: mean(group.map(s => s.up)),
   down: mean(group.map(s => s.down)),
   connections: group.some(s => s.connections !== null) ? Math.max(...group.map(s => s.connections ?? 0)) : null
 });
 
-export function trafficSample(runtime: Runtime): TrafficSample | undefined {
+function trafficSample(runtime: Runtime): TrafficSample | undefined {
   const traffic = runtime.traffic;
   const time = Date.parse(traffic.sampled_at ?? '');
   if (!Number.isFinite(time)) return undefined;
@@ -42,7 +42,7 @@ export function historyTrafficSamples(history: TrafficHistory): TrafficSample[] 
   }));
 }
 
-export type TrafficSeries = {
+type TrafficSeries = {
   timestamps: number[];
   down: Array<number | null>;
   up: Array<number | null>;

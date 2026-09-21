@@ -1,162 +1,30 @@
-import {useMemo, useState} from 'react';
 import {Menu, MenuSection, Header} from 'react-aria-components';
-import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../api/store';
-import {ApiError} from '../../api/error';
-import {chainNames, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
-import {connectionDetails} from './view';
-import {
-  Badge,
-  Button,
-  DetailPanel,
-  Kv,
-  LabeledSelect,
-  Light,
-  MenuButton,
-  MenuChoice,
-  Segmented,
-  TextField,
-  ErrorMessage,
-  csvLine,
-  downloadFile,
-  errorText,
-  panelQuery,
-  toast,
-  useLinked,
-  useMediaQuery,
-  exportName,
-  TextTooltip
-} from '../../ui/ui';
+import {Badge, Button, DetailPanel, Kv, LabeledSelect, Light, MenuButton, MenuChoice, Segmented, TextField, ErrorMessage, TextTooltip} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
-import {useT, useLang, LOCALE} from '../../i18n';
-import {columns, readView, viewKey, type ConnectionView} from './view';
+import {useT} from '../../i18n';
+import {useConnections} from './useConnections';
+import type {ConnectionView} from './view';
 
-export function Connections({go, query}: PageProps) {
+export function Connections(props: PageProps) {
   const t = useT();
-  const lang = useLang();
-  const locale = LOCALE[lang];
-  const [view, setView] = useState(readView);
-  const wide = useMediaQuery(panelQuery);
-  const updateView = (patch: Partial<ConnectionView>) => {
-    const next = {...view, ...patch};
-    setView(next);
-    try {
-      localStorage.setItem(viewKey, JSON.stringify(next));
-    } catch {
-      // Keep the controls usable when storage is unavailable.
-    }
-  };
-  const q = useMemo(() => new URLSearchParams(query), [query]);
-  const [text, setText] = useState(q.get('q') ?? q.get('src') ?? '');
-  // The collection filters live in the URL, so a filtered view survives reload and travels as a link.
-  const network = q.get('network') ?? 'all';
-  const out = q.get('out') ?? 'all';
-  const rule = q.get('rule') ?? 'all';
-  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
-  const setNetwork = (value: string) => setFilter('network', value);
-  const setOut = (value: string) => setFilter('out', value);
-  const setRule = (value: string) => setFilter('rule', value);
-  const sel = q.get('id');
-  // A new q/src URL value replaces typed text; row selection must not reset later typing. Removing the URL filter clears the field.
-  useLinked(q.get('q') ?? q.get('src'), value => setText(value ?? ''));
-  const select = (id: string | null) => {
-    const params = new URLSearchParams(query);
-    if (id) params.set('id', id);
-    else params.delete('id');
-    go('connections', params.toString());
-  };
-  const src = ipLiteral(text);
-  const resource = useConnections(src);
-  const canClose = useCapabilities().data?.resources.connections.can_close === true;
-  const names = useOutboundNames();
-  const closing = useConnectionClose(resource.refetch);
-  async function close(id: string, name: string) {
-    try {
-      if (!(await closing.close(id))) return;
-      select(null);
-      toast('positive', t('conn.closed', {name}));
-    } catch (error) {
-      toast(
-        'negative',
-        error instanceof ApiError && error.code === 'state_conflict' ? t('conn.notClosable') : t('conn.closeFailed', {error: errorText(error)})
-      );
-    }
-  }
-  const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
-  const needle = text.trim().toLowerCase();
-  const shown = useMemo(
-    () =>
-      rows.filter(
-        c =>
-          (network === 'all' || c.network === network) &&
-          (out === 'all' || c.outbound === out) &&
-          (rule === 'all' || c.rule_expression === rule) &&
-          (src ||
-            !needle ||
-            [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
-      ),
-    [rows, network, out, rule, src, needle, names]
-  );
-  const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const {outbounds, clients, rules} = useMemo(() => {
-    // Build filter choices from visible rows, ordered by frequency.
-    const seen = (values: Array<string | null | undefined>) => {
-      const counts = new Map<string, number>();
-      for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
-    };
-    return {
-      outbounds: [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))],
-      clients: seen(rows.map(c => sourceIp(c.src))),
-      rules: seen(rows.map(c => c.rule_expression))
-    };
-  }, [rows]);
-  const filtered = network !== 'all' || out !== 'all' || rule !== 'all' || needle !== '';
+  const vm = useConnections(props);
+  const cur = vm.detail;
   return (
     <div className="rp-page">
-      {resource.error && <ErrorMessage error={resource.error} onRetry={resource.refetch} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
-        <TextField search label={t('ui.filter')} value={text} onChange={setText} placeholder={t('conn.filterHint')} width={260} />
-        <Segmented
-          label={t('ui.network')}
-          value={network}
-          onChange={setNetwork}
-          items={[
-            ['all', t('ui.allCount', {n: rows.length})],
-            ['tcp', t('ui.tcp')],
-            ['udp', t('ui.udp')]
-          ]}
-        />
-        <LabeledSelect
-          label={t('ui.outbound')}
-          side
-          value={out}
-          onChange={setOut}
-          items={[{id: 'all', label: t('conn.allOutbounds')}, ...outbounds.map(id => ({id, label: id}))]}
-        />
+        <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} width={260} />
+        <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
+        <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
         <MenuButton
           quiet
           label={t('conn.pick')}
           content={
-            <Menu
-              aria-label={t('conn.pick')}
-              onAction={key => {
-                const id = String(key);
-                if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
-                else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
-              }}
-            >
-              {[
-                {title: t('ui.source'), value: 'src:' + src, items: clients.map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))},
-                {
-                  title: t('conn.rule'),
-                  value: 'rule:' + rule,
-                  items: rules.map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))
-                }
-              ].map(section => (
+            <Menu aria-label={t('conn.pick')} onAction={vm.pick}>
+              {vm.picks.map(section => (
                 <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[section.value]}>
                   <Header className="rp-sec-h">{section.title}</Header>
                   {section.items.map(item => (
@@ -172,8 +40,8 @@ export function Connections({go, query}: PageProps) {
         <LabeledSelect
           label={t('conn.group')}
           side
-          value={view.group}
-          onChange={group => updateView({group: group as ConnectionView['group']})}
+          value={vm.view.group}
+          onChange={group => vm.updateView({group: group as ConnectionView['group']})}
           items={[
             {id: 'source', label: t('conn.byClient')},
             {id: 'outbound', label: t('ui.outbound')},
@@ -187,126 +55,63 @@ export function Connections({go, query}: PageProps) {
               aria-label={t('conn.columns')}
               selectionMode="multiple"
               shouldCloseOnSelect={false}
-              selectedKeys={columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id)}
-              onAction={key => {
-                const id = String(key);
-                const hidden = view.hidden.includes(id) ? view.hidden.filter(value => value !== id) : [...view.hidden, id];
-                if (hidden.length < columns.length) updateView({hidden});
-              }}
+              selectedKeys={vm.visibleColumns}
+              onAction={vm.toggleColumn}
             >
-              {columns.map(column => (
-                <MenuChoice key={column.id} item={{id: column.id, label: t(column.label)}} />
+              {vm.columns.map(column => (
+                <MenuChoice key={column.id} item={column} />
               ))}
             </Menu>
           }
         >
           {t('conn.columns')}
         </MenuButton>
-        {filtered && (
-          <Button
-            quiet
-            onPress={() => {
-              setText('');
-              go('connections', within(query, {network: null, out: null, rule: null, q: null, src: null}));
-            }}
-          >
+        {vm.filtered && (
+          <Button quiet onPress={vm.clear}>
             {t('ui.clearFilters')}
           </Button>
         )}
-        {resource.data?.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
-        {resource.data && resource.data.visibility !== 'full' && (
+        {vm.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
+        {vm.visibility && (
           <TextTooltip text={t('conn.visibilityNote')}>
-            <Badge>{t(resource.data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial')}</Badge>
+            <Badge>{vm.visibility}</Badge>
           </TextTooltip>
         )}
         <span className="rp-grow" />
-        {canClose && (
-          <CloseAllButton
-            count={shown.length}
-            // Network and source-IP filters are the bulk endpoint's own; a text, outbound or rule filter is not. A
-            // truncated snapshot lists fewer rows than match, so it closes the listed ones only.
-            selection={
-              out === 'all' && rule === 'all' && (src || !needle) && !resource.data?.truncated
-                ? {query: {type: network as 'all' | 'tcp' | 'udp', src: src ?? undefined, all: true}}
-                : {ids: shown.map(c => c.id)}
-            }
-            closing={closing}
-            onClosed={() => select(null)}
-          />
-        )}
-        <Button
-          isDisabled={!shown.length}
-          onPress={() =>
-            downloadFile(
-              exportName('connections', 'csv'),
-              [
-                csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
-                ...shown.map(c =>
-                  csvLine([
-                    c.id,
-                    c.dst,
-                    c.domain,
-                    c.src,
-                    c.network,
-                    c.state,
-                    c.outbound,
-                    chainNames(c.chain, names).join(' > '),
-                    c.rule_expression,
-                    c.upload_bytes,
-                    c.download_bytes,
-                    c.started_at
-                  ])
-                )
-              ].join('\n') + '\n',
-              'text/csv;charset=utf-8'
-            )
-          }
-        >
+        {vm.canClose && <CloseAllButton {...vm.closeAll} />}
+        <Button isDisabled={!vm.canExport} onPress={vm.export}>
           <Download />
           {t('conn.export')}
         </Button>
       </div>
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
-          rows={shown}
-          loading={resource.loading && !resource.data}
-          selected={sel}
-          onSelect={select}
-          selectOnFocus={wide}
-          view={view}
-          onSort={sort => updateView({sort})}
-          names={names}
+          collection={vm.collection}
+          loading={vm.loading}
+          selected={vm.sel}
+          onSelect={vm.select}
+          selectOnFocus={vm.wide}
+          view={vm.view}
+          onSort={sort => vm.updateView({sort})}
         />
-        <DetailPanel open={!!cur} title={cur?.domain || cur?.dst || cur?.id || ''} onClose={() => select(null)}>
+        <DetailPanel open={!!cur} title={vm.detailTitle} onClose={() => vm.select(null)}>
           {cur && (
             <>
-              <Light small tone={cur.state === 'blocked' || cur.state === 'failed' ? 'err' : cur.state === 'active' ? 'ok' : 'info'}>
-                {t(connectionStates[cur.state])} · {cur.network.toUpperCase()}
+              <Light small tone={cur.tone}>
+                {cur.status}
               </Light>
-              <Kv items={connectionDetails(cur, locale).map(([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)])} />
+              <Kv items={cur.fields} />
               <div className="rp-cluster">
-                <Button
-                  onPress={() =>
-                    go('rules', 'tab=flows&' + (cur.flow_id ? 'id=' + encodeURIComponent(cur.flow_id) : 'connection_id=' + encodeURIComponent(cur.id)))
-                  }
-                >
-                  {t('conn.viewFlow')}
-                </Button>
-                {cur.src && (
-                  <Button quiet onPress={() => setText(sourceIp(cur.src) ?? cur.src ?? '')}>
+                <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>
+                {cur.source && (
+                  <Button quiet onPress={vm.onlyClient}>
                     {t('conn.onlyThisClient')}
                   </Button>
                 )}
-                {canClose && (cur.state === 'active' || cur.state === 'dialing' || cur.state === 'routing') && (
+                {vm.canClose && cur.closable && (
                   <>
                     <span className="rp-grow" />
-                    <Button
-                      negative
-                      quiet
-                      isPending={closing.busy === cur.id}
-                      isDisabled={!!closing.busy}
-                      onPress={() => void close(cur.id, cur.domain || cur.dst || cur.id)}
-                    >
+                    <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled} onPress={vm.close.run}>
                       {t('conn.close')}
                     </Button>
                   </>
@@ -316,7 +121,7 @@ export function Connections({go, query}: PageProps) {
           )}
         </DetailPanel>
       </div>
-      {sel && !cur && resource.data && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
+      {vm.notInSnapshot && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
     </div>
   );
 }

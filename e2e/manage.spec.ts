@@ -14,8 +14,8 @@ test('the backend actions card gathers reload, DNS, subscriptions, connections a
   await expect(card).toContainText('geoip');
   await card.getByRole('button', {name: 'Update', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Geodata updated and reloaded'})).toBeVisible();
-  await card.getByRole('button', {name: /^Refresh all subscriptions/}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Refreshed 1 of 1'})).toBeVisible();
+  await card.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
   await card.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Cache cleared'})).toBeVisible();

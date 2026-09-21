@@ -131,7 +131,7 @@ test('the tree draws every configured rule, follows a hover along its branch and
   // Hovering a rule lights its branch and dims the rest.
   const item = topology.locator('[data-stage="rule"]').filter({hasText: 'domain(suffix: doubleclick.net)'});
   await item.hover();
-  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'Block'})).not.toHaveClass(/dim/);
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'block'})).not.toHaveClass(/dim/);
   await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).toHaveClass(/dim/);
   await expect(topology.locator('.rp-tree-links path[data-state="active"]').first()).toBeAttached();
   await expect(topology.locator('.rp-tree-links path[data-state="dim"]').first()).toBeAttached();

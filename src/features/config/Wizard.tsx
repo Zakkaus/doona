@@ -1,143 +1,54 @@
-import {useEffect, useMemo, useState} from 'react';
 import {useT} from '../../i18n';
-import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
-import type {useConfigEditor} from '../../api/store';
-import {useSourceComplete} from '../../api/store/config';
-import {Button, LabeledSelect, TextField, errorText, toast} from '../../ui/ui';
+import type {ConfigEditor} from './useConfigPage';
+import {Button, LabeledSelect, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
-import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, writeState, type RuleTemplate, type WizardState} from './wizard';
-
-const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
-const templateLabels: Record<RuleTemplate, [Key, Key]> = {
-  global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],
-  bypass: ['config.wizardBypass', 'config.wizardBypassHelp'],
-  gfw: ['config.wizardGfw', 'config.wizardGfwHelp'],
-  mini: ['config.wizardMini', 'config.wizardMiniHelp'],
-  standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
-  full: ['config.wizardFull', 'config.wizardFullHelp']
-};
-// Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
-export function Wizard({
-  main,
-  editor,
-  onDone,
-  onDirty
-}: {
-  main: ConfigSource;
-  editor: ReturnType<typeof useConfigEditor>;
-  onDone: () => void;
-  onDirty: (dirty: boolean) => void;
-}) {
+import type {WizardState} from './wizard';
+import {useWizard} from './useWizard';
+export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void; onDirty: (dirty: boolean) => void}) {
   const t = useT();
-  // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
-  const [origin] = useState(() => main);
-  const complete = useSourceComplete(origin);
-  useEffect(() => editor.cancel, [editor.cancel]);
-  const current = origin.content ?? '';
-  const [state, setState] = useState<WizardState>(() => {
-    const read = readState(current);
-    return {
-      ...read,
-      rules: current.trim() ? 'keep' : defaultTemplate,
-      subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]
-    };
-  });
-  const preview = useMemo(() => {
-    try {
-      return {text: complete ? writeState(current, state) : current, error: null};
-    } catch (error) {
-      return {text: current, error};
-    }
-  }, [complete, current, state]);
-  const {text} = preview;
-  const busy = !!editor.busy;
-  const dirty = preview.error !== null || text !== current;
-  useEffect(() => {
-    onDirty(dirty);
-    return () => onDirty(false);
-  }, [dirty, onDirty]);
-  // Lines the form left as written are valid by definition; the ones it edited need a name and an http(s) URL.
-  const valid = state.subscriptions.every(s => s.raw !== undefined || (s.name.trim() && isSubscriptionUrl(s.url)));
-  const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));
-  // Editing a line hands it to the form; the original text is no longer written back for it.
-  const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
-    patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
-  const apply = async () => {
-    if (busy) return;
-    if (preview.error) {
-      toast('negative', errorText(preview.error));
-      return;
-    }
-    const result = await editor.apply(origin, text);
-    if (!result) return;
-    if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
-      return;
-    }
-    toast('positive', t('config.saved', {path: main.path}));
-    onDirty(false);
-    onDone();
-  };
+  const {state, text, busy, rows, groupUsedText, patch, setSubscription, apply, saveDisabled, saving, saveTip, writeHelp, showLan, templates, add, remove} =
+    useWizard(props);
   return (
     <section className="rp-card" aria-label={t('config.wizard')}>
       <span className="rp-label">{t('config.wizardNote')}</span>
 
       <h3 className="rp-h3">{t('config.wizardSubscriptions')}</h3>
       <div className="rp-list">
-        {state.subscriptions.map((item, index) =>
-          // A blank line is kept for the round trip but is not a row.
-          item.raw !== undefined && !item.raw.trim() ? null : (
-            <div className="rp-toolbar top" key={index}>
-              {item.raw !== undefined && !item.name ? (
-                // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
-                <span className="rp-code rp-grow">{item.raw.trim()}</span>
-              ) : (
-                <>
-                  <TextField
-                    isDisabled={busy}
-                    label={t('config.wizardSubscriptionName')}
-                    value={item.name}
-                    width={140}
-                    onChange={name => setSubscription(index, {name})}
-                  />
-                  <TextField
-                    isDisabled={busy}
-                    label={t('config.wizardSubscription')}
-                    value={item.url}
-                    width={520}
-                    placeholder="https://example.org/sub?token=…"
-                    error={
-                      item.url !== '' && !isSubscriptionUrl(item.url)
-                        ? t('config.wizardSubscriptionHelp')
-                        : preview.error
-                          ? errorText(preview.error)
-                          : undefined
-                    }
-                    description={index === 0 ? t('config.wizardSubscriptionHelp') : undefined}
-                    onChange={url => setSubscription(index, {url})}
-                  />
-                </>
-              )}
-              <Button
-                isDisabled={busy}
-                quiet
-                small
-                label={t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})}
-                onPress={() => patch({subscriptions: state.subscriptions.filter((_, i) => i !== index)})}
-              >
-                <Close />
-              </Button>
-            </div>
-          )
-        )}
+        {rows.map(item => (
+          <div className="rp-toolbar top" key={item.index}>
+            {item.raw !== null ? (
+              // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
+              <span className="rp-code rp-grow">{item.raw}</span>
+            ) : (
+              <>
+                <TextField
+                  isDisabled={busy}
+                  label={t('config.wizardSubscriptionName')}
+                  value={item.name}
+                  width={140}
+                  onChange={name => setSubscription(item.index, {name})}
+                />
+                <TextField
+                  isDisabled={busy}
+                  label={t('config.wizardSubscription')}
+                  value={item.url}
+                  width={520}
+                  placeholder="https://example.org/sub?token=…"
+                  error={item.error}
+                  description={item.description}
+                  onChange={url => setSubscription(item.index, {url})}
+                />
+              </>
+            )}
+            <Button isDisabled={busy} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
+              <Close />
+            </Button>
+          </div>
+        ))}
         <div>
-          <Button
-            isDisabled={busy}
-            small
-            onPress={() => patch({subscriptions: [...state.subscriptions, {name: `sub-${state.subscriptions.length + 1}`, url: ''}]})}
-          >
+          <Button isDisabled={busy} small onPress={add}>
             {t('config.wizardAddSubscription')}
           </Button>
         </div>
@@ -150,12 +61,9 @@ export function Wizard({
           label={t('config.wizardTemplate')}
           value={state.rules}
           onChange={rules => patch({rules: rules as WizardState['rules']})}
-          items={[
-            ...(current.trim() ? [{id: 'keep', label: t('config.wizardKeep'), desc: t('config.wizardKeepHelp')}] : []),
-            ...templateIds.map(id => ({id, label: t(templateLabels[id][0]), desc: t(templateLabels[id][1])}))
-          ]}
+          items={templates}
         />
-        {!current.trim() && (
+        {showLan && (
           <TextField
             isDisabled={busy}
             label={t('config.wizardLan')}
@@ -166,21 +74,15 @@ export function Wizard({
           />
         )}
       </div>
-      <span className="rp-label">{t('config.wizardGroupUsed', {name: state.group ?? defaultGroup})}</span>
+      <span className="rp-label">{groupUsedText}</span>
 
       <h3 className="rp-h3">{t('config.wizardPreview')}</h3>
       <CodeEditor label={t('config.wizardPreview')} value={text} readOnly compact />
       <div className="rp-toolbar">
-        <Button
-          accent
-          isDisabled={!complete || !valid || busy || !dirty}
-          isPending={editor.busy === 'save'}
-          tip={complete === false ? t('config.incomplete') : undefined}
-          onPress={() => void apply()}
-        >
+        <Button accent isDisabled={saveDisabled} isPending={saving} tip={saveTip} onPress={() => void apply()}>
           {t('config.save')}
         </Button>
-        {current.trim() !== '' && <span className="rp-label">{t('config.wizardWriteHelp', {path: main.path})}</span>}
+        {writeHelp && <span className="rp-label">{writeHelp}</span>}
       </div>
     </section>
   );

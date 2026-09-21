@@ -1,0 +1,108 @@
+import {useCallback, useMemo, useState} from 'react';
+import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
+import {formatBytes} from '../../api/u64';
+import {useT, useLang, LOCALE} from '../../i18n';
+import {fmtRate, usePalette} from '../../ui/Charts';
+import {useMemorySeries} from '../overview/useMemorySeries';
+import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
+import {useNotices} from './useNotices';
+import {useMode} from './useMode';
+import {activityOutbounds, activityRanking, activityView} from './view';
+
+export function useActivity() {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const p = usePalette();
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const runtime = useRuntime();
+  const outbounds = useRuntimeOutbounds(resources?.runtime_outbounds.available === true);
+  const memory = useRuntimeMemory(resources?.runtime_memory.available === true);
+  const [range, setRange] = useState('live');
+  const [by, setBy] = useState('dev');
+  const windowSeconds = trafficWindows[range] ?? 120;
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
+  const connections = useConnections(undefined, resources?.connections.available === true);
+  const history = useTrafficHistory(windowSeconds, capabilities.data);
+  const polledTraffic = useTrafficSamples(runtime.data);
+  const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
+  const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
+  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
+  const traffic = useMemo(
+    () => [
+      {label: t('act.download'), color: p.cat[0], values: series.down},
+      {label: t('act.upload'), color: p.cat[3], values: series.up}
+    ],
+    [t, p, series]
+  );
+  const memorySeries = useMemo(
+    () => [
+      {label: t('act.rss'), color: p.cat[0], values: memoryHistory.rss},
+      {label: t('act.cgroup'), color: p.cat[3], values: memoryHistory.cgroup}
+    ],
+    [t, p, memoryHistory.rss, memoryHistory.cgroup]
+  );
+  const trafficBounds = useMemo(() => ({since: series.since, until: series.until}), [series.since, series.until]);
+  const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
+  const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
+  const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
+  const view = useMemo(() => activityView(runtime.data, memory.data, t), [runtime.data, memory.data, t]);
+  const outboundView = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
+  const ranking = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
+  const notices = useNotices();
+  const mode = useMode();
+  return {
+    ...view,
+    outbounds: outboundView,
+    ranking,
+    mode,
+    notices,
+    range,
+    setRange,
+    by,
+    setBy,
+    locale,
+    p,
+    spark,
+    traffic,
+    memorySeries,
+    chartRate,
+    memoryBytes,
+    trafficBounds,
+    memoryBounds,
+    trafficTimestamps: series.timestamps,
+    memoryTimestamps: memoryHistory.timestamps,
+    ready: !!runtime.data,
+    error: runtime.error ?? capabilities.error,
+    retry: () => {
+      capabilities.refetch();
+      runtime.refetch();
+    },
+    showMemory: !!resources?.runtime_memory.available,
+    history: {
+      error: history.error,
+      state: resources?.traffic_history.available === false ? 'unavailable' : !history.data ? 'loading' : !history.data.samples.length ? 'empty' : 'ready'
+    },
+    outboundState: {
+      error: outbounds.error,
+      state: resources?.runtime_outbounds.available === false ? 'unavailable' : !outbounds.data ? 'loading' : !outboundView.rows.length ? 'empty' : 'ready'
+    },
+    rankingState: {
+      error: connections.error,
+      truncated: !!connections.data?.truncated,
+      state: connections.data
+        ? ranking.length
+          ? 'ready'
+          : 'empty'
+        : connections.error
+          ? 'error'
+          : resources?.connections.available === true
+            ? 'loading'
+            : 'unavailable'
+    },
+    memoryState: {
+      error: memory.error ?? memoryHistory.error,
+      state: memoryHistory.samples.length > 1 ? 'ready' : resources?.runtime_memory.available === false ? 'unavailable' : 'loading'
+    }
+  };
+}

@@ -1,108 +1,30 @@
-import {useMemo, useState} from 'react';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
-import Clock from '../../ui/icons/Clock';
 import Data from '../../ui/icons/Data';
-import {useCapabilities, useConnections, useNodes, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {healthMillis, lifecycleStates, lifecycleTone, localTime, outboundLabel, outboundUsage, preferredHealth} from '../../api/selectors';
-import {formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
-import {useT, useLang, LOCALE} from '../../i18n';
+import {useT} from '../../i18n';
 import {Badge, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, Empty, Link} from '../../ui/ui';
 import {buildHash} from '../../shell/route';
-import {NodeMenu} from '../policies/Nodes';
-import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
-import {useMemorySeries} from '../overview/memory';
-import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
+import {AreaChart, Donut, Legend, Spark} from '../../ui/Charts';
 import {ModeCards} from './ModeSwitch';
-import {connectionRanking} from './ranking';
-import {Notices, useNotices} from './Notices';
+import {Notices} from './Notices';
+import {useActivity} from './useActivity';
+import {NodeCard} from './NodeCard';
 
 export function Activity() {
   const t = useT();
-  const lang = useLang();
-  const locale = LOCALE[lang];
-  const chartRate = (value: number | null | undefined) => fmtRate(value, locale, t);
-  const p = usePalette();
-  const capabilities = useCapabilities();
-  const resources = capabilities.data?.resources;
-  // Node and group tiles need those resources; a backend without them still gets traffic and connections.
-  const hasNodes = resources?.nodes.available === true;
-  const runtimeResource = useRuntime(),
-    nodesResource = useNodes(hasNodes);
-  const outbounds = useRuntimeOutbounds(capabilities.data?.resources.runtime_outbounds.available === true);
-  const memory = useRuntimeMemory(capabilities.data?.resources.runtime_memory.available === true);
-  const [range, setRange] = useState('live');
-  const windowSeconds = trafficWindows[range] ?? 120;
-  const rss = memory.data?.process?.rss_bytes ?? null;
-  const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
-  const memorySamples = memoryHistory.samples;
-  const memorySeries = [
-    {label: t('act.rss'), color: p.cat[0], values: memoryHistory.rss},
-    {label: t('act.cgroup'), color: p.cat[3], values: memoryHistory.cgroup}
-  ];
-  const memoryBytes = (value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value)));
-  const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
-  const NODES = useMemo(
-    () =>
-      (nodesResource.data ?? []).map(n => {
-        const health = preferredHealth(n);
-        const alive = health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined;
-        return {id: n.id, name: n.name, tcp: healthMillis(health), alive, unavailable: health?.state === 'unavailable'};
-      }),
-    [nodesResource.data]
-  );
-  const [by, setBy] = useState('dev');
-  const hasConnections = resources?.connections.available === true;
-  const connections = useConnections(undefined, hasConnections);
-  const ranking = useMemo(() => connectionRanking(connections.data, by), [by, connections.data]);
-  const history = useTrafficHistory(windowSeconds, capabilities.data);
-  // The backend's ring reaches back before the page opened; the session's own polls carry the chart past it.
-  const polledTraffic = useTrafficSamples(runtimeResource.data);
-  const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
-  const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
-  // Sparklines use 24 five-second means over the last two minutes, independent of the chart window.
-  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
-  const [chosenNode, setNodeName] = useState('');
-  const notices = useNotices();
-  // Until a node is chosen: the first with a measurement, else the first proxy node; the built-ins come last.
-  const node =
-    NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
-  const nodeName = node?.name ?? '';
-  // A failed refresh keeps what the page already shows, with the error above it.
-  const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
-  const alert = error && (
-    <ErrorMessage
-      error={error}
-      onRetry={() => {
-        capabilities.refetch();
-        runtimeResource.refetch();
-        nodesResource.refetch();
-      }}
-    />
-  );
-  if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return alert || <Loading>{t('act.loading')}</Loading>;
-  const liveRuntime = runtimeResource.data;
-  const usage = outboundUsage(outbounds.data);
-  const traffic = [
-    {label: t('act.download'), color: p.cat[0], values: series.down},
-    {label: t('act.upload'), color: p.cat[3], values: series.up}
-  ];
-  const OUT = usage.rows.map((r, i) => ({
-    name: outboundLabel(r.name, t),
-    value: r.percent === null ? null : Math.round(r.percent),
-    text: formatBytes(r.bytes),
-    // Only the engine's own block outbound is drawn as a refusal; a group may not take that name, but the kind says so.
-    color: r.kind === 'builtin' && r.name === 'block' ? p.love : p.cat[i % p.cat.length]
-  }));
+  const vm = useActivity();
+  const {p, locale, range, setRange, by, setBy, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
+  const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
+  if (!vm.ready) return alert || <Loading>{t('act.loading')}</Loading>;
   return (
     <>
       {alert}
       <div className="rp-quick">
-        <ModeCards />
+        <ModeCards model={vm.mode} />
         <div className="rp-card">
           <div className="rp-row">
-            <Light tone={lifecycleTone(liveRuntime.lifecycle.state)}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
+            <Light tone={vm.status.tone}>{vm.status.text}</Light>
             <Link appearance="button" className="quiet" href={buildHash('overview')}>
               {t('act.viewDetails')}
             </Link>
@@ -118,7 +40,7 @@ export function Activity() {
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.download_bytes_per_second ?? null)}</span>
+              <span className="rp-big">{vm.download}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} />
@@ -132,7 +54,7 @@ export function Activity() {
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{formatRate(liveRuntime.traffic.rates?.upload_bytes_per_second ?? null)}</span>
+              <span className="rp-big">{vm.upload}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} />
@@ -146,29 +68,15 @@ export function Activity() {
           </span>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{liveRuntime.traffic.connections.total ?? '—'}</span>
+              <span className="rp-big">{vm.connections}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} />
             </span>
           </div>
         </CardLink>
-        <div className="rp-card">
-          <span className="rp-tile-head rp-tint-c5">
-            <Clock />
-            {t('act.latency')}
-            <NodeMenu label={t('act.node')} value={nodeName} onChange={setNodeName} nodes={NODES} />
-          </span>
-          <div className="rp-tile-body">
-            <span className="rp-tile-val">
-              <span className="rp-big">{node?.alive ? (node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)})) : '—'}</span>
-            </span>
-            <Light small tone={node?.alive ? 'ok' : node?.unavailable ? 'err' : 'muted'}>
-              {node?.alive ? t('act.good') : node?.unavailable ? t('act.timeout') : t('act.unknown')}
-            </Light>
-          </div>
-        </div>
-        {capabilities.data?.resources.runtime_memory.available && (
+        <NodeCard />
+        {vm.showMemory && (
           <div className="rp-card">
             <span className="rp-tile-head rp-tint-c2">
               <Data />
@@ -176,11 +84,11 @@ export function Activity() {
             </span>
             <div className="rp-tile-body">
               <span className="rp-tile-val">
-                <span className="rp-big">{formatBytes(rss)}</span>
+                <span className="rp-big">{vm.rss}</span>
               </span>
-              {cgroupPercent !== null && (
-                <Light small tone={cgroupPercent > 90 ? 'err' : cgroupPercent > 75 ? 'warn' : 'ok'}>
-                  {t(cgroupPercent > 90 ? 'act.memoryNearLimit' : cgroupPercent > 75 ? 'act.memoryHigh' : 'act.memoryOk')}
+              {vm.memoryBadge && (
+                <Light small tone={vm.memoryBadge.tone}>
+                  {vm.memoryBadge.text}
                 </Light>
               )}
             </div>
@@ -208,26 +116,18 @@ export function Activity() {
               ]}
             />
           </div>
-          {history.error ? (
-            <ErrorMessage error={history.error} />
-          ) : capabilities.data?.resources.traffic_history.available === false ? (
+          {vm.history.error ? (
+            <ErrorMessage error={vm.history.error} />
+          ) : vm.history.state === 'unavailable' ? (
             <span className="rp-label">{t('act.noHistory')}</span>
-          ) : !history.data ? (
+          ) : vm.history.state === 'loading' ? (
             <Loading>{t('act.loading')}</Loading>
-          ) : !history.data.samples.length ? (
+          ) : vm.history.state === 'empty' ? (
             <Empty>{t('act.emptyHistory')}</Empty>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
-              <AreaChart
-                series={traffic}
-                timestamps={series.timestamps}
-                fmt={chartRate}
-                locale={locale}
-                height={120}
-                fill
-                window={{since: series.since, until: series.until}}
-              />
+              <AreaChart series={traffic} timestamps={vm.trafficTimestamps} fmt={chartRate} locale={locale} height={120} fill window={vm.trafficBounds} />
             </>
           )}
         </section>
@@ -235,19 +135,19 @@ export function Activity() {
           <div className="rp-row">
             <div className="rp-cluster">
               <h3 className="rp-h3">{t('act.outUsage')}</h3>
-              {outbounds.data && <span className="rp-label">{t('act.since', {t: localTime(outbounds.data.counter_since, locale)})}</span>}
+              {vm.outbounds.since && <span className="rp-label">{vm.outbounds.since}</span>}
             </div>
           </div>
-          {outbounds.error ? (
-            <ErrorMessage error={outbounds.error} />
-          ) : capabilities.data?.resources.runtime_outbounds.available === false ? (
+          {vm.outboundState.error ? (
+            <ErrorMessage error={vm.outboundState.error} />
+          ) : vm.outboundState.state === 'unavailable' ? (
             <span className="rp-label">{t('act.noOutbounds')}</span>
-          ) : !outbounds.data ? (
+          ) : vm.outboundState.state === 'loading' ? (
             <Loading>{t('act.loading')}</Loading>
-          ) : !OUT.length ? (
+          ) : vm.outboundState.state === 'empty' ? (
             <Empty>{t('ui.empty')}</Empty>
           ) : (
-            <Donut rows={OUT} total={formatBytes(usage.total)} />
+            <Donut rows={vm.outbounds.rows} total={vm.outbounds.total} />
           )}
         </div>
       </div>
@@ -268,30 +168,22 @@ export function Activity() {
               ]}
             />
           </div>
-          {connections.error && <ErrorMessage error={connections.error} />}
-          {connections.data?.truncated && (
+          {vm.rankingState.error && <ErrorMessage error={vm.rankingState.error} />}
+          {vm.rankingState.truncated && (
             <TextTooltip text={t('act.rankingTruncated')}>
               <Badge tone="warn">{t('act.truncated')}</Badge>
             </TextTooltip>
           )}
-          {!connections.data ? (
-            connections.error ? null : hasConnections ? (
-              <Loading>{t('act.loading')}</Loading>
-            ) : (
-              <Empty>{t('shell.notOfferedShort')}</Empty>
-            )
-          ) : ranking.length === 0 ? (
+          {vm.rankingState.state === 'error' ? null : vm.rankingState.state === 'loading' ? (
+            <Loading>{t('act.loading')}</Loading>
+          ) : vm.rankingState.state === 'unavailable' ? (
+            <Empty>{t('shell.notOfferedShort')}</Empty>
+          ) : vm.rankingState.state === 'empty' ? (
             <Empty>{t('act.rankingEmpty')}</Empty>
           ) : (
             <div className="rp-list">
-              {ranking.map((row, i) => (
-                <Bar
-                  key={row.name}
-                  label={row.name}
-                  value={row.percent === null ? formatBytes(row.download) : t('ui.share', {bytes: formatBytes(row.download), percent: row.percent})}
-                  pct={row.percent ?? 0}
-                  color={p.cat[i % p.cat.length]}
-                />
+              {vm.ranking.map(row => (
+                <Bar key={row.name} label={row.name} value={row.value} pct={row.pct} color={row.color} />
               ))}
             </div>
           )}
@@ -305,23 +197,23 @@ export function Activity() {
               {t('act.viewDetails')}
             </Link>
           </div>
-          {memory.error || memoryHistory.error ? (
-            <ErrorMessage error={memory.error ?? memoryHistory.error} />
-          ) : memorySamples.length > 1 ? (
+          {vm.memoryState.error ? (
+            <ErrorMessage error={vm.memoryState.error} />
+          ) : vm.memoryState.state === 'ready' ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
               <AreaChart
                 series={memorySeries}
-                timestamps={memoryHistory.timestamps}
+                timestamps={vm.memoryTimestamps}
                 fmt={memoryBytes}
                 locale={locale}
                 height={150}
                 fill
                 baseline="auto"
-                window={{since: memoryHistory.since, until: memoryHistory.until}}
+                window={vm.memoryBounds}
               />
             </>
-          ) : capabilities.data?.resources.runtime_memory.available === false ? (
+          ) : vm.memoryState.state === 'unavailable' ? (
             <Empty>{t('act.noHistory')}</Empty>
           ) : (
             <div className="rp-chart-wait">

@@ -1,6 +1,25 @@
-import {describe, expect, it} from 'vitest';
-import {buildHash, parseHash, updateRoute} from './route';
+import {afterEach, describe, expect, it, vi} from 'vitest';
+import {buildHash, parseHash, restoreDraftRoute, updateRoute} from './route';
 
+afterEach(() => vi.unstubAllGlobals());
+
+describe('draft history restoration', () => {
+  it('restores an unindexed Back destination without traversing away from the draft', () => {
+    const history = {state: null, go: vi.fn(), replaceState: vi.fn()};
+    vi.stubGlobal('history', history);
+    expect(restoreDraftRoute({route: 'config', query: 'source=main'}, 2)).toBeUndefined();
+    expect(history.go).not.toHaveBeenCalled();
+    expect(history.replaceState).toHaveBeenCalledWith({doonaPosition: 2}, '', '#/config?source=main');
+  });
+
+  it('restores an indexed Back destination and returns its discard traversal', () => {
+    const history = {state: {doonaPosition: 1}, go: vi.fn(), replaceState: vi.fn()};
+    vi.stubGlobal('history', history);
+    expect(restoreDraftRoute({route: 'config', query: ''}, 3)).toBe(-2);
+    expect(history.go).toHaveBeenCalledWith(2);
+    expect(history.replaceState).not.toHaveBeenCalled();
+  });
+});
 describe('hash routing', () => {
   it.each([
     ['', 'activity', ''],

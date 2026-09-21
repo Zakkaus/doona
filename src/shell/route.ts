@@ -38,6 +38,17 @@ export function updateRoute(current: Route, hash: string): Route {
 
 type PendingRoute = Route & {delta?: number};
 
+export function restoreDraftRoute(current: Route, position: number): number | undefined {
+  const destination: unknown = history.state?.doonaPosition;
+  const delta = typeof destination === 'number' ? destination - position : 0;
+  if (delta) {
+    history.go(-delta);
+    return delta;
+  }
+  // An unindexed destination has no known direction; restore in place rather than traverse.
+  history.replaceState({...history.state, doonaPosition: position}, '', buildHash(current.route, current.query));
+}
+
 function currentHash(api: string | null): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
   else if (/^#\/?flows(\?|$)/.test(location.hash)) {
@@ -82,20 +93,17 @@ export function useRoute(api: string | null) {
         return;
       }
       const hash = currentHash(api);
-      const nextPosition: number = history.state?.doonaPosition ?? position.current + 1;
-      if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
+      const nextPosition: number = history.state?.doonaPosition ?? position.current;
       const next = updateRoute(loc, hash);
-      const delta = nextPosition - position.current;
-      // A draft holds the page: step back to it and ask, then travel again on discard.
       if (next !== loc && dirty.current) {
-        if (delta) {
+        const delta = restoreDraftRoute(loc, position.current);
+        if (delta !== undefined) {
           restoring.current = {...next, delta};
-          history.go(-delta);
         } else {
-          history.replaceState(history.state, '', buildHash(loc.route, loc.query));
           setPending(next);
         }
       } else {
+        if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
         position.current = nextPosition;
         setLoc(next);
       }

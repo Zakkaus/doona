@@ -27,7 +27,7 @@ it('preserves coarse history when a clock moves backwards', () => {
 
 it('does not persist a coarse-history wipe after an out-of-order poll', () => {
   const coarse = [{time: 0, value: 5.5}];
-  const key = 'doona-rings-clock-mock';
+  const key = 'doona-rings-clock-["","mock"]';
   const storage = new Map([[key, JSON.stringify({fine: [{time: 3600000, value: 10}], coarse})]]);
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -86,4 +86,36 @@ it('thins a long window to buckets', () => {
   const series = window({fine, coarse: []}, [], 3600, fold, 3600000, 60);
   expect(series.samples.length).toBe(60);
   expect(series.samples[0]).toEqual({time: 0, value: 5.5});
+});
+
+it('separates an edited backend while retaining history across credential changes', () => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  const profile = (api: string, token = '') => {
+    storage.set('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api, token}]));
+    storage.set('doona-profile', 'home');
+  };
+  vi.useFakeTimers();
+  try {
+    profile('https://one.example/');
+    record('backend', {time: 1, value: 10}, fold);
+    vi.advanceTimersByTime(60000);
+    record('backend', {time: 2, value: 20}, fold);
+    profile('https://two.example');
+    expect(record<Sample>('backend', undefined, fold)).toEqual({fine: [], coarse: []});
+    record('backend', {time: 3, value: 30}, fold);
+    profile('https://one.example', 'new-secret');
+    expect(record<Sample>('backend', undefined, fold).fine).toEqual([
+      {time: 1, value: 10},
+      {time: 2, value: 20}
+    ]);
+  } finally {
+    resetRings();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
 });

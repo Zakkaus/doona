@@ -52,3 +52,20 @@ test('cancelled Back and Forward restore the cursor without replacing history en
   await page.goForward();
   await expect(page).toHaveURL(/#\/connections$/);
 });
+
+test('Back to an unindexed entry keeps a guarded draft until discard', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.evaluate(() => history.replaceState(null, '', location.href));
+  await page.locator('.rp-nav[href="#/config"]').click();
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  await page.locator('.cm-content').fill('unindexed history draft');
+  await page.goBack();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(/#\/config$/);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page.locator('.cm-content')).toContainText('unindexed history draft');
+  await page.locator('.rp-nav[href="#/settings"]').click();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings$/);
+});

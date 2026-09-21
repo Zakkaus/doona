@@ -1,298 +1,78 @@
-import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../api/store';
-import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
-import {
-  Badge,
-  Button,
-  DataTable,
-  LabeledSelect,
-  Light,
-  ModalDialog,
-  Segmented,
-  Switch,
-  ErrorMessage,
-  TextField,
-  TextTooltip,
-  errorText,
-  toast
-} from '../../ui/ui';
+import {useT} from '../../i18n';
+import {Badge, Button, DataTable, LabeledSelect, Light, ModalDialog, Segmented, Switch, ErrorMessage, TextField, TextTooltip} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
-import {ruleDistribution} from './distribution';
-import {fileName} from '../config/names';
-import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
+import type {ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
-import {ruleAnchor, sourceFor} from './source';
+import {useRuleList, type RuleListModel as Model} from './useRuleList';
 
-const kindLabels: Record<ConditionKind, Key> = {
-  domainSuffix: 'rule.kind.domainSuffix',
-  domain: 'rule.kind.domain',
-  geosite: 'rule.kind.geosite',
-  dip: 'rule.kind.dip',
-  geoip: 'rule.kind.geoip',
-  sip: 'rule.kind.sip',
-  dport: 'rule.kind.dport',
-  sport: 'rule.kind.sport',
-  pname: 'rule.kind.pname',
-  l4proto: 'rule.kind.l4proto'
-};
-const kindHints: Record<ConditionKind, string> = {
-  domainSuffix: 'example.com, example.org',
-  domain: 'www.example.com',
-  geosite: 'netflix, cn',
-  dip: '10.0.0.0/8, 224.0.0.0/4',
-  geoip: 'cn, private',
-  sip: '192.168.1.10',
-  dport: '80, 443',
-  sport: '53',
-  pname: 'curl, firefox',
-  l4proto: 'udp'
-};
-
-const sources: Record<string, Key> = {
-  kernel: 'rule.sourceKernel',
-  recomputed: 'rule.sourceRecomputed',
-  unknown: 'rule.sourceUnknown'
-};
-
-// Rule IDs sort in config order when they carry a number; the rest keep their text order.
-const ruleOrder = (a: string | null, b: string | null) => {
-  if (a === null || b === null) return Number(a === null) - Number(b === null);
-  return a.localeCompare(b, undefined, {numeric: true});
-};
-
-// Use the backend dictionary when available; otherwise group retained flows by deciding rule. Edits rewrite the owning source through validate-and-save.
-export function RuleList({go, query}: PageProps) {
-  const resources = useCapabilities().data?.resources;
-  return resources?.rules.available === true ? <Dictionary go={go} query={query} /> : <Distribution />;
+export function RuleList(props: PageProps) {
+  const view = useRuleList(props);
+  return view.kind === 'dictionary' ? <Dictionary view={view} /> : <Distribution view={view} />;
 }
-
-function Dictionary({go, query}: PageProps) {
+function Dictionary({view}: {view: Model}) {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const resources = useCapabilities().data?.resources;
-  const rules = useRules();
-  const flows = useFlows(undefined, resources?.flows.available === true);
-  const groups = useGroups(resources?.groups.available === true);
-  const canWrite = resources?.config.available === true && resources.config.writable === true;
-  const config = useConfig(canWrite);
-  const editor = useConfigEditor(() => {
-    config.refetch();
-    rules.refetch();
-  });
-  useEffect(() => {
-    if (editor.error) toast('negative', errorText(editor.error));
-  }, [editor.error]);
-  const hits = useMemo(() => new Map(ruleDistribution(flows.data?.flows ?? []).map(row => [row.id, row.count])), [flows.data]);
-  // The removal keeps the source as it was when the dialog opened, so a file changed meanwhile answers 412.
-  const [dialog, setDialog] = useState<{kind: 'add'} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource} | null>(null);
-  const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
-  const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
-  const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
-  const list = rules.data?.rules ?? [];
-  // `?rule=` (from search) lands on that row: selected, and scrolled into view once the list is there.
-  const landed = new URLSearchParams(query).get('rule');
-  // The row picked by hand replaces the landed one; a new landing wins again.
-  const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
-  const selected = picked.landed === landed ? picked.row : landed;
-  const setSelected = (row: string | null) => setPicked({landed, row});
-  const configSources = config.data?.sources ?? [];
-  const sourceToEdit = (rule: RoutingRule | undefined) => configSources.find(source => source.id === rule?.source?.source_id);
-  const writable = (rule: RoutingRule) => {
-    const source = sourceToEdit(rule);
-    return !!source && source.writable && source.content !== undefined;
-  };
-  // Where a new rule can go: before the fallback when its line is known and writable, else before a writable rule.
-  const fallback = list.find(rule => rule.kind === 'fallback');
-  const positions = [
-    ...(fallback && writable(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
-    ...list
-      .filter(rule => rule.kind === 'rule' && writable(rule))
-      .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
-  ];
-  const outbounds = [...(groups.data ?? []).map(g => g.name), 'direct', 'block'];
-  const open = (next: NonNullable<typeof dialog>, preset?: {kind: ConditionKind; value: string}) => {
-    // Line numbers come from the rule list and the text from the config; they must describe the same generation.
-    if (rules.data?.generation_id !== config.data?.generation_id) {
-      toast('negative', t('rule.stale'));
-      rules.refetch();
-      config.refetch();
-      return;
-    }
-    setForm({condition: '', outbound: (groups.data?.[0]?.name ?? 'direct') as string, must: false, before: positions[0]?.id ?? 'end'});
-    setPick({on: true, kind: 'domainSuffix', value: '', ...preset});
-    setDialog(next);
-  };
-  // `?add=kind:value` (from a flow) opens the add dialog with that condition once the list and the config are
-  // there; the address keeps the seed until the dialog closes.
-  const seed = new URLSearchParams(query).get('add');
-  const wanted = canWrite && rules.data && config.data && rules.data.generation_id === config.data.generation_id && positions.length > 0 ? seed : null;
-  // Applied whenever a seed appears, on the first render too: the data is often already cached.
-  const [seen, setSeen] = useState<string | null>(null);
-  if (seen !== wanted) {
-    setSeen(wanted);
-    if (wanted) {
-      const [kind, ...rest] = wanted.split(':');
-      if (conditionKinds.includes(kind as ConditionKind)) open({kind: 'add'}, {kind: kind as ConditionKind, value: rest.join(':')});
-    }
-  }
-  const write = async (source: ConfigSource, transform: (text: string) => string | null) => {
-    const result = await editor.apply(source, transform);
-    if (!result) return false;
-    if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
-      return false;
-    }
-    return true;
-  };
-  const add = async (close: () => void) => {
-    if (!rules.data || !config.data || rules.data.generation_id !== config.data.generation_id) {
-      toast('negative', t('rule.stale'));
-      rules.refetch();
-      config.refetch();
-      return;
-    }
-    const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
-    const source = sourceToEdit(anchor);
-    if (!anchor?.source || !source) return;
-    const stale = () => {
-      toast('negative', t('rule.stale'));
-      rules.refetch();
-      config.refetch();
-    };
-    if (
-      await write(source, text => {
-        const range = ruleAnchor(text, anchor);
-        if (!range) {
-          stale();
-          return null;
-        }
-        return text.slice(0, range.from) + `${range.indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}\n` + text.slice(range.from);
-      })
-    ) {
-      toast('positive', t('rule.added'));
-      close();
-    }
-  };
-  const remove = async (rule: RoutingRule, source: ConfigSource, close: () => void) => {
-    if (!rule.source) return;
-    if (
-      await write(source, text => {
-        const range = ruleAnchor(text, rule);
-        if (!range) {
-          toast('negative', t('rule.stale'));
-          rules.refetch();
-          config.refetch();
-          return null;
-        }
-        return text.slice(0, range.from) + text.slice(range.to);
-      })
-    ) {
-      toast('positive', t('rule.removed'));
-      close();
-    }
-  };
-  const openSource = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source);
-    if (source && rule.source) go('config', `tab=source&source=${encodeURIComponent(source.id)}&line=${rule.source.line}`);
-  };
-  // Where a rule is written: the file's name when a source is matched (a redacted path is named by kind), else
-  // the backend's label, which may itself be redacted and then leaves only the line.
-  const label = (source: RuleSource) => {
-    const matched = sourceFor(configSources, source);
-    return matched ? fileName(matched) : source.file === '<redacted>' ? '' : source.file;
-  };
-  const position = (source: RuleSource) => {
-    const file = label(source);
-    return file ? `${file}:${source.line}` : t('rule.lineOnly', {n: String(source.line)});
-  };
-  const conditionValid = pick.on ? pick.value.trim() !== '' : /\w\(/.test(form.condition) && !form.condition.includes('->');
+  const {form, setForm, pick, setPick, draft, dialog} = view;
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
-        {rules.data && (
-          <span className="rp-label">{t('rule.dictionaryCaption', {n: formatNumber(list.length, locale), generation: rules.data.generation_id})}</span>
-        )}
+        {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
         <span className="rp-grow" />
-        {canWrite && (
-          <Button small isDisabled={!positions.length || !!editor.busy} onPress={() => open({kind: 'add'})}>
+        {view.canWrite && (
+          <Button small isDisabled={view.addDisabled} onPress={view.openAdd}>
             {t('rule.add')}
           </Button>
         )}
       </div>
-      <ErrorMessage
-        error={rules.error ?? config.error}
-        onRetry={() => {
-          rules.refetch();
-          config.refetch();
-        }}
-      />
+      <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}
-        loading={rules.loading && !rules.data}
-        rows={list.map(rule => ({...rule, id: rule.rule_id}))}
-        selected={selected}
+        loading={view.loading}
+        rows={view.table.rows}
+        selected={view.selected}
         reveal
-        onSelect={setSelected}
+        onSelect={view.select}
         height={560}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: rule => (rule.kind === 'fallback' ? '—' : String(rule.index + 1))},
+          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
           {
             id: 'expression',
             label: t('rule.expression'),
             minWidth: 160,
             grow: 3,
             isRowHeader: true,
-            render: rule => <TextTooltip className="rp-code">{rule.expression}</TextTooltip>
+            render: row => <TextTooltip className="rp-code">{row.expression}</TextTooltip>
           },
           {
             id: 'outbound',
             label: t('ui.outbound'),
             minWidth: 100,
             grow: 0,
-            render: rule => (
+            render: row => (
               <span className="rp-chain">
-                {rule.outbound}
-                {rule.must && <Badge>must</Badge>}
+                {row.outbound}
+                {row.must && <Badge>must</Badge>}
               </span>
             )
           },
-          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: rule => (rule.source ? position(rule.source) : '—')},
-          {
-            id: 'hits',
-            label: t('rule.hits'),
-            minWidth: 60,
-            grow: 0,
-            align: 'end',
-            drop: 1,
-            render: rule => (hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—')
-          },
+          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: row => row.position},
+          {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1, render: row => row.hits},
           {
             id: 'actions',
             label: t('ui.actions'),
-            minWidth: canWrite ? 96 : 56,
+            minWidth: view.canWrite ? 96 : 56,
             grow: 0,
-            render: rule => (
+            render: row => (
               <span className="rp-chain">
-                {rule.source && sourceFor(configSources, rule.source) && (
-                  <Button small quiet icon label={t('rule.openSource')} onPress={() => openSource(rule)}>
+                {row.sourceQuery && (
+                  <Button small quiet icon label={t('rule.openSource')} onPress={() => view.openSource(row.sourceQuery!)}>
                     <FileText />
                   </Button>
                 )}
-                {canWrite && rule.kind === 'rule' && writable(rule) && (
-                  <Button
-                    small
-                    quiet
-                    icon
-                    isDisabled={!!editor.busy}
-                    label={t('rule.remove')}
-                    onPress={() => open({kind: 'remove', rule, source: sourceToEdit(rule)!})}
-                  >
+                {view.canWrite && row.removable && (
+                  <Button small quiet icon isDisabled={view.busy} label={t('rule.remove')} onPress={() => view.openRemove(row.id)}>
                     <Close />
                   </Button>
                 )}
@@ -302,36 +82,32 @@ function Dictionary({go, query}: PageProps) {
         ]}
       />
       <ModalDialog
-        title={dialog?.kind === 'remove' ? t('rule.removeTitle') : t('rule.add')}
+        title={view.dialogTitle}
         narrow
         alert={dialog?.kind === 'remove'}
         isOpen={dialog !== null}
-        onOpenChange={isOpen => {
-          if (isOpen) return;
-          setDialog(null);
-          if (seed) go('rules', within(query, {add: null}));
+        onOpenChange={open => {
+          if (!open) view.close();
         }}
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            {dialog?.kind === 'remove' ? (
-              <Button negative isPending={!!editor.busy} onPress={() => void remove(dialog.rule, dialog.source, close)}>
-                {t('rule.remove')}
-              </Button>
-            ) : (
-              <Button accent isDisabled={!conditionValid || !form.outbound} isPending={!!editor.busy} onPress={() => void add(close)}>
-                {t('rule.add')}
-              </Button>
-            )}
+            <Button
+              negative={dialog?.kind === 'remove'}
+              accent={dialog?.kind !== 'remove'}
+              isDisabled={view.submitDisabled}
+              isPending={view.busy}
+              onPress={() => void view.submit(close)}
+            >
+              {view.submitLabel}
+            </Button>
           </>
         )}
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
-            <span className="rp-label">
-              {t('rule.removeHelp', {file: dialog.rule.source ? label(dialog.rule.source) : '', line: String(dialog.rule.source?.line ?? '')})}
-            </span>
-            <span className="rp-code">{dialog.rule.expression}</span>
+            <span className="rp-label">{dialog.help}</span>
+            <span className="rp-code">{dialog.expression}</span>
           </div>
         )}
         {dialog?.kind === 'add' && (
@@ -339,12 +115,8 @@ function Dictionary({go, query}: PageProps) {
             <span className="rp-label">{t('rule.addHelp')}</span>
             <Segmented
               label={t('rule.conditionMode')}
-              value={pick.on ? 'pick' : 'text'}
-              onChange={mode => {
-                // Leaving the picker keeps what it composed, so the expression can be refined by hand.
-                if (mode === 'text' && pick.on && pick.value.trim()) setForm({...form, condition});
-                setPick({...pick, on: mode === 'pick'});
-              }}
+              value={draft.mode}
+              onChange={view.changeMode}
               items={[
                 ['pick', t('rule.pick')],
                 ['text', t('rule.expression')]
@@ -357,102 +129,80 @@ function Dictionary({go, query}: PageProps) {
                     label={t('rule.kind')}
                     value={pick.kind}
                     onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
-                    items={conditionKinds.map(kind => ({id: kind, label: t(kindLabels[kind])}))}
+                    items={draft.choices}
                   />
                   <TextField
                     label={t('rule.values')}
                     value={pick.value}
-                    placeholder={kindHints[pick.kind]}
+                    placeholder={draft.hint}
                     description={t('rule.valuesHelp')}
                     spellCheck={false}
                     onChange={value => setPick({...pick, value})}
                   />
                 </div>
-                {pick.value.trim() !== '' && <span className="rp-code">{condition}</span>}
+                {draft.preview && <span className="rp-code">{draft.preview}</span>}
               </>
             ) : (
               <TextField
                 label={t('rule.condition')}
                 value={form.condition}
                 placeholder="domain(geosite:netflix)"
-                isInvalid={form.condition !== '' && !conditionValid}
+                isInvalid={draft.rawInvalid}
                 spellCheck={false}
                 onChange={condition => setForm({...form, condition})}
               />
             )}
             <div className="rp-toolbar">
-              <LabeledSelect
-                label={t('ui.outbound')}
-                value={form.outbound}
-                onChange={outbound => setForm({...form, outbound})}
-                items={outbounds.map(id => ({id, label: id}))}
-              />
+              <LabeledSelect label={t('ui.outbound')} value={form.outbound} onChange={outbound => setForm({...form, outbound})} items={view.table.outbounds} />
               <Switch isSelected={form.must} onChange={must => setForm({...form, must})}>
                 must
               </Switch>
             </div>
-            <LabeledSelect label={t('rule.position')} value={form.before} onChange={before => setForm({...form, before})} items={positions} />
+            <LabeledSelect label={t('rule.position')} value={form.before} onChange={before => setForm({...form, before})} items={view.table.positions} />
           </div>
         )}
       </ModalDialog>
     </div>
   );
 }
-
-function Distribution() {
-  const resource = useFlows();
+function Distribution({view}: {view: Model}) {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const [source, setSource] = useState('all');
-  const rows = useMemo(
-    () =>
-      (resource.data ? ruleDistribution(resource.data.flows) : [])
-        .map((row, i) => ({...row, key: String(i)}))
-        .sort((a, b) => ruleOrder(a.id, b.id) || b.count - a.count),
-    [resource.data]
-  );
-  const list = resource.data ?? null;
-  const filtered = source === 'all' ? rows : rows.filter(row => row.source === source);
+  const table = view.distribution;
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
-        <Segmented
-          label={t('rule.distributionSource')}
-          value={source}
-          onChange={setSource}
-          items={[['all', t('ui.all')], ...Object.entries(sources).map(([id, label]): [string, string] => [id, t(label)])]}
-        />
-        {list && (
+        <Segmented label={t('rule.distributionSource')} value={view.source} onChange={view.setSource} items={table.choices} />
+        {table.caption && (
           <TextTooltip text={t('rule.distributionScope')} className="rp-label">
-            {t('rule.distributionCaption', {n: formatNumber(list.flows.length, locale)})}
+            {table.caption}
           </TextTooltip>
         )}
-        {list && <Coverage data={list} />}
-        {list && list.dropped_records === null && (
+        {table.coverage && <Coverage view={table.coverage} />}
+        {table.droppedUnknown && (
           <Light small tone="warn">
             {t('rule.droppedUnknown')}
           </Light>
         )}
       </div>
-      {resource.error && <ErrorMessage error={resource.error} />}
+      <ErrorMessage error={view.error} />
       <DataTable
         label={t('rule.listTitle')}
-        loading={resource.loading && !resource.data}
-        rows={filtered.map(row => ({...row, ruleId: row.id, id: row.key}))}
+        loading={view.loading}
+        rows={table.rows}
         empty={t('rule.distributionEmpty')}
         cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId ?? '—'},
+          {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId},
           {
             id: 'expression',
             label: t('rule.expression'),
             minWidth: 240,
             grow: 3,
             isRowHeader: true,
-            render: row => <TextTooltip className={row.expression ? 'rp-code' : undefined}>{row.expression ?? t('rule.unknownRule')}</TextTooltip>
+            render: row => <TextTooltip className={row.expressionClass}>{row.expression}</TextTooltip>
           },
-          {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{t(sources[row.source])}</Badge>},
-          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => formatNumber(row.count, locale)},
-          {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => formatNumber(row.share * 100, locale, 1) + '%'}
+          {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
+          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},
+          {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => row.share}
         ]}
       />
     </div>

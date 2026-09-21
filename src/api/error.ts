@@ -15,10 +15,10 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
-  // A 503 with a Retry-After is the backend saying not now, not no: a poll waits it out before it counts as
-  // a failure. A bare 503 is a proxy with nothing behind it, and shows at once.
+  // A 503 or 429 with a Retry-After is the backend saying not now, not no: a poll waits it out before it
+  // counts as a failure. A bare 503 is a proxy with nothing behind it, and shows at once.
   get transient() {
-    return this.status === 503 && this.retryAfter !== null;
+    return (this.status === 503 || this.status === 429) && this.retryAfter !== null;
   }
 }
 

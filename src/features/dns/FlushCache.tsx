@@ -1,7 +1,17 @@
 import {useT} from '../../i18n';
 import {Button, ModalDialog} from '../../ui/ui';
 
-export function FlushCacheButton({count, busy, isDisabled, onFlush}: {count: number | null; busy: boolean; isDisabled?: boolean; onFlush: () => void}) {
+export function FlushCacheButton({
+  confirmationText,
+  busy,
+  isDisabled,
+  onFlush
+}: {
+  confirmationText: string;
+  busy: boolean;
+  isDisabled?: boolean;
+  onFlush: () => void;
+}) {
   const t = useT();
   return (
     <ModalDialog
@@ -28,7 +38,7 @@ export function FlushCacheButton({count, busy, isDisabled, onFlush}: {count: num
         </>
       )}
     >
-      <p>{count === null ? t('dns.flushConfirmAll') : t('dns.flushConfirm', {n: count})}</p>
+      <p>{confirmationText}</p>
     </ModalDialog>
   );
 }

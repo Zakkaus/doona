@@ -48,7 +48,11 @@ export function useFlows(connection_id?: string, enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit, detail: 'full'}, signal),
-          (acc: FlowList | undefined, page) => (acc ? {...acc, flows: [...acc.flows, ...page.flows]} : page)
+          (acc: FlowList | undefined, page) => {
+            if (!acc) return {...page, flows: [...page.flows]};
+            acc.flows.push(...page.flows);
+            return acc;
+          }
         )
     },
     {enabled}

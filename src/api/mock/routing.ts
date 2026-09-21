@@ -1,7 +1,5 @@
-import type {RoutingTraceInput, RoutingTraceRequest, RoutingTraceResponse} from '../model';
+import type {DnsCacheList, RuleList, RoutingTraceInput, RoutingTraceRequest, RoutingTraceResponse} from '../model';
 import {ApiError} from '../error';
-import {configRules} from './fixtures/configuration';
-import {dnsCache} from './fixtures/network';
 import {instanceId} from './fixtures/clock';
 
 type Evaluation = RoutingTraceResponse['evaluations'][number];
@@ -60,39 +58,41 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
   else matched = arg.split(',').some(item => item.trim() === String(value));
   return {result: matched ? 'matched' : 'not_matched', missing_inputs: []};
 }
-function evaluate(input: RoutingTraceInput): Evaluation {
+function evaluate(input: RoutingTraceInput, snapshot: RuleList): Evaluation {
   let matched = false,
     outbound: string | null = null;
   const missing = new Set<string>();
-  const rules: Evaluation['rules'] = configRules.rules.map(rule => {
-    const conditions = rule.cond.split(/\s*&&\s*/).map((expression, i): Condition => ({
-      id: rule.id + '/' + i,
-      expression,
-      ...(matched ? {result: 'skipped', missing_inputs: []} : predicate(expression, input))
-    }));
-    const result = matched
-      ? 'skipped'
-      : conditions.some(c => c.result === 'not_matched')
-        ? 'not_matched'
-        : conditions.some(c => c.result === 'indeterminate')
-          ? 'indeterminate'
-          : 'matched';
-    const missing_inputs = result === 'indeterminate' ? [...new Set(conditions.flatMap(c => c.missing_inputs))] : [];
-    for (const field of missing_inputs) missing.add(field);
-    if (result === 'matched') {
-      matched = true;
-      outbound = rule.target;
-    }
-    return {rule_id: rule.id, expression: rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), result, missing_inputs, conditions};
-  });
+  const rules: Evaluation['rules'] = snapshot.rules
+    .filter(rule => rule.kind === 'rule')
+    .map(rule => {
+      const conditions = rule.expression.split(/\s*&&\s*/).map((expression, i): Condition => ({
+        id: rule.rule_id + '/' + i,
+        expression,
+        ...(matched ? {result: 'skipped', missing_inputs: []} : predicate(expression, input))
+      }));
+      const result = matched
+        ? 'skipped'
+        : conditions.some(c => c.result === 'not_matched')
+          ? 'not_matched'
+          : conditions.some(c => c.result === 'indeterminate')
+            ? 'indeterminate'
+            : 'matched';
+      const missing_inputs = result === 'indeterminate' ? [...new Set(conditions.flatMap(c => c.missing_inputs))] : [];
+      for (const field of missing_inputs) missing.add(field);
+      if (result === 'matched') {
+        matched = true;
+        outbound = rule.outbound;
+      }
+      return {rule_id: rule.rule_id, expression: rule.expression + ' -> ' + rule.outbound + (rule.must ? '(must)' : ''), result, missing_inputs, conditions};
+    });
   rules.push({
     rule_id: 'fallback',
-    expression: 'fallback: ' + configRules.fallback.target,
+    expression: 'fallback: ' + snapshot.fallback.outbound,
     result: matched ? 'skipped' : 'matched',
     missing_inputs: [],
     conditions: []
   });
-  if (!matched) outbound = configRules.fallback.target;
+  if (!matched) outbound = snapshot.fallback.outbound;
   // A later match cannot resolve an earlier rule whose inputs are missing.
   return {
     dst_ip: input.dst_ip ?? null,
@@ -102,20 +102,20 @@ function evaluate(input: RoutingTraceInput): Evaluation {
     rules
   };
 }
-export function routingTrace({input, resolve}: RoutingTraceRequest, generationId: string): RoutingTraceResponse {
+export function routingTrace({input, resolve}: RoutingTraceRequest, snapshot: RuleList, dnsCache: DnsCacheList): RoutingTraceResponse {
   if (!input.domain && !input.dst_ip) throw new ApiError(400, 'invalid_request', 'A domain or destination IP is required');
   if (resolve === 'live' && (!input.domain || input.dst_ip))
     throw new ApiError(400, 'invalid_input', 'Live resolution requires a domain and no destination IP');
   const response: RoutingTraceResponse = {
     mode: 'simulation',
     instance_id: instanceId,
-    generation_id: generationId,
+    generation_id: snapshot.generation_id,
     observed_at: new Date().toISOString(),
     evaluations: [],
     dns: []
   };
   if (resolve === 'none') {
-    response.evaluations.push(evaluate(input));
+    response.evaluations.push(evaluate(input, snapshot));
     return response;
   }
   const name = domainName(input.domain!) + '.';
@@ -140,6 +140,6 @@ export function routingTrace({input, resolve}: RoutingTraceRequest, generationId
     selected_ip: null,
     error: entries.length ? null : 'No address in mock DNS cache'
   });
-  response.evaluations = addresses.map(dst_ip => evaluate({...input, dst_ip}));
+  response.evaluations = addresses.map(dst_ip => evaluate({...input, dst_ip}, snapshot));
   return response;
 }

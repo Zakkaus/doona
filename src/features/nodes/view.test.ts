@@ -1,7 +1,11 @@
 import {describe, expect, it} from 'vitest';
 import type {Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {nodeRows, ownedNodes, providerRows} from './view';
+import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText} from './view';
+import {translate, type Translator} from '../../i18n';
+import {nodeFixtures} from '../../api/mock/fixtures';
+import {formatBytes} from '../../api/u64';
+const t: Translator = (key, params) => translate('en', key, params);
 
 const provider = (id: string, overrides: Partial<Provider> = {}): Provider => ({
   id,
@@ -42,7 +46,7 @@ describe('providerRows', () => {
       provider('file', {kind: 'file', url_redacted: 'https://primary.example/redacted'})
     ];
     const nodes = [node('tagged', {provider_id: 'a', subscription_tag: 'primary'})];
-    expect(providerRows(providers, nodes, entries, 'Inline').list.map(item => item.name)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
+    expect(providerRows(providers, nodes, entries, t).list.map(item => item.name)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
     expect(providers.map(item => item.name)).toEqual(['opaque-a', 'opaque-b', 'opaque-c', 'opaque-file']);
   });
 
@@ -51,16 +55,16 @@ describe('providerRows', () => {
       first: 'https://shared.example/one'
       second: 'https://shared.example/two'
     }`);
-    expect(providerRows([provider('a', {url_redacted: 'https://shared.example/redacted'})], [], shared, 'Inline').list[0].name).toBe('opaque-a');
-    expect(providerRows([provider('a'), provider('b')], [], entries.slice(0, 1), 'Inline').list.map(item => item.name)).toEqual(['opaque-a', 'opaque-b']);
+    expect(providerRows([provider('a', {url_redacted: 'https://shared.example/redacted'})], [], shared, t).list[0].name).toBe('opaque-a');
+    expect(providerRows([provider('a'), provider('b')], [], entries.slice(0, 1), t).list.map(item => item.name)).toEqual(['opaque-a', 'opaque-b']);
   });
 
-  it('groups null and omitted provider ids as unknown provenance', () => {
+  it('groups null and omitted provider ids as unattributed provenance', () => {
     const remote = provider('remote');
     const nodes = [node('local'), node('remote', {provider_id: 'remote'}), node('unknown', {provider_id: undefined})];
-    const result = providerRows([remote], nodes, [], 'Unknown');
+    const result = providerRows([remote], nodes, [], t);
     expect(result.list.map(item => [item.id, item.name, item.kind, item.node_count])).toEqual([
-      ['unknown', 'Unknown', 'unknown', 2],
+      ['unattributed', t('nodes.kind.unattributed'), 'unattributed', 2],
       ['remote', 'opaque-remote', 'subscription', 0]
     ]);
     expect(ownedNodes(nodes, null).map(item => item.id)).toEqual(['local', 'unknown']);
@@ -69,7 +73,7 @@ describe('providerRows', () => {
   it('does not attribute unknown nodes to a backend inline provider', () => {
     const inline = provider('backend-inline', {kind: 'inline', name: 'config.dae', node_count: 2});
     const nodes = [node('local'), node('owned', {provider_id: inline.id})];
-    expect(providerRows([inline], nodes, [], 'Unknown').list.map(item => item.kind)).toEqual(['unknown', 'inline']);
+    expect(providerRows([inline], nodes, [], t).list.map(item => item.kind)).toEqual(['unattributed', 'inline']);
     expect(ownedNodes(nodes, inline.id).map(item => item.id)).toEqual(['owned']);
   });
 });
@@ -120,5 +124,59 @@ describe('node rows', () => {
     const ascending = ['zero', 'slow-2', 'slow-10', 'missing', 'unavailable'];
     expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}).map(item => item.id)).toEqual(ascending);
     expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}).map(item => item.id)).toEqual([...ascending].reverse());
+  });
+});
+
+it('projects node protocol, membership, measured zero and unavailable health', () => {
+  const sample = nodeFixtures(0).nodes[0].health.find(item => item.transport === 'tcp')!;
+  const view = nodeRowView(
+    node('a', {protocol: null, group_ids: ['group', 'unknown'], health: [{...sample, latency_ms: 0}]}),
+    new Map([['group', 'Proxy']]),
+    'en',
+    t
+  );
+  expect(view.protocol).toBe('—');
+  expect(view.groups).toContain('Proxy');
+  expect(view.groups).toContain('unknown');
+  expect(view.latency).toBe('0 ms');
+  expect(nodeRowView(node('down', {health: [{...sample, state: 'unavailable'}]}), new Map(), 'en', t).latency).toBe(t('ui.unavailable'));
+});
+
+it('projects traffic without truncating counters and retains custom refresh intervals', () => {
+  const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
+  expect(row.usage).toBe(formatBytes(1024n));
+  expect(row.intervals.at(-1)).toEqual({id: '90', label: intervalText(90, 'en-US', t)});
+  expect(intervalText(0, 'en-US', t)).toBe(t('nodes.manualOnly'));
+  expect(intervalText(3600, 'en-US', t)).toBe(t('nodes.everyHours', {n: '1'}));
+  expect(providerRowView({...provider('unattributed'), kind: 'unattributed'}, undefined, 'en-US', t)).toMatchObject({
+    usage: '—',
+    status: null,
+    hasInterval: false,
+    expires: '—'
+  });
+});
+
+it('separates built-in outbounds from unattributed nodes and avoids provider id collisions', () => {
+  const nodes = [
+    node('direct', {protocol: 'direct'}),
+    node('block', {protocol: 'block', provider_id: undefined}),
+    node('loose'),
+    node('owned-direct', {protocol: 'direct', provider_id: 'builtin'})
+  ];
+  const rows = providerRows([provider('builtin')], nodes, [], t).list;
+  expect(rows.map(row => [row.id, row.kind, row.node_count])).toEqual([
+    ['builtin-', 'builtin', 2],
+    ['unattributed', 'unattributed', 1],
+    ['builtin', 'subscription', 0]
+  ]);
+  expect(ownedNodes(nodes, null, 'builtin').map(row => row.id)).toEqual(['direct', 'block']);
+  expect(ownedNodes(nodes, null, 'unattributed').map(row => row.id)).toEqual(['loose']);
+  expect(ownedNodes(nodes, 'builtin').map(row => row.id)).toEqual(['owned-direct']);
+  expect(providerRowView(rows[0], undefined, 'en-US', t)).toMatchObject({
+    name: t('nodes.kind.builtin'),
+    kind: t('nodes.kind.builtin'),
+    usage: '—',
+    updated: '—',
+    status: null
   });
 });

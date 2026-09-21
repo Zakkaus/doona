@@ -7,7 +7,6 @@ import {cx} from './cx';
 import {TextTooltip} from './Button';
 import {Badge} from './Feedback';
 
-// A whole card as one link: a tile that opens the page it summarises.
 export function CardLink({href, label, children}: {href: string; label: string; children: ReactNode}) {
   return (
     <RLink href={href} aria-label={label} className="rp-card rp-card-link">
@@ -15,21 +14,15 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
-// A routing rule named by a connection or flow: the expression, and a small link to its row in the rule
-// list when the backend lists rules and the record carries the id. The link is its own target so a click on
-// the row still selects the row.
 export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
   const t = useT();
   if (!expression) return <>—</>;
+  const href = linked && ruleId ? '#/rules?tab=list&rule=' + encodeURIComponent(ruleId) : undefined;
   return (
     <>
       <TextTooltip text={expression}>{expression}</TextTooltip>
-      {linked && ruleId && (
-        <RLink
-          href={'#/rules?tab=list&rule=' + encodeURIComponent(ruleId)}
-          className="rp-btn quiet icon rp-rule-link"
-          aria-label={t('ui.openRule', {rule: expression})}
-        >
+      {href && (
+        <RLink href={href} className="rp-btn quiet icon rp-rule-link" aria-label={t('ui.openRule', {rule: expression})}>
           <ListBulleted />
         </RLink>
       )}
@@ -37,7 +30,6 @@ export function RuleRef({expression, ruleId, linked}: {expression: string | null
   );
 }
 
-// Virtual collections render the same tile body inside their own selectable item.
 export type NodeTileProps = {
   name: string;
   tcp?: number;
@@ -66,6 +58,7 @@ export function NodeTile({
   bodyOnly
 }: NodeTileProps) {
   const t = useT();
+  const latency = tcp == null ? '' : t('ui.latency', {n: millis(tcp)});
   const body = (
     <>
       <span className="top">
@@ -75,7 +68,7 @@ export function NodeTile({
         {nested ? (
           <Badge>{t('ui.group')}</Badge>
         ) : alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
+          <span className={cx('ms', latencyTone(tcp))}>{latency}</span>
         ) : (
           <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
         )}

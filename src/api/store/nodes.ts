@@ -13,7 +13,11 @@ export function useNodes(enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.nodes({cursor, limit: 1000}, signal),
-          (acc: Node[] | undefined, page) => [...(acc ?? []), ...page.nodes]
+          (acc: Node[] | undefined, page) => {
+            if (!acc) return [...page.nodes];
+            acc.push(...page.nodes);
+            return acc;
+          }
         )
     },
     {enabled}

@@ -102,12 +102,17 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   capabilities.resources.routing_trace.available = true;
   capabilities.resources.routing_trace.resolve_modes = ['none'];
   capabilities.resources.dns_query.available = true;
+  capabilities.resources.dns_query.limits!.max_types_per_request = 1;
+  const requested: string[][] = [];
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/dns/query?*', async route => {
     const query = new URL(route.request().url()).searchParams;
-    await route.fulfill({json: await api.dnsQuery(query.get('domain')!, ['A', 'AAAA'])});
+    const types = query.getAll('type');
+    requested.push(types);
+    expect(types).toHaveLength(1);
+    await route.fulfill({json: await api.dnsQuery(query.get('domain')!, types)});
   });
   await page.route('**/api/v1/routing/trace', async route => {
     await route.fulfill({json: await api.routingTrace(route.request().postDataJSON())});
@@ -123,4 +128,5 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   await expect(page.getByRole('heading', {name: '2001:db8::14', exact: true})).toBeVisible();
   await expect(page.getByRole('grid', {name: 'Rule evaluation 1', exact: true})).toBeVisible();
   await expect(page.getByRole('grid', {name: 'Rule evaluation 2', exact: true})).toBeVisible();
+  expect(requested).toEqual([['A'], ['AAAA']]);
 });
