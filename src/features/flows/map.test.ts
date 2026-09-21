@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import type {GroupSummary} from '../../api/model';
-import {flowsThrough, nodeNames, pinnedLabel, routingTree} from './map';
+import {flowsThrough, nodeNames, parentOf, pinnedLabel, routingTree, treeRows} from './map';
 
 it('lays the config out as a tree and weights it with retained flows', async () => {
   const api = createMockApi();
@@ -60,4 +60,26 @@ it('takes a one-element chain as the leaf node the flow left through', async () 
   const single = routingTree([{...routed, chain: [leaf]}], groups, nodes.nodes, []);
   expect(single.links.some(link => link.target === 'node:' + names.get(leaf) && link.count === 1)).toBe(true);
   expect(single.nodes.some(node => node.unknown)).toBe(false);
+});
+
+it('rows the tree with rules as leaves under their outbound and parents level with their children', async () => {
+  const api = createMockApi();
+  const [flows, groups, nodes, rules] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules);
+  const {rows, at} = treeRows(tree);
+  // Every item has a row; the leaves take whole rows and never share one.
+  const leaves = [...tree.rules, ...tree.outbounds.filter(outbound => !tree.rules.some(rule => parentOf(tree, rule) === outbound.id))];
+  expect(new Set(leaves.map(item => at.get(item.id)))).toHaveProperty('size', leaves.length);
+  expect(rows).toBe(leaves.length + tree.nodes.filter(node => !tree.outbounds.some(outbound => parentOf(tree, outbound) === node.id)).length);
+  for (const outbound of tree.outbounds) {
+    const under = tree.rules.filter(rule => parentOf(tree, rule) === outbound.id).map(rule => at.get(rule.id)!);
+    if (!under.length) continue;
+    expect(at.get(outbound.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
+    // Siblings sit on consecutive rows, so their connectors never cross another branch.
+    expect(Math.max(...under) - Math.min(...under)).toBe(under.length - 1);
+  }
+  for (const node of tree.nodes) {
+    const under = tree.outbounds.filter(outbound => parentOf(tree, outbound) === node.id).map(outbound => at.get(outbound.id)!);
+    if (under.length) expect(at.get(node.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
+  }
 });

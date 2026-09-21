@@ -30,7 +30,7 @@ test('a flow opens its trace beside the list and links to its connection', async
 test('a pinned tree item carries into the records', async ({page}) => {
   await page.goto('/#/rules?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
-  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'}).getByRole('button');
+  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'});
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar3$/);
@@ -95,12 +95,12 @@ test('the tree draws every configured rule, follows a hover along its branch and
     ['outbound', 'Outbound'],
     ['node', 'Node']
   ]) {
-    await expect(topology.locator('.rp-tree-col').getByText(caption, {exact: true})).toBeVisible();
+    await expect(topology.locator('.rp-tree-captions').getByText(caption, {exact: true})).toBeVisible();
     await expect(topology.locator(`[data-stage="${stage}"]`).first()).toBeVisible();
   }
-  // Rules keep their evaluation order, unused ones included, and the fallback closes the column.
+  // Every configured rule is drawn, unused ones included, grouped under its outbound.
   const rules = topology.locator('[data-stage="rule"]');
-  await expect(rules.first()).toContainText('domain(suffix: doubleclick.net)');
+  await expect(rules).toHaveCount(10);
   await expect(rules.filter({hasText: 'sip(10.0.0.0/24) && dport(25)'})).toContainText('0');
   await expect(rules.filter({hasText: 'fallback: resilient'})).toHaveCount(1);
   // Groups nothing routes to are still drawn, with a dashed connector to the node they select.
@@ -116,7 +116,7 @@ test('the tree draws every configured rule, follows a hover along its branch and
   await expect(topology.locator('.rp-tree-links path[data-state="active"]').first()).toBeAttached();
   await expect(topology.locator('.rp-tree-links path[data-state="dim"]').first()).toBeAttached();
   // A node pins too, and lights the groups and rules that reach it.
-  const node = topology.locator('[data-stage="node"]').filter({hasText: 'hk-01'}).getByRole('button');
+  const node = topology.locator('[data-stage="node"]').filter({hasText: 'hk-01'});
   await node.click();
   await expect(page).toHaveURL(/path=node%3Ahk-01/);
   await expect(node).toHaveAttribute('aria-pressed', 'true');

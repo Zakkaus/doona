@@ -143,3 +143,40 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     links: [...links.values()]
   };
 }
+
+// Where a rule or outbound hangs on the tree: its configured target, else the one its flows mostly went to.
+export function parentOf(tree: RoutingTree, item: TreeRule | TreeOutbound): string | null {
+  const configured = 'groups' in item ? item.node : item.outbound;
+  return configured ?? tree.links.filter(link => link.source === item.id).sort((a, b) => b.count - a.count)[0]?.target ?? null;
+}
+
+// Rows of the drawn tree: rules are the leaves, one per row in config order, grouped under their outbound;
+// a parent sits level with the middle of its children. Nothing crosses.
+export function treeRows(tree: RoutingTree): {rows: number; at: Map<string, number>} {
+  const at = new Map<string, number>();
+  let row = 0;
+  const children = new Map<string, string[]>();
+  for (const item of [...tree.rules, ...tree.outbounds]) {
+    const parent = parentOf(tree, item);
+    if (parent) children.set(parent, [...(children.get(parent) ?? []), item.id]);
+  }
+  const place = (id: string) => {
+    const under = children.get(id) ?? [];
+    if (!under.length) {
+      at.set(id, row++);
+      return;
+    }
+    for (const child of under) place(child);
+    at.set(id, (at.get(under[0])! + at.get(under[under.length - 1])!) / 2);
+  };
+  // Roots in the order their branches first appear in the config.
+  const roots: string[] = [];
+  for (const outbound of tree.outbounds) {
+    const root = parentOf(tree, outbound) ?? outbound.id;
+    if (!roots.includes(root)) roots.push(root);
+  }
+  for (const node of tree.nodes) if (!roots.includes(node.id)) roots.push(node.id);
+  for (const rule of tree.rules) if (!parentOf(tree, rule)) roots.push(rule.id);
+  for (const root of roots) place(root);
+  return {rows: row, at};
+}
