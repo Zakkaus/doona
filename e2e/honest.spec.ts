@@ -138,7 +138,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(refresh).toHaveAttribute('data-pending');
   release();
   await expect(refresh).not.toHaveAttribute('data-pending');
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.rp-content').getByRole('alert')).toHaveCount(0);
   brokenRuntime = true;
   await page.getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();

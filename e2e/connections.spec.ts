@@ -32,6 +32,29 @@ test('English Started values fit without truncation', async ({page}) => {
   expect(widths.text).toBeLessThanOrEqual(widths.available);
 });
 
+test('a column can be resized with the keyboard', async ({page}) => {
+  await page.goto('/#/connections');
+  const header = page.getByRole('columnheader', {name: 'Target'});
+  const resizer = header.getByRole('slider');
+  await expect(header).toBeVisible();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // The header re-renders while columns are being fitted; focus is retried until it sticks.
+  await expect
+    .poll(async () => {
+      await resizer.focus();
+      return resizer.evaluate(element => element === document.activeElement);
+    })
+    .toBe(true);
+  await page.keyboard.press('Enter');
+  const width = () => header.evaluate(element => element.getBoundingClientRect().width);
+  const original = await width();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(width).toBeGreaterThan(original);
+  const expanded = await width();
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(width).toBeLessThan(expanded);
+});
+
 test('connection selection follows clicks, arrows and Home/End across virtual rows', async ({page}) => {
   await page.goto('/#/connections');
   const selected = page.locator('.rp-table [aria-selected="true"]');
@@ -72,6 +95,35 @@ test('connection filtering narrows the collection and renders an empty result', 
   await filter.fill('');
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
   expect(await page.locator('.rp-table [role="row"]').count()).toBeLessThan(60);
+});
+
+test('activating a checked source or rule removes that filter', async ({page}) => {
+  await page.goto('/#/connections');
+  const pick = page.getByRole('button', {name: 'Pick', exact: true});
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+  await pick.click();
+  const source = page.getByRole('menuitemradio').first();
+  const sourceName = await source.locator('.rp-il').innerText();
+  await source.click();
+  await expect(page.locator('.rp-toolbar input')).toHaveValue(sourceName);
+  await pick.click();
+  const selectedSource = page.getByRole('menuitemradio').filter({hasText: sourceName});
+  await expect(selectedSource).toHaveAttribute('aria-checked', 'true');
+  await selectedSource.click();
+  await expect(page.locator('.rp-toolbar input')).toHaveValue('');
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+  await pick.click();
+  const rule = page.getByRole('menuitemradio').filter({hasText: 'domain('}).first();
+  const ruleName = await rule.locator('.rp-il').innerText();
+  await rule.click();
+  await expect(page).toHaveURL(/rule=/);
+  await pick.click();
+  const selectedRule = page.getByRole('menuitemradio').filter({hasText: ruleName});
+  await expect(selectedRule).toHaveAttribute('aria-checked', 'true');
+  await selectedRule.click();
+  await expect(page).not.toHaveURL(/rule=/);
+  await expect(grid).toHaveAttribute('aria-rowcount', '1001');
 });
 
 test('connection selection survives a runtime poll', async ({page}) => {
@@ -223,4 +275,38 @@ test('connection filters live in the URL and survive a reload', async ({page}) =
   await expect(page.getByRole('radio', {name: 'UDP', exact: true})).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page).not.toHaveURL(/network=/);
+});
+
+test('close all with a rule filter closes the listed rows only', async ({page}) => {
+  await page.goto('/#/connections');
+  const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
+  const listed = async () => Number(await grid.getAttribute('aria-rowcount')) - 1;
+  await expect.poll(listed).toBeGreaterThan(0);
+  const total = await listed();
+  await page.getByRole('button', {name: 'Pick', exact: true}).click();
+  // The telegram rule routes through a proxy group, so its connections are userspace-observed and closable.
+  await page.getByRole('menu').getByRole('menuitemradio').filter({hasText: 'telegram'}).first().click();
+  await expect(page).toHaveURL(/rule=/);
+  await expect.poll(listed).toBeLessThan(total);
+  const shown = await listed();
+  expect(shown).toBeGreaterThan(0);
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
+  const toast = page.locator('.rp-toast');
+  await expect(toast).toContainText(/Closed \d+, skipped \d+/);
+  const [, closed, skipped] = /Closed (\d+), skipped (\d+)/.exec((await toast.textContent()) ?? '')!.map(Number);
+  expect(closed).toBeGreaterThan(0);
+  expect(closed + skipped).toBe(shown);
+  // The page lists at most 1000 rows, so the unfiltered count can only bound what was closed.
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await expect(page).not.toHaveURL(/rule=/);
+  await expect.poll(listed).toBeGreaterThanOrEqual(total - closed);
+});
+
+test('a linked filter clears when the address loses it', async ({page}) => {
+  await page.goto('/#/connections?q=hk-01');
+  const filter = page.getByRole('searchbox', {name: 'Filter'});
+  await expect(filter).toHaveValue('hk-01');
+  await page.goto('/#/connections');
+  await expect(filter).toHaveValue('');
 });

@@ -32,3 +32,22 @@ test('a pairing link fills the backend form and leaves the address bar clean', a
   await expect(page.locator('.rp-content')).toContainText('filled in from the link');
   await expect(page).toHaveURL(/#\/settings$/);
 });
+
+test('policy editing discards a cancelled draft and saves filters through the main source', async ({page}) => {
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'gaming', exact: true});
+  const edit = card.getByRole('button', {name: 'Edit', exact: true});
+  await edit.click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  const filter = dialog.getByRole('textbox', {name: 'Filter 1', exact: true});
+  const original = await filter.inputValue();
+  await filter.fill('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await edit.click();
+  await expect(filter).toHaveValue(original);
+  await filter.fill('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await edit.click();
+  await expect(filter).toHaveValue('name(hk-01)');
+});

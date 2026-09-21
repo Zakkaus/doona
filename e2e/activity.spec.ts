@@ -76,6 +76,38 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });
 
+test('the compact node menu selects by keyboard and returns focus to its trigger', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-mock-big', '7'));
+  await page.goto('/#/activity');
+  const trigger = page.getByRole('button', {name: 'Node', exact: true});
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  const menu = page.getByRole('menu', {name: 'Node', exact: true});
+  const last = menu.getByRole('menuitemradio').last();
+  const name = await last.getAttribute('data-key');
+  expect(name).not.toBeNull();
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(12);
+  await expect(page.getByRole('searchbox', {name: 'Filter nodes'})).toHaveCount(0);
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toContainText(name!);
+  await expect(trigger).toBeFocused();
+});
+
+test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/activity');
+  const notices = page.getByRole('region', {name: 'Notifications and issues'});
+  await expect(notices.getByRole('listitem').filter({hasText: 'stream.ready'})).toHaveCount(1);
+  await page.clock.fastForward(10100);
+  await expect(notices.getByRole('listitem').filter({hasText: /runtime\.updated|flow\.updated/})).toHaveCount(0);
+  await page.goto('/#/events');
+  await expect(page.getByRole('gridcell', {name: 'Stream ready', exact: true})).toBeVisible();
+  await page.clock.fastForward(5100);
+  await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
+});
+
 test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {
@@ -83,5 +115,37 @@ test.describe('many outbounds', () => {
     const legend = page.locator('.rp-donut .lst');
     await expect(legend.locator('.r')).toHaveCount(29);
     expect(await legend.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight <= 170)).toBe(true);
+  });
+
+  test('the node menu searches virtual sections and selects the filtered node by keyboard', async ({page}) => {
+    await page.goto('/#/activity');
+    const trigger = page.getByRole('button', {name: 'Node', exact: true});
+    await trigger.click();
+    const menu = page.getByRole('menu', {name: 'Node', exact: true});
+    const search = page.getByRole('searchbox', {name: 'Filter nodes'});
+    await expect(search).toBeFocused();
+    await expect(menu.locator('.rp-sec-h').first()).toBeVisible();
+    expect(await menu.getByRole('menuitemradio').count()).toBeLessThan(3000);
+    await menu.evaluate(el => el.scrollTo(0, el.scrollHeight));
+    const target = menu.getByRole('menuitemradio').last();
+    const name = await target.getAttribute('data-key');
+    expect(name).not.toBeNull();
+    await search.fill(name!);
+    await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
+    const health = await menu.locator('.desc').innerText();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(menu).toHaveCount(0);
+    await expect(trigger).toContainText(name!);
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    // The virtual list renders the selected row only once the filter narrows it into view.
+    await search.fill(name!);
+    await expect(menu.getByRole('menuitemradio', {name: new RegExp(name!)})).toHaveAttribute('aria-checked', 'true');
+    await expect(menu.locator('.desc')).toHaveText(health);
+    await page.keyboard.press('Escape');
+    await expect(search).toHaveValue('');
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
   });
 });

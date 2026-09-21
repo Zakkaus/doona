@@ -6,7 +6,6 @@ import {Button, DataTable, ErrorMessage, TextTooltip, errorText, toast} from '..
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
-import {useState} from 'react';
 
 export function BackendActionsCard() {
   const t = useT();
@@ -20,7 +19,6 @@ export function BackendActionsCard() {
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const geodata = useGeodata(resources?.geodata.available ?? false);
-  const [refreshingAll, setRefreshingAll] = useState(false);
   const fail = (error: unknown) => toast('negative', errorText(error));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const offered =
@@ -31,23 +29,18 @@ export function BackendActionsCard() {
     !!resources?.geodata.can_update;
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const live = (connections.data ? [...connections.data.tcp, ...connections.data.udp] : []).map(c => c.id);
-  // Subscriptions refresh one after another: the backend keeps one refresh per provider in flight anyway.
-  const refreshAll = async () => {
-    setRefreshingAll(true);
-    let done = 0;
-    try {
-      for (const item of subscriptions) {
-        try {
-          if (await refresh.refresh(item.id)) done += 1;
-        } catch (error) {
-          fail(error);
-        }
-      }
-      toast(done ? 'positive' : 'negative', t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)}));
-    } finally {
-      setRefreshingAll(false);
-    }
-  };
+  const refreshingAll = refresh.busy === '*';
+  const refreshAll = () =>
+    refresh
+      .refreshMany(
+        subscriptions.map(item => item.id),
+        (_id, error) => fail(error)
+      )
+      .then(done => {
+        // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
+        if (done !== undefined)
+          toast(done ? 'positive' : 'negative', t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)}));
+      }, fail);
   return (
     <section className="rp-card" aria-labelledby="settings-actions">
       <h2 className="rp-h3" id="settings-actions">

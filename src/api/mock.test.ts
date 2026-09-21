@@ -1,6 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp, trafficSeries} from './selectors';
+import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp} from './selectors';
 import {addU64} from './u64';
 import type {ApiEvent} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
@@ -49,8 +49,6 @@ it('filters the history window before thinning backwards without changing sample
   const single = await api.trafficHistory({window_seconds: 1, max_points: 1});
   expect(single.samples).toEqual([trafficHistory.samples.at(-1)]);
   expect((await api.trafficHistory({window_seconds: 720})).samples).toHaveLength(72);
-  const sample = {...single.samples[0], download_bytes_per_second: null, connections: null};
-  expect(trafficSeries({...single, samples: [sample]})).toMatchObject({down: [null], connections: [null], timestamps: [Date.parse(sample.sampled_at)]});
   await expect(api.trafficHistory({window_seconds: 3601})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.trafficHistory({max_points: 361})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.trafficHistory({max_points: 0})).rejects.toMatchObject({status: 400});

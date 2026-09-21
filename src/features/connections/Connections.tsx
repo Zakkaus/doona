@@ -18,6 +18,7 @@ import {
   errorText,
   panelQuery,
   toast,
+  useLinked,
   useMediaQuery,
   exportName,
   TextTooltip
@@ -56,14 +57,8 @@ export function Connections({go, query}: PageProps) {
   const setOut = (value: string) => setFilter('out', value);
   const setRule = (value: string) => setFilter('rule', value);
   const sel = q.get('id');
-  // A filter arriving in the URL (a search hit, a client link) replaces the typed one; selecting a row keeps
-  // the same q/src and must not reset what the person typed since.
-  const linked = q.get('q') ?? q.get('src');
-  const [lastLinked, setLastLinked] = useState(linked);
-  if (lastLinked !== linked) {
-    setLastLinked(linked);
-    if (linked !== null) setText(linked);
-  }
+  // A new q/src URL value replaces typed text; row selection must not reset later typing. Removing the URL filter clears the field.
+  useLinked(q.get('q') ?? q.get('src'), value => setText(value ?? ''));
   const select = (id: string | null) => {
     const params = new URLSearchParams(query);
     if (id) params.set('id', id);
@@ -77,7 +72,7 @@ export function Connections({go, query}: PageProps) {
   const closing = useConnectionClose(resource.refetch);
   async function close(id: string, name: string) {
     try {
-      await closing.close(id);
+      if (!(await closing.close(id))) return;
       select(null);
       toast('positive', t('conn.closed', {name}));
     } catch (error) {
@@ -89,25 +84,33 @@ export function Connections({go, query}: PageProps) {
   }
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
   const needle = text.trim().toLowerCase();
-  const shown = rows.filter(
-    c =>
-      (network === 'all' || c.network === network) &&
-      (out === 'all' || c.outbound === out) &&
-      (rule === 'all' || c.rule_expression === rule) &&
-      (src ||
-        !needle ||
-        [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+  const shown = useMemo(
+    () =>
+      rows.filter(
+        c =>
+          (network === 'all' || c.network === network) &&
+          (out === 'all' || c.outbound === out) &&
+          (rule === 'all' || c.rule_expression === rule) &&
+          (src ||
+            !needle ||
+            [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+      ),
+    [rows, network, out, rule, src, needle, names]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
-  // Build filter choices from visible rows, ordered by frequency.
-  const seen = (values: Array<string | null | undefined>) => {
-    const counts = new Map<string, number>();
-    for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
-  };
-  const clients = seen(rows.map(c => sourceIp(c.src)));
-  const rules = seen(rows.map(c => c.rule_expression));
+  const {outbounds, clients, rules} = useMemo(() => {
+    // Build filter choices from visible rows, ordered by frequency.
+    const seen = (values: Array<string | null | undefined>) => {
+      const counts = new Map<string, number>();
+      for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    };
+    return {
+      outbounds: [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))],
+      clients: seen(rows.map(c => sourceIp(c.src))),
+      rules: seen(rows.map(c => c.rule_expression))
+    };
+  }, [rows]);
   const filtered = network !== 'all' || out !== 'all' || rule !== 'all' || needle !== '';
   return (
     <div className="rp-page">
@@ -135,7 +138,7 @@ export function Connections({go, query}: PageProps) {
           quiet
           label={t('conn.pick')}
           value={[src ? 'src:' + src : '', rule !== 'all' ? 'rule:' + rule : '']}
-          onChange={id => {
+          onAction={id => {
             if (id.startsWith('src:')) setText(src === id.slice(4) ? '' : id.slice(4));
             else if (id.startsWith('rule:')) setRule(rule === id.slice(5) ? 'all' : id.slice(5));
           }}
@@ -174,7 +177,7 @@ export function Connections({go, query}: PageProps) {
             quiet
             onPress={() => {
               setText('');
-              go('connections', within(query, {network: null, out: null, rule: null}));
+              go('connections', within(query, {network: null, out: null, rule: null, q: null, src: null}));
             }}
           >
             {t('ui.clearFilters')}
@@ -193,12 +196,12 @@ export function Connections({go, query}: PageProps) {
             // Network and source-IP filters are the bulk endpoint's own; a text, outbound or rule filter is not. A
             // truncated snapshot lists fewer rows than match, so it closes the listed ones only.
             selection={
-              out === 'all' && (src || !needle) && !resource.data?.truncated
+              out === 'all' && rule === 'all' && (src || !needle) && !resource.data?.truncated
                 ? {query: {type: network as 'all' | 'tcp' | 'udp', src: src ?? undefined, all: true}}
                 : {ids: shown.map(c => c.id)}
             }
             closing={closing}
-            onStart={() => select(null)}
+            onClosed={() => select(null)}
           />
         )}
         <Button

@@ -2,8 +2,8 @@ import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {localTime, outboundLabel, preferredHealth, word} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import type {GroupSummary, Node} from '../../api/model';
-import {useEffect, useMemo} from 'react';
-import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace, type TraceResolve} from '../../api/store';
+import {useEffect, useMemo, useState} from 'react';
+import {useCapabilities, useGroups, useNodeProbe, useNodes, useRoutingTrace, type TraceProblem, type TraceResolve} from '../../api/store';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, errorText, toast} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';
@@ -93,6 +93,9 @@ function Trace() {
           : t('rule.untested');
     return {chain: [...chain, ...(node ? [node.name] : [])].join(' → '), node, reach};
   };
+  const problem = (field: TraceProblem['field']) => (trace.invalid?.field === field ? t(trace.invalid.key) : undefined);
+  // The advanced fields stay in view while one of them is what blocks the run.
+  const [advanced, setAdvanced] = useState(false);
   return (
     <>
       <form
@@ -112,9 +115,9 @@ function Trace() {
               {id: 'udp', label: t('ui.udp')}
             ]}
           />
-          <TextField label={t('ui.domain')} value={form.domain} onChange={domain => setForm({...form, domain})} />
-          <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} />
-          <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} />
+          <TextField label={t('ui.domain')} value={form.domain} onChange={domain => setForm({...form, domain})} error={problem('domain')} />
+          <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={problem('dst_ip')} />
+          <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} error={problem('dst_port')} />
           <LabeledSelect
             label={t('rule.resolve')}
             value={trace.resolve}
@@ -130,14 +133,13 @@ function Trace() {
             {t('rule.run')}
           </Button>
         </div>
-        <Disclosure id="rules-trace-advanced" title={t('rule.advanced')}>
+        <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={advanced || !!problem('src_port')} onExpandedChange={setAdvanced}>
           <div className="rp-toolbar">
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} />
-            <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} />
+            <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={problem('src_port')} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
           </div>
         </Disclosure>
-        {trace.invalid && <span className="rp-label">{t(trace.invalid)}</span>}
         {!trace.invalid && form.dst_ip.trim() && !form.domain.trim() && <span className="rp-label">{t('rule.ipOnly')}</span>}
         {!trace.available && <span className="rp-label">{t('rule.unavailable')}</span>}
       </form>

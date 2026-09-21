@@ -87,6 +87,7 @@ export const messages = defineMessages({
     'about.engine': '引擎',
     'about.api': 'API',
     'about.license': '授權',
+    'about.contract': '契約提交',
     'about.close': '關閉',
     'about.credits':
       '字型 Noto Sans TC／SC（OFL）；圖示 Adobe Spectrum（Apache-2.0）；配色來自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 與 Semi Design。',
@@ -178,6 +179,7 @@ export const messages = defineMessages({
     'about.engine': '引擎',
     'about.api': 'API',
     'about.license': '许可',
+    'about.contract': '契约提交',
     'about.close': '关闭',
     'about.credits':
       '字体 Noto Sans TC／SC（OFL）；图标 Adobe Spectrum（Apache-2.0）；配色来自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 与 Semi Design。',
@@ -269,6 +271,7 @@ export const messages = defineMessages({
     'about.engine': 'Engine',
     'about.api': 'API',
     'about.license': 'Licence',
+    'about.contract': 'Contract commit',
     'about.close': 'Close',
     'about.credits':
       'Fonts Noto Sans TC/SC (OFL); icons Adobe Spectrum (Apache-2.0); palettes from Rosé Pine, Catppuccin, Nord, Kary Pro Colors, Ant Design, Arco Design and Semi Design.',

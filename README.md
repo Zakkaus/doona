@@ -15,14 +15,14 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a set of static files that the engine serves itself, or any web server does. It talks to [honk](https://github.com/daeuniverse/honk) today and to dae once it speaks the same API. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
+doona is a set of static files that the engine serves itself, or any web server does. It talks to the native API the daeuniverse engines share: honk today, dae once it implements the same contract. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin keep several dark flavours. The palette picker is in the top bar.
+Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
 
 <img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -30,25 +30,28 @@ Eleven palettes, each with a light and a dark side; Rosé Pine and Catppuccin ke
 
 ## Status
 
-doona targets the native API that honk implements on its `feat/native-api` branch, not in a release yet; dae is expected to implement the same contract. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). A backend built against an older pin still works: resources it does not declare count as unavailable and their pages leave the navigation. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
+doona targets the native API implemented by honk's `feat/native-api` branch; that API is not released yet. The contract it is built against is `daeuniverse/api-standardize` at commit `01a6575` (every doona contract change merged), recorded in [SOURCE.md](contract/api-standardize/SOURCE.md). Backends that omit newer resource keys are accepted: doona fills those keys as unavailable. Every page remains in navigation; a page is marked unavailable only when all of its listed resources are unavailable. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.
 
 ## Requirements
 
-| Component | Requirement                                                                                                    |
-| --------- | -------------------------------------------------------------------------------------------------------------- |
-| Backend   | honk with `native_api` enabled (see [Install](#install)); nothing else runs on the server                      |
-| Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the build targets; automated tests use Chromium |
-| Build     | Node 22 or later and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                |
+| Component | Requirement                                                                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend   | honk with `native_api` enabled (see [Install](#install)); nothing else runs on the server                                                           |
+| Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the CSS build targets; the JavaScript target is ES2022. Automated tests use Chromium |
+| Build     | Node 22 or later and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                                                     |
 
 ## Install
 
-Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Verify and extract into the directory honk or the web server will serve:
+Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Set `VERSION` to the downloaded release asset suffix, including the leading `v` for tagged releases. Then verify and extract the files into the directory honk or the web server will serve:
 
 ```sh
-sha256sum -c SHA256SUMS
+VERSION=v0.1.0-beta.1  # replace with the downloaded release tag
+sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
-sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona   # optional
+if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
+    sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
+fi
 ```
 
 Without the font archive, the browser uses its own fonts.
@@ -118,24 +121,24 @@ Every write goes through honk: the text is validated in full, saved with the has
 | Configuration | Sources with diagnostics, an editor with validation, quick setup and export                                        | `config`                            |
 | Events        | The backend event stream                                                                                           | `events`                            |
 | Logs          | The log stream with level and module filters, pause and export                                                     | `logs`                              |
-| Settings      | Backends, language, appearance and palette                                                                         | —                                   |
+| Settings      | Backends, runtime settings and backend actions, language, appearance and palette                                   | —                                   |
 
-A page whose resources the backend does not declare leaves the navigation; the requirements come from [registry.ts](src/shell/registry.ts). `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
+Every page remains in navigation. A page is marked unavailable only when every resource listed for it in [registry.ts](src/shell/registry.ts) is unavailable; opening it shows an unavailable notice. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
 
 <img src="docs/screenshots/en/rules-light.png" alt="The rules page" width="100%">
 
 ## Data and settings
 
-doona keeps nothing on the server. Its settings live in the browser's `localStorage` for the site's origin:
+doona has no server-side store for its own UI settings. Configuration and runtime changes are written through honk; doona's UI settings live in the browser's `localStorage` for the site's origin:
 
-| Setting       | Key              | Values                                                                                                                                                                        |
-| ------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backends      | `doona-profiles` | JSON list of `{id, name, api, token}`; `api` is a server root or proxy prefix, empty or `mock` for demo data; the token travels in the Authorization header, never in the URL |
-| Active one    | `doona-profile`  | `id` of the selected backend                                                                                                                                                  |
-| Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                              |
-| Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                           |
-| Palette       | `doona-palette`  | `rose-pine/moon` (default); the other ids are the `PaletteId` union in [settings.ts](src/features/settings/settings.ts)                                                       |
-| Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                                 |
+| Setting       | Key              | Values                                                                                                                                                                                                                                         |
+| ------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backends      | `doona-profiles` | JSON list of `{id, name, api, token}`; `api` is a server root or proxy prefix, empty or `mock` for demo data; API requests send the token in the `Authorization` header. Pairing links may carry it in the URL fragment and remove it on load. |
+| Active one    | `doona-profile`  | `id` of the selected backend                                                                                                                                                                                                                   |
+| Language      | `doona-lang`     | `zh-TW` (default), `zh-CN`, `en`                                                                                                                                                                                                               |
+| Colour scheme | `doona-scheme`   | `system` (default), `light`, `dark`                                                                                                                                                                                                            |
+| Palette       | `doona-palette`  | `rose-pine/moon` (default); the other ids are the `PaletteId` union in [settings.ts](src/features/settings/settings.ts)                                                                                                                        |
+| Wordmark      | `doona-wordmark` | `gradient` (default), `plain`                                                                                                                                                                                                                  |
 
 The saved theme and language are applied before the first paint, so a reload does not flash the default look.
 
@@ -156,18 +159,18 @@ pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<
 
 `pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` refreshes the images above from a running build (the palette sheet needs `cwebp`). See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
-| Path            | Purpose                                            |
-| --------------- | -------------------------------------------------- |
-| `src/features/` | Pages, their hooks and messages, one folder each   |
-| `src/shell/`    | Application shell, navigation and search           |
-| `src/ui/`       | Shared components, theme and icons                 |
-| `src/api/`      | Client, mock backend and generated types           |
-| `src/i18n/`     | Translations and locale helpers                    |
-| `contract/`     | The vendored OpenAPI contract and its pin          |
-| `public/`       | Static assets, fonts and the service worker        |
-| `e2e/`          | Browser tests                                      |
-| `tools/`        | Build, packaging, conformance and screenshot tools |
-| `install/`      | nfpm configs, OpenWrt, Alpine and Nix recipes      |
+| Path            | Purpose                                                                    |
+| --------------- | -------------------------------------------------------------------------- |
+| `src/features/` | Pages, their hooks and messages, one folder each                           |
+| `src/shell/`    | Application shell, navigation and search                                   |
+| `src/ui/`       | Shared components, theme and icons                                         |
+| `src/api/`      | Client, backend profiles, resource store, mock backend and generated types |
+| `src/i18n/`     | Translations and locale helpers                                            |
+| `contract/`     | The vendored OpenAPI contract and its pin                                  |
+| `public/`       | Static assets, fonts and the service worker                                |
+| `e2e/`          | Browser tests                                                              |
+| `tools/`        | Build, packaging, conformance and screenshot tools                         |
+| `install/`      | nfpm configs, OpenWrt, Alpine and Nix recipes                              |
 
 ### Contract
 

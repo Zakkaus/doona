@@ -4,28 +4,21 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Clock from '../../ui/icons/Clock';
 import Data from '../../ui/icons/Data';
-import {useCapabilities, useConnections, useEventFeed, useNodes, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {
-  connectionRows,
-  eventSummary,
-  lifecycleStates,
-  localTime,
-  outboundLabel,
-  outboundUsage,
-  preferredHealth,
-  routineGap,
-  sourceIp
-} from '../../api/selectors';
-import {addU64, formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
+import {useCapabilities, useConnections, useNodes, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
+import {healthMillis, lifecycleStates, lifecycleTone, localTime, outboundLabel, outboundUsage, preferredHealth} from '../../api/selectors';
+import {formatBytes, formatRate, millis, parseU64, pctU64} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Button, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
+import {Badge, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, Empty, Link} from '../../ui/ui';
+import {buildHash} from '../../shell/route';
 import {NodeMenu} from '../policies/Nodes';
 import {AreaChart, Donut, Legend, Spark, fmtRate, usePalette} from '../../ui/Charts';
 import {useMemorySeries} from '../overview/memory';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {ModeCards} from './ModeSwitch';
+import {connectionRanking} from './ranking';
+import {Notices, useNotices} from './Notices';
 
-export function Activity({go}: {go: (page: string) => void}) {
+export function Activity() {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -45,8 +38,8 @@ export function Activity({go}: {go: (page: string) => void}) {
   const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
   const memorySamples = memoryHistory.samples;
   const memorySeries = [
-    {label: t('act.rss'), color: p.cat[0], values: memorySamples.map(sample => sample.rss)},
-    {label: t('act.cgroup'), color: p.cat[3], values: memorySamples.map(sample => sample.cgroup)}
+    {label: t('act.rss'), color: p.cat[0], values: memoryHistory.rss},
+    {label: t('act.cgroup'), color: p.cat[3], values: memoryHistory.cgroup}
   ];
   const memoryBytes = (value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value)));
   const cgroupPercent = pctU64(parseU64(memory.data?.cgroup?.current_bytes ?? null), parseU64(memory.data?.cgroup?.limit_bytes ?? null));
@@ -55,26 +48,14 @@ export function Activity({go}: {go: (page: string) => void}) {
       (nodesResource.data ?? []).map(n => {
         const health = preferredHealth(n);
         const alive = health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined;
-        return {id: n.id, name: n.name, tcp: health?.latency_ms ?? undefined, alive, unavailable: health?.state === 'unavailable'};
+        return {id: n.id, name: n.name, tcp: healthMillis(health), alive, unavailable: health?.state === 'unavailable'};
       }),
     [nodesResource.data]
   );
   const [by, setBy] = useState('dev');
   const hasConnections = resources?.connections.available === true;
   const connections = useConnections(undefined, hasConnections);
-  const feed = useEventFeed();
-  const ranking = useMemo(() => {
-    const totals = new Map<string, bigint | null>();
-    for (const row of connectionRows(connections.data)) {
-      const name = by === 'dev' ? sourceIp(row.src) : row.domain || row.dst;
-      if (!name) continue;
-      totals.set(name, addU64(totals.has(name) ? totals.get(name)! : 0n, row.download_bytes));
-    }
-    const rows = [...totals].map(([name, download]) => ({name, download}));
-    const total = addU64(...rows.map(row => row.download));
-    rows.sort((a, b) => (a.download === b.download ? 0 : a.download === null ? 1 : b.download === null ? -1 : a.download > b.download ? -1 : 1));
-    return rows.slice(0, 5).map(row => ({...row, percent: pctU64(row.download, total)}));
-  }, [by, connections.data]);
+  const ranking = useMemo(() => connectionRanking(connections.data, by), [by, connections.data]);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   // The backend's ring reaches back before the page opened; the session's own polls carry the chart past it.
   const polledTraffic = useTrafficSamples(runtimeResource.data);
@@ -83,24 +64,24 @@ export function Activity({go}: {go: (page: string) => void}) {
   // Sparklines use 24 five-second means over the last two minutes, independent of the chart window.
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
   const [chosenNode, setNodeName] = useState('');
+  const notices = useNotices();
   // Until a node is chosen: the first with a measurement, else the first proxy node; the built-ins come last.
   const node =
     NODES.find(n => n.name === chosenNode) ?? NODES.find(n => n.tcp !== undefined) ?? NODES.find(n => n.name !== 'direct' && n.name !== 'block') ?? NODES[0];
   const nodeName = node?.name ?? '';
-  const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
-  if (error)
-    return (
   // A failed refresh keeps what the page already shows, with the error above it.
-      <ErrorMessage
-        error={error}
-        onRetry={() => {
-          capabilities.refetch();
-          runtimeResource.refetch();
-          nodesResource.refetch();
-        }}
-      />
-    );
-  if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return <Loading>{t('act.loading')}</Loading>;
+  const error = runtimeResource.error ?? nodesResource.error ?? capabilities.error;
+  const alert = error && (
+    <ErrorMessage
+      error={error}
+      onRetry={() => {
+        capabilities.refetch();
+        runtimeResource.refetch();
+        nodesResource.refetch();
+      }}
+    />
+  );
+  if (!runtimeResource.data || (hasNodes && !nodesResource.data)) return alert || <Loading>{t('act.loading')}</Loading>;
   const liveRuntime = runtimeResource.data;
   const usage = outboundUsage(outbounds.data);
   const traffic = [
@@ -114,18 +95,17 @@ export function Activity({go}: {go: (page: string) => void}) {
     // Only the engine's own block outbound is drawn as a refusal; a group may not take that name, but the kind says so.
     color: r.kind === 'builtin' && r.name === 'block' ? p.love : p.cat[i % p.cat.length]
   }));
-  // Show actionable events only; runtime/flow ticks and routine ring gaps are chart housekeeping. Limit the list to 30 so the card scrolls instead of stretching its row.
-  const events = feed.events.filter(event => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event)).slice(0, 30);
   return (
     <>
+      {alert}
       <div className="rp-quick">
         <ModeCards />
         <div className="rp-card">
           <div className="rp-row">
-            <Light tone={liveRuntime.lifecycle.state === 'running' ? 'ok' : 'warn'}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
-            <Button quiet onPress={() => go('overview')}>
+            <Light tone={lifecycleTone(liveRuntime.lifecycle.state)}>{t(lifecycleStates[liveRuntime.lifecycle.state])}</Light>
+            <Link appearance="button" className="quiet" href={buildHash('overview')}>
               {t('act.viewDetails')}
-            </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -235,7 +215,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : !history.data ? (
             <Loading>{t('act.loading')}</Loading>
           ) : !history.data.samples.length ? (
-            <span className="rp-empty">{t('act.emptyHistory')}</span>
+            <Empty>{t('act.emptyHistory')}</Empty>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
@@ -265,7 +245,7 @@ export function Activity({go}: {go: (page: string) => void}) {
           ) : !outbounds.data ? (
             <Loading>{t('act.loading')}</Loading>
           ) : !OUT.length ? (
-            <span className="rp-empty">{t('ui.empty')}</span>
+            <Empty>{t('ui.empty')}</Empty>
           ) : (
             <Donut rows={OUT} total={formatBytes(usage.total)} />
           )}
@@ -298,10 +278,10 @@ export function Activity({go}: {go: (page: string) => void}) {
             connections.error ? null : hasConnections ? (
               <Loading>{t('act.loading')}</Loading>
             ) : (
-              <span className="rp-empty">{t('shell.notOfferedShort')}</span>
+              <Empty>{t('shell.notOfferedShort')}</Empty>
             )
           ) : ranking.length === 0 ? (
-            <span className="rp-empty">{t('act.rankingEmpty')}</span>
+            <Empty>{t('act.rankingEmpty')}</Empty>
           ) : (
             <div className="rp-list">
               {ranking.map((row, i) => (
@@ -321,9 +301,9 @@ export function Activity({go}: {go: (page: string) => void}) {
             <h3 className="rp-h3" id="activity-memory">
               {t('act.memory')}
             </h3>
-            <Button quiet small onPress={() => go('overview')}>
+            <Link appearance="button" className="quiet sm" href={buildHash('overview')}>
               {t('act.viewDetails')}
-            </Button>
+            </Link>
           </div>
           {memory.error || memoryHistory.error ? (
             <ErrorMessage error={memory.error ?? memoryHistory.error} />
@@ -332,7 +312,7 @@ export function Activity({go}: {go: (page: string) => void}) {
               <Legend series={memorySeries} fmt={memoryBytes} />
               <AreaChart
                 series={memorySeries}
-                timestamps={memorySamples.map(sample => sample.time)}
+                timestamps={memoryHistory.timestamps}
                 fmt={memoryBytes}
                 locale={locale}
                 height={150}
@@ -342,46 +322,14 @@ export function Activity({go}: {go: (page: string) => void}) {
               />
             </>
           ) : capabilities.data?.resources.runtime_memory.available === false ? (
-            <span className="rp-empty">{t('act.noHistory')}</span>
+            <Empty>{t('act.noHistory')}</Empty>
           ) : (
             <div className="rp-chart-wait">
               <Loading>{t('act.sampling')}</Loading>
             </div>
           )}
         </section>
-        <section className="rp-card" aria-label={t('act.issues')}>
-          <div className="rp-row">
-            <div className="rp-cluster">
-              <h3 className="rp-h3">{t('act.issues')}</h3>
-              {events.length > 0 && <span className="rp-label">{events.length}</span>}
-            </div>
-            <Button quiet small onPress={() => go('events')}>
-              {t('act.viewAll')}
-            </Button>
-          </div>
-          {feed.error && <ErrorMessage error={feed.error} />}
-          {!feed.error && feed.available === null ? (
-            <Loading />
-          ) : events.length === 0 ? (
-            <span className="rp-empty">{t(feed.available === false ? 'event.unavailable' : 'act.noIssues')}</span>
-          ) : (
-            <div className="rp-list rp-feed" role="list">
-              {events.map(event => {
-                const summary = eventSummary(event, t);
-                return (
-                  <div key={event.id} role="listitem" className="rp-row">
-                    <Light small tone={event.event === 'flow.gap' ? 'warn' : 'info'}>
-                      {t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice')}
-                    </Light>
-                    <span className="rp-note rp-grow">
-                      {event.event} · {t(summary.key, summary.params)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        <Notices {...notices} />
       </div>
     </>
   );

@@ -13,7 +13,6 @@ import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
-import {Settings} from '../features/settings/Settings';
 import SettingsIcon from '../ui/icons/Settings';
 
 // One loader per page: `lazy` renders through it, and the nav warms it up when the pointer reaches a link, so
@@ -27,7 +26,8 @@ const loaders = {
   config: () => import('../features/config/Config').then(m => ({default: m.Config})),
   dns: () => import('../features/dns/Dns').then(m => ({default: m.Dns})),
   logs: () => import('../features/logs/Logs').then(m => ({default: m.Logs})),
-  events: () => import('../features/events/Events').then(m => ({default: m.Events}))
+  events: () => import('../features/events/Events').then(m => ({default: m.Events})),
+  settings: () => import('../features/settings/Settings').then(m => ({default: m.Settings}))
 };
 const Overview = lazy(loaders.overview);
 const Connections = lazy(loaders.connections);
@@ -38,6 +38,7 @@ const Config = lazy(loaders.config);
 const Dns = lazy(loaders.dns);
 const Logs = lazy(loaders.logs);
 const Events = lazy(loaders.events);
+const Settings = lazy(loaders.settings);
 // Loading a chunk twice costs nothing; a failed warm-up is not an error, the click loads it again.
 export function warmPage(id: string) {
   void loaders[id as keyof typeof loaders]?.().catch(() => undefined);

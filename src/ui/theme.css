@@ -159,9 +159,7 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 :root[data-family='kary'] {
-  /* Kary Pro Colors (Pouya Kary) is an editor theme with a short official list: the editor background is the
-     card, the line highlight the page, the selection the overlay, and the caret the sixth chart colour. The
-     secondary text is a blend of its two greys. */
+  /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays, and blend its greys for secondary text. */
   --rp-base: #e7f0f7;
   --rp-surface: #f0f6fb;
   --rp-overlay: #cff0f9;
@@ -470,12 +468,7 @@
   --rp-line: rgba(255, 255, 255, 0.08);
   --rp-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.25);
 }
-/* Glass. The recipe follows what the convincing implementations share (macOS vibrancy, Windows Acrylic, the
-   glassmorphism generators): a THIN tint so the backdrop shows through, a LARGE blur plus saturation so it still reads,
-   a wallpaper with crisp saturated shapes so the blur is visible at all, a rim that is bright where the light hits and
-   fades on the far side (a gradient border, not a white outline), an inner glow, a diagonal sheen, faint grain, and a
-   long soft shadow. Chrome sits on the wallpaper; the content area is a faint sheet with no blur of its own, so the
-   cards inside blur the wallpaper directly. Accents are Apple's system colours. */
+/* Glass uses thin tints, high blur and saturation, a gradient rim, grain, and a soft shadow. Cards blur the wallpaper directly; the content sheet has no blur. */
 
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.05);
@@ -520,7 +513,6 @@
   --rp-sheet: rgba(0, 0, 0, 0.18);
   --rp-sheet-rim: rgba(255, 255, 255, 0.08);
   --rp-row-hover: rgba(255, 255, 255, 0.05);
-  --rp-bevel: rgba(255, 255, 255, 0.08);
   --rp-knob: rgba(120, 120, 128, 0.62);
   --rp-knob-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.45);
   --rp-bg:
@@ -575,7 +567,6 @@
   --rp-sheet: rgba(255, 255, 255, 0.14);
   --rp-sheet-rim: rgba(255, 255, 255, 0.35);
   --rp-row-hover: rgba(255, 255, 255, 0.18);
-  --rp-bevel: rgba(255, 255, 255, 0.35);
   --rp-knob: rgba(255, 255, 255, 0.85);
   --rp-knob-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18);
   --rp-bg:
@@ -589,22 +580,17 @@
   --rp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 :root[data-family='glass'] body {
-  background: var(--rp-bg);
-  background-attachment: fixed;
+  background: none;
 }
+/* The picture, its grain and the readability scrim are fixed layers rather than a fixed body background: a
+   backdrop-filter above them then sees the same thing in every browser. */
 :root[data-family='glass'] body::before {
   content: '';
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
-  background: var(--rp-grain);
-  opacity: 0.14;
-  mix-blend-mode: overlay;
-}
-/* The shell keeps the usual 1600px centring; the readability scrim is a fixed full-viewport layer so it ends in no seam. */
-:root[data-family='glass'] .rp-shell {
-  position: relative;
+  background: var(--rp-bg);
 }
 :root[data-family='glass'] body::after {
   content: '';
@@ -614,9 +600,69 @@
   pointer-events: none;
   background: var(--rp-scrim);
 }
+:root[data-family='glass']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--rp-grain);
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+}
+/* The chrome is one piece of frosted glass: a fixed layer over the viewport, clipped to everything outside the
+   panel's rounded box (its corners traced with a few points), so no two blurs meet and the header part stays
+   put while the page scrolls under it. It sits above the page; the header and sidebar controls stack above it. */
+:root[data-family='glass'] .rp-shell::after {
+  --rp-shell-inset: max(0px, (100% - 1600px) / 2);
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--rp-sheet);
+  backdrop-filter: blur(28px) saturate(1.6);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    calc(100% - 0px) 80px,
+    calc(100% - 1.22px) 73.88px,
+    calc(100% - 4.69px) 68.69px,
+    calc(100% - 9.88px) 65.22px,
+    calc(100% - 16px) 64px,
+    16px 64px,
+    9.88px 65.22px,
+    4.69px 68.69px,
+    1.22px 73.88px,
+    0px 80px
+  );
+}
+@media (min-width: 1024px) {
+  :root[data-family='glass'] .rp-shell::after {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 100%,
+      calc(100% - var(--rp-shell-inset) - 16px) 80px,
+      calc(100% - var(--rp-shell-inset) - 17.22px) 73.88px,
+      calc(100% - var(--rp-shell-inset) - 20.69px) 68.69px,
+      calc(100% - var(--rp-shell-inset) - 25.88px) 65.22px,
+      calc(100% - var(--rp-shell-inset) - 32px) 64px,
+      calc(var(--rp-shell-inset) + 256px) 64px,
+      calc(var(--rp-shell-inset) + 249.88px) 65.22px,
+      calc(var(--rp-shell-inset) + 244.69px) 68.69px,
+      calc(var(--rp-shell-inset) + 241.22px) 73.88px,
+      calc(var(--rp-shell-inset) + 240px) 80px,
+      calc(var(--rp-shell-inset) + 240px) 100%,
+      0 100%
+    );
+  }
+}
 :root[data-family='glass'] .rp-top,
 :root[data-family='glass'] .rp-side {
   background: transparent;
+  z-index: 2;
 }
 :root[data-family='glass'] .rp-main {
   background: var(--rp-sheet);
@@ -634,8 +680,7 @@
 :root[data-family='glass'] .rp-card,
 :root[data-family='glass'] .rp-table,
 :root[data-family='glass'] .rp-popover,
-:root[data-family='glass'] .rp-dialog,
-:root[data-family='glass'] .rp-toast {
+:root[data-family='glass'] .rp-modal {
   position: relative;
   isolation: isolate;
   background: var(--rp-sheen), var(--rp-glass);
@@ -645,7 +690,7 @@
 }
 :root[data-family='glass'] .rp-card::before,
 :root[data-family='glass'] .rp-popover::before,
-:root[data-family='glass'] .rp-dialog::before,
+:root[data-family='glass'] .rp-modal::before,
 :root[data-family='glass'] .rp-table::before {
   content: '';
   position: absolute;
@@ -659,9 +704,8 @@
 }
 :root[data-family='glass'] .rp-card::after,
 :root[data-family='glass'] .rp-popover::after,
-:root[data-family='glass'] .rp-dialog::after,
-:root[data-family='glass'] .rp-table::after,
-:root[data-family='glass'] .rp-toast::after {
+:root[data-family='glass'] .rp-modal::after,
+:root[data-family='glass'] .rp-table::after {
   content: '';
   position: absolute;
   inset: -1px;
@@ -678,12 +722,21 @@
 :root[data-family='glass'] .rp-card {
   border-radius: var(--rp-r-2xl);
 }
+/* A scrolling card would scroll its grain and rim away and gain a scrollbar from the rim's overhang; it keeps a
+   plain border instead. */
+:root[data-family='glass'] .rp-panel::before,
+:root[data-family='glass'] .rp-panel::after {
+  content: none;
+}
+:root[data-family='glass'] .rp-panel {
+  border-color: var(--rp-sheet-rim);
+}
 :root[data-family='glass'] .rp-popover::after,
-:root[data-family='glass'] .rp-dialog::after {
+:root[data-family='glass'] .rp-modal::after {
   inset: 0;
 }
 :root[data-family='glass'] .rp-popover,
-:root[data-family='glass'] .rp-dialog {
+:root[data-family='glass'] .rp-modal {
   background: var(--rp-sheen), var(--rp-glass-strong);
   backdrop-filter: blur(40px) saturate(1.8);
   box-shadow: var(--rp-glow), var(--rp-shadow-lg);
@@ -697,8 +750,8 @@
 /* Controls are small pieces of the same glass: a translucent fill and nothing drawn around it. */
 :root[data-family='glass'] .rp-btn {
   background: var(--rp-ctl);
-  border-color: var(--rp-ctl-border);
-  box-shadow: inset 0 1px 0 var(--rp-bevel);
+  border-color: transparent;
+  box-shadow: none;
 }
 :root[data-family='glass'] .rp-btn[data-hovered] {
   background: var(--rp-hl-med);
@@ -1187,8 +1240,10 @@ input {
   background: transparent;
   border: 0;
   cursor: pointer;
+  font: inherit;
   font-size: 13px;
   line-height: 20px;
+  text-decoration: none;
 }
 .rp-version[data-hovered] {
   background: var(--rp-hl-low);
@@ -1533,7 +1588,9 @@ input {
   background: var(--rp-overlay);
   color: var(--rp-text);
   cursor: pointer;
+  font: inherit;
   font-weight: 500;
+  text-decoration: none;
   white-space: nowrap;
 }
 .rp-btn[data-hovered] {
@@ -1899,13 +1956,20 @@ input {
 .rp-select[data-hovered] {
   background: var(--rp-hl-low);
 }
-.rp-dialog {
+/* The box is the modal; the dialog scrolls inside it, so the surface and its rim never scroll away. */
+.rp-modal {
   position: relative;
   background: var(--rp-surface);
   border-radius: var(--rp-r-xl);
-  padding: 24px 32px;
   width: min(720px, 90vw);
   max-height: calc(100vh - 12vh - 24px);
+  display: flex;
+  overflow: hidden;
+}
+.rp-dialog {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px;
   overflow: hidden auto;
   display: flex;
   flex-direction: column;
@@ -2404,7 +2468,7 @@ button.rp-node[data-focus-visible] {
   line-height: 24px;
   font-weight: 700;
 }
-.rp-dialog.narrow {
+.rp-modal.narrow {
   width: min(480px, 90vw);
 }
 .rp-form {
@@ -2590,10 +2654,10 @@ button.rp-node[data-focus-visible] {
 .rp-underlay[data-exiting] {
   animation: rp-fade-out 130ms var(--rp-ease);
 }
-.rp-underlay[data-entering] .rp-dialog {
+.rp-underlay[data-entering] .rp-modal {
   animation: rp-dialog-in 250ms var(--rp-ease) 160ms both;
 }
-.rp-underlay[data-exiting] .rp-dialog {
+.rp-underlay[data-exiting] .rp-modal {
   animation: rp-fade-out 130ms var(--rp-ease) both;
 }
 @keyframes rp-fade-in {
@@ -2621,7 +2685,6 @@ button.rp-node[data-focus-visible] {
   position: fixed;
   inset: 0;
   background: var(--rp-underlay);
-  z-index: 19;
   animation: rp-fade-in 250ms var(--rp-ease);
 }
 .rp-toasts {
@@ -2635,6 +2698,7 @@ button.rp-node[data-focus-visible] {
   flex-direction: column-reverse;
   gap: 8px;
   z-index: 20;
+  outline: none;
 }
 .rp-toasts.expanded {
   bottom: 0;
@@ -2642,11 +2706,15 @@ button.rp-node[data-focus-visible] {
   padding: 16px 8px;
   max-height: 100vh;
 }
+/* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
 .rp-toast-list {
   position: relative;
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .rp-toasts.expanded .rp-toast-list {
   overflow: auto;
@@ -2654,8 +2722,8 @@ button.rp-node[data-focus-visible] {
   margin: 0 -8px;
 }
 .rp-toast-controls {
+  position: relative;
   display: flex;
-/* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
   justify-content: flex-end;
   gap: 8px;
 }
@@ -2678,6 +2746,10 @@ button.rp-node[data-focus-visible] {
     translate 400ms var(--rp-ease),
     scale 400ms var(--rp-ease),
     opacity 400ms var(--rp-ease);
+}
+.rp-toast[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
 }
 .rp-toast .main {
   flex: 1;
@@ -2754,24 +2826,11 @@ button.rp-node[data-focus-visible] {
 .rp-toasts:not(.expanded) .rp-toast-list {
   cursor: default;
 }
-.rp-toast:not(.background):not(.exiting) {
+.rp-toast:not(.background) {
   animation: rp-toast-in 400ms var(--rp-ease);
-}
-.rp-toast.exiting {
-  animation: rp-toast-out 400ms var(--rp-ease) forwards;
-  pointer-events: none;
-}
-.rp-toast.exiting.background {
-  animation: rp-fade-out 400ms var(--rp-ease) forwards;
 }
 @keyframes rp-toast-in {
   from {
-    opacity: 0;
-    translate: 0 calc(100% + 12px);
-  }
-}
-@keyframes rp-toast-out {
-  to {
     opacity: 0;
     translate: 0 calc(100% + 12px);
   }
@@ -2948,6 +3007,11 @@ button.rp-node[data-focus-visible] {
 }
 .rp-btn[data-pending] {
   cursor: progress;
+}
+/* On an accent button the arc would be the button's own colour; it takes the text colour instead. */
+.rp-btn.accent > .rp-spinner {
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
 }
 .rp-btn.icon[data-pending] > svg {
   display: none;
@@ -3155,14 +3219,13 @@ button.rp-node[data-focus-visible] {
   align-items: stretch;
   padding-top: 0;
 }
-.rp-dialog.rp-drawer {
+.rp-modal.rp-drawer {
   width: min(480px, 100vw);
   height: 100%;
   max-height: none;
   border-radius: var(--rp-r-xl) 0 0 var(--rp-r-xl);
-  overflow: auto;
 }
-.rp-underlay[data-entering] .rp-dialog.rp-drawer {
+.rp-underlay[data-entering] .rp-modal.rp-drawer {
   animation: rp-drawer-in 250ms var(--rp-ease) both;
 }
 @keyframes rp-drawer-in {

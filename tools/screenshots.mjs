@@ -88,9 +88,7 @@ try {
   try {
     execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', join(dir, 'palettes.png'), '-o', join(dir, 'palettes.webp')]);
     rmSync(join(dir, 'palettes.png'));
-  } catch {
-    // cwebp missing
-  }
+  } catch {}
   for (const lang of ['en', 'zh-TW', 'zh-CN']) {
     mkdirSync(join(dir, lang), {recursive: true});
     for (const [name, scheme, route] of shots) {

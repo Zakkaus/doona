@@ -1,26 +1,10 @@
 // Virtualize lists above 12 items; smaller collections use plain tiles.
 import {useMemo, useState} from 'react';
-import {
-  Autocomplete,
-  GridLayout,
-  GridList,
-  GridListItem,
-  ListLayout,
-  Menu,
-  MenuItem,
-  MenuSection,
-  MenuTrigger,
-  Popover,
-  Header,
-  Size,
-  Virtualizer,
-  useFilter,
-  type Key
-} from 'react-aria-components';
-import ChevronDown from '../../ui/icons/ChevronDown';
+import {GridLayout, GridList, GridListItem, Size, Virtualizer, useFilter} from 'react-aria-components';
 import {regionOf} from './geo';
 import {millis} from '../../api/u64';
-import {Button, Check, InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps} from '../../ui/ui';
+import {compareLatency, healthMillis} from '../../api/selectors';
+import {InlineSelect, MenuButton, NodeTile, Switch, TextField, latencyTone, type NodeTileProps, Empty} from '../../ui/ui';
 import type {Group, HealthObservation} from '../../api/model';
 import {useT} from '../../i18n';
 
@@ -37,7 +21,7 @@ function regions(nodes: Array<{name: string}>) {
   }
   return [...m].sort((a, b) => b[1] - a[1]);
 }
-const byLatency = (a: NodeInfo, b: NodeInfo) => (a.alive ? (a.tcp ?? 0) : 1e9) - (b.alive ? (b.tcp ?? 0) : 1e9);
+const byLatency = (a: NodeInfo, b: NodeInfo) => compareLatency(a.tcp, b.tcp);
 
 export function NodeGrid({
   nodes,
@@ -64,17 +48,12 @@ export function NodeGrid({
     const list = nodes.filter(
       n => (!q || contains(n.name, q)) && (region === 'all' || (regionOf(n.name) ?? '?') === region) && (!aliveOnly || n.health?.state === 'healthy')
     );
-    if (sort === 'latency')
-      list.sort(
-        (a, b) =>
-          (a.health?.state === 'healthy' ? (a.health.latency_ms ?? Infinity) : Infinity) -
-          (b.health?.state === 'healthy' ? (b.health.latency_ms ?? Infinity) : Infinity)
-      );
+    if (sort === 'latency') list.sort((a, b) => compareLatency(healthMillis(a.health), healthMillis(b.health)));
     else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [nodes, big, q, region, sort, aliveOnly, contains]);
   const facets = useMemo(() => regions(nodes), [nodes]);
-  if (!nodes.length) return <div className="rp-empty">{t('policy.none')}</div>;
+  if (!nodes.length) return <Empty>{t('policy.none')}</Empty>;
   if (!big) {
     return (
       <div className="rp-nodes">
@@ -134,7 +113,7 @@ export function NodeGrid({
             const v = [...k][0];
             if (v != null) onSelect(String(v));
           }}
-          renderEmptyState={() => <div className="rp-empty">{t('policy.none')}</div>}
+          renderEmptyState={() => <Empty>{t('policy.none')}</Empty>}
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={'rp-node' + (cur === n.id && !onSelect ? ' cur' : '')}>
@@ -153,7 +132,7 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
       {...props}
       name={n.name}
       nested={n.kind === 'group'}
-      tcp={health?.state === 'healthy' ? (health.latency_ms ?? undefined) : undefined}
+      tcp={healthMillis(health)}
       unavailable={health?.state === 'unavailable'}
       description={health ? health.transport.toUpperCase() + ' · ' + health.purpose : ' '}
     />
@@ -162,86 +141,52 @@ function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'select
 
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
   const t = useT();
-  const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
+  const items = useMemo(() => nodes.map(node => ({...node, id: node.name, label: node.name})), [nodes]);
   const sections = useMemo(() => {
-    const m = new Map<string, NodeInfo[]>();
-    for (const n of [...nodes].sort(byLatency)) {
-      const r = regionOf(n.name) ?? '—';
-      if (!m.has(r)) m.set(r, []);
-      m.get(r)!.push(n);
+    if (!big) return undefined;
+    const groups = new Map<string, typeof items>();
+    for (const node of [...items].sort(byLatency)) {
+      const region = regionOf(node.name) ?? '—';
+      const group = groups.get(region);
+      if (group) group.push(node);
+      else groups.set(region, [node]);
     }
-    return [...m];
-  }, [nodes]);
-  const item = (n: NodeInfo) => (
-    <MenuItem key={n.name} id={n.name} className="rp-item" textValue={n.name}>
-      <Check />
-      <span className="rp-il">
-        <span>{n.name}</span>
-      </span>
-      {n.alive === false ? (
-        <span className="desc err">{t('ui.unavailable')}</span>
-      ) : n.tcp === undefined ? (
-        <span className="desc">—</span>
-      ) : (
-        <span className={'desc ' + latencyTone(n.tcp)}>{t('ui.latency', {n: millis(n.tcp)})}</span>
-      )}
-    </MenuItem>
-  );
-  const list = (
-    <Menu
-      className="rp-menu-scroll"
-      aria-label={label}
-      selectionMode="single"
-      selectedKeys={[value]}
-      onSelectionChange={(k: 'all' | Set<Key>) => {
-        if (k === 'all') return;
-        const v = [...k][0];
-        if (v != null) onChange(String(v));
-      }}
-    >
-      {big
-        ? sections.map(([r, list]) => (
-            <MenuSection key={r} id={r}>
-              <Header className="rp-sec-h">
-                <span className="rp-il">
-                  {r}
-                  <span className="rp-muted"> · {list.length}</span>
-                </span>
-              </Header>
-              {list.map(item)}
-            </MenuSection>
-          ))
-        : nodes.map(item)}
-    </Menu>
-  );
-  // Virtualizer row heights must match the stylesheet's item and section-header heights.
-  const menu = big ? (
-    <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
-      {list}
-    </Virtualizer>
-  ) : (
-    list
-  );
-  return (
-    <MenuTrigger>
-      <Button appearance="select" label={label}>
+    return [...groups].map(([title, items]) => ({
+      title,
+      items,
+      heading: (
         <span className="rp-il">
-          <span>{value}</span>
+          {title}
+          <span className="rp-muted"> · {items.length}</span>
         </span>
-        <ChevronDown />
-      </Button>
-      <Popover className="rp-popover" placement="bottom start">
-        {big ? (
-          <Autocomplete filter={contains}>
-            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-            <TextField search label={t('policy.filter')} autoFocus className="rp-menu-search" />
-            {menu}
-          </Autocomplete>
+      )
+    }));
+  }, [items, big]);
+  return (
+    <MenuButton
+      appearance="select"
+      placement="bottom start"
+      label={label}
+      value={value}
+      onChange={onChange}
+      items={items}
+      sections={sections}
+      searchLabel={big ? t('policy.filter') : undefined}
+      virtualizeAbove={BIG}
+      renderTrailing={node =>
+        node.alive === false ? (
+          <span className="desc err">{t('ui.unavailable')}</span>
+        ) : node.tcp === undefined ? (
+          <span className="desc">—</span>
         ) : (
-          menu
-        )}
-      </Popover>
-    </MenuTrigger>
+          <span className={'desc ' + latencyTone(node.tcp)}>{t('ui.latency', {n: millis(node.tcp)})}</span>
+        )
+      }
+    >
+      <span className="rp-il">
+        <span>{value}</span>
+      </span>
+    </MenuButton>
   );
 }

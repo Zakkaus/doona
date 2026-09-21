@@ -5,7 +5,7 @@ import {useCapabilities} from '../../api/store';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth, useFillHeight, RuleRef} from '../../ui/ui';
+import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth, useFillHeight, RuleRef, Empty} from '../../ui/ui';
 
 import {columns, tableRows, type ConnectionView} from './view';
 
@@ -135,8 +135,8 @@ export function ConnectionTable({
             </TableHeader>
             <TableBody
               items={items}
-              dependencies={[locale, cols, view.group, loading]}
-              renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+              dependencies={[locale, cols, view.group, loading, names, rulesListed]}
+              renderEmptyState={() => (loading ? <Loading /> : <Empty>{t('conn.empty')}</Empty>)}
             >
               {row => {
                 if ('group' in row)

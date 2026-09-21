@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../../api';
@@ -15,13 +15,14 @@ import {
   Kv,
   LabeledSelect,
   Light,
-  ModalDialog,
+  Loading,
   Segmented,
   Tabs,
   TextTooltip,
   downloadFile,
   errorText,
-  toast
+  toast,
+  Empty
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
@@ -29,7 +30,7 @@ import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
 import {candidate, fileName, groupNames, redacted} from './names';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
+import {DraftContext, within} from '../../shell/route';
 import {sha256} from '../../api/hash';
 
 const kinds: Record<ConfigSource['kind'], Key> = {
@@ -56,12 +57,25 @@ function useSha256(text: string | undefined): string | undefined {
   return hashed !== null && hashed.text === text ? hashed.hash : undefined;
 }
 
+function useConfigEditorController(refetch: () => void) {
+  const t = useT();
+  const editor = useConfigEditor(refetch);
+  useEffect(() => {
+    if (!editor.error) return;
+    if (editor.error instanceof ApiError && editor.error.status === 422) {
+      const diagnostics = (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [];
+      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
+    } else toast('negative', errorText(editor.error));
+  }, [editor.error, t]);
+  return editor;
+}
+
 export function Config({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
   const config = useConfig(resources?.config.available !== false);
-  const editor = useConfigEditor(config.refetch);
+  const editor = useConfigEditorController(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const mainSource = sources.find(item => item.kind === 'main') ?? null;
@@ -74,20 +88,22 @@ export function Config({go, query}: PageProps) {
   const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
-  // Leaving an edit: the browser asks on reload or close; switching source or tab asks with the kit's dialog.
-  const [dirty, setDirty] = useState(false);
-  const [pending, setPending] = useState<string | null>(null);
+  const [dirty, updateDirty] = useState(false);
+  const guardDraft = useContext(DraftContext);
+  const setDirty = useCallback(
+    (value: boolean) => {
+      guardDraft(value);
+      updateDirty(value);
+    },
+    [guardDraft]
+  );
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     addEventListener('beforeunload', warn);
     return () => removeEventListener('beforeunload', warn);
   }, [dirty]);
-  const navigate = (next: string) => {
-    if (dirty) setPending(next);
-    else go('config', next);
-  };
-  const select = (id: string | null) => navigate(within(query, {source: id, line: null}));
+  const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
@@ -95,16 +111,10 @@ export function Config({go, query}: PageProps) {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
   }, [config.data]);
-  useEffect(() => {
-    if (!editor.error) return;
-    if (editor.error instanceof ApiError && editor.error.status === 422) {
-      const diagnostics = (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [];
-      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
-    } else toast('negative', errorText(editor.error));
-  }, [editor.error, t]);
   return (
     <div className="rp-page">
-      <ErrorMessage error={config.error} />
+      <ErrorMessage error={config.error} onRetry={config.refetch} />
+      {config.loading && !config.data && <Loading />}
       {config.data && (
         <div className="rp-toolbar">
           <Kv
@@ -128,7 +138,7 @@ export function Config({go, query}: PageProps) {
         <Tabs
           label={t('nav.config')}
           value={tab}
-          onChange={next => navigate(within(query, {tab: next}))}
+          onChange={next => go('config', within(query, {tab: next}))}
           items={[
             ...(setupAvailable && mainSource
               ? [
@@ -218,47 +228,11 @@ export function Config({go, query}: PageProps) {
           ]}
         />
       )}
-      <ModalDialog
-        title={t('config.discardTitle')}
-        narrow
-        alert
-        isOpen={pending !== null}
-        onOpenChange={open => {
-          if (!open) setPending(null);
-        }}
-        footer={close => (
-          <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button
-              negative
-              onPress={() => {
-                const next = pending;
-                setPending(null);
-                if (next !== null) go('config', next);
-              }}
-            >
-              {t('config.discard')}
-            </Button>
-          </>
-        )}
-      >
-        <p>{t('config.discardHelp')}</p>
-      </ModalDialog>
     </div>
   );
 }
 
-function SourceCard({
-  source,
-  diagnostics,
-  canValidate,
-  canWrite,
-  contentOffered,
-  editor,
-  groups,
-  focusLine,
-  onDirty
-}: {
+type SourceCardProps = {
   source: ConfigSource;
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
@@ -268,13 +242,13 @@ function SourceCard({
   groups: string[];
   focusLine: number | null;
   onDirty: (dirty: boolean) => void;
-}) {
+};
+
+function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirty}: SourceCardProps) {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
-  // The draft keeps the digest of the text it started from: If-Match carries that, so a source that changed on
-  // disk while it was being edited is refused with 412 instead of overwritten.
+  // If-Match uses the draft's original digest to reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; base: string} | null>(null);
+  const [saving, setSaving] = useState(false);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   // Content is only safe to edit when it is the complete accepted text: present and hashing to the accepted digest.
   const hash = useSha256(source.content);
@@ -333,16 +307,37 @@ function SourceCard({
     return result.valid;
   };
   const save = async () => {
-    if (draft === null) return;
-    if (canValidate && !(await validate('failure'))) return;
-    const result = await editor.save(source.id, draft.text, draft.base);
-    // A rejected save carries its own diagnostics; drop the dry-run list so they show.
-    setFound(null);
-    if (result) {
-      toast('positive', t('config.saved', {path: sourceName(source, t)}));
-      setDraft(null);
+    if (draft === null || saving || editor.busy) return;
+    setSaving(true);
+    try {
+      if (canValidate && !(await validate('failure'))) return;
+      const result = await editor.save(source.id, draft.text, draft.base);
+      // A rejected save carries its own diagnostics; drop the dry-run list so they show.
+      setFound(null);
+      if (result) {
+        toast('positive', t('config.saved', {path: sourceName(source, t)}));
+        setDraft(null);
+      }
+    } finally {
+      setSaving(false);
     }
   };
+  const edit = () => setDraft({text: source.content ?? '', base: source.content_sha256});
+  const cancel = () => {
+    setDraft(null);
+    setFound(null);
+  };
+  const change = (value: string) => setDraft(prev => (prev ? {...prev, text: value} : prev));
+  return {editing, saving, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change};
+}
+
+function SourceCard(props: SourceCardProps) {
+  const {source, canValidate, canWrite, contentOffered, editor, focusLine} = props;
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
+  const {editing, saving, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change} = useSourceCard(props);
+  const busy = saving || !!editor.busy;
   return (
     <section className="rp-card">
       <div className="rp-row">
@@ -357,34 +352,24 @@ function SourceCard({
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button isPending={editor.busy === 'validate'} isDisabled={!!editor.busy || source.content === undefined} onPress={() => void validate()}>
+            <Button isPending={editor.busy === 'validate'} isDisabled={busy || source.content === undefined} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
           {canWrite && !editing && (
-            <Button
-              isDisabled={!complete || !!editor.busy}
-              tip={complete === false ? t('config.incomplete') : undefined}
-              onPress={() => setDraft({text: source.content ?? '', base: source.content_sha256})}
-            >
+            <Button isDisabled={!complete || busy} tip={complete === false ? t('config.incomplete') : undefined} onPress={edit}>
               {t('config.edit')}
             </Button>
           )}
           {editing && (
             <>
-              <Button
-                isDisabled={!!editor.busy}
-                onPress={() => {
-                  setDraft(null);
-                  setFound(null);
-                }}
-              >
+              <Button isDisabled={busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
               <Button
                 accent
-                isPending={editor.busy === 'save'}
-                isDisabled={!!editor.busy || !dirty}
+                isPending={saving}
+                isDisabled={busy || !dirty}
                 tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
                 onPress={() => void save()}
               >
@@ -407,17 +392,17 @@ function SourceCard({
       )}
       {source.content === undefined ? (
         // With content on, a withheld source is the one holding the API credential.
-        <span className="rp-empty">{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</span>
+        <Empty>{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</Empty>
       ) : (
         <CodeEditor
           label={sourceName(source, t)}
           value={text}
-          readOnly={!editing || editor.busy === 'save'}
-          onChange={editing ? value => setDraft(prev => (prev ? {...prev, text: value} : prev)) : undefined}
+          readOnly={!editing || busy}
+          onChange={editing ? change : undefined}
           marks={marks}
           focusLine={jump ?? focusLine}
           outbounds={outbounds}
-          onSave={editing && dirty && !editor.busy ? () => void save() : undefined}
+          onSave={editing && dirty && !busy ? () => void save() : undefined}
         />
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
@@ -425,20 +410,14 @@ function SourceCard({
   );
 }
 
-function ValidateTab({
-  config,
-  editor,
-  canValidate,
-  open
-}: {
+type ValidateTabProps = {
   config: EffectiveConfig;
   editor: ReturnType<typeof useConfigEditor>;
   canValidate: boolean;
   open: (sourceId: string, line: number | null) => void;
-}) {
-  const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
+};
+
+function useValidateTab({config, editor}: ValidateTabProps) {
   const [level, setLevel] = useState('all');
   const [run, setRun] = useState<ConfigValidationResult | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -454,6 +433,24 @@ function ValidateTab({
   const cur = rows.find(item => item.id === selected) ?? null;
   // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
   const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));
+  const validate = () => {
+    void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
+      // A fresh list has new rows; the old selection would point at a different diagnostic.
+      if (result) {
+        setRun(result);
+        setSelected(null);
+      }
+    });
+  };
+  return {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate};
+}
+
+function ValidateTab(props: ValidateTabProps) {
+  const {config, editor, canValidate, open} = props;
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
+  const {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate} = useValidateTab(props);
   return (
     <>
       <div className="rp-toolbar">
@@ -473,15 +470,7 @@ function ValidateTab({
             isPending={editor.busy === 'validate'}
             isDisabled={!!editor.busy || candidates.length === 0}
             tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
-            onPress={() => {
-              void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
-                // A fresh list has new rows; the old selection would point at a different diagnostic.
-                if (result) {
-                  setRun(result);
-                  setSelected(null);
-                }
-              });
-            }}
+            onPress={validate}
           >
             <Refresh />
             {t('config.revalidate')}

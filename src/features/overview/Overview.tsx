@@ -1,7 +1,7 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
-import {datapathFields, datapathValue, formatDuration, lifecycleStates, localTime, memoryFields, shortId} from '../../api/selectors';
+import {datapathFields, datapathValue, formatDuration, lifecycleStates, lifecycleTone, localTime, memoryFields, shortId} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName} from '../../ui/ui';
+import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {usePalette} from '../../ui/Charts';
 import {LifecycleActions} from './Lifecycle';
@@ -54,7 +54,7 @@ export function Overview() {
       {capabilities.error && <ErrorMessage error={capabilities.error} />}
       <div className="rp-between">
         <div className="rp-cluster">
-          <Light tone={state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn'}>
+          <Light tone={lifecycleTone(state)}>
             {state ? t(lifecycleStates[state]) : capabilities.loading || runtime.loading ? t('ov.loading') : t('ov.unknown')}
           </Light>
           <Kv
@@ -132,7 +132,7 @@ export function Overview() {
           ) : capabilities.loading || version.loading || runtime.loading ? (
             <Loading />
           ) : (
-            <span className="rp-empty">{t('ov.unavailable')}</span>
+            <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-counters">
@@ -164,7 +164,7 @@ export function Overview() {
           ) : capabilities.loading || runtime.loading ? (
             <Loading />
           ) : (
-            <span className="rp-empty">{t('ov.unavailable')}</span>
+            <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-memory">
@@ -187,7 +187,7 @@ export function Overview() {
           ) : capabilities.loading || memory.loading ? (
             <Loading />
           ) : (
-            <span className="rp-empty">{t('ov.unavailable')}</span>
+            <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
       </div>
@@ -235,7 +235,7 @@ export function Overview() {
           ) : capabilities.loading || datapath.loading ? (
             <Loading />
           ) : (
-            <span className="rp-empty">{t('ov.unavailable')}</span>
+            <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
         <section className="rp-card" aria-labelledby="overview-resources">
@@ -256,7 +256,7 @@ export function Overview() {
           ) : capabilities.loading ? (
             <Loading />
           ) : (
-            <span className="rp-empty">{t('ov.unavailable')}</span>
+            <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
       </div>

@@ -30,7 +30,7 @@ for (const route of routes) {
     await expect(page.locator(content)).toBeVisible();
     await page.waitForLoadState('networkidle');
 
-    if (route !== 'activity' && route !== 'settings') {
+    if (route !== 'activity') {
       expect([...scripts].filter(url => !initialScripts.has(url)).length, 'New lazy-route JS requests').toBeGreaterThanOrEqual(1);
     }
     expect(failedResponses, 'Non-2xx responses').toHaveLength(0);

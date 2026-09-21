@@ -16,6 +16,30 @@ test('configuration sources list with the main source open, read-only ones canno
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toContainText('redacted');
 });
 
+test('switching sources discards the draft after confirmation', async ({page}) => {
+  await page.goto('/#/config?source=src-rules');
+  const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
+  await expect(editor).toBeVisible();
+  const original = await editor.innerText();
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('domain(example.org) -> proxy');
+  await expect(editor).toContainText('domain(example.org) -> proxy');
+  const picker = page.getByRole('button', {name: /Source/});
+  await picker.click();
+  await page.getByRole('option', {name: /\/etc\/honk\/config\.dae/}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toBeVisible();
+  await picker.click();
+  await page.getByRole('option', {name: /\/etc\/honk\/rules\.dae/}).click();
+  await expect(editor).toHaveAttribute('contenteditable', 'false');
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
+});
+
 test('editing validates, shows diagnostics on errors, and saves through a reload', async ({page}) => {
   await page.goto('/#/config?source=src-rules');
   await page.getByRole('button', {name: 'Edit', exact: true}).click();

@@ -1,3 +1,4 @@
+import {LocalError} from '../../api/error';
 import {topLevelBlock} from '../config/blocks';
 
 // honk has no native mode switch, so doona writes a marked catch-all rule into routing. The marker allows replacement or removal without touching other rules.
@@ -20,7 +21,7 @@ export function writeMode(text: string, next: OutboundMode): string {
   const lines = text.split('\n').filter(line => !modeLine.test(line));
   if (next.mode === 'rule') return lines.join('\n');
   const block = topLevelBlock(lines, 'routing');
-  if (!block) throw new Error('no routing section');
+  if (!block) throw new LocalError('act.modeNoRouting');
   const body = lines.slice(block.open + 1, block.close);
   const indent = body.find(line => line.trim())?.match(/^\s*/)?.[0] ?? '    ';
   let at = block.open + 1;
