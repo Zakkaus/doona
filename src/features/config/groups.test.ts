@@ -61,6 +61,19 @@ describe('group entries', () => {
     expect(addNamesToGroup('group {\n  a { policy: score }\n}\n', 'b', ['x'])).toBe('group {\n  a { policy: score }\n  b {\n    filter: name(x)\n  }\n}\n');
   });
 
+  it('preserves compound and qualified filters when adding a name', () => {
+    for (const filter of ['name(a) && subtag(b)', 'name(a) || name(b)', 'name(keyword: a)', "name(regex: '^a')"]) {
+      const source = `group { proxy { filter: ${filter} } }`;
+      expect(readGroupEntries(addNamesToGroup(source, 'proxy', ['c']))[0].filters).toEqual([filter, 'name(c)']);
+    }
+  });
+
+  it('extends only a complete plain call with quoted boundaries', () => {
+    const source = `group { proxy { filter: name ("a)b", 'c,d', e) } }`;
+    const next = addNamesToGroup(source, 'proxy', ['a)b', 'f', 'f']);
+    expect(readGroupEntries(next)[0].filters).toEqual([`name("a)b", 'c,d', e, f)`]);
+  });
+
   it('composes conditions from a kind and values', () => {
     expect(ruleCondition('domainSuffix', 'example.com, example.net')).toBe('domain(suffix: example.com, example.net)');
     expect(ruleCondition('geosite', 'cn')).toBe('domain(geosite: cn)');

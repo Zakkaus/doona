@@ -413,3 +413,25 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await expect(filter).toHaveValue('name(hk-01)');
 });
+
+test('policy details load near the viewport and a deep link explicitly mounts a distant group', async ({page}) => {
+  const api = await backend(page);
+  const base = await api.group('proxy');
+  const snapshot = await api.groups();
+  const summary = snapshot[0];
+  const groups = Array.from({length: 60}, (_, i) => ({...summary, id: `group-${i}`, name: `Group ${i}`}));
+  const loaded = new Set<string>();
+  await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
+  await page.route('**/api/v1/groups/*', route => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    loaded.add(id);
+    return route.fulfill({json: {...base, id, name: groups.find(group => group.id === id)!.name}});
+  });
+  await page.goto('/#/policies');
+  await expect(page.getByRole('region', {name: 'Group 0', exact: true}).getByRole('heading', {name: 'Group 0', exact: true})).toBeVisible();
+  expect(loaded.has('group-59')).toBe(false);
+  expect(loaded.size).toBeLessThan(60);
+  await page.goto('/#/policies?group=group-59');
+  await expect(page.getByRole('region', {name: 'Group 59', exact: true}).getByRole('heading', {name: 'Group 59', exact: true})).toBeVisible();
+  expect(loaded.has('group-59')).toBe(true);
+});

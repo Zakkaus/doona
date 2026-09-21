@@ -2,16 +2,14 @@
 import {useMemo, useState} from 'react';
 import {Autocomplete, Menu, MenuSection, Header, ListLayout, GridLayout, GridList, GridListItem, Size, Virtualizer, useFilter} from 'react-aria-components';
 import {regionOf} from './geo';
-import {millis} from '../../api/u64';
-import {compareLatency, healthMillis} from '../../api/selectors';
-import {InlineSelect, ChoiceMenu, NodeTile, Switch, TextField, latencyTone, type NodeTileProps, Empty} from '../../ui/ui';
+import {compareLatency} from '../../api/selectors';
+import {InlineSelect, ChoiceMenu, NodeTile, Switch, TextField, type NodeTileProps, Empty} from '../../ui/ui';
 import {MenuButton, MenuChoice, pickMenuKey} from '../../ui/ui';
-import type {Group, HealthObservation} from '../../api/model';
+import {menuViews, type MemberView} from './view';
 import {useT} from '../../i18n';
 
 // `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
 export type NodeInfo = {name: string; tcp?: number; alive?: boolean};
-export type MemberInfo = Group['members'][number] & {health?: HealthObservation};
 const BIG = 12;
 
 function regions(nodes: Array<{name: string}>) {
@@ -22,7 +20,6 @@ function regions(nodes: Array<{name: string}>) {
   }
   return [...m].sort((a, b) => b[1] - a[1]);
 }
-const byLatency = (a: NodeInfo, b: NodeInfo) => compareLatency(a.tcp, b.tcp);
 
 export function NodeGrid({
   nodes,
@@ -31,7 +28,7 @@ export function NodeGrid({
   onSelect,
   isDisabled
 }: {
-  nodes: MemberInfo[];
+  nodes: MemberView[];
   selected?: string;
   cur?: string;
   onSelect?: (id: string) => void;
@@ -46,10 +43,8 @@ export function NodeGrid({
   const big = nodes.length > BIG;
   const shown = useMemo(() => {
     if (!big) return nodes;
-    const list = nodes.filter(
-      n => (!q || contains(n.name, q)) && (region === 'all' || (regionOf(n.name) ?? '?') === region) && (!aliveOnly || n.health?.state === 'healthy')
-    );
-    if (sort === 'latency') list.sort((a, b) => compareLatency(healthMillis(a.health), healthMillis(b.health)));
+    const list = nodes.filter(n => (!q || contains(n.name, q)) && (region === 'all' || (regionOf(n.name) ?? '?') === region) && (!aliveOnly || n.healthy));
+    if (sort === 'latency') list.sort((a, b) => compareLatency(a.tcp, b.tcp));
     else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
   }, [nodes, big, q, region, sort, aliveOnly, contains]);
@@ -71,7 +66,7 @@ export function NodeGrid({
       </div>
     );
   }
-  const down = shown.filter(n => n.health?.state === 'unavailable').length;
+  const down = shown.filter(n => n.unavailable).length;
   return (
     <div className="rp-form">
       <div className="rp-toolbar">
@@ -126,54 +121,20 @@ export function NodeGrid({
     </div>
   );
 }
-function MemberTile({n, ...props}: {n: MemberInfo} & Pick<NodeTileProps, 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
-  const health = n.health;
-  return (
-    <NodeTile
-      {...props}
-      name={n.name}
-      nested={n.kind === 'group'}
-      tcp={healthMillis(health)}
-      unavailable={health?.state === 'unavailable'}
-      description={health ? health.transport.toUpperCase() + ' · ' + health.purpose : ' '}
-    />
-  );
+function MemberTile({n, ...props}: {n: MemberView} & Pick<NodeTileProps, 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
+  return <NodeTile {...props} name={n.name} nested={n.nested} tcp={n.tcp} unavailable={n.unavailable} description={n.description} />;
 }
 
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
   const t = useT();
   const {contains} = useFilter({sensitivity: 'base'});
   const big = nodes.length > BIG;
-  const items = useMemo(() => nodes.map(node => ({...node, id: node.name, label: node.name})), [nodes]);
-  const sections = useMemo(() => {
-    if (!big) return undefined;
-    const groups = new Map<string, typeof items>();
-    for (const node of [...items].sort(byLatency)) {
-      const region = regionOf(node.name) ?? '—';
-      const group = groups.get(region);
-      if (group) group.push(node);
-      else groups.set(region, [node]);
-    }
-    return [...groups].map(([title, items]) => ({
-      title,
-      items,
-      heading: (
-        <span className="rp-il">
-          {title}
-          <span className="rp-muted"> · {items.length}</span>
-        </span>
-      )
-    }));
-  }, [items, big]);
+  const prepared = useMemo(() => menuViews(nodes, t), [nodes, t]);
+  const {items} = prepared;
+  const sections = big ? prepared.sections : undefined;
   const item = (node: (typeof items)[number]) => (
     <MenuChoice key={node.id} item={node}>
-      {node.alive === false ? (
-        <span className="desc err">{t('ui.unavailable')}</span>
-      ) : node.tcp === undefined ? (
-        <span className="desc">—</span>
-      ) : (
-        <span className={'desc ' + latencyTone(node.tcp)}>{t('ui.latency', {n: millis(node.tcp)})}</span>
-      )}
+      <span className={node.className}>{node.description}</span>
     </MenuChoice>
   );
   const menu = (
@@ -187,7 +148,12 @@ export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; va
       {sections
         ? sections.map(section => (
             <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[value]} onSelectionChange={pickMenuKey(onChange)}>
-              <Header className="rp-sec-h">{section.heading}</Header>
+              <Header className="rp-sec-h">
+                <span className="rp-il">
+                  {section.title}
+                  <span className="rp-muted">{section.count}</span>
+                </span>
+              </Header>
               {section.items.map(item)}
             </MenuSection>
           ))

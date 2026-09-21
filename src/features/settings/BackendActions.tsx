@@ -1,110 +1,77 @@
-import {useCapabilities, useConnectionClose, useConnections, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../api/store';
-import {formatBytes} from '../../api/u64';
-import {localTime, relativeStart} from '../../api/selectors';
-import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, TextTooltip, errorText, toast} from '../../ui/ui';
+import {useT} from '../../i18n';
+import {Button, DataTable, ErrorMessage, TextTooltip} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
-
+import {useBackendActions} from './useBackendActions';
 export function BackendActionsCard() {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const capabilities = useCapabilities();
-  const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
-  const providers = useProviders(resources?.providers.available === true);
-  const refresh = useProviderRefresh(providers.refetch);
-  const connections = useConnections(undefined, resources?.connections.available === true);
-  const closing = useConnectionClose(connections.refetch);
-  const flushing = useDnsFlush();
-  const geodata = useGeodata(resources?.geodata.available ?? false);
-  const fail = (error: unknown) => toast('negative', errorText(error));
-  const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
-  const offered =
-    lifecycle ||
-    !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
-    !!resources?.providers.can_refresh ||
-    !!resources?.connections.can_close ||
-    !!resources?.geodata.can_update;
-  const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
-  const live = (connections.data ? [...connections.data.tcp, ...connections.data.udp] : []).map(c => c.id);
-  const refreshingAll = refresh.busy === '*';
-  const refreshAll = () =>
-    refresh
-      .refreshMany(
-        subscriptions.map(item => item.id),
-        (_id, error) => fail(error)
-      )
-      .then(done => {
-        // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
-        if (done !== undefined)
-          toast(done ? 'positive' : 'negative', t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)}));
-      }, fail);
+  const {
+    capabilities,
+    runtime,
+    closing,
+    flushing,
+    geodataBusy,
+    geodataBlocked,
+    geodataLoading,
+    geodataError,
+    liveCount,
+    note,
+    refreshingAll,
+    refreshAll,
+    refreshDisabled,
+    refreshLabel,
+    canFlush,
+    canRefresh,
+    canClose,
+    canUpdate,
+    hasGeodata,
+    rows,
+    flush,
+    update
+  } = useBackendActions();
   return (
     <section className="rp-card" aria-labelledby="settings-actions">
       <h2 className="rp-h3" id="settings-actions">
         {t('settings.actions')}
       </h2>
-      <span className="rp-label">{t(offered ? 'settings.actionsNote' : 'settings.actionsNone')}</span>
+      <span className="rp-label">{note}</span>
       <ErrorMessage error={runtime.error} />
       <div className="rp-toolbar">
         <LifecycleActions runtime={runtime} capabilities={capabilities.data} />
       </div>
       <div className="rp-toolbar">
-        {resources?.dns_cache.available && resources.dns_cache.flush && (
-          <FlushCacheButton
-            count={null}
-            busy={flushing.busy}
-            onFlush={() => {
-              void flushing.flush().then(result => {
-                if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-              }, fail);
-            }}
-          />
-        )}
-        {resources?.providers.can_refresh && (
-          <Button isPending={refreshingAll} isDisabled={refreshingAll || !!refresh.busy || !subscriptions.length} onPress={() => void refreshAll()}>
-            {t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)})}
+        {canFlush && <FlushCacheButton count={null} busy={flushing} onFlush={flush} />}
+        {canRefresh && (
+          <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
+            {refreshLabel}
           </Button>
         )}
-        {resources?.connections.can_close && <CloseAllButton count={live.length} selection={{query: {all: true}}} closing={closing} />}
-        {resources?.geodata.can_update && (
-          <Button
-            isPending={geodata.busy}
-            isDisabled={geodata.busy || !geodata.data}
-            onPress={() => {
-              void geodata.update().then(result => {
-                if (result) toast('positive', t('settings.geodataUpdated'));
-              }, fail);
-            }}
-          >
+        {canClose && <CloseAllButton count={liveCount} selection={{query: {all: true}}} closing={closing} />}
+        {canUpdate && (
+          <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
             {t('settings.geodataUpdate')}
           </Button>
         )}
       </div>
-      {resources?.geodata.available && (
+      {hasGeodata && (
         <>
           <span className="rp-label">{t('settings.geodataNote')}</span>
-          <ErrorMessage error={geodata.error} />
+          <ErrorMessage error={geodataError} />
           <DataTable
             label={t('settings.geodata')}
-            loading={geodata.loading && !geodata.data}
-            rows={(geodata.data?.assets ?? []).map(asset => ({...asset, id: asset.kind}))}
+            loading={geodataLoading}
+            rows={rows}
             height={160}
             cols={[
               {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
-              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => formatBytes(asset.size_bytes)},
+              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => asset.size},
               {
                 id: 'modified',
                 label: t('nodes.updated'),
                 minWidth: 140,
                 grow: 0,
-                render: asset => (
-                  <TextTooltip text={asset.modified_at ? localTime(asset.modified_at, locale) : undefined}>
-                    {relativeStart(asset.modified_at, locale)}
-                  </TextTooltip>
-                )
+                render: asset => <TextTooltip text={asset.modifiedTitle}>{asset.modified}</TextTooltip>
               },
               {
                 id: 'sha',
@@ -112,12 +79,12 @@ export function BackendActionsCard() {
                 minWidth: 160,
                 drop: 2,
                 render: asset => (
-                  <TextTooltip text={asset.sha256}>
-                    <span className="rp-code">{asset.sha256.slice(0, 12)}</span>
+                  <TextTooltip text={asset.shaTitle}>
+                    <span className="rp-code">{asset.sha}</span>
                   </TextTooltip>
                 )
               },
-              {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1, render: asset => asset.source_redacted ?? '—'}
+              {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1, render: asset => asset.source}
             ]}
           />
         </>

@@ -172,5 +172,52 @@ export function useBackendForm(query: string) {
     }
   };
 
-  return {saved, active, api, changeApi, token, changeToken, paired, invalid, result, pending, saving, persist, editedProfiles, save, testConnection};
+  const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
+  const [name, setName] = useState('');
+  const confirmProfile = () => {
+    if (dialog === 'delete') {
+      const profiles = saved.profiles.filter(profile => profile.id !== active?.id);
+      persist(profiles, profiles[0]?.id ?? '');
+      return;
+    }
+    const profiles = dialog === 'add' && !active ? [] : editedProfiles();
+    if (!profiles) {
+      setDialog(null);
+      toast('negative', t('settings.invalidUrl'));
+      return;
+    }
+    if (!name.trim()) return;
+    if (dialog === 'add') {
+      const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
+      persist([...profiles, profile], profile.id);
+    } else {
+      persist(
+        profiles.map(profile => (profile.id === active?.id ? {...profile, name: name.trim()} : profile)),
+        saved.activeId
+      );
+    }
+  };
+
+  return {
+    dialog,
+    setDialog,
+    name,
+    setName,
+    confirmProfile,
+    saved,
+    active,
+    api,
+    changeApi,
+    token,
+    changeToken,
+    paired,
+    invalid,
+    result,
+    pending,
+    saving,
+    persist,
+    editedProfiles,
+    save,
+    testConnection
+  };
 }

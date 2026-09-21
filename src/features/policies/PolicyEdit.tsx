@@ -1,51 +1,20 @@
-import {useState} from 'react';
 import {useT} from '../../i18n';
-import {policyKindLabels} from './view';
-import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
-import type {MainSourceEdit} from '../config/mainSource';
-import type {ConfigSource} from '../../api/model';
 import Close from '../../ui/icons/Close';
-import {Button, LabeledSelect, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
-
-export function PolicyEdit({name, source, entry}: {name: string; source: MainSourceEdit; entry: GroupEntry | undefined}) {
+import {Button, LabeledSelect, ModalDialog, TextField} from '../../ui/ui';
+import type {PolicyEditView} from './usePolicyEdit';
+export function PolicyEdit({model: m}: {model: PolicyEditView}) {
   const t = useT();
-  const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
-  const saveDraft = (close: () => void) => {
-    if (!draft) return;
-    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
-    void source
-      .apply(
-        text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}),
-        errors => toast('negative', t('policy.editInvalid', {n: errors})),
-        draft.origin
-      )
-      .then(
-        written => {
-          if (written) {
-            toast('positive', t('policy.updated', {name: draft.name}));
-            close();
-          }
-        },
-        error => toast('negative', errorText(error))
-      );
-  };
   return (
     <ModalDialog
-      title={t('policy.editTitle', {name})}
+      title={m.title}
       narrow
-      isOpen={draft !== null}
-      onOpenChange={isOpen => {
-        if (!isOpen) setDraft(null);
+      isOpen={m.open}
+      onOpenChange={open => {
+        if (!open) m.close();
       }}
       trigger={
-        draft || (source.writable && entry && source.main) ? (
-          <Button
-            quiet
-            isDisabled={source.busy || !entry || !source.main}
-            onPress={() => {
-              if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
-            }}
-          >
+        m.available ? (
+          <Button quiet isDisabled={m.disabled} onPress={m.show}>
             {t('policy.edit')}
           </Button>
         ) : undefined
@@ -53,42 +22,32 @@ export function PolicyEdit({name, source, entry}: {name: string; source: MainSou
       footer={close => (
         <>
           <Button onPress={close}>{t('ui.cancel')}</Button>
-          <Button accent isDisabled={!draft} isPending={source.busy} onPress={() => saveDraft(close)}>
+          <Button accent isDisabled={!m.open} isPending={m.busy} onPress={() => m.save(close)}>
             {t('policy.save')}
           </Button>
         </>
       )}
     >
-      {draft && (
+      {m.open && (
         <div className="rp-list">
           <span className="rp-label">{t('policy.editHelp')}</span>
-          <LabeledSelect
-            label={t('policy.policy')}
-            value={canonicalPolicy(draft.policy)}
-            onChange={policy => setDraft({...draft, policy})}
-            items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name]), desc: name}))}
-          />
-          {draft.filters.map((filter, i) => (
+          <LabeledSelect label={t('policy.policy')} value={m.policy} onChange={m.setPolicy} items={m.choices} />
+          {m.filters.map(field => (
             <TextField
-              key={i}
-              label={t('policy.filterN', {n: i + 1})}
-              value={filter}
+              key={field.id}
+              label={field.label}
+              value={field.value}
               placeholder="name(keyword: 'HK')"
               spellCheck={false}
-              onChange={value => setDraft({...draft, filters: draft.filters.map((f, j) => (j === i ? value : f))})}
+              onChange={field.change}
               action={
-                <Button
-                  quiet
-                  icon
-                  label={t('policy.removeFilter', {n: i + 1})}
-                  onPress={() => setDraft({...draft, filters: draft.filters.filter((_, j) => j !== i)})}
-                >
+                <Button quiet icon label={field.removeLabel} onPress={field.remove}>
                   <Close />
                 </Button>
               }
             />
           ))}
-          <Button small quiet onPress={() => setDraft({...draft, filters: [...draft.filters, '']})}>
+          <Button small quiet onPress={m.add}>
             {t('policy.addFilter')}
           </Button>
         </div>

@@ -1,6 +1,10 @@
-import type {Group, ProbeResult} from '../../api/model';
+import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n/messages';
-import type {MessageRef} from '../../api/selectors';
+import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
+import type {Params} from '../../i18n';
+import {millis} from '../../api/u64';
+import {latencyTone} from '../../ui/ui';
+import {regionOf} from './geo';
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   selector: 'policy.kind.selector',
   urltest: 'policy.kind.urltest',
@@ -47,5 +51,72 @@ export function probeSummary(result: ProbeResult): MessageRef {
       unavailable: states.filter(s => s === 'unavailable').length,
       unknown: states.filter(s => s === 'unknown').length
     }
+  };
+}
+
+type Translate = (key: Key, params?: Params) => string;
+export type MemberView = {id: string; name: string; nested: boolean; tcp?: number; unavailable: boolean; healthy: boolean; description: string; region: string};
+export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>): MemberView[] {
+  return members.map(member => ({
+    id: member.id,
+    name: member.name,
+    nested: member.kind === 'group',
+    tcp: healthMillis(member.health),
+    unavailable: member.health?.state === 'unavailable',
+    healthy: member.health?.state === 'healthy',
+    description: member.health ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}` : ' ',
+    region: regionOf(member.name) ?? '?'
+  }));
+}
+export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: boolean}>, t: Translate) {
+  const items = nodes.map(node => ({
+    id: node.name,
+    label: node.name,
+    tcp: node.tcp,
+    region: regionOf(node.name) ?? '—',
+    description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)}),
+    className: node.alive === false ? 'desc err' : node.tcp === undefined ? 'desc' : `desc ${latencyTone(node.tcp)}`
+  }));
+  const groups = new Map<string, typeof items>();
+  for (const node of [...items].sort((a, b) => compareLatency(a.tcp, b.tcp))) {
+    const group = groups.get(node.region);
+    if (group) group.push(node);
+    else groups.set(node.region, [node]);
+  }
+  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: ` · ${items.length}`}))};
+}
+export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translate) {
+  const tcp = g.runtime.selection.tcp?.member_id;
+  const udp = g.runtime.selection.udp?.member_id;
+  const selectable = g.policy.kind === 'selector' && g.capabilities.can_select;
+  const overridable = !selectable && g.capabilities.can_override;
+  const pinned = overridable && [g.runtime.selection.tcp, g.runtime.selection.udp].some(item => item?.source === 'override');
+  const interruptable = g.capabilities.mutable_config.includes('interrupt_connections');
+  const healthy = members.filter(member => member.healthy).length;
+  const down = members.filter(member => member.unavailable).length;
+  const untested = members.length - healthy - down;
+  return {
+    id: g.id,
+    name: g.name,
+    kind: t(policyKindLabels[g.policy.kind]),
+    selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
+    selectable,
+    overridable,
+    pinned,
+    interruptable,
+    interrupt: g.config.interrupt_connections,
+    showNetwork: selectable || overridable || tcp !== udp,
+    networkLabel: t('policy.network', {name: g.name}),
+    healthy: t('policy.healthy', {n: healthy}),
+    down: down ? t('policy.down', {n: down}) : null,
+    untested: untested ? t('policy.untested', {n: untested}) : null,
+    overrideTone: pinned ? ('neutral' as const) : ('ok' as const),
+    overrideText: t(pinned ? 'policy.overridden' : 'policy.automatic'),
+    fields: groupConfigFields(g)
+      .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
+      .map(([key, value]): [string, string] => [
+        typeof key === 'string' ? t(key) : t(key.key, key.params),
+        typeof value === 'string' ? value : t(value.key, value.params)
+      ])
   };
 }

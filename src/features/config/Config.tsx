@@ -1,144 +1,64 @@
-import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
-import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {getApi} from '../../api';
-import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
-import type {ConfigDiagnostic, ConfigSource, ConfigValidationResult, EffectiveConfig} from '../../api/model';
-import {ApiError} from '../../api/error';
-import {formatBytes} from '../../api/u64';
-import {localTime} from '../../api/selectors';
-import {
-  Badge,
-  Button,
-  DataTable,
-  ErrorMessage,
-  Kv,
-  LabeledSelect,
-  Light,
-  Loading,
-  Segmented,
-  Tabs,
-  TextTooltip,
-  downloadFile,
-  errorText,
-  toast,
-  Empty
-} from '../../ui/ui';
+import {useT} from '../../i18n';
+import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
-import {CodeEditor, type EditorMark} from '../../ui/code/CodeEditor';
-import {candidate, fileName, groupNames, redacted} from './names';
+import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../types';
-import {DraftContext, within} from '../../shell/route';
-import {useSourceComplete} from '../../api/store/config';
-
-const kinds: Record<ConfigSource['kind'], Key> = {
-  main: 'config.kind.main',
-  include: 'config.kind.include',
-  subscription: 'config.kind.subscription',
-  generated: 'config.kind.generated'
-};
-const sourceName = (source: ConfigSource, t: (key: Key) => string) => (redacted(source) ? `${t(kinds[source.kind])} · ${source.id.slice(0, 8)}` : source.path);
-
-const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
-const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
-
-function useConfigEditorController(refetch: () => void) {
+import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
+export function Config(props: PageProps) {
   const t = useT();
-  const editor = useConfigEditor(refetch);
-  useEffect(() => {
-    if (!editor.error) return;
-    if (editor.error instanceof ApiError && editor.error.status === 422) {
-      const diagnostics = (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [];
-      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
-    } else toast('negative', errorText(editor.error));
-  }, [editor.error, t]);
-  return editor;
-}
-
-export function Config({go, query}: PageProps) {
-  const t = useT();
-  const locale = LOCALE[useLang()];
-  const resources = useCapabilities().data?.resources;
-  const config = useConfig(resources?.config.available !== false);
-  const editor = useConfigEditorController(config.refetch);
-  const params = useMemo(() => new URLSearchParams(query), [query]);
-  const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
-  const mainSource = sources.find(item => item.kind === 'main') ?? null;
-  // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
-  const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
-  const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
-  const requested = params.get('tab');
-  const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
-  const selectedId = params.get('source') ?? sources[0]?.id ?? null;
-  const source = sources.find(item => item.id === selectedId) ?? null;
-  const [dirty, updateDirty] = useState(false);
-  const {setDirty: guardDraft, revision} = useContext(DraftContext);
-  const setDirty = useCallback(
-    (value: boolean) => {
-      guardDraft(value);
-      updateDirty(value);
-    },
-    [guardDraft]
-  );
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    addEventListener('beforeunload', warn);
-    return () => removeEventListener('beforeunload', warn);
-  }, [dirty]);
-  const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
-  const n = (value: number) => formatNumber(value, locale);
-  const focusLine = Number(params.get('line')) || null;
-  const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
-  const counts = useMemo(() => {
-    const all = config.data?.diagnostics ?? [];
-    return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
-  }, [config.data]);
+  const {
+    error,
+    reload,
+    loading,
+    ready,
+    metadata,
+    redacted,
+    tab,
+    setTab,
+    selectedId,
+    revision,
+    select,
+    sourceProps,
+    wizardProps,
+    validateProps,
+    sourceModel,
+    sourceOptions,
+    exportSource,
+    summaryTone,
+    summaryText
+  } = useConfigPage(props);
   return (
     <div className="rp-page">
-      <ErrorMessage error={config.error} onRetry={config.refetch} />
-      {config.loading && !config.data && <Loading />}
-      {config.data && (
+      <ErrorMessage error={error} onRetry={reload} />
+      {loading && <Loading />}
+      {ready && (
         <div className="rp-toolbar">
-          <Kv
-            row
-            items={[
-              [t('config.generation'), config.data.generation_id],
-              [t('config.revision'), config.data.revision]
-            ]}
-          />
-          <Light small tone={counts.error ? 'err' : counts.warning ? 'warn' : 'ok'}>
-            {counts.error ? t('config.errors', {n: n(counts.error)}) : counts.warning ? t('config.warnings', {n: n(counts.warning)}) : t('config.clean')}
+          <Kv row items={metadata} />
+          <Light small tone={summaryTone}>
+            {summaryText}
           </Light>
-          {config.data.secrets_redacted && (
+          {redacted && (
             <Light small tone="muted">
               {t('config.redacted')}
             </Light>
           )}
         </div>
       )}
-      {config.data && (
+      {ready && (
         <Tabs
           key={revision}
           label={t('nav.config')}
           value={tab}
-          onChange={next => go('config', within(query, {tab: next}))}
+          onChange={setTab}
           items={[
-            ...(setupAvailable && mainSource
+            ...(wizardProps
               ? [
                   {
                     id: 'setup',
                     label: t('config.wizard'),
-                    content: (
-                      <Wizard
-                        main={mainSource}
-                        editor={editor}
-                        onDone={() => go('config', within(query, {tab: 'source', source: mainSource.id}))}
-                        onDirty={setDirty}
-                      />
-                    )
+                    content: <Wizard {...wizardProps} />
                   }
                 ]
               : []),
@@ -148,66 +68,34 @@ export function Config({go, query}: PageProps) {
               content: (
                 <>
                   <div className="rp-toolbar">
-                    <LabeledSelect
-                      side
-                      label={t('config.source')}
-                      value={selectedId ?? ''}
-                      onChange={select}
-                      items={sources.map(item => ({id: item.id, label: sourceName(item, t), desc: t(kinds[item.kind])}))}
-                    />
-                    {source && (
+                    <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
+                    {sourceModel && (
                       <>
-                        <Badge>{t(kinds[source.kind])}</Badge>
-                        <Light small tone={source.writable ? 'ok' : 'muted'}>
-                          {t(source.writable ? 'config.editable' : 'config.readOnly')}
+                        <Badge>{sourceModel.kind}</Badge>
+                        <Light small tone={sourceModel.tone}>
+                          {sourceModel.editable}
                         </Light>
-                        <span className="rp-label">
-                          {t('config.sourceFacts', {
-                            lines: n(source.line_count),
-                            size: formatBytes(String(source.bytes)),
-                            time: localTime(source.loaded_at, locale)
-                          })}
-                        </span>
+                        <span className="rp-label">{sourceModel.facts}</span>
                       </>
                     )}
-                    {source?.content !== undefined && (
+                    {sourceModel?.hasContent && (
                       <>
                         <span className="rp-grow" />
-                        <Button onPress={() => downloadFile(fileName(source), source.content!, 'text/plain;charset=utf-8')}>
+                        <Button onPress={exportSource}>
                           <Download />
                           {t('config.export')}
                         </Button>
                       </>
                     )}
                   </div>
-                  {source && (
-                    <SourceCard
-                      key={source.id}
-                      source={source}
-                      diagnostics={config.data.diagnostics.filter(d => d.source_id === source.id)}
-                      canValidate={canValidate}
-                      canWrite={resources?.config.writable === true && source.writable}
-                      contentOffered={resources?.config.content === true}
-                      editor={editor}
-                      groups={groupList}
-                      focusLine={focusLine}
-                      onDirty={setDirty}
-                    />
-                  )}
+                  {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
                 </>
               )
             },
             {
               id: 'validate',
               label: t('config.tabValidate'),
-              content: (
-                <ValidateTab
-                  config={config.data}
-                  editor={editor}
-                  canValidate={canValidate}
-                  open={(sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))}
-                />
-              )
+              content: validateProps && <ValidateTab {...validateProps} />
             }
           ]}
         />
@@ -216,112 +104,35 @@ export function Config({go, query}: PageProps) {
   );
 }
 
-type SourceCardProps = {
-  source: ConfigSource;
-  diagnostics: ConfigDiagnostic[];
-  canValidate: boolean;
-  canWrite: boolean;
-  contentOffered: boolean;
-  editor: ReturnType<typeof useConfigEditor>;
-  groups: string[];
-  focusLine: number | null;
-  onDirty: (dirty: boolean) => void;
-};
-
-function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirty}: SourceCardProps) {
-  const t = useT();
-  // If-Match uses the draft's original digest to reject changes made on disk while editing.
-  const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
-  const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
-  const complete = useSourceComplete(source);
-  useEffect(() => editor.cancel, [editor.cancel]);
-  const editing = draft !== null;
-  // What the list shows: the last dry run, else the diagnostics a rejected save came back with, else the engine's.
-  const saveErrors =
-    editor.error instanceof ApiError && editor.error.status === 422 && editor.errorSource === source.id
-      ? ((editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [])
-      : null;
-  const shown = found ?? saveErrors ?? diagnostics;
-  const marks = useMemo<EditorMark[]>(
-    () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message})),
-    [shown]
-  );
-  const text = draft?.text ?? source.content ?? '';
-  // Names to complete after "->": the groups in the text being edited, else the running configuration's.
-  const outbounds = () => {
-    const own = groupNames(text);
-    return own.length ? own : groups;
-  };
-  const [jump, setJump] = useState<number | null>(null);
-  const dirty = editing && draft.text !== source.content;
-  useEffect(() => {
-    onDirty(dirty);
-    return () => onDirty(false);
-  }, [dirty, onDirty]);
-  // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
-  const api = getApi();
-  const draftText = draft?.text;
-  const sourceId = source.id;
-  useEffect(() => {
-    if (!canValidate || draftText === undefined) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      api.validateConfig({sources: [candidate({id: sourceId}, draftText)], mode: 'full'}, controller.signal).then(
-        result => setFound(result.diagnostics),
-        () => undefined
-      );
-    }, 600);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [api, canValidate, draftText, sourceId]);
-  const presentValidation = (result: Pick<ConfigValidationResult, 'valid' | 'diagnostics'>, announce = true) => {
-    setFound(result.diagnostics);
-    // Put the cursor on the first error so the problem is on screen, not below a long file.
-    const first = result.diagnostics.find(d => d.level === 'error' && d.line !== null);
-    setJump(first ? first.line : null);
-    if (!result.valid) toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
-    else if (announce) toast('positive', t('config.valid'));
-    return result.valid;
-  };
-  const validate = async () => {
-    const result = await editor.validate({sources: [candidate(source, text)], mode: 'full'});
-    return result ? presentValidation(result) : false;
-  };
-  const save = async () => {
-    if (draft === null || editor.busy) return;
-    const result = await editor.apply(draft.origin, draft.text);
-    setFound(null);
-    if (!result) return;
-    if (result.diagnostics) {
-      presentValidation({valid: false, diagnostics: result.diagnostics}, false);
-      return;
-    }
-    toast('positive', t('config.saved', {path: sourceName(source, t)}));
-    setDraft(null);
-  };
-  const edit = () => setDraft({text: source.content ?? '', origin: source});
-  const cancel = () => {
-    setDraft(null);
-    setFound(null);
-  };
-  const change = (value: string) => setDraft(prev => (prev ? {...prev, text: value} : prev));
-  return {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change};
-}
-
 function SourceCard(props: SourceCardProps) {
-  const {source, canValidate, canWrite, contentOffered, editor, focusLine} = props;
+  const {canValidate, canWrite, contentOffered, focusLine} = props;
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
-  const {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change} = useSourceCard(props);
-  const busy = !!editor.busy;
+  const {
+    editing,
+    shown,
+    marks,
+    text,
+    outbounds,
+    jump,
+    dirty,
+    validate,
+    save,
+    edit,
+    cancel,
+    change,
+    view,
+    busy,
+    validating,
+    saving,
+    validateDisabled,
+    editDisabled,
+    editTip
+  } = useSourceCard(props);
   return (
     <section className="rp-card">
       <div className="rp-row">
         <span className="rp-cluster">
-          <h3 className="rp-h3 rp-code">{sourceName(source, t)}</h3>
+          <h3 className="rp-h3 rp-code">{view.label}</h3>
           {dirty && (
             <>
               <Badge tone="warn">{t('config.unsaved')}</Badge>
@@ -331,12 +142,12 @@ function SourceCard(props: SourceCardProps) {
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button isPending={editor.busy === 'validate'} isDisabled={busy || source.content === undefined} onPress={() => void validate()}>
+            <Button isPending={validating} isDisabled={validateDisabled} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
           {canWrite && !editing && (
-            <Button isDisabled={!complete || busy} tip={complete === false ? t('config.incomplete') : undefined} onPress={edit}>
+            <Button isDisabled={editDisabled} tip={editTip} onPress={edit}>
               {t('config.edit')}
             </Button>
           )}
@@ -347,7 +158,7 @@ function SourceCard(props: SourceCardProps) {
               </Button>
               <Button
                 accent
-                isPending={editor.busy === 'save'}
+                isPending={saving}
                 isDisabled={busy || !dirty}
                 tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
                 onPress={() => void save()}
@@ -362,19 +173,19 @@ function SourceCard(props: SourceCardProps) {
         <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
-              <Light small tone={tones[item.level]}>
-                {item.line !== null ? t('config.atLine', {line: n(item.line), message: item.message}) : item.message}
+              <Light small tone={item.tone}>
+                {item.inline}
               </Light>
             </div>
           ))}
         </div>
       )}
-      {source.content === undefined ? (
+      {!view.hasContent ? (
         // With content on, a withheld source is the one holding the API credential.
         <Empty>{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</Empty>
       ) : (
         <CodeEditor
-          label={sourceName(source, t)}
+          label={view.label}
           value={text}
           readOnly={!editing || busy}
           onChange={editing ? change : undefined}
@@ -389,85 +200,27 @@ function SourceCard(props: SourceCardProps) {
   );
 }
 
-type ValidateTabProps = {
-  config: EffectiveConfig;
-  editor: ReturnType<typeof useConfigEditor>;
-  canValidate: boolean;
-  open: (sourceId: string, line: number | null) => void;
-};
-
-function useValidateTab({config, editor}: ValidateTabProps) {
-  const [level, setLevel] = useState('all');
-  const [run, setRun] = useState<ConfigValidationResult | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const rows = useMemo(() => (run?.diagnostics ?? config.diagnostics).map((item, index) => ({...item, id: String(index)})), [run, config.diagnostics]);
-  const count = (which: ConfigDiagnostic['level']) => rows.filter(item => item.level === which).length;
-  const errors = count('error');
-  const warnings = count('warning');
-  const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
-  const pathOf = (id: string) => {
-    const source = config.sources.find(item => item.id === id);
-    return source ? fileName(source) : id;
-  };
-  const cur = rows.find(item => item.id === selected) ?? null;
-  // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
-  const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));
-  const validate = () => {
-    void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
-      // A fresh list has new rows; the old selection would point at a different diagnostic.
-      if (result) {
-        setRun(result);
-        setSelected(null);
-      }
-    });
-  };
-  return {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate};
-}
-
 function ValidateTab(props: ValidateTabProps) {
-  const {config, editor, canValidate, open} = props;
+  const {canValidate, open} = props;
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
-  const {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate} = useValidateTab(props);
+  const {level, setLevel, selected, setSelected, shown, cur, validate, summaryTone, summary, lastRun, validating, blocked, tip, levels} = useValidateTab(props);
   return (
     <>
       <div className="rp-toolbar">
-        <Light small tone={errors ? 'err' : warnings ? 'warn' : 'ok'}>
-          {errors
-            ? t('config.failed', {errors: t('config.errors', {n: errors}), warnings: t('config.warnings', {n: warnings})})
-            : warnings
-              ? t('config.passedWarnings', {n: n(warnings)})
-              : t('config.passed')}
+        <Light small tone={summaryTone}>
+          {summary}
         </Light>
-        <span className="rp-label">
-          {run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id})}
-        </span>
+        <span className="rp-label">{lastRun}</span>
         <span className="rp-grow" />
         {canValidate && (
-          <Button
-            isPending={editor.busy === 'validate'}
-            isDisabled={!!editor.busy || candidates.length === 0}
-            tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
-            onPress={validate}
-          >
+          <Button isPending={validating} isDisabled={blocked} tip={tip} onPress={validate}>
             <Refresh />
             {t('config.revalidate')}
           </Button>
         )}
       </div>
       <span className="rp-label">{t('config.validateNote')}</span>
-      <Segmented
-        label={t('config.level')}
-        value={level}
-        onChange={setLevel}
-        items={[
-          ['all', t('config.levelAll', {n: n(rows.length)})],
-          ['error', t('config.levelErrors', {n: n(errors)})],
-          ['warning', t('config.levelWarnings', {n: n(warnings)})],
-          ['info', t('config.levelInfo', {n: n(count('info'))})]
-        ]}
-      />
+      <Segmented label={t('config.level')} value={level} onChange={setLevel} items={levels} />
       <DataTable
         label={t('config.diagnostics')}
         rows={shown}
@@ -482,8 +235,8 @@ function ValidateTab(props: ValidateTabProps) {
             minWidth: 96,
             grow: 0,
             render: item => (
-              <Light small tone={tones[item.level]}>
-                {t(levels[item.level])}
+              <Light small tone={item.tone}>
+                {item.levelText}
               </Light>
             )
           },
@@ -492,7 +245,7 @@ function ValidateTab(props: ValidateTabProps) {
             label: t('config.where'),
             minWidth: 150,
             grow: 0,
-            render: item => <span className="rp-code">{item.line !== null ? `${pathOf(item.source_id)}:${item.line}` : pathOf(item.source_id)}</span>
+            render: item => <span className="rp-code">{item.where}</span>
           },
           {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true, render: item => <TextTooltip>{item.message}</TextTooltip>},
           {id: 'code', label: t('config.code'), minWidth: 140, drop: 1, render: item => <span className="rp-code">{item.code}</span>}
@@ -500,10 +253,10 @@ function ValidateTab(props: ValidateTabProps) {
       />
       {cur && (
         <div className="rp-cluster">
-          <Light small tone={tones[cur.level]}>
-            {cur.line !== null ? t('config.atFile', {file: pathOf(cur.source_id), line: n(cur.line), message: cur.message}) : cur.message}
+          <Light small tone={cur.tone}>
+            {cur.detail}
           </Light>
-          <Button onPress={() => open(cur.source_id, cur.line)}>{t('config.openSource')}</Button>
+          <Button onPress={() => open(cur.sourceId, cur.line)}>{t('config.openSource')}</Button>
         </div>
       )}
     </>

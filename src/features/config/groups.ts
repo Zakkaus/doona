@@ -73,22 +73,38 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
   return `${text.replace(/\n+$/, '')}\n\ngroup {\n${body}\n}\n`;
 }
 
-// The node names a group's plain `name(...)` filter lists; keyword and regex forms select differently.
-const plainName = (filter: string) => /^name\(/.test(filter) && !/^name\((keyword|regex)\s*:/.test(filter);
-const nameTokens = (filter: string) => (filter.match(/'([^']*)'|"([^"]*)"|([\w.-]+)/g) ?? []).slice(1);
+// Only a complete plain call can be extended without changing filter semantics.
+function nameTokens(filter: string): string[] | null {
+  const tokens = scanConfig(filter).tokens;
+  const raw = tokens.map(token => filter.slice(token.from, token.to));
+  if (tokens[0]?.kind !== 'text' || raw[0] !== 'name' || raw[1] !== '(' || raw.at(-1) !== ')' || tokens.at(-1)?.parens !== 1) return null;
+  const names: string[] = [];
+  let value = true;
+  for (let i = 2; i < tokens.length - 1; i++) {
+    const token = tokens[i];
+    if (token.parens !== 1) return null;
+    if (value) {
+      if (token.kind !== 'text' && token.kind !== 'quoted') return null;
+      if (token.kind === 'text' && !/^[\w.-]+$/.test(raw[i])) return null;
+      names.push(raw[i]);
+    } else if (raw[i] !== ',') return null;
+    value = !value;
+  }
+  return value && names.length ? null : names;
+}
 export function namedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
-  return entry.filters.filter(plainName).flatMap(filter => nameTokens(filter).map(v => v.replace(/^['"]|['"]$/g, '')));
+  return entry.filters.flatMap(filter => (nameTokens(filter) ?? []).map(v => v.replace(/^['"]|['"]$/g, '')));
 }
 
-// Nodes joining a group by name: the names go into the group's `name(...)` filter, which is added when the
-// group selects by other means. Names already present are not repeated.
+// Preserve filters selecting by other means and append a separate name filter.
 export function addNamesToGroup(text: string, group: string, names: string[]): string {
   const entry = readGroupEntries(text).find(e => e.name === group);
   const filters = entry ? [...entry.filters] : [];
-  const at = filters.findIndex(plainName);
-  const raw = at === -1 ? [] : nameTokens(filters[at]);
-  const present = namedIn({filters});
-  const added = names.filter(name => !present.includes(name)).map(quoteName);
+  const lists = filters.map(nameTokens);
+  const at = lists.findIndex(list => list !== null);
+  const raw = at === -1 ? [] : lists[at]!;
+  const present = new Set(namedIn({filters}));
+  const added = [...new Set(names)].filter(name => !present.has(name)).map(quoteName);
   if (!added.length) return text;
   const list = [...raw, ...added].join(', ');
   if (at === -1) filters.push(`name(${list})`);
