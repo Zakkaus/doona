@@ -2,9 +2,21 @@ import {defineConfig} from 'vite';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import {version, repository, config} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
+
+// lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
+// minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
+const cssMinify = (() => {
+  try {
+    createRequire(import.meta.url)('lightningcss');
+    return 'lightningcss' as const;
+  } catch {
+    return 'esbuild' as const;
+  }
+})();
 
 export default defineConfig({
   base: './',
@@ -62,7 +74,7 @@ export default defineConfig({
     manifest: true,
     target: ['es2022'],
     cssTarget: ['chrome120', 'safari17', 'firefox120', 'edge120'],
-    cssMinify: 'lightningcss',
+    cssMinify,
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('index.html', import.meta.url))

@@ -85,7 +85,7 @@ A reverse proxy in front of both keeps them same-origin: forward `/api/` to honk
 <details>
 <summary><strong>Distribution packages</strong></summary>
 
-None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package. Recipes for the package repositories live in [install/](install/): an OpenWrt feed Makefile, an Alpine `APKBUILD`, a nixpkgs-style expression, and `doona-bin` for the AUR in its own repository. Each release also attaches `doona-<tag>-deps.tar.xz`, the installed `node_modules`, for builds that must run offline; it carries the native build helpers for Linux x86_64 and aarch64, glibc and musl. `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
+None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package. Recipes for the package repositories live in [install/](install/): an OpenWrt feed Makefile, an Alpine `APKBUILD`, a nixpkgs-style expression, and `doona-bin` for the AUR in its own repository. Each release also attaches `doona-<tag>-deps.tar.xz`, the installed `node_modules`, for builds that must run offline; it carries the native build helpers for every Linux architecture they ship (x86, x86_64, armv7, aarch64, riscv64, loong64, ppc64le, s390x, mips64el; glibc and musl), and the build falls back to esbuild's CSS minifier where lightningcss has no binary. `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
 
 </details>
 
