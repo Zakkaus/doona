@@ -35,25 +35,54 @@ export function BackendActionsCard() {
       </h2>
       <span className="rp-label">{note}</span>
       <ErrorMessage error={runtimeError} />
-      <div className="rp-toolbar">
-        <LifecycleActions actions={lifecycle} />
-      </div>
-      <div className="rp-toolbar">
-        {canFlush && <FlushCacheButton {...flush} />}
-        {canRefresh && (
-          <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
-            {refreshLabel}
-          </Button>
+      <div className="rp-ops">
+        {lifecycle.length > 0 && (
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.groupLifecycle')}</span>
+            <div className="rp-cluster">
+              <LifecycleActions actions={lifecycle} />
+            </div>
+          </div>
         )}
-        {canClose && <CloseAllButton {...closeAll} />}
-        {canUpdate && (
-          <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
-            {t('settings.geodataUpdate')}
-          </Button>
+        {canFlush && (
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('nav.dns')}</span>
+            <div className="rp-cluster">
+              <FlushCacheButton {...flush} />
+            </div>
+          </div>
+        )}
+        {canRefresh && (
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('nav.nodes')}</span>
+            <div className="rp-cluster">
+              <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
+                {refreshLabel}
+              </Button>
+            </div>
+          </div>
+        )}
+        {canClose && (
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('nav.connections')}</span>
+            <div className="rp-cluster">
+              <CloseAllButton {...closeAll} />
+            </div>
+          </div>
         )}
       </div>
       {hasGeodata && (
-        <>
+        <div className="rp-geodata">
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.geodata')}</span>
+            <div className="rp-cluster">
+              {canUpdate && (
+                <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
+                  {t('settings.geodataUpdate')}
+                </Button>
+              )}
+            </div>
+          </div>
           <span className="rp-label">{t('settings.geodataNote')}</span>
           <ErrorMessage error={geodataError} />
           <DataTable
@@ -85,7 +114,7 @@ export function BackendActionsCard() {
               {id: 'source', label: t('settings.geodataSource'), minWidth: 240, grow: 2, drop: 1, render: asset => asset.source}
             ]}
           />
-        </>
+        </div>
       )}
     </section>
   );
