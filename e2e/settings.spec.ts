@@ -182,7 +182,7 @@ test('five taps on the duck honk, and the header wears the long name for the ses
   for (let i = 0; i < 4; i++) await duck.click();
   await expect(brand).toHaveText('doona');
   await duck.click();
-  await expect(page.getByText('Honk!', {exact: true})).toBeVisible();
+  await expect(page.getByText('Duck sound', {exact: true})).toBeVisible();
   await expect(brand).toHaveText('doooooona');
   await page.getByRole('dialog').getByRole('button', {name: 'Close', exact: true}).click();
   await expect(brand).toHaveText('doooooona');

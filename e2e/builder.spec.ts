@@ -8,7 +8,7 @@ test('a node joins an existing group or a new one through the name filter', asyn
   await menu.getByRole('menuitemradio', {name: /^resilient/}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('jp-01 added to resilient');
   await page.getByRole('button', {name: 'Add sg-01 to a group', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'New group…', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: 'New group...', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('backup');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
@@ -25,7 +25,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveValue('name(jp-01, hk-02)');
   await dialog.getByRole('button', {name: /Policy$/}).click();
-  await page.getByRole('option', {name: /^Fallback/}).click();
+  await page.getByRole('option', {name: /^fallback/}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 2'}).fill("subtag('sub-c')");
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();

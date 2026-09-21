@@ -175,7 +175,7 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('changed-generation');
   const before = reads;
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+  await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect.poll(() => reads).toBeGreaterThan(before);
   expect(writes).toBe(0);
   await expect(dialog).toBeVisible();
@@ -204,7 +204,7 @@ for (const action of ['add', 'remove'] as const) {
       await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
       await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
     }
-    await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+    await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
     expect(validations).toBe(0);
     await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   });

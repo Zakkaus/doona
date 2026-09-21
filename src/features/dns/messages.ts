@@ -20,7 +20,7 @@ export const messages = defineMessages({
     'dns.persistent': '持久快取',
     'dns.notCovered': '不涵蓋',
     'dns.empty': '沒有快取記錄',
-    'dns.cacheUnavailable': '不支援快取列表',
+    'dns.cacheUnavailable': '不支援快取清單',
     'dns.expires': '到期時間',
     'dns.staleUntil': '過期後仍可用至',
     'dns.deleteEntry': '刪除快取 {id}',
@@ -29,15 +29,15 @@ export const messages = defineMessages({
     'dns.log': '解析記錄',
     'dns.exportLog': '匯出 CSV',
     'dns.result': '結果',
-    'dns.logFilterHint': '域名包含',
-    'dns.logTotal': '環內 {n} 筆',
+    'dns.logFilterHint': '網域包含',
+    'dns.logTotal': '環形緩衝區內有 {n} 筆記錄',
     'dns.logEmpty': '沒有符合的解析記錄',
     'dns.logUnavailable': '此後端不提供解析記錄',
-    'dns.cacheFilter': '域名：{domain}',
+    'dns.cacheFilter': '網域：{domain}',
     'dns.flushConfirm': '將清除全部 {n} 筆快取記錄，無法復原。',
     'dns.flushConfirmAll': '將清除全部快取記錄，無法復原。',
     'dns.flushAll': '清除全部快取',
-    'dns.answer': '{name} {type} · TTL {ttl} 秒 · {data}'
+    'dns.answer': '{name} {type}；TTL {ttl} 秒；{data}'
   },
   'zh-CN': {
     'dns.queryFailed': '查询失败：{error}',
@@ -68,14 +68,14 @@ export const messages = defineMessages({
     'dns.exportLog': '导出 CSV',
     'dns.result': '结果',
     'dns.logFilterHint': '域名包含',
-    'dns.logTotal': '环内 {n} 条',
+    'dns.logTotal': '环形缓冲区内有 {n} 条记录',
     'dns.logEmpty': '没有匹配的解析记录',
     'dns.logUnavailable': '此后端不提供解析记录',
     'dns.cacheFilter': '域名：{domain}',
     'dns.flushConfirm': '将清除全部 {n} 条缓存记录，无法恢复。',
     'dns.flushConfirmAll': '将清除全部缓存记录，无法恢复。',
     'dns.flushAll': '清除全部缓存',
-    'dns.answer': '{name} {type} · TTL {ttl} 秒 · {data}'
+    'dns.answer': '{name} {type}；TTL {ttl} 秒；{data}'
   },
   en: {
     'dns.queryFailed': 'Query failed: {error}',
@@ -109,13 +109,13 @@ export const messages = defineMessages({
     'dns.exportLog': 'Export CSV',
     'dns.result': 'Result',
     'dns.logFilterHint': 'Name contains',
-    'dns.logTotal': {one: '{n} record in the ring', other: '{n} records in the ring'},
+    'dns.logTotal': {one: '{n} record in the ring buffer', other: '{n} records in the ring buffer'},
     'dns.logEmpty': 'No matching resolutions',
-    'dns.logUnavailable': 'This backend keeps no resolution log',
+    'dns.logUnavailable': 'This backend does not provide a resolution log',
     'dns.cacheFilter': 'Domain: {domain}',
-    'dns.flushConfirm': 'This removes all {n} cache entries and cannot be undone.',
+    'dns.flushConfirm': {one: 'This removes the {n} cache entry and cannot be undone.', other: 'This removes all {n} cache entries and cannot be undone.'},
     'dns.flushConfirmAll': 'Clears every cache record; this cannot be undone.',
     'dns.flushAll': 'Clear all cache',
-    'dns.answer': '{name} {type} · TTL {ttl} s · {data}'
+    'dns.answer': '{name} {type}; TTL {ttl} s; {data}'
   }
 });

@@ -104,7 +104,7 @@ test('connection filtering narrows the collection and renders an empty result', 
 
 test('activating a checked source or rule removes that filter', async ({page}) => {
   await page.goto('/#/connections');
-  const pick = page.getByRole('button', {name: 'Pick', exact: true});
+  const pick = page.getByRole('button', {name: 'Select', exact: true});
   const grid = page.getByRole('grid', {name: 'Connections'});
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
   await pick.click();
@@ -342,7 +342,7 @@ test('close all with a rule filter closes the listed rows only', async ({page}) 
   const listed = async () => Number(await grid.getAttribute('aria-rowcount')) - 1;
   await expect.poll(listed).toBeGreaterThan(0);
   const total = await listed();
-  await page.getByRole('button', {name: 'Pick', exact: true}).click();
+  await page.getByRole('button', {name: 'Select', exact: true}).click();
   // The telegram rule routes through a proxy group, so its connections are userspace-observed and closable.
   await page.getByRole('menu').getByRole('menuitemradio').filter({hasText: 'telegram'}).first().click();
   await expect(page).toHaveURL(/rule=/);

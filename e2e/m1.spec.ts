@@ -21,7 +21,7 @@ test.describe('first-release backend', () => {
     await page.goto('/#/connections');
     await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
     await expect(page.getByRole('button', {name: 'Close all', exact: true})).toHaveCount(0);
-    await expect(page.getByText('Partial view', {exact: true})).toBeVisible();
+    await expect(page.getByText('Partial connection visibility', {exact: true})).toBeVisible();
     await page.keyboard.press('Control+K');
     await page.locator('.rp-dialog input').fill('telegram');
     await expect(page.getByRole('option', {name: /api\.telegram\.org/})).toBeVisible();
