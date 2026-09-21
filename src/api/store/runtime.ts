@@ -43,7 +43,7 @@ export function useMemoryHistory(capabilities: Capabilities | undefined) {
 }
 export function useCapabilities() {
   const api = getApi();
-  return useResource({key: ['capabilities'], every: 0, fetch: signal => api.capabilities(signal)});
+  return useResource({key: ['capabilities'], every: 0, retryErrors: true, followEvents: false, fetch: signal => api.capabilities(signal)});
 }
 export function useDatapath(enabled = true) {
   const api = getApi();

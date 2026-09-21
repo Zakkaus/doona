@@ -33,7 +33,11 @@ export function useProviders(enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.providers({cursor, limit}, signal),
-          (acc: ProviderList | undefined, page) => (acc ? {...acc, providers: [...acc.providers, ...page.providers]} : page)
+          (acc: ProviderList | undefined, page) => {
+            if (!acc) return {...page, providers: [...page.providers]};
+            acc.providers.push(...page.providers);
+            return acc;
+          }
         )
     },
     {enabled}

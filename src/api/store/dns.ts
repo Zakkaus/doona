@@ -29,7 +29,11 @@ function useDnsCache(enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),
-          (acc: DnsCacheList | undefined, page) => (acc ? {...acc, entries: [...acc.entries, ...page.entries]} : page)
+          (acc: DnsCacheList | undefined, page) => {
+            if (!acc) return {...page, entries: [...page.entries]};
+            acc.entries.push(...page.entries);
+            return acc;
+          }
         )
     },
     {enabled}

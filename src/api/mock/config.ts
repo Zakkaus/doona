@@ -79,12 +79,11 @@ function groupsIn(text: string): Set<string> {
   );
 }
 
-export function validate(request: ConfigValidationRequest, generationId: string, fallbackGroups: Set<string>): ConfigValidationResult {
+export function validate(request: ConfigValidationRequest, generationId: string): ConfigValidationResult {
   const ids = request.sources.map((source, index) => source.id ?? `source-${index + 1}`);
   if (new Set(ids).size !== ids.length) throw new ApiError(400, 'invalid_request', 'Source IDs must be unique');
   const main = request.sources[0]?.content ?? '';
-  const configuredGroups = groupsIn(main);
-  const groups = request.mode === 'full' ? new Set(configuredGroups.size ? configuredGroups : fallbackGroups) : new Set<string>();
+  const groups = request.mode === 'full' ? groupsIn(main) : new Set<string>();
   const diagnostics = request.sources.flatMap((source, index) => diagnose(ids[index], source.content, groups, request.mode));
   return {valid: !diagnostics.some(item => item.level === 'error'), diagnostics, generation_id: generationId, validated_at: new Date().toISOString()};
 }

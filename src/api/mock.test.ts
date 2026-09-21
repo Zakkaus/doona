@@ -11,11 +11,14 @@ afterEach(() => {
 });
 
 it('validates and enumerates quoted hashes without treating them as comments', async () => {
+  vi.useFakeTimers();
   const api = createMockApi();
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   const content = "routing {\n  pname('foo#bar') -> direct # trailing comment\n  fallback: direct\n}";
   expect((await api.validateConfig({mode: 'full', sources: [{id: main.id, content}]})).valid).toBe(true);
-  await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  const accepted = await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
   expect((await api.rules()).rules.find(rule => rule.expression === "pname('foo#bar')")).toMatchObject({outbound: 'direct', must: false});
   const invalid = "routing {\n  pname('foo#bar') -> missing # trailing comment\n}";
   const check = await api.validateConfig({mode: 'full', sources: [{id: main.id, content: invalid}]});
