@@ -30,10 +30,11 @@ export function ModeCards() {
   };
   const apply = async () => {
     if (!staged) return;
+    const submitted = staged;
     let written: boolean;
     try {
       written = await write(
-        text => writeMode(text, staged),
+        text => writeMode(text, submitted),
         errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
       );
     } catch (error) {
@@ -41,8 +42,8 @@ export function ModeCards() {
       return;
     }
     if (written) {
-      setStaged(null);
-      toast('positive', t('act.modeApplied', {mode: t(modeLabels[staged.mode])}));
+      setStaged(current => (current === submitted ? null : current));
+      toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
   };
   return (
@@ -82,7 +83,7 @@ export function ModeCards() {
           </span>
           <ChoiceMenu
             quiet
-            isDisabled={!writable || !main}
+            isDisabled={busy || !writable || !main}
             label={t('act.global')}
             value={target}
             onChange={name => setStaged({mode: 'global', target: name})}

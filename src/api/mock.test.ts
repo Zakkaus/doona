@@ -10,6 +10,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it('validates and enumerates quoted hashes without treating them as comments', async () => {
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = "routing {\n  pname('foo#bar') -> direct # trailing comment\n  fallback: direct\n}";
+  expect((await api.validateConfig({mode: 'full', sources: [{id: main.id, content}]})).valid).toBe(true);
+  await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  expect((await api.rules()).rules.find(rule => rule.expression === "pname('foo#bar')")).toMatchObject({outbound: 'direct', must: false});
+  const invalid = "routing {\n  pname('foo#bar') -> missing # trailing comment\n}";
+  const check = await api.validateConfig({mode: 'full', sources: [{id: main.id, content: invalid}]});
+  expect(check.diagnostics).toContainEqual(expect.objectContaining({code: 'unknown_outbound', line: 2, column: 23}));
+});
+
 it('serves cumulative outbound counters independently of live connection bytes', async () => {
   const api = createMockApi();
   const runtime = await api.runtime();

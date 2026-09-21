@@ -43,7 +43,7 @@ export function useBackendForm(query: string) {
     if (params.has('api')) {
       params.delete('api');
       params.delete('token');
-      history.replaceState(null, '', location.pathname + location.search + '#/settings' + (params.size ? '?' + params : ''));
+      history.replaceState(history.state, '', location.pathname + location.search + '#/settings' + (params.size ? '?' + params : ''));
     }
     const card = params.get('card');
     if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});

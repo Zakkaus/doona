@@ -5,6 +5,7 @@ import * as fixtures from './fixtures/configuration';
 import {found} from './common';
 import {diagnose, stored, validate} from './config';
 import type {MockLifecycle} from './lifecycle';
+import {uncomment} from '../../features/config/blocks';
 
 type ConfigurationApi = Pick<
   Api,
@@ -53,7 +54,7 @@ export function createConfiguration(
       const read = (file: (typeof list)[number], bare: boolean) => {
         let depth = 0;
         file.content.split('\n').forEach((raw, i) => {
-          const code = raw.replace(/#.*$/, '').trim();
+          const code = uncomment(raw).trim();
           if (!bare) {
             if (/^routing\s*\{/.test(code)) {
               depth = 1;

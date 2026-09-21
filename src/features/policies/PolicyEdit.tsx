@@ -3,24 +3,26 @@ import {useT} from '../../i18n';
 import {policyKindLabels} from './view';
 import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
 import type {MainSourceEdit} from '../config/mainSource';
+import type {ConfigSource} from '../../api/model';
 import Close from '../../ui/icons/Close';
 import {Button, LabeledSelect, ModalDialog, TextField, errorText, toast} from '../../ui/ui';
 
-export function PolicyEdit({name, source, entry}: {name: string; source: MainSourceEdit; entry: GroupEntry}) {
+export function PolicyEdit({name, source, entry}: {name: string; source: MainSourceEdit; entry: GroupEntry | undefined}) {
   const t = useT();
-  const [draft, setDraft] = useState<{policy: string | null; filters: string[]} | null>(null);
+  const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
   const saveDraft = (close: () => void) => {
     if (!draft) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
     void source
       .apply(
-        text => writeGroupEntry(text, entry.name, {filters, policy: draft.policy}),
-        errors => toast('negative', t('policy.editInvalid', {n: errors}))
+        text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}),
+        errors => toast('negative', t('policy.editInvalid', {n: errors})),
+        draft.origin
       )
       .then(
         written => {
           if (written) {
-            toast('positive', t('policy.updated', {name: entry.name}));
+            toast('positive', t('policy.updated', {name: draft.name}));
             close();
           }
         },
@@ -36,9 +38,17 @@ export function PolicyEdit({name, source, entry}: {name: string; source: MainSou
         if (!isOpen) setDraft(null);
       }}
       trigger={
-        <Button quiet isDisabled={source.busy} onPress={() => setDraft({policy: entry.policy, filters: entry.filters})}>
-          {t('policy.edit')}
-        </Button>
+        draft || (source.writable && entry && source.main) ? (
+          <Button
+            quiet
+            isDisabled={source.busy || !entry || !source.main}
+            onPress={() => {
+              if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
+            }}
+          >
+            {t('policy.edit')}
+          </Button>
+        ) : undefined
       }
       footer={close => (
         <>

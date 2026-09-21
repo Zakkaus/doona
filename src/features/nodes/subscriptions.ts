@@ -1,4 +1,4 @@
-import {blockEntries, blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
+import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
 
 export const DEFAULT_INTERVAL = 86400;
 export type SubscriptionEntry = {tag: string; host: string | null; interval: number; from: number; to: number};
@@ -42,37 +42,57 @@ function scalarParts(code: string) {
   }
   const suffix = quoted ? text.slice(valueToken.to).trim() : '';
   const ua = suffix.startsWith('(') && suffix.endsWith(')') ? unquote(suffix.slice(1, -1)) : null;
+  if (suffix && ua === null) return null;
   return tag ? {tag, url, ua} : null;
 }
 
 function subscriptionRanges(text: string) {
   const {blocks, tokens} = scanConfig(text);
-  return blocks
-    .filter(block => block.name === 'subscription')
-    .flatMap(section =>
-      blockEntries(text, section).flatMap<SubscriptionRange>(range => {
-        const code = text.slice(range.from, range.to);
-        if (range.block) {
-          const block = range.block;
-          if (block.line === block.endLine) return [];
-          const fields = blockFields(text, block, tokens);
-          const url = fields.find(field => field.name === 'url');
-          const interval = fields.find(field => field.name === 'interval');
-          return [
-            {
-              ...range,
-              tag: block.name,
-              host: url ? host(unquote(url.value)) : null,
-              interval: interval ? (parseInterval(unquote(interval.value)) ?? 0) : DEFAULT_INTERVAL,
-              fields,
-              parts: null
-            }
-          ];
-        }
-        const parts = scalarParts(code);
-        return parts ? [{...range, tag: parts.tag, host: host(parts.url), interval: DEFAULT_INTERVAL, fields: [], parts}] : [];
-      })
-    );
+  const entries: SubscriptionRange[] = [];
+  // Entries are cut at token boundaries, not lines: two scalars may share a line.
+  for (const section of blocks.filter(block => block.name === 'subscription')) {
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token.from <= section.open || token.from >= section.close || token.depth !== section.depth + 1 || token.kind === 'comment') continue;
+      const lineStart = text.lastIndexOf('\n', token.from - 1) + 1;
+      const from = /^[ \t]*$/.test(text.slice(lineStart, token.from)) ? lineStart : token.from;
+      const block = section.children.find(block => block.from === token.from);
+      if (block) {
+        while (tokens[i + 1]?.from < block.to) i++;
+        if (block.line === block.endLine) continue;
+        const fields = blockFields(text, block, tokens);
+        const url = fields.find(field => field.name === 'url');
+        const interval = fields.find(field => field.name === 'interval');
+        entries.push({
+          from,
+          to: block.to,
+          block,
+          tag: block.name,
+          host: url ? host(unquote(url.value)) : null,
+          interval: interval ? (parseInterval(unquote(interval.value)) ?? 0) : DEFAULT_INTERVAL,
+          fields,
+          parts: null
+        });
+        continue;
+      }
+      const colon = tokens[i + 1];
+      if (colon && text.slice(colon.from, colon.to) === ':' && !text.slice(colon.to).startsWith('//')) i += 2;
+      const value = tokens[i];
+      if (!value || value.from >= section.close) break;
+      if (value.kind !== 'quoted') {
+        while (tokens[i + 1]?.from === tokens[i].to && !/[(){}]/.test(text.slice(tokens[i + 1].from, tokens[i + 1].to))) i++;
+      }
+      if (text[tokens[i + 1]?.from] === '(') {
+        i++;
+        while (tokens[i + 1] && !(text[tokens[i].from] === ')' && tokens[i].parens === 1)) i++;
+      }
+      let to = tokens[i].to;
+      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) to = tokens[++i].to;
+      const parts = scalarParts(text.slice(from, to));
+      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: DEFAULT_INTERVAL, fields: [], parts});
+    }
+  }
+  return entries;
 }
 
 export function readSubscriptions(text: string): SubscriptionEntry[] {

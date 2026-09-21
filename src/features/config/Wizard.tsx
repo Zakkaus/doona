@@ -34,6 +34,7 @@ export function Wizard({
   // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
   const [origin] = useState(() => main);
   const complete = useSourceComplete(origin);
+  useEffect(() => editor.cancel, [editor.cancel]);
   const current = origin.content ?? '';
   const [state, setState] = useState<WizardState>(() => {
     const read = readState(current);

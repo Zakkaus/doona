@@ -83,8 +83,8 @@ function Trace() {
   const nodes = useNodes(resources?.nodes.available === true);
   const probe = useNodeProbe(nodes.refetch);
   const leaf = (outbound: string | null) => {
-    if (!outbound || outbound === 'direct' || outbound === 'block') return null;
-    const {chain, node} = leafOf(outbound, form.network, groups.data ?? [], nodes.data ?? []);
+    if (!trace.input || !outbound || outbound === 'direct' || outbound === 'block') return null;
+    const {chain, node} = leafOf(outbound, trace.input.network, groups.data ?? [], nodes.data ?? []);
     const health = node ? preferredHealth(node) : undefined;
     const reach = !node
       ? t('rule.noMember')
@@ -156,7 +156,7 @@ function Trace() {
           {trace.result.evaluations.map((evaluation, i) => (
             <section className="rp-card" key={i}>
               <div className="rp-row">
-                <h3 className="rp-h3">{evaluation.dst_ip ?? form.domain}</h3>
+                <h3 className="rp-h3">{evaluation.dst_ip ?? trace.input?.domain}</h3>
                 <Kv
                   inline
                   items={[

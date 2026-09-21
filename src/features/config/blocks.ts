@@ -147,10 +147,3 @@ export function blockEntries(text: string, block: TextBlock): Array<{from: numbe
   }
   return entries;
 }
-
-export function topLevelBlocks(lines: string[], name: string): Array<{open: number; close: number}> {
-  return scanConfig(lines.join('\n'))
-    .blocks.filter(block => block.name === name)
-    .map(block => ({open: block.line, close: block.endLine}));
-}
-export const topLevelBlock = (lines: string[], name: string) => topLevelBlocks(lines, name)[0] ?? null;

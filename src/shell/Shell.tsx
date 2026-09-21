@@ -2,7 +2,7 @@ import {Login} from './Login';
 import {ApiError} from '../api/error';
 import {consumeProfileReadError} from '../api/profiles';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {I18nProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
+import {I18nProvider, RouterProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
@@ -16,7 +16,7 @@ import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Lo
 import {MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
-import {DraftContext, useRoute} from './route';
+import {DraftContext, parseHash, useRoute} from './route';
 import {refetchAll, useCapabilities, useVersion} from '../api/store';
 import {features, navAvailable, warmPage} from './registry';
 import {SearchDialog} from './search/SearchDialog';
@@ -121,7 +121,7 @@ export function Shell() {
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
   const ap = useAppearance(settings);
-  const {route, query, go, setDirty, pending, discard, cancel} = useRoute(settings.api);
+  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
   // A hash no page owns goes to the first page instead of showing it under the wrong address.
   useEffect(() => {
     if (!features.some(feature => feature.path === route)) go('activity');
@@ -141,23 +141,30 @@ export function Shell() {
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>
-        <DraftContext.Provider value={setDirty}>
-          <Frame
-            settings={settings}
-            lang={lang}
-            pickLang={pickLang}
-            ap={ap}
-            route={route}
-            query={query}
-            go={go}
-            openSearch={() => setSearchOpen(true)}
-            mac={mac}
-          />
-        </DraftContext.Provider>
-        <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
-        {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
-        <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
-        <ToastHost />
+        <RouterProvider
+          navigate={href => {
+            const next = parseHash(href);
+            go(next.route, next.query);
+          }}
+        >
+          <DraftContext.Provider value={{setDirty, revision}}>
+            <Frame
+              settings={settings}
+              lang={lang}
+              pickLang={pickLang}
+              ap={ap}
+              route={route}
+              query={query}
+              go={go}
+              openSearch={() => setSearchOpen(true)}
+              mac={mac}
+            />
+          </DraftContext.Provider>
+          <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
+          {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} go={go} />}
+          <Shortcuts go={go} openSearch={() => setSearchOpen(true)} mac={mac} />
+          <ToastHost />
+        </RouterProvider>
       </I18nProvider>
     </LangContext.Provider>
   );

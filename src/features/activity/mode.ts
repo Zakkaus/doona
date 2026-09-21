@@ -38,9 +38,21 @@ export function writeMode(text: string, next: OutboundMode): string {
   let at = block.open + 1;
   if (text[at] === '\n') at++;
   // Mandatory rules retain precedence over the mode catch-all.
-  for (const token of tokens) {
+  for (let i = 4; i < tokens.length; i++) {
+    const token = tokens[i];
     if (token.from <= block.open || token.to > block.close || token.depth !== 1 || token.kind !== 'symbol' || text[token.from] !== ')') continue;
-    if (text.slice(token.from - 5, token.to) !== '(must)') continue;
+    const arrow = tokens[i - 4],
+      target = tokens[i - 3],
+      open = tokens[i - 2],
+      modifier = tokens[i - 1];
+    if (
+      arrow.parens !== 0 ||
+      text.slice(arrow.from, arrow.to) !== '->' ||
+      target.kind === 'comment' ||
+      text.slice(open.from, open.to) !== '(' ||
+      text.slice(modifier.from, modifier.to) !== 'must'
+    )
+      continue;
     const end = text.indexOf('\n', token.to);
     at = end !== -1 && end < block.close ? end + 1 : token.to;
   }

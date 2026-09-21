@@ -8,7 +8,7 @@ import Close from '../../ui/icons/Close';
 import type {PageProps} from '../../features/types';
 import {features, navAvailable, subpages} from '../registry';
 
-type Hit = {id: number; label: string; desc: string | undefined; route: string; query: string};
+type Hit = {id: string; label: string; desc: string | undefined; route: string; query: string};
 
 export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
@@ -25,9 +25,9 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
   const limit = needle ? 8 : 5;
   const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
   const available = (path: string) => navAvailable(path, capabilities.data);
-  const byId = new Map<number, Hit>();
-  const hit = (label: string, desc: string | undefined, route: string, query = ''): Hit => {
-    const item = {id: byId.size, label, desc, route, query};
+  const byId = new Map<string, Hit>();
+  const hit = (id: string, label: string, desc: string | undefined, route: string, query = ''): Hit => {
+    const item = {id, label, desc, route, query};
     byId.set(item.id, item);
     return item;
   };
@@ -46,7 +46,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: places
         .filter(place => match(place.title, place.parent && place.parent + ' ' + place.title))
         .slice(0, limit)
-        .map(place => hit(place.title, place.parent || undefined, place.route, place.query))
+        .map(place => hit(`page:${place.route}?${place.query}`, place.title, place.parent || undefined, place.route, place.query))
     },
     {
       id: 'conns',
@@ -54,7 +54,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: connectionRows(connections.data)
         .filter(c => match(c.domain, c.dst, c.src))
         .slice(0, limit)
-        .map(c => hit(c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', 'id=' + encodeURIComponent(c.id)))
+        .map(c => hit(`connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', 'id=' + encodeURIComponent(c.id)))
     },
     {
       id: 'nodes',
@@ -64,6 +64,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
         .slice(0, limit)
         .map(n =>
           hit(
+            `node:${n.id}`,
             n.name,
             n.group_ids.join(', ') || undefined,
             'nodes',
@@ -77,7 +78,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: (groups.data ?? [])
         .filter(g => match(g.name))
         .slice(0, limit)
-        .map(g => hit(g.name, g.policy.native, 'policies', 'group=' + encodeURIComponent(g.id)))
+        .map(g => hit(`group:${g.id}`, g.name, g.policy.native, 'policies', 'group=' + encodeURIComponent(g.id)))
     },
     {
       id: 'providers',
@@ -85,7 +86,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: (providers.data?.providers ?? [])
         .filter(p => match(p.name))
         .slice(0, limit)
-        .map(p => hit(p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', 'provider=' + encodeURIComponent(p.id)))
+        .map(p => hit(`provider:${p.id}`, p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', 'provider=' + encodeURIComponent(p.id)))
     },
     {
       id: 'sources',
@@ -93,7 +94,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: (config.data?.sources ?? [])
         .filter(source => match(source.path))
         .slice(0, limit)
-        .map(source => hit(source.path, source.kind, 'config', 'tab=source&source=' + encodeURIComponent(source.id)))
+        .map(source => hit(`source:${source.id}`, source.path, source.kind, 'config', 'tab=source&source=' + encodeURIComponent(source.id)))
     },
     {
       id: 'rules',
@@ -101,7 +102,9 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       items: (rules.data?.rules ?? [])
         .filter(rule => rule.kind === 'rule' && match(rule.expression, rule.outbound))
         .slice(0, limit)
-        .map(rule => hit(rule.expression, `#${rule.index + 1} → ${rule.outbound}`, 'rules', 'tab=list&rule=' + encodeURIComponent(rule.rule_id)))
+        .map(rule =>
+          hit(`rule:${rule.rule_id}`, rule.expression, `#${rule.index + 1} → ${rule.outbound}`, 'rules', 'tab=list&rule=' + encodeURIComponent(rule.rule_id))
+        )
     }
   ];
   const sources = [capabilities, connections, nodes, groups, providers, config, rules];
@@ -129,7 +132,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
         aria-label={t('search')}
         className="rp-results"
         onAction={id => {
-          const item = byId.get(Number(id));
+          const item = byId.get(String(id));
           if (!item) return;
           go(item.route, item.query);
           onClose();

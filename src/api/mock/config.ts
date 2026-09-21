@@ -2,6 +2,7 @@ import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigVali
 import {ApiError} from '../error';
 import {sha256} from '../hash';
 import * as vocab from '../daeVocab';
+import {uncomment} from '../../features/config/blocks';
 
 // `onDisk` is the text the digest and size describe when the served content is a redacted copy of it.
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};
@@ -28,7 +29,8 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
   const lines = text.split('\n');
   lines.forEach((raw, index) => {
     const line = index + 1;
-    const code = raw.replace(/#.*$/, '').trim();
+    const uncommented = uncomment(raw);
+    const code = uncommented.trim();
     if (!code) return;
     // A section is `name {`; an entry block inside one is `tag: {`, the tag quoted or bare.
     const open = /^(?:'([^']*)'|"([^"]*)"|([A-Za-z_][\w.-]*))\s*:?\s*\{\s*(.*)$/.exec(code);
@@ -62,7 +64,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
       // `name(must)` and `name(mark: 0x800)` address the same outbound as `name`.
       const outbound = target.replace(/\(.*\)$/, '');
       if (mode === 'full' && !builtinOutbounds.has(target) && !builtinOutbounds.has(outbound) && !groups.has(outbound))
-        at(line, code.length - target.length + 1, 'error', 'unknown_outbound', `No group named "${outbound}"`);
+        at(line, uncommented.lastIndexOf(target) + 1, 'error', 'unknown_outbound', `No group named "${outbound}"`);
       if (rule && !/\w\(/.test(rule[1])) at(line, 1, 'warning', 'bare_condition', 'Condition has no function call; it will never match');
     }
   });

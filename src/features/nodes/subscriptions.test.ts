@@ -107,3 +107,21 @@ subscription {
   expect(out).toBe(text.replace("'2h'", "'3600s'"));
   expect(writeInterval(text, 'second', 0)).toContain("url: 'https://two.example/#'");
 });
+
+it('rewrites only the selected scalar when subscriptions share a physical line', () => {
+  const source = "subscription { a: 'https://a.example/sub' b: 'https://b.example/sub'(agent) }";
+  expect(readSubscriptions(source).map(entry => entry.tag)).toEqual(['a', 'b']);
+  const first = writeInterval(source, 'a', 3600);
+  expect(first).toContain("b: 'https://b.example/sub'(agent)");
+  expect(readSubscriptions(first).map(entry => [entry.tag, entry.interval])).toEqual([
+    ['a', 3600],
+    ['b', DEFAULT_INTERVAL]
+  ]);
+  const second = writeInterval(source, 'b', 0);
+  expect(second).toContain("a: 'https://a.example/sub'");
+  expect(readSubscriptions(second).map(entry => [entry.tag, entry.interval])).toEqual([
+    ['a', DEFAULT_INTERVAL],
+    ['b', 0]
+  ]);
+  expect(second).toContain("ua: 'agent'");
+});
