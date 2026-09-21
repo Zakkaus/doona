@@ -38,7 +38,7 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | 後端   | 實作上述固定版本原生 API 契約並啟用 API 監聽的引擎（見[安裝](#安裝)）                                                         |
 | 瀏覽器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以後。這些是 CSS 建置目標；JavaScript 建置目標是 ES2022。自動化測試只用 Chromium |
-| 建置   | Node 22 及以後、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                                                             |
+| 建置   | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0`、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                                 |
 
 ## 安裝
 
@@ -81,7 +81,7 @@ experimental {
 
 把解壓後的檔案放在網站根目錄或 `/ui/` 這類前綴下即可；頁面用 hash 路由（`/ui/#/activity`），不需要改寫規則。UI 與引擎不同源時，需要在引擎中允許 UI 的來源。原生 API 監聽、CORS 與身分驗證的設定請參閱引擎文件。
 
-前面放一個反向代理可讓兩者同源：把 `/api/` 轉給引擎的監聽位址，檔案放在 `/ui/` 下。
+反向代理可讓兩者同源：將精確路徑 `/api`（探索端點）和 `/api/` 下的所有路徑轉送至引擎的監聽位址，靜態檔案放在 `/ui/` 下。如果設定了代理路徑前綴，兩類 API 路徑都須保留該前綴。
 
 </details>
 
@@ -155,7 +155,7 @@ pnpm check                       # 型別、lint、翻譯、格式、單元測�
 pnpm check:size                  # dist/ 建置的 gzip 大小限制
 pnpm perf <url>                  # 量測已提供的建置：首屏、腳本、輪詢與捲動成本，CPU 降速四倍
 pnpm e2e:install --with-deps     # 瀏覽器測試只需安裝一次
-pnpm e2e                         # 對模擬後端的瀏覽器測試，根目錄與 /ui/ 各一輪
+pnpm e2e                         # 重新建置，再對模擬後端執行瀏覽器測試，涵蓋根目錄與 /ui/
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 

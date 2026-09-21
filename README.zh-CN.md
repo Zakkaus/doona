@@ -38,7 +38,7 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | 后端   | 实现上述固定版本原生 API 契约并启用 API 监听的引擎（见[安装](#安装)）                                                         |
 | 浏览器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以后。这些是 CSS 构建目标；JavaScript 构建目标是 ES2022。自动化测试只用 Chromium |
-| 构建   | Node 22 及以后、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                                                             |
+| 构建   | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0`、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                                 |
 
 ## 安装
 
@@ -81,7 +81,7 @@ experimental {
 
 把解压后的文件放在网站根目录或 `/ui/` 这类前缀下即可；页面用 hash 路由（`/ui/#/activity`），不需要重写规则。UI 与引擎不同源时，需要在引擎中允许 UI 的来源。原生 API 监听、CORS 与身份验证的设置请参阅引擎文档。
 
-前面放一个反向代理可让两者同源：把 `/api/` 转给引擎的监听地址，文件放在 `/ui/` 下。
+反向代理可让两者同源：将精确路径 `/api`（发现端点）和 `/api/` 下的所有路径转发到引擎的监听地址，静态文件放在 `/ui/` 下。如果配置了代理路径前缀，两类 API 路径都须保留该前缀。
 
 </details>
 
@@ -155,7 +155,7 @@ pnpm check                       # 类型、lint、翻译、格式、单元测�
 pnpm check:size                  # dist/ 构建的 gzip 大小限制
 pnpm perf <url>                  # 测量已提供的构建：首屏、脚本、轮询与滚动成本，CPU 降速四倍
 pnpm e2e:install --with-deps     # 浏览器测试只需安装一次
-pnpm e2e                         # 对模拟后端的浏览器测试，根目录与 /ui/ 各一轮
+pnpm e2e                         # 重新构建，再对模拟后端执行浏览器测试，覆盖根目录与 /ui/
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 

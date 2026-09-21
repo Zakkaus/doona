@@ -61,6 +61,7 @@ try {
     });
     await context.addInitScript(
       ([palette, scheme]) => {
+        localStorage.setItem('doona-api', 'mock');
         localStorage.setItem('doona-lang', 'en');
         localStorage.setItem('doona-scheme', scheme);
         localStorage.setItem('doona-palette', palette);
@@ -69,7 +70,9 @@ try {
     );
     const page = await context.newPage();
     await page.goto(`${baseURL}/#/activity`);
-    await page.waitForTimeout(1500);
+    await page.locator('.rp-donut .recharts-sector').first().waitFor();
+    await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
+    await page.evaluate(() => document.fonts.ready);
     tiles.push(await page.screenshot());
     await context.close();
   }
@@ -91,6 +94,7 @@ try {
       const context = await browser.newContext({viewport: {width: 1440, height: 920}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});
       await context.addInitScript(
         ([lang, scheme]) => {
+          localStorage.setItem('doona-api', 'mock');
           localStorage.setItem('doona-lang', lang);
           localStorage.setItem('doona-scheme', scheme);
           localStorage.setItem('doona-palette', 'rose-pine/moon');
@@ -99,7 +103,12 @@ try {
       );
       const page = await context.newPage();
       await page.goto(`${baseURL}/${route}`);
-      await page.waitForTimeout(1500);
+      await page
+        .locator(name === 'policies' ? '.rp-nodes' : name === 'rules' ? '.rp-tree-tile' : '.rp-donut .recharts-sector')
+        .first()
+        .waitFor();
+      await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
+      await page.evaluate(() => document.fonts.ready);
       await screenshot(page, join(dir, lang, `${name}-${scheme}`));
       await context.close();
     }
