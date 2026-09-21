@@ -35,7 +35,7 @@ import {useRoute} from './route';
 import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useVersion} from '../api/store';
 import {chainLabel, connectionRows} from '../api/selectors';
 import {features, navAvailable, subpages, warmPage} from './registry';
-import {SettingsContext} from '../features/settings/Settings';
+import {SettingsContext} from '../features/settings/context';
 import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
 

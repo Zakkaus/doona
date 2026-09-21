@@ -16,6 +16,16 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await expect(page.locator('.rp-toolbar input')).toHaveValue('192.168.1.2');
 });
 
+test('a pairing link fills the backend draft and removes credentials from the address bar', async ({page}) => {
+  await page.goto('/#/settings?api=http://router:9527&token=x');
+  await expect(page.locator('[name=api]')).toHaveValue('http://router:9527');
+  await expect(page.locator('[name=token]')).toHaveValue('x');
+  await expect(page).toHaveURL(/#\/settings$/);
+  await page.reload();
+  await expect(page.locator('[name=api]')).toHaveValue('');
+  await expect(page.locator('[name=token]')).toHaveValue('');
+});
+
 browserTest('a first visit under a backend takes that backend and asks for its token', async ({page}) => {
   const challenge = {
     status: 401,
