@@ -11,7 +11,6 @@ test('a resolution record opens beside the log with its answers', async ({page})
   const panel = page.locator('.rp-panel');
   await expect(panel.getByRole('heading', {name})).toBeVisible();
   await expect(panel.locator('.rp-kv')).toContainText('Route source');
-  // Answers are listed in full, TTL included, or the record says it has none.
   await expect(panel.locator('.rp-code, .rp-empty').first()).toBeVisible();
   await panel.getByRole('button', {name: 'Close', exact: true}).click();
   await expect(panel).toHaveCount(0);

@@ -16,11 +16,7 @@ import type {
 import {addU64, formatBytes, formatRate, parseU64, pctU64} from './u64';
 import type {RuntimeOutbounds, TrafficHistory} from './model';
 
-/** The latency column compares one observation tuple: warm TCP data probes, IPv4 first and IPv6 when that is all a node has. */
-// The one TCP data observation a node's latency column shows. Backends differ in what they measure (honk's
-// periodic probe reports HTTP headers on an unknown-warmth session; a warm TCP connect is the cheapest), so
-// the pick is a ranking rather than a fixed tuple: warmth, then measurement cost, then IPv4 before IPv6.
-// Vocabulary a newer backend adds sorts with the unknown entries rather than falling out of the order.
+// Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {
   tcp_connect: 0,
@@ -76,7 +72,6 @@ export function sourceIp(src: string | undefined): string | undefined {
   return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
 }
 
-// Group policy kinds in the user's language.
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   selector: 'policy.kind.selector',
   urltest: 'policy.kind.urltest',
@@ -85,7 +80,6 @@ export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   random: 'policy.kind.random',
   score: 'policy.kind.score'
 };
-// Built-in outbounds read in the user's language; group and node names stay as configured.
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
 }
@@ -193,7 +187,6 @@ const flowWords: Record<string, Key> = {
   dns_mapping: 'flow.v.dnsMapping',
   explicit: 'flow.v.explicit'
 };
-// Why a trace is incomplete.
 export const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',
@@ -216,7 +209,6 @@ const inputLabels: Record<string, Key | string> = {
   uid: 'UID',
   pid: 'PID'
 };
-// Known engine words become message keys; anything else stays as the engine reported it.
 export const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
 
@@ -333,9 +325,7 @@ export function probeSummary(result: ProbeResult): MessageRef {
   };
 }
 
-// Field lists take a label function so the pages can translate the keys; values stay contract vocabulary.
 export type LabelFn = (key: Key) => string;
-// Enum values shown to people go through the dictionary; anything outside the contract shows as is.
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -386,7 +376,6 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
       : [])
   ];
 }
-// The memory figures as rows; `omit` drops the ones a page shows another way (the cgroup bar on the overview).
 const cgroupScopes: Record<'service' | 'shared' | 'unknown', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared', unknown: 'ui.unknown'};
 export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] = []): Array<[string, string]> {
   const percent = pctU64(memory.cgroup?.current_bytes ?? null, memory.cgroup?.limit_bytes ?? null);
@@ -395,8 +384,7 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] 
     ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null)],
     ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null)],
     ['ov.f.cgroupPercent', percent === null ? '—' : Math.round(percent) + '%'],
-    // Whose cgroup: the service's own, one shared with other processes, or unknown (a desktop session slice
-    // reads as the whole login), so the usage is not mistaken for the engine's alone.
+    // Distinguish service, shared, and unknown cgroups so shared usage is not attributed solely to the engine.
     ['ov.f.cgroupScope', memory.cgroup ? label(cgroupScopes[memory.cgroup.scope]) : '—'],
     ['ov.f.oomHigh', memory.cgroup?.events?.high ?? '—'],
     ['ov.f.oom', memory.cgroup?.events?.oom ?? '—'],
@@ -443,9 +431,7 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-// A flow record leaving the ring to make room (aged out, or pushed out of a full ring: no resource named), or
-// a flow never recorded because sampling skipped it, is the backend's routine housekeeping; a record that
-// lost its own history or a change in what gets recorded is a gap worth a notice.
+// Suppress routine eviction and sampling gaps; report lost history or recording-scope changes.
 export function routineGap(event: ApiEvent): boolean {
   if (event.event !== 'flow.gap') return false;
   const {reason, resource_id} = event.data;
@@ -481,5 +467,4 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
   }
 }
 
-// The first block of a UUID, enough to tell two apart on a strip; the full value goes in a tooltip.
 export const shortId = (id: string) => (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id) ? id.slice(0, 8) : id);

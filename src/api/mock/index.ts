@@ -35,7 +35,6 @@ function found<T>(value: T | undefined, kind: string): T {
   return value;
 }
 
-// Every flow with a name resolved once: the record says who asked, what answered and how long it took.
 function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
   return [...flows]
     .filter(flow => flow.input.domain)
@@ -122,8 +121,7 @@ export function createMockApi(): Api {
     if (history.length > 1024) history.shift();
     listeners.forEach(listener => listener(event));
   }
-  // A new generation: the revision moves, the runtime settings fall back to the
-  // configuration, listeners hear it.
+  // Advancing a generation increments the revision, restores configured runtime settings, and notifies listeners.
   function advance(): string {
     configRevision += 1;
     Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
@@ -133,8 +131,7 @@ export function createMockApi(): Api {
     publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
     return generation;
   }
-  // Management writes land in the main source's text too, so the config page shows what the API did. The demo's
-  // main text carries placeholder credentials in the clear, the way the file on disk would.
+  // Mirror management writes into the main source so the configuration page shows the API result.
   async function editMain(edit: (text: string) => string) {
     const main = (await loadSources()).find(item => item.id === 'src-main');
     if (!main) return;
@@ -220,7 +217,7 @@ export function createMockApi(): Api {
     signal?.throwIfAborted();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
-  // Logs: a bounded ring the stream replays from, fed by what the mock does plus a quiet background trickle.
+  // Keep a bounded replay ring fed by mock activity and quiet background records.
   const levels: LogRecord['level'][] = ['trace', 'debug', 'info', 'warn', 'error'];
   const logRing: Array<LogRecord & {id: string}> = [];
   const logListeners = new Set<(record: LogRecord & {id: string}) => void>();
@@ -392,8 +389,7 @@ export function createMockApi(): Api {
         max_points > limits.max_points!
       )
         throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
-      // The ring is synthesised on read: one sample every five seconds back through the window, with the
-      // same slow drift the memory snapshot follows, so the curve and the tile agree at the newest point.
+      // Synthesize five-second history with the memory snapshot's drift so their newest points agree.
       const now = Date.now();
       const every = 5;
       const count = Math.min(Math.floor(window_seconds / every), max_points);
@@ -810,9 +806,7 @@ export function createMockApi(): Api {
       advance();
       return {deleted: 1};
     },
-    // The dictionary is read off the accepted text: main routing first, includes in place, in evaluation order.
-    // A line the demo's flows and trace already refer to keeps that id; anything added later gets one from its
-    // file and line.
+    // Rebuild rules in evaluation order from accepted text; preserve known fixture IDs and derive new IDs from file and line.
     rules: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');

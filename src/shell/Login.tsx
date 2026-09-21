@@ -4,9 +4,7 @@ import {useT} from '../i18n';
 import {readProfiles, writeProfiles} from '../api/profiles';
 import {Button, TextField} from '../ui/ui';
 
-// What a backend that wants a token gets instead of a wall of errors: one field, one button. The token goes
-// into the active profile and the page restarts against the backend, the same way settings saves it. A token
-// the backend has already turned away is said so, instead of showing the same empty form again.
+// Save the token into the active profile and restart against the backend; show rejection when that token already failed.
 export function Login({backend, rejected}: {backend: string; rejected: boolean}) {
   const t = useT();
   const [token, setToken] = useState('');

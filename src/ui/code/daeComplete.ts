@@ -1,8 +1,6 @@
 import {autocompletion, type Completion, type CompletionContext, type CompletionResult} from '@codemirror/autocomplete';
 import * as vocab from '../../api/daeVocab';
 
-// What dae text can say, offered by where the cursor is: section names at the top level, keys inside global
-// and dns, condition functions in routing, an outbound after "->" or "fallback:", policies inside group.
 const sections = ['global', 'subscription', 'node', 'group', 'dns', 'routing'].map(label => ({label, type: 'keyword'}));
 const globalKeys = vocab.globalKeys.map(label => ({label, type: 'property', apply: label + ': '}));
 const conditions = ['domain', 'dip', 'sip', 'dport', 'sport', 'l4proto', 'ipversion', 'pname', 'mac', 'dscp', 'qname', 'qtype', 'upstream'].map(label => ({
@@ -31,7 +29,6 @@ function sectionAt(context: CompletionContext): string | null {
   return stack[0] ?? null;
 }
 
-// Completions for dae; `outbounds` are the group names the current text (or the running config) defines.
 export function daeCompletion(outbounds: () => string[]) {
   return autocompletion({
     override: [

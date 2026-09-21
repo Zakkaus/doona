@@ -1,4 +1,3 @@
-// Small control kit on react-aria-components, styled by theme.css with the Rosé Pine variables.
 import {
   useEffect,
   useId,
@@ -77,14 +76,12 @@ import {millis} from '../api/u64';
 
 export const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
 
-// Wrap a state change in a view transition (a page-wide crossfade) where the browser supports it.
 export function withCrossfade(fn: () => void) {
   const d = document as Document & {startViewTransition?: (cb: () => void) => void};
   if (!d.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return fn();
   d.startViewTransition(() => flushSync(fn));
 }
 
-// A selection indicator that slides between items, as in S2's SegmentedControl and Tabs.
 export function useSlider(value: string, selector = '[data-selected]') {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{x: number; y: number; w: number; h: number} | null>(null);
@@ -163,9 +160,7 @@ export function Button({
   );
   const text = label ?? tip;
   if (!text) return btn;
-  // The tip hangs off a wrapper so the tree keeps one shape while the button goes busy or disabled (a swap
-  // would remount the button and drop keyboard focus). Enabled, the wrapper has no box of its own; disabled,
-  // it takes the focus and pointer events the native button no longer accepts, usually to explain why.
+  // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts focus and pointer events only when the native button cannot.
   return (
     <TooltipTrigger delay={400}>
       <Focusable>
@@ -236,7 +231,7 @@ export function errorText(error: unknown) {
 
 // Resource refetch promises settle on both success and failure; refresh feedback uses committed inline errors.
 export const visibleErrors = new Map<string, Error>();
-// `onRetry` is the affordance a failed load owes the reader: the resource's own refetch, not a page reload.
+// Retry refetches the failed resource rather than reloading the page.
 export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
   const t = useT();
   const id = useId();
@@ -323,7 +318,6 @@ export function Segmented({
   );
 }
 type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
-// Label with an optional leading icon (a flag, a swatch); shared by menu items and the rendered value of a select.
 const ItemLabel = ({i}: {i: Item}) => (
   <span className="rp-il">
     {i.icon && <span className="ic">{i.icon}</span>}
@@ -332,7 +326,6 @@ const ItemLabel = ({i}: {i: Item}) => (
 );
 // S2 marks the selected item with a checkmark in a leading column, not with a background.
 export const Check = () => <Checkmark className="rp-check-mark" />;
-// One item body for menus and selects: the check column, the label, an optional description.
 const ItemBody = ({i}: {i: Item}) => (
   <>
     <Check />
@@ -345,7 +338,6 @@ const item = (i: Item) => (
     <ItemBody i={i} />
   </MenuItem>
 );
-// The select body shared by InlineSelect and LabeledSelect; `className` picks the trigger's clothes.
 function SelectBody({items, value, onChange, label, isDisabled, className}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string}) {
   return (
     <Select
@@ -454,7 +446,6 @@ export function InlineSelect({items, value, onChange, label}: {items: Item[]; va
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
   return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
 }
-// A ranked row: label, value, a thin fill.
 export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
   return (
     <div className="rp-bar">
@@ -917,7 +908,9 @@ export function ModalDialog({
   );
 }
 
-// Toasts: a queue rendered once by the shell, stacked like S2's ToastContainer.
+// Toasts: react-aria's queue, rendered once by the shell as S2's ToastContainer does: the newest in front with
+// the rest stacked behind it, and a "show all" that lays them out as a list over an underlay. Timers pause
+// while the region is hovered or focused and while the list is open.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastItem = {id: number; kind: ToastKind; msg: string; exiting?: boolean; timer?: ReturnType<typeof setTimeout>; left: number; since: number};
 let listeners: Array<(t: ToastItem[]) => void> = [];

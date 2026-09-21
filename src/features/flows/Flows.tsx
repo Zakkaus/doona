@@ -37,8 +37,6 @@ const stages: Record<string, Key> = {
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
 
-// The config as a picture: every retained flow drawn through rules, outbounds and selected nodes. A click pins
-// one item and dims the rest; the pinned path can be followed into the flow records.
 export function RoutingMap({go, query}: PageProps) {
   const t = useT();
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -77,7 +75,6 @@ export function RoutingMap({go, query}: PageProps) {
   );
 }
 
-// "Which decisions did this traffic go through": the retained flows, the trace of the selected one beside it.
 export function FlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();

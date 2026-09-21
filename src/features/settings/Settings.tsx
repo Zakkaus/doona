@@ -141,7 +141,6 @@ export function Settings({query}: PageProps) {
     }
     const profiles = dialog === 'add' && !active ? [] : editedProfiles();
     if (!profiles) {
-      // The form's URL is invalid, so the current profile cannot be carried over; say so behind the dialog.
       setDialog(null);
       toast('negative', t('settings.invalidUrl'));
       return;

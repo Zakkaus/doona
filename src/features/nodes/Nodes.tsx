@@ -55,9 +55,6 @@ const latencyOf = (node: Node) => {
   return health?.state === 'healthy' && health.latency_ms != null ? health.latency_ms : Infinity;
 };
 
-// Where nodes come from and what they are: providers (subscriptions, files, the nodes written in the config)
-// with their usage and expiry, refreshable when the backend allows; the nodes of the picked provider below,
-// searchable, filterable and sortable. With can_manage, subscriptions and share links are added and removed here.
 export function Nodes({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
@@ -110,9 +107,7 @@ export function Nodes({go, query}: PageProps) {
   // Nodes written straight into the configuration have no provider. A backend that lists them under an
   // `inline` provider is taken as is; one that does not gets a row for them here, so they stay reachable.
   const {list, synthetic} = useMemo(() => {
-    // A subscription's name may be an opaque label; the tag its nodes carry is the name the configuration uses.
-    // A subscription without nodes (not fetched yet, or empty) is matched to its entry by URL host when the
-    // backend shows one, else by elimination: the one entry no named subscription claims.
+    // Prefer each node's subscription tag over an opaque provider label. For providers without nodes, match by visible URL host, then by the sole unclaimed entry.
     const tags = new Map<string, string>();
     for (const node of nodes.data ?? []) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
     const byHost = (item: Provider) => {

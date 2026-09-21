@@ -8,8 +8,6 @@ import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
 import {useState} from 'react';
 
-// One place for the one-shot backend actions the contract offers: reload, suspend or resume, the DNS cache, subscriptions, connections and the geodata files. Each control is the same component the
-// action's own page uses; every one is gated on the capability that backs it.
 export function BackendActionsCard() {
   const t = useT();
   const locale = LOCALE[useLang()];

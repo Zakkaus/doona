@@ -168,7 +168,6 @@ test.describe('default view', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page).toHaveURL(/#\/connections\?id=c-\d+$/);
-    // Below 1200px the detail is a drawer; Escape closes it and clears the selection.
     const drawer = page.getByRole('dialog');
     await expect(drawer.getByRole('heading')).toBeVisible();
     await page.keyboard.press('Escape');

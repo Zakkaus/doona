@@ -68,7 +68,6 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(15);
-  // Config order: rule-2 before rule-10, unknown IDs last.
   const ids = await panel.getByRole('rowheader').allTextContents();
   expect(ids.slice(0, 3)).toEqual(['domain(full: rule-0.example)', 'domain(full: rule-1.example)', 'domain(full: rule-2.example)']);
   expect(ids.slice(-2)).toEqual(['Unknown rule', 'Unknown rule']);

@@ -1,7 +1,5 @@
-// Run beside the installed dependencies: node tools/audit-ui.mjs [--md] [--axe] [URL].
-// Defaults to Dawn/en at 1440px. --width=900 and --dark measure responsive and dark surfaces.
-// --screenshots=DIR saves full-page captures; --axe includes WCAG findings.
-// Use the shared SSD browser cache when present; PLAYWRIGHT_BROWSERS_PATH overrides it.
+// Usage: node tools/audit-ui.mjs [--md] [--axe] [--width=N] [--dark] [--screenshots=DIR] [URL]; defaults to Dawn/en at 1440px.
+// Uses the shared browser cache when available; PLAYWRIGHT_BROWSERS_PATH overrides it.
 import {existsSync, mkdirSync, readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';

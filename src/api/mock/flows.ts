@@ -18,8 +18,7 @@ export function flowFields(input: FlowDetail['input'], steps: FlowStep[]): FlowF
   };
 }
 
-// Which of the demo config's rules a domain hits, so flow evidence and the rule dictionary agree: adverts are
-// blocked, mainland sites go direct, Telegram and Discord through proxy, everything else through the fallback.
+// Keep mock flow evidence aligned with the shared rule dictionary.
 const ruleTable: Array<[string[], string]> = [
   [['ad.doubleclick.net', 'doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'r1'],
   [

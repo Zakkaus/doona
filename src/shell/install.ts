@@ -1,8 +1,6 @@
 import {useSyncExternalStore} from 'react';
 
-// The browser's "install this site as an app" offer, kept so a button can trigger it later. Chrome and Edge
-// fire beforeinstallprompt once the manifest and service worker qualify; other browsers never do, and the
-// button stays hidden there.
+// Cache beforeinstallprompt so a later button can trigger it. Chrome and Edge emit the event; unsupported browsers keep the button hidden.
 type InstallPrompt = Event & {prompt: () => Promise<void>; userChoice: Promise<{outcome: 'accepted' | 'dismissed'}>};
 let deferred: InstallPrompt | null = null;
 const listeners = new Set<() => void>();

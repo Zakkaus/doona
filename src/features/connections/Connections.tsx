@@ -30,8 +30,6 @@ import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {columns, readView, viewKey, type ConnectionView} from './view';
 
-// One page for "who is connected to what right now": the table groups by client by default,
-// the selected row opens beside the table and is remembered in the URL.
 export function Connections({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
@@ -102,7 +100,7 @@ export function Connections({go, query}: PageProps) {
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
-  // The lazy filter: pick a client or a rule from what is on the table now, busiest first.
+  // Build filter choices from visible rows, ordered by frequency.
   const seen = (values: Array<string | null | undefined>) => {
     const counts = new Map<string, number>();
     for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -192,7 +190,7 @@ export function Connections({go, query}: PageProps) {
         {canClose && (
           <CloseAllButton
             count={shown.length}
-            // Network and source-IP filters are the bulk endpoint's own; a text or outbound filter is not. A
+            // Network and source-IP filters are the bulk endpoint's own; a text, outbound or rule filter is not. A
             // truncated snapshot lists fewer rows than match, so it closes the listed ones only.
             selection={
               out === 'all' && (src || !needle) && !resource.data?.truncated

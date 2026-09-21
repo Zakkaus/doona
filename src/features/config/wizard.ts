@@ -1,8 +1,4 @@
-// The quick setup edits `subscription` (one entry per line) and swaps `routing` for a template; `group` keeps
-// what it has, gains the groups the template needs, and a main source without one gets a single `proxy`.
-// Every other section, and every subscription line the form does not recognise, is kept verbatim; a missing
-// main source is generated whole. No dae parser: sections are cut by brace matching.
-// `raw` is the line as it stands in the file; a line the form has not changed is written back untouched.
+// Rewrite owned subscription/routing sections and append required groups; preserve unrecognized lines and all other sections verbatim. This uses brace matching, not a dae parser.
 import {defaultTemplate, quote, templates, type RuleTemplate} from './templates';
 
 type Subscription = {name: string; url: string; raw?: string};
@@ -14,7 +10,6 @@ const ident = (value: string) => value.trim().replace(/[^\w-]/g, '-');
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 
 type Section = {name: string; start: number; end: number; body: string[]};
-// Top-level sections with their line ranges (inclusive of the braces).
 function sections(lines: string[]): Section[] {
   const out: Section[] = [];
   let open: {name: string; start: number; depth: number} | null = null;
@@ -36,11 +31,9 @@ function sections(lines: string[]): Section[] {
   return out;
 }
 
-// The names of the groups a `group` section defines, in order; comment lines are skipped.
 function groupNames(body: string[]): string[] {
   return body.map(line => /^[ \t]*([^\s{}]+)[ \t]*\{/.exec(line.replace(/#.*$/, ''))?.[1]).filter((name): name is string => !!name);
 }
-// What the current text says, for the form: the recognised `tag: 'url'` lines, the first group's name.
 export function readState(text: string): WizardState {
   const lines = text.split('\n');
   const found = sections(lines);
@@ -51,7 +44,6 @@ export function readState(text: string): WizardState {
     if (match && isSubscriptionUrl(match[3])) subscriptions.push({name: match[1] ?? match[2], url: match[3], raw: line});
     else subscriptions.push({name: '', url: '', raw: line});
   }
-  // The first group's name, whatever characters it uses; comment lines are skipped.
   const group = groupNames(found.find(s => s.name === 'group')?.body ?? [])[0] ?? null;
   const lan = /^\s*lan_interface:\s*(\S+)/m.exec(found.find(s => s.name === 'global')?.body.join('\n') ?? '')?.[1];
   return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
@@ -94,7 +86,6 @@ function globalBlock(state: WizardState): string[] {
   ];
 }
 
-// The groups a template needs and the file lacks, in honk's syntax; an empty list when the file has them all.
 function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
   const have = new Set(current);
   const wanted = rules === 'keep' ? [] : templates[rules].groups.filter(group => !have.has(group.name));
@@ -102,8 +93,6 @@ function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
   if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
   return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
-// The text to write: the current text with subscription replaced (and routing when a template is chosen), a
-// group section added when there is none, or a whole file when there is no text to keep.
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
     return [
@@ -124,8 +113,6 @@ export function writeState(current: string, state: WizardState): string {
   const lines = current.replace(/\n$/, '').split('\n');
   const found = sections(lines);
   const replacements = new Map<string, string[]>([['subscription', subscriptionBlock(state)]]);
-  // Groups the file already defines are never rewritten; the ones a template needs are appended, and a file
-  // without a group section gets one.
   const groupSection = found.find(section => section.name === 'group');
   const missing = groupLines(groupNames(groupSection?.body ?? []), state.rules);
   if (!groupSection) replacements.set('group', ['group {', ...missing, '}']);

@@ -32,11 +32,9 @@ export function createApi(base: string, token?: string): Api {
       return response;
     }
   });
-  // Every mutation the contract lets a client repeat safely carries a fresh key, so a retry after a lost
-  // reply cannot start the same operation twice.
+  // A fresh key per mutation prevents transport retries from starting a second operation.
   const once = () => ({'Idempotency-Key': uuid()});
-  // The contract pins an operation's href to an absolute /api/v1 path; a base URL that carries a proxy prefix
-  // keeps it, so the path is resolved under the base rather than against its origin.
+  // Resolve contract-absolute hrefs under the configured reverse-proxy prefix, not the origin.
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href.replace(/^\/+/, ''), root);
@@ -55,10 +53,7 @@ export function createApi(base: string, token?: string): Api {
       delay = retryAfter(response);
     }
   }
-  // One loop for both SSE feeds: connect with Last-Event-ID, hand frames to `onFrame`, pause Retry-After
-  // between attempts. A 409 cursor expiry restarts from the head; a definitive 4xx ends the stream; anything
-  // else (network failure, 5xx, a malformed frame) is retried with backoff up to 30 s, since the backend or the
-  // link may just be restarting.
+  // Both SSE feeds resume with Last-Event-ID and honor Retry-After; cursor expiry restarts at the head, definitive 4xx stops, and transient failures back off to 30 seconds.
   async function subscribeStream(
     url: URL,
     lastEventId: string | undefined,

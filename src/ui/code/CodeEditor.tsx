@@ -53,7 +53,6 @@ const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(
 
 export type EditorMark = {line: number; column?: number | null; level: 'error' | 'warning' | 'info'; message: string};
 
-// Colours come from theme.css tokens, so the editor follows every palette and the dark scheme.
 const theme = EditorView.theme({
   '&': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)', border: '1px solid var(--rp-hl-high)', borderRadius: '8px', fontSize: '13px'},
   '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-pine)', boxShadow: '0 0 0 1px var(--rp-pine)'},
@@ -166,10 +165,7 @@ function toDiagnostics(state: EditorState, marks: EditorMark[]): Diagnostic[] {
     });
 }
 
-// A CodeMirror editor in the kit's frame: line numbers, dae highlighting, search, bracket matching, and
-// diagnostics listed above and underlined in the text. `readOnly` turns it into a viewer that still selects,
-// copies and searches. `focusLine` scrolls a line into view and puts the cursor on it.
-// A stable default, so a parent without diagnostics does not dispatch an empty set on every render.
+// Read-only editors remain searchable and keyboard-scrollable; focusLine moves both viewport and cursor. Keep the default marks array stable to avoid redundant CodeMirror updates.
 const noMarks: EditorMark[] = [];
 export function CodeEditor({
   value,
@@ -192,7 +188,6 @@ export function CodeEditor({
   outbounds?: () => string[];
   // Mod-S inside the editor; the caller decides what saving means.
   onSave?: () => void;
-  // A shorter viewport for previews inside dialogs.
   compact?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -268,8 +263,7 @@ export function CodeEditor({
       instance.destroy();
       view.current = null;
     };
-    // The editor keeps its own document; props feed it through the effects below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- CodeMirror owns its document; the effects below sync prop changes
   }, []);
   useEffect(() => {
     const instance = view.current;

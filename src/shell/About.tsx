@@ -15,7 +15,6 @@ export function engineLinks(name: string | undefined) {
   return {slug, repo: name ? `${org}/${name}` : org};
 }
 
-// The about box behind the brand: versions, licence, credits. The duck answers to taps; five of them and it honks.
 export function About({trigger}: {trigger: ReactElement}) {
   const t = useT();
   const version = useVersion();

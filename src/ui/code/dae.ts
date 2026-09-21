@@ -1,7 +1,6 @@
 import {StreamLanguage} from '@codemirror/language';
 
-// A stream tokenizer for dae text: comments, section keywords, quoted strings, rule arrows and the outbound
-// after them, numbers. Enough for reading; the engine does the real parsing.
+// Lightweight highlighting only; the engine remains the authoritative dae parser.
 const sections = /^(global|dns|upstream|routing|request|response|subscription|node|group|include|fallback)\b/;
 export const dae = StreamLanguage.define<{afterArrow: boolean}>({
   name: 'dae',

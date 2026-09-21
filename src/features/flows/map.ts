@@ -11,7 +11,6 @@ export type FlowMap = {nodes: MapNode[]; links: MapLink[]};
 
 const terminal = (outbound: string | null) => outbound === 'direct' || outbound === 'block';
 
-// Node ids as the config names them; a chain ends in a node id, the map draws node names.
 export type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
 // A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
@@ -73,7 +72,6 @@ export function flowMap(flows: FlowSummary[], groups: GroupSummary[], nodes: Nod
   return {nodes: [...byId.values()].sort(order), links};
 }
 
-// The flows that pass through one node of the map, for filtering the list beneath it.
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames): FlowSummary[] {
   const [stage, key] = [id.slice(0, id.indexOf(':')) as MapStage, id.slice(id.indexOf(':') + 1)];
   return flows.filter(flow => {
@@ -82,8 +80,7 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames)
   });
 }
 
-// The map as lanes, one per outbound: the rules that lead into it on the left, the node it selects on the
-// right. Lanes never cross, which is what makes the config readable at a glance.
+// Represent the map as non-crossing lanes: rules, outbound, then selected node.
 export type Lane = {
   outbound: MapNode;
   rules: Array<{node: MapNode; count: number}>;

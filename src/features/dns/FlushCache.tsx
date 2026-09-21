@@ -1,7 +1,6 @@
 import {useT} from '../../i18n';
 import {Button, ModalDialog} from '../../ui/ui';
 
-// The flush-everything button with its confirmation; the page it sits on supplies the call.
 export function FlushCacheButton({count, busy, isDisabled, onFlush}: {count: number | null; busy: boolean; isDisabled?: boolean; onFlush: () => void}) {
   const t = useT();
   return (
