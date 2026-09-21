@@ -1,3 +1,4 @@
+import {useMemo} from 'react';
 import type {Capabilities, MemoryHistory, RuntimeMemory} from '../../api/model';
 import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {useMemoryHistory} from '../../api/store';
@@ -27,11 +28,22 @@ export function historySamples(history: MemoryHistory): MemorySample[] {
   });
 }
 
+export function memoryWindow(rings: Rings<MemorySample>, history: MemorySample[], windowSeconds: number, now = Date.now()) {
+  const series = window(rings, history, windowSeconds, foldMemory, now);
+  return {
+    ...series,
+    timestamps: series.samples.map(sample => sample.time),
+    rss: series.samples.map(sample => sample.rss),
+    cgroup: series.samples.map(sample => sample.cgroup)
+  };
+}
+
 export function useMemorySeries(capabilities: Capabilities | undefined, memory: RuntimeMemory | undefined, windowSeconds: number) {
   const history = useMemoryHistory(capabilities);
   const rings = useMemorySamples(memory);
   const advertised = capabilities?.resources.memory_history.available === true;
-  const series = window(rings, advertised && history.data ? historySamples(history.data) : [], windowSeconds, foldMemory);
+  const converted = useMemo(() => (history.data ? historySamples(history.data) : []), [history.data]);
+  const series = useMemo(() => memoryWindow(rings, advertised ? converted : [], windowSeconds), [rings, converted, advertised, windowSeconds]);
   return {
     ...series,
     loading: advertised && !history.data && history.loading,

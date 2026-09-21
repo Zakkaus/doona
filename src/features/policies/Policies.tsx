@@ -1,33 +1,17 @@
 import {useT} from '../../i18n';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import Refresh from '../../ui/icons/Refresh';
-import Close from '../../ui/icons/Close';
 import {useGroupControl, useGroups, useNodes, useCapabilities} from '../../api/store';
-import {groupConfigFields, policyKindLabels, preferredHealth, preferredObservation, probeSummary} from '../../api/selectors';
+import {groupConfigFields, policyKindLabels, preferredHealth, probeSummary} from '../../api/selectors';
 import type {HealthObservation} from '../../api/model';
 import {useMainSourceEdit} from '../config/mainSource';
-import {canonicalPolicy, policyNames, readGroupEntries, writeGroupEntry, type GroupEntry} from '../config/groups';
+import {readGroupEntries, type GroupEntry} from '../config/groups';
 import type {MainSourceEdit} from '../config/mainSource';
-import {
-  Badge,
-  Button,
-  Disclosure,
-  DisclosureGroup,
-  ErrorMessage,
-  LabeledSelect,
-  Light,
-  Loading,
-  Kv,
-  ModalDialog,
-  Segmented,
-  Switch,
-  TextField,
-  errorText,
-  toast,
-  Empty
-} from '../../ui/ui';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, errorText, toast, Empty} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import type {PageProps} from '../types';
+import {memberHealth} from './health';
+import {PolicyEdit} from './PolicyEdit';
 
 function PolicyCard({
   id,
@@ -47,25 +31,6 @@ function PolicyCard({
   entry: GroupEntry | undefined;
 }) {
   const t = useT();
-  const [draft, setDraft] = useState<{policy: string; filters: string[]} | null>(null);
-  const saveDraft = (close: () => void) => {
-    if (!draft) return;
-    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
-    void source
-      .apply(
-        text => writeGroupEntry(text, entry!.name, {filters, policy: draft.policy}),
-        errors => toast('negative', t('policy.editInvalid', {n: errors}))
-      )
-      .then(
-        written => {
-          if (written) {
-            toast('positive', t('policy.updated', {name: entry!.name}));
-            close();
-          }
-        },
-        error => toast('negative', errorText(error))
-      );
-  };
   const control = useGroupControl(id, refreshGroups, refreshNodes);
   // A failed control toasts once; a failed load shows inline and does not repeat on every poll.
   useEffect(() => {
@@ -78,10 +43,7 @@ function PolicyCard({
     if (settled) onLoaded(id);
   }, [settled, id, onLoaded]);
   // The group reports its members' health itself, nested groups included; the node list fills in when it does not.
-  const members = useMemo(
-    () => g?.members.map(m => ({...m, health: preferredObservation(g.runtime.health.filter(h => h.member_id === m.id)) ?? health.get(m.id)})) ?? [],
-    [g, health]
-  );
+  const members = useMemo(() => memberHealth(g, health), [g, health]);
   // Toasts name the member; the backend answers with its id.
   const memberName = (id: string) => members.find(m => m.id === id)?.name ?? id;
   const tcp = g?.runtime.selection.tcp?.member_id;
@@ -124,64 +86,7 @@ function PolicyCard({
               )}
             </span>
             <span className="rp-cluster">
-              {source.writable && entry && (
-                <ModalDialog
-                  title={t('policy.editTitle', {name: g.name})}
-                  narrow
-                  isOpen={draft !== null}
-                  onOpenChange={isOpen => {
-                    if (!isOpen) setDraft(null);
-                  }}
-                  trigger={
-                    <Button quiet isDisabled={source.busy} onPress={() => setDraft({policy: canonicalPolicy(entry.policy), filters: entry.filters})}>
-                      {t('policy.edit')}
-                    </Button>
-                  }
-                  footer={close => (
-                    <>
-                      <Button onPress={close}>{t('ui.cancel')}</Button>
-                      <Button accent isDisabled={!draft?.filters.some(f => f.trim())} isPending={source.busy} onPress={() => saveDraft(close)}>
-                        {t('policy.save')}
-                      </Button>
-                    </>
-                  )}
-                >
-                  {draft && (
-                    <div className="rp-list">
-                      <span className="rp-label">{t('policy.editHelp')}</span>
-                      <LabeledSelect
-                        label={t('policy.policy')}
-                        value={draft.policy}
-                        onChange={policy => setDraft({...draft, policy})}
-                        items={policyNames.map(name => ({id: name, label: t(policyKindLabels[name]), desc: name}))}
-                      />
-                      {draft.filters.map((filter, i) => (
-                        <TextField
-                          key={i}
-                          label={t('policy.filterN', {n: i + 1})}
-                          value={filter}
-                          placeholder="name(keyword: 'HK')"
-                          spellCheck={false}
-                          onChange={value => setDraft({...draft, filters: draft.filters.map((f, j) => (j === i ? value : f))})}
-                          action={
-                            <Button
-                              quiet
-                              icon
-                              label={t('policy.removeFilter', {n: i + 1})}
-                              onPress={() => setDraft({...draft, filters: draft.filters.filter((_, j) => j !== i)})}
-                            >
-                              <Close />
-                            </Button>
-                          }
-                        />
-                      ))}
-                      <Button small quiet onPress={() => setDraft({...draft, filters: [...draft.filters, '']})}>
-                        {t('policy.addFilter')}
-                      </Button>
-                    </div>
-                  )}
-                </ModalDialog>
-              )}
+              {source.writable && entry && <PolicyEdit name={g.name} source={source} entry={entry} />}
               <Button
                 isPending={control.busy === 'probe'}
                 isDisabled={!!control.busy || !control.canProbe}
