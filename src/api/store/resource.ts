@@ -92,6 +92,9 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
   let stale = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
+  // Consecutive transient refusals; the first few retry quietly after the backend's Retry-After.
+  let refused = 0;
+  let hold: number | null = null;
   const clear = () => {
     clearTimeout(timer);
     timer = undefined;
@@ -127,6 +130,7 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
     settled = request.promise
       .then(
         value => {
+          refused = 0;
           if (!disposed) {
             data = value;
             publish({data, loading: false, error: null});
@@ -135,7 +139,8 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
         },
         reason => {
           const error = reason instanceof Error ? reason : new Error(String(reason));
-          if (!disposed) publish({data, loading: false, error});
+          if (error instanceof ApiError && error.transient && ++refused <= 3) hold = error.retryAfter ?? 2;
+          else if (!disposed) publish({data, loading: false, error});
           return {key: name, ok: false, error} as const;
         }
       )
@@ -144,7 +149,10 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
         request.release();
         if (disposed) return;
         clear();
-        if (stale) {
+        if (hold !== null) {
+          schedule(Date.now() + hold * 1000);
+          hold = null;
+        } else if (stale) {
           stale = false;
           schedule(Date.now() + 2000);
         } else if (every > 0) schedule(Date.now() + every);

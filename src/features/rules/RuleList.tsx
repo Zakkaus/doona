@@ -16,8 +16,7 @@ import {
   TextField,
   TextTooltip,
   errorText,
-  toast,
-  useLinked
+  toast
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
@@ -131,12 +130,16 @@ function Dictionary({go, query}: PageProps) {
   // `?add=kind:value` (from a flow) opens the add dialog with that condition once the list and the config are
   // there; the address keeps the seed until the dialog closes.
   const seed = new URLSearchParams(query).get('add');
-  const ready = canWrite && !!rules.data && !!config.data && positions.length > 0;
-  useLinked(seed && ready ? seed : null, value => {
-    if (!value) return;
-    const [kind, ...rest] = value.split(':');
-    if (conditionKinds.includes(kind as ConditionKind)) open({kind: 'add'}, {kind: kind as ConditionKind, value: rest.join(':')});
-  });
+  const wanted = canWrite && rules.data && config.data && positions.length > 0 ? seed : null;
+  // Applied whenever a seed appears, on the first render too: the data is often already cached.
+  const [seen, setSeen] = useState<string | null>(null);
+  if (seen !== wanted) {
+    setSeen(wanted);
+    if (wanted) {
+      const [kind, ...rest] = wanted.split(':');
+      if (conditionKinds.includes(kind as ConditionKind)) open({kind: 'add'}, {kind: kind as ConditionKind, value: rest.join(':')});
+    }
+  }
   const write = async (source: ConfigSource, transform: (text: string) => string | null) => {
     const result = await editor.apply(source, transform);
     if (!result) return false;

@@ -24,6 +24,8 @@ function useDnsCache(enabled = true) {
   return useResource(
     {
       key: ['dnsCache'],
+      // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
+      every: 15000,
       fetch: signal =>
         walk(
           cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),

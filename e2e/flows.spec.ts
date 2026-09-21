@@ -59,6 +59,12 @@ test('a flow offers a rule for its target, prefilled in the rule list', async ({
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/#\/rules\?tab=list$/);
+  // A second seed after the first was dismissed still opens, with the list and config already cached.
+  await page.getByRole('tab', {name: 'Flow records', exact: true}).click();
+  await page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').filter({hasText: 'cdn.bilibili.com'}).first().click();
+  await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: cdn.bilibili.com)');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.goto('/#/rules?tab=list&add=dip:203.0.113.5');
   await expect(page.getByRole('dialog', {name: 'Add rule', exact: true}).locator('.rp-code')).toHaveText('dip(203.0.113.5)');
 });

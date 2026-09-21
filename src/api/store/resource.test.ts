@@ -5,6 +5,7 @@ import {createMockApi} from '../mock';
 import * as apiSelection from '../index';
 import {subscribeEvents} from './events';
 import {refetchAll, watchResource} from './resource';
+import {ApiError} from '../error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
 const disposers: Array<() => void> = [];
@@ -171,4 +172,49 @@ it('coalesces one event subscription for consumers sharing a resource', async ()
   expect(fetch).toHaveBeenCalledTimes(2);
   expect(second.getSnapshot()).toBe(first.getSnapshot());
   expect(subscribeEvents).toHaveBeenCalledOnce();
+});
+
+it('waits out a 503 for the backend’s Retry-After before it surfaces, and keeps polling after', async () => {
+  const api = createMockApi();
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    if (calls <= 2) throw new ApiError(503, 'temporarily_unavailable', 'DNS observation is temporarily unavailable', null, null, 3);
+    if (calls === 4) throw new ApiError(500, 'internal', 'broken');
+    return 'entries';
+  };
+  const resource = watchResource(api, {key: ['dnsCache'], every: 15000, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  // The refusal is not shown; the retry comes after three seconds, not fifteen.
+  expect(resource.getSnapshot().error).toBeNull();
+  await vi.advanceTimersByTimeAsync(2999);
+  expect(calls).toBe(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(calls).toBe(2);
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(calls).toBe(3);
+  expect(resource.getSnapshot()).toMatchObject({data: 'entries', error: null});
+  // A plain failure shows at once, and the poll goes on at its own pace.
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(calls).toBe(4);
+  expect(resource.getSnapshot().error?.message).toBe('broken');
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(calls).toBe(5);
+  expect(resource.getSnapshot()).toMatchObject({data: 'entries', error: null});
+});
+
+it('shows a 503 that persists past three retries', async () => {
+  const api = createMockApi();
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    throw new ApiError(503, 'temporarily_unavailable', 'not now', null, null, 1);
+  };
+  const resource = watchResource(api, {key: ['dnsCache'], every: 15000, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(calls).toBe(4);
+  expect(resource.getSnapshot().error?.message).toBe('not now');
 });

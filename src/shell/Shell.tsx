@@ -9,7 +9,7 @@ import Translate from '../ui/icons/Translate';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import logo from '../logo.svg';
-import {About, engineLinks} from './About';
+import {About, wordmark, engineLinks} from './About';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
 import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
@@ -240,6 +240,7 @@ function Frame({
   const nav = navGroups.map(group => [group, features.filter(feature => feature.nav?.group === group)] as const);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
+  const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
@@ -250,11 +251,12 @@ function Frame({
     <div className="rp-shell">
       <header className="rp-top">
         <About
+          onHonk={() => setHonked(true)}
           trigger={
             <Button className="rp-brand" label={t('about.title')}>
               <img src={logo} alt="" />
               <span className="rp-brand-text">
-                <span>doona</span>
+                <span>{wordmark(honked)}</span>
                 <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
               </span>
             </Button>
