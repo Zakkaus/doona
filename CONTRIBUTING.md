@@ -10,13 +10,7 @@ pnpm install --frozen-lockfile
 
 ## Run the gate
 
-Run `pnpm check` before opening a pull request. It runs:
-
-- `pnpm typecheck` for TypeScript errors without emitting files.
-- `pnpm lint` for ESLint rules.
-- `pnpm format:check` for Prettier formatting.
-- `pnpm test` for the Vitest suite.
-- `pnpm check:gen` to verify generated API types match the vendored contract.
+Before opening a pull request, run the same gates as CI from the repository root: `pnpm check`, `pnpm test:coverage`, `pnpm build`, `pnpm check:size`, and `pnpm e2e` after the one-time `pnpm e2e:install --with-deps`. `pnpm check` runs `typecheck`, `lint`, `check:i18n`, `format:check`, `test`, and `check:gen`.
 
 `REUSE.toml` handles license headers; preserve its third-party annotations when adding or moving files. From the repository root, run `reuse lint` if you have REUSE, and run `pnpm test:coverage` to print coverage totals and write `coverage/lcov.info`.
 
@@ -24,7 +18,7 @@ Run `pnpm check` before opening a pull request. It runs:
 
 Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Access backend data only through `src/api`.
 
-Use formal Traditional Chinese in `zh-TW`, real Simplified Chinese in `zh-CN`, and plain English in English messages.
+Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
 
 `reference/` is read-only history. Do not modify it for product changes.
 

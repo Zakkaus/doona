@@ -15,7 +15,7 @@
 
 </div>
 
-doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。现在对接 [honk](https://github.com/daeuniverse/honk)，dae 实现同一套 API 后也能用。它显示引擎当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
+doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。它现在对接 honk 的原生 API。它显示引擎当前的状态：连接、保留的流程、DNS、事件、日志、流量与内存。它也导入订阅与分享链接，把节点编成群组并测延迟，用表单写路由规则，配置文件每次保存前先校验。界面有繁体中文、简体中文与英文，十一套配色，各有浅色与深色。
 
 ![活动页](docs/screenshots/zh-CN/activity-light.png)
 
@@ -30,25 +30,28 @@ doona 是一组静态文件，由引擎自己或任意 Web 服务器提供。现
 
 ## 状态
 
-doona 对接原生 API。honk 在 `feat/native-api` 分支实现了这套 API，尚未发布；dae 预计实现同一份契约。契约是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契约修改已全部合并），记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。按较旧钉点构建的后端仍可用：后端没有声明的资源视为不可用，对应页面从导航栏消失。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
+doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚未发布。契约是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契约修改已全部合并），记录见 [SOURCE.md](contract/api-standardize/SOURCE.md)。后端缺少较新资源键时，doona 会把这些键视为不可用。所有页面仍保留在导航栏中；只有列出的资源全部不可用时，页面才会标为不可用。未设置后端时，内置模拟后端提供演示数据；本文截图全部来自模拟数据。
 
 ## 运行环境
 
 | 组件   | 要求                                                                                     |
 | ------ | ---------------------------------------------------------------------------------------- |
 | 后端   | 启用 `native_api` 的 honk（见[安装](#安装)）；服务器上不需要其他程序                     |
-| 浏览器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以后。这是构建目标，自动化测试只用 Chromium |
+| 浏览器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以后。这些是 CSS 构建目标；JavaScript 构建目标是 ES2022。自动化测试只用 Chromium |
 | 构建   | Node 22 及以后、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                        |
 
 ## 安装
 
-发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上；第一个标签发布之前，请按[开发](#开发)一节自行构建。校验后解压到 honk 或 Web 服务器要提供的目录：
+发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上；第一个标签发布之前，请按[开发](#开发)一节自行构建。把 `VERSION` 设为下载文件名中的发行标签，包括标签开头的 `v`。然后校验文件并解压到 honk 或 Web 服务器要提供的目录：
 
 ```sh
-sha256sum -c SHA256SUMS
+VERSION=v0.3.0.beta.1  # 替换为下载文件对应的发行标签
+sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
-sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona   # 可选
+if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
+    sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
+fi
 ```
 
 不装字体包时，浏览器改用本机字体。
@@ -118,19 +121,19 @@ experimental {
 | 配置 | 来源与诊断、带校验的编辑器、快速设置、导出                                 | `config`                            |
 | 事件 | 后端事件流                                                                 | `events`                            |
 | 日志 | 日志流，可按级别与模块筛选、暂停、导出                                     | `logs`                              |
-| 设置 | 后端、语言、外观与配色                                                     | —                                   |
+| 设置 | 后端、运行时设置与后端操作、语言、外观与配色                               | —                                   |
 
-后端没有声明所需资源的页面会从导航栏消失，需求定义在 [registry.ts](src/shell/registry.ts)。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。
+所有页面都保留在导航栏中。只有 [registry.ts](src/shell/registry.ts) 为页面列出的资源全部不可用时，页面才会标为不可用；打开后会显示不可用提示。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。
 
 <img src="docs/screenshots/zh-CN/rules-light.png" alt="规则页" width="100%">
 
 ## 数据与设置
 
-doona 不在服务器上保存任何数据。设置存在浏览器该来源的 `localStorage`：
+doona 没有用于存储自身界面设置的服务器端存储。配置与运行时变更通过 honk 写入；doona 的界面设置存储在浏览器中，范围限于该网站来源的 `localStorage`：
 
 | 设置     | 键               | 值                                                                                                                                       |
 | -------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 后端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 数组；`api` 是服务器根地址或代理前缀，留空或 `mock` 用演示数据；token 只放在 Authorization 头，不进网址 |
+| 后端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 数组；`api` 是服务器根地址或代理前缀，留空或 `mock` 使用演示数据；API 请求通过 `Authorization` 头发送 token。配对链接可能把 token 放在网址片段中，并在加载后移除。 |
 | 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                          |
 | 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                           |
 | 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                        |
@@ -161,7 +164,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 | `src/features/` | 各页面及其 hook 与文案，一页一个文件夹 |
 | `src/shell/`    | 应用外壳、导航与搜索                   |
 | `src/ui/`       | 共用组件、主题与图标                   |
-| `src/api/`      | 客户端、模拟后端与生成的类型           |
+| `src/api/`      | 客户端、后端档案、资源 store、模拟后端与生成的类型 |
 | `src/i18n/`     | 翻译与区域设置辅助                     |
 | `contract/`     | 内嵌的 OpenAPI 契约与钉点              |
 | `public/`       | 静态资源、字体与 service worker        |

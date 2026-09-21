@@ -16,8 +16,8 @@ Include the affected commit, browser, backend configuration, reproduction steps,
 
 ## Scope
 
-This policy covers the UI, its build, and its handling of backend tokens. The API client sends bearer tokens in an `Authorization` header and never places them in URLs. The runtime API client makes no third-party requests.
+This policy covers the UI, its build, and its handling of backend tokens. API requests send bearer tokens in an `Authorization` header. Pairing links may carry a token in the URL fragment and remove it on load. The runtime API client makes no third-party requests.
 
 ## Response
 
-We aim to acknowledge reports within one week. This is not an SLA.
+The project does not guarantee an acknowledgement or resolution time.
