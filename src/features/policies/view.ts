@@ -3,7 +3,7 @@ import type {Key} from '../../i18n/messages';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
 import type {Translator} from '../../i18n';
 import {millis} from '../../api/u64';
-import {latencyTone} from '../../ui/ui';
+import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   selector: 'policy.kind.selector',
@@ -54,8 +54,25 @@ export function probeSummary(result: ProbeResult): MessageRef {
   };
 }
 
-export type MemberView = {id: string; name: string; nested: boolean; tcp?: number; unavailable: boolean; healthy: boolean; description: string; region: string};
-export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>): MemberView[] {
+export type MemberView = {
+  id: string;
+  name: string;
+  nested: boolean;
+  tcp?: number;
+  unavailable: boolean;
+  healthy: boolean;
+  status: NodeStatus;
+  description: string;
+  region: string;
+};
+// The tile's status slot: a group badge, a latency with its tone, or the state when there is no latency.
+export function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
+  if (member.kind === 'group') return {text: t('ui.group'), badge: true};
+  const tcp = healthMillis(member.health);
+  if (tcp != null) return {text: t('ui.latency', {n: millis(tcp)}), tone: latencyTone(tcp)};
+  return member.health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err'} : {text: '—'};
+}
+export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>, t: Translator): MemberView[] {
   return members.map(member => ({
     id: member.id,
     name: member.name,
@@ -63,6 +80,7 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     tcp: healthMillis(member.health),
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',
+    status: memberStatus(member, t),
     description: member.health ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}` : ' ',
     region: regionOf(member.name) ?? '?'
   }));

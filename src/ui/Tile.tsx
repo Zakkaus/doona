@@ -1,8 +1,7 @@
 import type {ReactNode} from 'react';
-import {Link as RLink, ToggleButton} from 'react-aria-components';
+import {Link as RLink} from 'react-aria-components';
 import ListBulleted from './icons/ListBulleted';
 import {useT} from '../i18n';
-import {millis} from '../api/u64';
 import {cx} from './cx';
 import {TextTooltip} from './Button';
 import {Badge} from './Feedback';
@@ -30,62 +29,25 @@ export function RuleRef({expression, ruleId, linked}: {expression: string | null
   );
 }
 
-export type NodeTileProps = {
-  name: string;
-  tcp?: number;
-  alive?: boolean;
-  unavailable?: boolean;
-  description?: string;
-  nested?: boolean;
-  selected?: boolean;
-  cur?: boolean;
-  onPress?: () => void;
-  isDisabled?: boolean;
-  bodyOnly?: boolean;
-};
+// A node's tile body: the name, one prepared status (a latency, a state or a badge) and a description line.
+// The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
+export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
+export type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean};
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
-export function NodeTile({
-  name,
-  tcp,
-  alive = true,
-  unavailable = !alive || tcp == null,
-  description,
-  nested,
-  selected,
-  cur,
-  onPress,
-  isDisabled,
-  bodyOnly
-}: NodeTileProps) {
+export function NodeTile({name, status, description, current}: NodeTileProps) {
   const t = useT();
-  const latency = tcp == null ? '' : t('ui.latency', {n: millis(tcp)});
-  const body = (
+  return (
     <>
       <span className="top">
         <span className="n">
           <TextTooltip>{name}</TextTooltip>
         </span>
-        {nested ? (
-          <Badge>{t('ui.group')}</Badge>
-        ) : alive && tcp != null ? (
-          <span className={cx('ms', latencyTone(tcp))}>{latency}</span>
-        ) : (
-          <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
-        )}
+        {status.badge ? <Badge>{status.text}</Badge> : <span className={cx('ms', status.tone)}>{status.text}</span>}
       </span>
       <span className="s">
-        {description ?? ' '}
-        {cur && !onPress && <span className="cur">{t('ui.current')}</span>}
+        {description}
+        {current && <span className="cur">{t('ui.current')}</span>}
       </span>
     </>
   );
-  if (bodyOnly) return body;
-  if (onPress) {
-    return (
-      <ToggleButton className="rp-node" isSelected={selected} isDisabled={isDisabled} onChange={onPress}>
-        {body}
-      </ToggleButton>
-    );
-  }
-  return <div className={cx('rp-node', cur && 'cur')}>{body}</div>;
 }

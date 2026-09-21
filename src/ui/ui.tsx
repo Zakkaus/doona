@@ -7,4 +7,4 @@ export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMen
 export {ModalDialog, DetailPanel, Disclosure, DisclosureGroup, Tabs} from './Dialog';
 export {DataTable, fitColumns, tableLayout, type TableSort, type TableColumn} from './Table';
 export {Empty, Loading, errorText, ErrorMessage, toast, Toasts, Light, Badge, Bar, Kv} from './Feedback';
-export {NodeTile, type NodeTileProps, latencyTone, CardLink, RuleRef} from './Tile';
+export {NodeTile, type NodeTileProps, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';

@@ -1,7 +1,20 @@
 // Virtualize lists above 12 items; smaller collections use plain tiles.
 import {useMemo} from 'react';
-import {Autocomplete, Menu, MenuSection, Header, ListLayout, GridLayout, GridList, GridListItem, Size, Virtualizer, useFilter} from 'react-aria-components';
-import {InlineSelect, ChoiceMenu, NodeTile, Switch, TextField, type NodeTileProps, Empty} from '../../ui/ui';
+import {
+  Autocomplete,
+  Menu,
+  MenuSection,
+  Header,
+  ListLayout,
+  GridLayout,
+  GridList,
+  GridListItem,
+  Size,
+  ToggleButton,
+  Virtualizer,
+  useFilter
+} from 'react-aria-components';
+import {InlineSelect, ChoiceMenu, NodeTile, Switch, TextField, Empty} from '../../ui/ui';
 import {MenuButton, MenuChoice, pickMenuKey} from '../../ui/ui';
 import {menuViews, type MemberView} from './view';
 import {useT} from '../../i18n';
@@ -31,16 +44,17 @@ export function NodeGrid({
   if (!m.big) {
     return (
       <div className="rp-nodes">
-        {nodes.map(n => (
-          <MemberTile
-            key={n.id}
-            n={n}
-            selected={selected === n.id}
-            isDisabled={isDisabled}
-            onPress={onSelect ? () => onSelect(n.id) : undefined}
-            cur={!onSelect && cur === n.id}
-          />
-        ))}
+        {nodes.map(n =>
+          onSelect ? (
+            <ToggleButton key={n.id} className="rp-node" isSelected={selected === n.id} isDisabled={isDisabled} onChange={() => onSelect(n.id)}>
+              <MemberTile n={n} />
+            </ToggleButton>
+          ) : (
+            <div key={n.id} className={cx('rp-node', cur === n.id && 'cur')}>
+              <MemberTile n={n} current={cur === n.id} />
+            </div>
+          )
+        )}
       </div>
     );
   }
@@ -84,7 +98,7 @@ export function NodeGrid({
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', cur === n.id && !onSelect && 'cur')}>
-              <MemberTile n={n} cur={!onSelect && cur === n.id} bodyOnly />
+              <MemberTile n={n} current={!onSelect && cur === n.id} />
             </GridListItem>
           )}
         </GridList>
@@ -92,8 +106,8 @@ export function NodeGrid({
     </div>
   );
 }
-function MemberTile({n, ...props}: {n: MemberView} & Pick<NodeTileProps, 'selected' | 'cur' | 'isDisabled' | 'onPress' | 'bodyOnly'>) {
-  return <NodeTile {...props} name={n.name} nested={n.nested} tcp={n.tcp} unavailable={n.unavailable} description={n.description} />;
+function MemberTile({n, current}: {n: MemberView; current?: boolean}) {
+  return <NodeTile name={n.name} status={n.status} description={n.description} current={current} />;
 }
 
 export function NodeMenu({nodes, value, onChange, label}: {nodes: NodeInfo[]; value: string; onChange: (name: string) => void; label: string}) {
