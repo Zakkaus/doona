@@ -153,6 +153,7 @@ pnpm install --frozen-lockfile
 pnpm build                       # 输出 dist/
 pnpm check                       # 类型、lint、翻译、格式、单元测试、生成的 API 类型
 pnpm check:size                  # dist/ 构建的 gzip 大小限制
+pnpm perf <url>                  # 测量已提供的构建：首屏、脚本、轮询与滚动成本，CPU 降速四倍
 pnpm e2e:install --with-deps     # 浏览器测试只需安装一次
 pnpm e2e                         # 对模拟后端的浏览器测试，根目录与 /ui/ 各一轮
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS

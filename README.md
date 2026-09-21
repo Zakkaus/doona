@@ -153,6 +153,7 @@ pnpm install --frozen-lockfile
 pnpm build                       # writes dist/
 pnpm check                       # types, lint, translations, formatting, unit tests, generated API types
 pnpm check:size                  # gzip budgets for the dist/ build
+pnpm perf <url>                  # first paint, scripting, polling and scrolling cost of a served build, CPU throttled 4x
 pnpm e2e:install --with-deps     # once, for the browser tests
 pnpm e2e                         # browser tests against the mock, at the root and under /ui/
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
