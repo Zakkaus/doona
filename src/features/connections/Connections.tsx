@@ -84,25 +84,33 @@ export function Connections({go, query}: PageProps) {
   }
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
   const needle = text.trim().toLowerCase();
-  const shown = rows.filter(
-    c =>
-      (network === 'all' || c.network === network) &&
-      (out === 'all' || c.outbound === out) &&
-      (rule === 'all' || c.rule_expression === rule) &&
-      (src ||
-        !needle ||
-        [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+  const shown = useMemo(
+    () =>
+      rows.filter(
+        c =>
+          (network === 'all' || c.network === network) &&
+          (out === 'all' || c.outbound === out) &&
+          (rule === 'all' || c.rule_expression === rule) &&
+          (src ||
+            !needle ||
+            [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+      ),
+    [rows, network, out, rule, src, needle, names]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const outbounds = [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))];
-  // Build filter choices from visible rows, ordered by frequency.
-  const seen = (values: Array<string | null | undefined>) => {
-    const counts = new Map<string, number>();
-    for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
-  };
-  const clients = seen(rows.map(c => sourceIp(c.src)));
-  const rules = seen(rows.map(c => c.rule_expression));
+  const {outbounds, clients, rules} = useMemo(() => {
+    // Build filter choices from visible rows, ordered by frequency.
+    const seen = (values: Array<string | null | undefined>) => {
+      const counts = new Map<string, number>();
+      for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    };
+    return {
+      outbounds: [...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))],
+      clients: seen(rows.map(c => sourceIp(c.src))),
+      rules: seen(rows.map(c => c.rule_expression))
+    };
+  }, [rows]);
   const filtered = network !== 'all' || out !== 'all' || rule !== 'all' || needle !== '';
   return (
     <div className="rp-page">

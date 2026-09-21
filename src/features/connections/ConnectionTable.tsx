@@ -135,7 +135,7 @@ export function ConnectionTable({
             </TableHeader>
             <TableBody
               items={items}
-              dependencies={[locale, cols, view.group, loading]}
+              dependencies={[locale, cols, view.group, loading, names, rulesListed]}
               renderEmptyState={() => (loading ? <Loading /> : <Empty>{t('conn.empty')}</Empty>)}
             >
               {row => {

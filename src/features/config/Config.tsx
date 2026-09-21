@@ -58,12 +58,25 @@ function useSha256(text: string | undefined): string | undefined {
   return hashed !== null && hashed.text === text ? hashed.hash : undefined;
 }
 
+function useConfigEditorController(refetch: () => void) {
+  const t = useT();
+  const editor = useConfigEditor(refetch);
+  useEffect(() => {
+    if (!editor.error) return;
+    if (editor.error instanceof ApiError && editor.error.status === 422) {
+      const diagnostics = (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [];
+      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
+    } else toast('negative', errorText(editor.error));
+  }, [editor.error, t]);
+  return editor;
+}
+
 export function Config({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
   const config = useConfig(resources?.config.available !== false);
-  const editor = useConfigEditor(config.refetch);
+  const editor = useConfigEditorController(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const mainSource = sources.find(item => item.kind === 'main') ?? null;
@@ -97,13 +110,6 @@ export function Config({go, query}: PageProps) {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
   }, [config.data]);
-  useEffect(() => {
-    if (!editor.error) return;
-    if (editor.error instanceof ApiError && editor.error.status === 422) {
-      const diagnostics = (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [];
-      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
-    } else toast('negative', errorText(editor.error));
-  }, [editor.error, t]);
   return (
     <div className="rp-page">
       <ErrorMessage error={config.error} onRetry={config.refetch} />
@@ -251,17 +257,7 @@ export function Config({go, query}: PageProps) {
   );
 }
 
-function SourceCard({
-  source,
-  diagnostics,
-  canValidate,
-  canWrite,
-  contentOffered,
-  editor,
-  groups,
-  focusLine,
-  onDirty
-}: {
+type SourceCardProps = {
   source: ConfigSource;
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
@@ -271,12 +267,11 @@ function SourceCard({
   groups: string[];
   focusLine: number | null;
   onDirty: (dirty: boolean) => void;
-}) {
+};
+
+function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirty}: SourceCardProps) {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
-  // The draft keeps the digest of the text it started from: If-Match carries that, so a source that changed on
-  // disk while it was being edited is refused with 412 instead of overwritten.
+  // If-Match uses the draft's original digest to reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; base: string} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   // Content is only safe to edit when it is the complete accepted text: present and hashing to the accepted digest.
@@ -346,6 +341,21 @@ function SourceCard({
       setDraft(null);
     }
   };
+  const edit = () => setDraft({text: source.content ?? '', base: source.content_sha256});
+  const cancel = () => {
+    setDraft(null);
+    setFound(null);
+  };
+  const change = (value: string) => setDraft(prev => (prev ? {...prev, text: value} : prev));
+  return {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change};
+}
+
+function SourceCard(props: SourceCardProps) {
+  const {source, canValidate, canWrite, contentOffered, editor, focusLine} = props;
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
+  const {editing, complete, shown, marks, text, outbounds, jump, dirty, validate, save, edit, cancel, change} = useSourceCard(props);
   return (
     <section className="rp-card">
       <div className="rp-row">
@@ -365,23 +375,13 @@ function SourceCard({
             </Button>
           )}
           {canWrite && !editing && (
-            <Button
-              isDisabled={!complete || !!editor.busy}
-              tip={complete === false ? t('config.incomplete') : undefined}
-              onPress={() => setDraft({text: source.content ?? '', base: source.content_sha256})}
-            >
+            <Button isDisabled={!complete || !!editor.busy} tip={complete === false ? t('config.incomplete') : undefined} onPress={edit}>
               {t('config.edit')}
             </Button>
           )}
           {editing && (
             <>
-              <Button
-                isDisabled={!!editor.busy}
-                onPress={() => {
-                  setDraft(null);
-                  setFound(null);
-                }}
-              >
+              <Button isDisabled={!!editor.busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
               <Button
@@ -416,7 +416,7 @@ function SourceCard({
           label={sourceName(source, t)}
           value={text}
           readOnly={!editing || editor.busy === 'save'}
-          onChange={editing ? value => setDraft(prev => (prev ? {...prev, text: value} : prev)) : undefined}
+          onChange={editing ? change : undefined}
           marks={marks}
           focusLine={jump ?? focusLine}
           outbounds={outbounds}
@@ -428,20 +428,14 @@ function SourceCard({
   );
 }
 
-function ValidateTab({
-  config,
-  editor,
-  canValidate,
-  open
-}: {
+type ValidateTabProps = {
   config: EffectiveConfig;
   editor: ReturnType<typeof useConfigEditor>;
   canValidate: boolean;
   open: (sourceId: string, line: number | null) => void;
-}) {
-  const t = useT();
-  const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
+};
+
+function useValidateTab({config, editor}: ValidateTabProps) {
   const [level, setLevel] = useState('all');
   const [run, setRun] = useState<ConfigValidationResult | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -457,6 +451,24 @@ function ValidateTab({
   const cur = rows.find(item => item.id === selected) ?? null;
   // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
   const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));
+  const validate = () => {
+    void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
+      // A fresh list has new rows; the old selection would point at a different diagnostic.
+      if (result) {
+        setRun(result);
+        setSelected(null);
+      }
+    });
+  };
+  return {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate};
+}
+
+function ValidateTab(props: ValidateTabProps) {
+  const {config, editor, canValidate, open} = props;
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const n = (value: number) => formatNumber(value, locale);
+  const {level, setLevel, run, selected, setSelected, rows, count, errors, warnings, shown, pathOf, cur, candidates, validate} = useValidateTab(props);
   return (
     <>
       <div className="rp-toolbar">
@@ -476,15 +488,7 @@ function ValidateTab({
             isPending={editor.busy === 'validate'}
             isDisabled={!!editor.busy || candidates.length === 0}
             tip={candidates.length === 0 ? t('config.contentHidden') : undefined}
-            onPress={() => {
-              void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
-                // A fresh list has new rows; the old selection would point at a different diagnostic.
-                if (result) {
-                  setRun(result);
-                  setSelected(null);
-                }
-              });
-            }}
+            onPress={validate}
           >
             <Refresh />
             {t('config.revalidate')}

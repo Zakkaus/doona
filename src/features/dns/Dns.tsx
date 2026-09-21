@@ -1,7 +1,10 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {useMemo, useState} from 'react';
 import Delete from '../../ui/icons/Delete';
-import {useDnsControl, useDnsLog} from '../../api/store';
+import {useCapabilities, useDnsControl, useDnsLog} from '../../api/store';
+import {getApi} from '../../api';
+import {useAction} from '../../api/store/action';
+import type {DnsQueryResponse} from '../../api/model';
 import {localTime, relativeStart} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {
@@ -31,21 +34,37 @@ import Download from '../../ui/icons/Download';
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 
+function useDnsQuery() {
+  const api = getApi();
+  const capabilities = useCapabilities();
+  const [result, setResult] = useState<DnsQueryResponse | null>(null);
+  const {busy, error, run} = useAction<'query'>({rethrow: true});
+  return {
+    capabilities,
+    result,
+    busy,
+    error,
+    query: (domain: string, types: string[]) =>
+      run('query', async signal => {
+        const value = await api.dnsQuery(domain, types, signal);
+        if (!signal.aborted) setResult(value);
+        return value;
+      })
+  };
+}
+
 export function Dns({go, query}: PageProps) {
   const t = useT();
-  const lang = useLang();
-  const locale = LOCALE[lang];
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const [domain, setDomain] = useState(params.get('domain') ?? '');
   const [type, setType] = useState(params.get('type') ?? 'A');
   useLinked(params.get('domain'), value => setDomain(value ?? ''));
   useLinked(params.get('type'), value => setType(value ?? 'A'));
-  const dns = useDnsControl();
+  const dns = useDnsQuery();
   const resources = dns.capabilities.data?.resources;
   const types = resources?.dns_query.record_types ?? ['A', 'AAAA', 'HTTPS', 'TXT', 'MX'];
   const canQuery = resources?.dns_query.available && (type === 'all' ? types.length > 0 : types.includes(type));
-  const rows = (dns.cache.data?.entries ?? []).map(entry => ({...entry, id: entry.entry_id}));
-  const error = dns.error ?? dns.cache.error ?? dns.capabilities.error;
+  const error = dns.error ?? dns.capabilities.error;
   const setTab = (tab: string, extra?: Record<string, string>) => {
     const next = new URLSearchParams();
     next.set('tab', tab);
@@ -57,22 +76,6 @@ export function Dns({go, query}: PageProps) {
       await dns.query(domain.trim(), type === 'all' ? types : [type]);
     } catch (error) {
       toast('negative', t('dns.queryFailed', {error: errorText(error)}));
-    }
-  }
-  async function remove(id: string) {
-    try {
-      const result = await dns.remove(id);
-      if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
-    } catch (error) {
-      toast('negative', t('dns.deleteFailed', {error: errorText(error)}));
-    }
-  }
-  async function flush() {
-    try {
-      const result = await dns.flush();
-      if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-    } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: errorText(error)}));
     }
   }
   const queryTab = (
@@ -143,10 +146,50 @@ export function Dns({go, query}: PageProps) {
       )}
     </>
   );
-  const cacheFilter = (params.get('domain') ?? '').toLowerCase();
+  const cacheTab = <DnsCache domain={params.get('domain') ?? ''} clearFilter={() => setTab('cache')} />;
+  const logTab = <DnsLog enabled={resources?.dns_log.available === true} initialName={params.get('domain') ?? ''} />;
+  const tabs = [
+    ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query'), content: queryTab}] : []),
+    ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log'), content: logTab}] : []),
+    ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache'), content: cacheTab}] : [])
+  ];
+  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'query');
+  return (
+    <div className="rp-page">
+      {error && <ErrorMessage error={error} />}
+      <Tabs label={t('nav.dns')} items={tabs} value={tab} onChange={next => setTab(next)} />
+    </div>
+  );
+}
+
+function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => void}) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const dns = useDnsControl();
+  const resources = dns.capabilities.data?.resources;
+  const rows = (dns.cache.data?.entries ?? []).map(entry => ({...entry, id: entry.entry_id}));
+  const error = dns.error ?? dns.cache.error ?? dns.capabilities.error;
+  async function remove(id: string) {
+    try {
+      const result = await dns.remove(id);
+      if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
+    } catch (error) {
+      toast('negative', t('dns.deleteFailed', {error: errorText(error)}));
+    }
+  }
+  async function flush() {
+    try {
+      const result = await dns.flush();
+      if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+    } catch (error) {
+      toast('negative', t('dns.flushFailed', {error: errorText(error)}));
+    }
+  }
+  const cacheFilter = domain.toLowerCase();
   const cacheRows = cacheFilter ? rows.filter(row => row.domain.toLowerCase().includes(cacheFilter)) : rows;
-  const cacheTab = (
+  return (
     <>
+      {error && <ErrorMessage error={error} />}
       <div className="rp-toolbar">
         <Kv row items={[[t('dns.entries'), dns.cache.data ? String(dns.cache.data.total) : '—']]} />
         {dns.cache.data &&
@@ -161,8 +204,8 @@ export function Dns({go, query}: PageProps) {
               </Badge>
             ))}
         {cacheFilter && (
-          <Button small onPress={() => setTab('cache')}>
-            {t('dns.cacheFilter', {domain: params.get('domain') ?? ''})}
+          <Button small onPress={clearFilter}>
+            {t('dns.cacheFilter', {domain})}
           </Button>
         )}
         <span className="rp-grow" />
@@ -209,19 +252,6 @@ export function Dns({go, query}: PageProps) {
         ]}
       />
     </>
-  );
-  const logTab = <DnsLog enabled={resources?.dns_log.available === true} initialName={params.get('domain') ?? ''} />;
-  const tabs = [
-    ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query'), content: queryTab}] : []),
-    ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log'), content: logTab}] : []),
-    ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache'), content: cacheTab}] : [])
-  ];
-  const tab = tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (tabs[0]?.id ?? 'query');
-  return (
-    <div className="rp-page">
-      {error && <ErrorMessage error={error} />}
-      <Tabs label={t('nav.dns')} items={tabs} value={tab} onChange={next => setTab(next)} />
-    </div>
   );
 }
 

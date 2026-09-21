@@ -32,6 +32,25 @@ test('English Started values fit without truncation', async ({page}) => {
   expect(widths.text).toBeLessThanOrEqual(widths.available);
 });
 
+test('a column can be resized with the keyboard', async ({page}) => {
+  await page.goto('/#/connections');
+  const header = page.getByRole('columnheader', {name: 'Target'});
+  const resizer = header.getByRole('slider');
+  await expect(header).toBeVisible();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  await header.focus();
+  await page.keyboard.press('Tab');
+  await expect(resizer).toBeFocused();
+  await page.keyboard.press('Enter');
+  const width = () => header.evaluate(element => element.getBoundingClientRect().width);
+  const original = await width();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(width).toBeGreaterThan(original);
+  const expanded = await width();
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(width).toBeLessThan(expanded);
+});
+
 test('connection selection follows clicks, arrows and Home/End across virtual rows', async ({page}) => {
   await page.goto('/#/connections');
   const selected = page.locator('.rp-table [aria-selected="true"]');
