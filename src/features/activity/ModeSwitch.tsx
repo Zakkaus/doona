@@ -82,6 +82,7 @@ export function ModeCards() {
           </span>
           <ChoiceMenu
             quiet
+            isDisabled={!writable || !main}
             label={t('act.global')}
             value={target}
             onChange={name => setStaged({mode: 'global', target: name})}

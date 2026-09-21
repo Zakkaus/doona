@@ -1,5 +1,6 @@
 import {Login} from './Login';
 import {ApiError} from '../api/error';
+import {consumeProfileReadError} from '../api/profiles';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {I18nProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
@@ -190,6 +191,7 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
 function ToastHost() {
   const t = useT();
   useEffect(() => {
+    if (consumeProfileReadError()) toast('negative', t('settings.profilesCorrupt'));
     try {
       if (sessionStorage.getItem('doona-saved')) {
         sessionStorage.removeItem('doona-saved');

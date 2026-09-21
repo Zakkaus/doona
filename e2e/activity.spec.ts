@@ -76,6 +76,36 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });
 
+test('the global target picker is disabled without a writable main source', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  const config = await api.config();
+  for (const source of config.sources) source.writable = false;
+  const responses: Record<string, unknown> = {
+    '/version': await api.version(),
+    '/capabilities': capabilities,
+    '/runtime': await api.runtime(),
+    '/runtime/memory': await api.runtimeMemory(),
+    '/runtime/memory/history': await api.memoryHistory(),
+    '/runtime/outbounds': await api.runtimeOutbounds(),
+    '/runtime/traffic/history': await api.trafficHistory(),
+    '/connections': await api.connections(),
+    '/nodes': await api.nodes(),
+    '/groups': await api.groups(),
+    '/config': config
+  };
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    await route.fulfill({json: responses[path]});
+  });
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-version')).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+});
+
 test('the compact node menu selects by keyboard and returns focus to its trigger', async ({page}) => {
   await page.addInitScript(() => localStorage.setItem('doona-mock-big', '7'));
   await page.goto('/#/activity');

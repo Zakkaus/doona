@@ -3,9 +3,9 @@ const MAX = (1n << 64n) - 1n;
 
 export function parseU64(s: string | null): bigint | null {
   if (s === null) return null;
-  if (!/^(0|[1-9][0-9]*)$/.test(s)) throw new RangeError('Invalid UInt64');
+  if (s.length > 20 || !/^(0|[1-9][0-9]*)$/.test(s)) return null;
   const value = BigInt(s);
-  if (value > MAX) throw new RangeError('UInt64 exceeds its range');
+  if (value > MAX) return null;
   return value;
 }
 

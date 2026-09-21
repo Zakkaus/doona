@@ -17,3 +17,14 @@ it('maps a history ring to samples in KB/s and keeps unknown rates null', () => 
     {time: Date.parse('2026-08-15T10:00:00Z'), up: 1, down: null, connections: null}
   ]);
 });
+
+it('keeps malformed rates unknown rather than converting them to zero', () => {
+  expect(
+    historyTrafficSamples({
+      observed_at: '2026-08-15T10:00:00Z',
+      window_seconds: 5,
+      sampled_every_seconds: 5,
+      samples: [{sampled_at: '2026-08-15T10:00:00Z', upload_bytes_per_second: 'broken', download_bytes_per_second: '0', connections: 0}]
+    })
+  ).toEqual([{time: Date.parse('2026-08-15T10:00:00Z'), up: null, down: 0, connections: 0}]);
+});

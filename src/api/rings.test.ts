@@ -1,19 +1,50 @@
-import {expect, it} from 'vitest';
-import {append, bucket, fineLimit, mean, window, type Fold} from './rings';
+import {expect, it, vi} from 'vitest';
+import {append, bucket, fineLimit, mean, record, resetRings, window, type Fold} from './rings';
 
 type Sample = {time: number; value: number | null};
 const fold: Fold<Sample> = (group, time) => ({time, value: mean(group.map(s => s.value))});
 
-it('keeps an hour of polls, folds evicted ones into minute buckets and restarts on a clock that went back', () => {
+it('folds each complete minute once without weighting its last polls', () => {
   let rings = {fine: [] as Sample[], coarse: [] as Sample[]};
-  for (let i = 0; i <= fineLimit; i++) rings = append(rings, {time: i * 5000, value: i}, fold);
-  expect(rings.fine.map(sample => sample.time)).toEqual(Array.from({length: fineLimit}, (_, i) => (i + 1) * 5000));
-  expect(rings.coarse).toEqual([{time: 0, value: 0}]);
-  // The same instant again changes nothing; the next eviction extends the open bucket.
-  expect(append(rings, {time: fineLimit * 5000, value: 1}, fold)).toBe(rings);
-  rings = append(rings, {time: (fineLimit + 1) * 5000, value: 1}, fold);
-  expect(rings.coarse).toEqual([{time: 0, value: 0.5}]);
-  expect(append(rings, {time: 0, value: null}, fold)).toEqual({fine: [{time: 0, value: null}], coarse: []});
+  for (let i = 0; i <= fineLimit + 24; i++) rings = append(rings, {time: i * 5000, value: i}, fold);
+  expect(rings.coarse).toEqual([
+    {time: 0, value: 5.5},
+    {time: 60000, value: 17.5}
+  ]);
+  expect(rings.fine[0].time).toBe(120000);
+  expect(append(rings, rings.fine.at(-1)!, fold)).toBe(rings);
+  const restored = JSON.parse(JSON.stringify(rings)) as typeof rings;
+  expect(append(restored, {time: (fineLimit + 25) * 5000, value: 1000}, fold).coarse).toEqual(rings.coarse);
+});
+
+it('preserves coarse history when a clock moves backwards', () => {
+  const rings = {fine: [{time: 3600000, value: 10}], coarse: [{time: 0, value: 5.5}]};
+  expect(append(rings, {time: 3500000, value: null}, fold)).toEqual({
+    fine: [{time: 3500000, value: null}],
+    coarse: rings.coarse
+  });
+});
+
+it('does not persist a coarse-history wipe after an out-of-order poll', () => {
+  const coarse = [{time: 0, value: 5.5}];
+  const key = 'doona-rings-clock-mock';
+  const storage = new Map([[key, JSON.stringify({fine: [{time: 3600000, value: 10}], coarse})]]);
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  vi.useFakeTimers();
+  try {
+    record<Sample>('clock', undefined, fold);
+    vi.advanceTimersByTime(60000);
+    record('clock', {time: 3500000, value: null}, fold);
+    expect(JSON.parse(storage.get(key)!)).toEqual({fine: [{time: 3500000, value: null}], coarse});
+  } finally {
+    resetRings();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
 });
 
 it('buckets by wall-clock intervals and ignores unknown values in the mean', () => {

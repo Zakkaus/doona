@@ -5,7 +5,10 @@ import {parseU64} from '../../api/u64';
 export type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
 // Windows are seconds; live is two minutes at full resolution. Backend history covers ten minutes, then session polls provide minute buckets for longer spans.
 export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
-const rate = (value: string | null | undefined) => (value == null ? null : Number(parseU64(value)) / 1000);
+const rate = (value: string | null | undefined) => {
+  const parsed = parseU64(value ?? null);
+  return parsed === null ? null : Number(parsed) / 1000;
+};
 
 export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
   time,
