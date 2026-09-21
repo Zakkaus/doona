@@ -115,7 +115,7 @@ function Trace() {
           void trace.submit();
         }}
       >
-        <div className="rp-toolbar">
+        <div className="rp-toolbar top">
           <LabeledSelect
             label={t('ui.network')}
             value={form.network}
@@ -136,6 +136,7 @@ function Trace() {
           />
           <Button
             accent
+            className="rp-btn rp-field-row"
             isPending={trace.busy}
             isDisabled={trace.busy || !!trace.invalid || !trace.available || !trace.modes.includes(trace.resolve)}
             type="submit"

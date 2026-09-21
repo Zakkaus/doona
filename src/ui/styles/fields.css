@@ -47,6 +47,10 @@
   gap: 4px;
   min-width: 0;
 }
+/* A control beside stacked fields in a top-aligned toolbar sits level with their inputs, under the label row. */
+.rp-toolbar.top > .rp-field-row {
+  margin-top: 20px;
+}
 .rp-field > label,
 .rp-field .lbl {
   font-size: 12px;

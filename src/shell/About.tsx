@@ -15,7 +15,7 @@ export function engineLinks(name: string | undefined) {
 }
 
 // The name once the duck has honked: the header wears it for the rest of the session.
-export const wordmark = (honked: boolean) => (honked ? 'dooooooooa' : 'doona');
+export const wordmark = (honked: boolean) => (honked ? 'doooooona' : 'doona');
 
 export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => void}) {
   const t = useT();

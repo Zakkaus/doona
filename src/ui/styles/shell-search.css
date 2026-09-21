@@ -166,6 +166,19 @@
   line-height: 16px;
   font-weight: 500;
   color: var(--rp-subtle);
+  white-space: nowrap;
+}
+/* The honked name is longer than the column: it stays on one line and the version yields before the name does. */
+.rp-brand .rp-brand-text {
+  min-width: 0;
+  white-space: nowrap;
+}
+.rp-brand .rp-brand-text > span:first-child {
+  flex: none;
+}
+.rp-brand .rp-brand-version {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rp-search-wrap {
   grid-column: 2;
