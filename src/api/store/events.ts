@@ -8,6 +8,9 @@ type StreamStatus = {connected: boolean; cursor: string | null; error: Error | n
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
 const streams = new Map<Api, Stream>();
 const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
+export function eventStatus(api: Api) {
+  return streams.get(api)?.status ?? initialStatus;
+}
 export function subscribeEvents(api: Api, listener: Listener, notify?: () => void) {
   let stream = streams.get(api);
   if (!stream) {
@@ -65,6 +68,6 @@ export function useEvents(onEvent: Listener) {
     callback.current = onEvent;
   });
   const subscribe = useCallback((notify: () => void) => subscribeEvents(api, (event, reconnected) => callback.current(event, reconnected), notify), [api]);
-  const getSnapshot = useCallback(() => streams.get(api)?.status ?? initialStatus, [api]);
+  const getSnapshot = useCallback(() => eventStatus(api), [api]);
   return useSyncExternalStore(subscribe, getSnapshot);
 }

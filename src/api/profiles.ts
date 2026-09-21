@@ -1,5 +1,5 @@
 export type Profile = {id: string; name: string; api: string; token: string};
-export type Profiles = {profiles: Profile[]; activeId: string};
+type Profiles = {profiles: Profile[]; activeId: string};
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 /** Accept a server root or proxy prefix, never credentials, a query, or a fragment. */

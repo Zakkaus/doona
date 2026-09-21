@@ -235,6 +235,65 @@ it('answers a refresh asked during the hold with the outcome of the retry', asyn
   expect(calls).toBe(1);
   await vi.advanceTimersByTimeAsync(1);
   await expect(asked).resolves.toMatchObject({ok: true});
-  expect(calls).toBeLessThanOrEqual(3);
+  expect(calls).toBe(2);
   expect(resource.getSnapshot()).toMatchObject({data: 'entries', error: null});
+});
+
+it('honours a hold across polls, refreshes and invalidations', async () => {
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 3))
+    .mockResolvedValue('ready');
+  const resource = watchResource(createMockApi(), {key: ['runtime'], every: 100, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  const complete = vi.fn();
+  const refresh = resource.refetch().then(complete);
+  resource.invalidate(false);
+  resource.invalidate(true);
+  await vi.advanceTimersByTimeAsync(2999);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(complete).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  await refresh;
+  expect(complete).toHaveBeenCalledWith({key: '["runtime",[]]', ok: true});
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('defers an initial automatic load and a held retry while hidden, resuming each once', async () => {
+  Object.assign(document, {hidden: true});
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 2))
+    .mockResolvedValue('ready');
+  const resource = watchResource(createMockApi(), {key: ['runtime'], every: 0, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetch).not.toHaveBeenCalled();
+  Object.assign(document, {hidden: false});
+  document.dispatchEvent(new Event('visibilitychange'));
+  await vi.advanceTimersByTimeAsync(0);
+  const refresh = resource.refetch();
+  Object.assign(document, {hidden: true});
+  document.dispatchEvent(new Event('visibilitychange'));
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  Object.assign(document, {hidden: false});
+  document.dispatchEvent(new Event('visibilitychange'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  await vi.advanceTimersByTimeAsync(0);
+  await expect(refresh).resolves.toMatchObject({ok: true});
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('cancels the hold and settles a waiting refresh on disposal', async () => {
+  const fetch = vi.fn().mockRejectedValue(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 2));
+  const resource = watchResource(createMockApi(), {key: ['runtime'], fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const refresh = resource.refetch();
+  resource.dispose();
+  await expect(refresh).resolves.toMatchObject({ok: false, error: {name: 'AbortError'}});
+  expect(vi.getTimerCount()).toBe(0);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetch).toHaveBeenCalledTimes(1);
 });

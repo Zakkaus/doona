@@ -26,15 +26,30 @@ test('a pairing link fills the backend draft and removes credentials from the ad
   await expect(page.locator('[name=token]')).toHaveValue('');
 });
 
-browserTest('a first visit under a backend takes that backend and asks for its token', async ({page}) => {
+browserTest('paints a frame during discovery, then selects the hosted backend and asks for its token', async ({page}) => {
   const challenge = {
     status: 401,
     headers: {'www-authenticate': 'Bearer'},
     json: {error: {code: 'authentication_required', message: 'Valid bearer credentials are required.', details: null}, request_id: 'first-visit'}
   };
-  await page.route('**/api', route => route.fulfill(challenge));
-  await page.route('**/api/v1/**', route => route.fulfill(challenge));
+  let release!: () => void;
+  const discovery = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api', async route => {
+    await discovery;
+    await route.fulfill(challenge);
+  });
+  let backendRequests = 0;
+  await page.route('**/api/v1/**', route => {
+    backendRequests++;
+    return route.fulfill(challenge);
+  });
   await page.goto('/');
+  await expect(page.locator('.rp-top .rp-brand')).toBeVisible();
+  await expect(page.locator('.rp-nav')).toHaveCount(0);
+  expect(backendRequests).toBe(0);
+  release();
   await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.rp-login')).toContainText(new URL(page.url()).host);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles') ?? '[]').map((item: {api: string}) => item.api))).toEqual([
@@ -171,4 +186,13 @@ test('five taps on the duck honk, and the header wears the long name for the ses
   await expect(brand).toHaveText('doooooona');
   await page.getByRole('dialog').getByRole('button', {name: 'Close', exact: true}).click();
   await expect(brand).toHaveText('doooooona');
+});
+
+test('an unknown stored palette falls back to the supported moon palette', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-palette', 'unknown/palette'));
+  await page.goto('/#/settings');
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'rose-pine');
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'moon');
+  await page.getByRole('button', {name: 'Palette', exact: true}).first().click();
+  await expect(page.getByRole('menuitemradio', {name: /Moon/})).toHaveAttribute('aria-checked', 'true');
 });

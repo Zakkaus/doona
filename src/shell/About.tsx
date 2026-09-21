@@ -1,73 +1,36 @@
-import {useState, type ReactElement} from 'react';
-import {useT} from '../i18n';
-import {useVersion} from '../api/store';
+import type {ReactElement} from 'react';
 import {Button, Kv, Link, ModalDialog, cx} from '../ui/ui';
 import logo from '../logo.svg';
 import night from '../duck-night.webp';
 import GitHub from '../ui/icons/GitHub';
-
-// The engine's home on GitHub follows the name the backend reports (honk today, dae later) under the
-// organisation package.json names; the slug is what the page shows.
-export function engineLinks(name: string | undefined) {
-  const org = import.meta.env.VITE_ENGINE_ORG;
-  const slug = `${org.split('/').pop()}${name ? '/' + name : ''}`;
-  return {slug, repo: name ? `${org}/${name}` : org};
-}
-
-// The name once the duck has honked: the header wears it for the rest of the session.
-export const wordmark = (honked: boolean) => (honked ? 'doooooona' : 'doona');
+import {useAbout} from './useShell';
 
 export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => void}) {
-  const t = useT();
-  const version = useVersion();
-  const [taps, setTaps] = useState(0);
-  // Five taps and it honks; from then on each tap swaps between the drawing and the painting.
-  const honked = taps >= 5;
-  const painted = honked && (taps - 5) % 2 === 1;
-  const engine = version.data ? `${version.data.engine.name} ${version.data.engine.version}` : '—';
-  const org = import.meta.env.VITE_ENGINE_ORG;
-  const build = version.data?.build?.revision ? ` (${version.data.build.revision.slice(0, 12)})` : '';
+  const view = useAbout(onHonk);
   return (
-    <ModalDialog title={t('about.title')} narrow trigger={trigger} footer={close => <Button onPress={close}>{t('about.close')}</Button>}>
-      <div className={cx('rp-about', honked && 'honked')}>
-        <button
-          type="button"
-          className={cx('rp-about-duck', painted && 'painted')}
-          onClick={() => {
-            if (taps === 4) onHonk?.();
-            setTaps(n => n + 1);
-          }}
-          aria-label={t('about.duck')}
-        >
-          <img key={taps} src={logo} alt="" className={cx(taps > 0 && !painted && 'hop')} />
+    <ModalDialog title={view.title} narrow trigger={trigger} footer={close => <Button onPress={close}>{view.close}</Button>}>
+      <div className={cx('rp-about', view.honked && 'honked')}>
+        <button type="button" className={cx('rp-about-duck', view.painted && 'painted')} onClick={view.tap} aria-label={view.duck}>
+          <img key={view.taps} src={logo} alt="" className={cx(view.hop && 'hop')} />
           <img src={night} alt="" className="night" />
-          {honked && <span className="rp-about-bubble">{t('about.quack')}</span>}
+          {view.honked && <span className="rp-about-bubble">{view.quack}</span>}
         </button>
         <div className="rp-about-name">
           <span className="rp-brand-text">
-            <span>{wordmark(honked)}</span>
-            <span className="rp-brand-version">v{import.meta.env.VITE_DOONA_VERSION}</span>
+            <span>{view.wordmark}</span>
+            <span className="rp-brand-version">{view.versionText}</span>
           </span>
-          <span className="rp-label">{t('about.tagline', {engine: org.split('/').pop()!})}</span>
+          <span className="rp-label">{view.tagline}</span>
         </div>
-        <Kv
-          items={[
-            [t('about.engine'), engine + build],
-            [t('about.api'), version.data ? `${version.data.api.name} v${version.data.api.major} · ${version.data.api.status}` : '—'],
-            [t('about.contract'), import.meta.env.VITE_DOONA_CONTRACT_COMMIT],
-            [t('about.license'), 'GPL-3.0-only']
-          ]}
-        />
-        <p className="rp-label">{t('about.credits')}</p>
+        <Kv items={view.items} />
+        <p className="rp-label">{view.credits}</p>
         <div className="rp-cluster">
-          <Link appearance="link" href={import.meta.env.VITE_DOONA_REPO} external>
-            <GitHub />
-            doona
-          </Link>
-          <Link appearance="link" href={org} external>
-            <GitHub />
-            {org.split('/').pop()}
-          </Link>
+          {view.repositories.map(repository => (
+            <Link key={repository.href} appearance="link" href={repository.href} external>
+              <GitHub />
+              {repository.label}
+            </Link>
+          ))}
         </div>
       </div>
     </ModalDialog>

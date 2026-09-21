@@ -1,21 +1,55 @@
 import {createRoot} from 'react-dom/client';
-import {StrictMode} from 'react';
+import {StrictMode, useEffect, useState} from 'react';
 import './fonts.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
+import {initializeApi} from './api';
+import {Loading, ErrorMessage} from './ui/ui';
+import logo from './logo.svg';
 import {toast} from './ui/ui';
 import {readLang, translate} from './i18n';
 
 stampAppearance();
-// One discovery request on a first visit, so a copy hosted by the backend opens against it.
-void detectHostedBackend().finally(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <Shell />
-    </StrictMode>
+let startup: Promise<unknown> | undefined;
+function Startup() {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    startup ??= detectHostedBackend().then(() => initializeApi());
+    void startup.then(
+      () => {
+        if (mounted) setReady(true);
+      },
+      reason => {
+        if (mounted) setError(reason instanceof Error ? reason : new Error(String(reason)));
+      }
+    );
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  if (ready) return <Shell />;
+  return (
+    <div className="rp-shell">
+      <header className="rp-top">
+        <div className="rp-brand">
+          <img src={logo} alt="" />
+          <span>doona</span>
+        </div>
+      </header>
+      <main className="rp-main">
+        <div className="rp-content">{error ? <ErrorMessage error={error} /> : <Loading />}</div>
+      </main>
+    </div>
   );
-});
+}
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Startup />
+  </StrictMode>
+);
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.

@@ -7,7 +7,7 @@ export type Rings<T extends Timed> = {fine: T[]; coarse: T[]};
 // How a bucket summarises its samples: the mean of a rate, the peak of a count.
 export type Fold<T extends Timed> = (group: T[], time: number) => T;
 export const fineLimit = 720;
-export const coarseLimit = 7 * 24 * 60;
+const coarseLimit = 7 * 24 * 60;
 const minute = 60000;
 
 export const mean = (values: Array<number | null>) => {

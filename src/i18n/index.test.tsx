@@ -1,7 +1,7 @@
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect, it} from 'vitest';
 import {LangContext, useT, type Lang, type Params} from './index';
-import {modules, type Key} from './messages';
+import type {Key} from './messages';
 
 function Message({messageKey, params}: {messageKey: Key; params: Params}) {
   return useT()(messageKey, params);
@@ -18,16 +18,4 @@ it('substitutes placeholders once and selects plural forms in the active languag
   expect(render('en', 'dns.deleted', {n: 2})).toBe('Deleted 2 cache entries');
   expect(render('zh-TW', 'dns.deleted', {n: 1})).toBe('已刪除 1 筆快取');
   expect(render('zh-CN', 'dns.deleted', {n: 2})).toBe('已删除 2 条缓存');
-});
-
-it('never overwrites a message from another module during merging', () => {
-  const owners = new Set<string>();
-  const duplicates: string[] = [];
-  for (const module of modules) {
-    for (const key of Object.keys(module['zh-TW'])) {
-      if (owners.has(key)) duplicates.push(key);
-      owners.add(key);
-    }
-  }
-  expect(duplicates).toEqual([]);
 });

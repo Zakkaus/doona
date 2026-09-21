@@ -84,15 +84,17 @@ type ResourceState<T> = {data: T | undefined; loading: boolean; error: Error | n
 
 function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Resource<T>, data: T | undefined, publish: (state: ResourceState<T>) => void) {
   const name = normalizeResourceKey(key);
-  let pending: RequestLease<T> | undefined;
+  let phase: 'idle' | 'fetching' | 'backoff' = 'idle';
+  let request: RequestLease<T> | undefined;
   let settled: Promise<RefreshOutcome> | undefined;
+  let resolve: ((outcome: RefreshOutcome) => void) | undefined;
   let followup: Promise<RefreshOutcome> | undefined;
   let disposed = false;
   let dirty = false;
   let stale = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
-  // Consecutive transient refusals; the first few retry quietly after the backend's Retry-After.
+  let retryAt = 0;
   let refused = 0;
   const clear = () => {
     clearTimeout(timer);
@@ -112,59 +114,67 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
       () => {
         clear();
         if (document.hidden) dirty = true;
+        else if (phase === 'backoff') attempt();
         else load();
       },
       Math.max(0, at - Date.now())
     );
   };
-  const load = (): Promise<RefreshOutcome> => {
-    if (disposed) return Promise.resolve({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
-    if (pending) return settled!;
-    clear();
+  const finish = (outcome: RefreshOutcome) => {
+    phase = 'idle';
+    const complete = resolve;
+    resolve = undefined;
+    complete?.(outcome);
+    if (disposed) return;
+    if (stale) schedule(Date.now() + 2000);
+    else if (every > 0) schedule(Date.now() + every);
+  };
+  const attempt = () => {
+    phase = 'fetching';
     dirty = false;
     stale = false;
-    if (settled && data === undefined) publish({data, loading: true, error: null});
-    const request = inflight.acquire(api, name, fetch);
-    pending = request;
-    settled = request.promise
-      .then(
-        value => {
-          refused = 0;
-          if (!disposed) {
-            data = value;
-            publish({data, loading: false, error: null});
-          }
-          return {key: name, ok: true} as const;
-        },
-        reason => {
-          const error = reason instanceof Error ? reason : new Error(String(reason));
-          // Not now: the load stays pending through the backend's Retry-After and then goes again, so a
-          // refresh, an invalidation or a poll in between waits on the same outcome.
-          if (error instanceof ApiError && error.transient && ++refused <= 3)
-            return new Promise<RefreshOutcome>(resolve => setTimeout(resolve, (error.retryAfter ?? 2) * 1000)).then(() => {
-              pending = undefined;
-              request.release();
-              return load();
-            });
-          if (!disposed) publish({data, loading: false, error});
-          return {key: name, ok: false, error} as const;
-        }
-      )
-      .finally(() => {
-        if (pending !== request) return;
-        pending = undefined;
-        request.release();
+    const lease = inflight.acquire(api, name, fetch);
+    request = lease;
+    void lease.promise.then(
+      value => {
+        lease.release();
         if (disposed) return;
-        clear();
-        if (stale) {
-          stale = false;
-          schedule(Date.now() + 2000);
-        } else if (every > 0) schedule(Date.now() + every);
-      });
+        request = undefined;
+        data = value;
+        publish({data, loading: false, error: null});
+        finish({key: name, ok: true});
+      },
+      reason => {
+        lease.release();
+        if (disposed) return;
+        request = undefined;
+        const error = reason instanceof Error ? reason : new Error(String(reason));
+        if (error instanceof ApiError && error.transient && ++refused <= 3) {
+          phase = 'backoff';
+          retryAt = Date.now() + (error.retryAfter ?? 2) * 1000;
+          schedule(retryAt);
+          return;
+        }
+        publish({data, loading: false, error});
+        finish({key: name, ok: false, error});
+      }
+    );
+  };
+  const load = (): Promise<RefreshOutcome> => {
+    if (disposed) return Promise.resolve({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
+    if (phase !== 'idle') return settled!;
+    clear();
+    if (settled && data === undefined) publish({data, loading: true, error: null});
+    refused = 0;
+    settled = new Promise<RefreshOutcome>(complete => {
+      resolve = complete;
+    });
+    attempt();
     return settled;
   };
   const refetch = () => {
-    if (!pending) return load();
+    if (phase === 'idle') return load();
+    if (phase === 'backoff') return settled!;
     if (!followup) {
       followup = settled!.then(() => {
         followup = undefined;
@@ -175,7 +185,8 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
   };
   const invalidate = (reconnected: boolean) => {
     // A request already running may predate the change; one more follows once it settles.
-    if (pending) stale = true;
+    if (phase === 'fetching') stale = true;
+    else if (phase === 'backoff') return;
     else if (document.hidden) {
       dirty = true;
       clear();
@@ -186,13 +197,17 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
     if (document.hidden) {
       dirty ||= timer !== undefined;
       clear();
-    } else if (dirty) load();
+    } else if (dirty) {
+      if (phase === 'backoff') schedule(retryAt);
+      else load();
+    }
   };
   const unsubscribe = subscribeEvents(api, (event, reconnected) => {
     if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
   });
   document.addEventListener('visibilitychange', visibility);
-  load();
+  if (document.hidden) dirty = true;
+  else load();
   return {
     refetch,
     invalidate,
@@ -200,7 +215,8 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
       disposed = true;
       unsubscribe();
       document.removeEventListener('visibilitychange', visibility);
-      pending?.release();
+      request?.release();
+      finish({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
       clear();
     }
   };

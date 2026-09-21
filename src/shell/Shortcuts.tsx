@@ -1,14 +1,24 @@
 import {useEffect, useState} from 'react';
-import {useCapabilities} from '../api/store';
 import type {PageProps} from '../features/types';
 import {useT} from '../i18n';
 import {Button, ModalDialog} from '../ui/ui';
-import {features, navAvailable} from './registry';
+import type {ShortcutView} from './view';
 
-export function Shortcuts({go, openSearch, mac}: {go: PageProps['go']; openSearch: () => void; mac: boolean}) {
+export function Shortcuts({
+  go,
+  openSearch,
+  mac,
+  entries,
+  paths
+}: {
+  go: PageProps['go'];
+  openSearch: () => void;
+  mac: boolean;
+  entries: ShortcutView[];
+  paths: Record<string, string>;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const capabilities = useCapabilities();
   useEffect(() => {
     let prefixAt: number | null = null;
     const reset = () => {
@@ -46,10 +56,10 @@ export function Shortcuts({go, openSearch, mac}: {go: PageProps['go']; openSearc
       const pending = prefixAt;
       reset();
       if (pending !== null && performance.now() - pending <= 800) {
-        const page = features.find(feature => feature.shortcut === event.key && navAvailable(feature.path, capabilities.data));
-        if (page) {
+        const path = paths[event.key];
+        if (path) {
           event.preventDefault();
-          go(page.path);
+          go(path);
           return;
         }
       }
@@ -66,7 +76,7 @@ export function Shortcuts({go, openSearch, mac}: {go: PageProps['go']; openSearc
       removeEventListener('blur', reset);
       removeEventListener('focusin', reset);
     };
-  }, [go, openSearch, capabilities.data]);
+  }, [go, openSearch, paths]);
   return (
     <ModalDialog
       title={t('shell.shortcuts')}
@@ -85,14 +95,12 @@ export function Shortcuts({go, openSearch, mac}: {go: PageProps['go']; openSearc
           <span>{t('shell.shortcutHelp')}</span>
           <kbd className="rp-kbd">?</kbd>
         </div>
-        {features
-          .filter(feature => feature.shortcut && navAvailable(feature.path, capabilities.data))
-          .map(feature => (
-            <div className="rp-row" key={feature.id}>
-              <span>{t(feature.nav!.titleKey)}</span>
-              <kbd className="rp-kbd">g {feature.shortcut}</kbd>
-            </div>
-          ))}
+        {entries.map(entry => (
+          <div className="rp-row" key={entry.id}>
+            <span>{entry.label}</span>
+            <kbd className="rp-kbd">{entry.sequence}</kbd>
+          </div>
+        ))}
       </div>
     </ModalDialog>
   );
