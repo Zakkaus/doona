@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {readState, writeState} from './wizard';
+import {readState, validSubscriptions, writeState} from './wizard';
 import {readGroupEntries} from './groups';
 
 it('keeps template groups inside an inline group section', () => {
@@ -13,7 +13,9 @@ it('keeps template groups inside an inline group section', () => {
 it('keeps block subscriptions as indivisible raw entries', () => {
   const text = "subscription {\n  paid: {\n    url: 'https://example.org/{#}'\n    interval: '2h'\n  }\n}\ngroup { proxy {} }\n";
   const state = readState(text);
-  expect(state.subscriptions).toEqual([{name: '', url: '', section: 0, raw: "  paid: {\n    url: 'https://example.org/{#}'\n    interval: '2h'\n  }"}]);
+  expect(state.subscriptions).toEqual([
+    {name: '', tag: 'paid', url: '', section: 0, raw: "  paid: {\n    url: 'https://example.org/{#}'\n    interval: '2h'\n  }"}
+  ]);
   expect(writeState(text, state)).toBe(text);
   expect(writeState(text, {...state, subscriptions: []})).not.toContain('paid:');
 });
@@ -119,7 +121,7 @@ describe('quick setup text transforms', () => {
     expect(full).toContain("  bahamut {\n    filter: group('tw', 'proxy', 'auto')");
     expect(full).toContain('domain(geosite:bilibili) -> direct');
   });
-  it('adds a group section only when the source has none, and generates a whole file for an empty source', () => {
+  it('adds groups only for a selected template and generates a whole file for an empty source', () => {
     // A group name outside [\w-] is still the routing target, and its section is still left alone.
     const odd = main.replace('  proxy {', '  proxy.eu {');
     expect(readState(odd).group).toBe('proxy.eu');
@@ -129,7 +131,7 @@ describe('quick setup text transforms', () => {
     const noGroup = main.replace(/group \{[\s\S]*?\n\}\n/, '');
     const state = readState(noGroup);
     expect(state.group).toBeNull();
-    expect(writeState(noGroup, state)).toContain("group {\n  proxy { filter: !name('direct', 'block') policy: min_moving_avg }\n}");
+    expect(writeState(noGroup, state)).toBe(noGroup);
     const fresh = writeState('', {subscriptions: [{name: 'sub', url: 'https://example.org/sub'}], group: null, rules: 'keep', lanInterface: ''});
     expect(fresh).toContain('lan_interface: auto');
     expect(fresh).toContain('      qname(geosite:cn) -> alidns\n      fallback: cloudflare');
@@ -153,4 +155,23 @@ routing { fallback: proxy.eu }
   state.subscriptions[1] = {...state.subscriptions[1], url: 'https://example.net/new', raw: undefined};
   const written = writeState(source, state);
   expect(written).toBe(source.replace('https://example.net/#fragment', 'https://example.net/new'));
+});
+
+it('preserves subscription identity when only its URL changes and rejects duplicate tags', () => {
+  const text = "subscription {\n  sub.eu: 'https://example.org/old'\n  'sub eu': 'https://example.net/old'\n}\ngroup { proxy { filter: subtag('sub.eu') } }\n";
+  const state = readState(text);
+  state.subscriptions[0] = {...state.subscriptions[0], url: 'https://example.org/new', raw: undefined};
+  state.subscriptions[1] = {...state.subscriptions[1], url: 'https://example.net/new', raw: undefined};
+  expect(writeState(text, state)).toBe(text.replaceAll('/old', '/new'));
+  expect(validSubscriptions(state.subscriptions)).toBe(true);
+  state.subscriptions.push({name: 'sub.eu', url: 'https://duplicate.example'});
+  expect(validSubscriptions(state.subscriptions)).toBe(false);
+  const opaque = readState("subscription { paid: { url: 'https://example.org/sub' } }").subscriptions;
+  expect(validSubscriptions([...opaque, {name: 'paid', url: 'https://duplicate.example'}])).toBe(false);
+  expect(validSubscriptions([{name: ' ', url: 'https://example.org'}])).toBe(false);
+});
+
+it('does not inject subscriptions or groups into untouched setup', () => {
+  const source = 'global {\n  tproxy_port: 12345\n}\nrouting {\n  fallback: direct\n}\n';
+  expect(writeState(source, readState(source))).toBe(source);
 });

@@ -1,14 +1,17 @@
 import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from './blocks';
-import {readGroupEntries} from './groups';
+import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
-type Subscription = {name: string; url: string; raw?: string; section?: number};
+type Subscription = {name: string; url: string; raw?: string; section?: number; tag?: string};
 export type {RuleTemplate};
 export {defaultTemplate};
 export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
 
-const ident = (value: string) => value.trim().replace(/[^\w-]/g, '-');
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
+export function validSubscriptions(subscriptions: Subscription[]): boolean {
+  const names = subscriptions.map(item => item.name || item.tag).filter((name): name is string => !!name);
+  return new Set(names).size === names.length && subscriptions.every(item => item.raw !== undefined || (!!item.name.trim() && isSubscriptionUrl(item.url)));
+}
 
 export function readState(text: string): WizardState {
   const {blocks, tokens} = scanConfig(text);
@@ -21,7 +24,7 @@ export function readState(text: string): WizardState {
       const field = entry.block ? undefined : entryFields.length === 1 ? entryFields[0] : undefined;
       const url = field ? unquote(field.value) : '';
       if (field && isSubscriptionUrl(url)) subscriptions.push({name: field.name, url, raw: line, section});
-      else subscriptions.push({name: '', url: '', raw: line, section});
+      else subscriptions.push({name: '', url: '', raw: line, section, ...(entry.block || field ? {tag: entry.block?.name ?? field!.name} : {})});
     }
   }
   const group = readGroupEntries(text)[0]?.name ?? null;
@@ -31,7 +34,7 @@ export function readState(text: string): WizardState {
 }
 
 function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${ident(s.name) || 'sub'}: ${quote(s.url.trim())}`), '}'];
+  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${quoteName(s.name)}: ${quote(s.url.trim())}`), '}'];
 }
 export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
@@ -70,7 +73,7 @@ function globalBlock(state: WizardState): string[] {
 function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
   const have = new Set(current);
   const wanted = rules === 'keep' ? [] : templates[rules].groups.filter(group => !have.has(group.name));
-  if (!wanted.length && current.length) return [];
+  if (!wanted.length && (current.length || rules === 'keep')) return [];
   if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
   return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
@@ -96,20 +99,20 @@ export function writeState(current: string, state: WizardState): string {
   const subscriptionSections = blocks.filter(block => block.name === 'subscription');
   for (const [section, block] of subscriptionSections.entries()) {
     const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
-    const body = subscriptions.map(item => item.raw ?? `  ${ident(item.name) || 'sub'}: ${quote(item.url.trim())}`);
+    const body = subscriptions.map(item => item.raw ?? `  ${quoteName(item.name)}: ${quote(item.url.trim())}`);
     if (body.join('\n') !== blockBody(current, block).join('\n')) {
       edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
     }
   }
   const appended: string[] = [];
-  if (!subscriptionSections.length) appended.push(subscriptionBlock(state).join('\n'));
+  if (!subscriptionSections.length && state.subscriptions.length) appended.push(subscriptionBlock(state).join('\n'));
   const groupSection = blocks.find(block => block.name === 'group');
   const missing = groupLines(
     readGroupEntries(current).map(entry => entry.name),
     state.rules
   );
-  if (!groupSection) appended.push(['group {', ...missing, '}'].join('\n'));
-  else if (missing.length) {
+  if (!groupSection && missing.length) appended.push(['group {', ...missing, '}'].join('\n'));
+  else if (groupSection && missing.length) {
     const at = current.lastIndexOf('\n', groupSection.close - 1) + 1;
     const inline = !/^[ \t]*$/.test(current.slice(at, groupSection.close));
     edits.push({from: inline ? groupSection.close : at, to: inline ? groupSection.close : at, text: (inline ? '\n' : '') + missing.join('\n') + '\n'});

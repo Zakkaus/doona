@@ -13,7 +13,8 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
   await expect(page).toHaveURL(/#\/connections\?src=192\.168\.1\.2$/);
-  await expect(page.locator('.rp-toolbar input')).toHaveValue('192.168.1.2');
+  // The source filter is a server-side scope, shown as an active filter rather than search text.
+  await expect(page.getByRole('button', {name: 'Clear filters', exact: true})).toBeVisible();
 });
 
 test('a pairing link fills the backend draft and removes credentials from the address bar', async ({page}) => {

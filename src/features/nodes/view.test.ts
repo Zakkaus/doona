@@ -46,7 +46,9 @@ describe('providerRows', () => {
       provider('file', {kind: 'file', url_redacted: 'https://primary.example/redacted'})
     ];
     const nodes = [node('tagged', {provider_id: 'a', subscription_tag: 'primary'})];
-    expect(providerRows(providers, nodes, entries, t).list.map(item => item.name)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
+    const rows = providerRows(providers, nodes, entries, t).list;
+    expect(rows.map(item => item.displayName)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
+    expect(rows.map(item => item.configTag)).toEqual(['primary', undefined, undefined, undefined]);
     expect(providers.map(item => item.name)).toEqual(['opaque-a', 'opaque-b', 'opaque-c', 'opaque-file']);
   });
 
@@ -179,4 +181,18 @@ it('separates built-in outbounds from unattributed nodes and avoids provider id 
     updated: '—',
     status: null
   });
+});
+
+it('does not authorize writes from shared-host guesses or conflicting node tags', () => {
+  const providers = [
+    provider('main', {url_redacted: 'https://primary.example/redacted'}),
+    provider('include', {url_redacted: 'https://primary.example/redacted'})
+  ];
+  expect(providerRows(providers, [], entries, t).list.every(row => row.configTag === undefined)).toBe(true);
+  const nodes = [node('one', {provider_id: 'main', subscription_tag: 'primary'}), node('two', {provider_id: 'main', subscription_tag: 'secondary'})];
+  expect(providerRows(providers, nodes, entries, t).list.every(row => row.configTag === undefined)).toBe(true);
+  expect(providerRowView(provider('a'), undefined, 'en-US', t)).toMatchObject({interval: '—', hasInterval: false, intervals: []});
+  const unspecified = providerRowView(provider('a'), null, 'en-US', t);
+  expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
+  expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
 });

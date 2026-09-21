@@ -18,5 +18,5 @@ export {useOutboundNames} from './store/outbounds';
 export {useConnections, useConnectionClose} from './store/connections';
 export {useFlows, useFlow, useRules, type FlowFilter} from './store/flows';
 export {useDnsLog, useDnsControl, useDnsFlush} from './store/dns';
-export {useConfig, useConfigEditor, configValidationRequest} from './store/config';
+export {useConfig, useConfigEditor} from './store/config';
 export {useLogFeed, useEventFeed, EVENT_FEED_LIMIT} from './store/logs';

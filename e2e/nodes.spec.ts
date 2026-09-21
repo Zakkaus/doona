@@ -102,13 +102,25 @@ test('node sources list their nodes and a subscription can be refreshed', async 
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const original = (await createMockApi().config()).sources.find(source => source.kind === 'main')!.content!;
+  await editor.fill(
+    original.replace(
+      "sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'",
+      "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '86400s'\n  }"
+    )
+  );
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await page.goto('/#/nodes');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c auto-refresh written to the configuration and reloaded: Every 6 hours');
+  await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
   await expect(sources.first()).toContainText('Every 6 hours');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
@@ -157,4 +169,13 @@ test('built-in and unattributed provenance stay separate without granting inline
   await rows(page.locator('.rp-table').first()).filter({hasText: inline.name}).click();
   await expect(list).toHaveCount(1);
   await expect(page.getByRole('button', {name: 'Remove Inline owner', exact: true})).toBeVisible();
+});
+
+test('an unspecified subscription interval claims neither manual-only nor an engine default but can be set', async ({page}) => {
+  await page.goto('/#/nodes');
+  const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
+  await expect(subscription).toBeVisible();
+  await expect(subscription).not.toContainText('Every 24 hours');
+  await expect(subscription).not.toContainText('Manual only');
+  await expect(subscription.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true})).toHaveText('—');
 });

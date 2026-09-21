@@ -4,9 +4,10 @@ import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../api/store/config';
-import {errorText, toast} from '../../ui/ui';
-import {isSubscriptionUrl, writeState, type RuleTemplate, type WizardState} from './wizard';
+import {errorText, toast, useLinked} from '../../ui/ui';
+import {validSubscriptions, writeState, type RuleTemplate, type WizardState} from './wizard';
 import {wizardInitial, wizardRows} from './view';
+import {useDraftGuard} from './useDraftGuard';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],
@@ -17,14 +18,14 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   full: ['config.wizardFull', 'config.wizardFullHelp']
 };
 // Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
-export function useWizard({main, editor, onDone, onDirty}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void; onDirty: (dirty: boolean) => void}) {
+export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
-  const [origin] = useState(() => main);
+  const [origin, setOrigin] = useState(() => main);
   const complete = useSourceComplete(origin);
-  useEffect(() => editor.cancel, [editor.cancel]);
   const current = origin.content ?? '';
   const [state, setState] = useState<WizardState>(() => wizardInitial(current));
+  const baseline = useMemo(() => writeState(current, wizardInitial(current)), [current]);
   const preview = useMemo(() => {
     try {
       return {text: complete ? writeState(current, state) : current, error: null};
@@ -34,19 +35,20 @@ export function useWizard({main, editor, onDone, onDirty}: {main: ConfigSource; 
   }, [complete, current, state]);
   const {text} = preview;
   const busy = !!editor.busy;
-  const dirty = preview.error !== null || text !== current;
-  useEffect(() => {
-    onDirty(dirty);
-    return () => onDirty(false);
-  }, [dirty, onDirty]);
-  // Lines the form left as written are valid by definition; the ones it edited need a name and an http(s) URL.
-  const valid = state.subscriptions.every(s => s.raw !== undefined || (s.name.trim() && isSubscriptionUrl(s.url)));
+  const dirty = preview.error !== null || (complete === true && text !== baseline);
+  const guard = useDraftGuard(dirty);
+  useLinked(guard.revision, () => {
+    setOrigin(main);
+    setState(wizardInitial(main.content ?? ''));
+  });
+  useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
+  const valid = validSubscriptions(state.subscriptions);
   const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));
   // Editing a line hands it to the form; the original text is no longer written back for it.
   const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
-    if (busy) return;
+    if (busy || !valid) return;
     if (preview.error) {
       toast('negative', errorText(preview.error));
       return;
@@ -58,7 +60,7 @@ export function useWizard({main, editor, onDone, onDirty}: {main: ConfigSource; 
       return;
     }
     toast('positive', t('config.saved', {path: main.path}));
-    onDirty(false);
+    guard.clear();
     onDone();
   };
   const rows = wizardRows(state, preview.error ? errorText(preview.error) : undefined, t);

@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../api/store';
 import type {Node, Provider} from '../../api/model';
@@ -21,9 +21,14 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
+  const session = useRef(0);
   const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
-  useLinked(guard.revision, () => setDialog(null));
+  useLinked(guard.revision, () => {
+    session.current++;
+    setDialog(null);
+  });
   const open = useCallback((next: NodeDialog) => {
+    session.current++;
     setForm({name: '', value: ''});
     setDialog(next);
   }, []);
@@ -72,6 +77,7 @@ export function useNodesPage({go, query}: PageProps) {
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   const submit = async (close: () => void) => {
     if (!dialog) return;
+    const submitted = session.current;
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
@@ -91,8 +97,10 @@ export function useNodesPage({go, query}: PageProps) {
         if (!(await manage.removeNode(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
       }
-      guard.clear();
-      close();
+      if (session.current === submitted) {
+        guard.clear();
+        close();
+      }
     } catch (error) {
       fail(error);
     }
@@ -140,7 +148,7 @@ export function useNodesPage({go, query}: PageProps) {
     providers: providers.data?.providers ?? [],
     names,
     loading: nodes.loading && !nodes.data,
-    label: provider ? t('nodes.of', {name: provider.name}) : t('nav.nodes'),
+    label: provider ? t('nodes.of', {name: provider.displayName ?? provider.name}) : t('nav.nodes'),
     query: params.get('q'),
     source,
     canManage: !!resources?.nodes.can_manage,
@@ -157,7 +165,10 @@ export function useNodesPage({go, query}: PageProps) {
     error: providers.error ?? nodes.error,
     reload,
     dialog,
-    setDialog,
+    setDialog: (next: NodeDialog | null) => {
+      session.current++;
+      setDialog(next);
+    },
     form,
     setForm,
     removing,

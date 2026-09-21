@@ -37,6 +37,10 @@ export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, 
     .map(d => ({line: d.line! - block.line, column: d.column, level: d.level, message: d.message}));
 }
 
+export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string): EditorMark[] {
+  return diagnostics.filter(d => d.source_id === sourceId && d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message}));
+}
+
 function ruleCount(text: string, block: TextBlock, tokens: TextToken[]): number {
   return tokens.filter(
     token =>
@@ -209,7 +213,7 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
 }
 export function wizardInitial(content: string): WizardState {
   const read = readState(content);
-  return {...read, rules: content.trim() ? 'keep' : defaultTemplate, subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]};
+  return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
 export function wizardRows(state: WizardState, error: string | undefined, t: Translator): {groupUsedText: string; rows: WizardRow[]} {
   return {

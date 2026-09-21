@@ -6,7 +6,7 @@ import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from './wizard';
 import {useWizard} from './useWizard';
-export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void; onDirty: (dirty: boolean) => void}) {
+export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   const {state, text, busy, rows, groupUsedText, patch, setSubscription, apply, saveDisabled, saving, saveTip, writeHelp, showLan, templates, add, remove} =
     useWizard(props);

@@ -22,7 +22,7 @@ it('distinguishes map readiness and supplies the pinned flow count', () => {
   expect(routingMapView(empty, false, false, null, 0, t).state).toBe('loading');
   expect(routingMapView(empty, false, true, null, 0, t).state).toBe('error');
   expect(routingMapView(empty, true, false, null, 0, t).state).toBe('empty');
-  expect(routingMapView(empty, true, false, 'outbound:direct', 4, t).pinLabel).toBe(t('flow.viewPinned', {n: 4}));
+  expect(routingMapView(empty, true, false, 'outbound:value:direct', 4, t).pinLabel).toBe(t('flow.viewPinned', {n: 4}));
 });
 
 it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6', async () => {
@@ -47,7 +47,7 @@ it('prepares tile labels with configured destinations, nested policies and unkno
   const tree = routingTree([], groups, nodes.nodes, rules.rules);
   const tiles = tileViews(tree, t);
   const rule = rules.rules.find(rule => rule.outbound === 'block')!;
-  const tile = tiles.find(tile => tile.id === 'rule:' + rule.rule_id)!;
+  const tile = tiles.find(tile => tile.id === 'rule:value:' + rule.rule_id)!;
   expect(tile.label).toContain('→ ' + t('ui.block'));
   expect(tile.name).toBe(rule.expression);
   const map = routingMapView(tree, true, false, null, 0, t);

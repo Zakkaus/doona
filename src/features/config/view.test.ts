@@ -2,9 +2,10 @@ import {expect, it} from 'vitest';
 import {configNotes} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
-import {sourceView, diagnosticRows, wizardInitial, wizardRows, sectionSummaries, sectionRange, sectionMarks, splice} from './view';
+import {sourceView, diagnosticRows, wizardInitial, wizardRows, sectionSummaries, sectionRange, sectionMarks, sourceMarks, splice} from './view';
 import {scanConfig} from './blocks';
 import type {ConfigSource} from '../../api/model';
+import {validationSources} from './names';
 const t: Translator = (key, params) => translate('en', key, params);
 it('keeps hidden source paths out of source labels and exposes content availability', async () => {
   const configSources = (await createMockApi().config()).sources;
@@ -26,7 +27,7 @@ it('projects source locations without inventing a line for source-wide diagnosti
 it('initializes empty setup and preserves opaque subscription lines while hiding blank lines', () => {
   const empty = wizardInitial('');
   expect(empty.rules).not.toBe('keep');
-  expect(empty.subscriptions).toEqual([{name: 'sub', url: ''}]);
+  expect(empty.subscriptions).toEqual([]);
   const state = wizardInitial("subscription {\n  a: 'https://example.org/sub'\n}\n");
   expect(state.rules).toBe('keep');
   state.subscriptions = [
@@ -124,4 +125,25 @@ it('withholds editing for credential sources and native_api sections', () => {
   const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
   expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentCredential')});
+});
+
+it('marks only the edited source while retaining cross-source diagnostic locations', () => {
+  const main = source('global {}');
+  const include = source('routing {}', 'include');
+  const own = {...configNotes[0], source_id: 'main', line: 1};
+  const other = {...own, source_id: 'include', line: 8};
+  expect(sourceMarks([other, own, {...own, line: null}], main.id).map(mark => mark.line)).toEqual([1]);
+  expect(diagnosticRows([other], [main, include], 'en-US', t)[0]).toMatchObject({sourceId: 'include', where: 'rules.dae:8'});
+});
+
+it('constructs main-first candidates with include paths and refuses missing context', () => {
+  const main = source("include { 'rules.dae' }\ngroup { proxy {} }");
+  const include = source('routing { fallback: proxy }', 'include');
+  expect(validationSources([include, main], {id: include.id, content: 'routing { fallback: direct }'})).toEqual([
+    {id: main.id, path: main.path, content: main.content},
+    {id: include.id, path: include.path, content: 'routing { fallback: direct }'}
+  ]);
+  expect(validationSources([include])).toBeNull();
+  expect(validationSources([main, {...include, content: undefined}])).toBeNull();
+  expect(validationSources([{...main, path: '<redacted>'}, include])![0]).toEqual({id: main.id, content: main.content});
 });

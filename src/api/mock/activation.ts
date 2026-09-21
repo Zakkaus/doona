@@ -1,6 +1,24 @@
 import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../features/config/blocks';
-import {canonicalPolicy, namedIn, readGroupEntries, writeGroupEntry} from '../../features/config/groups';
+import {namedIn, readGroupEntries, writeGroupEntry} from '../../features/config/groups';
+
+// The demo engine's view of a native policy expression: which contract kind it behaves as.
+const policyKinds: Record<string, Group['policy']['kind']> = {
+  select: 'selector',
+  fixed: 'selector',
+  urltest: 'urltest',
+  min_moving_avg: 'urltest',
+  min_avg10: 'urltest',
+  min_last_delay: 'urltest',
+  fallback: 'fallback',
+  roundrobin: 'loadbalance',
+  loadbalance: 'loadbalance',
+  random: 'random',
+  score: 'score'
+};
+function policyKind(native: string): Group['policy']['kind'] {
+  return policyKinds[native.toLowerCase().replace(/\(.*$/, '')] ?? 'selector';
+}
 
 export function activateInventory(text: string, revision: string, nodes: Node[], groups: Group[], providers: Provider[]) {
   const {blocks, tokens} = scanConfig(text);
@@ -56,7 +74,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     const members: Group['members'] = memberNodes.map(node => ({id: node.id, name: node.name, kind: 'node'}));
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
-    const kind = native === 'random' ? 'random' : canonicalPolicy(native);
+    const kind = policyKind(native);
     const config: Group['config'] = {
       default_member_id: null,
       final_outbound: null,

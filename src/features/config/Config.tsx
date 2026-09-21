@@ -19,7 +19,6 @@ export function Config(props: PageProps) {
     tab,
     setTab,
     selectedId,
-    revision,
     select,
     sourceProps,
     wizardProps,
@@ -50,7 +49,6 @@ export function Config(props: PageProps) {
       )}
       {ready && (
         <Tabs
-          key={revision}
           label={t('nav.config')}
           value={tab}
           onChange={setTab}
@@ -209,6 +207,7 @@ function SourceCard(props: SourceCardProps) {
     validating,
     saving,
     validateDisabled,
+    validateTip,
     editDisabled,
     editTip
   } = useSourceCard(props);
@@ -226,7 +225,7 @@ function SourceCard(props: SourceCardProps) {
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button isPending={validating} isDisabled={validateDisabled} onPress={() => void validate()}>
+            <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
@@ -258,8 +257,11 @@ function SourceCard(props: SourceCardProps) {
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
               <Light small tone={item.tone}>
-                {item.inline}
+                {item.detail}
               </Light>
+              <Button small quiet onPress={() => props.open(item.sourceId, item.line)}>
+                {t('config.openSource')}
+              </Button>
             </div>
           ))}
         </div>

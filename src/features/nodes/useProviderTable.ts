@@ -27,7 +27,7 @@ export function useProviderTable(input: ProviderTableInput) {
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const fail = (error: unknown) => toast('negative', errorText(error));
   const rows = input.rows.map(item => ({
-    ...providerRowView(item, intervals.get(item.name), locale, t),
+    ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
     refreshable: item.kind === 'subscription' && input.canRefresh,
     refreshing: refresh.busy === item.id,
     refreshDisabled: !!refresh.busy,
@@ -40,10 +40,11 @@ export function useProviderTable(input: ProviderTableInput) {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
     },
     setInterval: (key: string) => {
+      if (!item.configTag) return;
       const seconds = Number(key);
       void input.source
         .apply(
-          text => writeInterval(text, item.name, seconds),
+          text => writeInterval(text, item.configTag!, seconds),
           errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
         )
         .then(written => {

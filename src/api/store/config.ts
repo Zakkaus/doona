@@ -21,20 +21,6 @@ function sourcePath(source: Pick<ConfigSource, 'path'>): {path?: string} {
   return source.path === '<redacted>' ? {} : {path: source.path};
 }
 
-export async function configValidationRequest(
-  sources: ConfigSource[],
-  sourceId: string,
-  content: string,
-  mode: ConfigValidationRequest['mode'] = 'full'
-): Promise<ConfigValidationRequest> {
-  const main = sources.find(source => source.kind === 'main');
-  if (!main) throw new LocalError('config.incomplete');
-  const candidates = [main, ...sources.filter(source => source.kind === 'include')];
-  if (!candidates.some(source => source.id === sourceId) || !(await Promise.all(candidates.map(completeSource))).every(Boolean))
-    throw new LocalError('config.incomplete');
-  return {mode, sources: candidates.map(source => ({id: source.id, ...sourcePath(source), content: source.id === sourceId ? content : source.content!}))};
-}
-
 export function useSourceComplete(source: ConfigSource | null): boolean | null {
   const content = source?.content;
   const digest = source?.content_sha256 ?? '';
