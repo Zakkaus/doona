@@ -1,55 +1,92 @@
-import {useCallback, useEffect, useRef, useState, type DependencyList} from 'react';
+import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../index';
 import type {Api} from '../api';
 import type {ApiEvent, Capabilities} from '../model';
 import {ApiError} from '../error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../inflight';
 import {shouldRefetch} from '../invalidation';
-import {useEvents} from './events';
-const refreshers = new WeakMap<Api, Set<() => Promise<void> | undefined>>();
+import {subscribeEvents} from './events';
 
-export async function refetchAll() {
-  await Promise.allSettled([...(refreshers.get(getApi()) ?? [])].map(refresh => refresh()));
-}
+type RefreshOutcome = {key: string} & ({ok: true} | {ok: false; error: Error});
 type Resource<T> = {
   key: ResourceKey;
+  every?: number;
   fetch: (signal: AbortSignal) => Promise<T>;
   acceptEvent?: (event: ApiEvent) => boolean;
 };
+type Entry = {
+  snapshot: ResourceState<unknown>;
+  subscribers: Set<() => void>;
+  watcher: {refetch: () => Promise<RefreshOutcome>; invalidate: (reconnected: boolean) => void; dispose: () => void};
+};
+type Store = {active: Map<string, Entry>; inactive: Map<string, ResourceState<unknown>>; parameterised: Set<string>};
+const stores = new WeakMap<Api, Store>();
+const initialState: ResourceState<never> = {data: undefined, loading: true, error: null};
+const disabledState: ResourceState<never> = {data: undefined, loading: false, error: null};
 
-// Reuse each backend's last response while refreshing it in the background to avoid loading-state flashes.
-const remembered = new WeakMap<Api, {data: Map<string, unknown>; parameterised: Set<string>}>();
-export function recall<T>(api: Api, name: string): T | undefined {
-  const store = remembered.get(api);
-  if (store?.parameterised.delete(name)) store.parameterised.add(name);
-  return store?.data.get(name) as T | undefined;
+export async function refetchAll(): Promise<RefreshOutcome[]> {
+  return Promise.all([...(stores.get(getApi())?.active.values() ?? [])].map(entry => entry.watcher.refetch()));
 }
-export function remember(api: Api, name: string, data: unknown, parameterised: boolean) {
-  let store = remembered.get(api);
-  if (!store) remembered.set(api, (store = {data: new Map(), parameterised: new Set()}));
-  store.data.set(name, data);
-  store.parameterised.delete(name);
-  if (parameterised) {
-    store.parameterised.add(name);
-    if (store.parameterised.size > 32) {
-      const oldest = store.parameterised.values().next().value!;
-      store.parameterised.delete(oldest);
-      store.data.delete(oldest);
-    }
+
+function snapshot<T>(api: Api, name: string): ResourceState<T> {
+  const store = stores.get(api);
+  return (store?.active.get(name)?.snapshot ?? store?.inactive.get(name) ?? initialState) as ResourceState<T>;
+}
+
+export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
+  let store = stores.get(api);
+  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), parameterised: new Set()}));
+  let entry = store.active.get(name);
+  if (!entry) {
+    const state = snapshot<T>(api, name);
+    store.inactive.delete(name);
+    store.parameterised.delete(name);
+    const subscribers = new Set<() => void>();
+    const shared: Entry = {
+      snapshot: state,
+      subscribers,
+      watcher: createWatcher(api, resource, state.data, next => {
+        shared.snapshot = next;
+        subscribers.forEach(fn => fn());
+      })
+    };
+    store.active.set(name, (entry = shared));
   }
+  entry.subscribers.add(notify);
+  const shared = entry;
+  let disposed = false;
+  return {
+    getSnapshot: () => shared.snapshot as ResourceState<T>,
+    refetch: shared.watcher.refetch,
+    invalidate: shared.watcher.invalidate,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      shared.subscribers.delete(notify);
+      if (shared.subscribers.size) return;
+      shared.watcher.dispose();
+      store.active.delete(name);
+      if (shared.snapshot.data === undefined) return;
+      store.inactive.set(name, {...shared.snapshot, error: null});
+      if (resource.key.length > 1) {
+        store.parameterised.add(name);
+        if (store.parameterised.size > 32) {
+          const oldest = store.parameterised.values().next().value!;
+          store.parameterised.delete(oldest);
+          store.inactive.delete(oldest);
+        }
+      }
+    }
+  };
 }
 
 type ResourceState<T> = {data: T | undefined; loading: boolean; error: Error | null};
 
-export function watchResource<T>(
-  {api, name, every, parameterised}: {api: Api; name: string; every: number; parameterised: boolean},
-  fetch: (signal: AbortSignal) => Promise<T>,
-  publish: (state: ResourceState<T>) => void
-) {
-  let data = recall<T>(api, name);
+function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Resource<T>, data: T | undefined, publish: (state: ResourceState<T>) => void) {
+  const name = normalizeResourceKey(key);
   let pending: RequestLease<T> | undefined;
-  let settled: Promise<void> | undefined;
-  let followup: Promise<void> | undefined;
+  let settled: Promise<RefreshOutcome> | undefined;
+  let followup: Promise<RefreshOutcome> | undefined;
   let disposed = false;
   let dirty = false;
   let stale = false;
@@ -78,24 +115,28 @@ export function watchResource<T>(
       Math.max(0, at - Date.now())
     );
   };
-  const load = (): Promise<void> | undefined => {
-    if (disposed) return;
-    if (pending) return settled;
+  const load = (): Promise<RefreshOutcome> => {
+    if (disposed) return Promise.resolve({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
+    if (pending) return settled!;
     clear();
     dirty = false;
     stale = false;
-    if (data === undefined) publish({data, loading: true, error: null});
+    if (settled && data === undefined) publish({data, loading: true, error: null});
     const request = inflight.acquire(api, name, fetch);
     pending = request;
     settled = request.promise
       .then(
         value => {
-          data = value;
-          remember(api, name, data, parameterised);
-          if (!disposed) publish({data, loading: false, error: null});
+          if (!disposed) {
+            data = value;
+            publish({data, loading: false, error: null});
+          }
+          return {key: name, ok: true} as const;
         },
         reason => {
-          if (!disposed) publish({data, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))});
+          const error = reason instanceof Error ? reason : new Error(String(reason));
+          if (!disposed) publish({data, loading: false, error});
+          return {key: name, ok: false, error} as const;
         }
       )
       .finally(() => {
@@ -135,9 +176,9 @@ export function watchResource<T>(
       clear();
     } else if (dirty) load();
   };
-  let listeners = refreshers.get(api);
-  if (!listeners) refreshers.set(api, (listeners = new Set()));
-  listeners.add(refetch);
+  const unsubscribe = subscribeEvents(api, (event, reconnected) => {
+    if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
+  });
   document.addEventListener('visibilitychange', visibility);
   load();
   return {
@@ -145,7 +186,7 @@ export function watchResource<T>(
     invalidate,
     dispose() {
       disposed = true;
-      listeners.delete(refetch);
+      unsubscribe();
       document.removeEventListener('visibilitychange', visibility);
       pending?.release();
       clear();
@@ -153,56 +194,23 @@ export function watchResource<T>(
   };
 }
 
-export function useResource<T>(
-  resource: Resource<T>,
-  {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}
-) {
+export function useResource<T>(resource: Resource<T>, {enabled = true}: {enabled?: boolean} = {}) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
-  const lane = resource.key[0];
-  const parameterised = resource.key.length > 1;
-  const [key, setKey] = useState(() => ({api, name, every, enabled, deps, parameterised}));
-  const start = (api: Api, name: string, enabled: boolean) => {
-    const data = enabled ? recall<T>(api, name) : undefined;
-    return {data, loading: enabled && data === undefined, error: null as Error | null};
-  };
-  const [state, setState] = useState<{data: T | undefined; loading: boolean; error: Error | null}>(() => start(api, name, enabled));
-  // Match React's dependency comparison without serializing API object identities.
-  if (
-    key.api !== api ||
-    key.name !== name ||
-    key.parameterised !== parameterised ||
-    !Object.is(key.every, every) ||
-    key.enabled !== enabled ||
-    key.deps.length !== deps.length ||
-    deps.some((dep, i) => !Object.is(dep, key.deps[i]))
-  ) {
-    setKey({api, name, every, enabled, deps, parameterised});
-    setState(start(api, name, enabled));
-  }
-  const current = useRef(resource.fetch);
+  const current = useRef(resource);
   useEffect(() => {
-    current.current = resource.fetch;
+    current.current = resource;
   });
-  const refresh = useRef<() => Promise<void> | undefined>(() => undefined);
-  const invalidate = useRef<(reconnected: boolean) => void>(() => {});
-  const refetch = useCallback(() => refresh.current(), []);
-  useEffect(() => {
-    if (!key.enabled) return;
-    const watcher = watchResource(key, signal => current.current(signal), setState);
-    refresh.current = watcher.refetch;
-    invalidate.current = watcher.invalidate;
-    return () => {
-      watcher.dispose();
-      refresh.current = () => undefined;
-      invalidate.current = () => {};
-    };
-  }, [key]);
-  useEvents((event, reconnected) => {
-    if (!shouldRefetch(lane, event, reconnected) || !(resource.acceptEvent?.(event) ?? true)) return;
-    invalidate.current(reconnected);
-  });
-  return {...state, refetch};
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      if (!enabled) return () => {};
+      return watchResource(api, current.current, notify, name).dispose;
+    },
+    [api, name, enabled]
+  );
+  const getSnapshot = useCallback(() => (enabled ? snapshot<T>(api, name) : disabledState), [api, name, enabled]);
+  const refetch = useCallback(() => (enabled ? stores.get(api)?.active.get(name)?.watcher.refetch() : undefined), [api, name, enabled]);
+  return {...useSyncExternalStore(subscribe, getSnapshot), refetch};
 }
 // Walks a cursor-paged list to its end. A cursor the backend no longer honours (400 for an unknown or expired
 // cursor, 410 for a gone snapshot) restarts the walk once from the head, which is what the contract asks for.

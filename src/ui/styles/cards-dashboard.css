@@ -1,0 +1,267 @@
+/* Holds a chart's height while its first samples arrive, so the card does not jump. */
+.rp-chart-wait {
+  min-height: 182px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rp-card-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 150ms var(--rp-ease),
+    background 150ms var(--rp-ease);
+}
+.rp-card-link[data-hovered] {
+  border-color: var(--rp-pine);
+}
+.rp-card-link[data-pressed] {
+  background: var(--rp-overlay);
+}
+.rp-card-link[data-focus-visible] {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-card {
+  background: var(--rp-base);
+  border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
+  border-radius: var(--rp-r-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.rp-login {
+  max-width: 480px;
+}
+.rp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--rp-control);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.rp-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.rp-label {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+}
+.rp-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+/* An odd fifth tile fills its row until all five fit at 1280px. */
+@media (min-width: 600px) {
+  .rp-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-strip > :nth-child(5):last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1100px) {
+  .rp-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  /* Five tiles at this width sit three over two, every row filled: six tracks, two or three per tile. */
+  .rp-strip:has(> :nth-child(5)) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .rp-strip:has(> :nth-child(5)) > .rp-card {
+    grid-column: span 2;
+  }
+  .rp-strip:has(> :nth-child(5)) > :nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+@media (min-width: 1280px) {
+  .rp-strip:has(> :nth-child(5)) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .rp-strip:has(> :nth-child(5)) > .rp-card,
+  .rp-strip:has(> :nth-child(5)) > :nth-child(n + 4) {
+    grid-column: auto;
+  }
+}
+.rp-g21 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+@media (min-width: 1024px) {
+  .rp-g21 {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+.rp-g3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+@media (min-width: 1024px) {
+  .rp-g3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* A feed inside a card fills the card's height and scrolls past it, so the row's cards stay level. */
+.rp-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.rp-quick {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+/* The mode card needs a full row for its label, switch, and apply button. */
+@media (min-width: 640px) {
+  .rp-quick {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-quick > :first-child:nth-last-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1100px) {
+  .rp-quick {
+    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  }
+  .rp-quick > :first-child:nth-last-child(3) {
+    grid-column: auto;
+  }
+}
+.rp-qlabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--rp-text);
+}
+.rp-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  font-size: 12px;
+  line-height: 16px;
+  min-width: 0;
+  color: var(--rp-subtle);
+  white-space: nowrap;
+}
+.rp-tile-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 32px;
+}
+.rp-tile-val {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.rp-big {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 28px;
+}
+.rp-delta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+}
+/* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
+.rp-tile-head > svg,
+.rp-qlabel > svg {
+  flex: none;
+}
+/* Role colours on icons, nav groups, rankings, and the wordmark; each palette supplies its own categorical set --rp-c1..c8. */
+.rp-tint-c1 > svg {
+  color: var(--rp-c1);
+}
+.rp-tint-c2 > svg {
+  color: var(--rp-c2);
+}
+.rp-tint-c3 > svg {
+  color: var(--rp-c3);
+}
+.rp-tint-c4 > svg {
+  color: var(--rp-c4);
+}
+.rp-tint-c5 > svg {
+  color: var(--rp-c5);
+}
+.rp-side [data-group='status'] {
+  --rp-group: var(--rp-c1);
+}
+.rp-side [data-group='network'] {
+  --rp-group: var(--rp-c6);
+}
+.rp-side [data-group='proxy'] {
+  --rp-group: var(--rp-c3);
+}
+.rp-side [data-group='system'] {
+  --rp-group: var(--rp-c4);
+}
+.rp-nav > svg {
+  color: var(--rp-group, currentColor);
+}
+.rp-nav[aria-current='page'] {
+  font-weight: 600;
+  color: var(--rp-group, var(--rp-pine));
+}
+.rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
+  --rp-group: var(--rp-c1);
+}
+.rp-side:has([data-group='network'] [aria-current='page']) .rp-nav-slider {
+  --rp-group: var(--rp-c6);
+}
+.rp-side:has([data-group='proxy'] [aria-current='page']) .rp-nav-slider {
+  --rp-group: var(--rp-c3);
+}
+.rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
+  --rp-group: var(--rp-c4);
+}
+:root:not([data-wordmark='plain']) .rp-brand-text > span:first-child {
+  background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rp-delta.good {
+  color: var(--rp-pine);
+}
+.rp-delta.bad {
+  color: var(--rp-rose);
+}
+.rp-spark {
+  flex: 1 1 64px;
+  min-width: 48px;
+  max-width: 120px;
+}

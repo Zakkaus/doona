@@ -6,10 +6,7 @@ import {useResource} from './resource';
 import {useAction} from './action';
 export function useConnections(src?: string, enabled = true) {
   const api = getApi();
-  return useResource(
-    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
-    {deps: [api, src], enabled}
-  );
+  return useResource({key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)}, {enabled});
 }
 export function useConnectionClose(refetch: () => void) {
   const api = getApi();

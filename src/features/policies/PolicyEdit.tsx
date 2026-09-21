@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {useT} from '../../i18n';
-import {policyKindLabels} from '../../api/selectors';
+import {policyKindLabels} from './view';
 import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
 import type {MainSourceEdit} from '../config/mainSource';
 import Close from '../../ui/icons/Close';

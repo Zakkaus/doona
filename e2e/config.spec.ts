@@ -1,3 +1,6 @@
+import {test as httpTest, type Page} from '@playwright/test';
+import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
 import {expect, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -145,4 +148,167 @@ test('the quick setup writes a rule template into routing', async ({page}) => {
   await page.getByRole('option', {name: /^GFW list only/}).click();
   await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
   await expect(preview).toContainText('fallback: direct');
+});
+
+async function configBackend(page: Page) {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-lang', 'en');
+    localStorage.setItem('doona-scheme', 'light');
+  });
+  const reads: Record<string, () => Promise<unknown>> = {
+    capabilities: async () => capabilities,
+    version: () => api.version(),
+    config: () => api.config(),
+    rules: () => api.rules(),
+    groups: () => api.groups(),
+    nodes: () => api.nodes(),
+    providers: () => api.providers(),
+    flows: () => api.flows(),
+    connections: () => api.connections(),
+    runtime: () => api.runtime(),
+    geodata: () => api.geodata(),
+    'runtime/settings': () => api.runtimeSettings(),
+    'runtime/outbounds': () => api.runtimeOutbounds()
+  };
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1/', '');
+    try {
+      if (reads[path]) return await route.fulfill({json: await reads[path]()});
+      if (path === 'config/validate') return await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+      if (path.startsWith('config/sources/'))
+        return await route.fulfill({
+          json: await api.replaceConfigSource(path.split('/').pop()!, route.request().postDataJSON().content, route.request().headers()['if-match'])
+        });
+      if (path.startsWith('operations/')) return await route.fulfill({json: await api.operation(path.split('/').pop()!)});
+      throw new Error(`Unexpected request: ${route.request().method()} ${path}`);
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      await route.fulfill({status: error.status, json: {request_id: 'config-test', error: {code: error.code, message: error.message, details: error.details}}});
+    }
+  });
+  return {api, capabilities};
+}
+
+test('validation refusal keeps the draft and never replaces the source', async ({page}) => {
+  const {api} = await configBackend(page);
+  const original = (await api.config()).sources.find(source => source.id === 'src-rules')!.content;
+  let writes = 0;
+  page.on('request', request => {
+    if (request.method() === 'PUT') writes++;
+  });
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill(original + '\ndomain(example.org) -> nowhere\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toContainText('domain(example.org) -> nowhere');
+  expect(writes).toBe(0);
+  expect((await api.config()).sources.find(source => source.id === 'src-rules')!.content).toBe(original);
+});
+
+test('source application works without the optional full validation endpoint', async ({page}) => {
+  const {capabilities} = await configBackend(page);
+  capabilities.resources.config_validate.available = false;
+  let validations = 0;
+  page.on('request', request => {
+    if (request.url().endsWith('/config/validate')) validations++;
+  });
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# without dry run\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(editor).toContainText('# without dry run');
+  expect(validations).toBe(0);
+});
+
+test('incomplete sources cannot be transformed by rule edits or quick setup', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  for (const source of config.sources) if (source.content !== undefined) source.content = source.content.replace('direct', 'redacted');
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  let mutations = 0;
+  page.on('request', request => {
+    if (request.method() !== 'GET') mutations++;
+  });
+  await page.goto('/#/config');
+  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  await page.getByRole('tab', {name: 'Quick setup'}).click();
+  await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
+  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await page.goto('/#/rules?tab=list');
+  await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('incomplete');
+  expect(mutations).toBe(0);
+});
+
+test('leaving the editor aborts validation before any replacement', async ({page}) => {
+  const {api} = await configBackend(page);
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  let settled!: () => void;
+  const handled = new Promise<void>(resolve => {
+    settled = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await hold;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+    settled();
+  });
+  let writes = 0;
+  page.on('request', request => {
+    if (request.method() === 'PUT') writes++;
+  });
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# cancelled draft\n');
+  const validating = page.waitForRequest('**/config/validate');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await validating;
+  await page.locator('.rp-nav[href="#/settings"]').click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
+  release();
+  await handled;
+  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  expect(writes).toBe(0);
+});
+
+httpTest('a stale original digest refuses replacement and retains the draft', async ({page}) => {
+  const {api} = await configBackend(page);
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# local draft\n');
+  const source = (await api.config()).sources.find(source => source.id === 'src-rules')!;
+  await api.replaceConfigSource(source.id, source.content + '\n# concurrent edit\n', `\"${source.content_sha256}\"`);
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await rejected;
+  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await expect(editor).toContainText('# local draft');
+  expect((await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
+});
+
+test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
+  const {api} = await configBackend(page);
+  const rules = await api.rules();
+  for (const rule of rules.rules) if (rule.source && 'source_id' in rule.source) delete rule.source.source_id;
+  await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
+  await page.goto('/#/rules?tab=list');
+  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Open source', exact: true}).first()).toBeVisible();
 });

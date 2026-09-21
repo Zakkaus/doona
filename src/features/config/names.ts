@@ -1,7 +1,6 @@
-export function groupNames(text: string): string[] {
-  const body = /(^|\n)group\s*\{([\s\S]*?)\n\}/.exec(text)?.[2] ?? '';
-  return [...body.matchAll(/^\s*([A-Za-z_][\w-]*)\s*\{/gm)].map(match => match[1]);
-}
+import {readGroupEntries} from './groups';
+
+export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
 
 // The backend redacts the path of a file that holds a secret; the file is then named by its kind and the
 // start of its id, and a name for export falls back to one by kind.

@@ -91,3 +91,26 @@ it('reads every group section and appends to the last', () => {
 it('reads policy spellings as the documented names', () => {
   expect(['min_moving_avg', 'fixed(0)', 'Score', null, 'honk'].map(canonicalPolicy)).toEqual(['urltest', 'selector', 'score', 'selector', 'selector']);
 });
+
+it('edits only the named group when values and comments contain braces and hashes', () => {
+  const source = `node { n: 'https://example.org/{#}' }
+group { 'proxy.eu' { filter: name(regex: 'a{2}#b') policy: fixed(2) } other { policy: random } } # keep }
+group {
+  backup {
+    filter: name("a}#b") # keep {
+    policy: min_last_delay
+    check_url: 'https://example.org/{#}'
+  }
+}
+`;
+  expect(readGroupEntries(source).map(entry => [entry.name, entry.filters, entry.policy])).toEqual([
+    ['proxy.eu', ["name(regex: 'a{2}#b')"], 'fixed(2)'],
+    ['other', [], 'random'],
+    ['backup', ['name("a}#b")'], 'min_last_delay']
+  ]);
+  const written = addNamesToGroup(source, 'backup', ['node']);
+  expect(written).toContain(source.slice(0, source.indexOf('group {\n')));
+  expect(written).toContain("check_url: 'https://example.org/{#}'");
+  expect(written).toContain('# keep {');
+  expect(readGroupEntries(written).at(-1)).toMatchObject({filters: ['name("a}#b", node)'], policy: 'min_last_delay'});
+});

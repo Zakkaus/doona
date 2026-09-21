@@ -1,0 +1,70 @@
+.rp-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 56px;
+  padding: 8px 12px;
+  border-radius: var(--rp-r-md);
+  border: 2px solid transparent;
+  background: var(--rp-overlay);
+  color: var(--rp-text);
+  text-align: start;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  transition:
+    background-color 150ms var(--rp-ease),
+    border-color 150ms var(--rp-ease);
+}
+
+.rp-step + .rp-step {
+  border-top: 1px solid var(--rp-hl-med);
+  padding-top: 12px;
+}
+.rp-flow-raw {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+/* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. */
+.rp-editor {
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-editor .cm-editor {
+  max-width: 100%;
+}
+.rp-editor.compact .cm-scroller {
+  max-height: 40vh;
+}
+
+.rp-provenance {
+  margin-inline-start: 4px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--rp-hl-med);
+  color: var(--rp-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.rp-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-rule-link {
+  min-height: 24px;
+  height: 24px;
+  width: 24px;
+  flex: none;
+}
+.rp-rule > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-rule > .rp-provenance {
+  flex-shrink: 0;
+}

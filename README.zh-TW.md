@@ -36,13 +36,13 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 
 | 元件   | 要求                                                                                                                          |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| 後端   | 啟用 `native_api` 的 honk（見[安裝](#安裝)）；伺服器上不需要其他程式                                                          |
+| 後端   | 實作上述固定版本原生 API 契約並啟用 API 監聽的引擎（見[安裝](#安裝)）                                                         |
 | 瀏覽器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以後。這些是 CSS 建置目標；JavaScript 建置目標是 ES2022。自動化測試只用 Chromium |
 | 建置   | Node 22 及以後、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                                                             |
 
 ## 安裝
 
-發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個標籤打出來之前，請照[開發](#開發)一節自行建置。把 `VERSION` 設為下載檔名中的發行標籤，包括標籤開頭的 `v`。然後驗證檔案並解壓到 honk 或 Web 伺服器要提供的目錄：
+發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個標籤打出來之前，請照[開發](#開發)一節自行建置。把 `VERSION` 設為下載檔名中的發行標籤，包括標籤開頭的 `v`。然後驗證檔案並解壓到引擎或 Web 伺服器要提供的目錄：
 
 ```sh
 VERSION=v0.1.0-beta.1  # 替換為下載檔案對應的發行標籤
@@ -79,9 +79,9 @@ experimental {
 <details>
 <summary><strong>任一靜態伺服器或反向代理</strong></summary>
 
-把解壓後的檔案放在網站根目錄或 `/ui/` 這類前綴下即可；頁面用 hash 路由（`/ui/#/activity`），不需要改寫規則。UI 與 honk 不同源時，該來源必須列在 honk 的 `allow_origins`；除非監聽位址是 loopback 且明確開啟匿名存取，否則必須提供 token。
+把解壓後的檔案放在網站根目錄或 `/ui/` 這類前綴下即可；頁面用 hash 路由（`/ui/#/activity`），不需要改寫規則。UI 與引擎不同源時，需要在引擎中允許 UI 的來源。原生 API 監聽、CORS 與身分驗證的設定請參閱引擎文件。
 
-前面放一個反向代理可讓兩者同源：把 `/api/` 轉給 honk 的監聽位址，檔案放在 `/ui/` 下。
+前面放一個反向代理可讓兩者同源：把 `/api/` 轉給引擎的監聽位址，檔案放在 `/ui/` 下。
 
 </details>
 
@@ -94,7 +94,7 @@ experimental {
 
 ## 第一次使用
 
-在 honk 主機上開 `/ui/`。第一次造訪時，doona 向提供頁面的來源請求 `/api`；honk 回應後就成為已儲存的後端，接著提示輸入 token。若頁面來自別處，或要連另一台 honk，開設定頁填伺服器根位址（`http://router:9527`，不含 `/api/v1`）與 token；「測試連線」在儲存前先檢查探索端點，儲存後重新載入頁面。配對連結可以代填表單：`/ui/#/settings?api=http://router:9527&token=…`，載入後 token 會從網址列移除。
+在引擎主機上開 `/ui/`。第一次造訪時，doona 向提供頁面的來源請求 `/api`；引擎回應後就成為已儲存的後端，接著提示輸入 token。若頁面來自別處，或要連另一台引擎，開設定頁填伺服器根位址（`http://router:9527`，不含 `/api/v1`）與 token；「測試連線」在儲存前先檢查探索端點，儲存後重新載入頁面。配對連結可以代填表單：`/ui/#/settings?api=http://router:9527&token=…`，載入後 token 會從網址列移除。
 
 接著活動頁顯示執行中的引擎。其餘頁面的常見順序：
 
@@ -103,7 +103,7 @@ experimental {
 3. **規則**：依評估順序列出路由字典，附每條規則決定過的流程數。新增規則可以挑選依據與值（網域後綴、geosite 分類、埠、程序名稱），也可以直接寫表達式，插在任一條之前或最後。
 4. **配置**：已接受的來源與其診斷。就地編輯檔案，校驗、儲存、重載；快速設定涵蓋主檔的常用項目。
 
-每一次寫入都經過 honk：全文校驗，帶著讀取時的雜湊儲存（磁碟上已變動的檔案會回 412，不會被覆蓋），再重載。來源裡的密鑰在回傳時已遮蔽，也不會被寫回。
+每一次寫入都經過引擎：全文校驗，帶著讀取時的雜湊儲存（磁碟上已變動的檔案會回 412，不會被覆蓋），再重載。來源裡的密鑰在回傳時已遮蔽，也不會被寫回。
 
 ## 頁面
 
@@ -129,7 +129,7 @@ experimental {
 
 ## 資料與設定
 
-doona 沒有供自身介面設定使用的伺服器端儲存空間。配置與執行期變更透過 honk 寫入；doona 的介面設定儲存在瀏覽器中，範圍限於該網站來源的 `localStorage`：
+doona 沒有供自身介面設定使用的伺服器端儲存空間。配置與執行期變更透過引擎寫入；doona 的介面設定儲存在瀏覽器中，範圍限於該網站來源的 `localStorage`：
 
 | 設定     | 鍵               | 值                                                                                                                                                                                                    |
 | -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -178,7 +178,7 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 
 ## 支援
 
-問題與提問請到 [issues](https://github.com/Zakkaus/doona/issues)。後端行為屬於 [honk](https://github.com/daeuniverse/honk)。
+問題與提問請到 [issues](https://github.com/Zakkaus/doona/issues)。後端問題請提交到所連接引擎的專案：[honk](https://github.com/daeuniverse/honk) 或 [dae](https://github.com/daeuniverse/dae)。
 
 ## 授權與致謝
 

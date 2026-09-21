@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {useCapabilities, useLogFeed} from '../../api/store';
+import {useCapabilities, useLogFeed, useVersion} from '../../api/store';
 import type {LogLevel} from '../../api/model';
 import {localTime} from '../../api/selectors';
 import {
@@ -34,6 +34,7 @@ export function Logs() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
+  const version = useVersion();
   const resources = capabilities.data?.resources;
   const [level, setLevel] = useState<LogLevel>('info');
   const [target, setTarget] = useState('');
@@ -73,7 +74,7 @@ export function Logs() {
           isDisabled={!feed.records.length}
           onPress={() =>
             downloadFile(
-              exportName('honk-log', 'txt'),
+              exportName(`${version.data?.engine.name || 'engine'}-log`, 'txt'),
               [...feed.records]
                 .reverse()
                 .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)

@@ -1,169 +1,72 @@
-import {useEffect, useMemo} from 'react';
-import {Cell, Column, ColumnResizer, ResizableTableContainer, Row, Table, TableBody, TableHeader, TableLayout, Virtualizer} from 'react-aria-components';
+/*
+ * Groups stay expanded and cannot be selected; row counts and keyboard navigation include their slots.
+ * Connections always virtualize, keep .cell wrappers, and give the first visible column grow 1.
+ * Type-ahead uses each row's text value; deep-linked selections reveal their flattened row.
+ */
+import {useMemo, type ComponentProps} from 'react';
 import {chainLabel, connectionStates, relativeStart, type OutboundNames} from '../../api/selectors';
 import {useCapabilities} from '../../api/store';
 import type {Connection} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {Badge, Loading, TextTooltip, fitColumns, tableLayout, useContentWidth, useFillHeight, RuleRef, Empty} from '../../ui/ui';
-
+import {Badge, DataTable, TextTooltip, useFillHeight, RuleRef, type TableGroup} from '../../ui/ui';
 import {columns, tableRows, type ConnectionView} from './view';
 
-export function ConnectionTable({
-  rows,
-  loading,
-  selected,
-  onSelect,
-  selectOnFocus,
-  view,
-  onSort,
-  names
-}: {
-  rows: Connection[];
-  loading: boolean;
-  selected: string | null;
-  onSelect: (id: string | null) => void;
-  selectOnFocus: boolean;
+type Props = Pick<ComponentProps<typeof DataTable<Connection>>, 'rows' | 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
   view: ConnectionView;
-  onSort: (sort: NonNullable<ConnectionView['sort']>) => void;
   names: OutboundNames;
-}) {
+};
+export function ConnectionTable({rows, view, names, ...props}: Props) {
   const t = useT();
-  const lang = useLang();
-  const locale = LOCALE[lang];
-  const items = useMemo(() => tableRows(rows, view, locale), [rows, view, locale]);
-  const flatRows = useMemo(() => items.flatMap(row => ('group' in row ? [null, ...row.children] : [row.connection])), [items]);
-  // Columns give way to the available width instead of a sideways scroll; the detail panel shows what was dropped.
-  const [ref, width] = useContentWidth<HTMLTableElement>();
-  const cols = useMemo(
-    () =>
-      fitColumns(
-        columns.filter(column => !view.hidden.includes(column.id)),
-        width
-      ),
-    [view.hidden, width]
-  );
-  const [fillRef, fill] = useFillHeight<HTMLDivElement>(442);
+  const locale = LOCALE[useLang()];
+  const [ref, height] = useFillHeight<HTMLDivElement>(442);
   const rulesListed = useCapabilities().data?.resources.rules.available === true;
-  const height = Math.min(fill, 2 + tableLayout.headingHeight + Math.max(flatRows.length, 2) * tableLayout.rowHeight);
-  const selectedIndex = flatRows.findIndex(row => row?.id === selected);
-  useEffect(() => {
-    // Wait for RAC to commit the virtual content height before revealing a deep link.
-    const frame = requestAnimationFrame(() => {
-      const table = ref.current;
-      if (!table || selectedIndex < 0) return;
-      const top = tableLayout.headingHeight + selectedIndex * tableLayout.rowHeight;
-      const bottom = top + tableLayout.rowHeight;
-      if (top < table.scrollTop + tableLayout.headingHeight) table.scrollTop = top - tableLayout.headingHeight;
-      else if (bottom > table.scrollTop + table.clientHeight) table.scrollTop = bottom - table.clientHeight;
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [ref, selectedIndex]);
-  const renderConnection = (c: Connection) => {
-    const cells: Record<string, React.ReactNode> = {
-      dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
-      src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
-      chain: <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
-      rule: (
-        <span className="rp-rule">
-          <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
-          {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
-        </span>
-      ),
-      state: t(connectionStates[c.state]),
-      down: formatBytes(c.download_bytes),
-      age: relativeStart(c.started_at, locale)
-    };
-    return (
-      <Row key={c.id} id={c.id} textValue={c.domain || c.dst || c.id}>
-        {cols.map(column => (
-          <Cell key={column.id} className={column.align}>
-            <span className="cell">{cells[column.id]}</span>
-          </Cell>
-        ))}
-      </Row>
-    );
-  };
+  const cols = useMemo(() => columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1})), [view.hidden, t]);
+  const collection = useMemo(() => {
+    const sorted: Connection[] = [];
+    const groups: TableGroup<Connection>[] = [];
+    for (const row of tableRows(rows, view, locale)) {
+      if ('connection' in row) sorted.push(row.connection);
+      else {
+        const totals: Record<string, React.ReactNode> = {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})};
+        const label = <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>;
+        groups.push({...row, textValue: row.group, render: (column, index) => (index === 0 ? label : totals[column.id])});
+      }
+    }
+    return {rows: sorted, groups: view.group === 'none' ? undefined : groups};
+  }, [rows, view, locale, t]);
   return (
-    <div
-      onKeyDownCapture={event => {
-        // RAC scopes Home/End to cells unless the row itself has focus.
-        if (event.key === 'Home' || event.key === 'End') {
-          (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]')?.focus({preventScroll: true});
-        }
-      }}
-    >
-      <ResizableTableContainer ref={fillRef} className="rp-table" style={{height}}>
-        <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
-          <Table
-            ref={ref}
-            aria-label={t('nav.connections')}
-            aria-rowcount={flatRows.length + 1}
-            expandedKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
-            treeColumn={view.group === 'none' ? undefined : cols[0].id}
-            sortDescriptor={view.sort ?? undefined}
-            onSortChange={onSort}
-            disabledKeys={items.flatMap(row => ('group' in row ? [row.id] : []))}
-            selectionMode="single"
-            selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-            selectedKeys={selected ? [selected] : []}
-            onSelectionChange={keys => onSelect(keys === 'all' || !keys.size ? null : String([...keys][0]))}
-            disallowEmptySelection
-          >
-            <TableHeader>
-              {cols.map((c, index) => (
-                <Column
-                  key={c.id}
-                  id={c.id}
-                  isRowHeader={index === 0}
-                  allowsSorting={c.sortable}
-                  defaultWidth={`${c.minWidth}fr`}
-                  minWidth={c.minWidth}
-                  className={c.align}
-                >
-                  {({sortDirection}) => (
-                    <>
-                      <span className="rp-th">
-                        {t(c.label)}
-                        {sortDirection && <span aria-hidden="true">{sortDirection === 'ascending' ? ' ↑' : ' ↓'}</span>}
-                      </span>
-                      <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: t(c.label)})} />
-                    </>
-                  )}
-                </Column>
-              ))}
-            </TableHeader>
-            <TableBody
-              items={items}
-              dependencies={[locale, cols, view.group, loading, names, rulesListed]}
-              renderEmptyState={() => (loading ? <Loading /> : <Empty>{t('conn.empty')}</Empty>)}
-            >
-              {row => {
-                if ('group' in row)
-                  return (
-                    <Row id={row.id} textValue={row.group}>
-                      {cols.map((column, index) => (
-                        <Cell key={column.id} className={column.align}>
-                          <span className="cell">
-                            {index === 0 ? (
-                              <strong>{t('conn.groupCount', {name: row.group, n: row.children.length})}</strong>
-                            ) : column.id === 'down' ? (
-                              formatBytes(row.download)
-                            ) : column.id === 'state' ? (
-                              t('conn.activeCount', {n: row.active})
-                            ) : null}
-                          </span>
-                        </Cell>
-                      ))}
-                      {row.children.map(renderConnection)}
-                    </Row>
-                  );
-                return renderConnection(row.connection);
-              }}
-            </TableBody>
-          </Table>
-        </Virtualizer>
-      </ResizableTableContainer>
+    <div ref={ref}>
+      <DataTable
+        {...props}
+        {...collection}
+        label={t('nav.connections')}
+        cols={cols}
+        height={height}
+        sort={view.sort ? {column: String(view.sort.column), direction: view.sort.direction ?? 'ascending'} : null}
+        empty={t('conn.empty')}
+        virtualization="always"
+        rowHeader="first-visible"
+        reveal
+        getTextValue={c => c.domain || c.dst || c.id}
+        render={c => {
+          const cells: Record<string, React.ReactNode> = {
+            dst: <TextTooltip>{c.domain || c.dst || '—'}</TextTooltip>,
+            src: <TextTooltip className="rp-code">{c.src ?? '—'}</TextTooltip>,
+            chain: <TextTooltip className="rp-chain">{chainLabel(c, t, names)}</TextTooltip>,
+            rule: (
+              <span className="rp-rule">
+                <RuleRef expression={c.rule_expression} ruleId={c.rule_id} linked={rulesListed} />
+                {c.rule_source === 'recomputed' && <Badge>{t('conn.recomputed')}</Badge>}
+              </span>
+            ),
+            state: t(connectionStates[c.state]),
+            down: formatBytes(c.download_bytes),
+            age: relativeStart(c.started_at, locale)
+          };
+          return cols.map(column => <span className="cell">{cells[column.id]}</span>);
+        }}
+      />
     </div>
   );
 }

@@ -55,32 +55,30 @@ describe('providerRows', () => {
     expect(providerRows([provider('a'), provider('b')], [], entries.slice(0, 1), 'Inline').list.map(item => item.name)).toEqual(['opaque-a', 'opaque-b']);
   });
 
-  it('prepends a synthetic inline provider only for nodes explicitly without a provider', () => {
+  it('groups null and omitted provider ids as unknown provenance', () => {
     const remote = provider('remote');
     const nodes = [node('local'), node('remote', {provider_id: 'remote'}), node('unknown', {provider_id: undefined})];
-    const result = providerRows([remote], nodes, [], 'Configuration');
-    expect(result.synthetic).toBe(true);
+    const result = providerRows([remote], nodes, [], 'Unknown');
     expect(result.list.map(item => [item.id, item.name, item.kind, item.node_count])).toEqual([
-      ['inline', 'Configuration', 'inline', 1],
+      ['unknown', 'Unknown', 'unknown', 2],
       ['remote', 'opaque-remote', 'subscription', 0]
     ]);
-    expect(providerRows([remote], nodes.slice(1), [], 'Configuration')).toEqual({list: [remote], synthetic: false});
+    expect(ownedNodes(nodes, null).map(item => item.id)).toEqual(['local', 'unknown']);
   });
 
-  it('preserves a backend inline provider and its identity instead of adding another', () => {
+  it('does not attribute unknown nodes to a backend inline provider', () => {
     const inline = provider('backend-inline', {kind: 'inline', name: 'config.dae', node_count: 2});
-    expect(providerRows([inline], [node('local'), node('owned', {provider_id: inline.id})], [], 'Configuration')).toEqual({
-      list: [inline],
-      synthetic: false
-    });
+    const nodes = [node('local'), node('owned', {provider_id: inline.id})];
+    expect(providerRows([inline], nodes, [], 'Unknown').list.map(item => item.kind)).toEqual(['unknown', 'inline']);
+    expect(ownedNodes(nodes, inline.id).map(item => item.id)).toEqual(['owned']);
   });
 });
 
 describe('node rows', () => {
-  it('distinguishes no filter, synthetic inline ownership, and backend provider ownership', () => {
+  it('distinguishes no filter, unknown provenance, and backend provider ownership', () => {
     const nodes = [node('local'), node('owned', {provider_id: 'backend-inline'}), node('unknown', {provider_id: undefined})];
     expect(ownedNodes(nodes, undefined).map(item => item.id)).toEqual(['local', 'owned', 'unknown']);
-    expect(ownedNodes(nodes, null).map(item => item.id)).toEqual(['local']);
+    expect(ownedNodes(nodes, null).map(item => item.id)).toEqual(['local', 'unknown']);
     expect(ownedNodes(nodes, 'backend-inline').map(item => item.id)).toEqual(['owned']);
   });
 

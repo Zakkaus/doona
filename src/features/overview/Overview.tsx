@@ -1,5 +1,6 @@
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../api/store';
-import {datapathFields, datapathValue, formatDuration, lifecycleStates, lifecycleTone, localTime, memoryFields, shortId} from '../../api/selectors';
+import {formatDuration, lifecycleStates, lifecycleTone, localTime, shortId} from '../../api/selectors';
+import {datapathFields, datapathValue, memoryFields} from './view';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, downloadFile, ErrorMessage, Loading, exportName, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';

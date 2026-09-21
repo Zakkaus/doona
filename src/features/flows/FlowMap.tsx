@@ -1,7 +1,8 @@
 import {useMemo} from 'react';
 import {useT, formatNumber, useLang, LOCALE} from '../../i18n';
 import type {GroupSummary, Node} from '../../api/model';
-import {outboundLabel, policyKindLabels, preferredHealth} from '../../api/selectors';
+import {outboundLabel, preferredHealth} from '../../api/selectors';
+import {policyKindLabels} from '../policies/view';
 import {Chips, Disclosure, Light, NodeTile} from '../../ui/ui';
 import {lanes, type FlowMap as FlowMapData, type MapNode} from './map';
 

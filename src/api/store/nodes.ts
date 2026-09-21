@@ -9,13 +9,14 @@ export function useNodes(enabled = true) {
   return useResource(
     {
       key: ['nodes'],
+      every: 30000,
       fetch: signal =>
         walk(
           cursor => api.nodes({cursor, limit: 1000}, signal),
           (acc: Node[] | undefined, page) => [...(acc ?? []), ...page.nodes]
         )
     },
-    {deps: [api], every: 30000, enabled}
+    {enabled}
   );
 }
 export function useProviders(enabled = true) {
@@ -24,14 +25,14 @@ export function useProviders(enabled = true) {
   const limit = pageSize(capabilities, capabilities?.resources.providers.max_page_size);
   return useResource(
     {
-      key: ['providers'],
+      key: ['providers', {limit}],
       fetch: signal =>
         walk(
           cursor => api.providers({cursor, limit}, signal),
           (acc: ProviderList | undefined, page) => (acc ? {...acc, providers: [...acc.providers, ...page.providers]} : page)
         )
     },
-    {deps: [api, limit], enabled}
+    {enabled}
   );
 }
 export function useProviderRefresh(refetch: () => void) {
@@ -109,7 +110,7 @@ export function useNodeProbe(refetch: () => void) {
 }
 export function useGeodata(enabled = true) {
   const api = getApi();
-  const resource = useResource({key: ['geodata'], fetch: signal => api.geodata(signal)}, {deps: [api], enabled, every: 0});
+  const resource = useResource({key: ['geodata'], every: 0, fetch: signal => api.geodata(signal)}, {enabled});
   const {refetch} = resource;
   const {busy, run} = useAction<'update'>({rethrow: true});
   const update = useCallback(

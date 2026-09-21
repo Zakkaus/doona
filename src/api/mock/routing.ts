@@ -1,6 +1,8 @@
 import type {RoutingTraceInput, RoutingTraceRequest, RoutingTraceResponse} from '../model';
 import {ApiError} from '../error';
-import {configRules, dnsCache, instanceId} from './fixtures';
+import {configRules} from './fixtures/configuration';
+import {dnsCache} from './fixtures/network';
+import {instanceId} from './fixtures/clock';
 
 type Evaluation = RoutingTraceResponse['evaluations'][number];
 type Condition = Evaluation['rules'][number]['conditions'][number];

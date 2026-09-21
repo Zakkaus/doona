@@ -1,8 +1,7 @@
 import {Login} from './Login';
 import {ApiError} from '../api/error';
 import {Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {I18nProvider, ListBox, ListBoxItem, ListBoxSection, Header, Link as RLink, Separator} from 'react-aria-components';
-import Close from '../ui/icons/Close';
+import {I18nProvider, Link as RLink, Separator} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
 import Translate from '../ui/icons/Translate';
@@ -12,29 +11,13 @@ import logo from '../logo.svg';
 import {About, engineLinks} from './About';
 import GitHub from '../ui/icons/GitHub';
 import {LangContext, LANGS, LOCALE, useT, type Lang, type Translator} from '../i18n';
-import {
-  Button,
-  MenuButton,
-  ModalDialog,
-  TextField,
-  Toasts,
-  LabeledSelect,
-  ErrorMessage,
-  Loading,
-  errorText,
-  toast,
-  visibleErrors,
-  useSlider,
-  withCrossfade,
-  Empty,
-  Link
-} from '../ui/ui';
+import {Button, MenuButton, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, errorText, toast, useSlider, withCrossfade, Link} from '../ui/ui';
 import Color from '../ui/icons/Color';
 import type {PageProps} from '../features/types';
 import {DraftContext, useRoute} from './route';
-import {refetchAll, useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useVersion} from '../api/store';
-import {chainLabel, connectionRows} from '../api/selectors';
-import {features, navAvailable, subpages, warmPage} from './registry';
+import {refetchAll, useCapabilities, useVersion} from '../api/store';
+import {features, navAvailable, warmPage} from './registry';
+import {SearchDialog} from './search/SearchDialog';
 import {SettingsContext} from '../features/settings/context';
 import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
@@ -125,138 +108,6 @@ function SchemeIcon({dark}: {dark: boolean}) {
       <Contrast className="moon" />
       <Lighten className="sun" />
     </span>
-  );
-}
-
-function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
-  const t = useT();
-  const [q, setQ] = useState('');
-  const capabilities = useCapabilities();
-  const resources = capabilities.data?.resources;
-  const connections = useConnections(undefined, resources?.connections.available === true);
-  const nodes = useNodes(resources?.nodes.available === true);
-  const groups = useGroups(resources?.groups.available === true);
-  const providers = useProviders(resources?.providers.available === true);
-  const config = useConfig(resources?.config.available === true);
-  const rules = useRules(resources?.rules.available === true);
-  const needle = q.trim().toLowerCase();
-  const limit = needle ? 8 : 5;
-  const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
-  const available = (path: string) => navAvailable(path, capabilities.data);
-  // Pages and their tabs and cards, so a tab or card name lands on the right place, not just the page.
-  const places = [
-    ...features
-      .filter(feature => feature.nav && available(feature.path))
-      .map(feature => ({id: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
-    ...subpages
-      .filter(item => available(item.path))
-      .map(item => ({
-        id: item.path + '?' + item.query,
-        query: item.query,
-        title: t(item.titleKey),
-        parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)
-      }))
-  ];
-  const hits = {
-    conns: connectionRows(connections.data)
-      .filter(c => match(c.domain, c.dst, c.src))
-      .slice(0, limit),
-    nodes: (nodes.data ?? []).filter(n => match(n.name)).slice(0, limit),
-    groups: (groups.data ?? []).filter(g => match(g.name)).slice(0, limit),
-    providers: (providers.data?.providers ?? []).filter(p => match(p.name)).slice(0, limit),
-    sources: (config.data?.sources ?? []).filter(source => match(source.path)).slice(0, limit),
-    rules: (rules.data?.rules ?? []).filter(rule => rule.kind === 'rule' && match(rule.expression, rule.outbound)).slice(0, limit),
-    pages: places.filter(place => match(place.title, place.parent && place.parent + ' ' + place.title)).slice(0, limit)
-  };
-  const sources = [capabilities, connections, nodes, groups, providers, config, rules];
-  const error = sources.find(source => source.error)?.error;
-  const loading = sources.some(source => source.loading && !source.data);
-  const total = Object.values(hits).reduce((sum, list) => sum + list.length, 0);
-  const pick = (k: string) => {
-    const [kind, ...rest] = k.split(':');
-    const id = rest.join(':');
-    if (kind === 'conn') go('connections', 'id=' + encodeURIComponent(id));
-    else if (kind === 'node') {
-      const node = nodes.data?.find(n => n.id === id);
-      go('nodes', (node?.provider_id ? 'provider=' + encodeURIComponent(node.provider_id) + '&' : '') + 'q=' + encodeURIComponent(node?.name ?? id));
-    } else if (kind === 'group') go('policies', 'group=' + encodeURIComponent(id));
-    else if (kind === 'provider') go('nodes', 'provider=' + encodeURIComponent(id));
-    else if (kind === 'source') go('config', 'tab=source&source=' + encodeURIComponent(id));
-    else if (kind === 'rule') go('rules', 'tab=list&rule=' + encodeURIComponent(id));
-    else {
-      const [path, query] = id.split('?');
-      go(path, query);
-    }
-    onClose();
-  };
-  const section = (id: string, title: string, items: Array<{key: string; label: string; desc?: string}>) =>
-    items.length > 0 && (
-      <ListBoxSection id={id}>
-        <Header className="rp-section-h">{title}</Header>
-        {items.map(item => (
-          <ListBoxItem key={item.key} id={item.key} className="rp-item plain" textValue={item.label}>
-            <span>{item.label}</span>
-            {item.desc && <span className="desc">{item.desc}</span>}
-          </ListBoxItem>
-        ))}
-      </ListBoxSection>
-    );
-  return (
-    <ModalDialog
-      title={t('search')}
-      hideTitle
-      isOpen
-      onOpenChange={o => {
-        if (!o) onClose();
-      }}
-    >
-      <div className="rp-toolbar">
-        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-        <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
-        <Button quiet icon onPress={onClose} label={t('close')}>
-          <Close />
-        </Button>
-      </div>
-      {error && <ErrorMessage error={error} />}
-      {total === 0 && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
-      <ListBox aria-label={t('search')} className="rp-results" onAction={k => pick(String(k))}>
-        {section(
-          'pages',
-          t('search.pages'),
-          hits.pages.map(place => ({key: 'page:' + place.id, label: place.title, desc: place.parent || undefined}))
-        )}
-        {section(
-          'conns',
-          t('nav.connections'),
-          hits.conns.map(c => ({key: 'conn:' + c.id, label: c.domain || c.dst || c.src || c.id, desc: chainLabel(c, t)}))
-        )}
-        {section(
-          'nodes',
-          t('search.nodes'),
-          hits.nodes.map(n => ({key: 'node:' + n.id, label: n.name, desc: n.group_ids.join(', ') || undefined}))
-        )}
-        {section(
-          'groups',
-          t('search.groups'),
-          hits.groups.map(g => ({key: 'group:' + g.id, label: g.name, desc: g.policy.native}))
-        )}
-        {section(
-          'providers',
-          t('search.providers'),
-          hits.providers.map(p => ({key: 'provider:' + p.id, label: p.name, desc: t('search.nodeCount', {n: p.node_count})}))
-        )}
-        {section(
-          'sources',
-          t('search.sources'),
-          hits.sources.map(source => ({key: 'source:' + source.id, label: source.path, desc: source.kind}))
-        )}
-        {section(
-          'rules',
-          t('nav.rules'),
-          hits.rules.map(rule => ({key: 'rule:' + rule.rule_id, label: rule.expression, desc: `#${rule.index + 1} → ${rule.outbound}`}))
-        )}
-      </ListBox>
-    </ModalDialog>
   );
 }
 
@@ -380,14 +231,6 @@ function Frame({
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   const [spinning, setSpinning] = useState(false);
   const refreshLock = useRef(false);
-  const [refreshed, setRefreshed] = useState(0);
-  const announcedRefresh = useRef(0);
-  useEffect(() => {
-    if (refreshed === announcedRefresh.current) return;
-    announcedRefresh.current = refreshed;
-    const error = visibleErrors.values().next().value;
-    toast(error ? 'negative' : 'positive', error ? t('ui.refreshFailed', {error: errorText(error)}) : t('ui.refreshed'));
-  }, [refreshed, t]);
   const feature = features.find(feature => feature.path === route) ?? features[0];
   const Page = feature.Page;
   // A 401 or 403 from the capability probe means the backend wants a token; the page yields to the login form.
@@ -430,8 +273,9 @@ function Frame({
               refreshLock.current = true;
               setSpinning(true);
               try {
-                await refetchAll();
-                setRefreshed(value => value + 1);
+                const outcomes = await refetchAll();
+                const failure = outcomes.find(outcome => !outcome.ok);
+                toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure.error)}) : t('ui.refreshed'));
               } finally {
                 refreshLock.current = false;
                 setSpinning(false);

@@ -17,10 +17,7 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const capabilities = useCapabilities().data;
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
   const limit = advertised === undefined ? undefined : Math.min(200, advertised);
-  return useResource(
-    {key: ['dnsLog', {name, type, src}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)},
-    {deps: [api, name, type, src, limit], enabled}
-  );
+  return useResource({key: ['dnsLog', {name, type, src, limit}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)}, {enabled});
 }
 function useDnsCache(enabled = true) {
   const api = getApi();
@@ -33,7 +30,7 @@ function useDnsCache(enabled = true) {
           (acc: DnsCacheList | undefined, page) => (acc ? {...acc, entries: [...acc.entries, ...page.entries]} : page)
         )
     },
-    {deps: [api], enabled}
+    {enabled}
   );
 }
 export function useDnsControl() {

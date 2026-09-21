@@ -1,0 +1,134 @@
+/* Kit additions for the remaining pages */
+.rp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.rp-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--rp-subtle);
+}
+.rp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* Fields with descriptions differ in height; align them by their labels instead of their middles. */
+.rp-toolbar.top {
+  align-items: flex-start;
+}
+.rp-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rp-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.rp-col > .rp-btn,
+.rp-card > .rp-btn,
+.rp-col > .rp-tipwrap,
+.rp-card > .rp-tipwrap,
+.rp-col > .rp-tipwrap > .rp-btn,
+.rp-card > .rp-tipwrap > .rp-btn {
+  align-self: flex-start;
+}
+
+.rp-h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rp-code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
+  font-size: 13px;
+}
+.rp-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px 16px;
+}
+.rp-kv .k {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-subtle);
+}
+.rp-kv .v {
+  display: block;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.rp-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex: none;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--rp-r-sm);
+  font-size: 12px;
+  /* Flex centres the glyphs; a line box as tall as the badge would sit CJK glyphs below its middle. */
+  line-height: 1;
+  font-weight: 500;
+  border: 1px solid var(--rp-hl-high);
+  color: var(--rp-subtle);
+}
+.rp-badge.warn {
+  border-color: transparent;
+  background: var(--rp-gold);
+  color: var(--rp-on-accent);
+}
+.rp-btn.negative {
+  background: transparent;
+  border-color: var(--rp-love);
+  color: var(--rp-love);
+}
+.rp-btn.negative[data-hovered] {
+  background: color-mix(in srgb, var(--rp-love) 12%, transparent);
+}
+.rp-btn.negative[data-pressed] {
+  background: color-mix(in srgb, var(--rp-love) 20%, transparent);
+}
+
+.rp-btn[data-disabled] {
+  cursor: default;
+  pointer-events: none;
+  color: var(--rp-muted);
+  background: var(--rp-hl-low);
+  border-color: transparent;
+}
+.rp-btn.quiet[data-disabled] {
+  background: transparent;
+}
+.rp-btn.negative[data-disabled] {
+  background: transparent;
+  border-color: var(--rp-hl-med);
+}
+.rp-btn.accent[data-disabled] {
+  background: var(--rp-hl-med);
+  color: var(--rp-muted);
+}
+.rp-btn[data-disabled] > svg {
+  opacity: 0.6;
+}
+.rp-nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 8px;
+}
+.rp-grow {
+  flex: 1;
+}

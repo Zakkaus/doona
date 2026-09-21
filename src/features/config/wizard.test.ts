@@ -112,3 +112,19 @@ describe('quick setup text transforms', () => {
     expect(fresh).toContain('fallback: proxy');
   });
 });
+
+it('preserves repeated inline sections and quoted hashes and braces while changing one subscription', () => {
+  const source = `subscription { a: 'https://example.org/{#}' } # }
+group { 'proxy.eu' { policy: random } }
+subscription {
+  b: 'https://example.net/#fragment'
+}
+routing { fallback: proxy.eu }
+`;
+  const state = readState(source);
+  expect(state.subscriptions.map(item => item.url)).toEqual(['https://example.org/{#}', 'https://example.net/#fragment']);
+  expect(writeState(source, state)).toBe(source);
+  state.subscriptions[1] = {...state.subscriptions[1], url: 'https://example.net/new', raw: undefined};
+  const written = writeState(source, state);
+  expect(written).toBe(source.replace('https://example.net/#fragment', 'https://example.net/new'));
+});

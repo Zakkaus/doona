@@ -1,5 +1,6 @@
 import type {Locator} from '@playwright/test';
 import {expect, test} from './fixtures';
+import {createMockApi} from '../src/api/mock';
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
 
@@ -117,4 +118,35 @@ test('a subscription refresh interval is written into the configuration', async 
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
+});
+
+test('unknown node provenance stays visible without granting inline deletion', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  for (const resource of Object.values(capabilities.resources)) resource.available = false;
+  capabilities.resources.nodes.available = true;
+  capabilities.resources.providers.available = true;
+  const providers = await api.providers();
+  const inline = providers.providers.find(provider => provider.kind === 'inline')!;
+  const snapshot = await api.nodes();
+  const node = snapshot.nodes[0];
+  snapshot.nodes = [
+    {...node, id: 'null-owner', name: 'Null owner', provider_id: null},
+    {...node, id: 'omitted-owner', name: 'Omitted owner', provider_id: undefined},
+    {...node, id: 'inline-owner', name: 'Inline owner', provider_id: inline.id}
+  ];
+  snapshot.next_cursor = null;
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
+  await page.route('**/api/v1/nodes?*', route => route.fulfill({json: snapshot}));
+  await page.goto('/#/nodes');
+  const list = rows(page.locator('.rp-table').nth(1));
+  await expect(list).toHaveCount(2);
+  await expect(list).toContainText(['Null owner', 'Omitted owner']);
+  await expect(page.getByRole('button', {name: /^Remove .* owner$/})).toHaveCount(0);
+  await rows(page.locator('.rp-table').first()).filter({hasText: inline.name}).click();
+  await expect(list).toHaveCount(1);
+  await expect(page.getByRole('button', {name: 'Remove Inline owner', exact: true})).toBeVisible();
 });

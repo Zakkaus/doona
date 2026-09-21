@@ -21,7 +21,7 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import {ruleDistribution} from './distribution';
-import {candidate, fileName} from '../config/names';
+import {fileName} from '../config/names';
 import {conditionKinds, ruleCondition, type ConditionKind} from '../config/groups';
 import {Coverage} from '../flows/Coverage';
 import type {PageProps} from '../types';
@@ -89,7 +89,6 @@ function Dictionary({go, query}: PageProps) {
     config.refetch();
     rules.refetch();
   });
-  const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
   useEffect(() => {
     if (editor.error) toast('negative', errorText(editor.error));
   }, [editor.error]);
@@ -107,8 +106,9 @@ function Dictionary({go, query}: PageProps) {
   const selected = picked.landed === landed ? picked.row : landed;
   const setSelected = (row: string | null) => setPicked({landed, row});
   const configSources = config.data?.sources ?? [];
+  const sourceToEdit = (rule: RoutingRule | undefined) => configSources.find(source => source.id === rule?.source?.source_id);
   const writable = (rule: RoutingRule) => {
-    const source = sourceFor(configSources, rule.source);
+    const source = sourceToEdit(rule);
     return !!source && source.writable && source.content !== undefined;
   };
   // Where a new rule can go: before the fallback when its line is known and writable, else before a writable rule.
@@ -132,18 +132,14 @@ function Dictionary({go, query}: PageProps) {
     setPick({on: true, kind: 'domainSuffix', value: ''});
     setDialog(next);
   };
-  // Writes one changed source: validated in full when the backend can, then saved against its accepted digest.
-  const write = async (source: ConfigSource, lines: string[]) => {
-    const content = lines.join('\n');
-    if (canValidate) {
-      const check = await editor.validate({sources: [candidate(source, content)], mode: 'full'});
-      if (!check) return false;
-      if (!check.valid) {
-        toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
-        return false;
-      }
+  const write = async (source: ConfigSource, transform: (text: string) => string | null) => {
+    const result = await editor.apply(source, transform);
+    if (!result) return false;
+    if (result.diagnostics) {
+      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+      return false;
     }
-    return !!(await editor.save(source.id, content, source.content_sha256));
+    return true;
   };
   const add = async (close: () => void) => {
     if (!rules.data || !config.data || rules.data.generation_id !== config.data.generation_id) {
@@ -153,28 +149,37 @@ function Dictionary({go, query}: PageProps) {
       return;
     }
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
-    const source = sourceFor(configSources, anchor?.source);
-    if (!anchor?.source || !source || source.content === undefined) return;
-    const lines = source.content.replace(/\n$/, '').split('\n');
+    const source = sourceToEdit(anchor);
+    if (!anchor?.source || !source) return;
     const at = anchor.source.line - 1;
-    const indent = /^\s*/.exec(lines[at] ?? '')?.[0] ?? '';
-    lines.splice(at, 0, `${indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}`);
-    if (await write(source, [...lines, ''])) {
+    if (
+      await write(source, text => {
+        const lines = text.replace(/\n$/, '').split('\n');
+        const indent = /^\s*/.exec(lines[at] ?? '')?.[0] ?? '';
+        lines.splice(at, 0, `${indent}${condition} -> ${form.outbound}${form.must ? '(must)' : ''}`);
+        return [...lines, ''].join('\n');
+      })
+    ) {
       toast('positive', t('rule.added'));
       close();
     }
   };
   const remove = async (rule: RoutingRule, source: ConfigSource, close: () => void) => {
-    if (!rule.source || source.content === undefined) return;
-    const lines = source.content.replace(/\n$/, '').split('\n');
-    if (!lines[rule.source.line - 1]?.includes('->')) {
-      toast('negative', t('rule.stale'));
-      rules.refetch();
-      config.refetch();
-      return;
-    }
-    lines.splice(rule.source.line - 1, 1);
-    if (await write(source, [...lines, ''])) {
+    if (!rule.source) return;
+    const at = rule.source.line - 1;
+    if (
+      await write(source, text => {
+        const lines = text.replace(/\n$/, '').split('\n');
+        if (!lines[at]?.includes('->')) {
+          toast('negative', t('rule.stale'));
+          rules.refetch();
+          config.refetch();
+          return null;
+        }
+        lines.splice(at, 1);
+        return [...lines, ''].join('\n');
+      })
+    ) {
       toast('positive', t('rule.removed'));
       close();
     }
@@ -253,7 +258,7 @@ function Dictionary({go, query}: PageProps) {
                 icon
                 isDisabled={!!editor.busy}
                 label={t('rule.remove')}
-                onPress={() => open({kind: 'remove', rule, source: sourceFor(configSources, rule.source)!})}
+                onPress={() => open({kind: 'remove', rule, source: sourceToEdit(rule)!})}
               >
                 <Close />
               </Button>

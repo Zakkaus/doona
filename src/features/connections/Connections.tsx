@@ -1,7 +1,8 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../api/store';
 import {ApiError} from '../../api/error';
-import {chainNames, connectionDetails, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
+import {chainNames, connectionRows, connectionStates, ipLiteral, sourceIp} from '../../api/selectors';
+import {connectionDetails} from './view';
 import {
   Badge,
   Button,

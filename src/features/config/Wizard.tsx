@@ -3,10 +3,10 @@ import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {ConfigSource} from '../../api/model';
 import type {useConfigEditor} from '../../api/store';
+import {useSourceComplete} from '../../api/store/config';
 import {Button, LabeledSelect, TextField, toast} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
-import {candidate} from './names';
 import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, writeState, type RuleTemplate, type WizardState} from './wizard';
 
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
@@ -21,24 +21,20 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
 // Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
 export function Wizard({
   main,
-  complete,
-  canValidate,
   editor,
   onDone,
   onDirty
 }: {
   main: ConfigSource;
-  complete: boolean | null;
-  canValidate: boolean;
   editor: ReturnType<typeof useConfigEditor>;
   onDone: () => void;
   onDirty: (dirty: boolean) => void;
 }) {
   const t = useT();
-  // The text and digest the form started from: the preview builds on them, and the save's If-Match names the
-  // digest, so a file that changed on disk while the form was open is refused rather than overwritten.
-  const [origin] = useState(() => ({content: main.content ?? '', sha256: main.content_sha256}));
-  const current = origin.content;
+  // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
+  const [origin] = useState(() => main);
+  const complete = useSourceComplete(origin);
+  const current = origin.content ?? '';
   const [state, setState] = useState<WizardState>(() => {
     const read = readState(current);
     return {
@@ -47,9 +43,8 @@ export function Wizard({
       subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]
     };
   });
-  const text = useMemo(() => writeState(current, state), [current, state]);
-  const [saving, setSaving] = useState(false);
-  const busy = saving || !!editor.busy;
+  const text = useMemo(() => (complete ? writeState(current, state) : current), [complete, current, state]);
+  const busy = !!editor.busy;
   const dirty = text !== current;
   useEffect(() => {
     onDirty(dirty);
@@ -63,24 +58,15 @@ export function Wizard({
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
     if (busy) return;
-    setSaving(true);
-    try {
-      if (canValidate) {
-        const check = await editor.validate({sources: [candidate(main, text)], mode: 'full'});
-        if (!check) return;
-        if (!check.valid) {
-          toast('negative', t('config.invalid', {n: String(check.diagnostics.filter(d => d.level === 'error').length)}));
-          return;
-        }
-      }
-      const result = await editor.save(main.id, text, origin.sha256);
-      if (!result) return;
-      toast('positive', t('config.saved', {path: main.path}));
-      onDirty(false);
-      onDone();
-    } finally {
-      setSaving(false);
+    const result = await editor.apply(origin, text);
+    if (!result) return;
+    if (result.diagnostics) {
+      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+      return;
     }
+    toast('positive', t('config.saved', {path: main.path}));
+    onDirty(false);
+    onDone();
   };
   return (
     <section className="rp-card" aria-label={t('config.wizard')}>
@@ -170,7 +156,7 @@ export function Wizard({
         <Button
           accent
           isDisabled={!complete || !valid || busy || text === current}
-          isPending={saving}
+          isPending={editor.busy === 'save'}
           tip={complete === false ? t('config.incomplete') : undefined}
           onPress={() => void apply()}
         >

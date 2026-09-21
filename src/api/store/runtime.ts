@@ -6,15 +6,15 @@ import {useResource} from './resource';
 import {finished, useAction} from './action';
 export function useVersion() {
   const api = getApi();
-  return useResource({key: ['version'], fetch: signal => api.version(signal)}, {deps: [api], every: 0});
+  return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)});
 }
 export function useRuntime(enabled = true) {
   const api = getApi();
-  return useResource({key: ['runtime'], fetch: signal => api.runtime(signal)}, {deps: [api], enabled});
+  return useResource({key: ['runtime'], fetch: signal => api.runtime(signal)}, {enabled});
 }
 export function useRuntimeOutbounds(enabled: boolean) {
   const api = getApi();
-  return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {deps: [api], enabled});
+  return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {enabled});
 }
 // The backend's ring, asked for the chart's window (or as much of it as the backend keeps) at its full
 // resolution: the live window wants every second the backend has.
@@ -26,7 +26,6 @@ export function useTrafficHistory(windowSeconds: number, capabilities: Capabilit
   return useResource(
     {key: ['trafficHistory', {window_seconds, max_points}], fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
     {
-      deps: [api, window_seconds, max_points],
       enabled: limits?.available === true
     }
   );
@@ -39,23 +38,23 @@ export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const max_points = Math.min(120, limits?.max_points ?? 120);
   return useResource(
     {key: ['memoryHistory', {window_seconds, max_points}], fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
-    {deps: [api, window_seconds, max_points], enabled: limits?.available === true}
+    {enabled: limits?.available === true}
   );
 }
 export function useCapabilities() {
   const api = getApi();
-  return useResource({key: ['capabilities'], fetch: signal => api.capabilities(signal)}, {deps: [api], every: 0});
+  return useResource({key: ['capabilities'], every: 0, fetch: signal => api.capabilities(signal)});
 }
 export function useDatapath(enabled = true) {
   const api = getApi();
-  return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {deps: [api], enabled});
+  return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {enabled});
 }
 // A write reply replaces the cached settings until a newer poll arrives, preventing a flash of stale values. Replies are scoped to their backend.
 const newest = <T extends {observed_at: string}>(written: T | null, polled: T | undefined) =>
   written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
-  const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {deps: [api], enabled});
+  const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {enabled});
   const {refetch} = resource;
   const {busy, run} = useAction<'save'>({rethrow: true});
   const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);
@@ -73,7 +72,7 @@ export function useRuntimeSettings(enabled = true) {
 }
 export function useRuntimeMemory(enabled = true) {
   const api = getApi();
-  return useResource({key: ['runtimeMemory'], fetch: signal => api.runtimeMemory(signal)}, {deps: [api], enabled});
+  return useResource({key: ['runtimeMemory'], fetch: signal => api.runtimeMemory(signal)}, {enabled});
 }
 type RuntimeAction = 'reload' | 'suspend' | 'resume';
 export function useRuntimeOperations(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
