@@ -2,14 +2,14 @@ import type {Node, Provider} from '../../api/model';
 import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import type {SubscriptionEntry} from './subscriptions';
-import {formatList, formatNumber, type Lang, type Params} from '../../i18n';
+import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, formatBytes, millis} from '../../api/u64';
 import {formatDuration, localTime, relativeStart} from '../../api/selectors';
 import {latencyTone} from '../../ui/ui';
 
-export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: (key: Key, params?: Params) => string) {
+export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
   const measured = health?.state === 'healthy' && health.latency_ms != null;
   return {
@@ -44,7 +44,7 @@ function redactedHost(url: string | null): string | null {
   }
 }
 
-export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translate) {
+export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translator) {
   // Match by node tag, then unique URL host, then the sole unclaimed entry.
   const tags = new Map<string, string>();
   for (const node of nodes) if (node.provider_id && node.subscription_tag) tags.set(node.provider_id, node.subscription_tag);
@@ -122,15 +122,14 @@ export function nodeRows(owned: Node[], search: string, group: string, protocol:
 }
 
 const intervals = [3600, 21600, 43200, 86400];
-type Translate = (key: Key, params?: Params) => string;
-export function intervalText(seconds: number, locale: string, t: Translate) {
+export function intervalText(seconds: number, locale: string, t: Translator) {
   return seconds === 0
     ? t('nodes.manualOnly')
     : intervals.includes(seconds)
       ? t('nodes.everyHours', {n: formatNumber(seconds / 3600, locale)})
       : formatDuration(String(seconds), locale);
 }
-export function providerRowView(item: ProviderRow, seconds: number | undefined, locale: string, t: Translate) {
+export function providerRowView(item: ProviderRow, seconds: number | undefined, locale: string, t: Translator) {
   const kinds: Record<ProviderRow['kind'], Key> = {
     subscription: 'nodes.kind.subscription',
     file: 'nodes.kind.file',

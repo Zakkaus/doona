@@ -17,11 +17,16 @@ export function RuntimeSettingsCard() {
       {!m.waiting && m.available && (
         <>
           <ErrorMessage error={m.error} />
+          {m.conflict && (
+            <p role="alert" className="rp-alert">
+              {m.conflict}
+            </p>
+          )}
           {m.loading && <Loading />}
           {m.hasBaseline && (
             <>
               <div className="rp-toolbar top">
-                {m.hasLevel && <LabeledSelect label={t('settings.logLevel')} value={m.level} onChange={m.setLevel} items={m.levels} />}
+                {m.hasLevel && <LabeledSelect label={t('settings.logLevel')} value={m.level} onChange={m.setLevel} items={m.levels} isDisabled={m.busy} />}
                 {m.numeric.map(field => (
                   <TextField
                     key={field.id}
@@ -29,6 +34,7 @@ export function RuntimeSettingsCard() {
                     type="text"
                     label={field.label}
                     value={field.value}
+                    isDisabled={m.busy}
                     isInvalid={field.invalid}
                     onChange={field.change}
                     description={field.description}
@@ -39,6 +45,11 @@ export function RuntimeSettingsCard() {
                 <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
                   {t('settings.apply')}
                 </Button>
+                {m.dirty && (
+                  <Button isDisabled={m.busy} onPress={m.discard}>
+                    {t('config.discard')}
+                  </Button>
+                )}
               </div>
             </>
           )}

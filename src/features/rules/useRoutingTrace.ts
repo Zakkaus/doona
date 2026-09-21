@@ -11,6 +11,7 @@ import {millis} from '../../api/u64';
 import {useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
+import {queryTypes} from '../dns/query';
 export type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -64,6 +65,7 @@ export function useRoutingTrace() {
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
   const dnsQuery = capabilities.data?.resources.dns_query;
   const recordTypes = (dnsQuery?.record_types ?? []).filter(type => type === 'A' || type === 'AAAA');
+  const maxTypes = dnsQuery?.limits?.max_types_per_request ?? 1;
   const modes: TraceResolve[] = [
     ...backendModes,
     ...(!backendModes.includes('live') && backendModes.includes('none') && dnsQuery?.available && recordTypes.length ? ['query' as const] : [])
@@ -84,9 +86,18 @@ export function useRoutingTrace() {
     if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    const response = await run('trace', signal => routingTrace(api, {input, resolve, recordTypes}, signal));
+    const response = await run('trace', signal =>
+      routingTrace(
+        {
+          ...api,
+          dnsQuery: (domain, types) => queryTypes(api.dnsQuery, domain, types, maxTypes, signal)
+        },
+        {input, resolve, recordTypes},
+        signal
+      )
+    );
     if (response) setResult({response, input});
-  }, [api, busy, canSubmit, form, resolve, recordTypes, run]);
+  }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
   const evaluations =
     accepted?.response.evaluations.map((evaluation, index) => {
       const matched = evaluation.rules.find(rule => rule.result === 'matched');

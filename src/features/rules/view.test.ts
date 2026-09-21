@@ -101,3 +101,32 @@ it('prepares DNS diagnostics with missing addresses and errors', async () => {
   expect(view.fields).toContainEqual([t('rule.address'), '—']);
   expect(view.fields).toContainEqual([t('ui.error'), 'lookup failed']);
 });
+
+it('sums current-expression hits across provenance without attributing historical rules', async () => {
+  const api = createMockApi();
+  const [rules, flows] = await Promise.all([api.rules(), api.flows()]);
+  const rule = rules.rules[0];
+  const flow = flows.flows[0];
+  flows.flows = [
+    {...flow, id: 'kernel', rule_id: rule.rule_id, rule_expression: rule.expression, rule_source: 'kernel'},
+    {...flow, id: 'recomputed', rule_id: rule.rule_id, rule_expression: rule.expression, rule_source: 'recomputed'},
+    {...flow, id: 'historical', rule_id: rule.rule_id, rule_expression: 'domain(old.example)', rule_source: 'kernel'}
+  ];
+  expect(dictionaryView([rule], rules.generation_id, flows, [], [], t, 'en').rows[0].hits).toBe('2');
+});
+
+it('keeps suffix ambiguity unresolved while reusing explicit source identities', async () => {
+  const api = createMockApi();
+  const [rules, config] = await Promise.all([api.rules(), api.config()]);
+  const source = config.sources[0];
+  const rule = rules.rules[0];
+  const sources = [
+    {...source, id: 'a', path: '/a/config.dae'},
+    {...source, id: 'b', path: '/b/config.dae'}
+  ];
+  const ambiguous = {...rule, source: {file: 'config.dae', line: 40}};
+  const explicit = {...rule, rule_id: 'explicit', source: {file: 'config.dae', line: 40, source_id: 'b'}};
+  const view = dictionaryView([ambiguous, explicit], undefined, undefined, sources, [], t, 'en');
+  expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
+  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=40', removable: true});
+});

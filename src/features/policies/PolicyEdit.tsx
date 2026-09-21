@@ -14,7 +14,7 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
       }}
       trigger={
         m.available ? (
-          <Button quiet isDisabled={m.disabled} onPress={m.show}>
+          <Button quiet isDisabled={m.disabled} tip={m.tip} onPress={m.show}>
             {t('policy.edit')}
           </Button>
         ) : undefined

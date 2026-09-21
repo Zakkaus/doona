@@ -11,10 +11,13 @@ export function usePolicies(query: string) {
   const focus = new URLSearchParams(query).get('group');
   const health = useMemo(() => new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)])), [nodes.data]);
   const sourceState = useMainSourceEdit();
-  const {main, writable, busy, apply} = sourceState;
-  const source = useMemo(() => ({main, writable, busy, apply}), [main, writable, busy, apply]);
+  const {main, writable, busy, apply, error} = sourceState;
+  const source = useMemo(() => ({main, writable, busy, apply, error}), [main, writable, busy, apply, error]);
   const entries = useMemo(() => new Map(readGroupEntries(source.main?.content ?? '').map(entry => [entry.name, entry])), [source.main?.content]);
-  const cards = useMemo(() => (groups.data ?? []).map(group => ({id: group.id, name: group.name, entry: entries.get(group.name)})), [groups.data, entries]);
+  const cards = useMemo(
+    () => (groups.data ?? []).map(group => ({id: group.id, domId: 'group-' + group.id, name: group.name, entry: entries.get(group.name)})),
+    [groups.data, entries]
+  );
   const ready = !!groups.data;
   // Cards above the linked one grow as their details mount, so the target is followed until the layout settles.
   useEffect(() => {

@@ -57,33 +57,40 @@ export function useNodeTable(input: NodeTableInput) {
     [source.main?.content]
   );
   const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
-  const rows = members.map(node => ({
-    ...nodeRowView(node, names, lang, t),
-    canProbe: probe.canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
-    probing: probe.busy === node.id,
-    probeDisabled: !!probe.busy,
-    probe: () =>
-      void probe.probe(node.id).then(
-        result => {
-          if (!result) return;
-          const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
-          toast(
-            sample ? 'positive' : 'negative',
-            sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
-          );
-        },
-        error => toast('negative', errorText(error))
-      ),
-    menu: () => [
-      ...entries
-        .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
-        .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
-      {id: '/new', label: t('nodes.newGroup')}
-    ],
-    join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
-    removable: canManage && providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline'),
-    remove: () => onRemove(node)
-  }));
+  const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
+  const display = useMemo(() => new Map(members.map(node => [node.id, nodeRowView(node, names, lang, t)])), [members, names, lang, t]);
+  const {probe: runProbe, canProbe, busy: probeBusy} = probe;
+  const rows = useMemo(
+    () =>
+      members.map(node => ({
+        ...display.get(node.id)!,
+        canProbe: canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
+        probing: probeBusy === node.id,
+        probeDisabled: !!probeBusy,
+        probe: () =>
+          void runProbe(node.id).then(
+            result => {
+              if (!result) return;
+              const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
+              toast(
+                sample ? 'positive' : 'negative',
+                sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+              );
+            },
+            error => toast('negative', errorText(error))
+          ),
+        menu: () => [
+          ...entries
+            .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
+            .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
+          {id: '/new', label: t('nodes.newGroup')}
+        ],
+        join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
+        removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
+        remove: () => onRemove(node)
+      })),
+    [members, display, canProbe, probeBusy, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
+  );
   return {
     rows,
     search,
@@ -102,7 +109,8 @@ export function useNodeTable(input: NodeTableInput) {
     canManage,
     busy: input.busy,
     writable: source.writable,
-    sourceBusy: source.busy,
+    sourceBusy: source.busy || !source.main,
+    sourceTip: source.error ? errorText(source.error) : undefined,
     onAdd: input.onAdd
   };
 }
@@ -143,5 +151,6 @@ export type NodeTableView = {
   busy: boolean;
   writable: boolean;
   sourceBusy: boolean;
+  sourceTip?: string;
   onAdd: () => void;
 };

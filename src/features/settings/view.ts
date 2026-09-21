@@ -1,7 +1,7 @@
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
-import {formatNumber, type Params} from '../../i18n';
+import {formatNumber, type Params, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 
 export type Numeric = Exclude<RuntimeSettingField, 'log.level'>;
@@ -43,8 +43,7 @@ export const numericAccess: Record<
     label: 'settings.flowsRetention'
   }
 };
-type Translate = (key: Key, params?: Params) => string;
-export function numericFieldView(id: Numeric, value: string, ceiling: number | undefined, locale: string, t: Translate) {
+export function numericFieldView(id: Numeric, value: string, ceiling: number | undefined, locale: string, t: Translator) {
   const access = numericAccess[id];
   return {
     id,
@@ -69,7 +68,7 @@ export function geodataRows(assets: GeoData['assets'], locale: string) {
 export function profileView(
   profiles: Array<{id: string; name: string}>,
   result: {key: Key; params?: Params; error?: boolean; requestId?: string | null} | null,
-  t: Translate
+  t: Translator
 ) {
   return {
     choices: profiles.map(profile => ({id: profile.id, label: profile.name})),

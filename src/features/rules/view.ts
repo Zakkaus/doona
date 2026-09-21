@@ -61,11 +61,23 @@ export function dictionaryView(
   lang: Lang
 ): DictionaryView {
   const locale = LOCALE[lang];
-  const hits = new Map(ruleDistribution(flows?.flows ?? []).map(row => [row.id, row.count]));
+  const current = new Map(rules.map(rule => [rule.rule_id, rule.expression]));
+  const hits = new Map<string, number>();
+  for (const row of ruleDistribution(flows?.flows ?? [])) {
+    if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
+  }
+  const byId = new Map(config.map(source => [source.id, source]));
+  const byFile = new Map<string, ConfigSource | undefined>();
+  const resolve = (source: RuleSource | null | undefined) => {
+    if (!source) return undefined;
+    if (source.source_id) return byId.get(source.source_id);
+    if (!byFile.has(source.file)) byFile.set(source.file, sourceFor(config, source));
+    return byFile.get(source.file);
+  };
   const rows = rules.map(rule => {
-    const source = config.find(source => source.id === rule.source?.source_id);
-    const linked = sourceFor(config, rule.source);
-    const label = rule.source ? sourceLabel(rule.source, config) : '';
+    const source = byId.get(rule.source?.source_id ?? '');
+    const linked = resolve(rule.source);
+    const label = linked ? fileName(linked) : rule.source?.file === '<redacted>' ? '' : (rule.source?.file ?? '');
     return {
       id: rule.rule_id,
       number: rule.kind === 'fallback' ? '—' : String(rule.index + 1),
@@ -79,7 +91,7 @@ export function dictionaryView(
     };
   });
   const writable = (rule: RoutingRule) => {
-    const source = config.find(source => source.id === rule.source?.source_id);
+    const source = byId.get(rule.source?.source_id ?? '');
     return !!source?.writable && source.content !== undefined;
   };
   const fallback = rules.find(rule => rule.kind === 'fallback');

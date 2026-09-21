@@ -1,7 +1,7 @@
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n/messages';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
-import type {Params} from '../../i18n';
+import type {Translator} from '../../i18n';
 import {millis} from '../../api/u64';
 import {latencyTone} from '../../ui/ui';
 import {regionOf} from './geo';
@@ -54,7 +54,6 @@ export function probeSummary(result: ProbeResult): MessageRef {
   };
 }
 
-type Translate = (key: Key, params?: Params) => string;
 export type MemberView = {id: string; name: string; nested: boolean; tcp?: number; unavailable: boolean; healthy: boolean; description: string; region: string};
 export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>): MemberView[] {
   return members.map(member => ({
@@ -68,7 +67,7 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     region: regionOf(member.name) ?? '?'
   }));
 }
-export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: boolean}>, t: Translate) {
+export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: boolean}>, t: Translator) {
   const items = nodes.map(node => ({
     id: node.name,
     label: node.name,
@@ -85,7 +84,7 @@ export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: bool
   }
   return {items, sections: [...groups].map(([title, items]) => ({title, items, count: ` · ${items.length}`}))};
 }
-export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translate) {
+export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator) {
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
   const selectable = g.policy.kind === 'selector' && g.capabilities.can_select;
@@ -98,7 +97,7 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
   return {
     id: g.id,
     name: g.name,
-    kind: t(policyKindLabels[g.policy.kind]),
+    kind: g.policy.native || g.policy.kind,
     selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
     selectable,
     overridable,
@@ -118,5 +117,35 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
         typeof key === 'string' ? t(key) : t(key.key, key.params),
         typeof value === 'string' ? value : t(value.key, value.params)
       ])
+  };
+}
+
+export function nodeGridView(
+  nodes: MemberView[],
+  filter: {q: string; region: string; sort: string; aliveOnly: boolean},
+  contains: (value: string, query: string) => boolean,
+  t: Translator
+) {
+  const big = nodes.length > 12;
+  const counts = new Map<string, number>();
+  for (const node of nodes) counts.set(node.region, (counts.get(node.region) ?? 0) + 1);
+  const shown = big
+    ? nodes.filter(
+        node =>
+          (!filter.q || contains(node.name, filter.q)) && (filter.region === 'all' || node.region === filter.region) && (!filter.aliveOnly || node.healthy)
+      )
+    : nodes;
+  if (big && filter.sort === 'latency') shown.sort((a, b) => compareLatency(a.tcp, b.tcp));
+  else if (big && filter.sort === 'name') shown.sort((a, b) => a.name.localeCompare(b.name));
+  const down = shown.filter(node => node.unavailable).length;
+  return {
+    big,
+    shown,
+    regions: [
+      {id: 'all', label: t('policy.allRegions')},
+      ...[...counts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({id, label: id === '?' ? '—' : id, desc: String(count)}))
+    ],
+    regionLabel: filter.region === 'all' ? t('policy.allRegions') : filter.region === '?' ? '—' : filter.region,
+    count: down ? t('policy.membersDown', {n: shown.length, down}) : t('policy.members', {n: shown.length})
   };
 }

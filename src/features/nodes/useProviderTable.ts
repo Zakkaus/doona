@@ -59,7 +59,8 @@ export function useProviderTable(input: ProviderTableInput) {
     canManage: input.canManage,
     busy: input.busy,
     writable: input.source.writable,
-    sourceBusy: input.source.busy,
+    sourceBusy: input.source.busy || !input.source.main,
+    sourceTip: input.source.error ? errorText(input.source.error) : undefined,
     onAdd: input.onAdd
   };
 }
@@ -100,5 +101,6 @@ export type ProviderTableView = {
   busy: boolean;
   writable: boolean;
   sourceBusy: boolean;
+  sourceTip?: string;
   onAdd: () => void;
 };

@@ -4,12 +4,14 @@ import {policyKindLabels} from './view';
 import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
+import {errorText, toast, useLinked} from '../../ui/ui';
+import {useDraftGuard} from '../config/useDraftGuard';
 export type PolicyEditView = {
   title: string;
   open: boolean;
   available: boolean;
   disabled: boolean;
+  tip?: string;
   busy: boolean;
   policy: string;
   choices: Array<{id: string; label: string; desc: string}>;
@@ -23,6 +25,8 @@ export type PolicyEditView = {
 export function usePolicyEdit(name: string, source: MainSourceEdit, entry: GroupEntry | undefined): PolicyEditView {
   const t = useT();
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
+  const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)));
+  useLinked(guard.revision, () => setDraft(null));
   const save = (close: () => void) => {
     if (!draft) return;
     void source
@@ -34,6 +38,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       .then(
         written => {
           if (written) {
+            guard.clear();
             toast('positive', t('policy.updated', {name: draft.name}));
             close();
           }
@@ -44,11 +49,12 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
   return {
     title: t('policy.editTitle', {name}),
     open: !!draft,
-    available: !!draft || !!(source.writable && entry && source.main),
+    available: !!draft || source.writable,
     disabled: source.busy || !entry || !source.main,
+    tip: source.error ? errorText(source.error) : undefined,
     busy: source.busy,
     policy: canonicalPolicy(draft?.policy ?? null),
-    choices: policyNames.map(id => ({id, label: t(policyKindLabels[id]), desc: id})),
+    choices: policyNames.map(id => ({id, label: id, desc: t(policyKindLabels[id])})),
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,
@@ -60,7 +66,10 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     show: () => {
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
     },
-    close: () => setDraft(null),
+    close: () => {
+      guard.clear();
+      setDraft(null);
+    },
     setPolicy: policy => setDraft(prev => (prev ? {...prev, policy} : prev)),
     add: () => setDraft(prev => (prev ? {...prev, filters: [...prev.filters, '']} : prev)),
     save

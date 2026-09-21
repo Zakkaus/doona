@@ -7,6 +7,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {dnsCacheView, dnsLogView, dnsQueryView} from './view';
+import {queryTypes} from './query';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -28,7 +29,13 @@ export function useDns({go, query}: PageProps) {
   const submit = async () => {
     try {
       await run('query', async signal => {
-        const value = await api.dnsQuery(domain.trim(), type === 'all' ? view.types : [type], signal);
+        const value = await queryTypes(
+          api.dnsQuery,
+          domain.trim(),
+          type === 'all' ? view.types : [type],
+          resources?.dns_query.limits?.max_types_per_request ?? 1,
+          signal
+        );
         if (!signal.aborted) setResult(value);
         return value;
       });

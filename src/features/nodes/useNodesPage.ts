@@ -10,6 +10,8 @@ import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
+import {useDraftGuard} from '../config/useDraftGuard';
+import {useLinked} from '../../ui/ui';
 
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
@@ -19,6 +21,8 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
+  const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
+  useLinked(guard.revision, () => setDialog(null));
   const open = useCallback((next: NodeDialog) => {
     setForm({name: '', value: ''});
     setDialog(next);
@@ -45,31 +49,49 @@ export function useNodesPage({go, query}: PageProps) {
     const owner = list.find(item => item.id === selectedId);
     return ownedNodes(nodes.data ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
   }, [nodes.data, list, selectedId]);
-  const joinGroup = (node: Node, group: string) => {
-    void source
-      .apply(
+  const {apply} = source;
+  const joinGroup = useCallback(
+    async (node: Node, group: string) => {
+      const written = await apply(
         text => addNamesToGroup(text, group, [node.name]),
         errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
-      )
-      .then(written => {
-        if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
-      }, fail);
-  };
+      );
+      if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
+      return written;
+    },
+    [apply, t, locale]
+  );
+  const joinExistingGroup = useCallback(
+    (node: Node, group: string) => {
+      void joinGroup(node, group).catch(fail);
+    },
+    [joinGroup]
+  );
+  const addNode = useCallback(() => open({kind: 'node'}), [open]);
+  const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
+  const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   const submit = async (close: () => void) => {
     if (!dialog) return;
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
+        if (!created) return;
         if (created) toast('positive', t('nodes.added', {name: form.name.trim()}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
+        if (!created) return;
         if (created) toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'group') {
-        joinGroup(dialog.item, form.name.trim());
+        if (!(await joinGroup(dialog.item, form.name.trim()))) return;
       } else if (dialog.kind === 'removeProvider') {
-        if (await manage.removeProvider(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
-      } else if (await manage.removeNode(dialog.item.id)) toast('positive', t('nodes.removed', {name: dialog.item.name}));
+        if (!(await manage.removeProvider(dialog.item.id))) return;
+        toast('positive', t('nodes.removed', {name: dialog.item.name}));
+      } else {
+        if (!(await manage.removeNode(dialog.item.id))) return;
+        toast('positive', t('nodes.removed', {name: dialog.item.name}));
+      }
+      guard.clear();
       close();
     } catch (error) {
       fail(error);
@@ -124,10 +146,10 @@ export function useNodesPage({go, query}: PageProps) {
     canManage: !!resources?.nodes.can_manage,
     busy: !!manage.busy,
     reload: refetchNodes,
-    joinGroup,
-    onAdd: () => open({kind: 'node'}),
-    onNewGroup: item => open({kind: 'group', item}),
-    onRemove: item => open({kind: 'removeNode', item})
+    joinGroup: joinExistingGroup,
+    onAdd: addNode,
+    onNewGroup: newGroup,
+    onRemove: removeNode
   });
   return {
     providerTable,

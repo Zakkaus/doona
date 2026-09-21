@@ -47,6 +47,7 @@ export const messages = defineMessages({
     'settings.range': '{min} 至 {max}',
     'settings.apply': '套用',
     'settings.runtimeSaved': '後端選項已套用',
+    'settings.runtimeConflict': '後端選項已變更；草稿已保留。套用前請確認，或放棄修改以載入目前值。',
     'settings.about': '關於',
     'settings.actions': '後端操作',
     'settings.actionsNote': '此處集中提供各頁面的單次操作；僅在後端宣告支援對應功能時顯示按鈕。',
@@ -111,6 +112,7 @@ export const messages = defineMessages({
     'settings.range': '{min} 至 {max}',
     'settings.apply': '应用',
     'settings.runtimeSaved': '后端选项已应用',
+    'settings.runtimeConflict': '后端选项已更改；草稿已保留。应用前请确认，或放弃修改以加载当前值。',
     'settings.about': '关于',
     'settings.actions': '后端操作',
     'settings.actionsNote': '此处集中提供各页面的单次操作；仅在后端声明支持对应功能时显示按钮。',
@@ -175,6 +177,7 @@ export const messages = defineMessages({
     'settings.range': '{min} to {max}',
     'settings.apply': 'Apply',
     'settings.runtimeSaved': 'Backend options applied',
+    'settings.runtimeConflict': 'Backend options changed; your draft was kept. Review it before applying, or discard changes to load the current values.',
     'settings.about': 'About',
     'settings.actions': 'Backend actions',
     'settings.actionsNote':

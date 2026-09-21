@@ -50,16 +50,18 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
             drop: 4,
             render: row =>
               row.hasInterval && m.writable ? (
-                <ChoiceMenu
-                  quiet
-                  label={row.intervalLabel}
-                  value={row.intervalValue}
-                  isDisabled={m.sourceBusy}
-                  onChange={row.setInterval}
-                  items={row.intervals}
-                >
-                  {row.interval}
-                </ChoiceMenu>
+                <TextTooltip text={m.sourceTip}>
+                  <ChoiceMenu
+                    quiet
+                    label={row.intervalLabel}
+                    value={row.intervalValue}
+                    isDisabled={m.sourceBusy}
+                    onChange={row.setInterval}
+                    items={row.intervals}
+                  >
+                    {row.interval}
+                  </ChoiceMenu>
+                </TextTooltip>
               ) : (
                 row.interval
               )

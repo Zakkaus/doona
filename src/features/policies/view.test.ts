@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {groupConfigFields, memberViews, menuViews, policyCardView, probeSummary} from './view';
+import {groupConfigFields, memberViews, menuViews, nodeGridView, policyCardView, probeSummary} from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
@@ -44,4 +44,31 @@ it('counts worst probe outcome once per member and reports selection changes', (
     selection_changed: {tcp: true, udp: false}
   });
   expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 0, unavailable: 1, unknown: 1}});
+});
+
+it('preserves native policy spelling and falls back to the canonical identifier', () => {
+  const group = nodeFixtures(0).groups[0];
+  expect(policyCardView({...group, policy: {kind: 'urltest', native: 'min_moving_avg'}}, [], 'both', t).kind).toBe('min_moving_avg');
+  expect(policyCardView({...group, policy: {kind: 'urltest', native: ''}}, [], 'both', t).kind).toBe('urltest');
+});
+
+it('filters large grids by region and observed health without mutating member order', () => {
+  const nodes = Array.from({length: 13}, (_, index) => ({
+    id: String(index),
+    name: `node-${index}`,
+    nested: false,
+    tcp: 20 - index,
+    unavailable: index === 0,
+    healthy: index > 0,
+    description: '',
+    region: index < 3 ? 'HK' : '?'
+  }));
+  const contains = (value: string, query: string) => value.includes(query);
+  const view = nodeGridView(nodes, {q: 'node', region: 'HK', sort: 'latency', aliveOnly: true}, contains, t);
+  expect(view.shown.map(node => node.id)).toEqual(['2', '1']);
+  expect(nodes[0].id).toBe('0');
+  expect(view.regions).toContainEqual({id: 'HK', label: 'HK', desc: '3'});
+  expect(view.count).toBe(t('policy.members', {n: 2}));
+  const small = nodeGridView(nodes.slice(0, 2), {q: 'missing', region: '?', sort: 'latency', aliveOnly: true}, contains, t);
+  expect(small.shown.map(node => node.id)).toEqual(['0', '1']);
 });

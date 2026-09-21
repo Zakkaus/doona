@@ -82,10 +82,10 @@ function PolicyDetail(props: PolicyGroupInput) {
     </>
   );
 }
-const PolicyCard = memo(function PolicyCard({focused, ...props}: PolicyGroupInput & {focused: boolean}) {
+const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: PolicyGroupInput & {focused: boolean; domId: string}) {
   const {ref, active, expand} = usePolicyVisibility(focused);
   return (
-    <section ref={ref} className="rp-card" id={'group-' + props.id} aria-label={props.name}>
+    <section ref={ref} className="rp-card" id={domId} aria-label={props.name}>
       {active ? (
         <PolicyDetail {...props} />
       ) : (

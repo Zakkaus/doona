@@ -114,6 +114,7 @@ test('navigation cancels a connection probe without a timeout toast', async ({pa
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await request;
   await page.locator('.rp-nav[href="#/connections"]').click();
+  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.getByRole('heading', {name: 'Connections', exact: true})).toBeVisible();
   resolve();
   await expect(page.locator('.rp-toast')).toHaveCount(0);
@@ -139,6 +140,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await page.evaluate(api => {
     location.hash = '#/settings?api=' + encodeURIComponent(api) + '&token=paired';
   }, origin + '/new-backend');
+  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue(origin + '/new-backend');
   await expect(probe).toBeEnabled();
   resolve();
@@ -148,6 +150,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await page.evaluate(() => {
     location.hash = '#/settings?api=mock';
   });
+  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue('mock');
   await expect(page.locator('form').getByRole('status')).toHaveCount(0);
 });

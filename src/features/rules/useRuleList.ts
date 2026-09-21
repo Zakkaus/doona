@@ -9,8 +9,10 @@ import {within} from '../../shell/route';
 import {addRule, removeRule} from './source';
 import {parseRuleSeed, type RuleSeed} from './seed';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
+import {useDraftGuard} from '../config/useDraftGuard';
+import {useLinked} from '../../ui/ui';
 
-type Dialog = {kind: 'add'} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource};
+type Dialog = {kind: 'add'; generation: string} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource};
 type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
 type RulePick = {on: boolean; kind: ConditionKind; value: string};
 export type RuleListModel = {
@@ -65,6 +67,8 @@ export function useRuleList({go, query}: PageProps) {
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
+  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()));
+  useLinked(guard.revision, () => setDialog(null));
   const list: RoutingRule[] = rules.data?.rules ?? [];
   const sources = config.data?.sources ?? [];
   const params = new URLSearchParams(query);
@@ -109,9 +113,10 @@ export function useRuleList({go, query}: PageProps) {
     table.positions.length
   ) {
     setConsumption({seed, consumed: true});
-    initialize({kind: 'add'}, parsedSeed);
+    initialize({kind: 'add', generation: rules.data.generation_id}, parsedSeed);
   }
   const close = () => {
+    guard.clear();
     setDialog(null);
     if (seed) go('rules', within(query, {add: null}));
   };
@@ -136,13 +141,22 @@ export function useRuleList({go, query}: PageProps) {
       }
       return;
     }
-    if (!rules.data || !config.data || rules.data.generation_id !== config.data.generation_id) {
+    if (
+      dialog?.kind !== 'add' ||
+      !rules.data ||
+      !config.data ||
+      rules.data.generation_id !== dialog.generation ||
+      config.data.generation_id !== dialog.generation
+    ) {
       stale();
       return;
     }
     const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
     const source = sources.find(source => source.id === anchor?.source?.source_id);
-    if (!anchor?.source || !source) return;
+    if (!anchor?.source || !source) {
+      stale();
+      return;
+    }
     if (await write(source, text => addRule(text, anchor, condition, form.outbound, form.must))) {
       toast('positive', t('rule.added'));
       dismiss();
@@ -168,7 +182,9 @@ export function useRuleList({go, query}: PageProps) {
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : 'rule.add'),
     submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : 'rule.add'),
     close,
-    openAdd: () => open({kind: 'add'}),
+    openAdd: () => {
+      if (rules.data) open({kind: 'add', generation: rules.data.generation_id});
+    },
     openRemove: (id: string) => {
       const rule = list.find(rule => rule.rule_id === id);
       const source = sources.find(source => source.id === rule?.source?.source_id);
