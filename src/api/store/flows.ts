@@ -1,6 +1,6 @@
 import {getApi} from '../index';
 import type {Api} from '../api';
-import type {FlowList, RoutingTraceRequest, RoutingTraceResponse} from '../model';
+import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../model';
 import {pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
 
@@ -37,17 +37,20 @@ export async function routingTrace(
   return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
 }
 
-export function useFlows(connection_id?: string, enabled = true) {
+// The whole retained set, one snapshot per poll: a cursor is bound to a snapshot, so pages cannot be added to
+// a list that the next poll replaces. Network and state narrow the walk on the backend instead.
+export type FlowFilter = {connection_id?: string; network?: NonNullable<FlowQuery>['network']; state?: NonNullable<FlowQuery>['state']};
+export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFilter = {}, enabled = true) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
   return useResource(
     {
-      key: ['flows', {connection_id, limit}],
+      key: ['flows', {connection_id, network, state, limit}],
       every: 15000,
       fetch: signal =>
         walk(
-          cursor => api.flows({network: 'all', state: 'all', connection_id, cursor, limit, detail: 'full'}, signal),
+          cursor => api.flows({network, state, connection_id, cursor, limit, detail: 'full'}, signal),
           (acc: FlowList | undefined, page) => {
             if (!acc) return {...page, flows: [...page.flows]};
             acc.flows.push(...page.flows);

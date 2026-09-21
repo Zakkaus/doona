@@ -51,7 +51,7 @@ export function useRuleList({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
   const dictionary = resources?.rules.available === true;
   const rules = useRules(dictionary);
-  const flows = useFlows(undefined, dictionary ? resources?.flows.available === true : true);
+  const flows = useFlows({}, dictionary ? resources?.flows.available === true : true);
   const groups = useGroups(dictionary && resources?.groups.available === true);
   const canWrite = dictionary && resources?.config.available === true && resources.config.writable === true;
   const config = useConfig(canWrite);
