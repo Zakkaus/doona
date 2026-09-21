@@ -20,7 +20,7 @@ test('quick setup refuses an apostrophe without changing the subscription URL', 
 });
 
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('tproxy_port: 12345');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
   const picker = page.getByRole('button', {name: /Source/});
@@ -252,7 +252,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   page.on('request', request => {
     if (request.method() !== 'GET') mutations++;
   });
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
   await page.getByRole('tab', {name: 'Quick setup'}).click();
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
@@ -325,4 +325,72 @@ test('rule writes require a stable source ID even when the display path matches'
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Open source', exact: true}).first()).toBeVisible();
+});
+
+test('modules list top-level counts and edit only routing through reload', async ({page}) => {
+  const {api} = await configBackend(page);
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  await page.goto('/#/config');
+  await expect(page.getByRole('tab', {name: 'Modules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  await expect(modules.getByRole('heading', {level: 3})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  await expect(modules.getByRole('region', {name: 'global', exact: true})).toContainText('6 settings');
+  await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
+  await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
+  await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
+    '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: min_moving_avg'
+  );
+  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rules, 0 response rules');
+  const routing = modules.getByRole('region', {name: 'routing', exact: true});
+  await expect(routing).toContainText('5 rules · fallback: resilient');
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const section = await editor.innerText();
+  const edited = section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:');
+  await editor.fill(edited);
+  await expect(modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(routing).toContainText('6 rules · fallback: resilient');
+  const expected = original.replace(section, edited);
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(expected);
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+});
+
+test('cancelling a module discards its draft and navigation uses the draft guard', async ({page}) => {
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const original = await editor.innerText();
+  await editor.fill(original.replace('fallback: resilient', 'fallback: direct'));
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await routing.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(editor).toHaveCount(0);
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await expect(routing.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+});
+
+test('module validation maps whole-file errors onto section lines and refuses an invalid save', async ({page}) => {
+  const {api} = await configBackend(page);
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  await editor.fill('routing {\n  domain(example.org) -> nowhere\n  fallback: resilient\n}');
+  await expect(routing.locator('.cm-diag-line-error')).toContainText('domain(example.org) -> nowhere');
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
 });

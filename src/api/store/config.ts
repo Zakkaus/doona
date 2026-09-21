@@ -12,7 +12,7 @@ export function useConfig(enabled = true) {
   return useResource({key: ['config'], every: 0, fetch: signal => api.config(signal)}, {enabled});
 }
 
-async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sha256'>): Promise<boolean> {
+export async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sha256'>): Promise<boolean> {
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
 }
 

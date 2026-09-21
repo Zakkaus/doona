@@ -53,7 +53,12 @@ export function useConfigPage({go, query}: PageProps) {
   const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
   const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
   const requested = params.get('tab');
-  const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
+  const tab =
+    requested === 'modules' || requested === 'source' || requested === 'validate' || (requested === 'setup' && setupAvailable)
+      ? requested
+      : params.has('source') || !mainSource?.content
+        ? 'source'
+        : 'modules';
   const selectedId = params.get('source') ?? sources[0]?.id ?? null;
   const source = sources.find(item => item.id === selectedId) ?? null;
   const [dirty, updateDirty] = useState(false);
@@ -123,6 +128,7 @@ export function useConfigPage({go, query}: PageProps) {
     select,
     sourceProps,
     wizardProps,
+    modulesProps: config.data ? {config: config.data, editor, canWrite: resources?.config.writable === true, canValidate} : null,
     validateProps,
     sourceModel: source ? sourceView(source, locale, t) : null,
     sourceOptions: sources.map(item => {

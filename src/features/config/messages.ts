@@ -2,6 +2,15 @@ import {defineMessages} from '../../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'config.tabModules': '模組',
+    'config.moduleOpen': '開啟頁面',
+    'config.moduleAbsent': '未設定此區段；可加入 {file}。',
+    'config.moduleSettings': '{n} 項設定',
+    'config.moduleSubscriptions': '{n} 個訂閱',
+    'config.moduleNodes': '{n} 個節點',
+    'config.moduleGroups': '{n} 個群組：{policies}',
+    'config.moduleDns': '{upstreams} 個上游、{requests} 條請求規則、{responses} 條回應規則',
+    'config.moduleRules': '{n} 條規則',
     'config.generation': '生效代次',
     'config.revision': '組態修訂',
     'config.errors': '{n} 個錯誤',
@@ -91,6 +100,15 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   'zh-CN': {
+    'config.tabModules': '模块',
+    'config.moduleOpen': '打开页面',
+    'config.moduleAbsent': '未设置此区段；可加入 {file}。',
+    'config.moduleSettings': '{n} 项设置',
+    'config.moduleSubscriptions': '{n} 个订阅',
+    'config.moduleNodes': '{n} 个节点',
+    'config.moduleGroups': '{n} 个组：{policies}',
+    'config.moduleDns': '{upstreams} 个上游、{requests} 条请求规则、{responses} 条响应规则',
+    'config.moduleRules': '{n} 条规则',
     'config.generation': '生效代次',
     'config.revision': '配置修订',
     'config.errors': '{n} 个错误',
@@ -180,6 +198,15 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   en: {
+    'config.tabModules': 'Modules',
+    'config.moduleOpen': 'Open page',
+    'config.moduleAbsent': 'Section not configured; add it to {file}.',
+    'config.moduleSettings': {one: '{n} setting', other: '{n} settings'},
+    'config.moduleSubscriptions': {one: '{n} subscription', other: '{n} subscriptions'},
+    'config.moduleNodes': {one: '{n} node', other: '{n} nodes'},
+    'config.moduleGroups': {one: '{n} group: {policies}', other: '{n} groups: {policies}'},
+    'config.moduleDns': '{upstreams} upstreams, {requests} request rules, {responses} response rules',
+    'config.moduleRules': {one: '{n} rule', other: '{n} rules'},
     'config.generation': 'Generation',
     'config.revision': 'Revision',
     'config.errors': {one: '{n} error', other: '{n} errors'},
