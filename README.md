@@ -15,7 +15,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a set of static files that the engine serves itself, or any web server does. It talks to honk's native API. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
+doona is a set of static files that the engine serves itself, or any web server does. It talks to the native API the daeuniverse engines share: honk today, dae once it implements the same contract. It shows what the engine is doing right now (connections, retained flows, DNS, events, logs, traffic and memory), imports subscriptions and share links, groups nodes and tests their latency, writes routing rules from a form, and edits the configuration files with validation before every save. It speaks Traditional Chinese, Simplified Chinese and English, and ships eleven palettes in light and dark.
 
 ![The activity page](docs/screenshots/en/activity-light.png)
 
