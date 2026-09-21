@@ -33,8 +33,10 @@ it('lays the config out as a tree and weights it with retained flows', async () 
   const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression)!;
   expect(tree.rules.filter(rule => rule.id === 'rule:' + matched.rule_id)).toHaveLength(1);
   expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes))).toContain(matched);
-  expect(pinnedLabel('rule:' + matched.rule_id, rules.rules)).toBe(matched.rule_expression);
-  expect(pinnedLabel('outbound:direct', rules.rules)).toBe('direct');
+  const label = (name: string | null) => (name === 'direct' ? 'Direct' : String(name));
+  expect(pinnedLabel('rule:' + matched.rule_id, rules.rules, nodeNames(nodes.nodes), label)).toBe(matched.rule_expression);
+  expect(pinnedLabel('outbound:direct', rules.rules, nodeNames(nodes.nodes), label)).toBe('Direct');
+  expect(pinnedLabel('node:' + nodes.nodes[0].id, rules.rules, nodeNames(nodes.nodes), label)).toBe(nodes.nodes[0].name);
 });
 
 it('follows a nested selection to its node and draws the inner group inside the outbound', async () => {
@@ -45,7 +47,7 @@ it('follows a nested selection to its node and draws the inner group inside the 
   const tree = routingTree([], nested, nodes.nodes, rules.rules);
   const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
   expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'resilient']);
-  expect(proxy.node).toBe('node:' + nodeNames(nodes.nodes).get(inner.selection.tcp_member_id!));
+  expect(proxy.node).toBe('node:' + inner.selection.tcp_member_id);
   // The inner group is only drawn inside proxy unless a rule names it directly.
   const named = rules.rules.some(rule => rule.outbound === 'resilient');
   expect(tree.outbounds.some(outbound => outbound.label === 'resilient')).toBe(named);
@@ -56,9 +58,9 @@ it('takes a one-element chain as the leaf node the flow left through', async () 
   const [flows, groups, nodes] = await Promise.all([api.flows(), api.groups(), api.nodes({limit: 1000})]);
   const routed = flows.flows.find(flow => flow.chain.length > 1)!;
   const leaf = routed.chain[routed.chain.length - 1];
-  const names = nodeNames(nodes.nodes);
   const single = routingTree([{...routed, chain: [leaf]}], groups, nodes.nodes, []);
-  expect(single.links.some(link => link.target === 'node:' + names.get(leaf) && link.count === 1)).toBe(true);
+  expect(single.links.some(link => link.target === 'node:' + leaf && link.count === 1)).toBe(true);
+  expect(single.nodes.find(node => node.id === 'node:' + leaf)?.label).toBe(nodeNames(nodes.nodes).get(leaf));
   expect(single.nodes.some(node => node.unknown)).toBe(false);
 });
 
@@ -82,4 +84,17 @@ it('rows the tree with rules as leaves under their outbound and parents level wi
     const under = tree.outbounds.filter(outbound => parentOf(tree, outbound) === node.id).map(outbound => at.get(outbound.id)!);
     if (under.length) expect(at.get(node.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
   }
+});
+
+it('keeps one transport through a nested chain and hides a group only reached through another', async () => {
+  const api = createMockApi();
+  const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const inner = groups.find(group => group.name === 'gaming')!;
+  // proxy selects gaming for UDP only; the tree follows UDP into gaming rather than switching to its TCP pick.
+  const nested: GroupSummary[] = groups.map(group => (group.name === 'proxy' ? {...group, selection: {tcp_member_id: null, udp_member_id: inner.id}} : group));
+  const tree = routingTree([], nested, nodes.nodes, rules.rules);
+  const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
+  expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'gaming']);
+  expect(proxy.node).toBe('node:' + inner.selection.udp_member_id);
+  expect(tree.outbounds.some(outbound => outbound.label === 'gaming')).toBe(rules.rules.some(rule => rule.outbound === 'gaming'));
 });

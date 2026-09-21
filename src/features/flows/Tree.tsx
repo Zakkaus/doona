@@ -176,7 +176,7 @@ export default function Tree({tree, pinned, onPin}: {tree: RoutingTree; pinned: 
 }
 
 // On a narrow screen the same tree reads top-down: each outbound with the rules that name it above and the
-// node it ends at below.
+// nodes it led to below.
 function Stacked({
   tree,
   more,
@@ -198,19 +198,15 @@ function Stacked({
   return (
     <div className="rp-tree stacked">
       {branches.map(({outbound, rules}) => {
-        const node = tree.nodes.find(node => node.id === parentOf(tree, outbound));
+        const nodes = tree.nodes.filter(node => tree.links.some(link => link.source === outbound.id && link.target === node.id));
         return (
           <section className="rp-tree-branch" key={outbound.id}>
             {rules.length > 0 && <span className="rp-label">{t('flow.mapRule')}</span>}
             {rules.map(rule => tile(rule.id, 'rule', ruleBody(rule)))}
             <span className="rp-label">{t('flow.mapOutbound')}</span>
             {tile(outbound.id, 'outbound', outboundBody(outbound))}
-            {node && (
-              <>
-                <span className="rp-label">{t('flow.mapNode')}</span>
-                {tile(node.id, 'node', nodeBody(node))}
-              </>
-            )}
+            {nodes.length > 0 && <span className="rp-label">{t('flow.mapNode')}</span>}
+            {nodes.map(node => tile(node.id, 'node', nodeBody(node)))}
           </section>
         );
       })}

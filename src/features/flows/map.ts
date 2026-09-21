@@ -30,7 +30,7 @@ function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames): {label: s
     case 'node': {
       if (terminal(flow.outbound)) return null;
       const leaf = flow.chain.at(-1) ?? null;
-      return leaf ? {label: names.get(leaf) ?? leaf, unknown: false} : {label: 'unknown', unknown: true};
+      return leaf ? {label: names.get(leaf) ?? leaf, unknown: false, key: leaf} : {label: 'unknown', unknown: true};
     }
   }
 }
@@ -45,10 +45,12 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames)
   );
 }
 
-// The label the flow records show for a pinned tree id.
-export function pinnedLabel(id: string, rules: RoutingRule[]): string {
+// What the flow records call a pinned tree id: the rule's expression, the node's name, the outbound as shown.
+export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
   const [stage, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
-  return (stage === 'rule' && rules.find(rule => rule.rule_id === key)?.expression) || key;
+  if (stage === 'rule') return rules.find(rule => rule.rule_id === key)?.expression ?? key;
+  if (stage === 'node') return names.get(key) ?? key;
+  return label(key);
 }
 
 export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[]): RoutingTree {
@@ -64,11 +66,12 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     if (!entry) links.set(key, (entry = {source, target, count: 0}));
     return entry;
   };
-  const nodeItem = (label: string, unknown = false) => {
-    const id = 'node:' + label;
+  // Nodes are identified by the backend's id; the name is only the label.
+  const nodeItem = (key: string, label: string, unknown = false) => {
+    const id = 'node:' + key;
     let entry = nodeItems.get(id);
     if (!entry) {
-      const node = nodes.find(n => n.name === label);
+      const node = nodes.find(n => n.id === key);
       const health = node && preferredHealth(node);
       nodeItems.set(
         id,
@@ -77,26 +80,28 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     }
     return entry;
   };
-  // An outbound that names a group follows its selection through nested groups to the node it ends at.
+  // An outbound that names a group follows its selection through nested groups to the node it ends at, on one
+  // transport throughout: TCP where the group selects one, else UDP.
   const outboundItem = (name: string, unknown = false) => {
     const id = 'outbound:' + name;
     let entry = outboundItems.get(id);
     if (entry) return entry;
     const chain: TreeGroup[] = [];
     let group = groups.find(g => g.name === name);
+    const transport = group?.selection.tcp_member_id ? 'tcp_member_id' : 'udp_member_id';
     let leaf: string | null = null;
     while (group && chain.length < 8) {
       chain.push({name: group.name, kind: group.policy.kind, policy: group.policy.native});
-      const member = group.selection.tcp_member_id ?? group.selection.udp_member_id;
+      const member = group.selection[transport];
       const next = member ? byId.get(member) : undefined;
       if (!next) {
-        leaf = member ? (names.get(member) ?? member) : null;
+        leaf = member;
         break;
       }
       group = next;
     }
     const kind = unknown ? 'unknown' : name === 'direct' || name === 'block' ? name : chain.length ? 'group' : 'unknown';
-    entry = {id, label: name, count: 0, unknown: unknown || undefined, kind, groups: chain, node: leaf && nodeItem(leaf).id};
+    entry = {id, label: name, count: 0, unknown: unknown || undefined, kind, groups: chain, node: leaf && nodeItem(leaf, names.get(leaf) ?? leaf).id};
     outboundItems.set(id, entry);
     if (entry.node) link(id, entry.node);
     return entry;
@@ -126,7 +131,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
           ? ruleItem(stageId(stage, part), part.label, part.unknown)
           : stage === 'outbound'
             ? outboundItem(part.label, part.unknown)
-            : nodeItem(part.label, part.unknown);
+            : nodeItem(part.key ?? part.label, part.label, part.unknown);
       current.count++;
       if (previous) link(previous.id, current.id).count++;
       previous = current;
@@ -134,13 +139,16 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   }
   // Groups nothing routes to still belong on the tree, after the used ones; a group only reached through
   // another group's selection is drawn inside that outbound instead.
+  for (const group of groups) outboundItem(group.name);
+  const referenced = new Set([...ruleItems.values()].map(rule => rule.outbound));
   const nested = new Set([...outboundItems.values()].flatMap(outbound => outbound.groups.slice(1).map(group => group.name)));
-  for (const group of groups) if (!nested.has(group.name)) outboundItem(group.name);
+  const outbounds = [...outboundItems.values()].filter(outbound => outbound.count || referenced.has(outbound.id) || !nested.has(outbound.label));
+  const kept = new Set(outbounds.map(outbound => outbound.id));
   return {
     rules: [...ruleItems.values()],
-    outbounds: [...outboundItems.values()],
+    outbounds,
     nodes: [...nodeItems.values()],
-    links: [...links.values()]
+    links: [...links.values()].filter(link => kept.has(link.source) || kept.has(link.target))
   };
 }
 

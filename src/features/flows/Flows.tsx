@@ -68,7 +68,7 @@ export function RoutingMap({go, query}: PageProps) {
       />
       <section className="rp-card rp-topology" aria-label={t('flow.topology')}>
         <h2 className="rp-label">{t('flow.topology')}</h2>
-        {!resource.data ? (
+        {!resource.data && !rules.data && !groups.data ? (
           resource.error ? null : (
             <Loading />
           )
@@ -140,7 +140,7 @@ export function FlowRecords({go, query}: PageProps) {
         />
         {pinned && (
           <Button small label={t('flow.clearMapFilter')} onPress={() => setPinned(null)}>
-            {t('flow.mapFilter', {label: pinnedLabel(pinned, rules.data?.rules ?? [])})}
+            {t('flow.mapFilter', {label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => outboundLabel(name, t))})}
             <Close />
           </Button>
         )}
