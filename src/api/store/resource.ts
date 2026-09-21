@@ -42,6 +42,101 @@ export function forgetResources() {
   for (const api of [getApi()]) remembered.delete(api);
 }
 
+type ResourceState<T> = {data: T | undefined; loading: boolean; error: Error | null};
+
+export function watchResource<T>(
+  {api, name, every, parameterised}: {api: Api; name: string; every: number; parameterised: boolean},
+  fetch: (signal: AbortSignal) => Promise<T>,
+  publish: (state: ResourceState<T>) => void
+) {
+  let data = recall<T>(api, name);
+  let pending: RequestLease<T> | undefined;
+  let settled: Promise<void> | undefined;
+  let disposed = false;
+  let dirty = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let deadline = Infinity;
+  const clear = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    deadline = Infinity;
+  };
+  const schedule = (at: number) => {
+    if (document.hidden) {
+      dirty = true;
+      clear();
+      return;
+    }
+    if (at >= deadline) return;
+    clear();
+    deadline = at;
+    timer = setTimeout(
+      () => {
+        clear();
+        if (document.hidden) dirty = true;
+        else load();
+      },
+      Math.max(0, at - Date.now())
+    );
+  };
+  const load = () => {
+    clear();
+    dirty = false;
+    if (pending) return settled;
+    if (data === undefined) publish({data, loading: true, error: null});
+    const request = inflight.acquire(api, name, fetch);
+    pending = request;
+    settled = request.promise
+      .then(
+        value => {
+          data = value;
+          remember(api, name, data, parameterised);
+          if (!disposed) publish({data, loading: false, error: null});
+        },
+        reason => {
+          if (!disposed) publish({data, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))});
+        }
+      )
+      .finally(() => {
+        pending = undefined;
+        request.release();
+        if (disposed) return;
+        clear();
+        if (every > 0) schedule(Date.now() + every);
+      });
+    return settled;
+  };
+  const invalidate = (reconnected: boolean) => {
+    if (document.hidden) {
+      dirty = true;
+      clear();
+    } else if (reconnected) load();
+    else schedule(Date.now() + 2000);
+  };
+  const visibility = () => {
+    if (document.hidden) {
+      dirty ||= timer !== undefined;
+      clear();
+    } else if (dirty) load();
+  };
+  let listeners = refreshers.get(api);
+  if (!listeners) refreshers.set(api, (listeners = new Set()));
+  listeners.add(load);
+  document.addEventListener('visibilitychange', visibility);
+  load();
+  return {
+    refetch: load,
+    invalidate,
+    dispose() {
+      disposed = true;
+      listeners.delete(load);
+      document.removeEventListener('visibilitychange', visibility);
+      pending?.release();
+      clear();
+    }
+  };
+}
+
 export function useResource<T>(
   resource: Resource<T>,
   {every = 5000, deps = [], enabled = true}: {every?: number; deps?: DependencyList; enabled?: boolean} = {}
@@ -74,69 +169,22 @@ export function useResource<T>(
     current.current = resource.fetch;
   });
   const refresh = useRef<() => Promise<void> | undefined>(() => undefined);
+  const invalidate = useRef<(reconnected: boolean) => void>(() => {});
   const refetch = useCallback(() => refresh.current(), []);
   useEffect(() => {
     if (!key.enabled) return;
-    let pending: RequestLease<T> | undefined;
-    let settled: Promise<void> | undefined;
-    let disposed = false;
-    const load = () => {
-      if (pending) return settled;
-      const request = inflight.acquire(key.api, key.name, current.current);
-      pending = request;
-      settled = request.promise.then(
-        data => {
-          pending = undefined;
-          request.release();
-          remember(key.api, key.name, data, key.parameterised);
-          if (!disposed) setState({data, loading: false, error: null});
-        },
-        reason => {
-          pending = undefined;
-          request.release();
-          if (!disposed) setState(previous => ({...previous, loading: false, error: reason instanceof Error ? reason : new Error(String(reason))}));
-        }
-      );
-      return settled;
-    };
-    refresh.current = () => {
-      setState(previous => ({...previous, loading: true}));
-      return load();
-    };
-    let listeners = refreshers.get(key.api);
-    if (!listeners) refreshers.set(key.api, (listeners = new Set()));
-    // Every resource refetches on a manual refresh, the same way it does when the event stream reconnects.
-    const invalidate = () => refresh.current();
-    listeners.add(invalidate);
-    load();
-    const timer = key.every > 0 ? setInterval(refresh.current, key.every) : undefined;
+    const watcher = watchResource(key, signal => current.current(signal), setState);
+    refresh.current = watcher.refetch;
+    invalidate.current = watcher.invalidate;
     return () => {
-      disposed = true;
-      listeners.delete(invalidate);
-      pending?.release();
-      clearInterval(timer);
+      watcher.dispose();
       refresh.current = () => undefined;
+      invalidate.current = () => {};
     };
   }, [key]);
-  // Coalesce event bursts into one delayed refetch; reconnects still refetch immediately.
-  const armed = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (armed.current) clearTimeout(armed.current);
-    },
-    []
-  );
   useEvents((event, reconnected) => {
     if (!shouldRefetch(lane, event, reconnected) || !(resource.acceptEvent?.(event) ?? true)) return;
-    if (reconnected) {
-      refetch();
-      return;
-    }
-    if (armed.current) return;
-    armed.current = setTimeout(() => {
-      armed.current = null;
-      refetch();
-    }, 2000);
+    invalidate.current(reconnected);
   });
   return {...state, refetch};
 }
