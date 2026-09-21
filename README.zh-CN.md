@@ -34,11 +34,11 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 
 ## 运行环境
 
-| 组件   | 要求                                                                                     |
-| ------ | ---------------------------------------------------------------------------------------- |
-| 后端   | 启用 `native_api` 的 honk（见[安装](#安装)）；服务器上不需要其他程序                     |
+| 组件   | 要求                                                                                                                          |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 后端   | 启用 `native_api` 的 honk（见[安装](#安装)）；服务器上不需要其他程序                                                          |
 | 浏览器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以后。这些是 CSS 构建目标；JavaScript 构建目标是 ES2022。自动化测试只用 Chromium |
-| 构建   | Node 22 及以后、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                        |
+| 构建   | Node 22 及以后、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                                                             |
 
 ## 安装
 
@@ -131,14 +131,14 @@ experimental {
 
 doona 没有用于存储自身界面设置的服务器端存储。配置与运行时变更通过 honk 写入；doona 的界面设置存储在浏览器中，范围限于该网站来源的 `localStorage`：
 
-| 设置     | 键               | 值                                                                                                                                       |
-| -------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 设置     | 键               | 值                                                                                                                                                                                                  |
+| -------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 后端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 数组；`api` 是服务器根地址或代理前缀，留空或 `mock` 使用演示数据；API 请求通过 `Authorization` 头发送 token。配对链接可能把 token 放在网址片段中，并在加载后移除。 |
-| 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                          |
-| 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                           |
-| 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                        |
-| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；其他值见 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                       |
-| 字标     | `doona-wordmark` | `gradient`（默认）、`plain`                                                                                                              |
+| 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                                                                                     |
+| 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                                                                                      |
+| 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                                                                                   |
+| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；其他值见 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                                                                                  |
+| 字标     | `doona-wordmark` | `gradient`（默认）、`plain`                                                                                                                                                                         |
 
 保存的主题与语言在第一帧之前就应用，重新加载不会闪出默认外观。
 
@@ -159,18 +159,18 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 
 `pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建重新生成上面的截图（配色总览需要 `cwebp`）。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
-| 路径            | 用途                                   |
-| --------------- | -------------------------------------- |
-| `src/features/` | 各页面及其 hook 与文案，一页一个文件夹 |
-| `src/shell/`    | 应用外壳、导航与搜索                   |
-| `src/ui/`       | 共用组件、主题与图标                   |
+| 路径            | 用途                                               |
+| --------------- | -------------------------------------------------- |
+| `src/features/` | 各页面及其 hook 与文案，一页一个文件夹             |
+| `src/shell/`    | 应用外壳、导航与搜索                               |
+| `src/ui/`       | 共用组件、主题与图标                               |
 | `src/api/`      | 客户端、后端档案、资源 store、模拟后端与生成的类型 |
-| `src/i18n/`     | 翻译与区域设置辅助                     |
-| `contract/`     | 内嵌的 OpenAPI 契约与钉点              |
-| `public/`       | 静态资源、字体与 service worker        |
-| `e2e/`          | 浏览器测试                             |
-| `tools/`        | 构建、打包、一致性检查与截图工具       |
-| `install/`      | nfpm 配置与 OpenWrt、Alpine、Nix 写法  |
+| `src/i18n/`     | 翻译与区域设置辅助                                 |
+| `contract/`     | 内嵌的 OpenAPI 契约与钉点                          |
+| `public/`       | 静态资源、字体与 service worker                    |
+| `e2e/`          | 浏览器测试                                         |
+| `tools/`        | 构建、打包、一致性检查与截图工具                   |
+| `install/`      | nfpm 配置与 OpenWrt、Alpine、Nix 写法              |
 
 ### 契约
 

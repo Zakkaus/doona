@@ -34,11 +34,11 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 
 ## 執行環境
 
-| 元件   | 要求                                                                                     |
-| ------ | ---------------------------------------------------------------------------------------- |
-| 後端   | 啟用 `native_api` 的 honk（見[安裝](#安裝)）；伺服器上不需要其他程式                     |
+| 元件   | 要求                                                                                                                          |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 後端   | 啟用 `native_api` 的 honk（見[安裝](#安裝)）；伺服器上不需要其他程式                                                          |
 | 瀏覽器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以後。這些是 CSS 建置目標；JavaScript 建置目標是 ES2022。自動化測試只用 Chromium |
-| 建置   | Node 22 及以後、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                        |
+| 建置   | Node 22 及以後、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                                                             |
 
 ## 安裝
 
@@ -121,7 +121,7 @@ experimental {
 | 配置 | 來源與診斷、附校驗的編輯器、快速設定、匯出                                   | `config`                            |
 | 事件 | 後端事件串流                                                                 | `events`                            |
 | 日誌 | 日誌串流，可按等級與模組篩選、暫停、匯出                                     | `logs`                              |
-| 設定 | 後端、執行期設定與後端操作、語言、外觀與配色                             | —                                   |
+| 設定 | 後端、執行期設定與後端操作、語言、外觀與配色                                 | —                                   |
 
 所有頁面都保留在導覽列中。只有 [registry.ts](src/shell/registry.ts) 為頁面列出的資源全部不可用時，頁面才會標為不可用；開啟後會顯示不可用提示。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。
 
@@ -131,14 +131,14 @@ experimental {
 
 doona 沒有供自身介面設定使用的伺服器端儲存空間。配置與執行期變更透過 honk 寫入；doona 的介面設定儲存在瀏覽器中，範圍限於該網站來源的 `localStorage`：
 
-| 設定     | 鍵               | 值                                                                                                                                         |
-| -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 設定     | 鍵               | 值                                                                                                                                                                                                    |
+| -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 使用示範資料；API 請求透過 `Authorization` 標頭傳送 token。配對連結可能把 token 放在網址片段中，並在載入後移除。 |
-| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                            |
-| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                             |
-| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                          |
-| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                         |
-| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                |
+| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                                                                                       |
+| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                                                                                        |
+| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                                                                                     |
+| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                                                                                    |
+| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                                                                           |
 
 儲存的主題與語言在第一幀之前就套用，重新載入不會閃出預設外觀。
 
@@ -159,18 +159,18 @@ pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-
 
 `pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置重新產生上面的截圖（配色總覽需要 `cwebp`）。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
 
-| 路徑            | 用途                                   |
-| --------------- | -------------------------------------- |
-| `src/features/` | 各頁面及其 hook 與文案，一頁一個資料夾 |
-| `src/shell/`    | 應用外殼、導覽與搜尋                   |
-| `src/ui/`       | 共用元件、主題與圖示                   |
+| 路徑            | 用途                                                 |
+| --------------- | ---------------------------------------------------- |
+| `src/features/` | 各頁面及其 hook 與文案，一頁一個資料夾               |
+| `src/shell/`    | 應用外殼、導覽與搜尋                                 |
+| `src/ui/`       | 共用元件、主題與圖示                                 |
 | `src/api/`      | 客戶端、後端設定檔、資源 store、模擬後端與產生的型別 |
-| `src/i18n/`     | 翻譯與地區設定輔助                     |
-| `contract/`     | 內嵌的 OpenAPI 契約與釘點              |
-| `public/`       | 靜態資源、字型與 service worker        |
-| `e2e/`          | 瀏覽器測試                             |
-| `tools/`        | 建置、打包、一致性檢查與截圖工具       |
-| `install/`      | nfpm 設定與 OpenWrt、Alpine、Nix 寫法  |
+| `src/i18n/`     | 翻譯與地區設定輔助                                   |
+| `contract/`     | 內嵌的 OpenAPI 契約與釘點                            |
+| `public/`       | 靜態資源、字型與 service worker                      |
+| `e2e/`          | 瀏覽器測試                                           |
+| `tools/`        | 建置、打包、一致性檢查與截圖工具                     |
+| `install/`      | nfpm 設定與 OpenWrt、Alpine、Nix 寫法                |
 
 ### 契約
 
