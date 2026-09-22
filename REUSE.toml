@@ -30,7 +30,7 @@ SPDX-FileCopyrightText = "2024 Adobe. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
-path = ["CODE_OF_CONDUCT.md"]
+path = [".github/CODE_OF_CONDUCT.md"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC-BY-4.0"
