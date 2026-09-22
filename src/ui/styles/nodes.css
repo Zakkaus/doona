@@ -30,13 +30,13 @@ button.rp-node[data-focus-visible] {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.rp-node .ms.ok {
+.ms.ok {
   color: var(--rp-foam);
 }
-.rp-node .ms.warn {
+.ms.warn {
   color: var(--rp-gold);
 }
-.rp-node .ms.err {
+.ms.err {
   color: var(--rp-love);
 }
 .rp-node .s {

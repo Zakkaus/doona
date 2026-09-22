@@ -198,3 +198,31 @@ it('writes explicit first-run network inputs and rejects missing or invalid list
   expect(validNetwork({...state, listenerPort: '53\nnode {}'})).toBe(false);
   expect(validNetwork({...state, defaultDns: ' '})).toBe(false);
 });
+
+describe('setup writes what dae reads back', () => {
+  it('quotes a group name that needs quotes where the templates route to it', () => {
+    const text = "group {\n  'my group' {\n    policy: min\n  }\n}\nrouting {\n  fallback: direct\n}\n";
+    const out = writeState(text, {...readState(text), rules: 'global'});
+    expect(out).toContain("fallback: 'my group'");
+    expect(out).not.toMatch(/fallback: my group/);
+  });
+
+  it('writes subscription names trimmed and treats trimmed names as duplicates', () => {
+    const state = readState('');
+    const subscriptions = [
+      {name: 'a ', url: 'https://example.org/a'},
+      {name: 'a', url: 'https://example.org/b'}
+    ];
+    expect(validSubscriptions(subscriptions)).toBe(false);
+    const out = writeState('', {...state, subscriptions: [{name: ' paid ', url: 'https://example.org/sub'}]});
+    expect(out).toContain("paid: 'https://example.org/sub'");
+  });
+
+  it('adds to an empty subscription block without a blank first line', () => {
+    const text = 'subscription {}\n';
+    const state = readState(text);
+    expect(state.subscriptions).toEqual([]);
+    const out = writeState(text, {...state, subscriptions: [{name: 'paid', url: 'https://example.org/sub'}]});
+    expect(out).toContain("subscription {\n  paid: 'https://example.org/sub'\n}");
+  });
+});

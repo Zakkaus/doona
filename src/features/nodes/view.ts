@@ -17,7 +17,7 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
     name: node.name,
     protocol: node.protocol ?? '—',
     latency: measured ? t('ui.latency', {n: millis(health.latency_ms!)}) : health?.state === 'unavailable' ? t('ui.unavailable') : '—',
-    latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : 'ms err',
+    latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : health?.state === 'unavailable' ? 'ms err' : 'ms',
     groups: node.group_ids.length
       ? formatList(
           lang,

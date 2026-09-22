@@ -22,7 +22,7 @@ export function validNetwork(state: WizardState): boolean {
 
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 export function validSubscriptions(subscriptions: Subscription[]): boolean {
-  const names = subscriptions.map(item => item.name || item.tag).filter((name): name is string => !!name);
+  const names = subscriptions.map(item => item.name.trim() || item.tag).filter((name): name is string => !!name);
   return new Set(names).size === names.length && subscriptions.every(item => item.raw !== undefined || (!!item.name.trim() && isSubscriptionUrl(item.url)));
 }
 
@@ -31,6 +31,7 @@ export function readState(text: string): WizardState {
   const subscriptions: Subscription[] = [];
   for (const [section, block] of blocks.filter(block => block.name === 'subscription').entries()) {
     const fields = blockFields(text, block, tokens);
+    if (!text.slice(block.open + 1, block.close).trim()) continue;
     for (const entry of blockEntries(text, block)) {
       const line = text.slice(entry.from, entry.to);
       const entryFields = fields.filter(field => field.from >= entry.from && field.to <= entry.to);
@@ -47,13 +48,13 @@ export function readState(text: string): WizardState {
 }
 
 function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${quoteName(s.name)}: ${quote(s.url.trim())}`), '}'];
+  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}`), '}'];
 }
 export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
   // The name as written: the templates must route to the group the file already has.
   const first = state.group ?? defaultGroup;
-  const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
+  const fill = (line: string) => '  ' + line.replaceAll('{group}', quoteName(first));
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
 function dnsBlock(state: WizardState): string[] {
@@ -114,7 +115,7 @@ export function writeState(current: string, state: WizardState): string {
   const subscriptionSections = blocks.filter(block => block.name === 'subscription');
   for (const [section, block] of subscriptionSections.entries()) {
     const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
-    const body = subscriptions.map(item => item.raw ?? `  ${quoteName(item.name)}: ${quote(item.url.trim())}`);
+    const body = subscriptions.map(item => item.raw ?? `  ${quoteName(item.name.trim())}: ${quote(item.url.trim())}`);
     if (body.join('\n') !== blockBody(current, block).join('\n')) {
       edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
     }

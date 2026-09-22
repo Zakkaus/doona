@@ -94,7 +94,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                   </Button>
                 )}
                 {row.removable && (
-                  <Button small quiet isDisabled={m.busy} label={row.removeLabel} onPress={row.remove}>
+                  <Button small quiet icon isDisabled={m.busy} label={row.removeLabel} onPress={row.remove}>
                     <Close />
                   </Button>
                 )}

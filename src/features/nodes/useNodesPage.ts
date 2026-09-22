@@ -51,7 +51,8 @@ export function useNodesPage({go, query}: PageProps) {
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  const selectedId = params.get('provider') ?? list[0]?.id ?? null;
+  // Default to the first real source: the built-in and unattributed rows only lead when nothing else exists.
+  const selectedId = params.get('provider') ?? (list.find(item => item.kind !== 'builtin' && item.kind !== 'unattributed') ?? list[0])?.id ?? null;
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
     const owner = list.find(item => item.id === selectedId);
@@ -163,6 +164,7 @@ export function useNodesPage({go, query}: PageProps) {
     source,
     entries,
     reload,
+    refresh: refreshing,
     onAdd: () => open({kind: 'provider'}),
     onRemove: item => open({kind: 'removeProvider', item})
   });
