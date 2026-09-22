@@ -31,7 +31,7 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
 export function recordingNote(recording: RuntimeSettings['recording'] | undefined, t: Translator) {
   if (!recording) return null;
   if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
-  return t(recording.events.active ? 'settings.recordingAttached' : 'settings.recordingDetached');
+  return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
@@ -78,7 +78,10 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
     value,
     label: t(access.label),
     invalid: !/^\d+$/.test(value) || Number(value) < access.floor || (ceiling !== undefined && Number(value) > ceiling),
-    description: ceiling === undefined ? undefined : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
+    description:
+      ceiling === undefined
+        ? t('settings.rangeMin', {min: formatNumber(access.floor, locale)})
+        : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
 export function geodataRows(assets: GeoData['assets'], locale: string) {

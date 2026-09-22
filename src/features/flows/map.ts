@@ -50,12 +50,14 @@ function stagePart(
 // Empty identities distinguish missing values from identifiers literally named "unknown".
 const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => stage + ':' + (part.unknown ? '' : (part.key ?? part.label));
 
-export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames, rules: RoutingRule[]): FlowSummary[] {
+// Identities are keyed by node ID, not name, so matching needs no name catalogue.
+const noNames: NodeNames = new Map();
+export function flowsThrough(flows: FlowSummary[], id: string, rules: RoutingRule[]): FlowSummary[] {
   const stage = id.slice(0, id.indexOf(':')) as Stage;
   if (!stages.includes(stage)) return [];
   const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
   return flows.filter(flow => {
-    const part = stagePart(flow, stage, names, rulesById);
+    const part = stagePart(flow, stage, noNames, rulesById);
     return part !== null && stageId(stage, part) === id;
   });
 }
@@ -193,10 +195,6 @@ export function treeIndex(tree: RoutingTree): TreeIndex {
   const index = {outgoing, incoming, parents};
   indexes.set(tree, index);
   return index;
-}
-
-export function parentOf(tree: RoutingTree, item: TreeLeaf | TreeOutbound): string | null {
-  return treeIndex(tree).parents.get(item.id) ?? null;
 }
 
 // Parents sit midway between their children, whose rows retain configuration order.

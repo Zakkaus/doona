@@ -5,6 +5,16 @@
   align-items: center;
   justify-content: center;
 }
+.rp-chart-wait.tall {
+  min-height: 264px;
+}
+.rp-chart-wait.bars {
+  min-height: 136px;
+}
+/* An error from the mode card spans the row rather than taking one of its three slots. */
+.rp-quick > .rp-alert {
+  grid-column: 1 / -1;
+}
 .rp-card-link {
   color: inherit;
   text-decoration: none;

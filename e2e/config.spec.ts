@@ -102,7 +102,7 @@ test('the validation tab lists kept diagnostics and opens the source at the line
   await expect(rows).toHaveCount(0);
   await page.reload();
   await rows.filter({hasText: 'rules.dae:3'}).click();
-  await page.getByRole('button', {name: 'Open source', exact: true}).click();
+  await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
   await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
@@ -482,7 +482,7 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await expect(diagnostics).toContainText('config.dae');
   await expect(diagnostics).toContainText('Error in main source');
   await expect(editor.locator('.cm-diag-line-error')).toHaveCount(0);
-  await diagnostics.getByRole('button', {name: 'Open source', exact: true}).click();
+  await diagnostics.getByRole('button', {name: /^Open source: config\.dae/}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/source=src-main.*line=2/);
 });
@@ -605,3 +605,27 @@ for (const appearance of ['light', 'dark', 'glass'] as const) {
     expect(await raw.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   });
 }
+
+httpTest('a module draft refused with 412 is rebased and saves on the next attempt', async ({page}) => {
+  const {api} = await configBackend(page);
+  await page.goto('/#/config');
+  const routing = page.getByRole('tabpanel', {name: 'Modules'}).getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const section = await editor.innerText();
+  await editor.fill(section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:'));
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await rejected;
+  await expect(editor).toContainText('domain(example.org) -> proxy');
+  // The second attempt carries the refetched digest; the concurrent edit outside the section is kept.
+  await expect(async () => {
+    await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+    await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded', {timeout: 2000});
+  }).toPass({timeout: 15000});
+  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(saved).toContain('# concurrent edit');
+  expect(saved).toContain('domain(example.org) -> proxy');
+});

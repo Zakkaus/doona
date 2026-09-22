@@ -53,7 +53,7 @@
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
 }
-/* The about box. The duck hops on a tap; after five it honks and the name cycles its colours for a while. */
+/* The about box. The duck hops on a tap; after five it honks, and from then on the name cycles its colours. */
 .rp-about {
   display: flex;
   flex-direction: column;
@@ -246,6 +246,34 @@
   background: var(--rp-hl-med);
   border-radius: 1px;
 }
+/* Below 400px the brand, the compact search and the five actions no longer fit with the wide gutter: the bar
+   would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the brand. */
+@media (max-width: 399px) {
+  .rp-top {
+    padding: 0 12px;
+    column-gap: 8px;
+  }
+  .rp-brand {
+    gap: 8px;
+  }
+  .rp-brand-version {
+    display: none;
+  }
+  .rp-main {
+    padding-inline: 16px;
+  }
+}
+/* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. */
+@media (max-width: 339px) {
+  .rp-brand-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 .rp-side {
   display: none;
   flex-direction: column;
@@ -341,6 +369,8 @@
 }
 @media (min-width: 1024px) {
   .rp-main {
+    /* Pinned to the content column, so the startup screen without a side nav lands where the page will. */
+    grid-column: 2;
     margin-inline-end: 16px;
   }
 }
@@ -352,6 +382,9 @@
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  /* Fill the column even while a page's chunk is still loading: without this the content collapses to the
+     heading and springs back to full height a tenth of a second later. */
+  flex: 1;
 }
 .rp-head {
   display: flex;

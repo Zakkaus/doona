@@ -1,6 +1,7 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
+import {isFragment} from '../../dae/text';
 import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
@@ -47,9 +48,9 @@ type DictionaryRow = {
   sourceQuery: string | null;
 };
 export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; positions: Choice[]; outbounds: Choice[]};
-function sourceLabel(source: RuleSource, config: ConfigSource[]): string {
-  const matched = sourceFor(config, source);
-  return matched ? fileName(matched) : source.file === '<redacted>' ? '' : source.file;
+// The file a rule came from, by the name the configuration page uses; a redacted path shows nothing.
+function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): string {
+  return linked ? fileName(linked) : source.file === '<redacted>' ? '' : source.file;
 }
 export function dictionaryView(
   rules: RoutingRule[],
@@ -77,14 +78,14 @@ export function dictionaryView(
   const rows = rules.map(rule => {
     const source = byId.get(rule.source?.source_id ?? '');
     const linked = resolve(rule.source);
-    const label = linked ? fileName(linked) : rule.source?.file === '<redacted>' ? '' : (rule.source?.file ?? '');
+    const label = rule.source ? sourceLabel(rule.source, linked) : '';
     return {
       id: rule.rule_id,
-      number: rule.kind === 'fallback' ? '—' : String(rule.index + 1),
+      number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
       expression: rule.expression,
       outbound: rule.outbound ?? '',
       must: rule.must,
-      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: String(rule.source.line)})) : '—',
+      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
       removable: rule.kind === 'rule' && !!source?.writable && source.content !== undefined,
       sourceQuery: linked && rule.source ? `tab=source&source=${encodeURIComponent(linked.id)}&line=${rule.source.line}` : null
@@ -102,7 +103,7 @@ export function dictionaryView(
       ...(fallback && writable(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
       ...rules
         .filter(rule => rule.kind === 'rule' && writable(rule))
-        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
+        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
     ],
     outbounds: [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}))
   };
@@ -125,8 +126,9 @@ export type DistributionView = {
 };
 export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang): DistributionView {
   const locale = LOCALE[lang];
+  // Keyed by what the row counts, so a row keeps its identity when a poll reorders the counts.
   const rows = ruleDistribution(list?.flows ?? [])
-    .map((row, i) => ({...row, key: String(i)}))
+    .map(row => ({...row, key: JSON.stringify([row.id, row.expression, row.source])}))
     .sort(
       (a, b) =>
         (a.id === null || b.id === null ? Number(a.id === null) - Number(b.id === null) : a.id.localeCompare(b.id, undefined, {numeric: true})) ||
@@ -142,7 +144,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         expressionClass: row.expression ? 'rp-code' : undefined,
         source: t(sources[row.source]),
         hits: formatNumber(row.count, locale),
-        share: formatNumber(row.share * 100, locale, 1) + '%'
+        share: t('ui.percent', {n: formatNumber(row.share * 100, locale, 1)})
       })),
     choices: [['all', t('ui.all')], ...Object.entries(sources).map(([id, key]): [string, string] => [id, t(key)])],
     caption: list ? t('rule.distributionCaption', {n: formatNumber(list.flows.length, locale)}) : null,
@@ -150,6 +152,8 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
     droppedUnknown: list?.dropped_records === null
   };
 }
+// A typed condition: a call like `domain(...)`, no outbound of its own, and nothing that escapes its line.
+const rawCondition = (raw: string) => /\w\(/.test(raw) && !raw.includes('->') && isFragment(raw);
 export type RuleDraftView = {choices: Choice[]; hint: string; preview: string | null; mode: string; valid: boolean; rawInvalid: boolean};
 export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string, raw: string, t: Translator) {
   return {
@@ -157,14 +161,14 @@ export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, c
     hint: kindHints[kind],
     preview: on && value.trim() ? condition : null,
     mode: on ? 'pick' : 'text',
-    valid: on ? value.trim() !== '' : /\w\(/.test(raw) && !raw.includes('->'),
-    rawInvalid: raw !== '' && !(/\w\(/.test(raw) && !raw.includes('->'))
+    valid: on ? value.trim() !== '' : rawCondition(raw),
+    rawInvalid: raw !== '' && !rawCondition(raw)
   };
 }
 export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Translator) {
   return {
     expression: rule.expression,
-    help: t('rule.removeHelp', {file: rule.source ? sourceLabel(rule.source, sources) : '', line: String(rule.source?.line ?? '')})
+    help: t('rule.removeHelp', {file: rule.source ? sourceLabel(rule.source, sourceFor(sources, rule.source)) : '', line: rule.source?.line ?? ''})
   };
 }
 
@@ -251,7 +255,7 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
   };
   return {
     id: dns.lookup_id,
-    heading: 'DNS · ' + dns.name,
+    heading: t('rule.dnsHeading', {name: dns.name}),
     fields: [
       [t('ui.type'), dns.qtype],
       [t('ui.state'), dns.status],

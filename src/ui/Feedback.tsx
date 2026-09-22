@@ -43,16 +43,18 @@ export function errorText(error: unknown) {
     const text = translate(readLang(), error.key);
     return error.detail ? `${text}: ${error.detail}` : text;
   }
+  if (error instanceof ApiError && error.text) return translate(readLang(), error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
 }
 
 // Retry refetches the failed resource rather than reloading the page.
-export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
+// `message` replaces the load-failure wording for a failed action.
+export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: string}) {
   const t = useT();
   return error ? (
     <p role="alert" className="rp-alert">
-      {t('ui.loadFailed', {error: errorText(error)})}
+      {message ?? t('ui.loadFailed', {error: errorText(error)})}
       {onRetry && (
         <Button small quiet onPress={onRetry}>
           {t('ui.retry')}
@@ -132,8 +134,11 @@ export function Toasts() {
   );
   useEffect(() => {
     if (!expanded) return;
+    // One Escape closes one layer: an open dialog takes it unless focus is in the toasts themselves.
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setExpanded(false);
+      if (e.key !== 'Escape') return;
+      const inToasts = (e.target as Element | null)?.closest?.('.rp-toasts');
+      if (inToasts || !document.querySelector('[role="dialog"], [role="alertdialog"]')) setExpanded(false);
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

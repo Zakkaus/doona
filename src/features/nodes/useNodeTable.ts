@@ -1,4 +1,5 @@
 import {useMemo, useState} from 'react';
+import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../store';
@@ -51,7 +52,14 @@ export function useNodeTable(input: NodeTableInput) {
         .map(id => ({id, label: id})),
     [nodes]
   );
-  const members = useMemo(() => nodeRows(nodes, search, group, protocol, sort), [nodes, search, group, protocol, sort]);
+  // A filter chosen for another source applies only if this source offers that value.
+  const activeGroup = groups.some(item => item.id === group) ? group : '';
+  const activeProtocol = protocols.some(item => item.id === protocol) ? protocol : '';
+  const {contains} = useFilter({sensitivity: 'base'});
+  const members = useMemo(
+    () => nodeRows(nodes, search, activeGroup, activeProtocol, sort, contains),
+    [nodes, search, activeGroup, activeProtocol, sort, contains]
+  );
   const entries = useMemo(
     () => readGroupEntries(source.main?.content ?? '').map(entry => ({...entry, names: new Set(namedIn(entry))})),
     [source.main?.content]
@@ -95,9 +103,9 @@ export function useNodeTable(input: NodeTableInput) {
     rows,
     search,
     setSearch,
-    group,
+    group: activeGroup,
     setGroup,
-    protocol,
+    protocol: activeProtocol,
     setProtocol,
     sort,
     setSort,

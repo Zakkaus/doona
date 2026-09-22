@@ -5,6 +5,14 @@ export function quote(value: string): string {
   if (value.includes("'") || /[\r\n]|(^|[^\\])(?:\\\\)*\\$/.test(value)) throw new LocalError('config.unquotable');
   return `'${value}'`;
 }
+export function isQuotable(value: string): boolean {
+  try {
+    quote(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 export type TextToken = {from: number; to: number; line: number; kind: 'text' | 'quoted' | 'comment' | 'symbol'; depth: number; parens: number};
 export type TextBlock = {
   name: string;
@@ -53,8 +61,11 @@ export function scanConfig(text: string) {
     } else if ('{}:(),'.includes(c)) {
       kind = 'symbol';
       i++;
+    } else if (c === '-' && text[i + 1] === '>') {
+      // The routing arrow is its own token even when written flush against its neighbours, as in `dip(x)->direct`.
+      i += 2;
     } else {
-      while (i < text.length && !/[\s{}:(),'"]/.test(text[i])) i++;
+      while (i < text.length && !/[\s{}:(),'"]/.test(text[i]) && !(text[i] === '-' && text[i + 1] === '>')) i++;
     }
     const token = {from, to: i, line: startLine, kind, depth: stack.length, parens};
     if (kind === 'symbol' && c === '{') {
@@ -88,6 +99,25 @@ export function scanConfig(text: string) {
   return {blocks, tokens};
 }
 
+/**
+ * Whether typed text can be written as one field value or rule without changing the file's structure: a single
+ * line with balanced parentheses and no comment or brace outside quotes. `domain(a) # x` would comment out the
+ * outbound written after it; a brace would open or close a section.
+ */
+export function isFragment(text: string): boolean {
+  if (/[\r\n]/.test(text)) return false;
+  let depth = 0;
+  for (const token of scanConfig(text).tokens) {
+    if (token.kind === 'comment') return false;
+    if (token.kind === 'quoted') continue;
+    const raw = text.slice(token.from, token.to);
+    if (raw.includes('{') || raw.includes('}')) return false;
+    if (raw === '(') depth++;
+    if (raw === ')' && --depth < 0) return false;
+  }
+  return depth === 0;
+}
+
 export const unquote = (text: string) => (/^['"]/.test(text) ? text.slice(1, -1) : text);
 export function uncomment(text: string): string {
   const comments = scanConfig(text).tokens.filter(token => token.kind === 'comment');
@@ -102,7 +132,7 @@ export function blockFields(text: string, block: TextBlock, tokens: TextToken[])
     const token = tokens[i];
     if (token.from <= block.open || token.from >= block.close) continue;
     const raw = text.slice(token.from, token.to);
-    if (token.kind === 'comment' || (field && text.slice(field.valueTo, token.from).includes('\n'))) field = undefined;
+    if (token.kind === 'comment' || (field && token.parens === 0 && text.slice(field.valueTo, token.from).includes('\n'))) field = undefined;
     if (token.depth !== block.depth + 1 || token.kind === 'comment') continue;
     const next = tokens[i + 1];
     if (token.parens === 0 && (token.kind === 'text' || token.kind === 'quoted') && next && text.slice(next.from, next.to) === ':') {

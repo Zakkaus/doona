@@ -17,7 +17,7 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
     name: node.name,
     protocol: node.protocol ?? '—',
     latency: measured ? t('ui.latency', {n: millis(health.latency_ms!)}) : health?.state === 'unavailable' ? t('ui.unavailable') : '—',
-    latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : 'ms err',
+    latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : health?.state === 'unavailable' ? 'ms err' : 'ms',
     groups: node.group_ids.length
       ? formatList(
           lang,
@@ -122,10 +122,11 @@ export function ownedNodes(nodes: Node[], ownerId: string | null | undefined, ki
   );
 }
 
-export function nodeRows(owned: Node[], search: string, group: string, protocol: string, sort: TableSort) {
-  const needle = search.trim().toLowerCase();
+// `contains` is the locale-aware matcher the policy grid also uses, so both pages find the same names.
+export function nodeRows(owned: Node[], search: string, group: string, protocol: string, sort: TableSort, contains: (value: string, query: string) => boolean) {
+  const needle = search.trim();
   const kept = owned.filter(
-    node => (!needle || node.name.toLowerCase().includes(needle)) && (!group || node.group_ids.includes(group)) && (!protocol || node.protocol === protocol)
+    node => (!needle || contains(node.name, needle)) && (!group || node.group_ids.includes(group)) && (!protocol || node.protocol === protocol)
   );
   const sign = sort.direction === 'ascending' ? 1 : -1;
   const latency = sort.column === 'latency' ? new Map(kept.map(node => [node.id, latencyOf(node)])) : new Map();

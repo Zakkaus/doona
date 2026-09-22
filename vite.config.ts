@@ -27,7 +27,7 @@ export default defineConfig({
     'import.meta.env.VITE_DOONA_REPO': JSON.stringify(repository.url.replace(/\.git$/, '')),
     'import.meta.env.VITE_ENGINE_ORG': JSON.stringify(config.engineOrg),
     'import.meta.env.VITE_DOONA_CONTRACT_COMMIT': JSON.stringify(
-      readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/\bcommit ([0-9a-f]{7,40})\b/)![1]
+      readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/^Pin: (.+)$/m)![1]
     )
   },
   plugins: [
@@ -73,7 +73,7 @@ export default defineConfig({
   build: {
     manifest: true,
     target: ['es2022'],
-    cssTarget: ['chrome120', 'safari17', 'firefox120', 'edge120'],
+    cssTarget: ['chrome120', 'safari17', 'firefox121', 'edge120'],
     cssMinify,
     rollupOptions: {
       input: {

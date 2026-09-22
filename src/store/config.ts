@@ -1,3 +1,4 @@
+import {ApiError} from '../api/error';
 import {useCallback, useEffect, useState} from 'react';
 import {getApi} from '../api/index';
 import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
@@ -65,7 +66,11 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
             signal.throwIfAborted();
             if (!check.valid) return {diagnostics: check.diagnostics};
           }
-          const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal);
+          const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal).catch(error => {
+            // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
+            if (error instanceof ApiError && error.status === 412) refetch();
+            throw error;
+          });
           signal.throwIfAborted();
           const operation = await api.pollOperation(accepted, signal);
           signal.throwIfAborted();

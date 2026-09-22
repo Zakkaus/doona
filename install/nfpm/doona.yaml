@@ -57,7 +57,3 @@ contents:
     dst: /usr/share/doc/doona
     type: tree
     packager: archlinux
-  - src: build/stage/doona/usr/share/doc/doona
-    dst: /usr/share/doc/doona
-    type: tree
-    packager: apk

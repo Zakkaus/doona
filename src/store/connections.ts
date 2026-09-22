@@ -8,6 +8,11 @@ export function useConnections(src?: string, enabled = true) {
   const api = getApi();
   return useResource({key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)}, {enabled});
 }
+// Totals count every matching entry before the limit, so one returned entry is enough to read them.
+export function useConnectionTotals(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['connections', {totals: true}], fetch: signal => api.connections({type: 'all', detail: 'summary', limit: 1}, signal)}, {enabled});
+}
 export function useConnectionClose(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});
@@ -22,7 +27,8 @@ export function useConnectionClose(refetch: () => void) {
               return await api.closeConnections(selection.query, signal);
             } catch (error) {
               // Over the advertised bulk limit the backend closes nothing; the listed ids still get closed one by one.
-              if (!(error instanceof ApiError && error.status === 413)) throw error;
+              // With no ids to fall back to, the caller sees the limit instead of "closed 0".
+              if (!(error instanceof ApiError && error.status === 413) || !selection.ids.length) throw error;
             }
           const tally = {closed: 0, skipped: 0};
           for (const id of selection.ids) {

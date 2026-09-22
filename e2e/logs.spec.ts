@@ -34,8 +34,8 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   await page.goto('/#/logs');
   const rows = page.getByRole('grid', {name: 'Logs'}).getByRole('rowheader');
   await expect(rows).toHaveText(['Route failed', 'DNS slow', 'DNS answered']);
-  await page.getByRole('button', {name: 'info Level', exact: true}).click();
-  await page.getByRole('option', {name: 'warn', exact: true}).click();
+  await page.getByRole('button', {name: 'Info Level', exact: true}).click();
+  await page.getByRole('option', {name: 'Warning', exact: true}).click();
   await expect(rows).toHaveText(['Route failed', 'DNS slow']);
   await page.getByRole('searchbox', {name: 'Module', exact: true}).fill('honk::dns');
   await expect(rows).toHaveText(['DNS slow']);

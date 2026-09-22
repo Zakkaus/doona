@@ -18,8 +18,8 @@ export function useLogs() {
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});
   const view = useMemo(
-    () => logView(feed.records, resource?.levels ?? [], feed.connected, version.data?.engine.name, locale, t),
-    [feed.records, feed.connected, resource, version.data, locale, t]
+    () => logView(feed.records, resource?.levels ?? [], feed.connected, version.data?.engine.name, locale, t, !!feed.error),
+    [feed.records, feed.connected, feed.error, resource, version.data, locale, t]
   );
   return {
     ...view,

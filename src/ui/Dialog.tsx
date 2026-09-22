@@ -107,6 +107,9 @@ export function Tabs({
   // The selected tab and its marker answer the click in the urgent render; a heavy panel (a table of
   // log rows) mounts in the deferred one, so the click never waits for it.
   const shown = useDeferredValue(value);
+  // Until the deferred render lands, the newly selected panel keeps showing the previous content: an empty panel
+  // for one frame would collapse the page and spring back.
+  const content = (items.find(item => item.id === shown) ?? items.find(item => item.id === value))?.content;
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
@@ -121,7 +124,7 @@ export function Tabs({
       </div>
       {items.map(item => (
         <TabPanel key={item.id} id={item.id} className="rp-tabpanel">
-          {item.id === shown ? item.content : null}
+          {item.id === value ? content : null}
         </TabPanel>
       ))}
     </RTabs>
@@ -135,7 +138,8 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   useEffect(() => {
     if (!open || !wide) return;
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"]')) onClose();
+      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"], .rp-toasts'))
+        onClose();
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

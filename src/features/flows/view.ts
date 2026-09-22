@@ -1,8 +1,8 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
 import type {Key} from '../../i18n/messages';
-import {formatList, LOCALE, type Lang, type Translator} from '../../i18n';
+import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
-import {millis} from '../../api/u64';
+import {millis, parseU64} from '../../api/u64';
 import {latencyTone} from '../../ui/ui';
 import {policyKindLabels} from '../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
@@ -148,7 +148,7 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
 
 type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
 export type TileView = {id: string; stage: TreeBy | 'outbound' | 'node'; name: string; badge?: string; notes: TileNote[]; count: number; label: string};
-export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
+export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileView[] {
   const unknown = (item: TreeItem, name: string) => (item.unknown ? t('flow.mapUnknown') : name);
   type Bare = Omit<TileView, 'label'>;
   const tiles: Bare[] = [
@@ -185,10 +185,14 @@ export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
     }))
   ];
   const names = new Map(tiles.map(tile => [tile.id, tile.name]));
+  const {outgoing, incoming} = treeIndex(tree);
   return tiles.map(tile => {
-    const to = (treeIndex(tree).outgoing.get(tile.id) ?? []).map(link => names.get(link.target)!);
+    const to = (outgoing.get(tile.id) ?? []).map(link => names.get(link.target)!);
+    // A node's groups are drawn only as connectors, so its name carries them for assistive technology.
+    const from = tile.stage === 'node' ? (incoming.get(tile.id) ?? []).map(link => names.get(link.source)!) : [];
     const parts = [tile.name, ...(tile.badge ? [tile.badge] : []), ...tile.notes.map(note => note.text), t('flow.treeFlows', {n: tile.count})];
-    if (to.length) parts.push('→ ' + to.join(', '));
+    if (from.length) parts.push(t('flow.treeFrom', {names: formatList(lang, from)}));
+    if (to.length) parts.push(t('flow.treeTo', {names: formatList(lang, to)}));
     return {...tile, label: parts.join(' · ')};
   });
 }
@@ -205,7 +209,8 @@ const visibility: Record<string, Key> = {full: 'flow.full', partial: 'flow.parti
 export type CoverageView = {summary: string | null; detail: string; dropped: string | null};
 export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'>, t: Translator, lang: Lang): CoverageView | null {
   const partial = Object.entries(data.coverage).filter(([, value]) => value !== 'full');
-  const dropped = data.dropped_records !== null && BigInt(data.dropped_records) > 0n ? t('flow.dropped', {n: data.dropped_records}) : null;
+  const count = parseU64(data.dropped_records);
+  const dropped = count ? t('flow.dropped', {n: formatNumber(count, LOCALE[lang])}) : null;
   if (!partial.length && !dropped) return null;
   return {
     summary: partial.length ? t('flow.coverageSummary', {n: partial.length}) : null,
@@ -316,7 +321,7 @@ export function flowRecordsView(
                 id: step.seq,
                 stage: stages[step.stage] ? t(stages[step.stage]) : step.stage,
                 observed: localTime(step.observed_at, locale),
-                elapsed: t('ui.microseconds', {n: step.elapsed_us ?? '—'}),
+                elapsed: step.elapsed_us == null ? '—' : t('ui.microseconds', {n: step.elapsed_us}),
                 fields:
                   fields?.map(([key, value]) => [
                     typeof key === 'string' ? t(key) : t(key.key, key.params),
@@ -345,7 +350,7 @@ export function treeWindow(tree: RoutingTree, limit: number): RoutingTree {
   return tree.leaves.length <= limit ? tree : {...tree, leaves: tree.leaves.slice(0, limit)};
 }
 
-export function treeGeometry(tree: RoutingTree, measured: number | null, t: Translator) {
+export function treeGeometry(tree: RoutingTree, measured: number | null, t: Translator, lang: Lang) {
   const width = measured === null ? undefined : Math.max(measured, MIN_WIDTH);
   const unit = ((width ?? 0) - 2 * GAP) / shares.reduce((sum, share) => sum + share);
   const column = (stage: TreeStage) => {
@@ -353,7 +358,7 @@ export function treeGeometry(tree: RoutingTree, measured: number | null, t: Tran
     return {left: shares.slice(0, index).reduce((sum, share) => sum + share * unit + GAP, 0), width: shares[index] * unit};
   };
   const layout = treeRows(tree);
-  const placed = tileViews(tree, t).map(view => ({view, style: {top: layout.at.get(view.id)! * PITCH, ...column(view.stage)}}));
+  const placed = tileViews(tree, t, lang).map(view => ({view, style: {top: layout.at.get(view.id)! * PITCH, ...column(view.stage)}}));
   const outbounds = new Map(tree.outbounds.map(outbound => [outbound.id, outbound]));
   const geometry = tree.links.flatMap(link => {
     if (!layout.at.has(link.source) || !layout.at.has(link.target)) return [];

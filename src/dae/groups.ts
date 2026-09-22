@@ -46,13 +46,13 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
       let to = field.to - bodyStart;
       const start = old.lastIndexOf('\n', from - 1) + 1;
       const end = old.indexOf('\n', to);
-      if (/^[ \t]*$/.test(old.slice(start, from)) && end !== -1 && /^[ \t]*$/.test(old.slice(to, end))) {
+      if (/^[ \t\r]*$/.test(old.slice(start, from)) && end !== -1 && /^[ \t\r]*$/.test(old.slice(to, end))) {
         from = start;
         to = end + 1;
       }
       kept = kept.slice(0, from) + kept.slice(to);
     }
-    const rest = entry.line === entry.endLine ? (kept.trim() ? `${inner}${kept.trim()}\n` : '') : kept.replace(/^[ \t]*\n/, '').replace(/[ \t]*$/, '');
+    const rest = entry.line === entry.endLine ? (kept.trim() ? `${inner}${kept.trim()}\n` : '') : kept.replace(/^[ \t\r]*\n/, '').replace(/[ \t\r]*$/, '');
     const body = [...next.filters.map(filter => `${inner}filter: ${filter}`), ...(next.policy ? [`${inner}policy: ${next.policy}`] : [])];
     const replacement = '\n' + (body.length ? body.join('\n') + '\n' : '') + rest + indent;
     return text.slice(0, bodyStart) + replacement + text.slice(entry.close);
@@ -119,7 +119,8 @@ export function ruleCondition(kind: ConditionKind, value: string): string {
     .split(/[,\s]+/)
     .map(v => v.trim())
     .filter(Boolean);
-  const list = values.join(', ');
+  // A value with a colon (an IPv6 range) is quoted, as the presets write 'ff00::/8'; bare, dae reads it as a key.
+  const list = values.map(v => (v.includes(':') ? quote(v) : v)).join(', ');
   const qualified = (prefix: string) => values.map(value => `${prefix}: ${value}`).join(', ');
   switch (kind) {
     case 'domain':

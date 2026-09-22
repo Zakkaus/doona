@@ -160,6 +160,8 @@ test('built-in and unattributed provenance stay separate without granting inline
   const list = rows(page.locator('.rp-table').nth(1));
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources.first()).toContainText('Built-in');
+  // The first real source is the default; the built-in row is chosen explicitly.
+  await sources.first().click();
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['block', 'direct']);
   await expect(sources.first().getByRole('button', {name: /Refresh|Remove/})).toHaveCount(0);

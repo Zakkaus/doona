@@ -88,3 +88,21 @@ it('clears the published list even while held', () => {
   expect(feed.getSnapshot().records).toEqual([]);
   stop();
 });
+
+it('keeps the record list on a status-only change and schedules nothing without subscribers', () => {
+  const feed = createFeed<{id: string}, {connected: boolean}>(5, {connected: false}, 'ignore');
+  feed.append({id: 'early'});
+  expect(vi.getTimerCount()).toBe(0);
+  const notify = vi.fn();
+  const stop = feed.subscribe(notify);
+  vi.advanceTimersByTime(100);
+  const records = feed.getSnapshot().records;
+  expect(records).toEqual([{id: 'early'}]);
+  feed.update({connected: true});
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().records).toBe(records);
+  feed.update({connected: true});
+  vi.advanceTimersByTime(100);
+  expect(notify).toHaveBeenCalledTimes(2);
+  stop();
+});

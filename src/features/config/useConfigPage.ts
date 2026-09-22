@@ -35,7 +35,7 @@ function useConfigEditorController(refetch: () => void) {
   useEffect(() => {
     if (!editor.error) return;
     if (diagnostics) {
-      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
+      toast('negative', t('config.invalid', {n: diagnostics.filter(d => d.level === 'error').length}));
     } else toast('negative', errorText(editor.error));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};
@@ -57,9 +57,11 @@ export function useConfigPage({go, query}: PageProps) {
   const tab =
     requested === 'modules' || requested === 'source' || requested === 'validate' || (requested === 'setup' && setupAvailable)
       ? requested
-      : params.has('source') || !mainSource?.content
+      : params.has('source') || mainSource?.content === undefined
         ? 'source'
-        : 'modules';
+        : !mainSource.content.trim() && setupAvailable
+          ? 'setup'
+          : 'modules';
   // A stale link to a source that no longer exists opens the first one rather than an empty card.
   const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
   const selectedId = source?.id ?? null;
@@ -67,6 +69,7 @@ export function useConfigPage({go, query}: PageProps) {
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
+  const sourceDiagnostics = useMemo(() => (config.data?.diagnostics ?? []).filter(item => item.source_id === selectedId), [config.data, selectedId]);
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
@@ -76,7 +79,7 @@ export function useConfigPage({go, query}: PageProps) {
         source,
         sources,
         open: (sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)})),
-        diagnostics: (config.data?.diagnostics ?? []).filter(item => item.source_id === source.id),
+        diagnostics: sourceDiagnostics,
         canValidate,
         canWrite: resources?.config.writable === true && source.writable,
         contentOffered: resources?.config.content === true,
@@ -149,7 +152,7 @@ export type SourceCardProps = {
   focusLine: number | null;
 };
 
-export function useSourceCard({source, sources, diagnostics, canValidate, editor, groups}: SourceCardProps) {
+export function useSourceCard({source, sources, diagnostics, canValidate, editor, groups, focusLine}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   // If-Match uses the draft's original digest to reject changes made on disk while editing.
@@ -167,6 +170,8 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     return own.length ? own : groups;
   };
   const [jump, setJump] = useState<number | null>(null);
+  // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
+  useLinked(focusLine, () => setJump(null));
   const dirty = editing && draft.text !== source.content;
   const guard = useDraftGuard(dirty);
   useLinked(guard.revision, () => {
@@ -182,7 +187,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     // Put the cursor on the first error so the problem is on screen, not below a long file.
     const first = result.diagnostics.find(d => d.source_id === source.id && d.level === 'error' && d.line !== null);
     setJump(first ? first.line : null);
-    if (!result.valid) toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+    if (!result.valid) toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
     else if (announce) toast('positive', t('config.valid'));
     return result.valid;
   };
@@ -218,7 +223,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     marks,
     text,
     outbounds,
-    jump,
+    focus: jump ?? focusLine,
     dirty,
     validate,
     save,

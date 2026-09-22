@@ -35,6 +35,3 @@ contents:
   - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
     dst: /usr/share/doc/doona/OFL.txt
     packager: archlinux
-  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
-    dst: /usr/share/doc/doona/OFL.txt
-    packager: apk

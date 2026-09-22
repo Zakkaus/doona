@@ -15,7 +15,7 @@ export {
 export {useNodes, useProviders, useProviderRefresh, useNodeManage, useNodeProbe, useGeodata} from './nodes';
 export {useGroups, useGroupControl} from './groups';
 export {useOutboundNames} from './outbounds';
-export {useConnections, useConnectionClose} from './connections';
+export {useConnections, useConnectionClose, useConnectionTotals} from './connections';
 export {useFlows, useFlow, useRules, type FlowFilter} from './flows';
 export {useDnsLog, useDnsControl, useDnsFlush} from './dns';
 export {useConfig, useConfigEditor} from './config';

@@ -12,6 +12,8 @@ import {dictionaryView, distributionView, removalView, ruleDraftView, type Dicti
 import {useDraftGuard} from '../config/useDraftGuard';
 import {useLinked} from '../../ui/ui';
 
+const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
+const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
 type Dialog = ({kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) & {
   generation: string;
   sources: ConfigSource[];
@@ -82,11 +84,15 @@ export function useRuleList({go, query}: PageProps) {
   const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
   const selected = picked.landed === landed ? picked.row : landed;
   const [source, setSource] = useState('all');
+  // Only one of the two views renders, so only that one is projected.
   const table = useMemo(
-    () => dictionaryView(rules.data?.rules ?? [], rules.data?.generation_id, flows.data, config.data?.sources ?? [], groups.data ?? [], t, lang),
-    [rules.data, flows.data, config.data, groups.data, t, lang]
+    () =>
+      dictionary
+        ? dictionaryView(rules.data?.rules ?? [], rules.data?.generation_id, flows.data, config.data?.sources ?? [], groups.data ?? [], t, lang)
+        : noDictionary,
+    [dictionary, rules.data, flows.data, config.data, groups.data, t, lang]
   );
-  const distribution = useMemo(() => distributionView(flows.data, source, t, lang), [flows.data, source, t, lang]);
+  const distribution = useMemo(() => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang)), [dictionary, flows.data, source, t, lang]);
   const stale = () => {
     toast('negative', t('rule.stale'));
     retry();
@@ -137,7 +143,7 @@ export function useRuleList({go, query}: PageProps) {
     });
     if (!result) return false;
     if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+      toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return false;
     }
     return true;

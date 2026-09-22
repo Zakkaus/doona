@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../store';
+import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory} from '../../store';
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {fmtRate, usePalette} from '../../ui/Charts';
@@ -7,7 +7,7 @@ import {useMemorySeries} from './useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
-import {activityOutbounds, activityRanking, activityView, trafficState} from './view';
+import {activityView, trafficState} from './view';
 
 export function useActivity() {
   const t = useT();
@@ -16,13 +16,10 @@ export function useActivity() {
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(resources?.runtime.available === true);
-  const outbounds = useRuntimeOutbounds(resources?.runtime_outbounds.available === true);
   const memory = useRuntimeMemory(resources?.runtime_memory.available === true);
   const [range, setRange] = useState('live');
-  const [by, setBy] = useState('dev');
   const windowSeconds = trafficWindows[range] ?? 120;
   const memoryHistory = useMemorySeries(capabilities.data, memory.data);
-  const connections = useConnections(undefined, resources?.connections.available === true);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   const polledTraffic = useTrafficSamples(runtime.data);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
@@ -47,23 +44,17 @@ export function useActivity() {
   const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
   const view = useMemo(
-    () => activityView(runtime.data, memory.data, t, resources?.runtime.available),
-    [runtime.data, memory.data, t, resources?.runtime.available]
+    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
+    [runtime.data, memory.data, t, resources?.runtime.available, locale]
   );
-  const outboundView = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
-  const ranking = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
   const notices = useNotices();
   const mode = useMode();
   return {
     ...view,
-    outbounds: outboundView,
-    ranking,
     mode,
     notices,
     range,
     setRange,
-    by,
-    setBy,
     locale,
     p,
     spark,
@@ -84,24 +75,7 @@ export function useActivity() {
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
-      state: trafficState(series, resources?.traffic_history.available, !!history.data)
-    },
-    outboundState: {
-      error: outbounds.error,
-      state: resources?.runtime_outbounds.available === false ? 'unavailable' : !outbounds.data ? 'loading' : !outboundView.rows.length ? 'empty' : 'ready'
-    },
-    rankingState: {
-      error: connections.error,
-      truncated: !!connections.data?.truncated,
-      state: connections.data
-        ? ranking.length
-          ? 'ready'
-          : 'empty'
-        : connections.error
-          ? 'error'
-          : resources?.connections.available === true
-            ? 'loading'
-            : 'unavailable'
+      state: trafficState(series, resources?.traffic_history.available, !!history.data, resources?.runtime.available === true)
     },
     memoryState: {
       error: memory.error ?? memoryHistory.error,

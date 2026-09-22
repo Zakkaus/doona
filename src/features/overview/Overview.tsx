@@ -8,7 +8,7 @@ export function Overview() {
   const vm = useOverview();
   return (
     <div className="rp-page">
-      {vm.errors.capabilities && <ErrorMessage error={vm.errors.capabilities} />}
+      <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
       <div className="rp-between">
         <div className="rp-cluster">
           <Light tone={vm.status.tone}>{vm.status.text}</Light>
@@ -29,13 +29,12 @@ export function Overview() {
           <LifecycleActions actions={vm.actions} />
         </div>
       </div>
-      {vm.errors.runtime && <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry} />}
       <div className="rp-g3">
         <section className="rp-card" aria-labelledby="overview-engine">
           <h3 className="rp-h3" id="overview-engine">
             {t('ov.engine')}
           </h3>
-          {vm.errors.version && <ErrorMessage error={vm.errors.version} />}
+          <ErrorMessage error={vm.errors.version} onRetry={vm.retry.version} />
           {vm.engine.state === 'ready' ? (
             <>
               <Kv items={vm.engine.fields} />
@@ -49,7 +48,7 @@ export function Overview() {
             </>
           ) : vm.engine.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
@@ -57,6 +56,7 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-counters">
             {t('ov.counters')}
           </h3>
+          <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry.runtime} />
           {vm.counters.state === 'ready' ? (
             <>
               <Kv items={vm.counters.fields} />
@@ -64,7 +64,7 @@ export function Overview() {
             </>
           ) : vm.counters.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
@@ -72,7 +72,7 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-memory">
             {t('ov.memory')}
           </h3>
-          {vm.errors.memory && <ErrorMessage error={vm.errors.memory} />}
+          <ErrorMessage error={vm.errors.memory} onRetry={vm.retry.memory} />
           {vm.memory.state === 'ready' ? (
             <>
               {vm.memory.bar && <Bar label={vm.memory.bar.label} value={vm.memory.bar.value} pct={vm.memory.bar.pct} color={vm.memory.bar.color} />}
@@ -80,7 +80,7 @@ export function Overview() {
             </>
           ) : vm.memory.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.memory ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
@@ -90,7 +90,7 @@ export function Overview() {
           <h3 className="rp-h3" id="overview-datapath">
             {t('ov.datapath')}
           </h3>
-          {vm.errors.datapath && <ErrorMessage error={vm.errors.datapath} />}
+          <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
             <>
               <Kv items={vm.datapath.fields} />
@@ -127,7 +127,7 @@ export function Overview() {
             </>
           ) : vm.datapath.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>
@@ -148,7 +148,7 @@ export function Overview() {
             </div>
           ) : vm.resources.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.capabilities ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </section>

@@ -1,7 +1,7 @@
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
-import {ApiError} from '../api/error';
+import {clientError} from '../api/error';
 import {pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
 
@@ -21,7 +21,7 @@ export async function routingTrace(
 ): Promise<RoutingTraceResponse> {
   if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
   const limit = maxAddresses ?? (await api.capabilities(signal)).resources.routing_trace.max_addresses;
-  if (limit === undefined) throw new ApiError(422, 'unsupported_value', 'Routing trace address limits are unavailable');
+  if (limit === undefined) throw clientError(422, 'unsupported_value', 'Routing trace address limits are unavailable', 'ui.errTraceLimits');
   const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
   const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
     lookup_id: `query:${item.type}`,
@@ -44,13 +44,13 @@ export async function routingTrace(
   }));
   const addresses = [...new Set(dns.filter(item => item.qtype === 'A' || item.qtype === 'AAAA').flatMap(item => item.addresses))];
   if (addresses.length > limit)
-    throw new ApiError(422, 'unsupported_value', `DNS returned more than ${limit} distinct addresses; narrow the query before simulating`);
+    throw clientError(422, 'unsupported_value', `DNS returned more than ${limit} distinct addresses`, 'ui.errTooManyAddresses', {limit});
   const traces: RoutingTraceResponse[] = [];
   for (const address of addresses.length ? addresses : [null]) {
     traces.push(await api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal));
   }
   if (traces.some(trace => trace.instance_id !== traces[0].instance_id || trace.generation_id !== traces[0].generation_id))
-    throw new ApiError(409, 'snapshot_unavailable', 'The routing generation changed during simulation; retry the query');
+    throw clientError(409, 'snapshot_unavailable', 'The routing generation changed during simulation; retry the query', 'ui.errGenerationChanged');
   return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
 }
 
@@ -75,7 +75,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined}
+    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined}
   );
 }
 

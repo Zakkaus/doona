@@ -1,12 +1,12 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
-import {formatNumber, type Translator} from '../../i18n';
+import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {fileName, redacted} from './names';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
-import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {buildHash} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 
@@ -48,29 +48,45 @@ function ruleCount(text: string, block: TextBlock, tokens: TextToken[]): number 
       token.from > block.open &&
       token.to <= block.close &&
       token.depth === block.depth + 1 &&
+      token.parens === 0 &&
       token.kind === 'text' &&
       text.slice(token.from, token.to) === '->'
   ).length;
 }
 
-function sectionSummary(kind: SectionKind, text: string, block: TextBlock, tokens: TextToken[], t: Translator): string {
+// Subscription and node entries may be a bare link without a tag; each such value is an entry of its own.
+function entryCount(block: TextBlock, tokens: TextToken[], fields: ReturnType<typeof blockFields>): number {
+  const untagged = tokens.filter(
+    token =>
+      token.from > block.open &&
+      token.to <= block.close &&
+      token.depth === block.depth + 1 &&
+      token.parens === 0 &&
+      (token.kind === 'quoted' || token.kind === 'text') &&
+      !fields.some(field => token.from >= field.from && token.to <= field.to)
+  );
+  return fields.length + untagged.length;
+}
+
+function sectionSummary(kind: SectionKind, text: string, block: TextBlock, tokens: TextToken[], lang: Lang, t: Translator): string {
   const fields = blockFields(text, block, tokens);
   switch (kind) {
     case 'global':
       return t('config.moduleSettings', {n: fields.length});
     case 'subscription':
-      return t('config.moduleSubscriptions', {n: fields.length});
+      return t('config.moduleSubscriptions', {n: entryCount(block, tokens, fields)});
     case 'node':
-      return t('config.moduleNodes', {n: fields.length});
+      return t('config.moduleNodes', {n: entryCount(block, tokens, fields)});
     case 'group':
       return t('config.moduleGroups', {
         n: block.children.length,
-        policies: block.children
-          .map(child => {
+        policies: formatList(
+          lang,
+          block.children.map(child => {
             const policy = blockFields(text, child, tokens).find(field => field.name === 'policy')?.value;
             return policy ? `${child.name}: ${policy}` : child.name;
           })
-          .join(', ')
+        )
       });
     case 'dns': {
       const upstreams = block.children.filter(child => child.name === 'upstream');
@@ -90,7 +106,8 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
   }
 }
 
-export function sectionSummaries(sources: ConfigSource[], t: Translator): ModuleSection[] {
+// Card ids count occurrences rather than offsets, so an edit elsewhere in the file keeps an open editor on its card.
+export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Translator): ModuleSection[] {
   const eligible = sources.filter(source => source.kind === 'main' || (source.kind === 'include' && source.writable));
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
   const main = sources.find(source => source.kind === 'main') ?? null;
@@ -99,31 +116,31 @@ export function sectionSummaries(sources: ConfigSource[], t: Translator): Module
     const occurrences = parsed.flatMap(({source, blocks, tokens}) =>
       blocks
         .filter(block => block.name === kind)
-        .map(block => ({
-          id: `${source.id}:${block.from}`,
+        .map((block, index) => ({
+          id: `${source.id}:${kind}:${index}`,
           kind,
           source,
           block,
           href,
           range: sectionRange(source, block),
-          summary: sectionSummary(kind, source.content!, block, tokens, t),
+          summary: sectionSummary(kind, source.content!, block, tokens, lang, t),
           note: null
         }))
     );
-    return occurrences.length
-      ? occurrences
-      : [
-          {
-            id: kind,
-            kind,
-            source: main,
-            block: null,
-            href,
-            range: main ? fileName(main) : 'config.dae',
-            summary: main?.content === undefined ? '' : t('config.moduleAbsent', {file: fileName(main)}),
-            note: main?.content === undefined ? t('config.contentWithheld') : null
-          }
-        ];
+    // A main file whose text is withheld gets one card of its own below; absence cannot be told from it.
+    if (occurrences.length || (main && main.content === undefined)) return occurrences;
+    return [
+      {
+        id: kind,
+        kind,
+        source: main,
+        block: null,
+        href,
+        range: main ? fileName(main) : 'config.dae',
+        summary: main?.content === undefined ? '' : t('config.moduleAbsent', {file: fileName(main)}),
+        note: main?.content === undefined ? t('config.contentWithheld') : null
+      }
+    ];
   });
   const withheld: ModuleSection[] = parsed.flatMap(({source, blocks}) => {
     if (source.content === undefined)
@@ -141,8 +158,8 @@ export function sectionSummaries(sources: ConfigSource[], t: Translator): Module
       ];
     return blocks
       .filter(block => block.name === 'experimental' && block.children.some(child => child.name === 'native_api'))
-      .map(block => ({
-        id: `${source.id}:${block.from}`,
+      .map((block, index) => ({
+        id: `${source.id}:experimental:${index}`,
         kind: 'experimental.native_api',
         source,
         block: null,
@@ -191,7 +208,7 @@ type DiagnosticRow = {
   inline: string;
   detail: string;
 };
-type WizardRow = {index: number; name: string; url: string; raw: string | null; error?: string; description?: string; removeLabel: string};
+type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
@@ -217,13 +234,20 @@ export function wizardInitial(content: string): WizardState {
   const read = readState(content);
   return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
-export function wizardRows(state: WizardState, error: string | undefined, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
+// A value the file cannot hold is flagged on its own field, not on every row.
+const writableName = (name: string) => /^[\w.-]+$/.test(name.trim()) || isQuotable(name.trim());
+export function wizardRows(state: WizardState, lang: Lang, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
   return {
     groupUsedText:
       state.rules === 'keep'
         ? null
         : templates[state.rules].groups.length
-          ? t('config.wizardNamedGroups', {names: templates[state.rules].groups.map(group => group.name).join(', ')})
+          ? t('config.wizardNamedGroups', {
+              names: formatList(
+                lang,
+                templates[state.rules].groups.map(group => group.name)
+              )
+            })
           : t('config.wizardGroupUsed', {name: state.group ?? defaultGroup}),
     rows: state.subscriptions.flatMap((item, index) =>
       item.raw !== undefined && !item.raw.trim()
@@ -234,7 +258,13 @@ export function wizardRows(state: WizardState, error: string | undefined, t: Tra
               name: item.name,
               url: item.url,
               raw: item.raw !== undefined && !item.name ? item.raw.trim() : null,
-              error: item.url !== '' && !isSubscriptionUrl(item.url) ? t('config.wizardSubscriptionHelp') : error,
+              nameError: item.raw === undefined && !writableName(item.name) ? t('config.unquotable') : undefined,
+              error:
+                item.url !== '' && !isSubscriptionUrl(item.url)
+                  ? t('config.wizardSubscriptionHelp')
+                  : item.raw === undefined && !isQuotable(item.url.trim())
+                    ? t('config.unquotable')
+                    : undefined,
               description: index === 0 ? t('config.wizardSubscriptionHelp') : undefined,
               removeLabel: t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})
             }

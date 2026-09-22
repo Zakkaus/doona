@@ -35,12 +35,25 @@
   opacity: 0;
   transform: rotate(-90deg) scale(0.5);
 }
+/* An icon that stands for a chosen value (language, palette) turns in the same way when the value changes. */
+.rp-icon-in {
+  animation: rp-icon-in 200ms ease-out;
+}
+@keyframes rp-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+}
 
 .rp-empty {
   padding: 24px;
   text-align: center;
   color: var(--rp-subtle);
-  /* Loading and empty notices fade in rather than pop; reduced motion zeroes it. */
+}
+/* A late loading notice fades in rather than pops; an empty result appears at once, since live filtering can
+   reach and leave it on every keystroke. Reduced motion zeroes the fade. */
+.rp-empty[role='status'] {
   animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
 html,

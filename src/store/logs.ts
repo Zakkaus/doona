@@ -23,13 +23,12 @@ export function useEventFeed(withRuntime = true) {
   const changes = useSyncExternalStore(feeds.changes.subscribe, feeds.changes.getSnapshot);
   const runtime = useSyncExternalStore(withRuntime ? feeds.runtime.subscribe : silent, withRuntime ? feeds.runtime.getSnapshot : () => none);
   const status = useEvents(event => (event.event === 'runtime.updated' ? feeds.runtime : feeds.changes).append(event));
-  const events = useMemo(
-    () =>
-      runtime.records.length
-        ? [...changes.records, ...runtime.records].sort((a, b) => Date.parse(b.data.observed_at) - Date.parse(a.data.observed_at))
-        : changes.records,
-    [changes.records, runtime.records]
-  );
+  const events = useMemo(() => {
+    if (!runtime.records.length) return changes.records;
+    if (!changes.records.length) return runtime.records;
+    const time = new Map([...changes.records, ...runtime.records].map(event => [event, Date.parse(event.data.observed_at)]));
+    return [...time.keys()].sort((a, b) => time.get(b)! - time.get(a)!);
+  }, [changes.records, runtime.records]);
   return {...status, events};
 }
 

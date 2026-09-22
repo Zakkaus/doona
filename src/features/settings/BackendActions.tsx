@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, TextTooltip} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
@@ -19,7 +19,6 @@ export function BackendActionsCard() {
     providersLoading,
     retryProviders,
     connectionsError,
-    connectionsLoading,
     retryConnections,
     note,
     refreshingAll,
@@ -62,9 +61,9 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.nodes')}</span>
             <ErrorMessage error={providersError} onRetry={retryProviders} />
-            {providersLoading && <Loading />}
+            {/* Loading shows on the button itself: a spinner row would push the other groups down and back. */}
             <div className="rp-cluster">
-              <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
+              <Button isPending={refreshingAll || providersLoading} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
                 {refreshLabel}
               </Button>
             </div>
@@ -74,7 +73,6 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.connections')}</span>
             <ErrorMessage error={connectionsError} onRetry={retryConnections} />
-            {connectionsLoading && <Loading />}
             <div className="rp-cluster">
               <CloseAllButton {...closeAll} />
             </div>

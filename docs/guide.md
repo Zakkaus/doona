@@ -9,7 +9,7 @@ The parts of the [README](../README.md) that are only needed once: what doona ru
 | Component | Requirement                                                                                                                                                          |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backend   | An engine implementing the native API contract pinned in [SOURCE.md](../contract/api-standardize/SOURCE.md), with its API listener enabled (see [Install](#install)) |
-| Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the CSS build targets; the JavaScript target is ES2022. Automated tests use Chromium                  |
+| Browser   | Chrome or Edge 120, Firefox 121, Safari 17 or later. These are the CSS build targets; the JavaScript target is ES2022. Automated tests use Chromium                  |
 | Build     | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0` and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                                            |
 
 ## Install

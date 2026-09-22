@@ -49,6 +49,7 @@ export function Settings({query}: PageProps) {
     renameProfile,
     dialogTitle,
     dialogBlocked,
+    dialogDiscards,
     deleteHelp
   } = useSettingsPage(query);
 
@@ -231,6 +232,7 @@ export function Settings({query}: PageProps) {
           )}
         >
           {dialog === 'delete' ? <p>{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
+          {dialogDiscards && <p>{t('settings.profileDiscardHelp')}</p>}
           {profile.result?.error && <p role="alert">{profile.result.text}</p>}
         </ModalDialog>
       )}

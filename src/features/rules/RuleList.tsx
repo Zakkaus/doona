@@ -35,7 +35,7 @@ function Dictionary({view}: {view: Model}) {
         reveal
         onSelect={view.select}
         height={560}
-        empty={t('rule.distributionEmpty')}
+        empty={t('rule.dictionaryEmpty')}
         cols={[
           {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
           {

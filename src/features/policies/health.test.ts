@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {memberHealth} from './health';
+import {memberHealth, sameHealth} from './health';
 
 it('prefers group TCP data observations by warmth, measurement and IP version before falling back to node health', async () => {
   const group = await createMockApi().group('proxy');
@@ -37,4 +37,16 @@ it('prefers group TCP data observations by warmth, measurement and IP version be
   ]);
   expect(group).toEqual(original);
   expect(memberHealth(undefined, new Map())).toEqual([]);
+});
+
+it('treats node polls that change only unseen observation fields as the same health', async () => {
+  const base = (await createMockApi().group('proxy')).runtime.health[0];
+  const a = new Map([
+    ['x', base],
+    ['y', undefined]
+  ]);
+  expect(sameHealth(a, new Map([...a, ['x', {...base, observed_at: '2030-01-01T00:00:00Z'}]]))).toBe(true);
+  expect(sameHealth(a, new Map([...a, ['x', {...base, latency_ms: (base.latency_ms ?? 0) + 1}]]))).toBe(false);
+  expect(sameHealth(a, new Map([['x', base]]))).toBe(false);
+  expect(sameHealth(a, new Map([...a, ['y', base]]))).toBe(false);
 });

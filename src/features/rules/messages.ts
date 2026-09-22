@@ -82,6 +82,8 @@ export const messages = defineMessages({
     'rule.sourceUnknown': '未知',
     'rule.unknownRule': '未知規則',
     'rule.distributionEmpty': '目前快照中沒有符合的流程',
+    'rule.dictionaryEmpty': '沒有路由規則',
+    'rule.dnsHeading': 'DNS · {name}',
     'rule.droppedUnknown': '遺失記錄數未知'
   },
   'zh-CN': {
@@ -165,6 +167,8 @@ export const messages = defineMessages({
     'rule.sourceUnknown': '未知',
     'rule.unknownRule': '未知规则',
     'rule.distributionEmpty': '当前快照中没有匹配的流程',
+    'rule.dictionaryEmpty': '没有路由规则',
+    'rule.dnsHeading': 'DNS · {name}',
     'rule.droppedUnknown': '丢失记录数未知'
   },
   en: {
@@ -253,6 +257,8 @@ export const messages = defineMessages({
     'rule.sourceUnknown': 'Unknown',
     'rule.unknownRule': 'Unknown rule',
     'rule.distributionEmpty': 'No matching flows in this snapshot',
+    'rule.dictionaryEmpty': 'No routing rules',
+    'rule.dnsHeading': 'DNS · {name}',
     'rule.droppedUnknown': 'Dropped record count unknown'
   }
 });

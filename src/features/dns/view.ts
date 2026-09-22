@@ -1,16 +1,18 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {localTime, relativeStart} from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
+import type {Key} from '../../i18n/messages';
 
+const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
 export function dnsAnswerView(result: Result, t: LabelFn) {
   return {
     fields: [
       [t('ui.state'), result.status],
       [t('ui.upstream'), result.upstream ?? '—'],
-      [t('dns.routeSource'), result.route.source],
+      [t('dns.routeSource'), routeSources[result.route.source] ? t(routeSources[result.route.source]) : result.route.source],
       [t('dns.routeRule'), result.route.rule ?? '—'],
       [t('ui.elapsed'), t('ui.latency', {n: millis(result.elapsed_ms)})]
     ] as Array<[string, string]>,
@@ -52,7 +54,7 @@ export function dnsCacheView(
 ) {
   const filter = domain.toLowerCase();
   return {
-    fields: [[t('dns.entries'), data ? String(data.total) : '—']] as Array<[string, string]>,
+    fields: [[t('dns.entries'), data ? formatNumber(data.total, locale) : '—']] as Array<[string, string]>,
     coverage: data
       ? (['positive', 'negative', 'persistent'] as const)
           .filter(key => !data.coverage[key])
@@ -81,7 +83,7 @@ export function dnsCacheView(
         expiresTooltip: entry.expires_at,
         stale: relativeStart(entry.stale_until, locale),
         staleTooltip: entry.stale_until ?? undefined,
-        deleteLabel: t('dns.deleteEntry', {id: entry.entry_id}),
+        deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
         pending: busy === entry.entry_id,
         disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
       }))

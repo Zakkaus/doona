@@ -1,7 +1,7 @@
 import {
   useCapabilities,
   useConnectionClose,
-  useConnections,
+  useConnectionTotals,
   useDnsFlush,
   useGeodata,
   useProviderRefresh,
@@ -22,7 +22,7 @@ export function useBackendActions() {
   const providers = useProviders(resources?.providers.available === true);
   const refresh = useProviderRefresh(providers.refetch);
   // Only the close-all action needs the live count, so the poll runs only where that action exists.
-  const connections = useConnections(undefined, resources?.connections.available === true && resources.connections.can_close === true);
+  const connections = useConnectionTotals(resources?.connections.available === true && resources.connections.can_close === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
@@ -38,7 +38,7 @@ export function useBackendActions() {
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const providersReady = !!providers.data && !providers.error && !providers.loading;
   const connectionsReady = !!connections.data && !connections.error && !connections.loading;
-  const liveCount = connectionsReady ? connections.data!.tcp.length + connections.data!.udp.length : null;
+  const liveCount = connectionsReady ? connections.data!.total_tcp + connections.data!.total_udp : null;
   const refreshingAll = refresh.busy === '*';
   const refreshAll = () =>
     refresh
@@ -49,7 +49,10 @@ export function useBackendActions() {
       .then(done => {
         // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
         if (done !== undefined)
-          toast(done ? 'positive' : 'negative', t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)}));
+          toast(
+            done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
+            t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)})
+          );
       }, fail);
   const runOperation = (kind: keyof typeof operationLabels) =>
     void operations.run(kind).then(
@@ -60,7 +63,7 @@ export function useBackendActions() {
     );
   const closeAll = () =>
     void closing.closeAll({ids: [], query: {all: true}}).then(tally => {
-      if (tally) toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+      if (tally) toast(!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
     }, fail);
   return {
     runtimeError: runtime.error,
@@ -76,7 +79,7 @@ export function useBackendActions() {
     closeAll: {
       confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
       disabled: !connectionsReady || !liveCount || !!closing.busy,
-      pending: closing.busy === 'all',
+      pending: closing.busy === 'all' || (connections.loading && !connections.data),
       run: closeAll
     },
     geodataBusy: geodata.busy,

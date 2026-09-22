@@ -3,7 +3,7 @@ import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../st
 import {useT} from '../../i18n';
 import {within} from '../../shell/route';
 import type {PageProps} from '../types';
-import {flowsThrough, nodeNames, routingTree, type TreeBy} from './map';
+import {flowsThrough, routingTree, type TreeBy} from './map';
 import {routingMapView} from './view';
 
 export function useRoutingMap({go, query}: PageProps) {
@@ -26,7 +26,10 @@ export function useRoutingMap({go, query}: PageProps) {
     latest.current = query;
   }, [query]);
   const pin = useCallback((path: string | null) => go('rules', within(latest.current, {path})), [go]);
-  const count = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? []), rules.data?.rules ?? []).length : 0;
+  const count = useMemo(
+    () => (pinned ? flowsThrough(resource.data?.flows ?? [], pinned, rules.data?.rules ?? []).length : 0),
+    [resource.data, pinned, rules.data]
+  );
   return {
     ...routingMapView(tree, !!(resource.data || rules.data || groups.data), !!resource.error, pinned, count, t),
     by,

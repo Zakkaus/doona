@@ -41,16 +41,18 @@ async function ready(page) {
   await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'), null, {timeout: 60_000});
 }
 
-async function run(scenario) {
+// `big` loads the long-list fixture (3,000 nodes and their connections and flows). Ordinary page
+// measurements use the default fixture, so they report what an ordinary backend costs.
+async function run(scenario, {big = false} = {}) {
   const samples = [];
   for (let i = 0; i < 3; i++) {
     const browser = await chromium.launch();
     const context = await browser.newContext({viewport: {width: 1280, height: 800}, reducedMotion: 'reduce', serviceWorkers: 'block'});
-    await context.addInitScript(() => {
+    await context.addInitScript(big => {
       localStorage.setItem('doona-api', 'mock');
       localStorage.setItem('doona-lang', 'en');
-      localStorage.setItem('doona-mock-big', '3000');
-    });
+      if (big) localStorage.setItem('doona-mock-big', '3000');
+    }, big);
     const page = await context.newPage();
     const session = await context.newCDPSession(page);
     await session.send('Performance.enable');
@@ -87,20 +89,23 @@ rows.push({
 });
 rows.push({
   scenario: 'nodes: scroll 3,000 rows',
-  ...(await run(async (page, session) => {
-    await page.goto(`${base}/#/nodes?provider=sub-c`);
-    const table = page.locator('.rp-table').nth(1);
-    await table.locator('[role=row][data-key]').first().waitFor();
-    const before = await metrics(session);
-    for (let i = 0; i < 20; i++) {
-      await table.evaluate(el => {
-        const scroller = el.querySelector('[role=grid], [role=treegrid]') ?? el;
-        scroller.scrollTop += 2000;
-      });
-      await page.waitForTimeout(50);
-    }
-    return delta(before, await metrics(session));
-  }))
+  ...(await run(
+    async (page, session) => {
+      await page.goto(`${base}/#/nodes?provider=sub-c`);
+      const table = page.locator('.rp-table').nth(1);
+      await table.locator('[role=row][data-key]').first().waitFor();
+      const before = await metrics(session);
+      for (let i = 0; i < 20; i++) {
+        await table.evaluate(el => {
+          const scroller = el.querySelector('[role=grid], [role=treegrid]') ?? el;
+          scroller.scrollTop += 2000;
+        });
+        await page.waitForTimeout(50);
+      }
+      return delta(before, await metrics(session));
+    },
+    {big: true}
+  ))
 });
 rows.push({
   scenario: 'rules: hover 20 tree tiles',

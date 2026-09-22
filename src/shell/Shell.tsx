@@ -1,30 +1,20 @@
 import './install';
 import {Login} from './Login';
 import {Suspense, type ContextType} from 'react';
-import {I18nProvider, RouterProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
-import Search from '../ui/icons/Search';
-import Refresh from '../ui/icons/Refresh';
-import Translate from '../ui/icons/Translate';
-import Contrast from '../ui/icons/Contrast';
-import Lighten from '../ui/icons/Lighten';
-import logo from '../logo.svg';
-import {About} from './About';
-import GitHub from '../ui/icons/GitHub';
+import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty, Link} from '../ui/ui';
-import {MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
-import Color from '../ui/icons/Color';
+import {Button, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
 import type {PageProps} from '../features/types';
 import {DraftContext} from './route';
-import {warmPage} from './registry';
 import {SearchDialog} from './search/SearchDialog';
 import {SettingsContext} from '../features/settings/context';
-import type {PaletteId, Settings, Wordmark} from '../features/settings/settings';
+import type {Settings} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
+import {SideNav} from './SideNav';
+import {TopBar} from './TopBar';
 import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
-import {languageItems} from './view';
 import {LoadBoundary} from '../ui/LoadBoundary';
 
 // The startup entry calls this before mounting React to avoid a palette flash.
@@ -32,15 +22,6 @@ export function stampAppearance() {
   const {scheme, palette, wordmark} = readAppearance();
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   applyAppearance(dark, palette, wordmark);
-}
-
-function SchemeIcon({dark}: {dark: boolean}) {
-  return (
-    <span className="rp-icon-stack" data-dark={dark || undefined}>
-      <Contrast className="moon" />
-      <Lighten className="sun" />
-    </span>
-  );
 }
 
 export function Shell() {
@@ -118,108 +99,21 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   const Page = view.current.Page;
   return (
     <div className="rp-shell">
-      <header className="rp-top">
-        <About
-          onHonk={view.honk}
-          trigger={
-            <Button className="rp-brand" label={t('about.title')}>
-              <img src={logo} alt="" />
-              <span className="rp-brand-text">
-                <span>{view.wordmark}</span>
-                <span className="rp-brand-version">{view.about.versionText}</span>
-              </span>
-            </Button>
-          }
-        />
-        <div className="rp-search-wrap">
-          <Button className="rp-search" onPress={openSearch}>
-            <Search />
-            <span className="grow">{t('search')}</span>
-            <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>
-          </Button>
-        </div>
-        <div className="rp-actions">
-          <span className="rp-search-compact">
-            <Button quiet icon label={t('search')} onPress={openSearch}>
-              <Search />
-            </Button>
-          </span>
-          <Button quiet icon label={t('refresh')} isPending={view.spinning} onPress={view.refresh}>
-            <Refresh className="rp-refresh rp-spin-on-press" />
-          </Button>
-          <Separator orientation="vertical" className="rp-vrule" />
-          <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
-            <Translate />
-          </ChoiceMenu>
-          <MenuButton
-            quiet
-            chevron={false}
-            label={t('palette')}
-            content={
-              <Menu aria-label={t('palette')}>
-                {paletteSections.map(section => (
-                  <MenuSection
-                    key={section.title}
-                    id={section.title}
-                    selectionMode="single"
-                    selectedKeys={[ap.palette]}
-                    onSelectionChange={pickMenuKey(k => ap.pickPalette(k as PaletteId))}
-                  >
-                    <Header className="rp-sec-h">{section.title}</Header>
-                    {section.items.map(item => (
-                      <MenuChoice key={item.id} item={item} />
-                    ))}
-                  </MenuSection>
-                ))}
-                <MenuSection
-                  id="wordmark"
-                  selectionMode="single"
-                  selectedKeys={[ap.wordmark]}
-                  onSelectionChange={pickMenuKey(k => ap.pickWordmark(k as Wordmark))}
-                >
-                  <Header className="rp-sec-h">{t('wordmark')}</Header>
-                  {menu.wordmarks.map(item => (
-                    <MenuChoice key={item.id} item={item} />
-                  ))}
-                </MenuSection>
-              </Menu>
-            }
-          >
-            <Color />
-          </MenuButton>
-          <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
-            <SchemeIcon dark={ap.dark} />
-          </Button>
-        </div>
-      </header>
-      <nav className="rp-side" ref={navRef} aria-busy={view.busy || undefined}>
-        {navStyle && <span className="rp-nav-slider" style={navStyle} />}
-        {view.groups.map(group => (
-          <div key={group.id} data-group={group.id}>
-            <div className="rp-group">{group.label}</div>
-            {group.items.map(item => (
-              <RLink
-                key={item.id}
-                className="rp-nav"
-                href={item.href}
-                aria-current={item.current ? 'page' : undefined}
-                data-unavailable={item.unavailable ? '' : undefined}
-                aria-description={item.description}
-                onHoverStart={() => warmPage(item.id)}
-                onFocus={() => warmPage(item.id)}
-              >
-                <item.Icon />
-                {item.label}
-              </RLink>
-            ))}
-          </div>
-        ))}
-        <div className="rp-side-grow" />
-        <Link appearance="version" href={view.engine.href} external label={t('github')}>
-          <GitHub />
-          {view.engine.text}
-        </Link>
-      </nav>
+      <TopBar
+        lang={lang}
+        pickLang={pickLang}
+        ap={ap}
+        mac={mac}
+        openSearch={openSearch}
+        refresh={view.refresh}
+        spinning={view.spinning}
+        honk={view.honk}
+        wordmark={view.wordmark}
+        versionText={view.about.versionText}
+        paletteSections={paletteSections}
+        menu={menu}
+      />
+      <SideNav groups={view.groups} busy={view.busy} engine={view.engine} navRef={navRef} navStyle={navStyle} />
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">

@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import type {GroupSummary} from '../../api/model';
-import {flowsThrough, nodeNames, parentOf, pinnedLabel, routingTree, treeRows} from './map';
+import {flowsThrough, nodeNames, pinnedLabel, routingTree, treeIndex, treeRows} from './map';
 
 it('lays the config out as a tree and weights it with retained flows', async () => {
   const api = createMockApi();
@@ -28,11 +28,11 @@ it('lays the config out as a tree and weights it with retained flows', async () 
   expect(tree.outbounds.find(outbound => outbound.id === 'outbound:direct')).toMatchObject({kind: 'direct', node: null});
   expect(tree.links.some(link => link.source === 'outbound:direct')).toBe(false);
   const direct = flows.flows.filter(flow => flow.outbound === 'direct');
-  expect(flowsThrough(flows.flows, 'outbound:direct', nodeNames(nodes.nodes), rules.rules)).toHaveLength(direct.length);
+  expect(flowsThrough(flows.flows, 'outbound:direct', rules.rules)).toHaveLength(direct.length);
   // A flow that names a rule id lands on that entry rather than on a second one with the same text.
   const matched = flows.flows.find(flow => flow.rule_id && flow.rule_expression)!;
   expect(tree.leaves.filter(rule => rule.id === 'rule:' + matched.rule_id)).toHaveLength(1);
-  expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, nodeNames(nodes.nodes), rules.rules)).toContain(matched);
+  expect(flowsThrough(flows.flows, 'rule:' + matched.rule_id, rules.rules)).toContain(matched);
   const label = (name: string | null) => (name === 'direct' ? 'Direct' : String(name));
   expect(pinnedLabel('rule:' + matched.rule_id, rules.rules, nodeNames(nodes.nodes), label)).toBe(matched.rule_expression);
   expect(pinnedLabel('outbound:direct', rules.rules, nodeNames(nodes.nodes), label)).toBe('Direct');
@@ -70,18 +70,18 @@ it('rows the tree with rules as leaves under their outbound and parents level wi
   const tree = routingTree(flows.flows, groups, nodes.nodes, rules.rules);
   const {rows, at} = treeRows(tree);
   // Every item has a row; the leaves take whole rows and never share one.
-  const leaves = [...tree.leaves, ...tree.outbounds.filter(outbound => !tree.leaves.some(rule => parentOf(tree, rule) === outbound.id))];
+  const leaves = [...tree.leaves, ...tree.outbounds.filter(outbound => !tree.leaves.some(rule => treeIndex(tree).parents.get(rule.id) === outbound.id))];
   expect(new Set(leaves.map(item => at.get(item.id)))).toHaveProperty('size', leaves.length);
-  expect(rows).toBe(leaves.length + tree.nodes.filter(node => !tree.outbounds.some(outbound => parentOf(tree, outbound) === node.id)).length);
+  expect(rows).toBe(leaves.length + tree.nodes.filter(node => !tree.outbounds.some(outbound => treeIndex(tree).parents.get(outbound.id) === node.id)).length);
   for (const outbound of tree.outbounds) {
-    const under = tree.leaves.filter(rule => parentOf(tree, rule) === outbound.id).map(rule => at.get(rule.id)!);
+    const under = tree.leaves.filter(rule => treeIndex(tree).parents.get(rule.id) === outbound.id).map(rule => at.get(rule.id)!);
     if (!under.length) continue;
     expect(at.get(outbound.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
     // Siblings sit on consecutive rows, so their connectors never cross another branch.
     expect(Math.max(...under) - Math.min(...under)).toBe(under.length - 1);
   }
   for (const node of tree.nodes) {
-    const under = tree.outbounds.filter(outbound => parentOf(tree, outbound) === node.id).map(outbound => at.get(outbound.id)!);
+    const under = tree.outbounds.filter(outbound => treeIndex(tree).parents.get(outbound.id) === node.id).map(outbound => at.get(outbound.id)!);
     if (under.length) expect(at.get(node.id)).toBe((Math.min(...under) + Math.max(...under)) / 2);
   }
 });
@@ -109,7 +109,7 @@ it('keeps a retained flow from an earlier generation apart from the rule that no
   expect(historical).toMatchObject({label: 'domain(suffix: old.example)', count: 1, outbound: null});
   expect(tree.leaves.find(leaf => leaf.id === 'rule:' + matched.rule_id)?.label).toBe(matched.rule_expression);
   const names = nodeNames(nodes.nodes);
-  expect(flowsThrough([...flows.flows, stale], historical.id, names, rules.rules)).toEqual([stale]);
+  expect(flowsThrough([...flows.flows, stale], historical.id, rules.rules)).toEqual([stale]);
   expect(pinnedLabel(historical.id, rules.rules, names, String)).toBe('domain(suffix: old.example)');
 });
 
@@ -122,7 +122,7 @@ it('seen by device, the leaves are client addresses joined to outbounds by flows
   expect(tree.leaves.reduce((sum, leaf) => sum + leaf.count, 0)).toBe(flows.flows.length);
   const device = tree.leaves.find(leaf => leaf.label === '10.0.0.12')!;
   expect(tree.links.some(link => link.source === device.id && link.target.startsWith('outbound:') && link.count > 0)).toBe(true);
-  expect(flowsThrough(flows.flows, device.id, nodeNames(nodes.nodes), rules.rules)).toHaveLength(device.count);
+  expect(flowsThrough(flows.flows, device.id, rules.rules)).toHaveLength(device.count);
   // Groups and their selected nodes still come from the config.
   expect(tree.outbounds.some(outbound => outbound.label === 'skylink' && outbound.count === 0)).toBe(true);
   const {rows, at} = treeRows(tree);
@@ -144,8 +144,8 @@ it('keeps missing stages distinct from backend values literally named unknown', 
     expect(absent.id).not.toBe(present.id);
     expect(absent.count).toBe(1);
     expect(present.count).toBe(1);
-    expect(flowsThrough(flows, absent.id, names, [])).toEqual([missing]);
-    expect(flowsThrough(flows, present.id, names, [])).toEqual([known]);
+    expect(flowsThrough(flows, absent.id, [])).toEqual([missing]);
+    expect(flowsThrough(flows, present.id, [])).toEqual([known]);
     expect(pinnedLabel(absent.id, [], names, name => name ?? 'Missing')).toBe('Missing');
   }
   expect(pinnedLabel(tree.nodes.find(item => !item.unknown)!.id, [], names, String)).toBe('Known node');

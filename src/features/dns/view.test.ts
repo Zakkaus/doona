@@ -98,3 +98,10 @@ it('holds the loaded window when a poll advances the head after the final older 
   expect(dnsLogWindow(page(['d4', 'd3'], 'd3'), held).newerWaiting).toBe(false);
   expect(dnsLogWindow(head, null)).toEqual({data: head, newerWaiting: false});
 });
+
+it('names the route source and the cache entry a delete button removes', () => {
+  expect(dnsAnswerView({...record, route: {source: 'dns.routing', rule: 'r1'}}, t).fields).toContainEqual([t('dns.routeSource'), t('dns.route.rules')]);
+  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t).rows[0];
+  expect(entry.deleteLabel).toBe(t('dns.deleteEntry', {domain: entry.domain, type: entry.type}));
+  expect(entry.deleteLabel).not.toContain(entry.id);
+});

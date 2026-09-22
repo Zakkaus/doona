@@ -103,3 +103,15 @@ test('search respects destination capabilities, preserves loose-node ownership a
   await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.getByRole('searchbox', {name: 'Filter'})).toBeVisible();
 });
+
+test('search results are reached with arrow keys while the field keeps focus', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  const dialog = await open(page, 'valid');
+  const field = dialog.locator('input');
+  await expect(field).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(field).toHaveAttribute('aria-activedescendant', /.+/);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/config\?tab=validate$/);
+});

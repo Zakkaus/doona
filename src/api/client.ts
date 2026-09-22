@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
 import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
-import {ApiError, responseError} from './error';
+import {ApiError, clientError, responseError} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -12,7 +12,7 @@ import {normalizeCapabilities} from './capabilities';
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
-  if (result.data === undefined) throw new ApiError(result.response.status, 'empty_response', 'Response has no JSON body');
+  if (result.data === undefined) throw clientError(result.response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson');
   return result.data;
 }
 
@@ -58,15 +58,25 @@ export function createApi(base: string, token?: string): Api {
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href.replace(/^\/+/, ''), root);
-    if (url.origin !== root.origin) throw new ApiError(0, 'invalid_location', 'Operation URL has a different origin');
+    if (url.origin !== root.origin) throw clientError(0, 'invalid_location', 'Operation URL has a different origin', 'ui.errOtherOrigin');
     return url;
   };
   async function pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState> {
     let delay = accepted.retryAfter;
+    let dropped = 0;
     const url = resolveHref(accepted.href);
     while (true) {
       await wait(delay, signal);
-      const response = await fetch(url, {headers, cache: 'no-store', signal});
+      let response: Response;
+      try {
+        response = await fetch(url, {headers, cache: 'no-store', signal});
+        dropped = 0;
+      } catch (error) {
+        // A dropped connection says nothing about the accepted operation; ask again a few times before giving up.
+        if (signal?.aborted || ++dropped > 3) throw error;
+        delay = Math.min(delay * 2, 30);
+        continue;
+      }
       if (!response.ok) {
         const error = await responseError(response);
         // Rate limited or briefly unavailable: the accepted operation is still running, so keep polling.
@@ -106,7 +116,7 @@ export function createApi(base: string, token?: string): Api {
             pause = retryAfter(response);
             throw error;
           }
-          if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
+          if (!response.body) throw clientError(response.status, 'empty_stream', 'Response has no event stream', 'ui.errNoStream');
           await readSse(
             response.body,
             frame => {

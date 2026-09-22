@@ -46,6 +46,9 @@ export const messages = defineMessages({
     'conn.f.ingress': '入口',
     'conn.f.domainSource': '網域來源',
     'conn.f.observedBy': '觀測來源',
+    'conn.observed.userspace': '使用者空間',
+    'conn.observed.ebpf': 'eBPF',
+    'conn.observed.mixed': '使用者空間與 eBPF',
     'conn.f.uploadRate': '上傳速率',
     'conn.f.downloadRate': '下載速率',
     'conn.f.started': '開始時間'
@@ -95,6 +98,9 @@ export const messages = defineMessages({
     'conn.f.ingress': '入口',
     'conn.f.domainSource': '域名来源',
     'conn.f.observedBy': '观测来源',
+    'conn.observed.userspace': '用户空间',
+    'conn.observed.ebpf': 'eBPF',
+    'conn.observed.mixed': '用户空间与 eBPF',
     'conn.f.uploadRate': '上传速率',
     'conn.f.downloadRate': '下载速率',
     'conn.f.started': '开始时间'
@@ -150,6 +156,9 @@ export const messages = defineMessages({
     'conn.f.ingress': 'Ingress',
     'conn.f.domainSource': 'Domain source',
     'conn.f.observedBy': 'Observed by',
+    'conn.observed.userspace': 'Userspace',
+    'conn.observed.ebpf': 'eBPF',
+    'conn.observed.mixed': 'Userspace and eBPF',
     'conn.f.uploadRate': 'Upload rate',
     'conn.f.downloadRate': 'Download rate',
     'conn.f.started': 'Start time'

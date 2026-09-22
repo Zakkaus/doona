@@ -44,7 +44,13 @@ export function useOverview() {
     ...view,
     memory: memoryView,
     errors: {capabilities: capabilities.error, runtime: runtime.error, version: version.error, memory: memory.error, datapath: datapath.error},
-    retry: runtime.refetch,
+    retry: {
+      capabilities: capabilities.refetch,
+      runtime: runtime.refetch,
+      version: version.refetch,
+      memory: memory.refetch,
+      datapath: datapath.refetch
+    },
     actions: lifecycleActions(operations.canRun, operations.busy, kind => void run(kind), t),
     export: () => downloadFile(exportName('doona-state', 'json'), overviewExport(data, new Date().toISOString()), 'application/json')
   };

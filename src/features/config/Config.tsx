@@ -193,7 +193,7 @@ function Modules(props: ModulesProps) {
 }
 
 function SourceCard(props: SourceCardProps) {
-  const {canValidate, canWrite, contentOffered, focusLine} = props;
+  const {canValidate, canWrite, contentOffered} = props;
   const t = useT();
   const {
     editing,
@@ -201,7 +201,7 @@ function SourceCard(props: SourceCardProps) {
     marks,
     text,
     outbounds,
-    jump,
+    focus,
     dirty,
     validate,
     save,
@@ -260,7 +260,7 @@ function SourceCard(props: SourceCardProps) {
               <Light small tone={item.tone}>
                 {item.detail}
               </Light>
-              <Button small quiet onPress={() => props.open(item.sourceId, item.line)}>
+              <Button small quiet label={t('config.openSourceAt', {where: item.where})} onPress={() => props.open(item.sourceId, item.line)}>
                 {t('config.openSource')}
               </Button>
             </div>
@@ -276,7 +276,7 @@ function SourceCard(props: SourceCardProps) {
           readOnly={!editing || busy}
           onChange={editing ? change : undefined}
           marks={marks}
-          focusLine={jump ?? focusLine}
+          focusLine={focus}
           outbounds={outbounds}
           onSave={editing && dirty && !busy ? () => void save() : undefined}
         />
@@ -342,7 +342,9 @@ function ValidateTab(props: ValidateTabProps) {
           <Light small tone={cur.tone}>
             {cur.detail}
           </Light>
-          <Button onPress={() => open(cur.sourceId, cur.line)}>{t('config.openSource')}</Button>
+          <Button label={t('config.openSourceAt', {where: cur.where})} onPress={() => open(cur.sourceId, cur.line)}>
+            {t('config.openSource')}
+          </Button>
         </div>
       )}
     </>

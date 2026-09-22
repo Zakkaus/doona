@@ -3,18 +3,20 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Data from '../../ui/icons/Data';
 import {useT} from '../../i18n';
-import {Badge, CardLink, Segmented, Light, Bar, ErrorMessage, Loading, TextTooltip, Empty, Link} from '../../ui/ui';
+import {CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
 import {buildHash} from '../../shell/route';
-import {AreaChart, Donut, Legend, Spark} from '../../ui/Charts';
+import {AreaChart, Legend, Spark} from '../../ui/Charts';
 import {ModeCards} from './ModeSwitch';
 import {Notices} from './Notices';
 import {useActivity} from './useActivity';
 import {NodeCard} from './NodeCard';
+import {OutboundsCard} from './OutboundsCard';
+import {RankingCard} from './RankingCard';
 
 export function Activity() {
   const t = useT();
   const vm = useActivity();
-  const {p, locale, range, setRange, by, setBy, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
+  const {p, locale, range, setRange, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   if (!vm.ready) return alert || <Loading>{t('act.loading')}</Loading>;
   return (
@@ -116,78 +118,41 @@ export function Activity() {
               ]}
             />
           </div>
-          {vm.history.error ? (
+          {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} />
           ) : vm.history.state === 'unavailable' ? (
-            <span className="rp-label">{t('act.noHistory')}</span>
+            <div className="rp-chart-wait tall">
+              <span className="rp-label">{t('act.noHistory')}</span>
+            </div>
           ) : vm.history.state === 'loading' ? (
-            <Loading>{t('act.loading')}</Loading>
+            <div className="rp-chart-wait tall">
+              <Loading>{t('act.loading')}</Loading>
+            </div>
           ) : vm.history.state === 'empty' ? (
-            <Empty>{t('act.emptyHistory')}</Empty>
+            <div className="rp-chart-wait tall">
+              <Empty>{t('act.emptyHistory')}</Empty>
+            </div>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
-              <AreaChart series={traffic} timestamps={vm.trafficTimestamps} fmt={chartRate} locale={locale} height={120} fill window={vm.trafficBounds} />
+              <AreaChart
+                label={t('act.traffic')}
+                series={traffic}
+                timestamps={vm.trafficTimestamps}
+                fmt={chartRate}
+                locale={locale}
+                height={120}
+                fill
+                window={vm.trafficBounds}
+              />
             </>
           )}
         </section>
-        <div className="rp-card">
-          <div className="rp-row">
-            <div className="rp-cluster">
-              <h3 className="rp-h3">{t('act.outUsage')}</h3>
-              {vm.outbounds.since && <span className="rp-label">{vm.outbounds.since}</span>}
-            </div>
-          </div>
-          {vm.outboundState.error ? (
-            <ErrorMessage error={vm.outboundState.error} />
-          ) : vm.outboundState.state === 'unavailable' ? (
-            <span className="rp-label">{t('act.noOutbounds')}</span>
-          ) : vm.outboundState.state === 'loading' ? (
-            <Loading>{t('act.loading')}</Loading>
-          ) : vm.outboundState.state === 'empty' ? (
-            <Empty>{t('ui.empty')}</Empty>
-          ) : (
-            <Donut rows={vm.outbounds.rows} total={vm.outbounds.total} />
-          )}
-        </div>
+        <OutboundsCard />
       </div>
 
       <div className="rp-g3">
-        <div className="rp-card">
-          <div className="rp-row">
-            <TextTooltip text={t('act.rankingScope')}>
-              <h3 className="rp-h3">{t('act.topDevices')}</h3>
-            </TextTooltip>
-            <Segmented
-              label={t('act.topDevices')}
-              value={by}
-              onChange={setBy}
-              items={[
-                ['dev', t('act.devices')],
-                ['host', t('act.domains')]
-              ]}
-            />
-          </div>
-          {vm.rankingState.error && <ErrorMessage error={vm.rankingState.error} />}
-          {vm.rankingState.truncated && (
-            <TextTooltip text={t('act.rankingTruncated')}>
-              <Badge tone="warn">{t('act.truncated')}</Badge>
-            </TextTooltip>
-          )}
-          {vm.rankingState.state === 'error' ? null : vm.rankingState.state === 'loading' ? (
-            <Loading>{t('act.loading')}</Loading>
-          ) : vm.rankingState.state === 'unavailable' ? (
-            <Empty>{t('shell.notOfferedShort')}</Empty>
-          ) : vm.rankingState.state === 'empty' ? (
-            <Empty>{t('act.rankingEmpty')}</Empty>
-          ) : (
-            <div className="rp-list">
-              {vm.ranking.map(row => (
-                <Bar key={row.name} label={row.name} value={row.value} pct={row.pct} color={row.color} />
-              ))}
-            </div>
-          )}
-        </div>
+        <RankingCard />
         <section className="rp-card" aria-labelledby="activity-memory">
           <div className="rp-row">
             <h3 className="rp-h3" id="activity-memory">
@@ -203,6 +168,7 @@ export function Activity() {
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
               <AreaChart
+                label={t('act.memory')}
                 series={memorySeries}
                 timestamps={vm.memoryTimestamps}
                 fmt={memoryBytes}

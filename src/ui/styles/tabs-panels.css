@@ -10,6 +10,9 @@
   display: inline-flex;
   align-self: flex-start;
   max-width: 100%;
+  /* More tabs than a phone is wide scroll within the bar, not the page; the slider scrolls with them. */
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 2px;
   border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
@@ -22,6 +25,8 @@
 .rp-tab {
   position: relative;
   z-index: 1;
+  flex: none;
+  white-space: nowrap;
   min-height: 28px;
   padding: 4px 12px;
   border-radius: var(--rp-r-md);

@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
-import {Button, LabeledSelect, TextField} from '../../ui/ui';
+import {Button, LabeledSelect, Light, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from '../../dae/setup';
@@ -13,6 +13,9 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
     text,
     busy,
     rows,
+    diagnostics,
+    defaultDnsError,
+    chinaDnsError,
     groupUsedText,
     templateHelp,
     networkError,
@@ -46,6 +49,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
                   label={t('config.wizardSubscriptionName')}
                   value={item.name}
                   width={140}
+                  error={item.nameError}
                   onChange={name => setSubscription(item.index, {name})}
                 />
                 <TextField
@@ -106,13 +110,36 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
             onChange={listenerPort => patch({listenerPort})}
             error={networkError}
           />
-          <TextField isDisabled={busy} label={t('config.wizardDefaultDns')} value={state.defaultDns} onChange={defaultDns => patch({defaultDns})} />
-          <TextField isDisabled={busy} label={t('config.wizardChinaDns')} value={state.chinaDns} onChange={chinaDns => patch({chinaDns})} />
+          <TextField
+            isDisabled={busy}
+            label={t('config.wizardDefaultDns')}
+            value={state.defaultDns}
+            error={defaultDnsError}
+            onChange={defaultDns => patch({defaultDns})}
+          />
+          <TextField
+            isDisabled={busy}
+            label={t('config.wizardChinaDns')}
+            value={state.chinaDns}
+            error={chinaDnsError}
+            onChange={chinaDns => patch({chinaDns})}
+          />
         </div>
       )}
 
       <h3 className="rp-h3">{t('config.wizardPreview')}</h3>
       <CodeEditor label={t('config.wizardPreview')} value={text} readOnly compact />
+      {diagnostics.length > 0 && (
+        <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
+          {diagnostics.map(item => (
+            <div key={item.id} role="listitem">
+              <Light small tone={item.tone}>
+                {item.detail}
+              </Light>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="rp-toolbar">
         <Button accent isDisabled={saveDisabled} isPending={saving} tip={saveTip} onPress={() => void apply()}>
           {t('config.save')}

@@ -12,9 +12,6 @@
   width: 100%;
   min-width: 0;
   font: inherit;
-  transition:
-    background-color 150ms var(--rp-ease),
-    border-color 150ms var(--rp-ease);
 }
 
 .rp-step + .rp-step {

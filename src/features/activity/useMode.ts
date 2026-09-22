@@ -24,7 +24,7 @@ export function useMode() {
     try {
       const written = await write(
         text => writeMode(text, submitted),
-        errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
+        errors => toast('negative', t('act.modeInvalid', {n: errors}))
       );
       if (written) {
         guard.clear();

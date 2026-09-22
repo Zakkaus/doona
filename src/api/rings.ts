@@ -81,6 +81,33 @@ function load<T extends Timed>(name: string): {key: string; rings: Rings<T>; sav
   stores.set(name, store);
   return store;
 }
+// Rings of other backends are the first thing to give up when storage is full: the profiles and settings
+// share the same quota and matter more than a curve's past.
+function save(key: string, value: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      localStorage.setItem(key, value);
+      return;
+    } catch {
+      if (attempt || !prune(key)) return;
+    }
+  }
+}
+function prune(keep: string) {
+  const current = new Set([...stores.values()].map(store => store.key).concat(keep));
+  let freed = false;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('doona-rings-') && !current.has(key)) {
+        localStorage.removeItem(key);
+        freed = true;
+      }
+    }
+  } catch {
+    // Unavailable storage: nothing to free.
+  }
+  return freed;
+}
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
@@ -98,11 +125,7 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
     const now = Date.now();
     if (now - store.saved >= minute) {
       store.saved = now;
-      try {
-        localStorage.setItem(store.key, JSON.stringify(next));
-      } catch {
-        // Full or unavailable storage: the rings live on in memory.
-      }
+      save(store.key, JSON.stringify(next));
     }
   }
   return store.rings;
@@ -123,5 +146,6 @@ export function useRings<S, T extends Timed>(name: string, source: S | undefined
   useEffect(() => {
     record(name, source && sample(source), fold);
   }, [name, source, sample, fold]);
-  return useSyncExternalStore(subscribe, () => load<T>(name).rings);
+  // A render reads the ring already loaded; the next record re-checks the profile, so storage is not read per render.
+  return useSyncExternalStore(subscribe, () => ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings);
 }

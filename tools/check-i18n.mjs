@@ -17,6 +17,7 @@ function visit(node, callback) {
 }
 const sources = files('src').filter(path => /\.(?:ts|tsx)$/.test(path));
 const references = new Set();
+const literal = new Set(['doona', 'must']);
 let cjkCount = 0;
 const failures = [];
 for (const path of sources.filter(path => !path.endsWith('/messages.ts'))) {
@@ -33,6 +34,19 @@ for (const path of sources.filter(path => !path.endsWith('/messages.ts'))) {
       const {line} = ast.getLineAndCharacterOfPosition(node.getStart(ast));
       failures.push(`${path}:${line + 1}: CJK literal: ${node.text.trim()}`);
       cjkCount++;
+    }
+    // Visible or announced English written straight into markup bypasses the catalogue just as CJK would.
+    // Placeholders are sample input, and the product name and dae keywords are not language.
+    const spoken =
+      (ts.isJsxText(node) && /[A-Za-z]{2,}/.test(node.text) && !literal.has(node.text.trim())) ||
+      (ts.isJsxAttribute(node) &&
+        /^(?:aria-label|aria-description|title|label|alt)$/.test(node.name.getText(ast)) &&
+        node.initializer &&
+        ts.isStringLiteral(node.initializer) &&
+        /[A-Za-z]{2,}/.test(node.initializer.text));
+    if (!excluded.test(path) && !test && spoken) {
+      const {line} = ast.getLineAndCharacterOfPosition(node.getStart(ast));
+      failures.push(`${path}:${line + 1}: untranslated markup text: ${node.getText(ast).trim()}`);
     }
   });
 }

@@ -12,11 +12,10 @@ import {
   routineGap,
   shortId
 } from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
-import {menuViews} from '../policies/view';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -44,35 +43,56 @@ export function modeView(
 }
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 
+// The home card holds this many rows; the rest is one click away on the events page.
+export const NOTICE_ROWS = 8;
+// A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
+// backend dropping records at pace does not push everything else off the card. Two notices that differ in
+// any of those never fold: a failure must not disappear behind a neighbouring success.
 export function noticeRows(events: ApiEvent[], t: LabelFn) {
-  return events.map(event => {
+  const rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; key: string; count: number}> = [];
+  for (const event of events) {
     const summary = eventSummary(event, t);
+    const key = [event.event, summary.key, ...Object.entries(summary.params ?? {}).map(([name, value]) => `${name}=${String(value)}`)].join('|');
+    const last = rows[rows.length - 1];
+    if (last && last.key === key) {
+      last.count += 1;
+      continue;
+    }
+    if (rows.length === NOTICE_ROWS) break;
     const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
-    return {
+    rows.push({
       id: event.id,
       tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
       kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
-      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`
-    };
-  });
+      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`,
+      key,
+      count: 1
+    });
+  }
+  return rows.map(({key: _key, count, summaryText, ...row}) => ({
+    ...row,
+    summaryText: count > 1 ? `${summaryText} · ${t('act.noticeRepeat', {n: count})}` : summaryText
+  }));
 }
-type NodeMenuItem = {id: string; label: string; description: string; className: string};
 export type ActivityNodeMenu = {
-  menu: {items: NodeMenuItem[]; sections: Array<{title: string; count: string; items: NodeMenuItem[]}>};
+  options: NodeOption[];
   big: boolean;
   id: string;
   name: string;
 };
 
-export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean) {
+export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean, live = false) {
   if (series.down.some(value => value !== null) || series.up.some(value => value !== null)) return 'ready';
-  return available === false ? 'unavailable' : !loaded ? 'loading' : 'empty';
+  if (available === false) return live ? 'loading' : 'unavailable';
+  return !loaded ? 'loading' : 'empty';
 }
 
+type NodeOption = {id: string; name: string; label: string; tcp?: number; alive?: boolean; unavailable: boolean; healthError?: string};
+// The picker's menu is built from `options` only while it is open (see NodeMenu), not on every poll.
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const counts = new Map<string, number>();
   for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);
-  const options = nodes.map(node => {
+  const options = nodes.map((node): NodeOption => {
     const health = preferredHealth(node);
     return {
       id: node.id,
@@ -87,7 +107,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const node =
     options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => n.name !== 'direct' && n.name !== 'block') ?? options[0];
   return {
-    menu: menuViews(options, t),
+    options,
     big: options.length > 12,
     id: node?.id ?? '',
     name: node?.name ?? '',
@@ -97,7 +117,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     healthError: node?.healthError
   };
 }
-export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean) {
+export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en') {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   return {
     status: {
@@ -106,7 +126,7 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
     },
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null),
-    connections: runtime?.traffic.connections.total ?? '—',
+    connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),
     rss: formatBytes(memory?.process?.rss_bytes ?? null),
     memoryBadge:
       percent === null

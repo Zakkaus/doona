@@ -24,7 +24,7 @@ export function useMainSourceEdit(): MainSourceEdit {
   const complete = useSourceComplete(source);
   const main = complete ? source : null;
   // While the digest check is still running nothing is wrong yet; the notice waits for a verdict.
-  const incomplete = complete === false || (!!config.data && !source);
+  const incomplete = complete === false;
   const error = useMemo(() => config.error ?? (incomplete ? new LocalError('config.incomplete') : null), [config.error, incomplete]);
   const {apply} = editor;
   return {

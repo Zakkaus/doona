@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {useRoutingTrace, type TraceResolve} from './useRoutingTrace';
+import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';
@@ -9,7 +9,8 @@ import {useRulesPage} from './useRulesPage';
 export function Rules(props: PageProps) {
   const t = useT();
   const view = useRulesPage(props);
-  const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace />};
+  const traceForm = useTraceForm();
+  const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace form={traceForm} />};
   if (view.loading) return <Loading />;
   if (view.error) return <ErrorMessage error={view.error} />;
   return (
@@ -19,9 +20,9 @@ export function Rules(props: PageProps) {
   );
 }
 
-function Trace() {
+function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
   const t = useT();
-  const trace = useRoutingTrace();
+  const trace = useRoutingTrace(state);
   const {form, setForm} = trace;
   return (
     <>

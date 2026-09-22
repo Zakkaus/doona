@@ -11,11 +11,12 @@ import {
   type MessageRef,
   type OutboundNames
 } from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../flows/view';
 import type {Key} from '../../i18n/messages';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
+const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
     ['ui.source', c.src ?? '—'],
@@ -24,7 +25,7 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
     ['conn.f.ingress', word(c.ingress)],
     ['conn.f.domainSource', word(c.domain_source)],
     ['ui.process', c.pname ?? '—'],
-    ['conn.f.observedBy', c.observed_by],
+    ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by],
     ['ui.upload', formatBytes(c.upload_bytes)],
     ['ui.download', formatBytes(c.download_bytes)],
     ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second)],
@@ -69,7 +70,8 @@ export function readView(stored: string | null): ConnectionView {
   }
 }
 
-export function tableRows(rows: Connection[], view: ConnectionView, locale: string): TableRow[] {
+// Sorts and groups by what the table shows: a state sorts by its label, not the wire value.
+export function tableRows(rows: Connection[], view: ConnectionView, locale: string, t: LabelFn): TableRow[] {
   let sorted = rows;
   if (view.sort) {
     const {column, direction} = view.sort;
@@ -80,7 +82,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
         case 'src':
           return row.src;
         case 'state':
-          return row.state;
+          return t(connectionStates[row.state]);
         case 'down':
           return parseU64(row.download_bytes);
         case 'age':
@@ -103,7 +105,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
   // Source groups key on the address without the port, so one client is one group.
   const groups = new Map<string, Connection[]>();
   for (const row of sorted) {
-    const key = (view.group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src) : row.outbound) ?? '—';
+    const key = view.group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : outboundLabel(row.outbound, t);
     const group = groups.get(key);
     if (group) group.push(row);
     else groups.set(key, [row]);
@@ -149,7 +151,7 @@ export function connectionTableView(
     download: formatBytes(c.download_bytes),
     age: relativeStart(c.started_at, locale)
   });
-  return tableRows(rows, view, locale).map(row =>
+  return tableRows(rows, view, locale, t).map(row =>
     'connection' in row
       ? {id: row.id, connection: project(row.connection)}
       : {
@@ -184,17 +186,20 @@ export function connectionsView(
       ['tcp', t('ui.tcp')],
       ['udp', t('ui.udp')]
     ] as Array<[string, string]>,
-    outbounds: [{id: 'all', label: t('conn.allOutbounds')}, ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: id}))],
+    outbounds: [
+      {id: 'all', label: t('conn.allOutbounds')},
+      ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: outboundLabel(id, t)}))
+    ],
     picks: [
       {
         title: t('ui.source'),
         value: 'src:' + src,
-        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))
+        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: formatNumber(n, locale)}))
       },
       {
         title: t('conn.rule'),
         value: 'rule:' + rule,
-        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))
+        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: formatNumber(n, locale)}))
       }
     ],
     visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null,

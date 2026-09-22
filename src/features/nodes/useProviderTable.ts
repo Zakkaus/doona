@@ -17,13 +17,14 @@ type ProviderTableInput = {
   source: MainSourceEdit;
   entries: SubscriptionEntry[];
   reload: () => void;
+  refresh: ReturnType<typeof useProviderRefresh>;
   onAdd: () => void;
   onRemove: (item: Provider) => void;
 };
 export function useProviderTable(input: ProviderTableInput) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const refresh = useProviderRefresh(input.reload);
+  const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const fail = (error: unknown) => toast('negative', errorText(error));
   const rows = input.rows.map(item => ({

@@ -79,6 +79,8 @@ endef
 define Package/doona/install
 	$(INSTALL_DIR) $(1)/usr/share/doona
 	$(CP) $(PKG_BUILD_DIR)/web/* $(1)/usr/share/doona/
+	$(INSTALL_DIR) $(1)/usr/share/doc/doona
+	$(CP) $(PKG_BUILD_DIR)/web/LICENSE $(PKG_BUILD_DIR)/web/LICENSES $(PKG_BUILD_DIR)/web/NOTICE $(1)/usr/share/doc/doona/
 	rm -rf $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/LICENSES $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
 endef
 

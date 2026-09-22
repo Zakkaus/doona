@@ -22,6 +22,7 @@ it('keeps structured fields readable in rows and lossless in chronological expor
   expect(logsExport(records)).toContain(JSON.stringify(records[0].fields));
   expect(view.levels.map(level => level.id)).toEqual(['error']);
   expect(view.status.tone).toBe('warn');
+  expect(logView(records, ['error'], false, undefined, 'en-US', t, true).status).toEqual({tone: 'err', text: t('log.disconnected')});
 });
 
 it('resolves selected log levels against advertised choices', () => {

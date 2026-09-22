@@ -39,7 +39,7 @@
 }
 .rp-tree-links path {
   opacity: 0.55;
-  transition: opacity 0.15s;
+  transition: opacity var(--rp-duration) var(--rp-ease);
 }
 .rp-tree-links path[data-kind='direct'] {
   stroke: var(--rp-foam);
@@ -76,7 +76,6 @@
   line-height: 16px;
   text-align: start;
   cursor: pointer;
-  transition: opacity 0.15s;
 }
 .rp-tree-tile.dim {
   opacity: 0.35;

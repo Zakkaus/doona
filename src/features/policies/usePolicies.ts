@@ -3,23 +3,37 @@ import {useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../config/mainSource';
 import {readGroupEntries} from '../../dae/groups';
+import type {HealthObservation} from '../../api/model';
+import {sameHealth} from './health';
 
 export function usePolicies(query: string) {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups();
   const nodes = useNodes(resources?.nodes.available === true);
   const focus = new URLSearchParams(query).get('group');
-  const health = useMemo(() => new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)])), [nodes.data]);
+  const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
+  if (health.from !== nodes.data) {
+    const map = new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)]));
+    setHealth({from: nodes.data, map: sameHealth(health.map, map) ? health.map : map});
+  }
   const sourceState = useMainSourceEdit();
   const {main, writable, busy, apply, error} = sourceState;
   const source = useMemo(() => ({main, writable, busy, apply, error}), [main, writable, busy, apply, error]);
   const entries = useMemo(() => new Map(readGroupEntries(source.main?.content ?? '').map(entry => [entry.name, entry])), [source.main?.content]);
   const cards = useMemo(
-    () => (groups.data ?? []).map(group => ({id: group.id, domId: 'group-' + group.id, name: group.name, entry: entries.get(group.name)})),
+    () =>
+      (groups.data ?? []).map(group => ({
+        id: group.id,
+        domId: 'group-' + group.id,
+        name: group.name,
+        members: group.member_count,
+        entry: entries.get(group.name)
+      })),
     [groups.data, entries]
   );
   const ready = !!groups.data;
-  // Cards above the linked one grow as their details mount, so the target is followed until the layout settles.
+  // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
+  // once per link, and never after the user starts moving the page themselves.
   useEffect(() => {
     const target = focus && ready ? document.getElementById('group-' + focus) : null;
     if (!target) return;
@@ -30,11 +44,15 @@ export function usePolicies(query: string) {
       if (card === target) break;
       observer.observe(card);
     }
-    const settle = setTimeout(() => observer.disconnect(), 3000);
-    return () => {
+    const inputs = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+    const stop = () => {
       clearTimeout(settle);
       observer.disconnect();
+      for (const type of inputs) removeEventListener(type, stop, true);
     };
+    const settle = setTimeout(stop, 3000);
+    for (const type of inputs) addEventListener(type, stop, {capture: true, passive: true});
+    return stop;
   }, [focus, ready]);
   const {refetch: refreshGroups} = groups;
   const {refetch: refreshNodes} = nodes;
@@ -45,7 +63,7 @@ export function usePolicies(query: string) {
   return {
     cards,
     focus,
-    health,
+    health: health.map,
     source,
     error: groups.error ?? nodes.error,
     loading: groups.loading && !groups.data,
@@ -55,20 +73,22 @@ export function usePolicies(query: string) {
     refreshNodes: nodes.refetch
   };
 }
+// A card mounts its details the first time it nears the viewport and keeps them; `visible` follows the viewport.
 export function usePolicyVisibility(focused: boolean) {
   const [expanded, setExpanded] = useState(false);
+  const [visible, setVisible] = useState(false);
   const ref = useCallback((element: HTMLElement | null) => {
     if (!element) return;
     const observer = new IntersectionObserver(
       entries => {
-        if (!entries.some(entry => entry.isIntersecting)) return;
-        setExpanded(true);
-        observer.disconnect();
+        const near = entries.at(-1)!.isIntersecting;
+        setVisible(near);
+        if (near) setExpanded(true);
       },
       {rootMargin: '400px'}
     );
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  return {ref, active: focused || expanded, expand: () => setExpanded(true)};
+  return {ref, active: focused || expanded, visible, expand: () => setExpanded(true)};
 }

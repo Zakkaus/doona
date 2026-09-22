@@ -1,11 +1,29 @@
+import {useMemo} from 'react';
 import Tree from './Tree';
-import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, RuleRef, Empty, Link} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  DetailPanel,
+  ErrorMessage,
+  Loading,
+  TextTooltip,
+  Kv,
+  LabeledSelect,
+  Segmented,
+  RuleRef,
+  Empty,
+  Link,
+  type TableColumn
+} from '../../ui/ui';
 import {Coverage} from './Coverage';
 import type {PageProps} from '../types';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
+
+type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 
 export function RoutingMap(props: PageProps) {
   const t = useT();
@@ -48,6 +66,30 @@ export function FlowRecords(props: PageProps) {
   const t = useT();
   const view = useFlowRecords(props);
   const detail = view.detail;
+  // Stable column definitions: a new array on every poll would re-render every visible row.
+  const columns = useMemo(
+    (): TableColumn<FlowRow>[] => [
+      {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true, render: row => <TextTooltip>{row.target}</TextTooltip>},
+      {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2, render: row => <TextTooltip className="rp-chain">{row.chain}</TextTooltip>},
+      {
+        id: 'rule',
+        label: t('conn.rule'),
+        minWidth: 152,
+        grow: 2,
+        drop: 1,
+        render: row => (
+          <span className="rp-rule">
+            <RuleRef expression={row.expression} ruleId={row.ruleId} linked={view.rulesListed} />
+            {row.recomputed && <small className="rp-provenance">{t('conn.recomputed')}</small>}
+          </span>
+        )
+      },
+      {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: row => row.network},
+      {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: row => row.state},
+      {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: row => row.started}
+    ],
+    [t, view.rulesListed]
+  );
   return (
     <>
       <ErrorMessage error={view.error} />
@@ -87,26 +129,7 @@ export function FlowRecords(props: PageProps) {
           onSelect={view.select}
           selectOnFocus={view.wide}
           empty={t('flow.empty')}
-          cols={[
-            {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true, render: row => <TextTooltip>{row.target}</TextTooltip>},
-            {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2, render: row => <TextTooltip className="rp-chain">{row.chain}</TextTooltip>},
-            {
-              id: 'rule',
-              label: t('conn.rule'),
-              minWidth: 152,
-              grow: 2,
-              drop: 1,
-              render: row => (
-                <span className="rp-rule">
-                  <RuleRef expression={row.expression} ruleId={row.ruleId} linked={view.rulesListed} />
-                  {row.recomputed && <small className="rp-provenance">{t('conn.recomputed')}</small>}
-                </span>
-              )
-            },
-            {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: row => row.network},
-            {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: row => row.state},
-            {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: row => row.started}
-          ]}
+          cols={columns}
         />
         <DetailPanel open={view.panelOpen} title={view.panelTitle} onClose={() => view.select(null)}>
           <ErrorMessage error={view.detailError} onRetry={view.detailRetry} />

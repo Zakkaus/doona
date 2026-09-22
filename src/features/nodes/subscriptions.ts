@@ -2,7 +2,7 @@ import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type
 
 export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null; from: number; to: number};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};
-type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null};
+type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null; comment?: string};
 
 export function parseInterval(text: string): number | null {
   const found = /^(\d+(?:\.\d+)?)(ms|s|m|h)?$/.exec(text.trim());
@@ -86,9 +86,13 @@ function subscriptionRanges(text: string) {
         while (tokens[i + 1] && !(text[tokens[i].from] === ')' && tokens[i].parens === 1)) i++;
       }
       let to = tokens[i].to;
-      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) to = tokens[++i].to;
+      let comment: string | undefined;
+      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) {
+        comment = text.slice(tokens[i + 1].from, tokens[i + 1].to);
+        to = tokens[++i].to;
+      }
       const parts = scalarParts(text.slice(from, to));
-      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: null, fields: [], parts});
+      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: null, fields: [], parts, comment});
     }
   }
   return entries;
@@ -113,7 +117,7 @@ export function writeInterval(text: string, tag: string, seconds: number): strin
   if (entry.parts) {
     const body = [`${indent}${/^[\w.-]+$/.test(tag) ? tag : quote(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
     if (entry.parts.ua !== null) body.push(`${inner}ua: ${quote(entry.parts.ua)}`);
-    body.push(`${inner}interval: '${seconds}s'`, `${indent}}`);
+    body.push(`${inner}interval: '${seconds}s'`, `${indent}}${entry.comment ? ' ' + entry.comment : ''}`);
     return text.slice(0, entry.from) + body.join('\n') + text.slice(entry.to);
   }
   const field = entry.fields.find(field => field.name === 'interval');

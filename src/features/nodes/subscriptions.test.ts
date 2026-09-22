@@ -63,7 +63,7 @@ describe('writeInterval', () => {
   it('turns a scalar entry into a block and keeps its agent', () => {
     const next = writeInterval(text, 'compatible', 3600);
     expect(next).toContain(
-      `  compatible: {\n    url: 'https://example.net/sub'\n    ua: 'honk/1.0 like'\n    interval: '3600s'\n  }\n  'https://example.org/no_tag_link'`
+      `  compatible: {\n    url: 'https://example.net/sub'\n    ua: 'honk/1.0 like'\n    interval: '3600s'\n  } # keep the agent\n  'https://example.org/no_tag_link'`
     );
     expect(readSubscriptions(next).find(e => e.tag === 'compatible')?.interval).toBe(3600);
   });
@@ -131,4 +131,11 @@ it('does not turn unreadable or unspecified intervals into manual-only or a pres
     "subscription {\n  complex: {\n    url: 'https://example.org'\n    interval: '1h30m'\n  }\n  absent: {\n    url: 'https://example.net'\n  }\n}"
   );
   expect(entries.map(entry => entry.interval)).toEqual([null, null]);
+});
+
+it('keeps a same-line comment when a one-line subscription becomes a block', () => {
+  const text = "subscription {\n  paid: 'https://example.org/sub' # work account\n}\n";
+  const out = writeInterval(text, 'paid', 3600);
+  expect(out).toContain('# work account');
+  expect(out).toContain("interval: '3600s'");
 });

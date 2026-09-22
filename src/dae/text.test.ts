@@ -1,5 +1,5 @@
-import {expect, it} from 'vitest';
-import {blockFields, scanConfig, uncomment} from './text';
+import {describe, expect, it} from 'vitest';
+import {blockFields, scanConfig, uncomment, isFragment} from './text';
 import {groupNames} from '../features/config/names';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
@@ -31,4 +31,18 @@ it('keeps comments adjacent to braces out of section headers and depth', () => {
   const text = 'group # { ignored\n{ a { policy: random } }# }\nrouting { fallback: a }\n';
   expect(scanConfig(text).blocks.map(block => block.name)).toEqual(['group', 'routing']);
   expect(groupNames(text)).toEqual(['a']);
+});
+
+describe('isFragment', () => {
+  it('accepts one balanced line and rejects text that would escape it', () => {
+    for (const ok of ['domain(geosite: cn)', 'name(\'a # b\', "c}")', 'min_moving_avg', "!name('direct')"]) expect(isFragment(ok)).toBe(true);
+    for (const bad of ['domain(a) # x', 'domain(a', 'domain(a))', 'a } routing {', 'domain(a)\nb', 'name({a})']) expect(isFragment(bad)).toBe(false);
+  });
+});
+
+it('scans the routing arrow as its own token when written without spaces', () => {
+  const text = 'routing { dip(geoip:private)->direct\n domain(a)->proxy(must) }';
+  const arrows = scanConfig(text).tokens.filter(token => text.slice(token.from, token.to) === '->');
+  expect(arrows).toHaveLength(2);
+  expect(scanConfig('a-b c->d').tokens.map(token => 'a-b c->d'.slice(token.from, token.to))).toEqual(['a-b', 'c', '->', 'd']);
 });
