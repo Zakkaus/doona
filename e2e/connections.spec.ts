@@ -111,7 +111,7 @@ test('activating a checked source or rule removes that filter', async ({page}) =
   const source = page.getByRole('menuitemradio').first();
   const sourceName = await source.locator('.rp-il').innerText();
   await source.click();
-  await expect(page.locator('.rp-toolbar input')).toHaveValue(sourceName);
+  await expect(page).toHaveURL(new RegExp(`src=${encodeURIComponent(sourceName)}`));
   await pick.click();
   const selectedSource = page.getByRole('menuitemradio').filter({hasText: sourceName});
   await expect(selectedSource).toHaveAttribute('aria-checked', 'true');
@@ -288,7 +288,7 @@ test.describe('default view', () => {
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
     await page.locator('.rp-panel').getByRole('button', {name: 'Only this client', exact: true}).click();
-    await expect(page.locator('.rp-toolbar input')).toHaveValue(/^10\.0\.0\.\d+$/);
+    await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
     await expect(groups).toHaveCount(1);
   });
 });
@@ -370,10 +370,14 @@ test('a linked filter clears when the address loses it', async ({page}) => {
   await expect(filter).toHaveValue('');
 });
 
-test('source edits debounce requests and keep rows on the settled source', async ({page}) => {
+test('general IP search matches destinations while explicit source links constrain clients', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
+  const list = await api.connections();
+  list.tcp = [{...list.tcp[0], id: 'destination', src: '10.0.0.12:1234', dst: '198.51.100.42:443'}];
+  list.udp = [];
+  list.truncated = false;
   const responses: Record<string, unknown> = {
     '/capabilities': capabilities,
     '/version': await api.version(),
@@ -382,7 +386,6 @@ test('source edits debounce requests and keep rows on the settled source', async
     '/nodes': await api.nodes()
   };
   const sources: Array<string | null> = [];
-  await page.clock.install();
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
@@ -390,24 +393,64 @@ test('source edits debounce requests and keep rows on the settled source', async
     if (path === '/connections') {
       const src = url.searchParams.get('src');
       sources.push(src);
-      return route.fulfill({json: await api.connections({src: src ?? undefined})});
+      return route.fulfill({json: {...list, tcp: src && src !== '10.0.0.12' ? [] : list.tcp}});
     }
     return route.fulfill({json: responses[path]});
   });
-  await page.goto('/#/connections?src=10.0.0.12');
-  const grid = page.getByRole('grid', {name: 'Connections'});
-  await expect(grid.getByRole('rowheader').first()).toHaveText('api.telegram.org');
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
-  sources.length = 0;
+  await page.goto('/#/connections');
   const field = page.getByRole('searchbox', {name: 'Filter'});
-  await field.fill('10.0.0.2');
-  await page.clock.runFor(100);
-  await field.fill('10.0.0.7');
-  await page.clock.runFor(100);
-  expect(sources).toEqual([]);
-  await expect(field).toHaveValue('10.0.0.7');
-  await expect(grid.getByRole('rowheader').first()).toHaveText('api.telegram.org');
-  await page.clock.runFor(250);
-  await expect.poll(() => sources).toEqual(['10.0.0.7']);
-  await expect(grid.getByRole('rowheader').first()).toHaveText('cdn.bilibili.com');
+  await field.fill('198.51.100.42');
+  await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+  await expect(page.locator('[data-key="destination"]')).toBeVisible();
+  expect(sources).not.toContain('198.51.100.42');
+  await page.goto('/#/connections?src=10.0.0.7');
+  await expect(page.locator('.rp-table .rp-empty')).toBeVisible();
+  expect(sources).toContain('10.0.0.7');
+});
+
+test('close confirmation freezes listed IDs above the bulk limit and excludes new arrivals', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.connections.max_bulk_close = 1;
+  const list = await api.connections();
+  list.tcp = [
+    {...list.tcp[0], id: 'first'},
+    {...list.tcp[0], id: 'second'}
+  ];
+  list.udp = [];
+  list.truncated = false;
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/runtime': await api.runtime(),
+    '/groups': await api.groups(),
+    '/nodes': await api.nodes()
+  };
+  const deleted: string[] = [];
+  await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (route.request().method() === 'DELETE') {
+      const id = path.slice('/connections/'.length);
+      deleted.push(id);
+      list.tcp = list.tcp.filter(row => row.id !== id);
+      return route.fulfill({status: 204});
+    }
+    return route.fulfill({json: path === '/connections' ? list : responses[path]});
+  });
+  await page.goto('/#/connections');
+  await expect(page.getByRole('grid', {name: 'Connections'})).toHaveAttribute('aria-rowcount', '3');
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('2 listed connections one by one');
+  list.tcp.push({...list.tcp[0], id: 'later'});
+  await page.clock.fastForward(5100);
+  await expect(page.getByRole('grid', {name: 'Connections', includeHidden: true})).toHaveAttribute('aria-rowcount', '4');
+  await expect(dialog).toContainText('2 listed connections one by one');
+  await dialog.getByRole('button', {name: 'Close all', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Closed 2, skipped 0');
+  expect(deleted).toEqual(['first', 'second']);
+  await expect(page.locator('[data-key="later"]')).toBeVisible();
 });

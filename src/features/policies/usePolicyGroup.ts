@@ -1,9 +1,9 @@
 import {useEffect, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {useGroupControl} from '../../api/store';
+import {useGroupControl} from '../../store';
 import type {HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../config/mainSource';
-import type {GroupEntry} from '../config/groups';
+import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
 import {memberViews, policyCardView, probeSummary} from './view';
 import {usePolicyEdit} from './usePolicyEdit';

@@ -5,6 +5,154 @@ import {formatNumber, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {fileName, redacted} from './names';
 import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, type WizardState} from './wizard';
+import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {buildHash} from '../../shell/route';
+import type {EditorMark} from '../../ui/code/CodeEditor';
+
+const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
+type SectionKind = (typeof sectionKinds)[number];
+export type ModuleSection = {
+  id: string;
+  kind: string;
+  source: ConfigSource | null;
+  block: TextBlock | null;
+  range: string;
+  summary: string;
+  note: string | null;
+  href: string | null;
+};
+
+export function sectionRange(source: ConfigSource, block: TextBlock): string {
+  return `${fileName(source)}:${block.line + 1}-${block.endLine + 1}`;
+}
+
+export function splice(text: string, block: Pick<TextBlock, 'from' | 'to'>, replacement: string): string {
+  return text.slice(0, block.from) + replacement + text.slice(block.to);
+}
+
+export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, block: TextBlock, text: string): EditorMark[] {
+  const end = block.line + text.split('\n').length;
+  return diagnostics
+    .filter(d => d.source_id === sourceId && d.line !== null && d.line > block.line && d.line <= end)
+    .map(d => ({line: d.line! - block.line, column: d.column, level: d.level, message: d.message}));
+}
+
+export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string): EditorMark[] {
+  return diagnostics.filter(d => d.source_id === sourceId && d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message}));
+}
+
+function ruleCount(text: string, block: TextBlock, tokens: TextToken[]): number {
+  return tokens.filter(
+    token =>
+      token.from > block.open &&
+      token.to <= block.close &&
+      token.depth === block.depth + 1 &&
+      token.kind === 'text' &&
+      text.slice(token.from, token.to) === '->'
+  ).length;
+}
+
+function sectionSummary(kind: SectionKind, text: string, block: TextBlock, tokens: TextToken[], t: Translator): string {
+  const fields = blockFields(text, block, tokens);
+  switch (kind) {
+    case 'global':
+      return t('config.moduleSettings', {n: fields.length});
+    case 'subscription':
+      return t('config.moduleSubscriptions', {n: fields.length});
+    case 'node':
+      return t('config.moduleNodes', {n: fields.length});
+    case 'group':
+      return t('config.moduleGroups', {
+        n: block.children.length,
+        policies: block.children
+          .map(child => {
+            const policy = blockFields(text, child, tokens).find(field => field.name === 'policy')?.value;
+            return policy ? `${child.name}: ${policy}` : child.name;
+          })
+          .join(', ')
+      });
+    case 'dns': {
+      const upstreams = block.children.filter(child => child.name === 'upstream');
+      const routing = block.children.filter(child => child.name === 'routing').flatMap(child => child.children);
+      return t('config.moduleDns', {
+        upstreams: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0),
+        requests: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0),
+        responses: routing.filter(child => child.name === 'response').reduce((n, child) => n + ruleCount(text, child, tokens), 0)
+      });
+    }
+    case 'routing': {
+      const rules = t('config.moduleRules', {n: ruleCount(text, block, tokens)});
+      const fallback = fields.find(field => field.name === 'fallback')?.value;
+      return fallback ? `${rules} · fallback: ${fallback}` : rules;
+    }
+  }
+}
+
+export function sectionSummaries(sources: ConfigSource[], t: Translator): ModuleSection[] {
+  const eligible = sources.filter(source => source.kind === 'main' || (source.kind === 'include' && source.writable));
+  const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
+  const main = sources.find(source => source.kind === 'main') ?? null;
+  const sections = sectionKinds.flatMap<ModuleSection>(kind => {
+    const href = kind === 'group' ? buildHash('policies') : kind === 'node' || kind === 'subscription' ? buildHash('nodes') : null;
+    const occurrences = parsed.flatMap(({source, blocks, tokens}) =>
+      blocks
+        .filter(block => block.name === kind)
+        .map(block => ({
+          id: `${source.id}:${block.from}`,
+          kind,
+          source,
+          block,
+          href,
+          range: sectionRange(source, block),
+          summary: sectionSummary(kind, source.content!, block, tokens, t),
+          note: null
+        }))
+    );
+    return occurrences.length
+      ? occurrences
+      : [
+          {
+            id: kind,
+            kind,
+            source: main,
+            block: null,
+            href,
+            range: main ? fileName(main) : 'config.dae',
+            summary: main?.content === undefined ? '' : t('config.moduleAbsent', {file: fileName(main)}),
+            note: main?.content === undefined ? t('config.contentCredential') : null
+          }
+        ];
+  });
+  const withheld: ModuleSection[] = parsed.flatMap(({source, blocks}) => {
+    if (source.content === undefined)
+      return [
+        {
+          id: source.id,
+          kind: fileName(source),
+          source,
+          block: null,
+          href: null,
+          range: fileName(source),
+          summary: '',
+          note: t('config.contentCredential')
+        }
+      ];
+    return blocks
+      .filter(block => block.name === 'experimental' && block.children.some(child => child.name === 'native_api'))
+      .map(block => ({
+        id: `${source.id}:${block.from}`,
+        kind: 'experimental.native_api',
+        source,
+        block: null,
+        href: null,
+        range: sectionRange(source, block),
+        summary: '',
+        note: t('config.incomplete')
+      }));
+  });
+  return [...sections, ...withheld];
+}
+
 const kinds: Record<ConfigSource['kind'], Key> = {
   main: 'config.kind.main',
   include: 'config.kind.include',
@@ -65,7 +213,7 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
 }
 export function wizardInitial(content: string): WizardState {
   const read = readState(content);
-  return {...read, rules: content.trim() ? 'keep' : defaultTemplate, subscriptions: read.subscriptions.length ? read.subscriptions : [{name: 'sub', url: ''}]};
+  return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
 export function wizardRows(state: WizardState, error: string | undefined, t: Translator): {groupUsedText: string; rows: WizardRow[]} {
   return {

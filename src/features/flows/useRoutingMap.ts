@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../api/store';
+import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../store';
 import {useT} from '../../i18n';
 import {within} from '../../shell/route';
 import type {PageProps} from '../types';

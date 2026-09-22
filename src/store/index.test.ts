@@ -1,10 +1,10 @@
 import {expect, it, vi} from 'vitest';
-import {InflightRegistry, normalizeResourceKey} from './inflight';
-import {invalidations, shouldRefetch, type ResourceName} from './invalidation';
-import {createMockApi} from './mock';
-import {capabilities} from './mock/fixtures';
-import type {ApiEvent, Capabilities, EventKind} from './model';
-import {tcpProbe} from './store';
+import {InflightRegistry, normalizeResourceKey} from '../api/inflight';
+import {invalidations, shouldRefetch, type ResourceName} from '../api/invalidation';
+import {createMockApi} from '../api/mock';
+import {capabilities} from '../api/mock/fixtures';
+import type {ApiEvent, Capabilities, EventKind} from '../api/model';
+import {tcpProbe} from './index';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -165,7 +165,6 @@ it('refreshes generation-dependent resources but leaves DNS cache to its poll', 
   }
   for (const resource of ['dnsLog', 'version'] as const) expect(shouldRefetch(resource, event('generation.changed'))).toBe(false);
   expect(shouldRefetch('runtimeSettings', event('runtime.updated'))).toBe(false);
-  expect(invalidations['generation.changed'].poll).toContain('dnsCache');
   expect(shouldRefetch('dnsCache', event('generation.changed'))).toBe(false);
 });
 

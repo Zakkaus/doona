@@ -129,3 +129,24 @@ it('seen by device, the leaves are client addresses joined to outbounds by flows
   expect(rows).toBeGreaterThanOrEqual(tree.leaves.length);
   for (const leaf of tree.leaves) expect(at.has(leaf.id)).toBe(true);
 });
+
+it('keeps missing stages distinct from backend values literally named unknown', async () => {
+  const api = createMockApi();
+  const base = (await api.flows()).flows[0];
+  const missing = {...base, id: 'missing', outbound: null, chain: [], rule_id: null, rule_expression: null};
+  const known = {...base, id: 'known', outbound: 'unknown', chain: ['unknown'], rule_id: null, rule_expression: 'unknown'};
+  const flows = [missing, known];
+  const tree = routingTree(flows, [], [], []);
+  const names = new Map([['unknown', 'Known node']]);
+  for (const entries of [tree.leaves, tree.outbounds, tree.nodes]) {
+    const absent = entries.find(item => item.unknown)!;
+    const present = entries.find(item => !item.unknown)!;
+    expect(absent.id).not.toBe(present.id);
+    expect(absent.count).toBe(1);
+    expect(present.count).toBe(1);
+    expect(flowsThrough(flows, absent.id, names, [])).toEqual([missing]);
+    expect(flowsThrough(flows, present.id, names, [])).toEqual([known]);
+    expect(pinnedLabel(absent.id, [], names, name => name ?? 'Missing')).toBe('Missing');
+  }
+  expect(pinnedLabel(tree.nodes.find(item => !item.unknown)!.id, [], names, String)).toBe('Known node');
+});

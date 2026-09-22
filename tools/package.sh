@@ -33,7 +33,6 @@ for entry in dist/* dist/.[!.]* dist/..?*; do
 done
 cp LICENSE NOTICE CHANGELOG.md README.md "$stage/program/"
 cp -R dist/fonts "$stage/font-package/"
-cp public/fonts/OFL.txt public/fonts/README "$stage/font-package/fonts/"
 
 archive() {
     # Keep tar separate from gzip so POSIX sh detects failures in either command.

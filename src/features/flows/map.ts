@@ -52,7 +52,9 @@ function stagePart(
     }
   }
 }
-const stageId = (stage: Stage, part: {label: string; key?: string}) => stage + ':' + (part.key ?? part.label);
+// A missing entry has an empty identity, which no backend id or label can be, so it never collides with a value
+// literally named "unknown".
+const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => stage + ':' + (part.unknown ? '' : (part.key ?? part.label));
 
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames, rules: RoutingRule[]): FlowSummary[] {
   const stage = id.slice(0, id.indexOf(':')) as Stage;
@@ -67,7 +69,9 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames,
 // What the flow records call a pinned tree id: the rule's expression, the node's name, the outbound as shown,
 // the client's address.
 export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
-  const [stage, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
+  const stage = id.slice(0, id.indexOf(':'));
+  const key = id.slice(id.indexOf(':') + 1);
+  if (key === '') return label(null);
   if (stage === 'rule')
     return key.includes(HISTORICAL) ? key.slice(key.indexOf(HISTORICAL) + 1) : (rules.find(rule => rule.rule_id === key)?.expression ?? key);
   if (stage === 'node') return names.get(key) ?? key;
@@ -93,10 +97,10 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   };
   // Nodes are identified by the backend's id; the name is only the label.
   const nodeItem = (key: string, label: string, unknown = false) => {
-    const id = 'node:' + key;
+    const id = stageId('node', {key, label, unknown});
     let entry = nodeItems.get(id);
     if (!entry) {
-      const node = nodesById.get(key);
+      const node = unknown ? undefined : nodesById.get(key);
       const health = node && preferredHealth(node);
       nodeItems.set(
         id,
@@ -108,11 +112,13 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   // An outbound that names a group follows its selection through nested groups to the node it ends at, on one
   // transport throughout: TCP where the group selects one, else UDP.
   const outboundItem = (name: string, unknown = false) => {
-    const id = 'outbound:' + name;
+    const id = stageId('outbound', {label: name, unknown});
     let entry = outboundItems.get(id);
     if (entry) return entry;
-    const group = groupsByName.get(name);
-    const selected = resolveSelectedLeaf(name, group?.selection.tcp_member_id ? 'tcp' : 'udp', groupsByName, byId, nodesById);
+    const group = unknown ? undefined : groupsByName.get(name);
+    const selected = unknown
+      ? {groups: [], member: null}
+      : resolveSelectedLeaf(name, group?.selection.tcp_member_id ? 'tcp' : 'udp', groupsByName, byId, nodesById);
     const chain: TreeGroup[] = selected.groups.map(group => ({name: group.name, kind: group.policy.kind, policy: group.policy.native}));
     const leaf = selected.member;
     const kind = unknown ? 'unknown' : name === 'direct' || name === 'block' ? name : chain.length ? 'group' : 'unknown';
@@ -129,7 +135,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   // Config first, in evaluation order: every rule, its outbound and the selected node exist before a flow used them.
   if (by === 'rule')
     for (const rule of rules) {
-      const entry = leafItem('rule:' + rule.rule_id, rule.expression);
+      const entry = leafItem(stageId('rule', {key: rule.rule_id, label: rule.expression}), rule.expression);
       entry.must = rule.must;
       entry.fallback = rule.kind === 'fallback';
       if (rule.outbound) {

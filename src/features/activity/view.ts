@@ -4,6 +4,7 @@ import type {Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
+import {menuViews} from '../policies/view';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -38,24 +39,39 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
     };
   });
 }
+type NodeMenuItem = {id: string; label: string; description: string; className: string};
+export type ActivityNodeMenu = {
+  menu: {items: NodeMenuItem[]; sections: Array<{title: string; count: string; items: NodeMenuItem[]}>};
+  big: boolean;
+  id: string;
+  name: string;
+};
+
+export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean) {
+  if (series.down.some(value => value !== null) || series.up.some(value => value !== null)) return 'ready';
+  return available === false ? 'unavailable' : !loaded ? 'loading' : 'empty';
+}
+
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
+  const counts = new Map<string, number>();
+  for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);
   const options = nodes.map(node => {
     const health = preferredHealth(node);
     return {
       id: node.id,
       name: node.name,
+      label: counts.get(node.name)! > 1 ? `${node.name} · ${node.subscription_tag ?? node.provider_id ?? node.id} · ${node.id}` : node.name,
       tcp: healthMillis(health),
       alive: health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined,
       unavailable: health?.state === 'unavailable'
     };
   });
   const node =
-    options.find(n => n.name === chosen) ??
-    options.find(n => n.tcp !== undefined) ??
-    options.find(n => n.name !== 'direct' && n.name !== 'block') ??
-    options[0];
+    options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => n.name !== 'direct' && n.name !== 'block') ?? options[0];
   return {
-    options,
+    menu: menuViews(options, t),
+    big: options.length > 12,
+    id: node?.id ?? '',
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? t('ui.latency', {n: millis(node.tcp)}) : '—',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),

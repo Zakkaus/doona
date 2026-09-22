@@ -4,7 +4,7 @@ import {ApiError} from '../error';
 import {ipLiteral, sourceIp} from '../selectors';
 import * as fixtures from './fixtures/network';
 import {instanceId, observedAt} from './fixtures/clock';
-import {found, page} from './common';
+import {found, createPager} from './common';
 import {routingTrace} from './routing';
 
 function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
@@ -53,6 +53,9 @@ export function createNetwork(
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>
 ) {
+  const flowPage = createPager('flows');
+  const cachePage = createPager('dnsCache');
+  const logPage = createPager('dnsLog');
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
@@ -103,15 +106,14 @@ export function createNetwork(
     },
     flows: async (query, signal) => {
       signal?.throwIfAborted();
-      const result = page(
+      const result = flowPage(
         flows.filter(
           f =>
             (!query?.network || query.network === 'all' || f.network === query.network) &&
             (!query?.state || query.state === 'all' || f.state === query.state) &&
             (query?.connection_id === undefined || f.connection_id === query.connection_id)
         ),
-        query?.cursor,
-        query?.limit
+        query
       );
       return {
         instance_id: instanceId,
@@ -125,7 +127,7 @@ export function createNetwork(
           kernel_bypass: 'none'
         },
         dropped_records: big ? '0' : fixtures.flowDroppedRecords,
-        flows: structuredClone(result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input}))),
+        flows: result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input})),
         next_cursor: result.next_cursor
       };
     },
@@ -147,8 +149,8 @@ export function createNetwork(
       signal?.throwIfAborted();
       const name = query?.name ?? query?.domain;
       const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
-      const result = page(entries, query?.cursor, query?.limit);
-      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
+      const result = cachePage(entries, query);
+      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor};
     },
     dnsLog: async (query, signal) => {
       signal?.throwIfAborted();
@@ -164,8 +166,8 @@ export function createNetwork(
           (!query?.type || r.question.type === query.type) &&
           (!src || (r.src !== null && sourceIp(r.src) === src))
       );
-      const result = page(records, query?.cursor, query?.limit ?? 200);
-      return {observed_at: new Date().toISOString(), total: records.length, next_cursor: result.next_cursor, records: structuredClone(result.items)};
+      const result = logPage(records, {...query, limit: query?.limit ?? 200});
+      return {observed_at: new Date().toISOString(), total: result.total, next_cursor: result.next_cursor, records: result.items};
     },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();

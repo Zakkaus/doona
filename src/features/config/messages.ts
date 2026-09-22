@@ -2,6 +2,15 @@ import {defineMessages} from '../../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'config.tabModules': '模組',
+    'config.moduleOpen': '開啟頁面',
+    'config.moduleAbsent': '未設定此區段；可加入 {file}。',
+    'config.moduleSettings': '{n} 項設定',
+    'config.moduleSubscriptions': '{n} 個訂閱',
+    'config.moduleNodes': '{n} 個節點',
+    'config.moduleGroups': '{n} 個群組：{policies}',
+    'config.moduleDns': '{upstreams} 個上游、{requests} 條請求規則、{responses} 條回應規則',
+    'config.moduleRules': '{n} 條規則',
     'config.generation': '生效代次',
     'config.revision': '組態修訂',
     'config.errors': '{n} 個錯誤',
@@ -45,7 +54,7 @@ export const messages = defineMessages({
     'config.wizardStandardHelp': '依 ACL4SSR Online 增加 Telegram、國外媒體與 Apple 服務群組。',
     'config.wizardFull': '全分組',
     'config.wizardFullHelp': '依 ACL4SSR Full 增加 AI、影片與各地區節點群組，適用於進階使用者。',
-    'config.wizardWriteHelp': '僅改寫 {path} 的 subscription 區段；選用範本時亦改寫 routing，其餘內容保持不變。',
+    'config.wizardWriteHelp': '僅改寫 {path} 的 subscription 區段；選用範本時亦改寫 routing 並補上缺少的 group，其餘內容保持不變。',
     'config.wizardNote': '使用表單填寫訂閱；規則可選用範本或保留原文。網址原樣寫入 subscription，由引擎擷取並解析。',
     'config.wizardSubscription': '訂閱網址',
     'config.wizardSubscriptionHelp': 'HTTP 或 HTTPS 網址；支援的訂閱格式以後端說明為準',
@@ -91,6 +100,15 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   'zh-CN': {
+    'config.tabModules': '模块',
+    'config.moduleOpen': '打开页面',
+    'config.moduleAbsent': '未设置此区段；可加入 {file}。',
+    'config.moduleSettings': '{n} 项设置',
+    'config.moduleSubscriptions': '{n} 个订阅',
+    'config.moduleNodes': '{n} 个节点',
+    'config.moduleGroups': '{n} 个组：{policies}',
+    'config.moduleDns': '{upstreams} 个上游、{requests} 条请求规则、{responses} 条响应规则',
+    'config.moduleRules': '{n} 条规则',
     'config.generation': '生效代次',
     'config.revision': '配置修订',
     'config.errors': '{n} 个错误',
@@ -134,7 +152,7 @@ export const messages = defineMessages({
     'config.wizardStandardHelp': '按 ACL4SSR Online 增加 Telegram、国外媒体与 Apple 服务组。',
     'config.wizardFull': '全分组',
     'config.wizardFullHelp': '按 ACL4SSR Full 增加 AI、视频与各地区节点组，适用于高级用户。',
-    'config.wizardWriteHelp': '仅改写 {path} 的 subscription 区段；选用模板时也改写 routing，其余内容保持不变。',
+    'config.wizardWriteHelp': '仅改写 {path} 的 subscription 区段；选用模板时也改写 routing 并补上缺少的 group，其余内容保持不变。',
     'config.wizardNote': '使用表单填写订阅；规则可选用模板或保留原文。网址原样写入 subscription，由引擎获取并解析。',
     'config.wizardSubscription': '订阅网址',
     'config.wizardSubscriptionHelp': 'HTTP 或 HTTPS 网址；支持的订阅格式以后端说明为准',
@@ -180,6 +198,15 @@ export const messages = defineMessages({
     'config.level.info': '提示'
   },
   en: {
+    'config.tabModules': 'Modules',
+    'config.moduleOpen': 'Open page',
+    'config.moduleAbsent': 'Section not configured; add it to {file}.',
+    'config.moduleSettings': {one: '{n} setting', other: '{n} settings'},
+    'config.moduleSubscriptions': {one: '{n} subscription', other: '{n} subscriptions'},
+    'config.moduleNodes': {one: '{n} node', other: '{n} nodes'},
+    'config.moduleGroups': {one: '{n} group: {policies}', other: '{n} groups: {policies}'},
+    'config.moduleDns': '{upstreams} upstreams, {requests} request rules, {responses} response rules',
+    'config.moduleRules': {one: '{n} rule', other: '{n} rules'},
     'config.generation': 'Generation',
     'config.revision': 'Revision',
     'config.errors': {one: '{n} error', other: '{n} errors'},
@@ -225,7 +252,7 @@ export const messages = defineMessages({
     'config.wizardFull': 'Full groups',
     'config.wizardFullHelp': 'Based on ACL4SSR Full: adds AI, video and regional node groups for advanced users.',
     'config.wizardWriteHelp':
-      'Rewrites the subscription section of {path} and, when a template is selected, the routing section. All other content remains unchanged.',
+      'Rewrites the subscription section of {path} and, when a template is selected, the routing section plus any group the template needs. All other content remains unchanged.',
     'config.wizardNote':
       'Enter subscriptions in the form and select a rule template or retain the existing rules. URLs are written unchanged to subscription for the engine to fetch and parse.',
     'config.wizardSubscription': 'Subscription URL',

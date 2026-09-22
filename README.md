@@ -38,7 +38,7 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backend   | An engine implementing the pinned native API contract above, with its API listener enabled (see [Install](#install))                                |
 | Browser   | Chrome or Edge 120, Firefox 120, Safari 17 or later. These are the CSS build targets; the JavaScript target is ES2022. Automated tests use Chromium |
-| Build     | Node 22 or later and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                                                     |
+| Build     | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0` and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                           |
 
 ## Install
 
@@ -81,7 +81,7 @@ Keep this block in its own include (`include { api.dae }`): a main file that car
 
 Serve the extracted files at the web root or under a prefix such as `/ui/`; the pages use hash routes (`/ui/#/activity`), so no rewrite rules are needed. If the UI and engine have different origins, configure the engine to allow the UI's origin. Follow the engine's documentation for its native API listener, CORS and authentication settings.
 
-A reverse proxy in front of both keeps them same-origin: forward `/api/` to the engine's listener and serve the files under `/ui/`.
+A reverse proxy keeps the UI and engine same-origin. Forward the exact `/api` discovery endpoint and the `/api/` subtree to the engine's listener; serve the files under `/ui/`. Preserve any configured proxy prefix for both API routes.
 
 </details>
 
@@ -155,7 +155,7 @@ pnpm check                       # types, lint, translations, formatting, unit t
 pnpm check:size                  # gzip budgets for the dist/ build
 pnpm perf <url>                  # first paint, scripting, polling and scrolling cost of a served build, CPU throttled 4x
 pnpm e2e:install --with-deps     # once, for the browser tests
-pnpm e2e                         # browser tests against the mock, at the root and under /ui/
+pnpm e2e                         # rebuild, then test against the mock at the root and under /ui/
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 

@@ -17,9 +17,10 @@ export function eventsView(events: ApiEvent[], kind: string, connected: boolean,
       };
     }),
     kinds: [{id: 'all', label: t('event.allKinds')}, ...eventKinds.map(id => ({id, label: t(eventKindLabels[id])}))],
+    // Before capabilities answer nothing has failed yet; a warning only fits a stream that was expected.
     status: {
-      tone: connected ? ('ok' as const) : ('warn' as const),
-      text: t(available === false ? 'event.unavailable' : connected ? 'event.connected' : 'event.reconnecting')
+      tone: connected ? ('ok' as const) : available === null ? ('muted' as const) : ('warn' as const),
+      text: t(available === false ? 'event.unavailable' : connected ? 'event.connected' : available === null ? 'ui.loading' : 'event.reconnecting')
     },
     limitText: t('event.limit', {n: formatNumber(limit, locale)}),
     shown

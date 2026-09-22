@@ -1,6 +1,6 @@
-import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
-import {getApi} from '../index';
-import type {ApiEvent, LogLevel, LogRecord} from '../model';
+import {useEffect, useMemo, useReducer, useRef, useSyncExternalStore} from 'react';
+import {getApi} from '../api/index';
+import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
 import {eventStatus, subscribeEvents} from './events';
 import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
@@ -33,6 +33,8 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
   const capabilities = useCapabilities();
   const available = capabilities.data?.resources.logs.available;
   const hold = useRef(paused);
+  // A terminal stream error stays until the person asks again; the attempt count restarts the subscription.
+  const [attempt, retry] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     hold.current = paused;
   }, [paused]);
@@ -66,6 +68,6 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
         };
       }
     };
-  }, [api, available, level, target, limit]);
-  return {...useSyncExternalStore(stream.subscribe, stream.getSnapshot), available, clear: stream.clear};
+  }, [api, available, level, target, limit, attempt]);
+  return {...useSyncExternalStore(stream.subscribe, stream.getSnapshot), available, clear: stream.clear, retry};
 }

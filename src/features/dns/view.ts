@@ -27,7 +27,7 @@ export function dnsQueryView(
   busy: boolean,
   t: LabelFn
 ) {
-  const types = resources?.dns_query.record_types ?? ['A', 'AAAA', 'HTTPS', 'TXT', 'MX'];
+  const types = resources?.dns_query.record_types ?? [];
   return {
     types,
     choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
@@ -87,7 +87,7 @@ export function dnsCacheView(
       }))
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, selected: string | null, enabled: boolean, locale: string, t: LabelFn) {
+export function dnsLogView(data: DnsLogList | undefined, selected: string | null, enabled: boolean, locale: string, t: LabelFn, types: string[] = []) {
   const records = data?.records ?? [];
   const current = records.find(record => record.id === selected);
   const details = (record: DnsLogRecord) => {
@@ -107,8 +107,10 @@ export function dnsLogView(data: DnsLogList | undefined, selected: string | null
     };
   };
   return {
-    choices: [{id: 'all', label: t('dns.allTypes')}, ...['A', 'AAAA', 'HTTPS', 'TXT', 'MX', 'SRV', 'PTR'].map(id => ({id, label: id}))],
+    choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
     total: data ? t('dns.logTotal', {n: data.total}) : '',
+    // The loaded count only matters while older records remain on the backend.
+    loaded: data?.next_cursor ? t('dns.logLoaded', {n: records.length}) : '',
     empty: t(enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     detail: current ? details(current) : null,
     detailTitle: current?.question.name ?? '',
@@ -124,26 +126,35 @@ export function dnsLogView(data: DnsLogList | undefined, selected: string | null
       cached: record.cached,
       upstream: record.cached ? t('dns.hit') : (record.upstream ?? '—'),
       elapsed: t('ui.latency', {n: millis(record.elapsed_ms)})
-    })),
-    exportContent:
-      [
-        csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
-        ...records.map(r =>
-          csvLine([
-            r.id,
-            r.observed_at,
-            r.src,
-            r.question.name,
-            r.question.type,
-            r.status,
-            r.cached ? 'true' : 'false',
-            r.upstream,
-            r.route.source,
-            r.route.rule,
-            r.elapsed_ms,
-            r.answers.map(answer => answer.data).join(' ')
-          ])
-        )
-      ].join('\n') + '\n'
+    }))
   };
+}
+
+export function dnsLogsExport(records: DnsLogRecord[]) {
+  return (
+    [
+      csvLine(['id', 'observed_at', 'src', 'name', 'type', 'status', 'cached', 'upstream', 'route_source', 'route_rule', 'elapsed_ms', 'answers']),
+      ...records.map(r =>
+        csvLine([
+          r.id,
+          r.observed_at,
+          r.src,
+          r.question.name,
+          r.question.type,
+          r.status,
+          r.cached ? 'true' : 'false',
+          r.upstream,
+          r.route.source,
+          r.route.rule,
+          r.elapsed_ms,
+          r.answers.map(answer => answer.data).join(' ')
+        ])
+      )
+    ].join('\n') + '\n'
+  );
+}
+
+export function appendDnsLog(data: DnsLogList, page: DnsLogList): DnsLogList {
+  const ids = new Set(data.records.map(record => record.id));
+  return {...data, records: [...data.records, ...page.records.filter(record => !ids.has(record.id))], next_cursor: page.next_cursor};
 }

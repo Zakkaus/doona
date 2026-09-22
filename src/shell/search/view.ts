@@ -2,9 +2,12 @@ import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, Eff
 import type {Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
 import {features, navAvailable, subpages} from '../registry';
+import {dnsQueryView} from '../../features/dns/view';
+import {rulesView} from '../../features/rules/view';
+import {ownedNodes, providerRows} from '../../features/nodes/view';
 
 type SearchHit = {id: string; label: string; description: string | undefined; route: string; query: string};
-type SearchView = {sections: Array<{id: string; title: string; items: SearchHit[]}>; byId: Map<string, SearchHit>};
+type SearchView = {sections: Array<{id: string; title: string; items: SearchHit[]}>; byId: Map<string, SearchHit>; partial: string | null};
 export type SearchSources = {
   capabilities: {data: Capabilities | undefined};
   connections: {data: ConnectionList | undefined};
@@ -19,6 +22,32 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
   const limit = needle ? 8 : 5;
   const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
   const available = (path: string) => navAvailable(path, capabilities.data);
+  const resources = capabilities.data?.resources;
+  const tabs = {
+    dns: dnsQueryView(null, resources, '', '', false, t).tabs,
+    rules: rulesView(resources, null, t).tabs
+  };
+  const main = config.data?.sources.find(source => source.kind === 'main');
+  const destinationAvailable = (item: (typeof subpages)[number]) => {
+    if (!available(item.path)) return false;
+    const tab = new URLSearchParams(item.query).get('tab');
+    if (item.path === 'dns' || item.path === 'rules') return tabs[item.path].some(item => item.id === tab);
+    if (item.path === 'config' && tab === 'setup') return !!main?.writable && main.content !== undefined && resources?.config.writable === true;
+    if (item.path === 'config' && tab === 'validate') return resources?.config_validate.available === true;
+    return true;
+  };
+  const nodeList = nodes.data ?? [];
+  const owners = providerRows(providers.data?.providers ?? [], nodeList, [], t).list;
+  const syntheticOwners = new Map<string, string>();
+  for (const owner of owners) {
+    if (owner.kind !== 'builtin' && owner.kind !== 'unattributed') continue;
+    for (const node of ownedNodes(nodeList, null, owner.kind)) syntheticOwners.set(node.id, owner.id);
+  }
+  // The nodes page filters by owner and name; the owner comes from the same projection the page uses.
+  const nodeQuery = (node: Node) => {
+    const owner = node.provider_id ?? syntheticOwners.get(node.id);
+    return (owner === undefined ? '' : 'provider=' + encodeURIComponent(owner) + '&') + 'q=' + encodeURIComponent(node.name);
+  };
   const byId = new Map<string, SearchHit>();
   const hit = (id: string, label: string, description: string | undefined, route: string, query = ''): SearchHit => {
     const item = {id, label, description, route, query};
@@ -30,7 +59,7 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
       .filter(feature => feature.nav && available(feature.path))
       .map(feature => ({route: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
     ...subpages
-      .filter(item => available(item.path))
+      .filter(destinationAvailable)
       .map(item => ({route: item.path, query: item.query, title: t(item.titleKey), parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)}))
   ];
   const sections = [
@@ -56,15 +85,7 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
       items: (nodes.data ?? [])
         .filter(n => match(n.name))
         .slice(0, limit)
-        .map(n =>
-          hit(
-            `node:${n.id}`,
-            n.name,
-            n.group_ids.join(', ') || undefined,
-            'nodes',
-            (n.provider_id ? 'provider=' + encodeURIComponent(n.provider_id) + '&' : '') + 'q=' + encodeURIComponent(n.name)
-          )
-        )
+        .map(n => hit(`node:${n.id}`, n.name, n.group_ids.join(', ') || undefined, 'nodes', nodeQuery(n)))
     },
     {
       id: 'groups',
@@ -101,5 +122,5 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
         )
     }
   ];
-  return {sections: sections.filter(section => section.items.length > 0), byId};
+  return {sections: sections.filter(section => section.items.length > 0), byId, partial: connections.data?.truncated ? t('conn.truncated') : null};
 }

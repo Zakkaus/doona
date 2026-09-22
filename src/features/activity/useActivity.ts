@@ -1,13 +1,13 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
+import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../store';
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {fmtRate, usePalette} from '../../ui/Charts';
-import {useMemorySeries} from '../overview/useMemorySeries';
+import {useMemorySeries} from './useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
-import {activityOutbounds, activityRanking, activityView} from './view';
+import {activityOutbounds, activityRanking, activityView, trafficState} from './view';
 
 export function useActivity() {
   const t = useT();
@@ -81,7 +81,7 @@ export function useActivity() {
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
-      state: resources?.traffic_history.available === false ? 'unavailable' : !history.data ? 'loading' : !history.data.samples.length ? 'empty' : 'ready'
+      state: trafficState(series, resources?.traffic_history.available, !!history.data)
     },
     outboundState: {
       error: outbounds.error,

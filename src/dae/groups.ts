@@ -1,4 +1,4 @@
-import {blockFields, quote, scanConfig} from './blocks';
+import {blockFields, quote, scanConfig} from './text';
 
 export type GroupEntry = {
   name: string;
@@ -26,7 +26,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
     );
 }
 
-const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : quote(value));
+export const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : quote(value));
 
 export function writeGroupEntry(text: string, name: string, next: {filters: string[]; policy: string | null}): string {
   const {blocks, tokens} = scanConfig(text);
@@ -120,17 +120,18 @@ export function ruleCondition(kind: ConditionKind, value: string): string {
     .map(v => v.trim())
     .filter(Boolean);
   const list = values.join(', ');
+  const qualified = (prefix: string) => values.map(value => `${prefix}: ${value}`).join(', ');
   switch (kind) {
     case 'domain':
-      return `domain(${list})`;
+      return `domain(${qualified('full')})`;
     case 'domainSuffix':
-      return `domain(suffix: ${list})`;
+      return `domain(${qualified('suffix')})`;
     case 'geosite':
-      return `domain(geosite: ${list})`;
+      return `domain(${qualified('geosite')})`;
     case 'dip':
       return `dip(${list})`;
     case 'geoip':
-      return `dip(geoip: ${list})`;
+      return `dip(${qualified('geoip')})`;
     case 'sip':
       return `sip(${list})`;
     case 'dport':
@@ -142,22 +143,4 @@ export function ruleCondition(kind: ConditionKind, value: string): string {
     case 'l4proto':
       return `l4proto(${list})`;
   }
-}
-
-// The policy names honk documents, with the dae spellings each one accepts; an unknown spelling reads as selector.
-export const policyNames = ['selector', 'urltest', 'loadbalance', 'fallback', 'score'] as const;
-type PolicyName = (typeof policyNames)[number];
-const policyAliases: Record<string, PolicyName> = {
-  select: 'selector',
-  fixed: 'selector',
-  min_moving_avg: 'urltest',
-  min_avg10: 'urltest',
-  min_last_delay: 'urltest',
-  roundrobin: 'loadbalance',
-  round_robin: 'loadbalance',
-  balance: 'loadbalance'
-};
-export function canonicalPolicy(raw: string | null): PolicyName {
-  const name = (raw ?? 'selector').toLowerCase().replace(/\(.*$/, '');
-  return (policyNames as readonly string[]).includes(name) ? (name as PolicyName) : (policyAliases[name] ?? 'selector');
 }

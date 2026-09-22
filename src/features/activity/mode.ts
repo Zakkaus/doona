@@ -1,5 +1,5 @@
 import {LocalError} from '../../api/error';
-import {scanConfig, type TextBlock, type TextToken} from '../config/blocks';
+import {scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 
 // The marker lets mode changes remove their catch-all without touching authored rules.
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};

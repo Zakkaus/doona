@@ -21,11 +21,31 @@ function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; respons
 }
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
+// Control requests and DNS queries retry explicit transient refusals this many times.
+const MAX_REFUSALS = 3;
+
 export function createApi(base: string, token?: string): Api {
   const baseUrl = base.replace(/\/+$/, '');
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
-  const client = createClient<paths>({baseUrl, headers, cache: 'no-store'});
+  const client = createClient<paths>({
+    baseUrl,
+    headers,
+    cache: 'no-store',
+    fetch: async request => {
+      const retryable = request.method !== 'GET' || new URL(request.url).pathname.endsWith('/dns/query');
+      if (!retryable) return fetch(request);
+      // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
+      for (let refused = 0; ; refused++) {
+        const response = await fetch(request.clone());
+        if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
+        const error = await responseError(response.clone());
+        if (!error.transient) return response;
+        await response.body?.cancel();
+        await wait(error.retryAfter!, request.signal);
+      }
+    }
+  });
   client.use({
     onResponse: async ({response}) => {
       if (!response.ok) throw await responseError(response);
@@ -65,7 +85,7 @@ export function createApi(base: string, token?: string): Api {
     lastEventId: string | undefined,
     signal: AbortSignal | undefined,
     onConnectionChange: ((ready: boolean) => void) | undefined,
-    onFrame: (event: string, data: string, cursor: string) => void
+    onFrame: (event: string, data: unknown, cursor: string) => void
   ): Promise<void> {
     let cursor = lastEventId;
     let backoff = 1;
@@ -95,7 +115,15 @@ export function createApi(base: string, token?: string): Api {
                 backoff = 1;
                 onConnectionChange?.(true);
               }
-              if (frame.data) onFrame(frame.event, frame.data, cursor ?? '');
+              if (frame.data) {
+                let value: unknown;
+                try {
+                  value = JSON.parse(frame.data);
+                } catch {
+                  return;
+                }
+                onFrame(frame.event, value, cursor ?? '');
+              }
             },
             signal
           );
@@ -120,7 +148,7 @@ export function createApi(base: string, token?: string): Api {
     const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
     if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
     return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
-      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data: JSON.parse(data)} as ApiEvent);
+      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
     });
   }
   function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
@@ -128,7 +156,7 @@ export function createApi(base: string, token?: string): Api {
     if (level) url.searchParams.set('level', level);
     if (target) url.searchParams.set('target', target);
     return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
-      if (event === 'log') onRecord({id: cursor, ...(JSON.parse(data) as LogRecord)});
+      if (event === 'log') onRecord({id: cursor, ...(data as LogRecord)});
     });
   }
   return {

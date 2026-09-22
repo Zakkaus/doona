@@ -61,19 +61,18 @@ it('prepares grouped cells and rule-link availability without losing unknown cou
   expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.source', '—']);
 });
 
-it('restricts bulk close to exactly representable, complete snapshots', () => {
+it('captures IDs without expanding the confirmed selection when live rows arrive', () => {
   const rows = connections.tcp.slice(0, 2);
-  expect(closeSelection(rows, 'tcp', 'all', 'all', '10.0.0.7', '10.0.0.7', false)).toEqual({query: {type: 'tcp', src: '10.0.0.7', all: true}});
-  expect(closeSelection(rows, 'all', 'all', 'all', undefined, '', true)).toEqual({ids: rows.map(row => row.id)});
-  expect(closeSelection(rows, 'all', 'proxy', 'all', undefined, '', false)).toEqual({ids: rows.map(row => row.id)});
-  expect(closeSelection(rows, 'all', 'all', 'all', undefined, 'telegram', false)).toEqual({ids: rows.map(row => row.id)});
+  const selection = closeSelection(rows);
+  rows.push({...rows[0], id: 'later'});
+  expect(selection.ids).toEqual(connections.tcp.slice(0, 2).map(row => row.id));
+  expect(selection.ids).not.toContain('later');
 });
 
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
-  const model = connectionsView([row], [row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
+  const model = connectionsView([row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
   expect(model.detail?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
-  expect(model.closeConfirmation).toBe(t('conn.closeAllHelp', {n: 1}));
 });

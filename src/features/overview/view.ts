@@ -156,7 +156,7 @@ export function overviewView(
             [t('ov.f.total'), count(runtime.traffic.connections.total)],
             [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload)],
             [t('ui.download'), formatBytes(runtime.traffic.bytes.download)],
-            [t('ov.f.rateWindow'), t('ui.seconds', {n: runtime.traffic.rates ? formatNumber(runtime.traffic.rates.window_seconds, locale, 1) : '—'})]
+            [t('ov.f.rateWindow'), runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—']
           ] as Array<[string, string]>)
         : [],
       since: runtime
@@ -168,7 +168,9 @@ export function overviewView(
     },
     memory: {
       state: section(!!memory, loading.capabilities || loading.memory),
-      fields: memory ? memoryFields(memory, t, ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit']) : [],
+      fields: memory
+        ? memoryFields(memory, t, percent === null ? ['ov.f.cgroupPercent'] : ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit'])
+        : [],
       bar:
         percent === null
           ? null

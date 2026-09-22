@@ -1,6 +1,6 @@
 import {useCallback} from 'react';
-import {getApi} from '../index';
-import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../model';
+import {getApi} from '../api/index';
+import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {finished, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
@@ -33,7 +33,11 @@ export function useProviders(enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.providers({cursor, limit}, signal),
-          (acc: ProviderList | undefined, page) => (acc ? {...acc, providers: [...acc.providers, ...page.providers]} : page)
+          (acc: ProviderList | undefined, page) => {
+            if (!acc) return {...page, providers: [...page.providers]};
+            acc.providers.push(...page.providers);
+            return acc;
+          }
         )
     },
     {enabled}

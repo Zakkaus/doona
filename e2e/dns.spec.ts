@@ -1,5 +1,6 @@
 import {expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {test as browserTest} from '@playwright/test';
 
 test('a resolution record opens beside the log with its answers', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
@@ -51,4 +52,79 @@ test('all supported DNS types are queried in bounded batches and shown together'
   await expect(page.getByRole('heading', {name: 'example.com. · A', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'example.com. · AAAA', exact: true})).toBeVisible();
   expect(requested).toEqual([['A'], ['AAAA'], ['TXT']]);
+});
+
+test('DNS tabs preserve linked query drafts', async ({page}) => {
+  await page.goto('/#/dns?domain=example.com&type=AAAA');
+  await page.getByRole('tab', {name: 'Cache', exact: true}).click();
+  await expect(page).toHaveURL(/domain=example.com/);
+  await page.getByRole('tab', {name: 'Query', exact: true}).click();
+  await expect(page.getByRole('textbox', {name: 'Domain', exact: true})).toHaveValue('example.com');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect(page.getByRole('heading', {name: 'example.com. · AAAA', exact: true})).toBeVisible();
+});
+
+test('DNS logs load older pages and export only loaded records', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.dns_log.max_page_size = 1;
+  const seed = await api.dnsLog();
+  const records = seed.records.slice(0, 2);
+  const cursors: Array<string | null> = [];
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/runtime', async route => route.fulfill({json: await api.runtime()}));
+  await page.route('**/api/v1/dns/log?*', async route => {
+    const params = new URL(route.request().url()).searchParams;
+    const cursor = params.get('cursor');
+    cursors.push(cursor);
+    expect(params.get('limit')).toBe('1');
+    await route.fulfill({json: {...seed, total: 500, records: [records[cursor ? 1 : 0]], next_cursor: cursor ? null : 'older'}});
+  });
+  await page.goto('/#/dns?tab=log');
+  await expect(page.getByText('1 loaded; the export covers loaded records only', {exact: true})).toBeVisible();
+  await expect(page.getByText('500 records in the ring buffer', {exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  // Everything is loaded now, so the qualifier goes away.
+  await expect(page.getByText(/loaded; the export covers/)).toHaveCount(0);
+  expect(cursors).toContain('older');
+  await expect(page.getByRole('button', {name: 'Load older records'})).toHaveCount(0);
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Export CSV'}).click();
+  const stream = await (await download).createReadStream();
+  let body = '';
+  for await (const chunk of stream as AsyncIterable<Uint8Array>) body += new TextDecoder().decode(chunk);
+  expect(body.trim().split('\n')).toHaveLength(3);
+  for (const record of records) expect(body).toContain(record.id);
+});
+
+browserTest('a transient DNS refusal stays pending until the advertised retry succeeds', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  for (const resource of Object.values(capabilities.resources)) resource.available = false;
+  capabilities.resources.dns_query.available = true;
+  const times: number[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-lang', 'en');
+  });
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/dns/query?*', async route => {
+    times.push(Date.now());
+    if (times.length === 1)
+      return route.fulfill({status: 429, headers: {'Retry-After': '1'}, json: {error: {code: 'rate_limited', message: 'Wait'}, request_id: 'dns-refused'}});
+    return route.fulfill({json: await api.dnsQuery('example.com', ['A'])});
+  });
+  await page.goto('/#/dns?domain=example.com');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect(page.getByRole('heading', {name: 'example.com. · A', exact: true})).toBeVisible();
+  expect(times).toHaveLength(2);
+  expect(times[1] - times[0]).toBeGreaterThanOrEqual(1000);
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  expect(errors).toEqual([]);
 });

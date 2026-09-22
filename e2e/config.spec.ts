@@ -2,6 +2,7 @@ import {test as httpTest, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {expect, test} from './fixtures';
+import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
@@ -20,7 +21,7 @@ test('quick setup refuses an apostrophe without changing the subscription URL', 
 });
 
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('tproxy_port: 12345');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
   const picker = page.getByRole('button', {name: /Source/});
@@ -207,13 +208,10 @@ async function configBackend(page: Page) {
   return {api, capabilities};
 }
 
-test('validation refusal keeps the draft and never replaces the source', async ({page}) => {
+// An include is validated by the replacement itself, in its full source set; a refusal writes nothing.
+httpTest('validation refusal keeps the draft and never replaces the source', async ({page}) => {
   const {api} = await configBackend(page);
   const original = (await api.config()).sources.find(source => source.id === 'src-rules')!.content;
-  let writes = 0;
-  page.on('request', request => {
-    if (request.method() === 'PUT') writes++;
-  });
   await page.goto('/#/config?source=src-rules');
   await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
@@ -222,7 +220,6 @@ test('validation refusal keeps the draft and never replaces the source', async (
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await expect(editor).toContainText('domain(example.org) -> nowhere');
-  expect(writes).toBe(0);
   expect((await api.config()).sources.find(source => source.id === 'src-rules')!.content).toBe(original);
 });
 
@@ -252,7 +249,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   page.on('request', request => {
     if (request.method() !== 'GET') mutations++;
   });
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
   await page.getByRole('tab', {name: 'Quick setup'}).click();
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
@@ -264,6 +261,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   expect(mutations).toBe(0);
 });
 
+// The main source is checked before replacement; a discarded draft must not turn into a write afterwards.
 test('leaving the editor aborts validation before any replacement', async ({page}) => {
   const {api} = await configBackend(page);
   let release!: () => void;
@@ -283,7 +281,7 @@ test('leaving the editor aborts validation before any replacement', async ({page
   page.on('request', request => {
     if (request.method() === 'PUT') writes++;
   });
-  await page.goto('/#/config?source=src-rules');
+  await page.goto('/#/config?source=src-main');
   await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# cancelled draft\n');
@@ -313,7 +311,8 @@ httpTest('a stale original digest refuses replacement and retains the draft', as
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await expect(editor).toContainText('# local draft');
-  expect((await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
+  // The concurrent edit becomes the accepted text once its reload completes.
+  await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
 });
 
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
@@ -325,4 +324,154 @@ test('rule writes require a stable source ID even when the display path matches'
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Open source', exact: true}).first()).toBeVisible();
+});
+
+test('modules list top-level counts and edit only routing through reload', async ({page}) => {
+  const {api} = await configBackend(page);
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  await page.goto('/#/config');
+  await expect(page.getByRole('tab', {name: 'Modules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  await expect(modules.getByRole('heading', {level: 3})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  await expect(modules.getByRole('region', {name: 'global', exact: true})).toContainText('6 settings');
+  await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
+  await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
+  await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
+    '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: min_moving_avg'
+  );
+  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rules, 0 response rules');
+  const routing = modules.getByRole('region', {name: 'routing', exact: true});
+  await expect(routing).toContainText('5 rules · fallback: resilient');
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const section = await editor.innerText();
+  const edited = section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:');
+  await editor.fill(edited);
+  await expect(modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(routing).toContainText('6 rules · fallback: resilient');
+  const expected = original.replace(section, edited);
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(expected);
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+C');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+});
+
+test('cancelling a module discards its draft and navigation uses the draft guard', async ({page}) => {
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const original = await editor.innerText();
+  await editor.fill(original.replace('fallback: resilient', 'fallback: direct'));
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await routing.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(editor).toHaveCount(0);
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await expect(routing.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+});
+
+test('module validation maps whole-file errors onto section lines and refuses an invalid save', async ({page}) => {
+  const {api} = await configBackend(page);
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  await editor.fill('routing {\n  domain(example.org) -> nowhere\n  fallback: resilient\n}');
+  await expect(routing.locator('.cm-diag-line-error')).toContainText('domain(example.org) -> nowhere');
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
+});
+
+test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
+  const {api} = await configBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, main.content!.replace('sub-c:', 'sub.eu:'), `"${main.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('sub.eu:');
+  await page.goto('/#/config?tab=setup');
+  await expect(page.getByLabel('Name', {exact: true})).toHaveValue('sub.eu');
+  await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
+  await expect(page.locator('.cm-content')).toContainText("sub.eu: 'https://example.org/new'");
+  await page.getByRole('button', {name: 'Add a subscription', exact: true}).click();
+  await page.getByLabel('Name', {exact: true}).last().fill('sub.eu');
+  await page.getByLabel('Subscription URL', {exact: true}).last().fill('https://duplicate.example/sub');
+  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+});
+
+test('opening untouched quick setup does not inject sections or guard navigation', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = 'global {\n  tproxy_port: 12345\n}\nrouting {\n  fallback: direct\n}\n';
+  main.content_sha256 = await sha256(main.content);
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=setup');
+  await expect(page.locator('.cm-content')).not.toContainText('subscription');
+  await expect(page.locator('.cm-content')).not.toContainText('group');
+  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/tab=source$/);
+});
+
+test('explicit include validation sends the main-first set with source paths', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  config.sources.reverse();
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# candidate include\n');
+  const request = page.waitForRequest('**/config/validate');
+  await page.getByRole('button', {name: 'Validate', exact: true}).click();
+  const submitted = (await request).postDataJSON();
+  expect(submitted.sources[0]).toMatchObject({id: 'src-main', path: '/etc/honk/config.dae'});
+  expect(submitted.sources.find((source: {id: string}) => source.id === 'src-rules')).toMatchObject({
+    path: '/etc/honk/rules.dae',
+    content: expect.stringContaining('# candidate include')
+  });
+});
+
+httpTest('rejected saves show cross-source diagnostics without marking the edited file', async ({page}) => {
+  const {capabilities} = await configBackend(page);
+  capabilities.resources.config_validate.available = false;
+  await page.route('**/api/v1/config/sources/*', route =>
+    route.fulfill({
+      status: 422,
+      json: {
+        request_id: 'cross-source',
+        error: {
+          code: 'validation_failed',
+          message: 'Invalid configuration',
+          details: {
+            diagnostics: [{level: 'error', source_id: 'src-main', line: 2, column: 1, span: null, code: 'invalid', message: 'Error in main source'}]
+          }
+        }
+      }
+    })
+  );
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# rejected\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  const diagnostics = page.getByRole('list', {name: 'Diagnostics'});
+  await expect(diagnostics).toContainText('config.dae');
+  await expect(diagnostics).toContainText('Error in main source');
+  await expect(editor.locator('.cm-diag-line-error')).toHaveCount(0);
+  await diagnostics.getByRole('button', {name: 'Open source', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/source=src-main.*line=2/);
 });

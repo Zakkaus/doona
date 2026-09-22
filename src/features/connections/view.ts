@@ -1,4 +1,4 @@
-import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
+import type {Connection, ConnectionList} from '../../api/model';
 import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
 import {chainLabel, chainNames, connectionStates, localTime, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
 import type {Translator as LabelFn} from '../../i18n';
@@ -154,7 +154,6 @@ export function connectionTableView(
 
 export function connectionsView(
   rows: Array<Connection & {network: string}>,
-  shown: Array<Connection & {network: string}>,
   current: (Connection & {network: string}) | undefined,
   data: ConnectionList | undefined,
   src: string | undefined,
@@ -187,7 +186,6 @@ export function connectionsView(
       }
     ],
     visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null,
-    closeConfirmation: t('conn.closeAllHelp', {n: shown.length}),
     detail: current
       ? {
           id: current.id,
@@ -229,16 +227,6 @@ export function connectionsExport(shown: Array<Connection & {network: string}>, 
   );
 }
 
-export function closeSelection(
-  shown: Connection[],
-  network: string,
-  out: string,
-  rule: string,
-  src: string | undefined,
-  needle: string,
-  truncated: boolean
-): {query: BulkCloseQuery} | {ids: string[]} {
-  return out === 'all' && rule === 'all' && (src || !needle) && !truncated
-    ? {query: {type: network as 'all' | 'tcp' | 'udp', src, all: true}}
-    : {ids: shown.map(c => c.id)};
+export function closeSelection(shown: Connection[]): {ids: string[]} {
+  return {ids: shown.map(c => c.id)};
 }

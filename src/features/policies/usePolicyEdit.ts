@@ -1,7 +1,7 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
-import {policyKindLabels} from './view';
-import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
+import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
+import {policies} from '../../dae/vocab';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {errorText, toast, useLinked} from '../../ui/ui';
@@ -14,7 +14,7 @@ export type PolicyEditView = {
   tip?: string;
   busy: boolean;
   policy: string;
-  choices: Array<{id: string; label: string; desc: string}>;
+  policyHint: string;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
   show: () => void;
   close: () => void;
@@ -25,10 +25,15 @@ export type PolicyEditView = {
 export function usePolicyEdit(name: string, source: MainSourceEdit, entry: GroupEntry | undefined): PolicyEditView {
   const t = useT();
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
+  const session = useRef(0);
   const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)));
-  useLinked(guard.revision, () => setDraft(null));
+  useLinked(guard.revision, () => {
+    session.current++;
+    setDraft(null);
+  });
   const save = (close: () => void) => {
     if (!draft) return;
+    const submitted = session.current;
     void source
       .apply(
         text => writeGroupEntry(text, draft.name, {filters: draft.filters.map(f => f.trim()).filter(Boolean), policy: draft.policy}),
@@ -38,9 +43,11 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       .then(
         written => {
           if (written) {
-            guard.clear();
+            if (session.current === submitted) {
+              guard.clear();
+              close();
+            }
             toast('positive', t('policy.updated', {name: draft.name}));
-            close();
           }
         },
         error => toast('negative', errorText(error))
@@ -57,8 +64,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     disabled: source.busy || !entry || !source.main,
     tip: source.error ? errorText(source.error) : undefined,
     busy: source.busy,
-    policy: canonicalPolicy(draft?.policy ?? null),
-    choices: policyNames.map(id => ({id, label: id, desc: t(policyKindLabels[id])})),
+    policy: draft?.policy ?? '',
+    policyHint: policies.join(', '),
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,
@@ -68,13 +75,15 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
     })),
     show: () => {
+      session.current++;
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
     },
     close: () => {
+      session.current++;
       guard.clear();
       setDraft(null);
     },
-    setPolicy: policy => edit(prev => ({...prev, policy})),
+    setPolicy: policy => edit(prev => ({...prev, policy: policy || null})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
     save
   };

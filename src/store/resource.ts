@@ -1,10 +1,10 @@
 import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
-import {getApi} from '../index';
-import type {Api} from '../api';
-import type {ApiEvent, Capabilities} from '../model';
-import {ApiError} from '../error';
-import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../inflight';
-import {shouldRefetch} from '../invalidation';
+import {getApi} from '../api/index';
+import type {Api} from '../api/api';
+import type {ApiEvent, Capabilities} from '../api/model';
+import {ApiError} from '../api/error';
+import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../api/inflight';
+import {shouldRefetch} from '../api/invalidation';
 import {subscribeEvents} from './events';
 
 type RefreshOutcome = {key: string} & ({ok: true} | {ok: false; error: Error});
@@ -13,6 +13,9 @@ type Resource<T> = {
   every?: number;
   fetch: (signal: AbortSignal) => Promise<T>;
   acceptEvent?: (event: ApiEvent) => boolean;
+  retryErrors?: boolean;
+  // The capabilities resource is what the event stream itself waits on, so it cannot follow events.
+  followEvents?: boolean;
 };
 type Entry = {
   snapshot: ResourceState<unknown>;
@@ -82,7 +85,12 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
 
 type ResourceState<T> = {data: T | undefined; loading: boolean; error: Error | null};
 
-function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Resource<T>, data: T | undefined, publish: (state: ResourceState<T>) => void) {
+function createWatcher<T>(
+  api: Api,
+  {key, fetch, every = 5000, acceptEvent, retryErrors = false, followEvents = true}: Resource<T>,
+  data: T | undefined,
+  publish: (state: ResourceState<T>) => void
+) {
   const name = normalizeResourceKey(key);
   let phase: 'idle' | 'fetching' | 'backoff' = 'idle';
   let request: RequestLease<T> | undefined;
@@ -96,12 +104,14 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
   let deadline = Infinity;
   let retryAt = 0;
   let refused = 0;
+  let recoveryDelay = 5000;
   const clear = () => {
     clearTimeout(timer);
     timer = undefined;
     deadline = Infinity;
   };
   const schedule = (at: number) => {
+    at = Math.max(at, retryAt);
     if (document.hidden) {
       dirty = true;
       clear();
@@ -140,6 +150,8 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
         lease.release();
         if (disposed) return;
         request = undefined;
+        retryAt = 0;
+        recoveryDelay = 5000;
         data = value;
         publish({data, loading: false, error: null});
         finish({key: name, ok: true});
@@ -149,14 +161,21 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
         if (disposed) return;
         request = undefined;
         const error = reason instanceof Error ? reason : new Error(String(reason));
-        if (error instanceof ApiError && error.transient && ++refused <= 3) {
-          phase = 'backoff';
-          retryAt = Date.now() + (error.retryAfter ?? 2) * 1000;
-          schedule(retryAt);
-          return;
+        if (error instanceof ApiError && error.transient) {
+          retryAt = Date.now() + error.retryAfter! * 1000;
+          if (++refused <= 3) {
+            phase = 'backoff';
+            schedule(retryAt);
+            return;
+          }
         }
         publish({data, loading: false, error});
         finish({key: name, ok: false, error});
+        if (retryErrors && !(error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429)) {
+          retryAt = Math.max(retryAt, Date.now() + recoveryDelay);
+          schedule(retryAt);
+          recoveryDelay = Math.min(recoveryDelay * 2, 30000);
+        }
       }
     );
   };
@@ -164,12 +183,15 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
     if (disposed) return Promise.resolve({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
     if (phase !== 'idle') return settled!;
     clear();
-    if (settled && data === undefined) publish({data, loading: true, error: null});
+    if (settled && data === undefined && Date.now() >= retryAt) publish({data, loading: true, error: null});
     refused = 0;
     settled = new Promise<RefreshOutcome>(complete => {
       resolve = complete;
     });
-    attempt();
+    if (Date.now() < retryAt) {
+      phase = 'backoff';
+      schedule(retryAt);
+    } else attempt();
     return settled;
   };
   const refetch = () => {
@@ -202,9 +224,11 @@ function createWatcher<T>(api: Api, {key, fetch, every = 5000, acceptEvent}: Res
       else load();
     }
   };
-  const unsubscribe = subscribeEvents(api, (event, reconnected) => {
-    if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
-  });
+  const unsubscribe = followEvents
+    ? subscribeEvents(api, (event, reconnected) => {
+        if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
+      })
+    : () => {};
   document.addEventListener('visibilitychange', visibility);
   if (document.hidden) dirty = true;
   else load();

@@ -1,6 +1,7 @@
-import {getApi} from '../index';
-import type {Api} from '../api';
-import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../model';
+import {getApi} from '../api/index';
+import type {Api} from '../api/api';
+import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
+import {ApiError} from '../api/error';
 import {pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
 
@@ -30,10 +31,13 @@ export async function routingTrace(
     selected_ip: (item.answers ?? []).find(answer => answer.type === item.type)?.data ?? null,
     error: null
   }));
-  const addresses = dns.flatMap(item => item.addresses.slice(0, 1));
+  const addresses = [...new Set(dns.filter(item => item.qtype === 'A' || item.qtype === 'AAAA').flatMap(item => item.addresses))];
+  if (addresses.length > 64) throw new ApiError(422, 'unsupported_value', 'DNS returned more than 64 distinct addresses; narrow the query before simulating');
   const traces = await Promise.all(
     (addresses.length ? addresses : [null]).map(address => api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal))
   );
+  if (traces.some(trace => trace.instance_id !== traces[0].instance_id || trace.generation_id !== traces[0].generation_id))
+    throw new ApiError(409, 'snapshot_unavailable', 'The routing generation changed during simulation; retry the query');
   return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
 }
 

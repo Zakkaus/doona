@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useGroups, useNodes} from '../../api/store';
+import {useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../config/mainSource';
-import {readGroupEntries} from '../config/groups';
+import {readGroupEntries} from '../../dae/groups';
 
 export function usePolicies(query: string) {
   const resources = useCapabilities().data?.resources;

@@ -48,6 +48,18 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await expect(help).toBeHidden();
 });
 
+test('g r opens Rules instead of refreshing, while a lone r still refreshes', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-strip')).toBeVisible();
+  await page.keyboard.press('g');
+  await page.keyboard.press('r');
+  await expect(page).toHaveURL(/#\/rules$/);
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+  await page.keyboard.press('r');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed');
+  await expect(page).toHaveURL(/#\/rules$/);
+});
+
 test('chart data tooltips are reachable without pointer interaction', async ({page}) => {
   await page.goto('/#/activity');
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});

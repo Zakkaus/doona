@@ -3,7 +3,7 @@ import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../.
 import type {Key} from '../../i18n/messages';
 import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {millis} from '../../api/u64';
-import {conditionKinds, type ConditionKind} from '../config/groups';
+import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
 import {coverageView, word, type CoverageView} from '../flows/view';
 import {sourceFor} from './source';

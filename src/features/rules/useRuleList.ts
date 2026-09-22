@@ -1,9 +1,9 @@
 import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../api/store';
+import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../store';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {errorText, toast} from '../../ui/ui';
-import {ruleCondition, type ConditionKind} from '../config/groups';
+import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
 import {addRule, removeRule} from './source';

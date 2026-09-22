@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {getApi} from '../index';
-import type {Capabilities, Operation, OperationState, ProbeRequest} from '../model';
-import {LocalError} from '../error';
+import {getApi} from '../api/index';
+import type {Capabilities, Operation, OperationState, ProbeRequest} from '../api/model';
+import {LocalError} from '../api/error';
 // One action per hook; an abort drops the late result, a failure lands in `error` and rethrows when asked.
 export function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
   const api = getApi();

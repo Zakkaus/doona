@@ -26,6 +26,7 @@ package() {
 	cp -a "$srcdir"/web/. "$pkgdir"/usr/share/doona/
 	rm -f "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
 	install -Dm644 "$srcdir"/web/NOTICE -t "$pkgdir"/usr/share/doc/$pkgname/
+	install -Dm644 "$srcdir"/web/LICENSE -t "$pkgdir"/usr/share/doc/$pkgname/
 }
 
 fonts() {

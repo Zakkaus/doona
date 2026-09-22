@@ -97,3 +97,20 @@ for (const palette of ['glass/glass', 'rose-pine/moon', 'catppuccin/mocha']) {
     });
   });
 }
+
+test('an unknown history entry is replaced so Back can reach the preceding page', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(page.locator('#settings-backend')).toBeVisible();
+  await page.evaluate(() => {
+    location.hash = '#/oldpage';
+  });
+  await expect(page).toHaveURL(/#\/activity$/);
+  const length = await page.evaluate(() => history.length);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/activity$/);
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/settings$/);
+});

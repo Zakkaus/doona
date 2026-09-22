@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useNodes} from '../../api/store';
+import {useCapabilities, useNodes} from '../../store';
 import {useT} from '../../i18n';
 import {nodeView} from './view';
 

@@ -49,7 +49,7 @@ export function Settings({query}: PageProps) {
   } = useSettingsPage(query);
 
   return (
-    <div className="rp-col">
+    <div className="rp-page">
       {firstRun && <div className="rp-label">{t('settings.firstRun')}</div>}
       {paired && <div className="rp-label">{t('settings.paired')}</div>}
       <section className="rp-card" aria-labelledby="settings-backend">

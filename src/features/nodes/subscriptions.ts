@@ -1,7 +1,6 @@
-import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
+import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../../dae/text';
 
-export const DEFAULT_INTERVAL = 86400;
-export type SubscriptionEntry = {tag: string; host: string | null; interval: number; from: number; to: number};
+export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null; from: number; to: number};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};
 type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null};
 
@@ -69,7 +68,7 @@ function subscriptionRanges(text: string) {
           block,
           tag: block.name,
           host: url ? host(unquote(url.value)) : null,
-          interval: interval ? (parseInterval(unquote(interval.value)) ?? 0) : DEFAULT_INTERVAL,
+          interval: interval ? parseInterval(unquote(interval.value)) : null,
           fields,
           parts: null
         });
@@ -89,7 +88,7 @@ function subscriptionRanges(text: string) {
       let to = tokens[i].to;
       if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) to = tokens[++i].to;
       const parts = scalarParts(text.slice(from, to));
-      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: DEFAULT_INTERVAL, fields: [], parts});
+      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: null, fields: [], parts});
     }
   }
   return entries;
@@ -118,14 +117,8 @@ export function writeInterval(text: string, tag: string, seconds: number): strin
     return text.slice(0, entry.from) + body.join('\n') + text.slice(entry.to);
   }
   const field = entry.fields.find(field => field.name === 'interval');
-  if (field) {
-    if (seconds !== DEFAULT_INTERVAL) return text.slice(0, field.valueFrom) + ` '${seconds}s'` + text.slice(field.valueTo);
-    const start = text.lastIndexOf('\n', field.from - 1) + 1;
-    const end = text.indexOf('\n', field.to);
-    const ownLine = /^[ \t]*$/.test(text.slice(start, field.from)) && end !== -1 && /^[ \t]*$/.test(text.slice(field.to, end));
-    return text.slice(0, ownLine ? start : field.from) + text.slice(ownLine ? end + 1 : field.to);
-  }
-  if (seconds === DEFAULT_INTERVAL || !entry.block) return text;
+  if (field) return text.slice(0, field.valueFrom) + ` '${seconds}s'` + text.slice(field.valueTo);
+  if (!entry.block) return text;
   const at = text.lastIndexOf('\n', entry.block.close - 1) + 1;
   return text.slice(0, at) + `${inner}interval: '${seconds}s'\n` + text.slice(at);
 }

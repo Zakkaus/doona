@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import type {OutboundNames} from '../selectors';
+import type {OutboundNames} from '../api/selectors';
 import {useCapabilities} from './runtime';
 import {useGroups} from './groups';
 import {useNodes} from './nodes';

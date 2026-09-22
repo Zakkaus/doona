@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../api/store';
+import {useMemo, useState} from 'react';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
 import {outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';
@@ -14,7 +14,7 @@ export function useFlowRecords({go, query}: PageProps) {
   const [network, setNetwork] = useState<NonNullable<FlowFilter['network']>>('all');
   const [state, setState] = useState<NonNullable<FlowFilter['state']>>('all');
   const wide = useMediaQuery(panelQuery);
-  const params = new URLSearchParams(query);
+  const params = useMemo(() => new URLSearchParams(query), [query]);
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows({connection_id: connectionId, network, state});
   const resources = useCapabilities().data?.resources;
@@ -25,9 +25,14 @@ export function useFlowRecords({go, query}: PageProps) {
   const id = params.get('id');
   const detail = useFlow(id);
   const pinned = params.get('path');
-  const all = resource.data?.flows ?? [];
-  const shown = pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all;
-  const view = flowRecordsView(shown, detail.data ?? undefined, resource.data, names, canAdd, t, lang);
+  const shown = useMemo(() => {
+    const all = resource.data?.flows ?? [];
+    return pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all;
+  }, [resource.data, pinned, names, rules.data]);
+  const view = useMemo(
+    () => flowRecordsView(shown, detail.data ?? undefined, resource.data, names, canAdd, t, lang),
+    [shown, detail.data, resource.data, names, canAdd, t, lang]
+  );
   return {
     ...view,
     network,
@@ -45,7 +50,11 @@ export function useFlowRecords({go, query}: PageProps) {
     detailRetry: detail.refetch,
     detailLoading: !detail.data && detail.loading,
     select: (value: string | null) => go('rules', within(query, {id: value})),
-    pinLabel: pinned ? t('flow.mapFilter', {label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => outboundLabel(name, t))}) : null,
+    pinLabel: pinned
+      ? t('flow.mapFilter', {
+          label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => (name === null ? t('flow.mapUnknown') : outboundLabel(name, t)))
+        })
+      : null,
     clearPin: () => go('rules', within(query, {path: null})),
     connectionLabel: connectionId ? t('flow.connectionFilter', {id: connectionId}) : null,
     clearConnection: () => go('rules', within(query, {connection_id: null}))

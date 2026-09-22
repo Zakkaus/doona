@@ -1,4 +1,4 @@
-import {LocalError} from '../../api/error';
+import {LocalError} from '../api/error';
 
 export function quote(value: string): string {
   // honk skips escaped delimiters but retains the backslash in the value.

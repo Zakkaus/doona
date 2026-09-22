@@ -32,7 +32,7 @@ export function Logs() {
           {t('log.export')}
         </Button>
       </div>
-      <ErrorMessage error={vm.error} />
+      <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <DataTable
         label={t('nav.logs')}
         rows={vm.rows}

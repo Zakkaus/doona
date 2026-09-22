@@ -8,7 +8,7 @@ import {
   useProviders,
   useRuntime,
   useRuntimeOperations
-} from '../../api/store';
+} from '../../store';
 import {lifecycleActions, operationLabels} from '../overview/view';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
@@ -35,7 +35,9 @@ export function useBackendActions() {
     !!resources?.connections.can_close ||
     !!resources?.geodata.can_update;
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
-  const liveCount = (connections.data?.tcp.length ?? 0) + (connections.data?.udp.length ?? 0);
+  const providersReady = !!providers.data && !providers.error && !providers.loading;
+  const connectionsReady = !!connections.data && !connections.error && !connections.loading;
+  const liveCount = connectionsReady ? connections.data!.tcp.length + connections.data!.udp.length : null;
   const refreshingAll = refresh.busy === '*';
   const refreshAll = () =>
     refresh
@@ -71,8 +73,8 @@ export function useBackendActions() {
         }, fail)
     },
     closeAll: {
-      confirmationText: t('conn.closeAllHelp', {n: liveCount}),
-      disabled: !liveCount || !!closing.busy,
+      confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
+      disabled: !connectionsReady || !liveCount || !!closing.busy,
       pending: closing.busy === 'all',
       run: closeAll
     },
@@ -80,12 +82,18 @@ export function useBackendActions() {
     geodataBlocked: geodata.busy || !geodata.data,
     geodataLoading: geodata.loading && !geodata.data,
     geodataError: geodata.error,
+    providersError: providers.error,
+    providersLoading: providers.loading && !providers.data,
+    retryProviders: providers.refetch,
+    connectionsError: connections.error,
+    connectionsLoading: connections.loading && !connections.data,
+    retryConnections: connections.refetch,
     liveCount,
     note: t(offered ? 'settings.actionsNote' : 'settings.actionsNone'),
     refreshingAll,
     refreshAll,
-    refreshDisabled: !!refresh.busy || !subscriptions.length,
-    refreshLabel: t('settings.refreshAll', {n: formatNumber(subscriptions.length, locale)}),
+    refreshDisabled: !providersReady || !!refresh.busy || !subscriptions.length,
+    refreshLabel: t('settings.refreshAll', {n: providersReady ? formatNumber(subscriptions.length, locale) : '—'}),
     canFlush: !!(resources?.dns_cache.available && resources.dns_cache.flush),
     canRefresh: !!resources?.providers.can_refresh,
     canClose: !!resources?.connections.can_close,

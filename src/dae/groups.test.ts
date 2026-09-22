@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {addNamesToGroup, canonicalPolicy, readGroupEntries, ruleCondition, writeGroupEntry} from './groups';
+import {addNamesToGroup, readGroupEntries, ruleCondition, writeGroupEntry} from './groups';
 
 const text = `global {
   lan_interface: br-lan
@@ -75,8 +75,10 @@ describe('group entries', () => {
   });
 
   it('composes conditions from a kind and values', () => {
-    expect(ruleCondition('domainSuffix', 'example.com, example.net')).toBe('domain(suffix: example.com, example.net)');
-    expect(ruleCondition('geosite', 'cn')).toBe('domain(geosite: cn)');
+    expect(ruleCondition('domainSuffix', 'example.com, example.net')).toBe('domain(suffix: example.com, suffix: example.net)');
+    expect(ruleCondition('domain', 'example.com example.net')).toBe('domain(full: example.com, full: example.net)');
+    expect(ruleCondition('geosite', 'netflix, disney')).toBe('domain(geosite: netflix, geosite: disney)');
+    expect(ruleCondition('geoip', 'cn us')).toBe('dip(geoip: cn, geoip: us)');
     expect(ruleCondition('dport', '80 443')).toBe('dport(80, 443)');
     expect(ruleCondition('pname', 'curl')).toBe('pname(curl)');
   });
@@ -99,10 +101,6 @@ it('reads every group section and appends to the last', () => {
   expect(addNamesToGroup(text, 'c', ['n'])).toBe(
     'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n  c {\n    filter: name(n)\n  }\n}\n'
   );
-});
-
-it('reads policy spellings as the documented names', () => {
-  expect(['min_moving_avg', 'fixed(0)', 'Score', null, 'honk'].map(canonicalPolicy)).toEqual(['urltest', 'selector', 'score', 'selector', 'selector']);
 });
 
 it('edits only the named group when values and comments contain braces and hashes', () => {

@@ -1,6 +1,6 @@
 import {useCallback} from 'react';
-import {getApi} from '../index';
-import type {DnsCacheList} from '../model';
+import {getApi} from '../api/index';
+import type {DnsCacheList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
@@ -29,7 +29,11 @@ function useDnsCache(enabled = true) {
       fetch: signal =>
         walk(
           cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),
-          (acc: DnsCacheList | undefined, page) => (acc ? {...acc, entries: [...acc.entries, ...page.entries]} : page)
+          (acc: DnsCacheList | undefined, page) => {
+            if (!acc) return {...page, entries: [...page.entries]};
+            acc.entries.push(...page.entries);
+            return acc;
+          }
         )
     },
     {enabled}

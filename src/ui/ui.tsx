@@ -1,5 +1,5 @@
 export {cx} from './cx';
-export {useSlider, useContentWidth, useFillHeight, useDebounced, useMediaQuery, useLinked, withCrossfade, panelQuery} from './hooks';
+export {useSlider, useContentWidth, useFillHeight, useDebounced, useMediaQuery, useLinked, withCrossfade, panelQuery, isMac} from './hooks';
 export {exportName, downloadFile, csvLine} from './files';
 export {Button, TextTooltip, Link} from './Button';
 export {TextField, Switch, Segmented} from './Fields';

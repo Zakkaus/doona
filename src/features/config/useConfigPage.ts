@@ -1,17 +1,18 @@
-import {useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {getApi} from '../../api';
-import {useCapabilities, useConfig, useConfigEditor} from '../../api/store';
+import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {localTime} from '../../api/selectors';
-import {downloadFile, errorText, toast} from '../../ui/ui';
-import type {EditorMark} from '../../ui/code/CodeEditor';
-import {candidate, fileName, groupNames} from './names';
+import {downloadFile, errorText, isMac, toast, useLinked} from '../../ui/ui';
+import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
-import {DraftContext, within} from '../../shell/route';
-import {useSourceComplete} from '../../api/store/config';
-import {sourceView, diagnosticRows} from './view';
+import {within} from '../../shell/route';
+import {useSourceComplete} from '../../store/config';
+import {sourceView, diagnosticRows, sourceMarks} from './view';
+import {useDraftGuard} from './useDraftGuard';
+import {useValidationSources} from './useValidationSources';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
   error: unknown;
@@ -53,24 +54,15 @@ export function useConfigPage({go, query}: PageProps) {
   const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
   const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
   const requested = params.get('tab');
-  const tab = requested === 'validate' || (requested === 'setup' && setupAvailable) ? requested : 'source';
-  const selectedId = params.get('source') ?? sources[0]?.id ?? null;
-  const source = sources.find(item => item.id === selectedId) ?? null;
-  const [dirty, updateDirty] = useState(false);
-  const {setDirty: guardDraft, revision} = useContext(DraftContext);
-  const setDirty = useCallback(
-    (value: boolean) => {
-      guardDraft(value);
-      updateDirty(value);
-    },
-    [guardDraft]
-  );
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    addEventListener('beforeunload', warn);
-    return () => removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  const tab =
+    requested === 'modules' || requested === 'source' || requested === 'validate' || (requested === 'setup' && setupAvailable)
+      ? requested
+      : params.has('source') || !mainSource?.content
+        ? 'source'
+        : 'modules';
+  // A stale link to a source that no longer exists opens the first one rather than an empty card.
+  const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
+  const selectedId = source?.id ?? null;
   const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
@@ -82,20 +74,19 @@ export function useConfigPage({go, query}: PageProps) {
   const sourceProps: SourceCardProps | null = source
     ? {
         source,
+        sources,
+        open: (sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)})),
         diagnostics: (config.data?.diagnostics ?? []).filter(item => item.source_id === source.id),
         canValidate,
         canWrite: resources?.config.writable === true && source.writable,
         contentOffered: resources?.config.content === true,
         editor,
         groups: groupList,
-        focusLine,
-        onDirty: setDirty
+        focusLine
       }
     : null;
   const wizardProps =
-    setupAvailable && mainSource
-      ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id})), onDirty: setDirty}
-      : null;
+    setupAvailable && mainSource ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id}))} : null;
   const validateProps: ValidateTabProps | null = config.data
     ? {
         config: config.data,
@@ -119,10 +110,10 @@ export function useConfigPage({go, query}: PageProps) {
     tab,
     setTab: (tab: string) => go('config', within(query, {tab})),
     selectedId: selectedId ?? '',
-    revision,
     select,
     sourceProps,
     wizardProps,
+    modulesProps: config.data ? {config: config.data, editor, canWrite: resources?.config.writable === true, canValidate} : null,
     validateProps,
     sourceModel: source ? sourceView(source, locale, t) : null,
     sourceOptions: sources.map(item => {
@@ -138,6 +129,8 @@ export function useConfigPage({go, query}: PageProps) {
 }
 export type SourceCardProps = {
   source: ConfigSource;
+  sources: ConfigSource[];
+  open: (sourceId: string, line: number | null) => void;
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
   canWrite: boolean;
@@ -145,25 +138,19 @@ export type SourceCardProps = {
   editor: ConfigEditor;
   groups: string[];
   focusLine: number | null;
-  onDirty: (dirty: boolean) => void;
 };
 
-export function useSourceCard({source, diagnostics, canValidate, editor, groups, onDirty}: SourceCardProps) {
+export function useSourceCard({source, sources, diagnostics, canValidate, editor, groups}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   // If-Match uses the draft's original digest to reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const complete = useSourceComplete(source);
-  useEffect(() => editor.cancel, [editor.cancel]);
   const editing = draft !== null;
-  // What the list shows: the last dry run, else the diagnostics a rejected save came back with, else the engine's.
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
-  const shown = found ?? saveErrors ?? diagnostics;
-  const marks = useMemo<EditorMark[]>(
-    () => shown.filter(d => d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message})),
-    [shown]
-  );
+  const shown = saveErrors ?? found ?? diagnostics;
+  const marks = useMemo(() => sourceMarks(shown, source.id), [shown, source.id]);
   const text = draft?.text ?? source.content ?? '';
   // Names to complete after "->": the groups in the text being edited, else the running configuration's.
   const outbounds = () => {
@@ -172,20 +159,24 @@ export function useSourceCard({source, diagnostics, canValidate, editor, groups,
   };
   const [jump, setJump] = useState<number | null>(null);
   const dirty = editing && draft.text !== source.content;
-  useEffect(() => {
-    onDirty(dirty);
-    return () => onDirty(false);
-  }, [dirty, onDirty]);
+  const guard = useDraftGuard(dirty);
+  useLinked(guard.revision, () => {
+    setDraft(null);
+    setFound(null);
+  });
+  useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
   const api = getApi();
   const draftText = draft?.text;
-  const sourceId = source.id;
+  const candidates = useValidationSources(sources, {id: source.id, content: text});
   useEffect(() => {
-    if (!canValidate || draftText === undefined) return;
+    if (!canValidate || !candidates || draftText === undefined) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      api.validateConfig({sources: [candidate({id: sourceId}, draftText)], mode: 'full'}, controller.signal).then(
-        result => setFound(result.diagnostics),
+      api.validateConfig({sources: candidates, mode: 'full'}, controller.signal).then(
+        result => {
+          if (!controller.signal.aborted) setFound(result.diagnostics);
+        },
         () => undefined
       );
     }, 600);
@@ -193,18 +184,19 @@ export function useSourceCard({source, diagnostics, canValidate, editor, groups,
       clearTimeout(timer);
       controller.abort();
     };
-  }, [api, canValidate, draftText, sourceId]);
+  }, [api, canValidate, draftText, candidates]);
   const presentValidation = (result: Pick<ConfigValidationResult, 'valid' | 'diagnostics'>, announce = true) => {
     setFound(result.diagnostics);
     // Put the cursor on the first error so the problem is on screen, not below a long file.
-    const first = result.diagnostics.find(d => d.level === 'error' && d.line !== null);
+    const first = result.diagnostics.find(d => d.source_id === source.id && d.level === 'error' && d.line !== null);
     setJump(first ? first.line : null);
     if (!result.valid) toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
     else if (announce) toast('positive', t('config.valid'));
     return result.valid;
   };
   const validate = async () => {
-    const result = await editor.validate({sources: [candidate(source, text)], mode: 'full'});
+    if (!candidates) return false;
+    const result = await editor.validate({sources: candidates, mode: 'full'});
     return result ? presentValidation(result) : false;
   };
   const save = async () => {
@@ -217,6 +209,7 @@ export function useSourceCard({source, diagnostics, canValidate, editor, groups,
       return;
     }
     toast('positive', t('config.saved', {path: sourceView(source, locale, t).label}));
+    guard.clear();
     setDraft(null);
   };
   const edit = () => setDraft({text: source.content ?? '', origin: source});
@@ -229,7 +222,7 @@ export function useSourceCard({source, diagnostics, canValidate, editor, groups,
   return {
     editing,
     complete,
-    shown: diagnosticRows(shown, [source], locale, t),
+    shown: diagnosticRows(shown, sources, locale, t),
     marks,
     text,
     outbounds,
@@ -244,7 +237,9 @@ export function useSourceCard({source, diagnostics, canValidate, editor, groups,
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
-    validateDisabled: !!editor.busy || !view.hasContent,
+    saveTip: t(isMac ? 'config.saveShortcutMac' : 'config.saveShortcut'),
+    validateDisabled: !!editor.busy || !candidates,
+    validateTip: !candidates ? t('config.incomplete') : undefined,
     editDisabled: !complete || !!editor.busy,
     editTip: complete === false ? t('config.incomplete') : undefined
   };
@@ -273,10 +268,10 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
   const warnings = count('warning');
   const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
   const cur = rows.find(item => item.id === selected) ?? null;
-  // Only the text a person maintains is a candidate; subscription and generated sources are the engine's own.
-  const candidates = config.sources.filter(item => item.content !== undefined && (item.kind === 'main' || item.kind === 'include'));
+  const candidates = useValidationSources(config.sources);
   const validate = () => {
-    void editor.validate({sources: candidates.map(item => candidate(item, item.content!)), mode: 'full'}).then(result => {
+    if (!candidates) return;
+    void editor.validate({sources: candidates, mode: 'full'}).then(result => {
       // A fresh list has new rows; the old selection would point at a different diagnostic.
       if (result) {
         setRun(result);
@@ -300,8 +295,8 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
         : t('config.passed'),
     lastRun: run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id}),
     validating: editor.busy === 'validate',
-    blocked: !!editor.busy || candidates.length === 0,
-    tip: candidates.length === 0 ? t('config.contentHidden') : undefined,
+    blocked: !!editor.busy || !candidates,
+    tip: !candidates ? t('config.incomplete') : undefined,
     levels: [
       ['all', t('config.levelAll', {n: n(rows.length)})],
       ['error', t('config.levelErrors', {n: n(errors)})],

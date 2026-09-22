@@ -1,5 +1,5 @@
 // Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
-import {quote} from './blocks';
+import {quote} from '../../dae/text';
 import {templateText} from './messages';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
 export const defaultTemplate: RuleTemplate = 'standard';

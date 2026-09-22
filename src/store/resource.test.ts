@@ -1,11 +1,11 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
-import type {Api} from '../api';
-import type {ResourceKey} from '../inflight';
-import {createMockApi} from '../mock';
-import * as apiSelection from '../index';
+import type {Api} from '../api/api';
+import type {ResourceKey} from '../api/inflight';
+import {createMockApi} from '../api/mock';
+import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
 import {refetchAll, watchResource} from './resource';
-import {ApiError} from '../error';
+import {ApiError} from '../api/error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
 const disposers: Array<() => void> = [];
@@ -217,6 +217,37 @@ it('shows a 503 that persists past three retries', async () => {
   await vi.advanceTimersByTimeAsync(3000);
   expect(calls).toBe(4);
   expect(resource.getSnapshot().error?.message).toBe('not now');
+});
+
+it('preserves the fourth refusal floor after exposing the error, including queued and manual refresh', async () => {
+  let reject!: (error: Error) => void;
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(429, 'rate_limited', 'wait', null, null, 30))
+    .mockRejectedValueOnce(new ApiError(429, 'rate_limited', 'wait', null, null, 30))
+    .mockRejectedValueOnce(new ApiError(429, 'rate_limited', 'wait', null, null, 30))
+    .mockImplementationOnce(
+      () =>
+        new Promise((_, no) => {
+          reject = no;
+        })
+    )
+    .mockResolvedValue('ready');
+  const resource = watchResource(createMockApi(), {key: ['runtime'], every: 5000, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(90000);
+  const queued = resource.refetch();
+  reject(new ApiError(429, 'rate_limited', 'wait', null, null, 30));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(resource.getSnapshot().error).toMatchObject({status: 429});
+  resource.invalidate(true);
+  const manual = resource.refetch();
+  await vi.advanceTimersByTimeAsync(29999);
+  expect(fetch).toHaveBeenCalledTimes(4);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(queued).resolves.toMatchObject({ok: true});
+  await expect(manual).resolves.toMatchObject({ok: true});
+  expect(fetch).toHaveBeenCalledTimes(5);
 });
 
 it('answers a refresh asked during the hold with the outcome of the retry', async () => {

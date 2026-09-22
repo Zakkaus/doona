@@ -2,9 +2,9 @@ import {useMemo, useSyncExternalStore} from 'react';
 import {getApi} from '../../api';
 import type {ApiEvent} from '../../api/model';
 import {routineGap} from '../../api/selectors';
-import {EVENT_FEED_LIMIT} from '../../api/store';
-import {useEvents} from '../../api/store/events';
-import {createFeed} from '../../api/store/feed';
+import {EVENT_FEED_LIMIT} from '../../store';
+import {useEvents} from '../../store/events';
+import {createFeed} from '../../store/feed';
 import {useT} from '../../i18n';
 import {noticeRows} from './view';
 

@@ -1,6 +1,7 @@
 import {createContext, useCallback, useEffect, useRef, useState} from 'react';
 import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
+import {features} from './registry';
 
 type Route = {route: string; query: string};
 export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
@@ -9,7 +10,8 @@ export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
-  return route.route === 'flows' ? legacyFlows(route.query) : route;
+  if (route.route === 'flows') return legacyFlows(route.query);
+  return features.some(feature => feature.path === route.route) ? route : {...route, route: 'activity'};
 }
 // The flow map and records moved under rules; old links keep working.
 function legacyFlows(query: string): Route {
@@ -51,9 +53,10 @@ export function restoreDraftRoute(current: Route, position: number): number | un
 
 function currentHash(api: string | null): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
-  else if (/^#\/?flows(\?|$)/.test(location.hash)) {
+  else {
     const {route, query} = parseHash(location.hash);
-    history.replaceState(history.state, '', buildHash(route, query));
+    const canonical = buildHash(route, query);
+    if (location.hash !== canonical) history.replaceState(history.state, '', canonical);
   }
   return location.hash;
 }

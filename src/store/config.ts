@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useState} from 'react';
-import {getApi} from '../index';
-import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../model';
-import {LocalError} from '../error';
-import {sha256} from '../hash';
+import {getApi} from '../api/index';
+import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
+import {LocalError} from '../api/error';
+import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {etag, finished, useAction} from './action';
@@ -12,8 +12,13 @@ export function useConfig(enabled = true) {
   return useResource({key: ['config'], every: 0, fetch: signal => api.config(signal)}, {enabled});
 }
 
-async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sha256'>): Promise<boolean> {
+export async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sha256'>): Promise<boolean> {
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
+}
+
+// The path lets the validator resolve includes; a path hidden by visibility policy is no path at all.
+function sourcePath(source: Pick<ConfigSource, 'path'>): {path?: string} {
+  return source.path === '<redacted>' ? {} : {path: source.path};
 }
 
 export function useSourceComplete(source: ConfigSource | null): boolean | null {
@@ -60,8 +65,8 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           signal.throwIfAborted();
           const content = typeof candidate === 'string' ? candidate : candidate(source.content!);
           if (content === null) return undefined;
-          if (canValidate) {
-            const check = await api.validateConfig({sources: [{id: source.id, content}], mode: 'full'}, signal);
+          if (canValidate && source.kind === 'main') {
+            const check = await api.validateConfig({sources: [{id: source.id, ...sourcePath(source), content}], mode: 'full'}, signal);
             signal.throwIfAborted();
             if (!check.valid) return {diagnostics: check.diagnostics};
           }

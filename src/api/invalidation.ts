@@ -24,18 +24,16 @@ export type ResourceName =
   | 'rules';
 
 // Event schemas do not define cross-resource invalidation, so the UI owns this policy.
-export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'; poll: ResourceName[]}> = {
-  'stream.ready': {now: 'all', poll: []},
+export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
+  'stream.ready': {now: 'all'},
   'runtime.updated': {
-    now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'memoryHistory', 'connections'],
-    poll: ['nodes', 'groups', 'group']
+    now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'memoryHistory', 'connections']
   },
-  'flow.updated': {now: ['flows', 'flow', 'connections'], poll: []},
-  'flow.gap': {now: ['flows', 'flow'], poll: []},
-  'operation.updated': {now: ['runtime'], poll: []},
+  'flow.updated': {now: ['flows', 'flow', 'connections']},
+  'flow.gap': {now: ['flows', 'flow']},
+  'operation.updated': {now: ['runtime']},
   'generation.changed': {
-    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'rules', 'datapath', 'flows', 'flow'],
-    poll: ['dnsCache']
+    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'rules', 'datapath', 'flows', 'flow']
   }
 };
 

@@ -56,12 +56,15 @@ async function serve({broken = false, mutate = () => {}, events = 'ready', resum
     }
     let fixture;
     if (streams.includes(path)) {
-      if (resume === 200) {
+      if (resume === 200 || resume === 'comment-only' || resume === 'late-ready') {
         response.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'});
-        response.end(': resumed\n\n');
+        const runtime = example('/api/v1/runtime').body;
+        const ready = `event: stream.ready\nid: resumed:124\ndata: ${JSON.stringify({instance_id: runtime.instance_id, observed_at: runtime.observed_at})}\n\n`;
+        const prior = `event: runtime.updated\nid: resumed:123\ndata: ${JSON.stringify({instance_id: runtime.instance_id, observed_at: runtime.observed_at, href: '/api/v1/runtime'})}\n\n`;
+        response.end(resume === 'comment-only' ? ': resumed\n\n' : resume === 'late-ready' ? prior + ready : ready);
         return;
       }
-      fixture = example(path, 409);
+      fixture = resume === 401 ? errorResponse('authentication_required', 401) : example(path, 409);
       if (resume === 'wrong-code') fixture.body.error.code = 'state_conflict';
     } else {
       const template = Object.keys(contract.paths).find(candidate => {
@@ -194,6 +197,61 @@ describe('native API conformance', () => {
     expect(server.requests.every(request => request.headers.authorization === undefined)).toBe(true);
   });
 
+  it.each(['initial', 'page2'])('fails explicitly selected authentication-blocked %s requests', async phase => {
+    const server = await serve({
+      mutate(path, fixture, url) {
+        if (path === '/api/v1/dns/cache' && (phase === 'initial' || url.searchParams.has('cursor'))) {
+          Object.assign(fixture, errorResponse('authentication_required', 401));
+        }
+      }
+    });
+    const result = await walk({baseUrl: server.baseUrl, only: ['listDnsCache']});
+    expect(result.summary.exitCode).toBe(1);
+    expect(failures(result.checks)).toEqual([`listDnsCache${phase === 'page2' ? '.page2' : ''}.request`]);
+  });
+
+  it.each([401, 403])('fails a selected operation refused with HTTP %s despite a supplied token', async status => {
+    const server = await serve({
+      mutate(path, fixture) {
+        if (path === '/api/v1/runtime') Object.assign(fixture, errorResponse(status === 401 ? 'authentication_required' : 'permission_denied', status));
+      }
+    });
+    const result = await walk({baseUrl: server.baseUrl, token: 'refused-token', only: ['getRuntime']});
+    expect(result.summary.exitCode).toBe(1);
+    expect(failures(result.checks)).toContain('getRuntime.request');
+  });
+
+  it('gates independent runtime and DNS resources by their own capabilities', async () => {
+    const selected = ['getRuntimeMemory', 'getRuntimeOutbounds', 'getRuntimeSettings', 'getTrafficHistory', 'getMemoryHistory', 'listDnsLog', 'listDnsCache'];
+    const server = await serve({
+      mutate(path, fixture) {
+        if (path !== '/api/v1/capabilities') return;
+        for (const key of ['runtime', 'memory_history', 'dns_log']) fixture.body.resources[key].available = false;
+      }
+    });
+    const result = await walk({baseUrl: server.baseUrl, only: selected});
+    expect(failures(result.checks)).toEqual(['getMemoryHistory.request', 'listDnsLog.request']);
+    expect(new Set(server.requests.map(request => request.path))).toEqual(
+      new Set([
+        '/api',
+        '/api/v1/version',
+        '/api/v1/capabilities',
+        '/api/v1/runtime/memory',
+        '/api/v1/runtime/outbounds',
+        '/api/v1/runtime/settings',
+        '/api/v1/runtime/traffic/history',
+        '/api/v1/dns/cache'
+      ])
+    );
+  });
+
+  it('requires operation-specific diagnostics on source validation refusal', () => {
+    const fixture = example('/api/v1/config/sources/{source_id}', 422, 'put');
+    expect(failures(validateResponse({operationId: 'replaceConfigSource', ...fixture}))).toEqual([]);
+    delete fixture.body.error.details;
+    expect(failures(validateResponse({operationId: 'replaceConfigSource', ...fixture}))).toEqual(['replaceConfigSource.body']);
+  });
+
   it.each([
     ['missing-id', 'streamEvents.ready'],
     ['bad-data', 'streamEvents.event-1'],
@@ -211,5 +269,19 @@ describe('native API conformance', () => {
     expect(failures((await walk({baseUrl: accepted.baseUrl, only: ['streamEvents']})).checks)).toEqual([]);
     const rejected = await serve({resume: 'wrong-code'});
     expect(failures((await walk({baseUrl: rejected.baseUrl, only: ['streamEvents']})).checks)).toEqual(['streamEvents.reconnect.resume']);
+  });
+
+  it.each(['comment-only', 'late-ready'])('rejects %s resumed streams', async resume => {
+    const server = await serve({resume});
+    const result = await walk({baseUrl: server.baseUrl, only: ['streamEvents']});
+    expect(result.summary.exitCode).toBe(1);
+    expect(failures(result.checks)).toContain(`streamEvents.reconnect.${resume === 'comment-only' ? 'ready' : 'first-event'}`);
+  });
+
+  it('fails an explicitly selected stream when reconnect first requires authentication', async () => {
+    const server = await serve({resume: 401});
+    const result = await walk({baseUrl: server.baseUrl, only: ['streamEvents']});
+    expect(result.summary.exitCode).toBe(1);
+    expect(failures(result.checks)).toEqual(['streamEvents.reconnect.request']);
   });
 });

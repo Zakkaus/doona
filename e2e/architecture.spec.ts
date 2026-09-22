@@ -527,3 +527,112 @@ test('main-source actions remain disabled when advertised content fails complete
   await page.goto('/#/nodes?provider=inline');
   await expect(page.getByRole('button', {name: 'Add hk-01 to a group', exact: true})).toBeDisabled();
 });
+
+test('a completed provider creation cannot close a newer node draft or clear its guard', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/providers', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const created = await api.createProvider(route.request().postDataJSON());
+    await gate;
+    await route.fulfill({json: created});
+  });
+  await page.goto('/#/nodes');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const provider = page.getByRole('dialog');
+  await provider.getByLabel('Name', {exact: true}).fill('slow-provider');
+  await provider.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub');
+  const submitted = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/providers'));
+  await provider.getByRole('button', {name: 'Add', exact: true}).click();
+  await submitted;
+  await provider.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const node = page.getByRole('dialog');
+  await node.getByLabel('Name', {exact: true}).fill('new-draft');
+  await node.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.org:443');
+  release();
+  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added');
+  await expect(node.getByLabel('Name', {exact: true})).toHaveValue('new-draft');
+  await page.evaluate(() => {
+    location.hash = '#/settings';
+  });
+  await expect(page.getByRole('alertdialog', {name: 'Discard unsaved changes?'})).toBeVisible();
+});
+
+test('provider host labels cannot enable interval writes without node tag metadata', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = "subscription {\n  main: {\n    url: 'https://shared.example/sub'\n    interval: '2h'\n  }\n}\n";
+  main.content_sha256 = await sha256(main.content);
+  const providers = await api.providers();
+  const subscription = providers.providers.find(provider => provider.kind === 'subscription')!;
+  providers.providers = [
+    {...subscription, id: 'main-provider', name: 'opaque-main', url_redacted: 'https://shared.example/redacted'},
+    {...subscription, id: 'include-provider', name: 'opaque-include', url_redacted: 'https://shared.example/redacted'}
+  ];
+  const nodes = await api.nodes();
+  nodes.nodes = [];
+  nodes.next_cursor = null;
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
+  await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
+  await page.goto('/#/nodes');
+  await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
+  await expect(page.getByRole('button', {name: /^Auto-refresh of/})).toHaveCount(0);
+});
+
+httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
+  const api = await backend(page);
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  let failProviders = true;
+  let failConnections = true;
+  const failure = (message: string) => ({status: 503, json: {request_id: 'inventory', error: {code: 'service_unavailable', message, details: null}}});
+  await page.route('**/api/v1/providers?*', async route =>
+    route.fulfill(failProviders ? failure('Provider inventory unavailable') : {json: await api.providers()})
+  );
+  await page.route('**/api/v1/connections?*', async route =>
+    route.fulfill(failConnections ? failure('Connection inventory unavailable') : {json: await api.connections()})
+  );
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend actions'});
+  const providers = card.locator('.rp-ops-group').filter({hasText: 'Provider inventory unavailable'});
+  const connections = card.locator('.rp-ops-group').filter({hasText: 'Connection inventory unavailable'});
+  await expect(providers).toBeVisible();
+  await expect(connections).toBeVisible();
+  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).toBeDisabled();
+  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).not.toContainText('(0)');
+  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeDisabled();
+  failProviders = false;
+  await providers.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(card.getByRole('button', {name: 'Refresh subscription (1)', exact: true})).toBeEnabled();
+  await expect(connections).toBeVisible();
+  failConnections = false;
+  await connections.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+});
+
+test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {
+  const api = await backend(page);
+  const snapshot = await api.flows();
+  const base = snapshot.flows[0];
+  snapshot.flows = [
+    {...base, id: 'missing', outbound: null, chain: [], rule_id: null, rule_expression: null},
+    {...base, id: 'known', outbound: 'unknown', chain: ['unknown'], rule_id: null, rule_expression: 'unknown'}
+  ];
+  snapshot.next_cursor = null;
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
+  await page.goto('/#/rules?tab=map');
+  const missing = page.locator('.rp-tree-tile[data-id="outbound:"]');
+  const known = page.locator('.rp-tree-tile[data-id="outbound:unknown"]');
+  await expect(missing).toBeVisible();
+  await expect(known).toBeVisible();
+  await expect(missing.locator('.c')).toHaveText('1');
+  await expect(known.locator('.c')).toHaveText('1');
+  await known.click();
+  await expect(known).toHaveAttribute('aria-pressed', 'true');
+  await expect(missing).toHaveAttribute('aria-pressed', 'false');
+});

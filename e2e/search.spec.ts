@@ -1,4 +1,5 @@
 import {expect, test} from './fixtures';
+import {createMockApi} from '../src/api/mock';
 
 const open = async (page: import('@playwright/test').Page, text: string) => {
   await page.keyboard.press('Control+K');
@@ -53,4 +54,52 @@ test('search finds a routing rule by its condition and lands on its row', async 
   const row = page.locator('[role="row"][aria-selected="true"]');
   await expect(row).toContainText('doubleclick');
   await expect(row).toBeInViewport();
+});
+
+test('search respects destination capabilities, preserves loose-node ownership and qualifies partial results', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.dns_query.available = false;
+  capabilities.resources.dns_log.available = false;
+  capabilities.resources.routing_trace.available = false;
+  const nodes = await api.nodes();
+  nodes.nodes = [
+    {...nodes.nodes[0], id: 'direct', name: 'direct', protocol: 'direct', provider_id: null},
+    {...nodes.nodes[0], id: 'orphan-id', name: 'orphan', provider_id: null}
+  ];
+  const providers = await api.providers();
+  providers.providers = [{...providers.providers[0], id: 'unattributed'}];
+  const connections = await api.connections();
+  connections.truncated = true;
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/nodes': nodes,
+    '/providers': providers,
+    '/groups': await api.groups(),
+    '/config': await api.config(),
+    '/rules': await api.rules(),
+    '/connections': connections
+  };
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', route => route.fulfill({json: responses[new URL(route.request().url()).pathname.replace('/api/v1', '')]}));
+  await page.goto('/#/nodes');
+  await expect(page.getByLabel('Search nodes')).toBeVisible();
+  let dialog = await open(page, 'query');
+  await expect(dialog.getByRole('option', {name: /Query/})).toHaveCount(0);
+  await dialog.locator('input').fill('cache');
+  await expect(dialog.getByRole('option', {name: /Cache/})).toBeVisible();
+  await dialog.locator('input').fill('trace');
+  await expect(dialog.getByRole('option', {name: /Trace simulation/})).toHaveCount(0);
+  await dialog.locator('input').fill('orphan');
+  await dialog.getByRole('option', {name: /^orphan/}).click();
+  await expect(page).toHaveURL(/provider=unattributed-&q=orphan$/);
+  await expect(page.getByRole('rowheader', {name: 'orphan', exact: true})).toBeVisible();
+  dialog = await open(page, 'nothing-matches-this');
+  await expect(dialog.getByRole('option')).toHaveCount(0);
+  await expect(dialog.getByRole('status')).toContainText('truncated');
+  await dialog.getByRole('button', {name: 'Connections', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect(page.getByRole('searchbox', {name: 'Filter'})).toBeVisible();
 });

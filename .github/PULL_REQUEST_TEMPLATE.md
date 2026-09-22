@@ -1,14 +1,15 @@
-## What
+<!-- The three sections are required; CONTRIBUTING.md has the rules for them. -->
 
-<!-- Describe the change. -->
+## Problem
 
-## Why
+## How I fixed it
 
-<!-- Describe the problem or reason. -->
+## Verified
 
-## Checks
+---
 
-- [ ] I ran `pnpm check`, `pnpm test:coverage`, `pnpm build`, `pnpm check:size`, and `pnpm e2e`.
-- [ ] I added light and dark screenshots for UI changes.
-- [ ] I added strings to the messages tables.
-- [ ] I regenerated the contract output if the contract changed.
+- [ ] `pnpm check`, `pnpm build`, `pnpm check:size` and `pnpm e2e` pass.
+- [ ] I added strings to `messages.ts` in all three languages if I added user-visible text.
+- [ ] I attached light and dark screenshots if I changed what a page looks like.
+- [ ] I ran `pnpm gen:api` and `tools/check-gen.sh` if I changed the contract.
+- [ ] If I used AI: it followed `CONTRIBUTING.md`, and Verified shows what I ran, not guesses.

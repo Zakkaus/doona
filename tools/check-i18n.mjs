@@ -22,8 +22,10 @@ let cjkCount = 0;
 const failures = [];
 for (const path of sources.filter(path => !path.endsWith('/messages.ts'))) {
   const ast = parse(path);
+  const test = /\.test\.tsx?$/.test(path);
   visit(ast, node => {
-    if (ts.isStringLiteralLike(node)) references.add(node.text);
+    // A key that only a test names is unused in the application.
+    if (ts.isStringLiteralLike(node) && !test) references.add(node.text);
     if (
       !excluded.test(path) &&
       (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node) || ts.isJsxText(node)) &&

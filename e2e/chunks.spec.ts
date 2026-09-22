@@ -94,9 +94,42 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
     await expect(page.locator('.recharts-surface')).toHaveCount(0);
     release();
-    await expect(page.locator('.recharts-surface')).toHaveCount(6);
+    await expect(page.locator('.recharts-surface').first()).toBeVisible();
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();
   }
 });
+
+for (const chunk of ['Policies', 'vendor-charts']) {
+  test(`a rejected ${chunk} import preserves navigation and recovers after retry`, async ({browser}) => {
+    const context = await browser.newContext({serviceWorkers: 'block'});
+    const page = await context.newPage();
+    const uncaught: string[] = [];
+    page.on('pageerror', error => uncaught.push(error.message));
+    await page.addInitScript(() => {
+      localStorage.setItem('doona-api', 'mock');
+      localStorage.setItem('doona-lang', 'en');
+    });
+    let reject = true;
+    await page.route(`**/assets/${chunk}-*.js`, route => (reject ? route.abort() : route.continue()));
+    try {
+      await page.goto(chunk === 'Policies' ? '/#/policies' : '/#/activity');
+      const alert = page.locator('.rp-content .rp-alert').first();
+      await expect(alert).toBeVisible();
+      await expect(alert.getByRole('button', {name: 'Retry'})).toBeVisible();
+      await page.locator('.rp-nav[href="#/settings"]').click();
+      await expect(page.locator('#settings-backend')).toBeVisible();
+      await page.locator(`.rp-nav[href="#/${chunk === 'Policies' ? 'policies' : 'activity'}"]`).click();
+      await expect(alert).toBeVisible();
+      reject = false;
+      await alert.getByRole('button', {name: 'Retry'}).click();
+      await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : '.rp-strip')).toBeVisible();
+      await expect(page.locator('.rp-content .rp-alert')).toHaveCount(0);
+      if (chunk === 'vendor-charts') await expect(page.locator('.recharts-surface')).toHaveCount(6);
+      expect(uncaught).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+}

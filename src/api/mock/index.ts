@@ -32,7 +32,8 @@ export function createMockApi(): Api {
       eventData: () => lifecycle.eventData(),
       trimLogs: () => lifecycle.trimLogs()
     },
-    () => inventory.groupNames()
+    () => inventory.groupNames(),
+    (text, revision) => inventory.activate(text, revision)
   );
   const lifecycle = createLifecycle(capabilities.resources.logs, runtime.runtime, configuration.logSettings, configuration.revision);
   const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot);

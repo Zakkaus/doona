@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
@@ -15,6 +15,12 @@ export function BackendActionsCard() {
     geodataBlocked,
     geodataLoading,
     geodataError,
+    providersError,
+    providersLoading,
+    retryProviders,
+    connectionsError,
+    connectionsLoading,
+    retryConnections,
     note,
     refreshingAll,
     refreshAll,
@@ -55,6 +61,8 @@ export function BackendActionsCard() {
         {canRefresh && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.nodes')}</span>
+            <ErrorMessage error={providersError} onRetry={retryProviders} />
+            {providersLoading && <Loading />}
             <div className="rp-cluster">
               <Button isPending={refreshingAll} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
                 {refreshLabel}
@@ -65,6 +73,8 @@ export function BackendActionsCard() {
         {canClose && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.connections')}</span>
+            <ErrorMessage error={connectionsError} onRetry={retryConnections} />
+            {connectionsLoading && <Loading />}
             <div className="rp-cluster">
               <CloseAllButton {...closeAll} />
             </div>

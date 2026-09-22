@@ -48,7 +48,10 @@ const cmPhrases: Array<[string, Key]> = [
   ['Folded lines', 'cm.foldedLines'],
   ['Unfolded lines', 'cm.unfoldedLines'],
   ['to', 'cm.to'],
-  ['Selection deleted', 'cm.selectionDeleted']
+  ['Selection deleted', 'cm.selectionDeleted'],
+  ['Control character', 'cm.controlCharacter'],
+  ['folded code', 'cm.foldedCode'],
+  ['unfold', 'cm.unfold']
 ];
 const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(cmPhrases.map(([phrase, key]) => [phrase, t(key)])));
 

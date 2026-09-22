@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import type {Key} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../api/store';
+import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
 import type {PageProps} from '../../features/types';
 import {searchView} from './view';
 
@@ -22,6 +22,11 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
     q,
     setQ,
     sections: view.sections,
+    partial: view.partial,
+    openConnections: () => {
+      go('connections');
+      onClose();
+    },
     empty: view.byId.size === 0,
     error: sources.find(source => source.error)?.error,
     loading: sources.some(source => source.loading && !source.data),

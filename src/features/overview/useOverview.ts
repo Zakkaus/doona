@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../api/store';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, toast} from '../../ui/ui';
 import {usePalette} from '../../ui/Charts';

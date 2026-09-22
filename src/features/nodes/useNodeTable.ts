@@ -1,11 +1,11 @@
 import {useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
-import {useNodeProbe} from '../../api/store';
+import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {errorText, toast, useLinked, type TableSort} from '../../ui/ui';
-import {namedIn, readGroupEntries} from '../config/groups';
+import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../config/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
 

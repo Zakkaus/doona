@@ -19,7 +19,6 @@
 }
 /* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
 :root {
-  --iconPrimary: currentColor;
   color-scheme: light;
   --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --rp-underlay: rgba(0, 0, 0, 0.32);
