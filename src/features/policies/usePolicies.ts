@@ -70,7 +70,8 @@ export function usePolicies(query: string) {
     empty: groups.data?.length === 0,
     reload,
     refreshGroups: groups.refetch,
-    refreshNodes: nodes.refetch
+    refreshNodes: nodes.refetch,
+    nodes: nodes.data
   };
 }
 // A card mounts its details the first time it nears the viewport and keeps them; `visible` follows the viewport.

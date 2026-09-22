@@ -1,7 +1,10 @@
-import {memo, type ReactNode} from 'react';
+import {lazy, memo, Suspense, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty} from '../../ui/ui';
+import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
+import {within} from '../../shell/route';
+// Drag and drop is loaded with the arrange tab, not with the page.
+const Arrange = lazy(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import type {PageProps} from '../types';
@@ -124,11 +127,12 @@ const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<Pol
     </section>
   );
 });
-export function Policies({query}: PageProps) {
+export function Policies({go, query}: PageProps) {
   const t = useT();
   const m = usePolicies(query);
-  return (
-    <div className="rp-page">
+  const tab = new URLSearchParams(query).get('tab') === 'arrange' ? 'arrange' : 'groups';
+  const groups = (
+    <>
       <p className="rp-note">{t('policy.note')}</p>
       <ErrorMessage error={m.error} onRetry={m.reload} />
       {m.loading && <Loading />}
@@ -146,6 +150,27 @@ export function Policies({query}: PageProps) {
           />
         ))}
       </DisclosureGroup>
+    </>
+  );
+  return (
+    <div className="rp-page">
+      <Tabs
+        label={t('nav.policies')}
+        value={tab}
+        onChange={next => go('policies', within(query, {tab: next === 'groups' ? null : next}))}
+        items={[
+          {id: 'groups', label: t('policy.tab.groups'), content: groups},
+          {
+            id: 'arrange',
+            label: t('policy.tab.arrange'),
+            content: (
+              <Suspense fallback={<Loading />}>
+                <Arrange source={m.source} nodes={m.nodes} />
+              </Suspense>
+            )
+          }
+        ]}
+      />
     </div>
   );
 }
