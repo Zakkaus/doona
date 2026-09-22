@@ -32,18 +32,24 @@ export function RankingCard() {
           ]}
         />
       </div>
-      {connections.error && <ErrorMessage error={connections.error} />}
+      {connections.error && !connections.data && <ErrorMessage error={connections.error} />}
       {connections.data?.truncated && (
         <TextTooltip text={t('act.rankingTruncated')}>
           <Badge tone="warn">{t('act.truncated')}</Badge>
         </TextTooltip>
       )}
       {state === 'error' ? null : state === 'loading' ? (
-        <Loading>{t('act.loading')}</Loading>
+        <div className="rp-chart-wait bars">
+          <Loading>{t('act.loading')}</Loading>
+        </div>
       ) : state === 'unavailable' ? (
-        <Empty>{t('shell.notOfferedShort')}</Empty>
+        <div className="rp-chart-wait bars">
+          <Empty>{t('shell.notOfferedShort')}</Empty>
+        </div>
       ) : state === 'empty' ? (
-        <Empty>{t('act.rankingEmpty')}</Empty>
+        <div className="rp-chart-wait bars">
+          <Empty>{t('act.rankingEmpty')}</Empty>
+        </div>
       ) : (
         <div className="rp-list">
           {rows.map(row => (

@@ -44,8 +44,8 @@ export function useActivity() {
   const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
   const view = useMemo(
-    () => activityView(runtime.data, memory.data, t, resources?.runtime.available),
-    [runtime.data, memory.data, t, resources?.runtime.available]
+    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
+    [runtime.data, memory.data, t, resources?.runtime.available, locale]
   );
   const notices = useNotices();
   const mode = useMode();
@@ -75,7 +75,7 @@ export function useActivity() {
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
-      state: trafficState(series, resources?.traffic_history.available, !!history.data)
+      state: trafficState(series, resources?.traffic_history.available, !!history.data, resources?.runtime.available === true)
     },
     memoryState: {
       error: memory.error ?? memoryHistory.error,

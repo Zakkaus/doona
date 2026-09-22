@@ -14,7 +14,7 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
     {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: '91', limit_bytes: '100'}},
     t
   );
-  expect(model.connections).toBe(0);
+  expect(model.connections).toBe('0');
   expect(model.memoryBadge?.tone).toBe('err');
   expect(activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
   const ranking = activityRanking(connections, 'dev', colors, t);

@@ -12,7 +12,7 @@ import {
   routineGap,
   shortId
 } from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
@@ -83,9 +83,10 @@ export type ActivityNodeMenu = {
   name: string;
 };
 
-export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean) {
+export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean, live = false) {
   if (series.down.some(value => value !== null) || series.up.some(value => value !== null)) return 'ready';
-  return available === false ? 'unavailable' : !loaded ? 'loading' : 'empty';
+  if (available === false) return live ? 'loading' : 'unavailable';
+  return !loaded ? 'loading' : 'empty';
 }
 
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
@@ -116,7 +117,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     healthError: node?.healthError
   };
 }
-export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean) {
+export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en') {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   return {
     status: {
@@ -125,7 +126,7 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
     },
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null),
-    connections: runtime?.traffic.connections.total ?? '—',
+    connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),
     rss: formatBytes(memory?.process?.rss_bytes ?? null),
     memoryBadge:
       percent === null

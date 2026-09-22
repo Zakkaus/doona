@@ -23,14 +23,20 @@ export function OutboundsCard() {
           {view.since && <span className="rp-label">{view.since}</span>}
         </div>
       </div>
-      {outbounds.error ? (
+      {outbounds.error && state !== 'ready' ? (
         <ErrorMessage error={outbounds.error} />
       ) : state === 'unavailable' ? (
-        <span className="rp-label">{t('act.noOutbounds')}</span>
+        <div className="rp-chart-wait tall">
+          <span className="rp-label">{t('act.noOutbounds')}</span>
+        </div>
       ) : state === 'loading' ? (
-        <Loading>{t('act.loading')}</Loading>
+        <div className="rp-chart-wait tall">
+          <Loading>{t('act.loading')}</Loading>
+        </div>
       ) : state === 'empty' ? (
-        <Empty>{t('ui.empty')}</Empty>
+        <div className="rp-chart-wait tall">
+          <Empty>{t('ui.empty')}</Empty>
+        </div>
       ) : (
         <Donut rows={view.rows} total={view.total} />
       )}

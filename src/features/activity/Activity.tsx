@@ -118,14 +118,20 @@ export function Activity() {
               ]}
             />
           </div>
-          {vm.history.error ? (
+          {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} />
           ) : vm.history.state === 'unavailable' ? (
-            <span className="rp-label">{t('act.noHistory')}</span>
+            <div className="rp-chart-wait tall">
+              <span className="rp-label">{t('act.noHistory')}</span>
+            </div>
           ) : vm.history.state === 'loading' ? (
-            <Loading>{t('act.loading')}</Loading>
+            <div className="rp-chart-wait tall">
+              <Loading>{t('act.loading')}</Loading>
+            </div>
           ) : vm.history.state === 'empty' ? (
-            <Empty>{t('act.emptyHistory')}</Empty>
+            <div className="rp-chart-wait tall">
+              <Empty>{t('act.emptyHistory')}</Empty>
+            </div>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
