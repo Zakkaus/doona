@@ -7,7 +7,7 @@ import {fileName, redacted} from './names';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
-import {buildHash} from '../../shell/route';
+import {href as routeHref} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
@@ -112,7 +112,7 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
   const main = sources.find(source => source.kind === 'main') ?? null;
   const sections = sectionKinds.flatMap<ModuleSection>(kind => {
-    const href = kind === 'group' ? buildHash('policies') : kind === 'node' || kind === 'subscription' ? buildHash('nodes') : null;
+    const href = kind === 'group' ? routeHref('policies') : kind === 'node' || kind === 'subscription' ? routeHref('nodes') : null;
     const occurrences = parsed.flatMap(({source, blocks, tokens}) =>
       blocks
         .filter(block => block.name === kind)

@@ -7,7 +7,7 @@ import {localTime} from '../../api/selectors';
 import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
-import {within} from '../../shell/route';
+import {pickTab, within} from '../../shell/route';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
 import {useDraftGuard} from './useDraftGuard';
 import {useValidationSources} from './useValidationSources';
@@ -53,15 +53,8 @@ export function useConfigPage({go, query}: PageProps) {
   // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
   const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
   const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
-  const requested = params.get('tab');
-  const tab =
-    requested === 'modules' || requested === 'source' || requested === 'validate' || (requested === 'setup' && setupAvailable)
-      ? requested
-      : params.has('source') || mainSource?.content === undefined
-        ? 'source'
-        : !mainSource.content.trim() && setupAvailable
-          ? 'setup'
-          : 'modules';
+  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setupAvailable ? 'setup' : 'modules';
+  const tab = pickTab(query, ['modules', 'source', 'validate', ...(setupAvailable ? ['setup'] : [])], fallback);
   // A stale link to a source that no longer exists opens the first one rather than an empty card.
   const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
   const selectedId = source?.id ?? null;

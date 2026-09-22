@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {buildHash, parseHash, restoreDraftRoute, updateRoute} from './route';
+import {buildHash, href, parseHash, pickTab, restoreDraftRoute, updateRoute} from './route';
+import type {RoutePath} from './registry';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -21,6 +22,15 @@ describe('draft history restoration', () => {
   });
 });
 describe('hash routing', () => {
+  it('builds a link with encoded and omitted parameters', () => {
+    expect(href('rules', {tab: 'list', rule: 'a & b', unused: null})).toBe('#/rules?tab=list&rule=a+%26+b');
+  });
+
+  it('picks an available tab and falls back from stale links', () => {
+    expect(pickTab('tab=cache', ['query', 'cache'], 'query')).toBe('cache');
+    expect(pickTab('tab=log', ['query', 'cache'], 'query')).toBe('query');
+  });
+
   it.each([
     ['', 'activity', ''],
     ['#', 'activity', ''],
@@ -41,7 +51,7 @@ describe('hash routing', () => {
     expect(parseHash('#/unknown?id=a')).toEqual({route: 'activity', query: 'id=a'});
   });
 
-  it.each<[string, string?]>([
+  it.each<[RoutePath, string?]>([
     ['activity', undefined],
     ['rules', ''],
     ['rules', 'id=a&x=1'],

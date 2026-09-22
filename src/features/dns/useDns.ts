@@ -8,7 +8,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
-import {within} from '../../shell/route';
+import {pickTab, within} from '../../shell/route';
 import {queryTypes} from './query';
 import {errorText} from '../../api/error';
 
@@ -56,7 +56,11 @@ export function useDns({go, query}: PageProps) {
     queryError: error,
     submit: () => void submit(),
     setTab,
-    tab: view.tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (view.tabs[0]?.id ?? 'query'),
+    tab: pickTab(
+      query,
+      view.tabs.map(item => item.id),
+      view.tabs[0]?.id ?? 'query'
+    ),
     filterDomain: params.get('domain') ?? '',
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
     logEnabled: resources?.dns_log.available,

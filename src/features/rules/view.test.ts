@@ -71,7 +71,7 @@ it('rejects unavailable tab requests and keeps trace-only navigation usable', as
   resources.flows.available = false;
   resources.rules.available = false;
   resources.routing_trace.available = true;
-  const view = rulesView(resources, 'map', t);
+  const view = rulesView(resources, 'tab=map', t);
   expect(view.tabs.map(tab => tab.id)).toEqual(['trace']);
   expect(view.tab).toBe('trace');
 });

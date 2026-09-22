@@ -13,7 +13,7 @@ import {
   type Selection
 } from 'react-aria-components';
 import {formatList, useLang, useT} from '../../../i18n';
-import {buildHash} from '../../../shell/route';
+import {href} from '../../../shell/route';
 import {
   ActionBar,
   Badge,
@@ -197,7 +197,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
               )}
               <span className="rp-label">
                 {group.ruleNote}{' '}
-                <Link appearance="link" href={buildHash('config', 'tab=source')}>
+                <Link appearance="link" href={href('config', {tab: 'source'})}>
                   {t('arrange.editSource')}
                 </Link>
               </span>

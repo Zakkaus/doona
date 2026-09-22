@@ -1,13 +1,14 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
-import {features, navAvailable, subpages} from '../registry';
+import {features, navAvailable, subpages, type RoutePath} from '../registry';
+import {within} from '../route';
 import {dnsQueryView} from '../../features/dns/view';
 import {rulesView} from '../../features/rules/view';
 import {ownedNodes, providerRows} from '../../features/nodes/view';
 import {sourceKinds} from '../../features/config/view';
 
-type SearchHit = {id: string; label: string; description: string | undefined; route: string; query: string};
+type SearchHit = {id: string; label: string; description: string | undefined; route: RoutePath; query: string};
 // A hit with its lower-cased match text, projected once per dataset so a keystroke only filters.
 type SearchEntry = {hit: SearchHit; keys: string[]};
 export type SearchIndex = {sections: Array<{id: string; title: string; entries: SearchEntry[]}>; partial: string | null};
@@ -21,7 +22,14 @@ export type SearchSources = {
   config: {data: EffectiveConfig | undefined};
   rules: {data: RuleList | undefined};
 };
-const entry = (keys: Array<string | null | undefined>, id: string, label: string, description: string | undefined, route: string, query = ''): SearchEntry => ({
+const entry = (
+  keys: Array<string | null | undefined>,
+  id: string,
+  label: string,
+  description: string | undefined,
+  route: RoutePath,
+  query = ''
+): SearchEntry => ({
   hit: {id, label, description, route, query},
   keys: keys.flatMap(key => (key == null ? [] : [key.toLowerCase()]))
 });
@@ -31,12 +39,12 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
   const resources = capabilities?.resources;
   const tabs = {
     dns: dnsQueryView(null, resources, '', '', false, t).tabs,
-    rules: rulesView(resources, null, t).tabs
+    rules: rulesView(resources, '', t).tabs
   };
   const main = config?.sources.find(source => source.kind === 'main');
   const destinationAvailable = (item: (typeof subpages)[number]) => {
     if (!available(item.path)) return false;
-    const tab = new URLSearchParams(item.query).get('tab');
+    const tab = item.params.tab;
     if (item.path === 'dns' || item.path === 'rules') return tabs[item.path].some(item => item.id === tab);
     if (item.path === 'config' && tab === 'setup') return !!main?.writable && main.content !== undefined && resources?.config.writable === true;
     if (item.path === 'config' && tab === 'validate') return resources?.config_validate.available === true;
@@ -46,9 +54,12 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
     ...features
       .filter(feature => feature.nav && available(feature.path))
       .map(feature => ({route: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
-    ...subpages
-      .filter(destinationAvailable)
-      .map(item => ({route: item.path, query: item.query, title: t(item.titleKey), parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)}))
+    ...subpages.filter(destinationAvailable).map(item => ({
+      route: item.path,
+      query: within('', item.params),
+      title: t(item.titleKey),
+      parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)
+    }))
   ];
   return places.map(place =>
     entry(
@@ -63,7 +74,7 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
 }
 export function connectionEntries(connections: ConnectionList | undefined, t: Translator): SearchEntry[] {
   return connectionRows(connections).map(c =>
-    entry([c.domain, c.dst, c.src], `connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', 'id=' + encodeURIComponent(c.id))
+    entry([c.domain, c.dst, c.src], `connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', within('', {id: c.id}))
   );
 }
 export function nodeEntries(nodes: Node[] | undefined, providers: ProviderList | undefined, lang: Lang, t: Translator): SearchEntry[] {
@@ -77,21 +88,21 @@ export function nodeEntries(nodes: Node[] | undefined, providers: ProviderList |
   // The nodes page filters by owner and name; the owner comes from the same projection the page uses.
   const nodeQuery = (node: Node) => {
     const owner = node.provider_id ?? syntheticOwners.get(node.id);
-    return (owner === undefined ? '' : 'provider=' + encodeURIComponent(owner) + '&') + 'q=' + encodeURIComponent(node.name);
+    return within('', {provider: owner ?? null, q: node.name});
   };
   return nodeList.map(n => entry([n.name], `node:${n.id}`, n.name, formatList(lang, n.group_ids) || undefined, 'nodes', nodeQuery(n)));
 }
 export function groupEntries(groups: GroupSummary[] | undefined): SearchEntry[] {
-  return (groups ?? []).map(g => entry([g.name], `group:${g.id}`, g.name, g.policy.native, 'policies', 'group=' + encodeURIComponent(g.id)));
+  return (groups ?? []).map(g => entry([g.name], `group:${g.id}`, g.name, g.policy.native, 'policies', within('', {group: g.id})));
 }
 export function providerEntries(providers: ProviderList | undefined, t: Translator): SearchEntry[] {
   return (providers?.providers ?? []).map(p =>
-    entry([p.name], `provider:${p.id}`, p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', 'provider=' + encodeURIComponent(p.id))
+    entry([p.name], `provider:${p.id}`, p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', within('', {provider: p.id}))
   );
 }
 export function sourceEntries(config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
   return (config?.sources ?? []).map(source =>
-    entry([source.path], `source:${source.id}`, source.path, t(sourceKinds[source.kind]), 'config', 'tab=source&source=' + encodeURIComponent(source.id))
+    entry([source.path], `source:${source.id}`, source.path, t(sourceKinds[source.kind]), 'config', within('', {tab: 'source', source: source.id}))
   );
 }
 export function ruleEntries(rules: RuleList | undefined, lang: Lang): SearchEntry[] {
@@ -104,7 +115,7 @@ export function ruleEntries(rules: RuleList | undefined, lang: Lang): SearchEntr
         rule.expression,
         `#${formatNumber(rule.index + 1, LOCALE[lang])} → ${rule.outbound}`,
         'rules',
-        'tab=list&rule=' + encodeURIComponent(rule.rule_id)
+        within('', {tab: 'list', rule: rule.rule_id})
       )
     );
 }

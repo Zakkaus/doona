@@ -1,5 +1,5 @@
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
-import {buildHash} from '../../shell/route';
+import {href} from '../../shell/route';
 
 export type RuleSeed = {kind: ConditionKind; value: string};
 export function parseRuleSeed(value: string | null): RuleSeed | null {
@@ -9,5 +9,5 @@ export function parseRuleSeed(value: string | null): RuleSeed | null {
   return colon > 0 && conditionKinds.includes(kind) ? {kind, value: value.slice(colon + 1)} : null;
 }
 export function ruleSeedHref(seed: RuleSeed): string {
-  return buildHash('rules', 'tab=list&add=' + encodeURIComponent(seed.kind + ':' + seed.value));
+  return href('rules', {tab: 'list', add: seed.kind + ':' + seed.value});
 }

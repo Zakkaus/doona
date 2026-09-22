@@ -2,7 +2,7 @@ import {lazy, memo, Suspense, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
-import {within} from '../../shell/route';
+import {pickTab, within} from '../../shell/route';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import type {PageProps} from '../types';
@@ -131,7 +131,7 @@ const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<Pol
 export function Policies({go, query}: PageProps) {
   const t = useT();
   const m = usePolicies(query);
-  const tab = new URLSearchParams(query).get('tab') === 'arrange' ? 'arrange' : 'groups';
+  const tab = pickTab(query, ['groups', 'arrange'], 'groups');
   const groups = (
     <>
       <p className="rp-note">{t('policy.note')}</p>

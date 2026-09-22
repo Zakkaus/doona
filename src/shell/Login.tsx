@@ -1,6 +1,7 @@
 import {useT} from '../i18n';
 import {useLogin} from './useLogin';
 import {Button, InlineAlert, Link, Loading, TextField} from '../ui/ui';
+import {href} from './route';
 
 export function Login({profileId, api, backend, rejected}: {profileId: string; api: string; backend: string; rejected: boolean}) {
   const t = useT();
@@ -78,7 +79,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
             <Button accent type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
               {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
             </Button>
-            <Link appearance="link" href="#/settings">
+            <Link appearance="link" href={href('settings')}>
               {t('login.settings')}
             </Link>
           </div>
