@@ -4,6 +4,8 @@ export const messages = defineMessages({
   'zh-TW': {
     'config.tabModules': '模組',
     'config.moduleOpen': '開啟頁面',
+    'config.moduleManual': '手動編輯',
+    'config.moduleManualTip': '在來源分頁開啟整個檔案，游標停在這個區段',
     'config.moduleAbsent': '未設定此區段；可加入 {file}。',
     'config.moduleSettings': '{n} 項設定',
     'config.moduleSubscriptions': '{n} 個訂閱',
@@ -111,6 +113,8 @@ export const messages = defineMessages({
   'zh-CN': {
     'config.tabModules': '模块',
     'config.moduleOpen': '打开页面',
+    'config.moduleManual': '手动编辑',
+    'config.moduleManualTip': '在来源标签页打开整个文件，光标停在这个区段',
     'config.moduleAbsent': '未设置此区段；可加入 {file}。',
     'config.moduleSettings': '{n} 项设置',
     'config.moduleSubscriptions': '{n} 个订阅',
@@ -218,6 +222,8 @@ export const messages = defineMessages({
   en: {
     'config.tabModules': 'Modules',
     'config.moduleOpen': 'Open page',
+    'config.moduleManual': 'Edit by hand',
+    'config.moduleManualTip': 'Open the whole file in the Sources tab at this section',
     'config.moduleAbsent': 'Section not configured; add it to {file}.',
     'config.moduleSettings': {one: '{n} setting', other: '{n} settings'},
     'config.moduleSubscriptions': {one: '{n} subscription', other: '{n} subscriptions'},

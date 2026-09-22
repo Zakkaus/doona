@@ -362,6 +362,16 @@ test('modules list top-level counts and edit only routing through reload', async
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
 });
 
+test('a module card opens its section in the Sources tab for editing by hand', async ({page}) => {
+  await configBackend(page);
+  await page.goto('/#/config');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  await modules.getByRole('region', {name: 'routing', exact: true}).getByRole('button', {name: 'Edit by hand', exact: true}).click();
+  await expect(page.getByRole('tab', {name: 'Sources', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/tab=source&source=src-main&line=\d+$/);
+  await expect(page.locator('.cm-activeLine')).toContainText('routing {');
+});
+
 test('cancelling a module discards its draft and navigation uses the draft guard', async ({page}) => {
   await page.goto('/#/config');
   const routing = page.getByRole('region', {name: 'routing', exact: true});

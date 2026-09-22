@@ -134,6 +134,11 @@ function Modules(props: ModulesProps) {
                   {t('config.edit')}
                 </Button>
               )}
+              {card.manual && !card.editing && (
+                <Button small quiet tip={t('config.moduleManualTip')} onPress={card.manual}>
+                  {t('config.moduleManual')}
+                </Button>
+              )}
             </span>
           </div>
           <Light small tone={card.muted ? 'muted' : 'info'}>

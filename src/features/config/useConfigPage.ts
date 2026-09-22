@@ -113,7 +113,16 @@ export function useConfigPage({go, query}: PageProps) {
     select,
     sourceProps,
     wizardProps,
-    modulesProps: config.data ? {config: config.data, editor, canWrite: resources?.config.writable === true, canValidate} : null,
+    modulesProps: config.data
+      ? {
+          config: config.data,
+          editor,
+          canWrite: resources?.config.writable === true,
+          canValidate,
+          open: (sourceId: string, line: number | null) =>
+            go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))
+        }
+      : null,
     validateProps,
     sourceModel: source ? sourceView(source, locale, t) : null,
     sourceOptions: sources.map(item => {
