@@ -3,6 +3,7 @@ import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, Capabilities} from '../api/model';
 import {watchResource} from './resource';
+import {shouldRefetch} from '../api/invalidation';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
@@ -31,7 +32,9 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
         update({error: state.error});
       }
       if (!state.data || state.data === current) return;
+      const unchanged = state.data.resources.events.available === current?.resources.events.available;
       current = state.data;
+      if (unchanged && (connection || !current.resources.events.available)) return;
       connection?.abort();
       update({available: current.resources.events.available, connected: false, error: null});
       if (!current.resources.events.available) return;
@@ -50,11 +53,15 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
               shared.ready = event;
               update({cursor: event.id, error: null});
             }
+            if (shouldRefetch('capabilities', event, reconnected)) capabilities.invalidate(reconnected);
             shared.listeners.forEach(fn => fn(event, reconnected));
           }
         })
         .catch(reason => {
-          if (!controller.signal.aborted) update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
+          if (!controller.signal.aborted) {
+            connection = undefined;
+            update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
+          }
         });
     };
     const capabilities = watchResource(

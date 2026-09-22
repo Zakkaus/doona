@@ -15,7 +15,7 @@ import {
   highlightSpecialChars
 } from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap, indentWithTab, toggleComment} from '@codemirror/commands';
-import {bracketMatching, syntaxHighlighting, HighlightStyle, foldGutter, foldKeymap, indentUnit, indentOnInput, indentService} from '@codemirror/language';
+import {bracketMatching, syntaxHighlighting, HighlightStyle, indentUnit, indentOnInput, indentService} from '@codemirror/language';
 import {setDiagnostics} from '@codemirror/lint';
 import {highlightSelectionMatches, searchKeymap, gotoLine} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
@@ -24,8 +24,9 @@ import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {toDiagnostics} from './diagnostics';
 
-// CodeMirror's search and go-to-line panels ship English phrases; these are their keys in the catalogue.
+// CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
+  ['Completions', 'cm.completions'],
   ['Find', 'cm.find'],
   ['Replace', 'cm.replace'],
   ['next', 'cm.next'],
@@ -43,15 +44,8 @@ const cmPhrases: Array<[string, Key]> = [
   ['replaced $ matches', 'cm.replacedMatches'],
   ['replaced match on line $', 'cm.replacedOnLine'],
   ['on line', 'cm.onLine'],
-  ['Fold line', 'cm.foldLine'],
-  ['Unfold line', 'cm.unfoldLine'],
-  ['Folded lines', 'cm.foldedLines'],
-  ['Unfolded lines', 'cm.unfoldedLines'],
-  ['to', 'cm.to'],
   ['Selection deleted', 'cm.selectionDeleted'],
-  ['Control character', 'cm.controlCharacter'],
-  ['folded code', 'cm.foldedCode'],
-  ['unfold', 'cm.unfold']
+  ['Control character', 'cm.controlCharacter']
 ];
 const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(cmPhrases.map(([phrase, key]) => [phrase, t(key)])));
 
@@ -69,8 +63,6 @@ const theme = EditorView.theme({
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
   '.cm-gutters': {backgroundColor: 'transparent', color: 'var(--rp-muted)', border: 'none'},
-  '.cm-foldGutter .cm-gutterElement': {color: 'var(--rp-muted)', padding: '0 2px'},
-  '.cm-foldPlaceholder': {backgroundColor: 'var(--rp-hl-med)', border: 'none', color: 'var(--rp-subtle)', borderRadius: '4px', padding: '0 6px'},
   '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
   '.cm-activeLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
@@ -126,8 +118,7 @@ const daeIndent = indentService.of((context, pos) => {
   return Math.max(0, base + (opens ? 2 : 0) - (closes ? 2 : 0));
 });
 
-// The whole line of a diagnostic is tinted by its level, so a problem is visible from across the file; the
-// underline then says where on the line.
+// Tint diagnostic lines as well as underlining their exact spans.
 const setLineMarks = StateEffect.define<EditorMark[]>();
 const lineDecoration = {
   error: Decoration.line({class: 'cm-diag-line cm-diag-line-error'}),
@@ -206,7 +197,6 @@ export function CodeEditor({
         doc: value,
         extensions: [
           lineNumbers(),
-          foldGutter(),
           highlightActiveLineGutter(),
           highlightSpecialChars(),
           history(),
@@ -236,7 +226,6 @@ export function CodeEditor({
             {key: 'Mod-g', run: gotoLine},
             ...closeBracketsKeymap,
             ...completionKeymap,
-            ...foldKeymap,
             ...defaultKeymap,
             ...historyKeymap,
             ...searchKeymap,
@@ -244,8 +233,7 @@ export function CodeEditor({
           ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
           language.current.of(phrasesFor(t)),
-          // A viewer's text is not editable, so it stops being focusable; keep it in the tab order so a long
-          // or wide source can still be scrolled from the keyboard.
+          // Read-only sources remain focusable for keyboard scrolling and search.
           naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
           EditorView.updateListener.of(update => {
             if (update.docChanged) change.current?.(update.state.doc.toString());

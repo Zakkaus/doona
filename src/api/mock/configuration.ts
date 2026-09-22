@@ -3,7 +3,7 @@ import type {Capabilities, ConfigSource, RuleList, Runtime, RuntimeSettingsPatch
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
-import {diagnose, sectionLines, stored, validate} from './config';
+import {diagnose, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
 import type {MockLifecycle} from './lifecycle';
 
 type ConfigurationApi = Pick<
@@ -31,11 +31,26 @@ export function createConfiguration(
   let configRevision = 40;
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
+  function sourceSet(replacement?: {id: string; content: string}) {
+    const candidate: Array<{id: string; path: string; content: string}> = [];
+    const include = (item: (typeof disk)[number]) => {
+      if (candidate.some(source => source.id === item.id)) return;
+      const content = item.id === replacement?.id ? replacement.content : item.content;
+      candidate.push({id: item.id, path: item.path, content});
+      for (const {path} of includePaths(content)) {
+        const dependency = disk.find(source => resolveIncludePath(undefined, source.path) === resolveIncludePath(item.path, path));
+        if (dependency) include(dependency);
+      }
+    };
+    const main = disk.find(source => source.kind === 'main');
+    if (main) include(main);
+    return candidate;
+  }
   // Advancing a generation increments the revision, restores configured runtime settings, and notifies listeners.
   function advance(): string {
     const nextRevision = String(configRevision + 1);
-    const main = disk.find(source => source.kind === 'main');
-    if (main) activateInventory(main.content, nextRevision);
+    const candidate = sourceSet();
+    if (candidate.length) activateInventory(candidate.map(source => source.content).join('\n'), nextRevision);
     if (sources) sources = [...disk];
     configRevision += 1;
     Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
@@ -63,16 +78,19 @@ export function createConfiguration(
   const ruleSnapshot = async (): Promise<RuleList> => {
     await loadSources();
     const list = sources!;
-    const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
+    const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
     const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
     const entries: RuleList['rules'] = [];
     let fallback: RuleList['fallback'] | null = null;
+    const visited = new Set<string>();
     const read = (file: (typeof list)[number], bare: boolean) => {
+      if (visited.has(file.id)) return;
+      visited.add(file.id);
       sectionLines(file.content, 'routing', bare).forEach(({code, line}) => {
         const include = /^include\s+(\S+)$/.exec(code);
         if (include) {
-          const target = byPath.get(include[1]);
-          if (target) read(target, true);
+          const dependency = byPath.get(resolveIncludePath(file.path, include[1]));
+          if (dependency) read(dependency, true);
           return;
         }
         const fb = /^fallback:\s*(\S+)$/.exec(code);
@@ -97,6 +115,10 @@ export function createConfiguration(
           kind: 'rule'
         });
       });
+      for (const {path} of includePaths(file.content)) {
+        const dependency = byPath.get(resolveIncludePath(file.path, path));
+        if (dependency) read(dependency, true);
+      }
     };
     const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
@@ -132,7 +154,8 @@ export function createConfiguration(
       if (!capabilities.resources.config_validate.available) throw new ApiError(404, 'capability_not_supported', 'Validation is unavailable');
       if (!capabilities.resources.config_validate.modes?.includes(request.mode))
         throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
-      return validate(request, String(configRevision));
+      if (request.mode === 'full') await loadSources();
+      return validate(request, String(configRevision), disk.filter(ruleFile));
     },
     // The editing contract in order: If-Match present and current, full validation clean, then the write and a reload.
     replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
@@ -147,20 +170,7 @@ export function createConfiguration(
       if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
-      const main = list.find(item => item.kind === 'main')!;
-      const candidate: Array<{id: string; path: string; content: string}> = [];
-      const include = (item: (typeof list)[number]) => {
-        if (candidate.some(source => source.id === item.id)) return;
-        const text = item.id === sourceId ? content : item.content;
-        candidate.push({id: item.id, path: item.path, content: text});
-        for (const {code} of sectionLines(text, 'routing', item.kind === 'include')) {
-          const path = /^include\s+(\S+)$/.exec(code)?.[1];
-          const dependency = path && list.find(source => source.kind === 'include' && source.path.split('/').pop() === path);
-          if (dependency) include(dependency);
-        }
-      };
-      include(main);
-      const check = validate({sources: candidate, mode: 'full'}, String(configRevision));
+      const check = validate({sources: sourceSet({id: sourceId, content}), mode: 'full'}, String(configRevision));
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
       disk = disk.map(item => (item.id === sourceId ? next : item));

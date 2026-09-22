@@ -27,6 +27,7 @@ it('waits for discovery and yields protected pages to login without blocking set
   expect(shellView(configured, 'connections', undefined, error, undefined, null, t).content).toEqual({
     kind: 'login',
     profileId: 'router',
+    api: 'https://router.test',
     backend: 'Router',
     rejected: true
   });

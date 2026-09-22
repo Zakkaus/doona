@@ -6,7 +6,7 @@ import {millis} from '../../api/u64';
 import {latencyTone} from '../../ui/ui';
 import {policyKindLabels} from '../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
-import {treeIndex} from './map';
+import {treeIndex, treeRows} from './map';
 import {buildHash} from '../../shell/route';
 import {ruleSeedHref} from '../rules/seed';
 const flowWords: Record<string, Key> = {
@@ -87,7 +87,7 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
           const label = inputLabels[name];
           const labelRef: Key | MessageRef =
             label === undefined || !label.includes('.') ? {key: 'flow.f.input', params: {name: label ?? name}} : (label as Key);
-          return [labelRef, typeof value === 'string' ? word(value) : text(value)];
+          return [labelRef, typeof value === 'string' && (name === 'ingress' || name === 'domain_source') ? word(value) : text(value)];
         });
     case 'route':
       return [
@@ -146,8 +146,6 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
   }
 }
 
-// What a routing-tree tile shows, shaped once so the tree only lays tiles out: the name, small notes beside it
-// (policy, nested groups, latency), a badge, and the flow count. The spoken label adds where the branch leads.
 type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
 export type TileView = {id: string; stage: TreeBy | 'outbound' | 'node'; name: string; badge?: string; notes: TileNote[]; count: number; label: string};
 export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
@@ -168,7 +166,7 @@ export function tileViews(tree: RoutingTree, t: Translator): TileView[] {
       name: unknown(outbound, outboundLabel(outbound.label, t)),
       notes: [
         ...outbound.groups.slice(1).map(group => ({text: '› ' + group.name})),
-        ...(outbound.groups.length ? [{text: t(policyKindLabels[outbound.groups[outbound.groups.length - 1].kind])}] : []),
+        ...outbound.groups.slice(-1).map(group => ({text: group.policy || t(policyKindLabels[group.kind])})),
         ...(outbound.kind === 'group' && !outbound.node ? [{text: t('flow.treeNoNode')}] : [])
       ],
       count: outbound.count
@@ -329,5 +327,63 @@ export function flowRecordsView(
             })
         }
       : null
+  };
+}
+
+export const TREE_STEP = 30;
+// Narrow screens pan instead of compressing the diagram.
+const MIN_WIDTH = 720;
+const PITCH = 40;
+const TILE = 32;
+const GAP = 56;
+const shares = [5, 4, 3];
+type TreeStage = TreeBy | 'outbound' | 'node';
+const columns: Record<TreeStage, number> = {rule: 0, client: 0, outbound: 1, node: 2};
+export type TreePlacement = {top: number; left: number; width: number};
+
+export function treeWindow(tree: RoutingTree, limit: number): RoutingTree {
+  return tree.leaves.length <= limit ? tree : {...tree, leaves: tree.leaves.slice(0, limit)};
+}
+
+export function treeGeometry(tree: RoutingTree, measured: number | null, t: Translator) {
+  const width = measured === null ? undefined : Math.max(measured, MIN_WIDTH);
+  const unit = ((width ?? 0) - 2 * GAP) / shares.reduce((sum, share) => sum + share);
+  const column = (stage: TreeStage) => {
+    const index = columns[stage];
+    return {left: shares.slice(0, index).reduce((sum, share) => sum + share * unit + GAP, 0), width: shares[index] * unit};
+  };
+  const layout = treeRows(tree);
+  const placed = tileViews(tree, t).map(view => ({view, style: {top: layout.at.get(view.id)! * PITCH, ...column(view.stage)}}));
+  const outbounds = new Map(tree.outbounds.map(outbound => [outbound.id, outbound]));
+  const geometry = tree.links.flatMap(link => {
+    if (!layout.at.has(link.source) || !layout.at.has(link.target)) return [];
+    const from = link.source.startsWith('outbound:') ? 'outbound' : tree.by;
+    const start = column(from);
+    const x1 = start.left + start.width;
+    const x2 = column(from === 'outbound' ? 'node' : 'outbound').left;
+    const y1 = layout.at.get(link.source)! * PITCH + TILE / 2;
+    const y2 = layout.at.get(link.target)! * PITCH + TILE / 2;
+    const xm = (x1 + x2) / 2;
+    return [
+      {
+        link,
+        id: link.source + '>' + link.target,
+        path: `M${x1},${y1} C${xm},${y1} ${xm},${y2} ${x2},${y2}`,
+        width: Math.min(8, 1.5 + Math.log2(1 + link.count) * 1.25),
+        dash: link.count ? undefined : '4 4',
+        kind: from === 'outbound' ? 'node' : (outbounds.get(link.target)?.kind ?? 'group')
+      }
+    ];
+  });
+  return {
+    width,
+    height: layout.rows * PITCH - (PITCH - TILE),
+    captions: [
+      {stage: tree.by, label: t(tree.by === 'rule' ? 'flow.mapRule' : 'flow.stageClient'), style: column(tree.by)},
+      {stage: 'outbound', label: t('flow.mapOutbound'), style: column('outbound')},
+      {stage: 'node', label: t('flow.mapNode'), style: column('node')}
+    ],
+    placed,
+    geometry
   };
 }

@@ -1,10 +1,43 @@
 import {useCallback, useState} from 'react';
 import {getApi} from '../api/index';
-import type {GroupSelectionRequest} from '../api/model';
+import type {Capabilities, Group, GroupSelectionRequest, ProbeResult} from '../api/model';
+import type {Api} from '../api/api';
 import {LocalError} from '../api/error';
 import {useResource} from './resource';
 import {etag, finished, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
+export async function probeGroup(api: Api, capabilities: Capabilities, group: Group, signal: AbortSignal): Promise<ProbeResult> {
+  const request = tcpProbe(capabilities, {type: 'group', group_id: group.id});
+  const limits = capabilities.resources.probes.limits;
+  if (!request || !limits || !group.capabilities.probe_transports.includes('tcp')) throw new LocalError('ui.probeUnsupported');
+  const dimensions = request.transport.length * (request.ip_version === 'any' ? 2 : 1);
+  const size = Math.min(limits.max_members_per_job, Math.floor(limits.max_results_per_job / dimensions));
+  if (size < 1 || !group.members.length) throw new LocalError('ui.probeUnsupported');
+  let result: ProbeResult | undefined;
+  try {
+    for (let offset = 0; offset < group.members.length; offset += size) {
+      signal.throwIfAborted();
+      const members = group.members.slice(offset, offset + size).map(member => member.id);
+      const accepted = await api.startProbe({...request, members}, signal);
+      const batch = finished(await api.pollOperation(accepted, signal), 'probe');
+      if (!result) result = batch;
+      else {
+        result.results.push(...batch.results);
+        result.selection_after = batch.selection_after;
+        result.selection_changed.tcp ||= batch.selection_changed.tcp;
+        result.selection_changed.udp ||= batch.selection_changed.udp;
+      }
+    }
+  } catch (error) {
+    if (signal.aborted || !result) throw error;
+    const completed = new Set(result.results.map(row => row.member_id)).size;
+    throw Object.assign(
+      new LocalError('ui.operationFailed', `${completed}/${group.members.length}; ${error instanceof Error ? error.message : String(error)}`),
+      {partialResult: result}
+    );
+  }
+  return result!;
+}
 export function useGroups(enabled = true) {
   const api = getApi();
   return useResource({key: ['groups'], every: 30000, fetch: signal => api.groups(signal)}, {enabled});
@@ -31,7 +64,15 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     [act, refetch, refetchGroups, refetchNodes]
   );
   // A TCP probe needs the backend to offer it and the group to accept it.
-  const canProbe = tcpProbe(capabilities, {type: 'group', group_id: id}) !== null && (resource.data?.capabilities.probe_transports.includes('tcp') ?? false);
+  const request = tcpProbe(capabilities, {type: 'group', group_id: id});
+  const limits = capabilities?.resources.probes.limits;
+  const canProbe =
+    request !== null &&
+    !!limits &&
+    limits.max_members_per_job > 0 &&
+    limits.max_results_per_job >= (request.ip_version === 'any' ? 2 : 1) &&
+    !!resource.data?.members.length &&
+    resource.data.capabilities.probe_transports.includes('tcp');
   return {
     ...resource,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
@@ -45,12 +86,19 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     probe: useCallback(
       () =>
         run('probe', async signal => {
-          const request = tcpProbe(capabilities, {type: 'group', group_id: id});
-          if (!request || !canProbe) throw new LocalError('ui.probeUnsupported');
-          const accepted = await api.startProbe(request, signal);
-          return finished(await api.pollOperation(accepted, signal), 'probe');
+          if (!capabilities || !resource.data || !canProbe) throw new LocalError('ui.probeUnsupported');
+          try {
+            return await probeGroup(api, capabilities, resource.data, signal);
+          } catch (error) {
+            if (!signal.aborted) {
+              refetch();
+              refetchGroups();
+              refetchNodes();
+            }
+            throw error;
+          }
         }),
-      [api, id, capabilities, canProbe, run]
+      [api, capabilities, resource.data, canProbe, run, refetch, refetchGroups, refetchNodes]
     ),
     setInterrupt: useCallback(
       (value: boolean) =>

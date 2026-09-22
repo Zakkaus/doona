@@ -4,7 +4,8 @@ import {localTime} from '../../api/selectors';
 import {formatNumber, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import {fileName, redacted} from './names';
-import {defaultGroup, defaultTemplate, isSubscriptionUrl, readState, type WizardState} from './wizard';
+import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
+import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {buildHash} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
@@ -74,11 +75,12 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
     case 'dns': {
       const upstreams = block.children.filter(child => child.name === 'upstream');
       const routing = block.children.filter(child => child.name === 'routing').flatMap(child => child.children);
-      return t('config.moduleDns', {
-        upstreams: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0),
-        requests: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0),
-        responses: routing.filter(child => child.name === 'response').reduce((n, child) => n + ruleCount(text, child, tokens), 0)
-      });
+      // Three counts, each with its own plural form.
+      return [
+        t('config.moduleDnsUpstreams', {n: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0)}),
+        t('config.moduleDnsRequests', {n: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0)}),
+        t('config.moduleDnsResponses', {n: routing.filter(child => child.name === 'response').reduce((n, child) => n + ruleCount(text, child, tokens), 0)})
+      ].join(t('ui.listSeparator'));
     }
     case 'routing': {
       const rules = t('config.moduleRules', {n: ruleCount(text, block, tokens)});
@@ -119,7 +121,7 @@ export function sectionSummaries(sources: ConfigSource[], t: Translator): Module
             href,
             range: main ? fileName(main) : 'config.dae',
             summary: main?.content === undefined ? '' : t('config.moduleAbsent', {file: fileName(main)}),
-            note: main?.content === undefined ? t('config.contentCredential') : null
+            note: main?.content === undefined ? t('config.contentWithheld') : null
           }
         ];
   });
@@ -134,7 +136,7 @@ export function sectionSummaries(sources: ConfigSource[], t: Translator): Module
           href: null,
           range: fileName(source),
           summary: '',
-          note: t('config.contentCredential')
+          note: t('config.contentWithheld')
         }
       ];
     return blocks
@@ -215,9 +217,14 @@ export function wizardInitial(content: string): WizardState {
   const read = readState(content);
   return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
-export function wizardRows(state: WizardState, error: string | undefined, t: Translator): {groupUsedText: string; rows: WizardRow[]} {
+export function wizardRows(state: WizardState, error: string | undefined, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
   return {
-    groupUsedText: t('config.wizardGroupUsed', {name: state.group ?? defaultGroup}),
+    groupUsedText:
+      state.rules === 'keep'
+        ? null
+        : templates[state.rules].groups.length
+          ? t('config.wizardNamedGroups', {names: templates[state.rules].groups.map(group => group.name).join(', ')})
+          : t('config.wizardGroupUsed', {name: state.group ?? defaultGroup}),
     rows: state.subscriptions.flatMap((item, index) =>
       item.raw !== undefined && !item.raw.trim()
         ? []

@@ -19,7 +19,7 @@ export function useMode() {
   const guard = useDraftGuard(view.dirty);
   useLinked(guard.revision, () => setStaged(null));
   const apply = async () => {
-    if (!staged) return;
+    if (!staged || view.incomplete) return;
     const submitted = staged;
     try {
       const written = await write(

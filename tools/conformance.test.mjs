@@ -1,4 +1,5 @@
-import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
 import {setImmediate} from 'node:timers/promises';
 import {afterEach, describe, expect, it} from 'vitest';
@@ -28,6 +29,20 @@ function errorResponse(code, status) {
   response.body.error.code = code;
   return response;
 }
+
+it('reports missing, malformed and incomplete custom contracts as usage errors', () => {
+  const directory = mkdtempSync(new URL('./.conformance-', import.meta.url));
+  try {
+    const file = `${directory}/openapi.yaml`;
+    for (const content of [null, 'paths: [', 'paths: {}']) {
+      if (content !== null) writeFileSync(file, content);
+      const result = spawnSync(process.execPath, ['tools/conformance.mjs', 'http://127.0.0.1:4351', '--contract', file], {encoding: 'utf8'});
+      expect(result.status, result.stderr).toBe(2);
+    }
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
+});
 
 async function serve({broken = false, mutate = () => {}, events = 'ready', resume = 409, unauthorized} = {}) {
   const requests = [];

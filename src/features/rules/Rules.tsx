@@ -42,9 +42,21 @@ function Trace() {
               {id: 'udp', label: t('ui.udp')}
             ]}
           />
-          <TextField label={t('ui.domain')} value={form.domain} onChange={domain => setForm({...form, domain})} error={trace.errors.domain} />
+          <TextField
+            label={t('ui.domain')}
+            value={form.domain}
+            placeholder="example.com"
+            onChange={domain => setForm({...form, domain})}
+            error={trace.errors.domain}
+          />
           <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
-          <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} error={trace.errors.dst_port} />
+          <TextField
+            label={t('rule.dstPort')}
+            value={form.dst_port}
+            placeholder="443"
+            onChange={dst_port => setForm({...form, dst_port})}
+            error={trace.errors.dst_port}
+          />
           <LabeledSelect
             label={t('rule.resolve')}
             value={trace.resolve}

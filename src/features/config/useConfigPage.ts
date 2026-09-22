@@ -1,6 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {getApi} from '../../api';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
@@ -13,6 +12,7 @@ import {useSourceComplete} from '../../store/config';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
 import {useDraftGuard} from './useDraftGuard';
 import {useValidationSources} from './useValidationSources';
+import {useBackgroundValidation} from './useBackgroundValidation';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
   error: unknown;
@@ -165,26 +165,9 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     setFound(null);
   });
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
-  // While editing, a quiet dry run follows the text: diagnostics update as the person types, without toasts.
-  const api = getApi();
   const draftText = draft?.text;
   const candidates = useValidationSources(sources, {id: source.id, content: text});
-  useEffect(() => {
-    if (!canValidate || !candidates || draftText === undefined) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      api.validateConfig({sources: candidates, mode: 'full'}, controller.signal).then(
-        result => {
-          if (!controller.signal.aborted) setFound(result.diagnostics);
-        },
-        () => undefined
-      );
-    }, 600);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [api, canValidate, draftText, candidates]);
+  useBackgroundValidation(canValidate && draftText !== undefined ? candidates : null, setFound);
   const presentValidation = (result: Pick<ConfigValidationResult, 'valid' | 'diagnostics'>, announce = true) => {
     setFound(result.diagnostics);
     // Put the cursor on the first error so the problem is on screen, not below a long file.

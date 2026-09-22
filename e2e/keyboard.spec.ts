@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 
 test('search shortcut moves focus into a dismissible dialog', async ({page}) => {
   await page.goto('/#/activity');
@@ -92,4 +92,19 @@ test('slash focuses the page filter and r refreshes everything', async ({page}) 
   await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed');
   await page.keyboard.press('?');
   await expect(page.getByRole('dialog', {name: 'Keyboard shortcuts'})).toContainText('Tables and lists');
+});
+
+test('idle traffic has distinct fractional rate labels', async ({page}) => {
+  const backend = await mockBackend(page);
+  const runtime = await backend.api.runtime();
+  runtime.traffic.rates = {window_seconds: 10, upload_bytes_per_second: '0', download_bytes_per_second: '0'};
+  backend.handlers['GET runtime'] = async () => runtime;
+  const history = await backend.api.trafficHistory();
+  backend.handlers['GET runtime/traffic/history'] = async () => ({
+    ...history,
+    samples: history.samples.map(sample => ({...sample, upload_bytes_per_second: '0', download_bytes_per_second: '0'}))
+  });
+  await page.goto('/#/activity');
+  const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
+  await expect(traffic.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['0.6 KB/s', '1.2 KB/s']);
 });

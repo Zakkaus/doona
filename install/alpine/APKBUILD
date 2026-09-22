@@ -7,7 +7,7 @@ pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
 license="GPL-3.0-only"
-subpackages="$pkgname-fonts:fonts:noarch"
+subpackages="$pkgname-doc $pkgname-fonts:fonts:noarch"
 source="$pkgname-$_tag.tar.gz::$url/releases/download/$_tag/$pkgname-$_tag.tar.gz
 	$pkgname-fonts-$_tag.tar.gz::$url/releases/download/$_tag/$pkgname-fonts-$_tag.tar.gz
 	"
@@ -24,15 +24,16 @@ unpack() {
 package() {
 	mkdir -p "$pkgdir"/usr/share/doona
 	cp -a "$srcdir"/web/. "$pkgdir"/usr/share/doona/
-	rm -f "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
+	rm -rf "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/LICENSES "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
 	install -Dm644 "$srcdir"/web/NOTICE -t "$pkgdir"/usr/share/doc/$pkgname/
-	install -Dm644 "$srcdir"/web/LICENSE -t "$pkgdir"/usr/share/doc/$pkgname/
+	install -Dm644 "$srcdir"/web/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
+	install -Dm644 "$srcdir"/web/LICENSES/Apache-2.0.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
 fonts() {
 	pkgdesc="Noto Sans TC/SC for doona"
 	license="OFL-1.1"
-	depends="$pkgname"
+	depends="$pkgname=$pkgver-r$pkgrel"
 	mkdir -p "$subpkgdir"/usr/share/doona
 	cp -a "$srcdir"/fonts/fonts "$subpkgdir"/usr/share/doona/
 }

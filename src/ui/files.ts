@@ -1,5 +1,4 @@
-// One naming for every export: `<prefix>-<UTC time to the second>.<ext>`, sortable and free of characters
-// file systems reject.
+// Export names use filesystem-safe UTC timestamps, sortable to the second.
 export function exportName(prefix: string, ext: string): string {
   return `${prefix}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
 }
@@ -15,5 +14,5 @@ export function downloadFile(name: string, content: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export function csvLine(values: Array<string | number | null | undefined>): string {
-  return values.map(value => (value == null ? '' : /[",\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
+  return values.map(value => (value == null ? '' : /[",\r\n]/.test(String(value)) ? '"' + String(value).replace(/"/g, '""') + '"' : String(value))).join(',');
 }

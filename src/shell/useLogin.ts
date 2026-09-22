@@ -1,22 +1,29 @@
 import {useState} from 'react';
 import {useT} from '../i18n';
-import {readProfiles, writeProfiles} from '../api/profiles';
+import {normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
 
-// The token goes to the profile that raised the challenge, not to whichever profile is active by the time
-// the form is submitted.
-export function useLogin(profileId: string, backend: string, rejected: boolean) {
+export function loginProfiles(profiles: Profile[], profileId: string, api: string, token: string): Profile[] | null {
+  if (!profiles.some(profile => profile.id === profileId && normalizeApi(profile.api) === normalizeApi(api))) return null;
+  return profiles.map(profile => (profile.id === profileId ? {...profile, token: token.trim()} : profile));
+}
+
+export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
   const t = useT();
   const [token, setToken] = useState('');
   const [shown, setShown] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<'stale' | 'storage' | null>(null);
   const submit = () => {
     if (!token.trim()) return;
     try {
       const {profiles, activeId} = readProfiles();
-      if (!profiles.some(profile => profile.id === profileId)) throw new Error('Missing profile');
-      writeProfiles({profiles: profiles.map(item => (item.id === profileId ? {...item, token: token.trim()} : item)), activeId});
+      const updated = loginProfiles(profiles, profileId, api, token);
+      if (!updated) {
+        setFailure('stale');
+        return;
+      }
+      writeProfiles({profiles: updated, activeId});
     } catch {
-      setFailed(true);
+      setFailure('storage');
       return;
     }
     location.reload();
@@ -30,6 +37,6 @@ export function useLogin(profileId: string, backend: string, rejected: boolean) 
     toggle: () => setShown(value => !value),
     toggleText: t(shown ? 'settings.hideToken' : 'settings.showToken'),
     note: t('login.note', {backend}),
-    error: failed ? t('settings.saveError') : rejected ? t('login.rejected') : null
+    error: failure ? t(failure === 'stale' ? 'login.stale' : 'settings.saveError') : rejected ? t('login.rejected') : null
   };
 }

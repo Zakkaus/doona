@@ -3,12 +3,12 @@ import {getApi} from '../../api';
 import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
+import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
-import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {within} from '../../shell/route';
-import {pageSize} from '../../store/resource';
 import {queryTypes} from './query';
 
 export function useDns({go, query}: PageProps) {
@@ -56,7 +56,8 @@ export function useDns({go, query}: PageProps) {
     setTab,
     tab: view.tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (view.tabs[0]?.id ?? 'query'),
     filterDomain: params.get('domain') ?? '',
-    logEnabled: resources?.dns_log.available === true,
+    // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
+    logEnabled: resources?.dns_log.available,
     viewCache: () => setTab('cache', {domain: result?.domain ?? ''}),
     clearCacheFilter: () => go('dns', within(query, {tab: 'cache', domain: null}))
   };
@@ -96,7 +97,7 @@ export function useDnsCache(domain: string) {
   };
 }
 
-export function useDnsLog(enabled: boolean, initialName: string) {
+export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
@@ -105,31 +106,31 @@ export function useDnsLog(enabled: boolean, initialName: string) {
   const [src, setSrc] = useState('');
   const api = getApi();
   const capabilities = useCapabilities();
-  const filter = {name: useDebounced(name, 300), type, src: useDebounced(src, 300)};
+  const filter = {name: useDebounced(name, 300), type, src: ipLiteral(useDebounced(src, 300))};
   const key = JSON.stringify(filter);
-  const log = useDnsLogResource(filter, enabled);
-  const [older, setOlder] = useState<DnsLogList | null>(null);
+  const log = useDnsLogResource(filter, enabled === true);
+  const [held, setHeld] = useState<DnsLogList | null>(null);
   const paging = useAction<'older'>({scope: key});
   useLinked(key, () => {
-    setOlder(null);
+    setHeld(null);
     paging.cancel();
   });
-  const data = older ?? log.data;
+  const {data, newerWaiting} = useMemo(() => dnsLogWindow(log.data, held), [log.data, held]);
   const loadOlder = () =>
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
-      const limit = pageSize(capabilities.data, capabilities.data?.resources.dns_log.max_page_size);
+      setHeld(data);
       const page = await api.dnsLog(
         {
           name: filter.name.trim() || undefined,
           type: type === 'all' ? undefined : type,
-          src: filter.src.trim() || undefined,
+          src: filter.src,
           cursor: data.next_cursor,
-          limit: limit === undefined ? undefined : Math.min(200, limit)
+          limit: log.limit
         },
         signal
       );
-      if (!signal.aborted) setOlder(appendDnsLog(data, page));
+      if (!signal.aborted) setHeld(appendDnsLog(data, page));
     });
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
@@ -138,6 +139,7 @@ export function useDnsLog(enabled: boolean, initialName: string) {
   return {
     ...view,
     name,
+    newerWaiting,
     setName,
     type,
     setType,
@@ -153,7 +155,7 @@ export function useDnsLog(enabled: boolean, initialName: string) {
     loadOlder,
     refresh: () => {
       paging.cancel();
-      setOlder(null);
+      setHeld(null);
       log.refetch();
     },
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')

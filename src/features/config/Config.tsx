@@ -93,6 +93,7 @@ export function Config(props: PageProps) {
                       </>
                     )}
                   </div>
+                  {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
                   {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
                 </>
               )
@@ -155,7 +156,7 @@ function Modules(props: ModulesProps) {
                 onSave={vm.dirty && !vm.busy ? () => void vm.save() : undefined}
               />
               {vm.diagnostics.length > 0 && (
-                <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
+                <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
                   {vm.diagnostics.map(item => (
                     <div key={item.id} role="listitem">
                       <Light small tone={item.tone}>
@@ -248,7 +249,7 @@ function SourceCard(props: SourceCardProps) {
         </span>
       </div>
       {shown.length > 0 && (
-        <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
+        <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
               <Light small tone={item.tone}>
@@ -262,8 +263,7 @@ function SourceCard(props: SourceCardProps) {
         </div>
       )}
       {!view.hasContent ? (
-        // With content on, a withheld source is the one holding the API credential.
-        <Empty>{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</Empty>
+        <Empty>{t(contentOffered ? 'config.contentWithheld' : 'config.contentHidden')}</Empty>
       ) : (
         <CodeEditor
           label={view.label}
@@ -333,7 +333,7 @@ function ValidateTab(props: ValidateTabProps) {
         ]}
       />
       {cur && (
-        <div className="rp-cluster">
+        <div className="rp-cluster rp-config-diagnostics">
           <Light small tone={cur.tone}>
             {cur.detail}
           </Light>

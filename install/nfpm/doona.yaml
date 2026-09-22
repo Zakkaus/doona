@@ -11,11 +11,11 @@ epoch: '0'
 section: web
 priority: optional
 maintainer: Zakkaus <zakk@gentoozh.org>
-vendor: daeuniverse
+vendor: Zakkaus
 homepage: https://github.com/Zakkaus/doona
 license: GPL-3.0-only
 description: |
-  Web UI for the daeuniverse engines.
+  Web UI for the daeuniverse engines
   Static files for /usr/share/doona; configure the engine or a web server to serve that directory.
 suggests:
   - doona-fonts
@@ -23,6 +23,41 @@ contents:
   - src: build/stage/doona/usr/share/doona
     dst: /usr/share/doona
     type: tree
+  # rpm records documentation and licence files by type; nfpm drops typed entries from the other formats, which
+  # take the directory instead.
+  - src: build/stage/doona/usr/share/doc/doona/LICENSE
+    dst: /usr/share/doc/doona/LICENSE
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/Apache-2.0.txt
+    dst: /usr/share/doc/doona/LICENSES/Apache-2.0.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/NOTICE
+    dst: /usr/share/doc/doona/NOTICE
+    type: doc
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/README.md
+    dst: /usr/share/doc/doona/README.md
+    type: doc
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/CHANGELOG.md
+    dst: /usr/share/doc/doona/CHANGELOG.md
+    type: doc
+    packager: rpm
   - src: build/stage/doona/usr/share/doc/doona
     dst: /usr/share/doc/doona
     type: tree
+    packager: deb
+  - src: build/stage/doona/usr/share/doc/doona
+    dst: /usr/share/doc/doona
+    type: tree
+    packager: ipk
+  - src: build/stage/doona/usr/share/doc/doona
+    dst: /usr/share/doc/doona
+    type: tree
+    packager: archlinux
+  - src: build/stage/doona/usr/share/doc/doona
+    dst: /usr/share/doc/doona
+    type: tree
+    packager: apk

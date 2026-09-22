@@ -17,9 +17,7 @@ it('keeps structured fields readable in rows and lossless in chronological expor
   ];
   const view = logView(records, ['error'], false, undefined, 'en-US', t);
   expect(view.rows[0].message).toBe('failed host=a.test attempts=2 nested={"ok":false}');
-  expect(JSON.parse(view.rows[0].tooltip!)).toEqual(records[0].fields);
   expect(view.rows[0].tone).toBe('err');
-  expect(view.rows[1].tooltip).toBeUndefined();
   expect(logsExport(records).split('\n')[0]).toContain('started');
   expect(logsExport(records)).toContain(JSON.stringify(records[0].fields));
   expect(view.levels.map(level => level.id)).toEqual(['error']);

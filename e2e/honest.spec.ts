@@ -10,8 +10,10 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');
-  // The stream reconnects on the new page; the next tick lands after the mock's five-second cadence.
-  await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
+  // Runtime heartbeats are hidden by default; the stream reconnects on the new page and the next tick lands
+  // after the mock's five-second cadence.
+  await page.getByRole('button', {name: 'Exclude runtime updates Kind', exact: true}).click();
+  await page.getByRole('option', {name: 'Runtime updated', exact: true}).click();
   await page.clock.fastForward(5100);
   await page.clock.fastForward(5100);
   await expect(page.locator('.rp-table [role=row][data-key]').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
@@ -46,6 +48,8 @@ test('search reads live connection addresses, node and group names, and availabl
     await route.fulfill({json: path.startsWith('/groups/') ? await api.group(decodeURIComponent(path.slice(8))) : responses[path]});
   });
   await page.goto('/#/connections?q=no-such-connection');
+  // The shortcut only works once the shell has mounted its key handler.
+  await expect(page.getByRole('button', {name: /^Search pages/})).toBeVisible();
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog');
   for (const query of ['live-search.example', '198.51.100.42', '192.0.2.42']) {

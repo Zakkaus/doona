@@ -50,7 +50,8 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await expect(page.locator('.rp-toolbar').first()).toContainText('42');
 });
 
-test('a subscription is added unfetched and removed with its nodes', async ({page}) => {
+// The contract creates a provider unfetched; the page refreshes it right away so the person sees nodes, not "stale".
+test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
   await page.goto('/#/nodes');
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources).toHaveCount(2);
@@ -59,9 +60,9 @@ test('a subscription is added unfetched and removed with its nodes', async ({pag
   await dialog.getByLabel('Name').fill('sub-d');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'})).toBeVisible();
   await expect(sources).toHaveCount(3);
-  await expect(sources.filter({hasText: 'sub-d'})).toContainText('Stale');
+  await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
   await page.getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-c removed'})).toBeVisible();

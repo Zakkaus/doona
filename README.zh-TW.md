@@ -7,7 +7,7 @@
 
 # doona
 
-**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 介面：在瀏覽器裡管節點、群組、規則與組態。**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 介面：在瀏覽器中管理節點、群組、規則與組態。**
 
 [English](README.md) · [简体中文](README.zh-CN.md) · 繁體中文
 
@@ -42,7 +42,7 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 
 ## 安裝
 
-發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個標籤打出來之前，請照[開發](#開發)一節自行建置。把 `VERSION` 設為下載檔名中的發行標籤，包括標籤開頭的 `v`。然後驗證檔案並解壓到引擎或 Web 伺服器要提供的目錄：
+發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個發行標籤發布之前，請依[開發](#開發)一節自行建置。將 `VERSION` 設為下載檔名中的發行標籤，包括標籤開頭的 `v`。然後驗證檔案並解壓至引擎或 Web 伺服器提供檔案的目錄：
 
 ```sh
 VERSION=v0.1.0-beta.1  # 替換為下載檔案對應的發行標籤
@@ -88,7 +88,9 @@ experimental {
 <details>
 <summary><strong>發行版套件</strong></summary>
 
-尚未發布。每個發行版本附 [nfpm](install/nfpm) 從 `make install` 打出的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件。各套件倉庫的寫法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表達式；AUR 的 `doona-bin` 另有倉庫。發行版本另附 `doona-<tag>-deps.tar.xz`（裝好的 `node_modules`），給必須離線建置的套件用。原生模組涵蓋工具鏈有出的每種 Linux 架構與 libc，清單見 `pnpm-workspace.yaml`；lightningcss 沒有二進位的架構改用 esbuild 壓 CSS。其他打包方式從 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts` 入手。
+尚未發布。每個發行版本附 [nfpm](install/nfpm) 透過 `make install` 產生的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件。各套件倉庫的打包設定位於 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、Gentoo ebuild、nixpkgs 表達式；AUR 的 `doona-bin` 使用獨立倉庫。
+
+發行版本另附 `doona-<tag>-deps.tar.xz`（已安裝的 `node_modules`），供離線建置使用。原生模組涵蓋建置工具支援的 Linux 架構與 libc，清單見 `pnpm-workspace.yaml`；lightningcss 未提供二進位檔案的架構改用 esbuild 壓縮 CSS。其他打包方式可使用 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts`。
 
 </details>
 
@@ -99,7 +101,7 @@ experimental {
 接著活動頁顯示執行中的引擎。其餘頁面的常見順序：
 
 1. **節點**：新增訂閱（名稱與網址）或貼入分享連結；節點列出協定、延遲與所屬群組。可設定訂閱多久更新一次、測試單一節點，或從該列把節點加入群組。
-2. **策略**：每個群組一張卡，列出成員與延遲。selector 群組可直接選成員；自動群組可釘住一個成員、之後再放開；可全部測試，也可編輯群組的策略與篩選。
+2. **策略**：每個群組一張卡片，列出成員與延遲。selector 群組可直接選擇成員；自動群組可手動固定成員，並隨時恢復自動選擇；可測試全部成員，也可編輯群組的策略與篩選條件。
 3. **規則**：依評估順序列出路由字典，附每條規則決定過的流程數。新增規則可以挑選依據與值（網域後綴、geosite 分類、埠、程序名稱），也可以直接寫表達式，插在任一條之前或最後。
 4. **組態**：已接受的來源與其診斷。就地編輯檔案，校驗、儲存、重載；快速設定涵蓋主檔的常用項目。
 
@@ -115,7 +117,7 @@ experimental {
 | 概覽 | 引擎與 eBPF 狀態、流量計數、後端能力、狀態 JSON 匯出                                                       | `runtime`                           |
 | 連線 | 即時連線的來源、目的、規則、鏈路與流量；關閉單條或全部；篩選條件可寫在網址                                 | `connections`                       |
 | DNS  | 查詢與解析結果、快取、日誌；清空快取                                                                       | `dns_query`、`dns_log`、`dns_cache` |
-| 策略 | 群組、成員與健康；選擇、釘住、測試、編輯                                                                   | `groups`                            |
+| 策略 | 群組、成員與健康；選擇、手動固定、恢復自動選擇、測試、編輯                                                 | `groups`                            |
 | 規則 | 從規則或設備經出站到所選節點的分流樹、規則列表與命中數、可直接為目標加規則的流程記錄、對指定目標的追蹤模擬 | `rules`、`flows`、`routing_trace`   |
 | 節點 | 訂閱與更新間隔、組態內節點、新增與移除、測試、加入群組                                                     | `nodes`、`providers`                |
 | 組態 | 來源與診斷、附校驗的編輯器、快速設定、匯出                                                                 | `config`                            |
@@ -159,20 +161,23 @@ pnpm e2e                         # 重新建置，再對模擬後端執行瀏覽
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
+在倉庫根目錄執行 `DOONA_API=http://router:9527 DOONA_TOKEN=… pnpm e2e:live`，可對實際後端執行唯讀的無障礙、行動裝置導覽與鍵盤測試。`DOONA_API` 必填；後端不要求身分驗證時可省略 `DOONA_TOKEN`。測試拒絕透過 fixture 儲存覆寫後端設定，並中止控制請求，包括 DNS 查詢。一般 `pnpm e2e` 測試在設定了 `DOONA_API` 時拒絕執行，除非明確設定 `DOONA_LIVE_OBSERVE=1`。
+
 `pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置擷取頁面截圖與配色總覽，輸出無失真的 WebP，需要安裝 `cwebp`。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
 
-| 路徑            | 用途                                                 |
-| --------------- | ---------------------------------------------------- |
-| `src/features/` | 各頁面及其 hook 與文案，一頁一個資料夾               |
-| `src/shell/`    | 應用外殼、導覽與搜尋                                 |
-| `src/ui/`       | 共用元件、主題與圖示                                 |
-| `src/api/`      | 客戶端、後端設定檔、資源 store、模擬後端與產生的型別 |
-| `src/i18n/`     | 翻譯與地區設定輔助                                   |
-| `contract/`     | 內嵌的 OpenAPI 契約與釘點                            |
-| `public/`       | 靜態資源、字型與 service worker                      |
-| `e2e/`          | 瀏覽器測試                                           |
-| `tools/`        | 建置、打包、一致性檢查與截圖工具                     |
-| `install/`      | nfpm 設定與 OpenWrt、Alpine、Nix 寫法                |
+| 路徑            | 用途                                          |
+| --------------- | --------------------------------------------- |
+| `src/features/` | 各頁面及其 hook 與文案，一頁一個資料夾        |
+| `src/shell/`    | 應用外殼、導覽與搜尋                          |
+| `src/ui/`       | 共用元件、主題與圖示                          |
+| `src/api/`      | 客戶端、後端設定檔、模擬後端與產生的型別      |
+| `src/store/`    | 資源監聽、讀取快取與操作 hook                 |
+| `src/i18n/`     | 翻譯與地區設定輔助                            |
+| `contract/`     | 內嵌的 OpenAPI 契約與釘點                     |
+| `public/`       | 靜態資源、字型與 service worker               |
+| `e2e/`          | 瀏覽器測試                                    |
+| `tools/`        | 建置、打包、一致性檢查與截圖工具              |
+| `install/`      | nfpm 設定與 OpenWrt、Alpine、Gentoo、Nix 寫法 |
 
 ### 契約
 

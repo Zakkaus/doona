@@ -26,7 +26,6 @@ export function logView(
       levelText: t(labels[record.level]),
       tone: tones[record.level],
       target: record.target,
-      tooltip: record.fields ? JSON.stringify(record.fields) : undefined,
       message:
         record.message +
         (record.fields

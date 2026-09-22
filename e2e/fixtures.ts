@@ -11,6 +11,8 @@ export const routes = ['activity', 'overview', 'connections', 'dns', 'policies',
 // DOONA_API and optional DOONA_TOKEN run read-only specs against a live backend; e2e has no Node globals.
 // Example: DOONA_API=http://127.0.0.1:9527 DOONA_TOKEN=... pnpm e2e:live
 const env = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env ?? {};
+if (env.DOONA_API && env.DOONA_LIVE_OBSERVE !== '1') throw new Error('DOONA_API requires DOONA_LIVE_OBSERVE=1; use pnpm e2e:live');
+if (env.DOONA_LIVE_OBSERVE && !env.DOONA_API) throw new Error('e2e:live requires DOONA_API');
 const live = env.DOONA_API ? {'doona-api': env.DOONA_API, 'doona-api-token': env.DOONA_TOKEN ?? ''} : {};
 
 // A live backend marks the pages it has no capability for unavailable and may have nothing to list; the mock offers every page.
@@ -27,9 +29,9 @@ export const test = base.extend<{storage: Record<string, string>}>({
   page: async ({page, storage}, use) => {
     const errors: string[] = [];
     const controls: string[] = [];
-    if (env.DOONA_LIVE_OBSERVE) {
-      expect(isLive, 'e2e:live requires DOONA_API').toBe(true);
-      expect(storage['doona-api'], 'Live specs must not override the backend').toBeUndefined();
+    if (isLive) {
+      for (const key of ['doona-api', 'doona-api-token', 'doona-profiles', 'doona-profile'])
+        expect(storage[key], 'Live specs must not override the backend').toBeUndefined();
       await page.route('**/api{,/**}', async route => {
         const request = route.request();
         if (request.method() !== 'GET' || new URL(request.url()).pathname.endsWith('/dns/query')) {

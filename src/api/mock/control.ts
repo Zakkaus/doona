@@ -10,10 +10,9 @@ export function resolveLeaf(id: string, network: 'tcp' | 'udp', nodes: Node[], g
   return selection ? resolveLeaf(selection.member_id, network, nodes, groups, seen) : undefined;
 }
 
-export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[], observed_at: string): ProbeResult {
+export function probeMembers(request: ProbeRequest, nodes: Node[], groups: Group[]): string[] {
   const target = request.target;
   const group = target.type === 'group' ? groups.find(g => g.id === target.group_id) : undefined;
-  const selection = {tcp: group?.runtime.selection.tcp?.member_id ?? null, udp: group?.runtime.selection.udp?.member_id ?? null};
   let ids = target.type === 'node' ? [target.node_id] : group!.members.map(m => m.id);
   if (Array.isArray(request.members)) ids = ids.filter(id => request.members.includes(id));
   if (request.members === 'leaves') {
@@ -28,6 +27,14 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
     ids.forEach(visit);
     ids = [...leaves];
   }
+  return ids;
+}
+
+export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[], observed_at: string): ProbeResult {
+  const target = request.target;
+  const group = target.type === 'group' ? groups.find(g => g.id === target.group_id) : undefined;
+  const selection = {tcp: group?.runtime.selection.tcp?.member_id ?? null, udp: group?.runtime.selection.udp?.member_id ?? null};
+  const ids = probeMembers(request, nodes, groups);
   const results: ProbeResult['results'] = [];
   for (const member_id of ids)
     for (const transport of request.transport) {

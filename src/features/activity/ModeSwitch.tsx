@@ -8,6 +8,7 @@ type ModeCardsModel = {
   targetText: string;
   writable: boolean;
   dirty: boolean;
+  incomplete: boolean;
   status: string;
   modes: Array<[string, string]>;
   targets: Array<{id: string; label: string}>;
@@ -38,7 +39,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
           ) : (
             <span className="rp-cluster">
               <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy} items={vm.modes} />
-              <Button small accent isDisabled={!vm.dirty} isPending={vm.busy} onPress={vm.apply}>
+              <Button small accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
                 {t('act.apply')}
               </Button>
             </span>

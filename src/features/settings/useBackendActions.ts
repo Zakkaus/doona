@@ -58,7 +58,7 @@ export function useBackendActions() {
       error => toast('negative', t('ov.operationError', {error: errorText(error)}))
     );
   const closeAll = () =>
-    void closing.closeAll({query: {all: true}}).then(tally => {
+    void closing.closeAll({ids: [], query: {all: true}}).then(tally => {
       if (tally) toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
     }, fail);
   return {

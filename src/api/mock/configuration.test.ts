@@ -71,3 +71,51 @@ it('activates node membership and group policy with the accepted source, includi
   expect((await api.operation(again.operation_id)).status).toBe('succeeded');
   expect((await api.group(fresh.id)).policy.kind).toBe('selector');
 });
+
+it('preserves group policies across an unchanged reload', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const before = (await api.groups()).map(group => ({id: group.id, policy: group.policy}));
+  const controls = (await api.group('skylink')).capabilities;
+  const operation = await api.startReload();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(operation.operation_id)).status).toBe('succeeded');
+  expect((await api.groups()).map(group => ({id: group.id, policy: group.policy}))).toEqual(before);
+  expect((await api.group('skylink')).capabilities).toEqual(controls);
+});
+
+it('admits AnyTLS share links and retains their protocol through reload', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const created = await api.createNode({name: 'anytls-test', link: 'anytls://demo@edge.example.net:443'});
+  expect(created.protocol).toBe('anytls');
+  const operation = await api.startReload();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(operation.operation_id)).status).toBe('succeeded');
+  expect((await api.nodes()).nodes.find(node => node.id === created.id)?.protocol).toBe('anytls');
+});
+
+it('activates included groups and rules and rejects an unresolved native include without writing', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const config = await api.config();
+  const include = config.sources.find(source => source.kind === 'include')!;
+  await api.replaceConfigSource(
+    include.id,
+    'group { included { policy: fixed(0) } }\nrouting { domain(full: example.org) -> included }',
+    `\"${include.content_sha256}\"`
+  );
+  await vi.advanceTimersByTimeAsync(1000);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = 'include { rules.dae }\nrouting { fallback: direct }';
+  await api.replaceConfigSource(main.id, content, `\"${main.content_sha256}\"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.groups()).map(group => group.name)).toEqual(['included']);
+  const trace = await api.routingTrace({input: {domain: 'example.org', network: 'tcp', dst_port: 443}, resolve: 'none'});
+  expect(trace.evaluations[0]).toMatchObject({decision: 'determinate', outbound: 'included'});
+  const current = (await api.config()).sources.find(source => source.id === main.id)!;
+  await expect(api.replaceConfigSource(main.id, content.replace('rules.dae', 'missing.dae'), `\"${current.content_sha256}\"`)).rejects.toMatchObject({
+    status: 422
+  });
+  expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(content);
+});

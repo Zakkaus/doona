@@ -8,6 +8,9 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await page.goto('/#/dns?tab=cache');
   const rows = page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader');
   await expect(rows).toHaveCount(entries.length);
+  const deleteHeader = page.getByRole('columnheader', {name: /^Delete /}).locator('.rp-th');
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  expect(await deleteHeader.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('button', {name: `Delete cache entry ${entries[0].entry_id}`, exact: true}).click();
   await expect(page.getByRole('button', {name: `Delete cache entry ${entries[0].entry_id}`, exact: true})).toHaveCount(0);
   await expect(rows).toHaveCount(entries.length - 1);

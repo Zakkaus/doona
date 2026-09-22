@@ -87,7 +87,14 @@ export function dnsCacheView(
       }))
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, selected: string | null, enabled: boolean, locale: string, t: LabelFn, types: string[] = []) {
+export function dnsLogView(
+  data: DnsLogList | undefined,
+  selected: string | null,
+  enabled: boolean | undefined,
+  locale: string,
+  t: LabelFn,
+  types: string[] = []
+) {
   const records = data?.records ?? [];
   const current = records.find(record => record.id === selected);
   const details = (record: DnsLogRecord) => {
@@ -111,7 +118,7 @@ export function dnsLogView(data: DnsLogList | undefined, selected: string | null
     total: data ? t('dns.logTotal', {n: data.total}) : '',
     // The loaded count only matters while older records remain on the backend.
     loaded: data?.next_cursor ? t('dns.logLoaded', {n: records.length}) : '',
-    empty: t(enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
+    empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     detail: current ? details(current) : null,
     detailTitle: current?.question.name ?? '',
     rows: records.map(record => ({
@@ -157,4 +164,9 @@ export function dnsLogsExport(records: DnsLogRecord[]) {
 export function appendDnsLog(data: DnsLogList, page: DnsLogList): DnsLogList {
   const ids = new Set(data.records.map(record => record.id));
   return {...data, records: [...data.records, ...page.records.filter(record => !ids.has(record.id))], next_cursor: page.next_cursor};
+}
+
+export function dnsLogWindow(head: DnsLogList | undefined, held: DnsLogList | null) {
+  const ids = held && new Set(held.records.map(record => record.id));
+  return {data: held ?? head, newerWaiting: !!ids && !!head?.records.some(record => !ids.has(record.id))};
 }

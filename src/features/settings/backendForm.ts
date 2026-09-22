@@ -27,7 +27,8 @@ export function useBackendForm(query: string) {
   const [result, setResult] = useState<Result | null>(null);
   const [pending, setPending] = useState(false);
   // Pairing links also fill an already-open form without saving the credentials.
-  const guard = useDraftGuard(api !== (saved.api ?? '') || token !== saved.token);
+  const dirty = api !== (saved.api ?? '') || token !== saved.token;
+  const guard = useDraftGuard(dirty);
   useLinked(guard.revision, () => {
     setApi(saved.api ?? '');
     setToken(saved.token);
@@ -127,10 +128,19 @@ export function useBackendForm(query: string) {
     const profile = {...(active ?? {id: uuid(), name: t('settings.backend')}), api: base, token};
     return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
   };
-  const save = (id?: string) => {
+  const save = () => {
     const profiles = editedProfiles();
-    if (profiles) persist(profiles, id ?? active?.id ?? profiles[0].id);
+    if (profiles) persist(profiles, active?.id ?? profiles[0].id);
     else toast('negative', t('settings.invalidUrl'));
+  };
+  const [switchId, setSwitchId] = useState<string | null>(null);
+  const switchProfile = (id: string) => {
+    if (id === saved.activeId || !saved.profiles.some(profile => profile.id === id)) return;
+    if (dirty) setSwitchId(id);
+    else persist(saved.profiles, id);
+  };
+  const confirmSwitch = () => {
+    if (switchId !== null) persist(saved.profiles, switchId);
   };
   const testConnection = async () => {
     if (request.current) return;
@@ -226,6 +236,10 @@ export function useBackendForm(query: string) {
     persist,
     editedProfiles,
     save,
+    switchProfile,
+    confirmSwitch,
+    switchPending: switchId !== null,
+    cancelSwitch: () => setSwitchId(null),
     testConnection
   };
 }

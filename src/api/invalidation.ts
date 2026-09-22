@@ -27,7 +27,7 @@ export type ResourceName =
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   'stream.ready': {now: 'all'},
   'runtime.updated': {
-    now: ['runtime', 'runtimeOutbounds', 'trafficHistory', 'memoryHistory', 'connections']
+    now: ['runtime', 'runtimeOutbounds']
   },
   'flow.updated': {now: ['flows', 'flow', 'connections']},
   'flow.gap': {now: ['flows', 'flow']},

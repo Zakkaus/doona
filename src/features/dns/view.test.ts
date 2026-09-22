@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {capabilities, dnsCache} from '../../api/mock/fixtures';
 import type {DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
+import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const record: DnsLogRecord = {
   id: 'dns-1',
@@ -80,4 +80,21 @@ it('appends older pages without duplicating overlapping records or changing the 
   expect(merged.total).toBe(5);
   expect(merged.next_cursor).toBeNull();
   expect(dnsLogsExport(merged.records).trim().split('\n')).toHaveLength(3);
+});
+
+it('holds the loaded window when a poll advances the head after the final older page', () => {
+  const page = (ids: string[], next_cursor: string | null) => ({
+    observed_at: record.observed_at,
+    total: 5,
+    next_cursor,
+    records: ids.map(id => ({...record, id}))
+  });
+  const held = appendDnsLog(page(['d4', 'd3'], 'd3'), page(['d2', 'd1'], null));
+  const head = page(['d5', 'd4'], 'd4');
+  const window = dnsLogWindow(head, held);
+  expect(window.data?.records.map(row => row.id)).toEqual(['d4', 'd3', 'd2', 'd1']);
+  expect(window.data?.next_cursor).toBeNull();
+  expect(window.newerWaiting).toBe(true);
+  expect(dnsLogWindow(page(['d4', 'd3'], 'd3'), held).newerWaiting).toBe(false);
+  expect(dnsLogWindow(head, null)).toEqual({data: head, newerWaiting: false});
 });

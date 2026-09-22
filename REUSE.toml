@@ -29,11 +29,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "2024 Adobe. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
-# Flag.tsx imports artwork from the MIT-licensed flag-icons dependency;
-# the SVGs are not stored in that source file. NOTICE retains their attribution.
-
 [[annotations]]
 path = ["CODE_OF_CONDUCT.md"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC-BY-4.0"
+
+# Ebuilds carry the header the overlays require.
+[[annotations]]
+path = ["install/gentoo/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Gentoo Authors"
+SPDX-License-Identifier = "GPL-2.0-only"

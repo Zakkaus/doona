@@ -1,7 +1,7 @@
 import {test as httpTest, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {expect, test} from './fixtures';
+import {downloadText, expect, test} from './fixtures';
 import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -122,7 +122,9 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
   await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
-  await expect(card).toContainText('Templates route to proxy');
+  const input = await card.getByLabel('Name', {exact: true}).boundingBox();
+  const remove = await card.getByRole('button', {name: 'Remove sub-c', exact: true}).boundingBox();
+  expect(Math.abs(input!.y + input!.height / 2 - (remove!.y + remove!.height / 2))).toBeLessThanOrEqual(2);
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
   await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -172,7 +174,6 @@ async function configBackend(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('doona-api', location.origin);
     localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-scheme', 'light');
   });
   const reads: Record<string, () => Promise<unknown>> = {
     capabilities: async () => capabilities,
@@ -339,7 +340,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
     '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: min_moving_avg'
   );
-  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rules, 0 response rules');
+  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rule, 0 response rules');
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
   await expect(routing).toContainText('5 rules · fallback: resilient');
   await routing.getByRole('button', {name: 'Edit', exact: true}).click();
@@ -475,3 +476,122 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/source=src-main.*line=2/);
 });
+
+test('withheld includes do not disable main validation or background diagnostics', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const include = config.sources.find(source => source.kind === 'include')!;
+  delete include.content;
+  include.path = '<redacted>';
+  include.writable = false;
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'Validate', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Validation passed');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill(config.sources.find(source => source.kind === 'main')!.content + '\nrouting { domain(example.org) -> nowhere }\n');
+  await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('No group named "nowhere"');
+  await page.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('tab', {name: 'Validation', exact: true}).click();
+  await page.getByRole('button', {name: 'Validate again', exact: true}).click();
+  await expect(page.getByRole('tabpanel', {name: 'Validation'})).toContainText('Last validation');
+  await page.getByRole('tab', {name: 'Modules', exact: true}).click();
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  await routing.locator('.cm-content').fill('routing { domain(example.org) -> nowhere }');
+  await expect(routing.getByRole('list', {name: 'Diagnostics'})).toContainText('No group named "nowhere"');
+});
+
+test('source withholding does not certify exports or diagnose the hidden include', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  config.secrets_redacted = true;
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.path = '<redacted>';
+  const include = config.sources.find(source => source.kind === 'include')!;
+  include.path = '<redacted>';
+  delete include.content;
+  include.writable = false;
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.rp-content')).toContainText('Backend withheld some data');
+  await expect(page.locator('.rp-content')).toContainText('may contain credentials');
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Export', exact: true}).click();
+  expect(await downloadText(await downloading)).toBe(main.content);
+  await page.getByRole('button', {name: /Source/}).click();
+  await page.getByRole('option', {name: /Include/}).click();
+  await expect(page.locator('.rp-content')).toContainText('The backend did not return this source');
+  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeDisabled();
+});
+
+test('first-run setup writes the chosen listener and DNS endpoints', async ({page}) => {
+  const {api} = await configBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '', `"${main.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).sources.find(source => source.id === main.id)!.content).toBe('');
+  await page.goto('/#/config?tab=setup');
+  await page.getByLabel('Transparent proxy port', {exact: true}).fill('23456');
+  await page.getByLabel('Default DNS upstream', {exact: true}).fill('udp://192.0.2.1:53');
+  await page.getByLabel('Mainland-China domain DNS upstream', {exact: true}).fill('tls://resolver.example:853');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  const accepted = (await api.config()).sources.find(source => source.id === main.id)!.content;
+  expect(accepted).toContain('tproxy_port: 23456');
+  expect(accepted).toContain("cloudflare: 'udp://192.0.2.1:53'");
+  expect(accepted).toContain("alidns: 'tls://resolver.example:853'");
+});
+
+test('choosing a template removes all previous traffic routing but retains DNS routing', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = 'group { mix {} }\ndns { routing { request { fallback: asis } } }\nrouting { fallback: direct }\nrouting { domain(old.example) -> block }\n';
+  main.content_sha256 = await sha256(main.content);
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Global proxy/}).click();
+  await expect(card).toContainText('This template uses mix');
+  await expect(card).toContainText('block remaining UDP/443');
+  const preview = card.locator('.cm-content');
+  await expect(preview).toContainText('fallback: mix');
+  await expect(preview).not.toContainText('old.example');
+  await expect(preview).toContainText('dns { routing { request { fallback: asis } } }');
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Standard groups/}).click();
+  await expect(card).toContainText('named groups: proxy, auto, telegram, media, apple');
+  await card.getByRole('button', {name: /Rules$/}).click();
+  await page.getByRole('option', {name: /^Keep the current rules/}).click();
+  await expect(card).not.toContainText('This template uses');
+  await expect(preview).toContainText('old.example');
+});
+
+for (const appearance of ['light', 'dark', 'glass'] as const) {
+  test(`configuration details wrap on phones in ${appearance}`, async ({page}) => {
+    const {api} = await configBackend(page);
+    await page.setViewportSize({width: 390, height: 844});
+    await page.addInitScript(appearance => {
+      localStorage.setItem('doona-scheme', appearance === 'light' ? 'light' : 'dark');
+      localStorage.setItem('doona-palette', appearance === 'glass' ? 'glass/glass' : 'rose-pine/moon');
+    }, appearance);
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    main.content += "\nsubscription { preserved: { url: 'https://example.org/" + 'longtoken'.repeat(20) + "' } }\n";
+    main.content_sha256 = await sha256(main.content!);
+    const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(20);
+    config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
+    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+    await page.goto('/#/config?tab=source');
+    const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(message, {exact: true});
+    await expect(diagnostic).toBeVisible();
+    expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.getByRole('tab', {name: 'Quick setup', exact: true}).click();
+    const raw = page.locator('.rp-config-raw');
+    await expect(raw).toContainText('longtoken'.repeat(20));
+    expect(await raw.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  });
+}

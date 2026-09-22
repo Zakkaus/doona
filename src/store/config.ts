@@ -16,11 +16,6 @@ export async function completeSource(source: Pick<ConfigSource, 'content' | 'con
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
 }
 
-// The path lets the validator resolve includes; a path hidden by visibility policy is no path at all.
-function sourcePath(source: Pick<ConfigSource, 'path'>): {path?: string} {
-  return source.path === '<redacted>' ? {} : {path: source.path};
-}
-
 export function useSourceComplete(source: ConfigSource | null): boolean | null {
   const content = source?.content;
   const digest = source?.content_sha256 ?? '';
@@ -65,8 +60,8 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           signal.throwIfAborted();
           const content = typeof candidate === 'string' ? candidate : candidate(source.content!);
           if (content === null) return undefined;
-          if (canValidate && source.kind === 'main') {
-            const check = await api.validateConfig({sources: [{id: source.id, ...sourcePath(source), content}], mode: 'full'}, signal);
+          if (canValidate && source.kind === 'main' && source.path !== '<redacted>') {
+            const check = await api.validateConfig({sources: [{id: source.id, path: source.path, content}], mode: 'full'}, signal);
             signal.throwIfAborted();
             if (!check.valid) return {diagnostics: check.diagnostics};
           }

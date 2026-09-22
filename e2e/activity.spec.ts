@@ -1,6 +1,7 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest} from '@playwright/test';
+import {sha256} from '../src/api/hash';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
@@ -49,15 +50,24 @@ test('home charts collect memory polls and change the traffic history range', as
   await expect(memory.locator('.recharts-surface')).toBeVisible();
   await expect(memory.locator('.rp-legend')).toContainText('2 MB');
   await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', /L|C/);
+  const memoryCurve = await memory.locator('.recharts-area-curve').first().getAttribute('d');
   const request = page.waitForRequest(
     request => request.url().includes('/runtime/traffic/history?') && new URL(request.url()).searchParams.get('window_seconds') === '3600'
   );
   await traffic.getByRole('radio', {name: '1H', exact: true}).click();
   await request;
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
+  await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
+  await traffic.getByRole('radio', {name: '7D', exact: true}).click();
+  await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
 });
 
 test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const ordinary = '  domain(suffix: doubleclick.net) -> block\n';
+  const content = source.content!.replace(ordinary, '').replace('  domain(geosite: cn)', ordinary + '  domain(geosite: cn)');
+  await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
@@ -136,20 +146,22 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await page.clock.install();
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications and issues'});
-  await expect(notices.getByRole('listitem').filter({hasText: 'stream.ready'})).toHaveCount(1);
+  await expect(notices.getByRole('listitem').filter({hasText: 'Stream ready'})).toHaveCount(1);
   await page.clock.fastForward(10100);
   await expect(notices.getByRole('listitem').filter({hasText: /runtime\.updated|flow\.updated/})).toHaveCount(0);
   await page.goto('/#/events');
   await expect(page.getByRole('gridcell', {name: 'Stream ready', exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Exclude runtime updates Kind', exact: true}).click();
+  await page.getByRole('option', {name: 'Runtime updated', exact: true}).click();
   await page.clock.fastForward(5100);
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
 });
 
-test('hidden notices keep their published snapshot until the 200-event window is revealed', async ({page}) => {
+test('housekeeping cannot evict notices while the page is hidden', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications and issues'});
-  const ready = notices.getByRole('listitem').filter({hasText: 'stream.ready'});
+  const ready = notices.getByRole('listitem').filter({hasText: 'Stream ready'});
   await expect(ready).toHaveCount(1);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable: true, value: true});
@@ -161,7 +173,7 @@ test('hidden notices keep their published snapshot until the 200-event window is
     Object.defineProperty(document, 'hidden', {configurable: true, value: false});
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  await expect(notices.getByRole('listitem')).toHaveCount(0);
+  await expect(ready).toHaveCount(1);
 });
 
 test.describe('many outbounds', () => {
@@ -227,6 +239,7 @@ test('local traffic renders without history and duplicate node names retain inde
   const capabilities = await api.capabilities();
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
   capabilities.resources.nodes.available = true;
+  capabilities.resources.runtime.available = true;
   const nodes = await api.nodes();
   const healthy = nodes.nodes.find(node => node.name === 'hk-01')!;
   const unavailable = nodes.nodes.find(node => node.name === 'jp-01')!;
@@ -252,6 +265,8 @@ test('local traffic renders without history and duplicate node names retain inde
   await page.getByRole('menuitemradio').filter({hasText: 'provider-b'}).click();
   const card = trigger.locator('xpath=ancestor::div[contains(@class,"rp-card")][1]');
   await expect(card.locator('.rp-big')).toHaveText('—');
+  await expect(card.getByText('Unavailable', {exact: true})).toBeVisible();
+  await expect(card.getByText('Timed out', {exact: true})).toHaveCount(0);
   await trigger.click();
   await expect(page.getByRole('menuitemradio').filter({hasText: 'provider-b'})).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('menuitemradio').filter({hasText: 'provider-a'}).click();
@@ -279,4 +294,31 @@ browserTest('configuration read failures are shown instead of write restrictions
   await expect(page.getByRole('alert').filter({hasText: 'Configuration storage failed'})).toBeVisible();
   await expect(page.getByText('Needs a writable main configuration', {exact: true})).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('optional runtime does not block independent activity sections or poll an unsupported endpoint', async ({page}) => {
+  const {capabilities, requests} = await mockBackend(page);
+  capabilities.resources.runtime.available = false;
+  await page.clock.install();
+  await page.goto('/#/activity');
+  await expect(page.getByRole('button', {name: 'Node', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.recharts-surface')).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
+  await expect(page.getByText('Not offered by the backend', {exact: true})).toBeVisible();
+  await page.clock.fastForward(10100);
+  expect(requests.filter(request => new URL(request.url()).pathname === '/api/v1/runtime')).toEqual([]);
+});
+
+test('interleaved mandatory rules reject mode changes without writing configuration', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const config = await api.config();
+  const source = config.sources.find(source => source.kind === 'main')!;
+  source.content = 'routing {\n  domain(example.com) -> proxy\n  pname(system) -> direct(must)\n  fallback: proxy\n}\n';
+  source.content_sha256 = await sha256(source.content);
+  handlers['GET config'] = async () => config;
+  await page.goto('/#/activity');
+  await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Ordinary rules precede must rules');
+  expect(requests.filter(request => request.method() === 'PUT')).toEqual([]);
 });

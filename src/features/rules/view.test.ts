@@ -26,6 +26,17 @@ it('offers edits only at writable sources and preserves source locations when pa
   );
   expect(locked.positions).toEqual([]);
   expect(locked.rows.some(row => row.removable)).toBe(false);
+  const withheld = dictionaryView(
+    rules.rules,
+    rules.generation_id,
+    flows,
+    config.sources.map(source => ({...source, content: undefined})),
+    groups,
+    t,
+    'en'
+  );
+  expect(withheld.positions).toEqual([]);
+  expect(withheld.rows.some(row => row.removable)).toBe(false);
   const redacted = {...first, source: {file: '<redacted>', line: 40}};
   expect(dictionaryView([redacted], undefined, undefined, [], [], t, 'en').rows[0].position).toBe(t('rule.lineOnly', {n: '40'}));
   expect(removalView(redacted, [], t).help).toBe(t('rule.removeHelp', {file: '', line: '40'}));

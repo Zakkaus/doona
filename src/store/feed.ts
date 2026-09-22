@@ -3,12 +3,14 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
   const listeners = new Set<() => void>();
   let snapshot = {records: [] as T[], ...status};
   let dirty = false;
+  // While held, records keep accumulating in the bounded ring but the published list stays as it was.
+  let held = false;
   let timer: number | undefined;
   const publish = () => {
     timer = undefined;
     if (document.hidden || !dirty) return;
     dirty = false;
-    snapshot = {records: [...records.values()].reverse(), ...status};
+    snapshot = {records: held ? snapshot.records : [...records.values()].reverse(), ...status};
     listeners.forEach(notify => notify());
   };
   const schedule = () => {
@@ -50,9 +52,15 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
       status = {...status, ...change};
       schedule();
     },
+    // Clearing is explicit, so it empties the published list even while held.
     clear() {
       records.clear();
+      snapshot = {...snapshot, records: []};
       schedule();
+    },
+    hold(on: boolean) {
+      held = on;
+      if (!on) schedule();
     }
   };
 }

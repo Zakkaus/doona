@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../store';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
 import {errorText, toast} from '../../ui/ui';
 import {useMainSourceEdit} from '../config/mainSource';
@@ -22,6 +22,8 @@ export function useNodesPage({go, query}: PageProps) {
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
   const session = useRef(0);
+  const submitting = useRef<NodeDialog | null>(null);
+  const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
   useLinked(guard.revision, () => {
     session.current++;
@@ -44,6 +46,7 @@ export function useNodesPage({go, query}: PageProps) {
     refetchNodes();
   }, [refetchProviders, refetchNodes]);
   const manage = useNodeManage(reload);
+  const refreshing = useProviderRefresh(reload);
   const source = useMainSourceEdit();
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
@@ -76,14 +79,31 @@ export function useNodesPage({go, query}: PageProps) {
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   const submit = async (close: () => void) => {
-    if (!dialog) return;
+    if (!dialog || submitting.current) return;
+    submitting.current = dialog;
+    setPendingDialog(dialog);
     const submitted = session.current;
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
         if (!created) return;
-        toast('positive', t('nodes.added', {name: form.name.trim()}));
+        const name = form.name.trim();
+        // The contract creates the provider unfetched; a refresh is what turns it into nodes.
+        if (resources?.providers.can_refresh) {
+          if (session.current === submitted) {
+            guard.clear();
+            close();
+          }
+          void refreshing.refresh(created.id).then(
+            result => {
+              if (result) toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
+            },
+            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error)}))
+          );
+          return;
+        }
+        toast('positive', t('nodes.added', {name}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
@@ -103,6 +123,9 @@ export function useNodesPage({go, query}: PageProps) {
       }
     } catch (error) {
       fail(error);
+    } finally {
+      submitting.current = null;
+      setPendingDialog(null);
     }
   };
   const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode';
@@ -170,12 +193,14 @@ export function useNodesPage({go, query}: PageProps) {
       setDialog(next);
     },
     form,
-    setForm,
+    setForm: (next: typeof form) => {
+      if (submitting.current !== dialog) setForm(next);
+    },
     removing,
     dialogTitle,
     formValid,
     submit,
-    pending: !!manage.busy || (dialog?.kind === 'group' && source.busy),
+    pending: dialog !== null && pendingDialog === dialog,
     submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : ''
   };

@@ -34,21 +34,27 @@ export function Nodes(props: PageProps) {
         {dialog?.kind === 'provider' && (
           <div className="rp-list">
             <span className="rp-label">{t('nodes.addProviderHelp')}</span>
-            <TextField label={t('nodes.name')} value={form.name} placeholder="sub-a" onChange={name => setForm({...form, name})} />
-            <TextField label={t('nodes.url')} value={form.value} placeholder="https://example.org/sub?token=…" onChange={value => setForm({...form, value})} />
+            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="sub-a" onChange={name => setForm({...form, name})} />
+            <TextField
+              isDisabled={pending}
+              label={t('nodes.url')}
+              value={form.value}
+              placeholder="https://example.org/sub?token=…"
+              onChange={value => setForm({...form, value})}
+            />
           </div>
         )}
         {dialog?.kind === 'group' && (
           <div className="rp-list">
             <span className="rp-label">{groupHelp}</span>
-            <TextField label={t('nodes.name')} value={form.name} placeholder="hk" onChange={name => setForm({...form, name})} />
+            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk" onChange={name => setForm({...form, name})} />
           </div>
         )}
         {dialog?.kind === 'node' && (
           <div className="rp-list">
             <span className="rp-label">{t('nodes.addNodeHelp')}</span>
-            <TextField label={t('nodes.name')} value={form.name} placeholder="hk-03" onChange={name => setForm({...form, name})} />
-            <TextField label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
+            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk-03" onChange={name => setForm({...form, name})} />
+            <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
           </div>
         )}
         {dialog?.kind === 'removeProvider' && <span className="rp-label">{t('nodes.removeProviderHelp')}</span>}

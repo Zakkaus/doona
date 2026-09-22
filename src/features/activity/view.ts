@@ -1,5 +1,17 @@
 import type {ApiEvent, ConnectionList, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
-import {eventSummary, healthMillis, lifecycleStates, lifecycleTone, localTime, outboundLabel, outboundUsage, preferredHealth} from '../../api/selectors';
+import {
+  eventKindLabels,
+  eventSummary,
+  healthMillis,
+  lifecycleStates,
+  lifecycleTone,
+  localTime,
+  outboundLabel,
+  outboundUsage,
+  preferredHealth,
+  routineGap,
+  shortId
+} from '../../api/selectors';
 import type {Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
@@ -23,19 +35,24 @@ export function modeView(
     targetText: target || '—',
     writable,
     dirty: staged !== null && !sameMode(staged, current),
+    // Global mode needs a group to send everything to; without one there is nothing valid to write.
+    incomplete: shown.mode === 'global' && !target,
     status: t(configAvailable ? 'act.modeNeedsWrite' : 'act.modeUnavailable'),
     modes: (['rule', 'direct', 'global'] as const).map(mode => [mode, t(modeLabels[mode])] as [string, string]),
     targets: groups.map(group => ({id: group.name, label: group.name}))
   };
 }
+export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
+
 export function noticeRows(events: ApiEvent[], t: LabelFn) {
   return events.map(event => {
     const summary = eventSummary(event, t);
+    const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
     return {
       id: event.id,
       tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
       kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
-      summaryText: `${event.event} · ${t(summary.key, summary.params)}`
+      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`
     };
   });
 }
@@ -63,7 +80,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
       label: counts.get(node.name)! > 1 ? `${node.name} · ${node.subscription_tag ?? node.provider_id ?? node.id} · ${node.id}` : node.name,
       tcp: healthMillis(health),
       alive: health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined,
-      unavailable: health?.state === 'unavailable'
+      unavailable: health?.state === 'unavailable',
+      healthError: health?.error ?? undefined
     };
   });
   const node =
@@ -75,15 +93,16 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? t('ui.latency', {n: millis(node.tcp)}) : '—',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
-    status: t(node?.alive ? 'act.good' : node?.unavailable ? 'act.timeout' : 'act.unknown')
+    status: t(node?.alive ? 'act.good' : node?.unavailable ? 'act.unavailable' : 'act.unknown'),
+    healthError: node?.healthError
   };
 }
-export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn) {
+export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean) {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
-      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t('act.loading')
+      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'act.loading')
     },
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null),

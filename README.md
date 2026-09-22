@@ -88,7 +88,7 @@ A reverse proxy keeps the UI and engine same-origin. Forward the exact `/api` di
 <details>
 <summary><strong>Distribution packages</strong></summary>
 
-None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package. Recipes for the package repositories live in [install/](install/): an OpenWrt feed Makefile, an Alpine `APKBUILD`, a nixpkgs-style expression, and `doona-bin` for the AUR in its own repository. Each release also attaches `doona-<tag>-deps.tar.xz`, the installed `node_modules`, for builds that must run offline; it carries the native build helpers for every Linux architecture they ship (x86, x86_64, armv7, aarch64, riscv64, loong64, ppc64le, s390x, mips64el; glibc and musl), and the build falls back to esbuild's CSS minifier where lightningcss has no binary. `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
+None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package. Recipes for the package repositories live in [install/](install/): an OpenWrt feed Makefile, an Alpine `APKBUILD`, a Gentoo ebuild, a nixpkgs-style expression, and `doona-bin` for the AUR in its own repository. Each release also attaches `doona-<tag>-deps.tar.xz`, the installed `node_modules`, for builds that must run offline; it carries the native build helpers for every Linux architecture they ship (x86, x86_64, armv7, aarch64, riscv64, loong64, ppc64le, s390x, mips64el; glibc and musl), and the build falls back to esbuild's CSS minifier where lightningcss has no binary. `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
 
 </details>
 
@@ -159,20 +159,23 @@ pnpm e2e                         # rebuild, then test against the mock at the ro
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
+For a read-only pass against a live backend, run `DOONA_API=http://router:9527 DOONA_TOKEN=… pnpm e2e:live` from the repository root. `DOONA_API` is required; omit `DOONA_TOKEN` when authentication is not required. The command runs accessibility, mobile-navigation and keyboard specs, rejects backend overrides in fixture storage, and aborts control requests, including DNS queries. Ordinary `pnpm e2e` runs reject `DOONA_API` unless `DOONA_LIVE_OBSERVE=1` is explicitly set.
+
 `pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` captures pages and the palette sheet from a running build as lossless WebP; it requires `cwebp`. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
-| Path            | Purpose                                                                    |
-| --------------- | -------------------------------------------------------------------------- |
-| `src/features/` | Pages, their hooks and messages, one folder each                           |
-| `src/shell/`    | Application shell, navigation and search                                   |
-| `src/ui/`       | Shared components, theme and icons                                         |
-| `src/api/`      | Client, backend profiles, resource store, mock backend and generated types |
-| `src/i18n/`     | Translations and locale helpers                                            |
-| `contract/`     | The vendored OpenAPI contract and its pin                                  |
-| `public/`       | Static assets, fonts and the service worker                                |
-| `e2e/`          | Browser tests                                                              |
-| `tools/`        | Build, packaging, conformance and screenshot tools                         |
-| `install/`      | nfpm configs, OpenWrt, Alpine and Nix recipes                              |
+| Path            | Purpose                                                    |
+| --------------- | ---------------------------------------------------------- |
+| `src/features/` | Pages, their hooks and messages, one folder each           |
+| `src/shell/`    | Application shell, navigation and search                   |
+| `src/ui/`       | Shared components, theme and icons                         |
+| `src/api/`      | Client, backend profiles, mock backend and generated types |
+| `src/store/`    | Resource watching, cached reads and action hooks           |
+| `src/i18n/`     | Translations and locale helpers                            |
+| `contract/`     | The vendored OpenAPI contract and its pin                  |
+| `public/`       | Static assets, fonts and the service worker                |
+| `e2e/`          | Browser tests                                              |
+| `tools/`        | Build, packaging, conformance and screenshot tools         |
+| `install/`      | nfpm configs, OpenWrt, Alpine, Gentoo and Nix recipes      |
 
 ### Contract
 

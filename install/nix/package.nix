@@ -8,6 +8,7 @@
   pnpmConfigHook,
   pnpm_11,
   nodejs,
+  nix-update-script,
   withFonts ? true,
 }:
 let
@@ -21,7 +22,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     owner = "Zakkaus";
     repo = "doona";
     # The release tag follows honk's shape: dots, no hyphen.
-    tag = "v0.1.0-beta.1";
+    tag = "v${lib.replaceStrings [ "-" ] [ "." ] finalAttrs.version}";
     hash = lib.fakeHash; # Placeholder: replace with the published tag's source hash.
   };
 
@@ -58,10 +59,14 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
     description = "Web UI for the daeuniverse engines";
     homepage = "https://github.com/Zakkaus/doona";
     license = with lib.licenses; [ gpl3Only ] ++ lib.optional withFonts ofl;
     platforms = lib.platforms.linux;
+    # Needs a maintainers/maintainer-list.nix entry in its own commit before submission.
+    maintainers = with lib.maintainers; [ zakkaus ];
   };
 })

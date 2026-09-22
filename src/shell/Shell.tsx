@@ -234,7 +234,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <SettingsContext.Provider value={settingsValue}>
             {view.content.kind === 'login' ? (
-              <Login profileId={view.content.profileId} backend={view.content.backend} rejected={view.content.rejected} />
+              <Login profileId={view.content.profileId} api={view.content.api} backend={view.content.backend} rejected={view.content.rejected} />
             ) : view.content.kind === 'loading' ? (
               <Loading />
             ) : view.content.kind === 'unavailable' ? (

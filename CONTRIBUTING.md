@@ -2,7 +2,7 @@
 
 ## Set up
 
-Use Node 22 or later and pnpm 11.15.1. From the repository root:
+Use Node `^22.13.0 || ^24.0.0 || >=26.0.0` and pnpm 11.15.1. From the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -21,7 +21,7 @@ The source tree has one folder per concern:
 | Folder         | Holds                                                                                                                                                                |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/api`      | The transport client, contract types, error model, selectors and the demo backend (`mock/`)                                                                          |
-| `src/store`    | Resource watching and action hooks; the only place that talks to `src/api` at runtime                                                                                |
+| `src/store`    | Resource watching and action hooks; owns cached reads. Feature controllers may call `getApi()` directly for actions                                                  |
 | `src/dae`      | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend                                                     |
 | `src/features` | One folder per page: a controller hook (`use*.ts`) owns store hooks, URL state and actions; `view.ts` holds pure projections with unit tests; components only render |
 | `src/shell`    | Routing, navigation, appearance, shortcuts and search                                                                                                                |

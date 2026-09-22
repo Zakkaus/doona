@@ -22,11 +22,13 @@
 .rp-tab {
   position: relative;
   z-index: 1;
-  height: 28px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 4px 12px;
   border-radius: var(--rp-r-md);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   font: inherit;
   font-weight: 500;
   color: var(--rp-subtle);

@@ -138,7 +138,7 @@ export function Overview() {
           {vm.resources.state === 'ready' ? (
             <div className="rp-list rp-list-columns">
               {vm.resources.rows.map(row => (
-                <div key={row.id} className="rp-row">
+                <div key={row.id} className="rp-list">
                   <span>{row.label}</span>
                   <Light small tone={row.tone}>
                     {row.text}

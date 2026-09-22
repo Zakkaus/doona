@@ -42,8 +42,7 @@ export function useContentWidth<E extends HTMLElement>() {
   }, []);
   return [ref, width] as const;
 }
-// The height that takes an element to the bottom of the viewport, never below `min`: a page whose table is
-// its last content shows as many rows as the screen holds instead of a fixed box over empty page.
+// Fill the remaining viewport without shrinking below min.
 export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
   const ref = useRef<E>(null);
   const [height, setHeight] = useState(min);
@@ -72,17 +71,14 @@ export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
   return [ref, height] as const;
 }
 
-// From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
-// selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
 // Whether shortcuts should read as ⌘ rather than Ctrl; userAgentData is the standard, platform the fallback.
 export const isMac =
   (navigator as Navigator & {userAgentData?: {platform: string}}).userAgentData?.platform === 'macOS' || navigator.platform.startsWith('Mac');
 
+// Below this breakpoint, detail drawers must not follow keyboard focus.
 export const panelQuery = '(min-width: 1200px)';
 
-// A draft seeded from the URL: a new linked value (a search-dialog jump) replaces the draft, while a
-// navigation that keeps the same value leaves what was typed since. The rewrite runs during render, so the
-// draft never shows the stale value for a frame.
+// Reset linked drafts during render so navigation cannot paint the previous value.
 export function useLinked<T>(linked: T, apply: (value: T) => void) {
   const [last, setLast] = useState(linked);
   if (last !== linked) {

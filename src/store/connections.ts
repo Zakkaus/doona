@@ -14,10 +14,16 @@ export function useConnectionClose(refetch: () => void) {
   // Bulk close for a selection the contract can express (network and source IP); anything narrower (a text
   // or outbound filter) closes one by one, where a 409 or 404 is a connection the backend no longer owns.
   const closeAll = useCallback(
-    (selection: {query: BulkCloseQuery} | {ids: string[]}): Promise<BulkCloseResult | undefined> =>
+    (selection: {ids: string[]; query?: BulkCloseQuery}): Promise<BulkCloseResult | undefined> =>
       run('all', async signal => {
         try {
-          if ('query' in selection) return await api.closeConnections(selection.query, signal);
+          if (selection.query)
+            try {
+              return await api.closeConnections(selection.query, signal);
+            } catch (error) {
+              // Over the advertised bulk limit the backend closes nothing; the listed ids still get closed one by one.
+              if (!(error instanceof ApiError && error.status === 413)) throw error;
+            }
           const tally = {closed: 0, skipped: 0};
           for (const id of selection.ids) {
             try {

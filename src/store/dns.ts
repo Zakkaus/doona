@@ -1,9 +1,13 @@
 import {useCallback} from 'react';
 import {getApi} from '../api/index';
-import type {DnsCacheList} from '../api/model';
+import type {Capabilities, DnsCacheList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
+export function dnsLogLimit(capabilities: Capabilities | undefined) {
+  const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
+  return advertised === undefined ? undefined : Math.min(200, advertised);
+}
 export function useDnsFlush() {
   const api = getApi();
   const {busy, run} = useAction<'flush'>({rethrow: true});
@@ -15,9 +19,12 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const type = query.type && query.type !== 'all' ? query.type : undefined;
   const src = query.src?.trim() || undefined;
   const capabilities = useCapabilities().data;
-  const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
-  const limit = advertised === undefined ? undefined : Math.min(200, advertised);
-  return useResource({key: ['dnsLog', {name, type, src, limit}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)}, {enabled});
+  const limit = dnsLogLimit(capabilities);
+  const resource = useResource(
+    {key: ['dnsLog', {name, type, src, limit}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)},
+    {enabled}
+  );
+  return {...resource, limit};
 }
 function useDnsCache(enabled = true) {
   const api = getApi();

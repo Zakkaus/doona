@@ -25,6 +25,7 @@ function Dictionary({view}: {view: Model}) {
           </Button>
         )}
       </div>
+      {view.editHelp && <p className="rp-label">{view.editHelp}</p>}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}
@@ -91,7 +92,9 @@ function Dictionary({view}: {view: Model}) {
         }}
         footer={close => (
           <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
+            <Button isDisabled={view.busy} onPress={close}>
+              {t('ui.cancel')}
+            </Button>
             <Button
               negative={dialog?.kind === 'remove'}
               accent={dialog?.kind !== 'remove'}
@@ -114,6 +117,7 @@ function Dictionary({view}: {view: Model}) {
           <div className="rp-list">
             <span className="rp-label">{t('rule.addHelp')}</span>
             <Segmented
+              isDisabled={view.busy}
               label={t('rule.conditionMode')}
               value={draft.mode}
               onChange={view.changeMode}
@@ -126,12 +130,14 @@ function Dictionary({view}: {view: Model}) {
               <>
                 <div className="rp-toolbar top">
                   <LabeledSelect
+                    isDisabled={view.busy}
                     label={t('rule.kind')}
                     value={pick.kind}
                     onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
                     items={draft.choices}
                   />
                   <TextField
+                    isDisabled={view.busy}
                     label={t('rule.values')}
                     value={pick.value}
                     placeholder={draft.hint}
@@ -144,6 +150,7 @@ function Dictionary({view}: {view: Model}) {
               </>
             ) : (
               <TextField
+                isDisabled={view.busy}
                 label={t('rule.condition')}
                 value={form.condition}
                 placeholder="domain(geosite:netflix)"
@@ -153,12 +160,24 @@ function Dictionary({view}: {view: Model}) {
               />
             )}
             <div className="rp-toolbar">
-              <LabeledSelect label={t('ui.outbound')} value={form.outbound} onChange={outbound => setForm({...form, outbound})} items={view.table.outbounds} />
-              <Switch isSelected={form.must} onChange={must => setForm({...form, must})}>
+              <LabeledSelect
+                isDisabled={view.busy}
+                label={t('ui.outbound')}
+                value={form.outbound}
+                onChange={outbound => setForm({...form, outbound})}
+                items={view.table.outbounds}
+              />
+              <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})}>
                 must
               </Switch>
             </div>
-            <LabeledSelect label={t('rule.position')} value={form.before} onChange={before => setForm({...form, before})} items={view.table.positions} />
+            <LabeledSelect
+              isDisabled={view.busy}
+              label={t('rule.position')}
+              value={form.before}
+              onChange={before => setForm({...form, before})}
+              items={view.table.positions}
+            />
           </div>
         )}
       </ModalDialog>

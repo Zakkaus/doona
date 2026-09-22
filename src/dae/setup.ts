@@ -1,11 +1,24 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from '../../dae/text';
-import {quoteName, readGroupEntries} from '../../dae/groups';
+import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from './text';
+import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
 type Subscription = {name: string; url: string; raw?: string; section?: number; tag?: string};
-export type {RuleTemplate};
-export {defaultTemplate};
-export type WizardState = {subscriptions: Subscription[]; group: string | null; rules: 'keep' | RuleTemplate; lanInterface: string};
+export type WizardState = {
+  subscriptions: Subscription[];
+  group: string | null;
+  rules: 'keep' | RuleTemplate;
+  lanInterface: string;
+  listenerPort: string;
+  defaultDns: string;
+  chinaDns: string;
+};
+
+const networkDefaults = {listenerPort: '12345', defaultDns: 'tls://1.1.1.1:853', chinaDns: 'udp://223.5.5.5:53'};
+
+export function validNetwork(state: WizardState): boolean {
+  const port = Number(state.listenerPort);
+  return /^\d+$/.test(state.listenerPort) && port >= 1 && port <= 65535 && !!state.defaultDns.trim() && !!state.chinaDns.trim();
+}
 
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 export function validSubscriptions(subscriptions: Subscription[]): boolean {
@@ -30,7 +43,7 @@ export function readState(text: string): WizardState {
   const group = readGroupEntries(text)[0]?.name ?? null;
   const global = blocks.find(block => block.name === 'global');
   const lan = global ? blockFields(text, global, tokens).find(field => field.name === 'lan_interface')?.value : undefined;
-  return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : ''};
+  return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : '', ...networkDefaults};
 }
 
 function subscriptionBlock(state: WizardState): string[] {
@@ -43,24 +56,26 @@ function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
-const dnsBlock = [
-  'dns {',
-  '  upstream {',
-  "    cloudflare: 'tls://1.1.1.1:853'",
-  "    alidns: 'udp://223.5.5.5:53'",
-  '  }',
-  '  routing {',
-  '    request {',
-  '      qname(geosite:cn) -> alidns',
-  '      fallback: cloudflare',
-  '    }',
-  '  }',
-  '}'
-];
+function dnsBlock(state: WizardState): string[] {
+  return [
+    'dns {',
+    '  upstream {',
+    `    cloudflare: ${quote(state.defaultDns.trim())}`,
+    `    alidns: ${quote(state.chinaDns.trim())}`,
+    '  }',
+    '  routing {',
+    '    request {',
+    '      qname(geosite:cn) -> alidns',
+    '      fallback: cloudflare',
+    '    }',
+    '  }',
+    '}'
+  ];
+}
 function globalBlock(state: WizardState): string[] {
   return [
     'global {',
-    '  tproxy_port: 12345',
+    `  tproxy_port: ${state.listenerPort}`,
     '  log_level: info',
     `  lan_interface: ${state.lanInterface.trim() || 'auto'}`,
     '  wan_interface: auto',
@@ -88,7 +103,7 @@ export function writeState(current: string, state: WizardState): string {
       ...groupLines([], state.rules === 'keep' ? defaultTemplate : state.rules),
       '}',
       '',
-      ...dnsBlock,
+      ...dnsBlock(state),
       '',
       ...routingBlock(state, state.rules === 'keep' ? defaultTemplate : state.rules),
       ''
@@ -118,10 +133,11 @@ export function writeState(current: string, state: WizardState): string {
     edits.push({from: inline ? groupSection.close : at, to: inline ? groupSection.close : at, text: (inline ? '\n' : '') + missing.join('\n') + '\n'});
   }
   if (state.rules !== 'keep') {
-    const routing = blocks.find(block => block.name === 'routing');
+    const routing = blocks.filter(block => block.name === 'routing');
     const text = routingBlock(state, state.rules).join('\n');
-    if (routing) edits.push({from: routing.from, to: routing.to, text});
-    else appended.push(text);
+    if (routing.length) {
+      routing.forEach((block, index) => edits.push({from: block.from, to: block.to, text: index === 0 ? text : ''}));
+    } else appended.push(text);
   }
   let out = current;
   for (const edit of edits.sort((a, b) => b.from - a.from)) out = out.slice(0, edit.from) + edit.text + out.slice(edit.to);

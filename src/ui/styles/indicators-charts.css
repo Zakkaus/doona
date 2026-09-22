@@ -15,7 +15,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-light > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rp-light::before {
   content: '';

@@ -61,7 +61,7 @@ export function Activity() {
             </span>
           </div>
         </div>
-        <CardLink href="#/connections" label={t('act.active')}>
+        <CardLink href={buildHash('connections')} label={t('act.active')}>
           <span className="rp-tile-head rp-tint-c3">
             <LinkIcon />
             {t('act.active')}

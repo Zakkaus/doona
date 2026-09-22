@@ -38,13 +38,14 @@ export function Events() {
             label: t('ui.time'),
             minWidth: 200,
             grow: 0,
+            drop: 1,
             render: event => (
               <TextTooltip className="rp-code" text={event.timeTooltip}>
                 {event.timestamp}
               </TextTooltip>
             )
           },
-          {id: 'k', label: t('event.kind'), minWidth: 168, render: event => <TextTooltip text={event.kind}>{event.kindText}</TextTooltip>},
+          {id: 'k', label: t('event.kind'), minWidth: 168, drop: 2, render: event => <TextTooltip text={event.kind}>{event.kindText}</TextTooltip>},
           {
             id: 'm',
             label: t('event.summary'),

@@ -5,13 +5,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_VERSION:=0.1.0~beta.1
+# apk (OpenWrt 25 and later) accepts only _beta1-style pre-release versions; opkg sorts it after 0.1.0, as it does for netdiscover.
+PKG_VERSION:=0.1.0_beta1
 PKG_RELEASE:=1
-# The release tag follows honk's shape: dots, no hyphen.
-PKG_TAG:=v0.1.0-beta.1
+# The release tag keeps honk's dotted shape.
+PKG_REAL_VERSION:=v0.1.0-beta.1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_TAG).tar.gz
-PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
+PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
 # Placeholder: replace with the program archive's SHA256SUMS entry after publication.
 PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
 
@@ -21,9 +22,9 @@ PKG_MAINTAINER:=Zakkaus <zakk@gentoozh.org>
 
 include $(INCLUDE_DIR)/package.mk
 
-FONTS_FILE:=$(PKG_NAME)-fonts-$(PKG_TAG).tar.gz
+FONTS_FILE:=$(PKG_NAME)-fonts-$(PKG_REAL_VERSION).tar.gz
 define Download/doona-fonts
-	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
+	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
 	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
@@ -76,10 +77,9 @@ define Build/Compile
 endef
 
 define Package/doona/install
-	$(INSTALL_DIR) $(1)/usr/share/doona $(1)/usr/share/doc/doona
+	$(INSTALL_DIR) $(1)/usr/share/doona
 	$(CP) $(PKG_BUILD_DIR)/web/* $(1)/usr/share/doona/
-	rm -f $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/web/LICENSE $(PKG_BUILD_DIR)/web/NOTICE $(1)/usr/share/doc/doona/
+	rm -rf $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/LICENSES $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
 endef
 
 define Package/doona-fonts/install

@@ -118,6 +118,10 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
     await route.fulfill({json: await api.routingTrace(route.request().postDataJSON())});
   });
   await page.goto('/#/rules?tab=trace');
+  await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('');
+  await expect(page.getByLabel('Destination port', {exact: true})).toHaveValue('');
+  await expect(page.getByRole('button', {name: 'Run trace', exact: true})).toBeDisabled();
+  expect(requested).toEqual([]);
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
   const run = page.getByRole('button', {name: 'Run trace', exact: true});
   await page.getByLabel('Destination port', {exact: true}).fill('65536');

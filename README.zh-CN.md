@@ -88,7 +88,9 @@ experimental {
 <details>
 <summary><strong>发行版软件包</strong></summary>
 
-尚未发布。每个发行版本附 [nfpm](install/nfpm) 从 `make install` 打出的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的写法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表达式；AUR 的 `doona-bin` 另有仓库。发行版本另附 `doona-<tag>-deps.tar.xz`（装好的 `node_modules`），给必须离线构建的软件包用。原生模块涵盖工具链有出的每种 Linux 架构与 libc，清单见 `pnpm-workspace.yaml`；lightningcss 没有二进制的架构改用 esbuild 压 CSS。其他打包方式从 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts` 入手。
+尚未发布。每个发行版本附 [nfpm](install/nfpm) 通过 `make install` 生成的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的打包配置位于 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、Gentoo ebuild、nixpkgs 表达式；AUR 的 `doona-bin` 使用独立仓库。
+
+发行版本另附 `doona-<tag>-deps.tar.xz`（已安装的 `node_modules`），供离线构建使用。原生模块涵盖构建工具支持的 Linux 架构与 libc，清单见 `pnpm-workspace.yaml`；lightningcss 未提供二进制文件的架构改用 esbuild 压缩 CSS。其他打包方式可使用 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts`。
 
 </details>
 
@@ -99,7 +101,7 @@ experimental {
 接着活动页显示运行中的引擎。其余页面的常见顺序：
 
 1. **节点**：新增订阅（名称与网址）或粘贴分享链接；节点列出协议、延迟与所属群组。可设置订阅多久更新一次、测试单个节点，或从该行把节点加入群组。
-2. **策略**：每个群组一张卡片，列出成员与延迟。selector 群组可直接选成员；自动群组可钉住一个成员、之后再放开；可全部测试，也可编辑群组的策略与筛选。
+2. **策略**：每个群组一张卡片，列出成员与延迟。selector 群组可直接选择成员；自动群组可手动固定成员，并随时恢复自动选择；可测试全部成员，也可编辑群组的策略与筛选条件。
 3. **规则**：按评估顺序列出路由字典，附每条规则决定过的流程数。新增规则可以挑选依据与值（域名后缀、geosite 分类、端口、进程名称），也可以直接写表达式，插在任意一条之前或最后。
 4. **配置**：已接受的来源与其诊断。就地编辑文件，校验、保存、重载；快速设置覆盖主文件的常用项目。
 
@@ -115,7 +117,7 @@ experimental {
 | 概览 | 引擎与 eBPF 状态、流量计数、后端能力、状态 JSON 导出                                                       | `runtime`                           |
 | 连接 | 实时连接的来源、目的、规则、链路与流量；关闭单条或全部；筛选条件可写在网址                                 | `connections`                       |
 | DNS  | 查询与解析结果、缓存、日志；清空缓存                                                                       | `dns_query`、`dns_log`、`dns_cache` |
-| 策略 | 群组、成员与健康；选择、钉住、测试、编辑                                                                   | `groups`                            |
+| 策略 | 群组、成员与健康；选择、手动固定、恢复自动选择、测试、编辑                                                 | `groups`                            |
 | 规则 | 从规则或设备经出站到所选节点的分流树、规则列表与命中数、可直接为目标加规则的流程记录、对指定目标的追踪模拟 | `rules`、`flows`、`routing_trace`   |
 | 节点 | 订阅与更新间隔、配置内节点、新增与移除、测试、加入群组                                                     | `nodes`、`providers`                |
 | 配置 | 来源与诊断、带校验的编辑器、快速设置、导出                                                                 | `config`                            |
@@ -159,20 +161,23 @@ pnpm e2e                         # 重新构建，再对模拟后端执行浏览
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
+在仓库根目录执行 `DOONA_API=http://router:9527 DOONA_TOKEN=… pnpm e2e:live`，可对实际后端执行只读的无障碍、移动端导航与键盘测试。`DOONA_API` 必填；后端不要求身份验证时可省略 `DOONA_TOKEN`。测试拒绝通过 fixture 存储覆盖后端设置，并中止控制请求，包括 DNS 查询。普通 `pnpm e2e` 测试在设置了 `DOONA_API` 时拒绝执行，除非显式设置 `DOONA_LIVE_OBSERVE=1`。
+
 `pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，输出无损 WebP，需要安装 `cwebp`。另见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
-| 路径            | 用途                                               |
-| --------------- | -------------------------------------------------- |
-| `src/features/` | 各页面及其 hook 与文案，一页一个文件夹             |
-| `src/shell/`    | 应用外壳、导航与搜索                               |
-| `src/ui/`       | 共用组件、主题与图标                               |
-| `src/api/`      | 客户端、后端档案、资源 store、模拟后端与生成的类型 |
-| `src/i18n/`     | 翻译与区域设置辅助                                 |
-| `contract/`     | 内嵌的 OpenAPI 契约与钉点                          |
-| `public/`       | 静态资源、字体与 service worker                    |
-| `e2e/`          | 浏览器测试                                         |
-| `tools/`        | 构建、打包、一致性检查与截图工具                   |
-| `install/`      | nfpm 配置与 OpenWrt、Alpine、Nix 写法              |
+| 路径            | 用途                                          |
+| --------------- | --------------------------------------------- |
+| `src/features/` | 各页面及其 hook 与文案，一页一个文件夹        |
+| `src/shell/`    | 应用外壳、导航与搜索                          |
+| `src/ui/`       | 共用组件、主题与图标                          |
+| `src/api/`      | 客户端、后端档案、模拟后端与生成的类型        |
+| `src/store/`    | 资源监听、读取缓存与操作 hook                 |
+| `src/i18n/`     | 翻译与区域设置辅助                            |
+| `contract/`     | 内嵌的 OpenAPI 契约与钉点                     |
+| `public/`       | 静态资源、字体与 service worker               |
+| `e2e/`          | 浏览器测试                                    |
+| `tools/`        | 构建、打包、一致性检查与截图工具              |
+| `install/`      | nfpm 配置与 OpenWrt、Alpine、Gentoo、Nix 写法 |
 
 ### 契约
 
