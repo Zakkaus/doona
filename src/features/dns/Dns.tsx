@@ -1,10 +1,27 @@
+import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
-import {Badge, Button, DataTable, ErrorMessage, Light, TextTooltip, Kv, LabeledSelect, Tabs, TextField, DetailPanel, Empty} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  ErrorMessage,
+  Light,
+  TextTooltip,
+  Kv,
+  LabeledSelect,
+  Tabs,
+  TextField,
+  DetailPanel,
+  Empty,
+  type TableColumn
+} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCache, useDnsLog} from './useDns';
+
+type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -136,6 +153,45 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
 function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialName: string}) {
   const t = useT();
   const vm = useDnsLog(enabled, initialName);
+  // Stable column definitions: a new array on every poll would re-render every visible row.
+  const columns = useMemo(
+    (): TableColumn<DnsLogRow>[] => [
+      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TextTooltip text={record.timeTooltip}>{record.time}</TextTooltip>},
+      {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
+      {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
+      {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
+      {
+        id: 'r',
+        label: t('dns.result'),
+        minWidth: 160,
+        grow: 2,
+        render: record =>
+          record.resultError ? (
+            <Light small tone="err">
+              {record.result}
+            </Light>
+          ) : (
+            <TextTooltip className="rp-code">{record.result}</TextTooltip>
+          )
+      },
+      {
+        id: 'u',
+        label: t('ui.upstream'),
+        minWidth: 128,
+        drop: 1,
+        render: record =>
+          record.cached ? (
+            <Light small tone="ok">
+              {record.upstream}
+            </Light>
+          ) : (
+            <TextTooltip>{record.upstream}</TextTooltip>
+          )
+      },
+      {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4, render: record => record.elapsed}
+    ],
+    [t]
+  );
   return (
     <>
       <div className="rp-toolbar">
@@ -168,41 +224,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           selectOnFocus={vm.wide}
           loading={vm.loading}
           empty={vm.empty}
-          cols={[
-            {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TextTooltip text={record.timeTooltip}>{record.time}</TextTooltip>},
-            {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
-            {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
-            {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
-            {
-              id: 'r',
-              label: t('dns.result'),
-              minWidth: 160,
-              grow: 2,
-              render: record =>
-                record.resultError ? (
-                  <Light small tone="err">
-                    {record.result}
-                  </Light>
-                ) : (
-                  <TextTooltip className="rp-code">{record.result}</TextTooltip>
-                )
-            },
-            {
-              id: 'u',
-              label: t('ui.upstream'),
-              minWidth: 128,
-              drop: 1,
-              render: record =>
-                record.cached ? (
-                  <Light small tone="ok">
-                    {record.upstream}
-                  </Light>
-                ) : (
-                  <TextTooltip>{record.upstream}</TextTooltip>
-                )
-            },
-            {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4, render: record => record.elapsed}
-          ]}
+          cols={columns}
         />
         <DetailPanel open={!!vm.detail} title={vm.detailTitle} onClose={() => vm.setSelected(null)}>
           {vm.detail && (

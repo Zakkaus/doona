@@ -1,11 +1,42 @@
+import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, Empty} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, Empty, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
+
+type LogRow = ReturnType<typeof useLogs>['rows'][number];
 
 export function Logs() {
   const t = useT();
   const vm = useLogs();
+  // Stable column definitions: a new array on every stream tick would re-render every visible row.
+  const columns = useMemo(
+    (): TableColumn<LogRow>[] => [
+      {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, drop: 2, render: record => <span className="rp-code">{record.timestamp}</span>},
+      {
+        id: 'level',
+        label: t('log.level'),
+        minWidth: 90,
+        grow: 0,
+        drop: 3,
+        render: record => (
+          <Light small tone={record.tone}>
+            {record.levelText}
+          </Light>
+        )
+      },
+      {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target}</span>},
+      {
+        id: 'message',
+        label: t('log.message'),
+        minWidth: 280,
+        grow: 3,
+        isRowHeader: true,
+        render: record => <TextTooltip>{record.message}</TextTooltip>
+      }
+    ],
+    [t]
+  );
   if (vm.unavailable)
     return (
       <div className="rp-page">
@@ -33,37 +64,7 @@ export function Logs() {
         </Button>
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
-      <DataTable
-        label={t('nav.logs')}
-        rows={vm.rows}
-        height={640}
-        loading={vm.loading}
-        empty={t('log.empty')}
-        cols={[
-          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, drop: 2, render: record => <span className="rp-code">{record.timestamp}</span>},
-          {
-            id: 'level',
-            label: t('log.level'),
-            minWidth: 90,
-            grow: 0,
-            drop: 3,
-            render: record => (
-              <Light small tone={record.tone}>
-                {record.levelText}
-              </Light>
-            )
-          },
-          {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target}</span>},
-          {
-            id: 'message',
-            label: t('log.message'),
-            minWidth: 280,
-            grow: 3,
-            isRowHeader: true,
-            render: record => <TextTooltip>{record.message}</TextTooltip>
-          }
-        ]}
-      />
+      <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={t('log.empty')} cols={columns} />
     </div>
   );
 }

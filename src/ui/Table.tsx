@@ -53,9 +53,17 @@ export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisi
   );
 }
 
-export function useTableReveal(at: number, ref: RefObject<HTMLElement | null>) {
+// Scrolls a selected row into view when the selection changes or the selected row first appears (a deep link
+// before the rows load). A poll that only moves the row does not scroll: the person may have scrolled away.
+export function useTableReveal(selected: string | null, at: number, ref: RefObject<HTMLElement | null>) {
+  const index = useRef(at);
   useEffect(() => {
-    if (at < 0) return;
+    index.current = at;
+  });
+  const present = at >= 0;
+  useEffect(() => {
+    const at = index.current;
+    if (!selected || !present) return;
     const frame = requestAnimationFrame(() => {
       const box = ref.current;
       if (!box) return;
@@ -65,7 +73,7 @@ export function useTableReveal(at: number, ref: RefObject<HTMLElement | null>) {
       else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
     });
     return () => cancelAnimationFrame(frame);
-  }, [at, ref]);
+  }, [selected, present, ref]);
 }
 
 export function selectedRow(keys: Selection): string | null {
@@ -101,7 +109,8 @@ export function DataTable<T extends {id: string}>({
   loading,
   sort,
   onSort,
-  getTextValue
+  getTextValue,
+  stream
 }: {
   label: string;
   cols: TableColumn<T>[];
@@ -119,6 +128,8 @@ export function DataTable<T extends {id: string}>({
   sort?: TableSort | null;
   onSort?: (sort: TableSort) => void;
   getTextValue?: (row: T) => string;
+  // Rows arrive continuously (logs, events): virtualised from the start rather than on crossing a threshold.
+  stream?: boolean;
 }) {
   const t = useT();
   const keys: Selection = selected ? new Set([selected]) : new Set();
@@ -132,12 +143,12 @@ export function DataTable<T extends {id: string}>({
   if (!reserved && loading && !rows.length) setReserved(true);
   const content = frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight;
   const fitted = reserved ? height : Math.min(height, content);
-  const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);
+  const [virtual, setVirtual] = useState(stream || rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;
   // A virtualized grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
-  useTableReveal(at, virtual ? grid : ref);
+  useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref);
   const renderRow = (row: T) => {
     return (
       <Row key={row.id} id={row.id} textValue={getTextValue?.(row)}>
