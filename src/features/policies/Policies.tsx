@@ -3,13 +3,14 @@ import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
 import {within} from '../../shell/route';
-// Drag and drop is loaded with the arrange tab, not with the page.
-const Arrange = lazy(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import type {PageProps} from '../types';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
+
+// The arrange tab and its drag and drop load when the tab is first opened.
+const Arrange = lazy(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
 
 // Holds roughly the loaded card's height, so cards below do not move when the details arrive.
 function PolicyWait({heading, members, label}: {heading: ReactNode; members: number; label?: string}) {
@@ -165,7 +166,7 @@ export function Policies({go, query}: PageProps) {
             label: t('policy.tab.arrange'),
             content: (
               <Suspense fallback={<Loading />}>
-                <Arrange source={m.source} nodes={m.nodes} />
+                <Arrange source={m.source} nodes={m.nodes} groups={m.groups} />
               </Suspense>
             )
           }

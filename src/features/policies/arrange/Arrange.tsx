@@ -1,280 +1,353 @@
-import {useId, useState} from 'react';
-import {Menu, MenuItem} from 'react-aria-components';
+import {useId, useMemo, useState} from 'react';
+import {
+  Button as RButton,
+  DropZone,
+  GridList,
+  GridListItem,
+  ListLayout,
+  Menu,
+  Virtualizer,
+  isTextDropItem,
+  useDragAndDrop,
+  type DropItem,
+  type Selection
+} from 'react-aria-components';
 import {formatList, useLang, useT} from '../../../i18n';
 import {buildHash} from '../../../shell/route';
-import {Badge, Button, Disclosure, Empty, InlineAlert, LabeledSelect, Link, MenuButton, ModalDialog, TextField, cx} from '../../../ui/ui';
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Check,
+  Disclosure,
+  Empty,
+  ErrorMessage,
+  InlineAlert,
+  LabeledSelect,
+  Light,
+  Link,
+  Loading,
+  MenuButton,
+  MenuChoice,
+  ModalDialog,
+  Segmented,
+  Tag,
+  Tags,
+  TextField,
+  TextTooltip
+} from '../../../ui/ui';
 import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
-import type {Node} from '../../../api/model';
+import type {GroupSummary, Node} from '../../../api/model';
 import type {MainSourceEdit} from '../../config/mainSource';
-import {newGroupPolicies, type ArrangeGroup} from './view';
-import {PLACEABLE, useArrange, type Placeable} from './useArrange';
+import {policyKindLabels} from '../view';
+import {holds, newGroupPolicies, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
+import {PLACEABLE, useArrange} from './useArrange';
 
 type Model = ReturnType<typeof useArrange>;
+type Source = Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>;
 
-export function Arrange({source, nodes}: {source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>; nodes: Node[] | undefined}) {
+export function Arrange({source, nodes, groups}: {source: Source; nodes: Node[] | undefined; groups: GroupSummary[] | undefined}) {
   const t = useT();
   const m = useArrange(source, nodes);
+  // The live summary of each group, for the same header the Groups tab shows.
+  const live = useMemo(() => new Map((groups ?? []).map(group => [group.name, group])), [groups]);
+  if (m.error) return <ErrorMessage error={m.error} onRetry={m.retry} />;
+  if (m.loading) return <Loading />;
   return (
     <div className="rp-arrange">
-      <p className="rp-note">{t('arrange.note')}</p>
+      <div className="rp-row">
+        <p className="rp-note rp-grow">{t('arrange.note')}</p>
+        <NewGroup m={m} />
+      </div>
       {m.blocked && <InlineAlert tone="informative">{m.blocked}</InlineAlert>}
       <div className="rp-arrange-grid">
         <div className="rp-col">
-          {m.groups.map(group => (
-            <GroupTarget key={group.name} group={group} m={m} />
-          ))}
-          <NewGroup m={m} />
+          {m.groups.length ? (
+            m.groups.map(group => <GroupCard key={group.name} group={group} live={live.get(group.name)} m={m} />)
+          ) : (
+            <Empty>{t('policy.empty')}</Empty>
+          )}
         </div>
         <Tray m={m} />
       </div>
       {m.changes.length > 0 && (
-        <div className="rp-pending" role="region" aria-label={t('arrange.pendingRegion')}>
-          <span>{m.pendingText}</span>
-          <div className="rp-toolbar">
-            <Button quiet onPress={m.discard} isDisabled={m.busy}>
-              {t('arrange.discard')}
-            </Button>
-            <Button accent onPress={() => m.setReviewing(true)}>
-              {t('arrange.review')}
-            </Button>
-          </div>
-        </div>
+        <ActionBar label={t('arrange.pendingRegion')} message={m.pendingText}>
+          <Button quiet onPress={m.discard} isDisabled={m.busy}>
+            {t('arrange.discard')}
+          </Button>
+          <Button accent onPress={() => m.setReviewing(true)}>
+            {t('arrange.review')}
+          </Button>
+        </ActionBar>
       )}
       <Review m={m} />
     </div>
   );
 }
 
-// A group card accepts dropped tray rows; each explicit member has a remove button, rule members are explained.
-function GroupTarget({group, m}: {group: ArrangeGroup; m: Model}) {
+// A group as the Groups tab heads it, with its members as tags: exact members carry a remove action, staged
+// removals an undo, and rule members are described by the rule and what it selects.
+function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | undefined; m: Model}) {
   const t = useT();
   const lang = useLang();
-  const locked = !!m.blocked;
   const heading = useId();
-  const [over, setOver] = useState(false);
-  // Native drag and drop for the pointer; the tray's Add menu is the same action for keyboards and touch screens.
-  const accepts = (event: React.DragEvent) => !locked && event.dataTransfer.types.includes(PLACEABLE);
-  return (
-    <section
-      className="rp-card rp-drop"
-      aria-labelledby={heading}
-      data-drop-target={over || undefined}
-      onDragOver={event => {
-        if (!accepts(event)) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-        setOver(true);
-      }}
-      onDragLeave={event => {
-        if (!event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) setOver(false);
-      }}
-      onDrop={event => {
-        setOver(false);
-        if (!accepts(event)) return;
-        event.preventDefault();
-        m.place(group.name, JSON.parse(event.dataTransfer.getData(PLACEABLE)) as Placeable);
-      }}
+  const locked = !!m.blocked;
+  const policy = live ? live.policy.native || t(policyKindLabels[live.policy.kind]) : null;
+  const accept = async (items: DropItem[]) => {
+    const texts = await Promise.all(
+      items
+        .filter(isTextDropItem)
+        .filter(item => item.types.has(PLACEABLE))
+        .map(item => item.getText(PLACEABLE))
+    );
+    m.place(
+      group.name,
+      texts.flatMap(text => parsePlaceable(text) ?? [])
+    );
+  };
+  const remove = (label: string, item: Placeable, blocked: string | null) => (
+    <Button
+      quiet
+      icon
+      small
+      label={t('arrange.remove', {name: label, group: group.name})}
+      tip={blocked ?? undefined}
+      isDisabled={locked || m.applying || !!blocked}
+      onPress={() => m.unplace(group.name, item)}
     >
-      <div className="rp-row">
-        <h3 className="rp-h3" id={heading}>
-          {group.name}
-        </h3>
-        {group.isNew && <Badge>{t('arrange.new')}</Badge>}
-      </div>
-      {group.holdsAll && <p className="rp-note">{t('arrange.holdsAll')}</p>}
-      {(group.names.length > 0 || group.removedNames.length > 0) && (
-        <Section title={t('arrange.byName')}>
-          {group.names.map(item => (
-            <Member
-              key={item.name}
-              label={item.name}
-              isNew={item.isNew}
-              blocked={item.blocked}
-              locked={locked}
-              removeLabel={t('arrange.remove', {name: item.name, group: group.name})}
-              onRemove={() => m.unplace(group.name, {kind: 'node', value: item.name})}
-            />
-          ))}
-          {group.removedNames.map(name => (
-            <Removed key={name} label={name} undoLabel={t('arrange.undoRemove', {name})} onUndo={() => m.place(group.name, {kind: 'node', value: name})} />
-          ))}
-        </Section>
-      )}
-      {(group.subscriptions.length > 0 || group.removedSubscriptions.length > 0) && (
-        <Section title={t('arrange.bySubscription')}>
-          {group.subscriptions.map(item => (
-            <Member
-              key={item.tag}
-              label={item.count === null ? item.label : t('arrange.subscriptionCount', {name: item.label, n: item.count})}
-              isNew={item.isNew}
-              blocked={item.blocked}
-              locked={locked}
-              removeLabel={t('arrange.remove', {name: item.label, group: group.name})}
-              onRemove={() => m.unplace(group.name, {kind: 'subscription', value: item.tag})}
-            />
-          ))}
-          {group.removedSubscriptions.map(item => (
-            <Removed
-              key={item.tag}
-              label={item.label}
-              undoLabel={t('arrange.undoRemove', {name: item.label})}
-              onUndo={() => m.place(group.name, {kind: 'subscription', value: item.tag})}
-            />
-          ))}
-        </Section>
-      )}
-      {group.rules.length > 0 && (
-        <Section title={t('arrange.byRule')}>
-          {group.rules.map(rule => (
-            <code key={rule} className="rp-code">
-              {rule}
-            </code>
-          ))}
-          {group.ruleNodes.length > 0 && (
-            <span>
-              {t('arrange.ruleSelects', {names: formatList(lang, group.ruleNodes)})}
-              {group.ruleMore > 0 && ' ' + t('arrange.ruleMore', {n: group.ruleMore})}
+      <Close />
+    </Button>
+  );
+  const undo = (label: string, item: Placeable) => (
+    <Button quiet small label={t('arrange.undoRemove', {name: label})} isDisabled={m.applying} onPress={() => m.place(group.name, [item])}>
+      {t('arrange.undoShort')}
+    </Button>
+  );
+  return (
+    <DropZone
+      className="rp-card rp-drop"
+      aria-label={t('arrange.dropInto', {group: group.name})}
+      isDisabled={locked || m.applying}
+      getDropOperation={types => (types.has(PLACEABLE) ? 'copy' : 'cancel')}
+      onDrop={event => void accept(event.items)}
+    >
+      {({isDropTarget}) => (
+        <>
+          <div className="rp-row">
+            <span className="rp-cluster">
+              <h3 className="rp-h3" id={heading}>
+                {group.name}
+              </h3>
+              {policy && <Badge>{policy}</Badge>}
+              {live && (
+                <Light small tone="neutral">
+                  {t('arrange.memberCount', {n: live.member_count})}
+                </Light>
+              )}
+              {group.isNew && <Badge>{t('arrange.new')}</Badge>}
             </span>
+          </div>
+          {group.holdsAll && <p className="rp-note">{t('arrange.holdsAll')}</p>}
+          {(group.names.length > 0 || group.removedNames.length > 0) && (
+            <Tags label={t('arrange.byName')}>
+              <span className="rp-label rp-tags-title">{t('arrange.byName')}</span>
+              {group.names.map(item => (
+                <Tag key={item.name} tone={item.isNew ? 'new' : undefined} action={remove(item.name, {kind: 'node', value: item.name}, item.blocked)}>
+                  {item.name}
+                </Tag>
+              ))}
+              {group.removedNames.map(name => (
+                <Tag key={name} tone="removed" action={undo(name, {kind: 'node', value: name})}>
+                  {name}
+                </Tag>
+              ))}
+            </Tags>
           )}
-          <span className="rp-label">
-            {group.ruleNote}{' '}
-            <Link appearance="link" href={buildHash('config', 'tab=source')}>
-              {t('arrange.editSource')}
-            </Link>
-          </span>
-        </Section>
+          {(group.subscriptions.length > 0 || group.removedSubscriptions.length > 0) && (
+            <Tags label={t('arrange.bySubscription')}>
+              <span className="rp-label rp-tags-title">{t('arrange.bySubscription')}</span>
+              {group.subscriptions.map(item => (
+                <Tag key={item.tag} tone={item.isNew ? 'new' : undefined} action={remove(item.label, {kind: 'subscription', value: item.tag}, item.blocked)}>
+                  {item.count === null ? item.label : t('arrange.subscriptionCount', {name: item.label, n: item.count})}
+                </Tag>
+              ))}
+              {group.removedSubscriptions.map(item => (
+                <Tag key={item.tag} tone="removed" action={undo(item.label, {kind: 'subscription', value: item.tag})}>
+                  {item.label}
+                </Tag>
+              ))}
+            </Tags>
+          )}
+          {group.rules.length > 0 && (
+            <div className="rp-arrange-rules">
+              <span className="rp-label">{t('arrange.byRule')}</span>
+              {group.rules.map(rule => (
+                <code key={rule} className="rp-code">
+                  {rule}
+                </code>
+              ))}
+              {group.ruleNodes.length > 0 && (
+                <span>
+                  {group.ruleMore
+                    ? t('arrange.ruleSelectsMore', {names: formatList(lang, group.ruleNodes), n: group.ruleMore})
+                    : t('arrange.ruleSelects', {names: formatList(lang, group.ruleNodes)})}
+                </span>
+              )}
+              <span className="rp-label">
+                {group.ruleNote}{' '}
+                <Link appearance="link" href={buildHash('config', 'tab=source')}>
+                  {t('arrange.editSource')}
+                </Link>
+              </span>
+            </div>
+          )}
+          {group.stillIn.length > 0 && <InlineAlert tone="informative">{t('arrange.stillIn', {names: formatList(lang, group.stillIn)})}</InlineAlert>}
+          {isDropTarget && (
+            <div className="rp-drop-hint" aria-hidden="true">
+              {t('arrange.dropHint')}
+            </div>
+          )}
+        </>
       )}
-      {group.stillIn.length > 0 && <InlineAlert tone="informative">{t('arrange.stillIn', {names: formatList(lang, group.stillIn)})}</InlineAlert>}
-      <p className="rp-drop-hint" aria-hidden="true">
-        {t('arrange.dropHint')}
-      </p>
-    </section>
+    </DropZone>
   );
 }
 
-function Section({title, children}: {title: string; children: React.ReactNode}) {
-  return (
-    <div className="rp-arrange-section">
-      <span className="rp-label">{title}</span>
-      <div className="rp-arrange-members">{children}</div>
-    </div>
-  );
-}
+type Row = {id: string; item: Placeable; label: string; meta: string};
 
-function Member({
-  label,
-  isNew,
-  blocked,
-  locked,
-  removeLabel,
-  onRemove
-}: {
-  label: string;
-  isNew: boolean;
-  blocked: string | null;
-  locked: boolean;
-  removeLabel: string;
-  onRemove: () => void;
-}) {
-  const t = useT();
-  return (
-    <div className={cx('rp-arrange-member', isNew && 'new')}>
-      <span className="rp-grow">{label}</span>
-      {isNew && <Badge>{t('arrange.new')}</Badge>}
-      <Button quiet icon small label={removeLabel} tip={blocked ?? undefined} isDisabled={locked || !!blocked} onPress={onRemove}>
-        <Close />
-      </Button>
-    </div>
-  );
-}
-
-// A staged removal, shown where it was made until it is applied or undone.
-function Removed({label, undoLabel, onUndo}: {label: string; undoLabel: string; onUndo: () => void}) {
-  const t = useT();
-  return (
-    <div className="rp-arrange-member removed">
-      <span className="rp-grow">{label}</span>
-      <Badge>{t('arrange.removed')}</Badge>
-      <Button quiet small label={undoLabel} onPress={onUndo}>
-        {t('arrange.undoShort')}
-      </Button>
-    </div>
-  );
-}
-
-// Everything that can be placed: subscriptions as a whole, then single nodes. Each row drags by pointer, and each
-// has a menu for the same action, the path for keyboards, touch screens and screen readers.
+// Everything that can be placed, as a virtualised list with react-aria's drag and drop (pointer, keyboard and
+// screen reader): drag rows onto a group card, or tick rows and add them from the bar below.
 function Tray({m}: {m: Model}) {
   const t = useT();
-  const locked = !!m.blocked;
-  const rows = [
-    ...m.subscriptions.map(item => ({
-      key: 'subscription:' + item.tag,
-      item: {kind: 'subscription' as const, value: item.tag},
-      label: item.label,
-      meta: t('arrange.subscriptionMeta', {n: item.count})
-    })),
-    ...m.nodes.map(node => ({key: 'node:' + node.name, item: {kind: 'node' as const, value: node.name}, label: node.name, meta: node.protocol ?? ''}))
-  ];
+  const heading = useId();
+  const locked = !!m.blocked || m.applying;
+  const [show, setShow] = useState<'all' | 'subscription' | 'node'>('all');
+  const [selected, setSelected] = useState<Selection>(new Set());
+  const rows = useMemo<Row[]>(
+    () => [
+      ...(show === 'node'
+        ? []
+        : m.subscriptions.map(item => ({
+            id: 'subscription:' + item.tag,
+            item: {kind: 'subscription' as const, value: item.tag},
+            label: item.label,
+            meta: t('arrange.subscriptionMeta', {n: item.count})
+          }))),
+      ...(show === 'subscription'
+        ? []
+        : m.nodes.map(node => ({id: 'node:' + node.name, item: {kind: 'node' as const, value: node.name}, label: node.name, meta: node.protocol ?? ''})))
+    ],
+    [show, m.subscriptions, m.nodes, t]
+  );
+  const byId = useMemo(() => new Map(rows.map(row => [row.id, row])), [rows]);
+  const chosen = selected === 'all' ? rows : [...selected].flatMap(id => byId.get(String(id)) ?? []);
+  const {dragAndDropHooks} = useDragAndDrop({
+    getItems: ids =>
+      [...ids].flatMap(id =>
+        byId.has(String(id)) ? [{[PLACEABLE]: JSON.stringify(byId.get(String(id))!.item), 'text/plain': byId.get(String(id))!.label}] : []
+      ),
+    getAllowedDropOperations: () => ['copy'],
+    isDisabled: locked
+  });
+  // A group that already holds every chosen item is not offered.
+  const targets = m.groups.filter(group => chosen.some(row => !holds(group, row.item)));
   return (
-    <aside className="rp-card rp-tray" aria-label={t('arrange.tray')}>
-      <h3 className="rp-h3">{t('arrange.tray')}</h3>
+    <div className="rp-card rp-tray">
+      <h3 className="rp-h3" id={heading}>
+        {t('arrange.tray')}
+      </h3>
       <TextField search label={t('arrange.search')} value={m.search} onChange={m.setSearch} />
-      {rows.length ? (
-        <ul className="rp-tray-list" aria-label={t('arrange.tray')}>
-          {rows.map(row => (
-            <li
-              key={row.key}
-              className="rp-tray-row"
-              draggable={!locked}
-              onDragStart={event => {
-                event.dataTransfer.setData(PLACEABLE, JSON.stringify(row.item));
-                event.dataTransfer.setData('text/plain', row.label);
-                event.dataTransfer.effectAllowed = 'copy';
+      <Segmented
+        label={t('arrange.show')}
+        value={show}
+        onChange={value => setShow(value as typeof show)}
+        items={[
+          ['all', t('ui.all')],
+          ['subscription', t('arrange.subscriptions')],
+          ['node', t('arrange.nodes')]
+        ]}
+      />
+      <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 48}}>
+        <GridList
+          aria-labelledby={heading}
+          className="rp-tray-list"
+          items={rows}
+          selectionMode="multiple"
+          selectionBehavior="toggle"
+          selectedKeys={selected}
+          onSelectionChange={setSelected}
+          dragAndDropHooks={dragAndDropHooks}
+          renderEmptyState={() => <Empty>{t('arrange.trayEmpty')}</Empty>}
+        >
+          {row => (
+            <GridListItem id={row.id} textValue={row.label} className="rp-item rp-tray-row">
+              {/* First in the row, as in S2's ListView: the keyboard's way into drag and drop, since Space and Enter
+                  already toggle the row's selection. */}
+              <RButton slot="drag" className="rp-btn quiet icon sm rp-drag" aria-label={t('arrange.drag', {name: row.label})}>
+                <DragHandle />
+              </RButton>
+              <Check />
+              <span className="rp-grow">
+                <TextTooltip>{row.label}</TextTooltip>
+                <span className="desc">{row.meta}</span>
+              </span>
+            </GridListItem>
+          )}
+        </GridList>
+      </Virtualizer>
+      <div className="rp-tray-bar">
+        <span className="rp-grow rp-label" aria-live="polite">
+          {chosen.length ? t('arrange.selected', {n: chosen.length}) : t('arrange.selectHint')}
+        </span>
+        {chosen.length > 0 && (
+          <Button quiet small onPress={() => setSelected(new Set())}>
+            {t('arrange.clear')}
+          </Button>
+        )}
+        <MenuButton
+          label={t('arrange.addSelected')}
+          isDisabled={locked || !targets.length}
+          content={
+            <Menu
+              aria-label={t('arrange.addSelected')}
+              onAction={group => {
+                m.place(
+                  String(group),
+                  chosen.map(row => row.item)
+                );
+                setSelected(new Set());
               }}
             >
-              {!locked && <DragHandle className="rp-drag" />}
-              <span className="rp-grow">
-                <span className="rp-tray-label">{row.label}</span>
-                <span className="rp-label">{row.meta}</span>
-              </span>
-              <MenuButton
-                quiet
-                label={t('arrange.addTo', {name: row.label})}
-                isDisabled={locked || !m.groups.length}
-                content={
-                  <Menu aria-label={t('arrange.addTo', {name: row.label})} onAction={group => m.place(String(group), row.item)}>
-                    {m.groups.map(group => (
-                      <MenuItem key={group.name} id={group.name} className="rp-item" textValue={group.name}>
-                        {group.name}
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                }
-              >
-                {t('arrange.add')}
-              </MenuButton>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Empty>{t('arrange.trayEmpty')}</Empty>
-      )}
-    </aside>
+              {targets.map(group => (
+                <MenuChoice key={group.name} item={{id: group.name, label: group.name}} />
+              ))}
+            </Menu>
+          }
+        >
+          {t('arrange.addSelected')}
+        </MenuButton>
+      </div>
+    </div>
   );
 }
 
 function NewGroup({m}: {m: Model}) {
   const t = useT();
+  const form = useId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [policy, setPolicy] = useState(newGroupPolicies[0].id);
   const [tried, setTried] = useState(false);
   const problem = m.nameProblem(name.trim());
+  const reset = () => {
+    setName('');
+    setPolicy(newGroupPolicies[0].id);
+    setTried(false);
+  };
   return (
     <>
-      <Button onPress={() => setOpen(true)} isDisabled={!!m.blocked}>
+      <Button onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
         {t('arrange.newGroup')}
       </Button>
       <ModalDialog
@@ -283,43 +356,45 @@ function NewGroup({m}: {m: Model}) {
         isOpen={open}
         onOpenChange={value => {
           setOpen(value);
-          if (!value) {
-            setName('');
-            setTried(false);
-          }
+          if (!value) reset();
         }}
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button
-              accent
-              onPress={() => {
-                setTried(true);
-                if (problem) return;
-                m.create(name.trim(), policy);
-                close();
-              }}
-            >
+            <Button accent type="submit" form={form}>
               {t('arrange.create')}
             </Button>
           </>
         )}
       >
-        <TextField
-          label={t('arrange.groupName')}
-          value={name}
-          onChange={setName}
-          description={t('arrange.groupNameHint')}
-          error={tried && problem ? problem : undefined}
-          spellCheck={false}
-        />
-        <LabeledSelect
-          label={t('arrange.policy')}
-          value={policy}
-          onChange={setPolicy}
-          items={newGroupPolicies.map(item => ({id: item.id, label: t(item.label), desc: t(item.description)}))}
-        />
-        <p className="rp-note">{t('arrange.newGroupNote')}</p>
+        <form
+          id={form}
+          className="rp-form"
+          onSubmit={event => {
+            event.preventDefault();
+            setTried(true);
+            if (problem) return;
+            m.create(name.trim(), policy);
+            setOpen(false);
+            reset();
+          }}
+        >
+          <TextField
+            label={t('arrange.groupName')}
+            value={name}
+            onChange={setName}
+            description={t('arrange.groupNameHint')}
+            error={tried && problem ? problem : undefined}
+            spellCheck={false}
+          />
+          <LabeledSelect
+            label={t('arrange.policy')}
+            value={policy}
+            onChange={setPolicy}
+            items={newGroupPolicies.map(item => ({id: item.id, label: t(item.label), desc: t(item.description)}))}
+          />
+          <p className="rp-note">{t('arrange.newGroupNote')}</p>
+        </form>
       </ModalDialog>
     </>
   );
@@ -336,20 +411,23 @@ function Review({m}: {m: Model}) {
       onOpenChange={m.setReviewing}
       footer={close => (
         <>
-          <Button onPress={close}>{t('ui.cancel')}</Button>
-          <Button accent isPending={m.busy} isDisabled={!m.canApply} onPress={() => void m.apply()}>
+          <Button onPress={close} isDisabled={m.applying}>
+            {t('ui.cancel')}
+          </Button>
+          <Button accent isPending={m.applying} isDisabled={!m.canApply} onPress={() => void m.apply()}>
             {t('arrange.apply')}
           </Button>
         </>
       )}
     >
+      {m.failure && <InlineAlert takeFocus>{m.failure}</InlineAlert>}
       {m.applyNote && <InlineAlert>{m.applyNote}</InlineAlert>}
       {m.unknown.size > 0 && <InlineAlert tone="informative">{t('arrange.unknown', {names: formatList(lang, [...m.unknown])})}</InlineAlert>}
       <ol className="rp-arrange-changes">
         {m.changeLines.map((line, index) => (
           <li key={index} className="rp-row">
             <span className="rp-grow">{line}</span>
-            <Button quiet icon small label={t('arrange.undo', {change: line})} onPress={() => m.drop(index)}>
+            <Button quiet icon small label={t('arrange.undo', {change: line})} isDisabled={m.applying} onPress={() => m.drop(index)}>
               <Close />
             </Button>
           </li>

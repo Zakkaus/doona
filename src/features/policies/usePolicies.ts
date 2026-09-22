@@ -71,7 +71,8 @@ export function usePolicies(query: string) {
     reload,
     refreshGroups: groups.refetch,
     refreshNodes: nodes.refetch,
-    nodes: nodes.data
+    nodes: nodes.data,
+    groups: groups.data
   };
 }
 // A card mounts its details the first time it nears the viewport and keeps them; `visible` follows the viewport.

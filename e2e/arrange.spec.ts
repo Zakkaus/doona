@@ -26,24 +26,39 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   // The only filter of a group cannot be removed, since the group would then hold every node.
   await expect(card('skylink').getByRole('button', {name: /^Remove /})).toBeDisabled();
 
-  // Menu path: add a node to a group without dragging.
-  const tray = page.getByRole('list', {name: 'Nodes and subscriptions'});
-  await tray.getByRole('listitem').filter({hasText: 'sg-01'}).getByRole('button', {name: 'Add sg-01 to a group'}).click();
+  // Selection path: tick rows, then add them together from the bar under the tray.
+  const tray = page.getByRole('grid', {name: 'Nodes and subscriptions'});
+  await tray.getByRole('row', {name: /^sg-01/}).click();
+  await expect(page.getByText('1 selected')).toBeVisible();
+  await page.getByRole('button', {name: 'Add to group'}).click();
   await page.getByRole('menuitem', {name: 'gaming'}).click();
   await expect(card('gaming')).toContainText('sg-01');
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toContainText('1 change not applied');
+  // A group that already holds every ticked item is not offered again.
+  await tray.getByRole('row', {name: /^jp-01/}).click();
+  await page.getByRole('button', {name: 'Add to group'}).click();
+  await expect(page.getByRole('menuitem', {name: 'gaming'})).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', {name: 'Clear selection'}).click();
 
-  // A second node through the same menu.
-  await tray.getByRole('listitem').filter({hasText: 'us-01'}).getByRole('button', {name: 'Add us-01 to a group'}).click();
-  await page.getByRole('menuitem', {name: 'gaming'}).click();
+  // Keyboard drag, as react-aria offers it: from the row, ArrowRight to its drag handle, Enter, Tab through the
+  // groups, Enter.
+  await tray.getByRole('row', {name: /^us-01/}).click();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('button', {name: 'Drag us-01'})).toBeFocused();
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 10 && (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) !== 'Drop into group gaming'; i++)
+    await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
   await expect(card('gaming')).toContainText('us-01');
 
   // Remove an explicit member.
   await card('resilient').getByRole('button', {name: 'Remove hk-01 from resilient'}).click();
   // A staged removal stays in view, marked, until it is applied or undone.
-  await expect(card('resilient')).toContainText('To be removed');
-  await card('resilient').getByRole('button', {name: 'Undo removing hk-01'}).click();
-  await expect(card('resilient')).not.toContainText('To be removed');
+  const undo = card('resilient').getByRole('button', {name: 'Undo removing hk-01'});
+  await expect(undo).toBeVisible();
+  await undo.click();
+  await expect(undo).toHaveCount(0);
   await card('resilient').getByRole('button', {name: 'Remove hk-01 from resilient'}).click();
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toContainText('3 changes not applied');
 
@@ -89,7 +104,7 @@ test('a new group needs a member before it can be applied, and undoing a change 
 test('a pointer drag from the tray stages the node on the group it lands on', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/policies?tab=arrange');
-  const row = page.getByRole('list', {name: 'Nodes and subscriptions'}).getByRole('listitem').filter({hasText: 'us-01'});
+  const row = page.getByRole('grid', {name: 'Nodes and subscriptions'}).getByRole('row', {name: /^us-01/});
   const gaming = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'gaming', exact: true})});
   await row.scrollIntoViewIfNeeded();
   const center = async (target: typeof row) => {
