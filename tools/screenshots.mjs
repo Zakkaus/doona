@@ -14,7 +14,7 @@ try {
   browserModule = require.resolve('@playwright/test');
 }
 const {chromium} = require(browserModule);
-const [baseURL = 'http://127.0.0.1:4184', dir = 'docs/screenshots'] = process.argv.slice(2);
+const [baseURL = 'http://127.0.0.1:4177', dir = 'docs/screenshots'] = process.argv.slice(2);
 const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],

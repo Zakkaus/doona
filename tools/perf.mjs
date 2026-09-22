@@ -3,7 +3,7 @@
 // page, scrolling a 3,000-row node table, and hovering the routing tree. Numbers are medians of three runs.
 import {chromium} from '@playwright/test';
 
-const base = process.argv[2] ?? 'http://127.0.0.1:4184';
+const base = process.argv[2] ?? 'http://127.0.0.1:4177';
 const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules?tab=map', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const ms = value => `${value.toFixed(0)} ms`;

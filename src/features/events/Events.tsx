@@ -25,7 +25,7 @@ export function Events() {
           {t('event.export')}
         </Button>
       </div>
-      {vm.error && <ErrorMessage error={vm.error} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <DataTable
         label={t('nav.events')}
         height={442}

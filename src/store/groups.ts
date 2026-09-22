@@ -35,7 +35,6 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   return {
     ...resource,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
-    error: resource.error,
     actionError: action.error,
     network,
     setNetwork,

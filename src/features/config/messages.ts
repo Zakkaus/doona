@@ -54,7 +54,7 @@ export const messages = defineMessages({
     'config.wizardStandardHelp': '依 ACL4SSR Online 增加 Telegram、國外媒體與 Apple 服務群組。',
     'config.wizardFull': '全分組',
     'config.wizardFullHelp': '依 ACL4SSR Full 增加 AI、影片與各地區節點群組，適用於進階使用者。',
-    'config.wizardWriteHelp': '僅改寫 {path} 的 subscription 區段；選用範本時亦改寫 routing，其餘內容保持不變。',
+    'config.wizardWriteHelp': '僅改寫 {path} 的 subscription 區段；選用範本時亦改寫 routing 並補上缺少的 group，其餘內容保持不變。',
     'config.wizardNote': '使用表單填寫訂閱；規則可選用範本或保留原文。網址原樣寫入 subscription，由引擎擷取並解析。',
     'config.wizardSubscription': '訂閱網址',
     'config.wizardSubscriptionHelp': 'HTTP 或 HTTPS 網址；支援的訂閱格式以後端說明為準',
@@ -152,7 +152,7 @@ export const messages = defineMessages({
     'config.wizardStandardHelp': '按 ACL4SSR Online 增加 Telegram、国外媒体与 Apple 服务组。',
     'config.wizardFull': '全分组',
     'config.wizardFullHelp': '按 ACL4SSR Full 增加 AI、视频与各地区节点组，适用于高级用户。',
-    'config.wizardWriteHelp': '仅改写 {path} 的 subscription 区段；选用模板时也改写 routing，其余内容保持不变。',
+    'config.wizardWriteHelp': '仅改写 {path} 的 subscription 区段；选用模板时也改写 routing 并补上缺少的 group，其余内容保持不变。',
     'config.wizardNote': '使用表单填写订阅；规则可选用模板或保留原文。网址原样写入 subscription，由引擎获取并解析。',
     'config.wizardSubscription': '订阅网址',
     'config.wizardSubscriptionHelp': 'HTTP 或 HTTPS 网址；支持的订阅格式以后端说明为准',
@@ -252,7 +252,7 @@ export const messages = defineMessages({
     'config.wizardFull': 'Full groups',
     'config.wizardFullHelp': 'Based on ACL4SSR Full: adds AI, video and regional node groups for advanced users.',
     'config.wizardWriteHelp':
-      'Rewrites the subscription section of {path} and, when a template is selected, the routing section. All other content remains unchanged.',
+      'Rewrites the subscription section of {path} and, when a template is selected, the routing section plus any group the template needs. All other content remains unchanged.',
     'config.wizardNote':
       'Enter subscriptions in the form and select a rule template or retain the existing rules. URLs are written unchanged to subscription for the engine to fetch and parse.',
     'config.wizardSubscription': 'Subscription URL',

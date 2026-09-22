@@ -5,7 +5,7 @@ import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {localTime} from '../../api/selectors';
-import {downloadFile, errorText, toast, useLinked} from '../../ui/ui';
+import {downloadFile, errorText, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -60,8 +60,9 @@ export function useConfigPage({go, query}: PageProps) {
       : params.has('source') || !mainSource?.content
         ? 'source'
         : 'modules';
-  const selectedId = params.get('source') ?? sources[0]?.id ?? null;
-  const source = sources.find(item => item.id === selectedId) ?? null;
+  // A stale link to a source that no longer exists opens the first one rather than an empty card.
+  const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
+  const selectedId = source?.id ?? null;
   const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
@@ -236,6 +237,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
+    saveTip: t(isMac ? 'config.saveShortcutMac' : 'config.saveShortcut'),
     validateDisabled: !!editor.busy || !candidates,
     validateTip: !candidates ? t('config.incomplete') : undefined,
     editDisabled: !complete || !!editor.busy,

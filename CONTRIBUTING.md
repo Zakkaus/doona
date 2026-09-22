@@ -44,6 +44,8 @@ Use the commit body to explain why. Use these types: `feat`, `fix`, `refactor`, 
 
 Branch from `main`. Keep pull requests small and limited to one theme. Keep CI green.
 
+Write the pull request body in English with one short paragraph under each of `## Problem`, `## How I fixed it` and `## Verified`, in that order: what is wrong, what changed, and what was checked, not the reasoning that led there. Verified lists the commands you ran and what they reported; link long evidence instead of pasting it.
+
 ## Update the contract
 
 Start with `contract/api-standardize/SOURCE.md`. Update the vendored contract, run `pnpm gen:api`, then run `tools/check-gen.sh`. Do not edit generated API types directly.

@@ -74,6 +74,10 @@ export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
 
 // From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
 // selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
+// Whether shortcuts should read as ⌘ rather than Ctrl; userAgentData is the standard, platform the fallback.
+export const isMac =
+  (navigator as Navigator & {userAgentData?: {platform: string}}).userAgentData?.platform === 'macOS' || navigator.platform.startsWith('Mac');
+
 export const panelQuery = '(min-width: 1200px)';
 
 // A draft seeded from the URL: a new linked value (a search-dialog jump) replaces the draft, while a

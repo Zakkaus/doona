@@ -206,6 +206,7 @@ function SourceCard(props: SourceCardProps) {
     busy,
     validating,
     saving,
+    saveTip,
     validateDisabled,
     validateTip,
     editDisabled,
@@ -239,13 +240,7 @@ function SourceCard(props: SourceCardProps) {
               <Button isDisabled={busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
-              <Button
-                accent
-                isPending={saving}
-                isDisabled={busy || !dirty}
-                tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
-                onPress={() => void save()}
-              >
+              <Button accent isPending={saving} isDisabled={busy || !dirty} tip={saveTip} onPress={() => void save()}>
                 {t('config.save')}
               </Button>
             </>

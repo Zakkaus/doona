@@ -3,7 +3,7 @@ import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntim
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {fmtRate, usePalette} from '../../ui/Charts';
-import {useMemorySeries} from '../overview/useMemorySeries';
+import {useMemorySeries} from './useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';

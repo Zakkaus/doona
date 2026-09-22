@@ -83,11 +83,11 @@ export function useNodesPage({go, query}: PageProps) {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
         if (!created) return;
-        if (created) toast('positive', t('nodes.added', {name: form.name.trim()}));
+        toast('positive', t('nodes.added', {name: form.name.trim()}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
-        if (created) toast('positive', t('nodes.added', {name: created.name}));
+        toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'group') {
         if (!(await joinGroup(dialog.item, form.name.trim()))) return;
       } else if (dialog.kind === 'removeProvider') {

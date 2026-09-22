@@ -4,7 +4,7 @@ import {writeSetting} from '../features/settings/settings';
 import type {SettingsContext} from '../features/settings/context';
 import {LOCALE, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
-import {useSlider} from '../ui/hooks';
+import {isMac, useSlider} from '../ui/hooks';
 import {warmAllPages} from './registry';
 import {parseHash, useRoute} from './route';
 import {readAppearance, useAppearance} from './useAppearance';
@@ -33,14 +33,13 @@ export function useShellController() {
     [go]
   );
   const draft = useMemo(() => ({setDirty, revision}), [setDirty, revision]);
-  const mac = navigator.platform.startsWith('Mac');
   // Warm accented menu glyphs to avoid a font swap when opening a menu.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
     document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
   }, [lang]);
   useEffect(warmAllPages, []);
-  return {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac};
+  return {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac: isMac};
 }
 
 export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap'], route: string) {

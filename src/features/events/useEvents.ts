@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {EVENT_FEED_LIMIT, useEventFeed} from '../../store';
+import {EVENT_FEED_LIMIT, refetchAll, useEventFeed} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';
@@ -19,6 +19,7 @@ export function useEvents() {
     setKind,
     cursor: feed.cursor,
     error: feed.error,
+    retry: () => void refetchAll(),
     loading: !feed.error && !feed.connected && feed.available !== false && !feed.events.length,
     export: () => downloadFile(exportName('doona-events', 'json'), eventsExport(view.shown), 'application/json')
   };

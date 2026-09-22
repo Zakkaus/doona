@@ -105,7 +105,7 @@ function evaluate(input: RoutingTraceInput, snapshot: RuleList): Evaluation {
 export function routingTrace({input, resolve}: RoutingTraceRequest, snapshot: RuleList, dnsCache: DnsCacheList): RoutingTraceResponse {
   if (!input.domain && !input.dst_ip) throw new ApiError(400, 'invalid_request', 'A domain or destination IP is required');
   if (resolve === 'live' && (!input.domain || input.dst_ip))
-    throw new ApiError(400, 'invalid_input', 'Live resolution requires a domain and no destination IP');
+    throw new ApiError(400, 'invalid_request', 'Live resolution requires a domain and no destination IP');
   const response: RoutingTraceResponse = {
     mode: 'simulation',
     instance_id: instanceId,
