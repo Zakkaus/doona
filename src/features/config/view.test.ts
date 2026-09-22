@@ -88,7 +88,7 @@ routing {
   const include = source('routing { fallback: direct }', 'include');
   const cards = sectionSummaries([main, include], t);
   expect(cards.map(card => card.kind)).toEqual(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'routing']);
-  expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstreams, 1 request rules, 1 response rules');
+  expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstream, 1 request rule, 1 response rule');
   expect(cards.filter(card => card.kind === 'routing').map(card => [card.range, card.summary])).toEqual([
     ['config.dae:8-12', '1 rule · fallback: proxy'],
     ['rules.dae:1-1', '0 rules · fallback: direct']

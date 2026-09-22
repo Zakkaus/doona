@@ -74,11 +74,12 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
     case 'dns': {
       const upstreams = block.children.filter(child => child.name === 'upstream');
       const routing = block.children.filter(child => child.name === 'routing').flatMap(child => child.children);
-      return t('config.moduleDns', {
-        upstreams: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0),
-        requests: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0),
-        responses: routing.filter(child => child.name === 'response').reduce((n, child) => n + ruleCount(text, child, tokens), 0)
-      });
+      // Three counts, each with its own plural form.
+      return [
+        t('config.moduleDnsUpstreams', {n: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0)}),
+        t('config.moduleDnsRequests', {n: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0)}),
+        t('config.moduleDnsResponses', {n: routing.filter(child => child.name === 'response').reduce((n, child) => n + ruleCount(text, child, tokens), 0)})
+      ].join(t('ui.listSeparator'));
     }
     case 'routing': {
       const rules = t('config.moduleRules', {n: ruleCount(text, block, tokens)});
