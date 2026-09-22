@@ -82,6 +82,8 @@ test('phone logs keep the message visible and reveal its full text and fields', 
   const cell = grid.getByRole('rowheader').locator('.rp-truncate');
   await expect.poll(() => cell.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
   await expect(async () => {
+    // Leave and re-enter: a pointer that never moved raises no new hover after the measurement.
+    await page.mouse.move(0, 0);
     await cell.hover();
     await expect(page.getByRole('tooltip')).toContainText(message, {timeout: 1500});
   }).toPass();
