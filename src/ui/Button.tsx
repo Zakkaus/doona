@@ -36,6 +36,8 @@ export function Button({
 }) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
   const ref = useRef<HTMLButtonElement>(null);
+  // A pending button keeps its colour and stays focusable, so the wrapper must not add a second tab stop.
+  const disabled = isDisabled && !isPending;
   // An icon marked rp-spin-on-press (the refresh arrows) turns once per press and keeps turning while the button is
   // pending, always finishing a whole turn; one animation owns the rotation, so a long refetch never hands over.
   const spin = useRef<Animation | null>(null);
@@ -60,6 +62,17 @@ export function Button({
       spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / 600))});
     }
   }, [isPending]);
+  useEffect(() => {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const stop = () => {
+      if (reduced.matches) spin.current?.cancel();
+    };
+    reduced.addEventListener('change', stop);
+    return () => {
+      reduced.removeEventListener('change', stop);
+      spin.current?.cancel();
+    };
+  }, []);
   const press = () => {
     turn(1);
     onPress?.();
@@ -77,7 +90,7 @@ export function Button({
       )}
       onPress={press}
       aria-label={label}
-      isDisabled={isDisabled && !isPending}
+      isDisabled={disabled}
       isPending={isPending}
       type={type}
     >
@@ -92,7 +105,7 @@ export function Button({
     <TooltipTrigger delay={400}>
       <Focusable>
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop */}
-        <span className="rp-tipwrap" tabIndex={isDisabled ? 0 : -1} data-passive={isDisabled ? undefined : ''}>
+        <span className="rp-tipwrap" tabIndex={disabled ? 0 : -1} data-passive={disabled ? undefined : ''}>
           {btn}
         </span>
       </Focusable>

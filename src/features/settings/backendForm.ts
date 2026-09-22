@@ -162,8 +162,9 @@ export function useBackendForm(query: string) {
         throw new ApiError(200, 'invalid_discovery', 'Missing API version');
       }
       if (request.current === controller) {
-        setResult({key: 'settings.reachable', params: {version: discovery.api_major}});
-        toast('positive', t('settings.reachable', {version: discovery.api_major}));
+        const version = String(discovery.api_major);
+        setResult({key: 'settings.reachable', params: {version}});
+        toast('positive', t('settings.reachable', {version}));
       }
     } catch (error) {
       if (request.current !== controller) return;

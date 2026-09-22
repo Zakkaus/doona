@@ -290,7 +290,7 @@ export function flowRecordsView(
           title: detail.input.domain || detail.input.dst || detail.id,
           status: t(traceStates[detail.trace.status]),
           tone: detail.trace.status === 'complete' ? undefined : 'warn',
-          revision: t('flow.revision', {n: detail.revision}),
+          revision: t('flow.revision', {n: String(detail.revision)}),
           fields: [
             [t('ui.state'), t(connectionStates[detail.state])],
             [t('ui.outbound'), outboundLabel(detail.outbound, t)],

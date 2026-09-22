@@ -46,13 +46,14 @@ export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.u
 
 // The home card holds this many rows; the rest is one click away on the events page.
 export const NOTICE_ROWS = 8;
-// Repeats of one problem (a run of gaps with the same reason) fold into one row with a count, so a
-// backend dropping records at pace does not push everything else off the card.
+// A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
+// backend dropping records at pace does not push everything else off the card. Two notices that differ in
+// any of those never fold: a failure must not disappear behind a neighbouring success.
 export function noticeRows(events: ApiEvent[], t: LabelFn) {
   const rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; key: string; count: number}> = [];
   for (const event of events) {
     const summary = eventSummary(event, t);
-    const key = event.event === 'flow.gap' ? `gap:${event.data.reason}` : `${event.event}:${summary.key}`;
+    const key = [event.event, summary.key, ...Object.entries(summary.params ?? {}).map(([name, value]) => `${name}=${String(value)}`)].join('|');
     const last = rows[rows.length - 1];
     if (last && last.key === key) {
       last.count += 1;

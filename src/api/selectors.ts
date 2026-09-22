@@ -157,7 +157,7 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
     case 'runtime.updated':
       return {key: 'event.resource', params: {resource: event.data.href}};
     case 'flow.updated':
-      return {key: 'event.flow', params: {id: event.data.resource_id, revision: event.data.revision}};
+      return {key: 'event.flow', params: {id: event.data.resource_id, revision: String(event.data.revision)}};
     case 'operation.updated': {
       const status = event.data.status;
       const label = status === 'running' || status === 'succeeded' || status === 'failed' ? (`ov.${status}` as Key) : null;
