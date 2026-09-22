@@ -3,6 +3,7 @@ import {LANGS, useT, type Lang} from '../../i18n';
 import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from './settings';
 import {useSettingsPage} from './useSettingsPage';
+import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {About} from '../../shell/About';
@@ -10,6 +11,7 @@ import type {PageProps} from '../types';
 
 export function Settings({query}: PageProps) {
   const t = useT();
+  const session = useSignOut();
   const {
     activeId,
     hasActive,
@@ -78,6 +80,11 @@ export function Settings({query}: PageProps) {
           <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
             {t('settings.deleteProfile')}
           </Button>
+          {session && (
+            <Button isPending={session.busy} onPress={() => void session.signOut()}>
+              {t('settings.signOut')}
+            </Button>
+          )}
         </div>
         <form
           className="rp-form"
