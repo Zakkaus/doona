@@ -1,24 +1,20 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import type {ConfigSource} from '../../api/model';
-import {completeSource} from '../../store/config';
 import {validationSources} from './names';
 
-export function useValidationSources(sources: ConfigSource[], replacement?: {id: string; content: string}) {
-  const [checked, setChecked] = useState<{sources: ConfigSource[]; complete: ConfigSource[]} | null>(null);
-  useEffect(() => {
-    let live = true;
-    const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
-    void Promise.all(authored.map(completeSource)).then(results => {
-      if (live) setChecked({sources, complete: authored.filter((_, index) => results[index])});
-    });
-    return () => {
-      live = false;
-    };
-  }, [sources]);
+export function useValidationSources(
+  sources: ConfigSource[],
+  isComplete: (source: ConfigSource) => boolean | undefined,
+  replacement?: {id: string; content: string}
+) {
   const id = replacement?.id;
   const content = replacement?.content;
-  return useMemo(
-    () => (checked?.sources === sources ? validationSources(checked.complete, id !== undefined && content !== undefined ? {id, content} : undefined) : null),
-    [checked, sources, id, content]
-  );
+  return useMemo(() => {
+    const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
+    if (authored.some(source => isComplete(source) === undefined)) return null;
+    return validationSources(
+      authored.filter(source => isComplete(source)),
+      id !== undefined && content !== undefined ? {id, content} : undefined
+    );
+  }, [sources, isComplete, id, content]);
 }

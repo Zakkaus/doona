@@ -80,49 +80,42 @@ export function dnsCacheView(
         type: entry.type,
         status: entry.status,
         expires: relativeStart(entry.expires_at, locale),
-        expiresTooltip: entry.expires_at,
+        expiresTooltip: localTime(entry.expires_at, locale),
         stale: relativeStart(entry.stale_until, locale),
-        staleTooltip: entry.stale_until ?? undefined,
+        staleTooltip: entry.stale_until === null ? undefined : localTime(entry.stale_until, locale),
         deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
         pending: busy === entry.entry_id,
         disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
       }))
   };
 }
-export function dnsLogView(
-  data: DnsLogList | undefined,
-  selected: string | null,
-  enabled: boolean | undefined,
-  locale: string,
-  t: LabelFn,
-  types: string[] = []
-) {
-  const records = data?.records ?? [];
-  const current = records.find(record => record.id === selected);
-  const details = (record: DnsLogRecord) => {
-    const answer = dnsAnswerView(record, t);
-    return {
-      id: record.id,
-      title: record.question.name,
-      answers: answer.answers,
-      fields: [
-        [t('ui.type'), record.question.type],
-        [t('ui.source'), record.src ?? '—'],
-        answer.fields[0],
-        [t('ui.cache'), answer.cacheText],
-        ...answer.fields.slice(1),
-        [t('ui.time'), localTime(record.observed_at, locale)]
-      ] as Array<[string, string]>
-    };
+// The selected record's detail, apart from the rows, so a click does not reformat every loaded record.
+export function dnsLogDetail(data: DnsLogList | undefined, selected: string | null, locale: string, t: LabelFn) {
+  const record = data?.records.find(item => item.id === selected);
+  if (!record) return null;
+  const answer = dnsAnswerView(record, t);
+  return {
+    id: record.id,
+    title: record.question.name,
+    answers: answer.answers,
+    fields: [
+      [t('ui.type'), record.question.type],
+      [t('ui.source'), record.src ?? '—'],
+      answer.fields[0],
+      [t('ui.cache'), answer.cacheText],
+      ...answer.fields.slice(1),
+      [t('ui.time'), localTime(record.observed_at, locale)]
+    ] as Array<[string, string]>
   };
+}
+export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = []) {
+  const records = data?.records ?? [];
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
     total: data ? t('dns.logTotal', {n: data.total}) : '',
     // The loaded count only matters while older records remain on the backend.
     loaded: data?.next_cursor ? t('dns.logLoaded', {n: records.length}) : '',
     empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
-    detail: current ? details(current) : null,
-    detailTitle: current?.question.name ?? '',
     rows: records.map(record => ({
       id: record.id,
       time: relativeStart(record.observed_at, locale),

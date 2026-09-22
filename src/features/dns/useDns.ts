@@ -7,7 +7,7 @@ import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
-import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {within} from '../../shell/route';
 import {queryTypes} from './query';
 
@@ -135,9 +135,12 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
-  const view = useMemo(() => dnsLogView(data, selected, enabled, locale, t, types), [data, selected, enabled, locale, t, types]);
+  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types), [data, enabled, locale, t, types]);
+  const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,
+    detail,
+    detailTitle: detail?.title ?? '',
     name,
     newerWaiting,
     setName,
@@ -145,7 +148,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
     setType,
     src,
     setSrc,
-    selected: view.detail ? selected : null,
+    selected: detail ? selected : null,
     setSelected,
     wide,
     error: paging.error ?? log.error,

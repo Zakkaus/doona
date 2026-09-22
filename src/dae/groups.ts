@@ -1,4 +1,4 @@
-import {blockFields, quote, scanConfig} from './text';
+import {blockFields, quote, scanConfig, unquote} from './text';
 
 export type GroupEntry = {
   name: string;
@@ -93,7 +93,7 @@ function nameTokens(filter: string): string[] | null {
   return value && names.length ? null : names;
 }
 export function namedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
-  return entry.filters.flatMap(filter => (nameTokens(filter) ?? []).map(v => v.replace(/^['"]|['"]$/g, '')));
+  return entry.filters.flatMap(filter => (nameTokens(filter) ?? []).map(unquote));
 }
 
 // Preserve filters selecting by other means and append a separate name filter.
