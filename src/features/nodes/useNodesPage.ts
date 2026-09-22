@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviders} from '../../store';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
 import {errorText, toast} from '../../ui/ui';
 import {useMainSourceEdit} from '../config/mainSource';
@@ -44,6 +44,7 @@ export function useNodesPage({go, query}: PageProps) {
     refetchNodes();
   }, [refetchProviders, refetchNodes]);
   const manage = useNodeManage(reload);
+  const refreshing = useProviderRefresh(reload);
   const source = useMainSourceEdit();
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
@@ -83,7 +84,22 @@ export function useNodesPage({go, query}: PageProps) {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
         const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
         if (!created) return;
-        toast('positive', t('nodes.added', {name: form.name.trim()}));
+        const name = form.name.trim();
+        // The contract creates the provider unfetched; a refresh is what turns it into nodes.
+        if (resources?.providers.can_refresh) {
+          if (session.current === submitted) {
+            guard.clear();
+            close();
+          }
+          void refreshing.refresh(created.id).then(
+            result => {
+              if (result) toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
+            },
+            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error)}))
+          );
+          return;
+        }
+        toast('positive', t('nodes.added', {name}));
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;

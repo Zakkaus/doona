@@ -540,6 +540,13 @@ test('a completed provider creation cannot close a newer node draft or clear its
     await gate;
     await route.fulfill({json: created});
   });
+  // The page refreshes a new provider straight away; the mock's accepted operation completes on its own.
+  await page.route('**/api/v1/providers/*/refresh', async route =>
+    route.fulfill({status: 202, json: await api.refreshProvider(new URL(route.request().url()).pathname.split('/').at(-2)!)})
+  );
+  await page.route('**/api/v1/operations/*', async route =>
+    route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').at(-1)!)})
+  );
   await page.goto('/#/nodes');
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const provider = page.getByRole('dialog');
@@ -554,7 +561,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
   await node.getByLabel('Name', {exact: true}).fill('new-draft');
   await node.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.org:443');
   release();
-  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added');
+  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added and refreshed');
   await expect(node.getByLabel('Name', {exact: true})).toHaveValue('new-draft');
   await page.evaluate(() => {
     location.hash = '#/settings';
