@@ -1,12 +1,16 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
-import type {Translator} from '../../i18n';
+import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
 import {features, navAvailable, subpages} from '../registry';
 import {dnsQueryView} from '../../features/dns/view';
 import {rulesView} from '../../features/rules/view';
 import {ownedNodes, providerRows} from '../../features/nodes/view';
+import {sourceKinds} from '../../features/config/view';
 
 type SearchHit = {id: string; label: string; description: string | undefined; route: string; query: string};
+// A hit with its lower-cased match text, projected once per dataset so a keystroke only filters.
+type SearchEntry = {hit: SearchHit; keys: string[]};
+export type SearchIndex = {sections: Array<{id: string; title: string; entries: SearchEntry[]}>; partial: string | null};
 type SearchView = {sections: Array<{id: string; title: string; items: SearchHit[]}>; byId: Map<string, SearchHit>; partial: string | null};
 export type SearchSources = {
   capabilities: {data: Capabilities | undefined};
@@ -17,17 +21,19 @@ export type SearchSources = {
   config: {data: EffectiveConfig | undefined};
   rules: {data: RuleList | undefined};
 };
-export function searchView(q: string, {capabilities, connections, nodes, groups, providers, config, rules}: SearchSources, t: Translator): SearchView {
-  const needle = q.trim().toLowerCase();
-  const limit = needle ? 8 : 5;
-  const match = (...values: Array<string | null | undefined>) => values.some(value => value?.toLowerCase().includes(needle));
-  const available = (path: string) => navAvailable(path, capabilities.data);
-  const resources = capabilities.data?.resources;
+const entry = (keys: Array<string | null | undefined>, id: string, label: string, description: string | undefined, route: string, query = ''): SearchEntry => ({
+  hit: {id, label, description, route, query},
+  keys: keys.flatMap(key => (key == null ? [] : [key.toLowerCase()]))
+});
+
+export function pageEntries(capabilities: Capabilities | undefined, config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
+  const available = (path: string) => navAvailable(path, capabilities);
+  const resources = capabilities?.resources;
   const tabs = {
     dns: dnsQueryView(null, resources, '', '', false, t).tabs,
     rules: rulesView(resources, null, t).tabs
   };
-  const main = config.data?.sources.find(source => source.kind === 'main');
+  const main = config?.sources.find(source => source.kind === 'main');
   const destinationAvailable = (item: (typeof subpages)[number]) => {
     if (!available(item.path)) return false;
     const tab = new URLSearchParams(item.query).get('tab');
@@ -36,8 +42,33 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
     if (item.path === 'config' && tab === 'validate') return resources?.config_validate.available === true;
     return true;
   };
-  const nodeList = nodes.data ?? [];
-  const owners = providerRows(providers.data?.providers ?? [], nodeList, [], t).list;
+  const places = [
+    ...features
+      .filter(feature => feature.nav && available(feature.path))
+      .map(feature => ({route: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
+    ...subpages
+      .filter(destinationAvailable)
+      .map(item => ({route: item.path, query: item.query, title: t(item.titleKey), parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)}))
+  ];
+  return places.map(place =>
+    entry(
+      [place.title, place.parent && place.parent + ' ' + place.title],
+      `page:${place.route}?${place.query}`,
+      place.title,
+      place.parent || undefined,
+      place.route,
+      place.query
+    )
+  );
+}
+export function connectionEntries(connections: ConnectionList | undefined, t: Translator): SearchEntry[] {
+  return connectionRows(connections).map(c =>
+    entry([c.domain, c.dst, c.src], `connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', 'id=' + encodeURIComponent(c.id))
+  );
+}
+export function nodeEntries(nodes: Node[] | undefined, providers: ProviderList | undefined, lang: Lang, t: Translator): SearchEntry[] {
+  const nodeList = nodes ?? [];
+  const owners = providerRows(providers?.providers ?? [], nodeList, [], t).list;
   const syntheticOwners = new Map<string, string>();
   for (const owner of owners) {
     if (owner.kind !== 'builtin' && owner.kind !== 'unattributed') continue;
@@ -48,79 +79,81 @@ export function searchView(q: string, {capabilities, connections, nodes, groups,
     const owner = node.provider_id ?? syntheticOwners.get(node.id);
     return (owner === undefined ? '' : 'provider=' + encodeURIComponent(owner) + '&') + 'q=' + encodeURIComponent(node.name);
   };
-  const byId = new Map<string, SearchHit>();
-  const hit = (id: string, label: string, description: string | undefined, route: string, query = ''): SearchHit => {
-    const item = {id, label, description, route, query};
-    byId.set(item.id, item);
-    return item;
+  return nodeList.map(n => entry([n.name], `node:${n.id}`, n.name, formatList(lang, n.group_ids) || undefined, 'nodes', nodeQuery(n)));
+}
+export function groupEntries(groups: GroupSummary[] | undefined): SearchEntry[] {
+  return (groups ?? []).map(g => entry([g.name], `group:${g.id}`, g.name, g.policy.native, 'policies', 'group=' + encodeURIComponent(g.id)));
+}
+export function providerEntries(providers: ProviderList | undefined, t: Translator): SearchEntry[] {
+  return (providers?.providers ?? []).map(p =>
+    entry([p.name], `provider:${p.id}`, p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', 'provider=' + encodeURIComponent(p.id))
+  );
+}
+export function sourceEntries(config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
+  return (config?.sources ?? []).map(source =>
+    entry([source.path], `source:${source.id}`, source.path, t(sourceKinds[source.kind]), 'config', 'tab=source&source=' + encodeURIComponent(source.id))
+  );
+}
+export function ruleEntries(rules: RuleList | undefined, lang: Lang): SearchEntry[] {
+  return (rules?.rules ?? [])
+    .filter(rule => rule.kind === 'rule')
+    .map(rule =>
+      entry(
+        [rule.expression, rule.outbound],
+        `rule:${rule.rule_id}`,
+        rule.expression,
+        `#${formatNumber(rule.index + 1, LOCALE[lang])} → ${rule.outbound}`,
+        'rules',
+        'tab=list&rule=' + encodeURIComponent(rule.rule_id)
+      )
+    );
+}
+export function searchSections(
+  entries: Record<'pages' | 'conns' | 'nodes' | 'groups' | 'providers' | 'sources' | 'rules', SearchEntry[]>,
+  connections: ConnectionList | undefined,
+  t: Translator
+): SearchIndex {
+  return {
+    sections: [
+      {id: 'pages', title: t('search.pages'), entries: entries.pages},
+      {id: 'conns', title: t('nav.connections'), entries: entries.conns},
+      {id: 'nodes', title: t('search.nodes'), entries: entries.nodes},
+      {id: 'groups', title: t('search.groups'), entries: entries.groups},
+      {id: 'providers', title: t('search.providers'), entries: entries.providers},
+      {id: 'sources', title: t('search.sources'), entries: entries.sources},
+      {id: 'rules', title: t('nav.rules'), entries: entries.rules}
+    ],
+    partial: connections?.truncated ? t('conn.truncated') : null
   };
-  const places = [
-    ...features
-      .filter(feature => feature.nav && available(feature.path))
-      .map(feature => ({route: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
-    ...subpages
-      .filter(destinationAvailable)
-      .map(item => ({route: item.path, query: item.query, title: t(item.titleKey), parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)}))
-  ];
-  const sections = [
+}
+export function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
+  return searchSections(
     {
-      id: 'pages',
-      title: t('search.pages'),
-      items: places
-        .filter(place => match(place.title, place.parent && place.parent + ' ' + place.title))
-        .slice(0, limit)
-        .map(place => hit(`page:${place.route}?${place.query}`, place.title, place.parent || undefined, place.route, place.query))
+      pages: pageEntries(sources.capabilities.data, sources.config.data, t),
+      conns: connectionEntries(sources.connections.data, t),
+      nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang, t),
+      groups: groupEntries(sources.groups.data),
+      providers: providerEntries(sources.providers.data, t),
+      sources: sourceEntries(sources.config.data, t),
+      rules: ruleEntries(sources.rules.data, lang)
     },
-    {
-      id: 'conns',
-      title: t('nav.connections'),
-      items: connectionRows(connections.data)
-        .filter(c => match(c.domain, c.dst, c.src))
-        .slice(0, limit)
-        .map(c => hit(`connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', 'id=' + encodeURIComponent(c.id)))
-    },
-    {
-      id: 'nodes',
-      title: t('search.nodes'),
-      items: (nodes.data ?? [])
-        .filter(n => match(n.name))
-        .slice(0, limit)
-        .map(n => hit(`node:${n.id}`, n.name, n.group_ids.join(', ') || undefined, 'nodes', nodeQuery(n)))
-    },
-    {
-      id: 'groups',
-      title: t('search.groups'),
-      items: (groups.data ?? [])
-        .filter(g => match(g.name))
-        .slice(0, limit)
-        .map(g => hit(`group:${g.id}`, g.name, g.policy.native, 'policies', 'group=' + encodeURIComponent(g.id)))
-    },
-    {
-      id: 'providers',
-      title: t('search.providers'),
-      items: (providers.data?.providers ?? [])
-        .filter(p => match(p.name))
-        .slice(0, limit)
-        .map(p => hit(`provider:${p.id}`, p.name, t('search.nodeCount', {n: p.node_count}), 'nodes', 'provider=' + encodeURIComponent(p.id)))
-    },
-    {
-      id: 'sources',
-      title: t('search.sources'),
-      items: (config.data?.sources ?? [])
-        .filter(source => match(source.path))
-        .slice(0, limit)
-        .map(source => hit(`source:${source.id}`, source.path, source.kind, 'config', 'tab=source&source=' + encodeURIComponent(source.id)))
-    },
-    {
-      id: 'rules',
-      title: t('nav.rules'),
-      items: (rules.data?.rules ?? [])
-        .filter(rule => rule.kind === 'rule' && match(rule.expression, rule.outbound))
-        .slice(0, limit)
-        .map(rule =>
-          hit(`rule:${rule.rule_id}`, rule.expression, `#${rule.index + 1} → ${rule.outbound}`, 'rules', 'tab=list&rule=' + encodeURIComponent(rule.rule_id))
-        )
+    sources.connections.data,
+    t
+  );
+}
+export function searchView(q: string, index: SearchIndex): SearchView {
+  const needle = q.trim().toLowerCase();
+  const limit = needle ? 8 : 5;
+  const byId = new Map<string, SearchHit>();
+  const sections = index.sections.map(section => {
+    const items: SearchHit[] = [];
+    for (const {hit, keys} of section.entries) {
+      if (items.length === limit) break;
+      if (!keys.some(key => key.includes(needle))) continue;
+      items.push(hit);
+      byId.set(hit.id, hit);
     }
-  ];
-  return {sections: sections.filter(section => section.items.length > 0), byId, partial: connections.data?.truncated ? t('conn.truncated') : null};
+    return {id: section.id, title: section.title, items};
+  });
+  return {sections: sections.filter(section => section.items.length > 0), byId, partial: index.partial};
 }

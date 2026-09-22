@@ -109,6 +109,8 @@
 /* Segmented control: the selection slides between items (200ms, ease-out). */
 .rp-seg {
   display: inline-flex;
+  /* Counts in segment labels tick without the neighbouring segments shifting. */
+  font-variant-numeric: tabular-nums;
   gap: 4px;
   max-width: 100%;
   background: var(--rp-overlay);

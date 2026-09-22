@@ -9,6 +9,7 @@ import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {toast, useLinked} from '../../ui/ui';
 import {readSettings} from './settings';
 import {useDraftGuard} from '../config/useDraftGuard';
+import {buildHash} from '../../shell/route';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
@@ -51,7 +52,7 @@ export function useBackendForm(query: string) {
     if (params.has('api')) {
       params.delete('api');
       params.delete('token');
-      history.replaceState(history.state, '', location.pathname + location.search + '#/settings' + (params.size ? '?' + params : ''));
+      history.replaceState(history.state, '', location.pathname + location.search + buildHash('settings', params.toString()));
     }
     const card = params.get('card');
     if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
@@ -236,8 +237,6 @@ export function useBackendForm(query: string) {
     result,
     pending,
     saving,
-    persist,
-    editedProfiles,
     save,
     switchProfile,
     confirmSwitch,

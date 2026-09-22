@@ -30,12 +30,12 @@ export function Loading({children}: {children?: ReactNode}) {
     const timer = setTimeout(() => setVisible(true), 150);
     return () => clearTimeout(timer);
   }, []);
-  return visible ? (
-    <div className="rp-empty" role="status">
+  return (
+    <div className="rp-empty" role="status" data-wait={visible ? undefined : ''}>
       <span className="rp-spinner" aria-hidden="true" />
       {children ?? t('ui.loading')}
     </div>
-  ) : null;
+  );
 }
 
 export function errorText(error: unknown) {
@@ -113,8 +113,22 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastMessage = {kind: ToastKind; text: string};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
+// A repeated message replaces its earlier copy at the front instead of stacking behind it.
+const queued = new Map<string, string>();
 export const toast = (kind: ToastKind, text: string) => {
-  toasts.add({kind, text}, {timeout: 5000});
+  const id = kind + '\n' + text;
+  const earlier = queued.get(id);
+  if (earlier) toasts.close(earlier);
+  const key = toasts.add(
+    {kind, text},
+    {
+      timeout: 5000,
+      onClose: () => {
+        if (queued.get(id) === key) queued.delete(id);
+      }
+    }
+  );
+  queued.set(id, key);
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 export function Toasts() {

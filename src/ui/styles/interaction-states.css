@@ -95,7 +95,8 @@
   border-color: color-mix(in srgb, currentColor 35%, transparent);
   border-top-color: currentColor;
 }
-.rp-btn.icon[data-pending] > svg {
+/* The refresh arrows keep turning in place of the spinner (motion.css). */
+.rp-btn.icon[data-pending] > svg:not(.rp-refresh) {
   display: none;
 }
 .rp-switch {

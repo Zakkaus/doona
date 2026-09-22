@@ -40,20 +40,26 @@ export function useBackendActions() {
   const connectionsReady = !!connections.data && !connections.error && !connections.loading;
   const liveCount = connectionsReady ? connections.data!.total_tcp + connections.data!.total_udp : null;
   const refreshingAll = refresh.busy === '*';
-  const refreshAll = () =>
-    refresh
+  // Failures fold into the one summary toast, which names the first error: a toast per subscription would bury it.
+  const refreshAll = () => {
+    const failures: unknown[] = [];
+    return refresh
       .refreshMany(
         subscriptions.map(item => item.id),
-        (_id, error) => fail(error)
+        (_id, error) => failures.push(error)
       )
       .then(done => {
         // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
-        if (done !== undefined)
-          toast(
-            done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
-            t('settings.refreshedAll', {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)})
-          );
+        if (done === undefined) return;
+        const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
+        toast(
+          done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
+          failures.length
+            ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0])})
+            : t('settings.refreshedAll', counts)
+        );
       }, fail);
+  };
   const runOperation = (kind: keyof typeof operationLabels) =>
     void operations.run(kind).then(
       result => {
@@ -90,9 +96,9 @@ export function useBackendActions() {
     providersLoading: providers.loading && !providers.data,
     retryProviders: providers.refetch,
     connectionsError: connections.error,
-    connectionsLoading: connections.loading && !connections.data,
     retryConnections: connections.refetch,
-    liveCount,
+    // Only while capabilities are on their way; a failed load is reported by the page banner, not a spinner.
+    waiting: !resources && !capabilities.error,
     note: t(offered ? 'settings.actionsNote' : 'settings.actionsNone'),
     refreshingAll,
     refreshAll,

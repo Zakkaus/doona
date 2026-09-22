@@ -1,6 +1,7 @@
 import {lazy, memo, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
 import type {ComponentProps, FocusEvent} from 'react';
 import {formatNumber, useT, type Translator} from '../i18n';
+import {localTimeFormat} from '../api/selectors';
 import {LoadBoundary} from './LoadBoundary';
 // Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
@@ -173,7 +174,6 @@ const LazyAreaChart = lazy(() =>
           ),
         [locale, withSeconds, withDate]
       );
-      const date = useMemo(() => new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'}), [locale]);
       const data = useMemo(() => timestamps.map((t, i) => Object.fromEntries([['t', t], ...series.map(s => [s.label, s.values[i]])])), [timestamps, series]);
       const {yDomain, yTicks} = useMemo(() => {
         const values = series.flatMap(s => s.values.filter((v): v is number => v !== null));
@@ -240,7 +240,7 @@ const LazyAreaChart = lazy(() =>
                 active={hover.inside ? undefined : false}
                 contentStyle={style.content}
                 itemStyle={style.item}
-                labelFormatter={value => date.format(Number(value))}
+                labelFormatter={value => localTimeFormat(locale).format(Number(value))}
                 formatter={v => fmt(Number(v))}
                 cursor={style.cursor}
               />
