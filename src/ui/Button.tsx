@@ -16,6 +16,7 @@ export function Button({
   isPending,
   tip,
   type,
+  form,
   appearance,
   className
 }: {
@@ -31,6 +32,8 @@ export function Button({
   isPending?: boolean;
   tip?: string;
   type?: 'button' | 'submit' | 'reset';
+  // The id of a form this button submits from outside it, such as a dialog footer.
+  form?: string;
   appearance?: 'select';
   className?: string;
 }) {
@@ -93,12 +96,14 @@ export function Button({
       isDisabled={disabled}
       isPending={isPending}
       type={type}
+      form={form}
     >
       {isPending ? <span className="rp-spinner" aria-hidden="true" /> : null}
       {children}
     </RButton>
   );
-  const text = label ?? tip;
+  // A tip adds what the name cannot say (why the button is disabled), so it wins; the label stays the accessible name.
+  const text = tip ?? label;
   if (!text) return btn;
   // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts focus and pointer events only when the native button cannot.
   return (
