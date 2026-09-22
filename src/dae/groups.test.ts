@@ -128,7 +128,7 @@ group {
 
 describe('group edits keep the rest of the source intact', () => {
   it('replaces a filter that spans several lines as one value', () => {
-    const text = "group {\n  hk {\n    filter: name(\n      a,\n      b)\n    policy: min\n  }\n}\n";
+    const text = 'group {\n  hk {\n    filter: name(\n      a,\n      b)\n    policy: min\n  }\n}\n';
     const next = writeGroupEntry(text, 'hk', {filters: ["name('c')"], policy: 'fixed(0)'});
     expect(next).toBe("group {\n  hk {\n    filter: name('c')\n    policy: fixed(0)\n  }\n}\n");
   });
@@ -147,4 +147,3 @@ it('quotes IPv6 ranges in address rules and leaves IPv4 bare', () => {
   expect(ruleCondition('dip', '10.0.0.0/8, ff00::/8')).toBe("dip(10.0.0.0/8, 'ff00::/8')");
   expect(ruleCondition('sip', '2001:db8::1')).toBe("sip('2001:db8::1')");
 });
-

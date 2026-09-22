@@ -1,6 +1,7 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
+import {isFragment} from '../../dae/text';
 import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
@@ -150,6 +151,8 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
     droppedUnknown: list?.dropped_records === null
   };
 }
+// A typed condition: a call like `domain(...)`, no outbound of its own, and nothing that escapes its line.
+const rawCondition = (raw: string) => /\w\(/.test(raw) && !raw.includes('->') && isFragment(raw);
 export type RuleDraftView = {choices: Choice[]; hint: string; preview: string | null; mode: string; valid: boolean; rawInvalid: boolean};
 export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string, raw: string, t: Translator) {
   return {
@@ -157,8 +160,8 @@ export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, c
     hint: kindHints[kind],
     preview: on && value.trim() ? condition : null,
     mode: on ? 'pick' : 'text',
-    valid: on ? value.trim() !== '' : /\w\(/.test(raw) && !raw.includes('->'),
-    rawInvalid: raw !== '' && !(/\w\(/.test(raw) && !raw.includes('->'))
+    valid: on ? value.trim() !== '' : rawCondition(raw),
+    rawInvalid: raw !== '' && !rawCondition(raw)
   };
 }
 export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Translator) {

@@ -1,3 +1,4 @@
+import {ApiError} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
 import {useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
@@ -43,6 +44,11 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     setState(wizardInitial(main.content ?? ''));
   });
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
+  // A save refused because the file changed on disk: the refetched file becomes the base, the form stays as typed.
+  const stale = editor.error instanceof ApiError && editor.error.status === 412;
+  useLinked(stale && main.content_sha256 !== origin.content_sha256 ? main : null, next => {
+    if (next) setOrigin(next);
+  });
   const valid = validSubscriptions(state.subscriptions) && (!!current.trim() || validNetwork(state));
   const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));
   // Editing a line hands it to the form; the original text is no longer written back for it.

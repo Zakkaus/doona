@@ -1,7 +1,7 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useLayoutEffect, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import {EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
+import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Transaction} from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -152,6 +152,9 @@ const lineMarks = StateField.define<DecorationSet>({
 
 // Read-only editors remain searchable and keyboard-scrollable; focusLine moves both viewport and cursor. Keep the default marks array stable to avoid redundant CodeMirror updates.
 const noMarks: EditorMark[] = [];
+// Marks a document replacement that came from the `value` prop rather than from typing.
+const external = Annotation.define<boolean>();
+
 export function CodeEditor({
   value,
   onChange,
@@ -190,7 +193,8 @@ export function CodeEditor({
   const t = useT();
   const language = useRef(new Compartment());
   const naming = useRef(new Compartment());
-  useEffect(() => {
+  // Before paint, so the first frame already shows the editor rather than an empty host.
+  useLayoutEffect(() => {
     const instance = new EditorView({
       parent: host.current!,
       state: EditorState.create({
@@ -236,7 +240,8 @@ export function CodeEditor({
           // Read-only sources remain focusable for keyboard scrolling and search.
           naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
           EditorView.updateListener.of(update => {
-            if (update.docChanged) change.current?.(update.state.doc.toString());
+            // A new `value` from the parent is not an edit: it is not echoed back.
+            if (update.docChanged && !update.transactions.some(tr => tr.annotation(external))) change.current?.(update.state.doc.toString());
           })
         ]
       })
@@ -262,7 +267,11 @@ export function CodeEditor({
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;
-    instance.dispatch({changes: {from: 0, to: instance.state.doc.length, insert: value}});
+    // Kept out of the undo history: Ctrl-Z must not bring back the text the source had before a refetch.
+    instance.dispatch({
+      changes: {from: 0, to: instance.state.doc.length, insert: value},
+      annotations: [external.of(true), Transaction.addToHistory.of(false)]
+    });
   }, [value]);
   useEffect(() => {
     const instance = view.current;

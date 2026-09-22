@@ -1,3 +1,4 @@
+import {isFragment} from '../../dae/text';
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
@@ -33,10 +34,15 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
   });
   const save = (close: () => void) => {
     if (!draft) return;
+    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
+    if (![...filters, draft.policy ?? ''].every(isFragment)) {
+      toast('negative', t('policy.editUnsafe'));
+      return;
+    }
     const submitted = session.current;
     void source
       .apply(
-        text => writeGroupEntry(text, draft.name, {filters: draft.filters.map(f => f.trim()).filter(Boolean), policy: draft.policy}),
+        text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}),
         errors => toast('negative', t('policy.editInvalid', {n: errors})),
         draft.origin
       )

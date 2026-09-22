@@ -88,6 +88,25 @@ export function scanConfig(text: string) {
   return {blocks, tokens};
 }
 
+/**
+ * Whether typed text can be written as one field value or rule without changing the file's structure: a single
+ * line with balanced parentheses and no comment or brace outside quotes. `domain(a) # x` would comment out the
+ * outbound written after it; a brace would open or close a section.
+ */
+export function isFragment(text: string): boolean {
+  if (/[\r\n]/.test(text)) return false;
+  let depth = 0;
+  for (const token of scanConfig(text).tokens) {
+    if (token.kind === 'comment') return false;
+    if (token.kind === 'quoted') continue;
+    const raw = text.slice(token.from, token.to);
+    if (raw.includes('{') || raw.includes('}')) return false;
+    if (raw === '(') depth++;
+    if (raw === ')' && --depth < 0) return false;
+  }
+  return depth === 0;
+}
+
 export const unquote = (text: string) => (/^['"]/.test(text) ? text.slice(1, -1) : text);
 export function uncomment(text: string): string {
   const comments = scanConfig(text).tokens.filter(token => token.kind === 'comment');
