@@ -9,7 +9,6 @@ import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, us
 import type {PageProps} from '../types';
 import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {within} from '../../shell/route';
-import {pageSize} from '../../store/resource';
 import {queryTypes} from './query';
 
 export function useDns({go, query}: PageProps) {
@@ -121,14 +120,13 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
       setHeld(data);
-      const limit = pageSize(capabilities.data, capabilities.data?.resources.dns_log.max_page_size);
       const page = await api.dnsLog(
         {
           name: filter.name.trim() || undefined,
           type: type === 'all' ? undefined : type,
           src: filter.src,
           cursor: data.next_cursor,
-          limit: limit === undefined ? undefined : Math.min(200, limit)
+          limit: log.limit
         },
         signal
       );
