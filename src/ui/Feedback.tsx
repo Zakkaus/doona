@@ -63,7 +63,11 @@ export function ErrorMessage({error, onRetry}: {error: Error | null | undefined;
 }
 
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
-  return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
+  return (
+    <span className={cx('rp-light', tone, small && 'sm')}>
+      <span>{children}</span>
+    </span>
+  );
 }
 export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
   return (

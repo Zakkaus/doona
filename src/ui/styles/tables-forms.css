@@ -87,6 +87,18 @@
   outline: none;
   vertical-align: middle;
 }
+.rp-table [role='rowheader']:has(> .rp-table-empty) {
+  padding: 0;
+  overflow: visible;
+  max-width: none;
+  white-space: normal;
+}
+.rp-table-empty {
+  position: sticky;
+  inset-inline-start: 0;
+  flex-shrink: 0;
+  max-width: 100%;
+}
 .rp-table [role='row'][data-selection-mode='single'] {
   cursor: default;
 }

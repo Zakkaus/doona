@@ -33,7 +33,7 @@ export type ShellView = {
   groups: Array<{id: string; label: string; items: NavItem[]}>;
   choices: Array<{id: string; label: string; desc: string | undefined}>;
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
-  content: {kind: 'login'; profileId: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
+  content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
   error: Error | null;
   engine: {text: string; href: string};
@@ -77,7 +77,7 @@ export function shellView(
   const needsToken = capabilityError instanceof ApiError && (capabilityError.status === 401 || capabilityError.status === 403);
   const content: ShellView['content'] =
     needsToken && feature.id !== 'settings'
-      ? {kind: 'login', profileId: profile?.id ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
+      ? {kind: 'login', profileId: profile?.id ?? '', api: profile?.api ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
       : !capabilities && !capabilityError && feature.id !== 'settings'
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)

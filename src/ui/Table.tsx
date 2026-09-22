@@ -164,7 +164,11 @@ export function DataTable<T extends {id: string}>({
       <TableBody<T>
         items={rows}
         dependencies={[shown, getTextValue]}
-        renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>)}
+        renderEmptyState={() => (
+          <div className="rp-table-empty" style={{width: width ?? '100%'}}>
+            {loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>}
+          </div>
+        )}
       >
         {renderRow}
       </TableBody>

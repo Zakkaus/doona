@@ -1,5 +1,6 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-mock-profile': 'base'}});
 
@@ -53,4 +54,33 @@ test('a non-auth discovery failure stays visible until Retry refreshes capabilit
   } finally {
     await context.close();
   }
+});
+
+test('a login draft cannot be saved after another tab changes the challenged endpoint', async ({page, context}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(401, 'authentication_required', 'Token required');
+  };
+  await page.goto('/#/activity');
+  const token = page.getByRole('textbox', {name: 'Token', exact: true});
+  await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
+  await page.getByLabel('Token', {exact: true}).fill('challenge-secret');
+  const other = await context.newPage();
+  await other.route('**/*', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><title>Profile storage</title>'}));
+  await other.goto('/');
+  const saved = await other.evaluate(() => {
+    const profiles = JSON.parse(localStorage.getItem('doona-profiles')!);
+    profiles[0].api = location.origin + '/different-backend';
+    profiles[0].token = 'replacement-secret';
+    const raw = JSON.stringify(profiles);
+    localStorage.setItem('doona-profiles', raw);
+    return raw;
+  });
+  await other.close();
+  await page.getByRole('button', {name: 'Connect', exact: true}).click();
+  await expect(page.getByRole('alert')).toContainText('The backend settings changed');
+  await page.getByRole('button', {name: 'Show token'}).click();
+  await expect(token).toHaveValue('challenge-secret');
+  expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe(saved);
+  expect(backend.requests.some(request => request.headers().authorization === 'Bearer challenge-secret')).toBe(false);
 });

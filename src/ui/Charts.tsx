@@ -73,7 +73,7 @@ export const fmtRate = (kb: number | null | undefined, locale: string, t: Transl
     ? '—'
     : kb >= 1000
       ? t('unit.mbPerSecond', {n: formatNumber(kb / 1000, locale, kb >= 10000 || kb % 1000 === 0 ? 0 : 1)})
-      : t('unit.kbPerSecond', {n: formatNumber(Math.round(kb), locale)});
+      : t('unit.kbPerSecond', {n: formatNumber(kb, locale, kb < 10 && !Number.isInteger(kb) ? 1 : 0)});
 const niceMax = (v: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;
@@ -86,8 +86,7 @@ const niceStep = (range: number) => {
   const s = n <= 1 ? 0.2 : n <= 2 ? 0.5 : n <= 5 ? 1 : 2;
   return s * p;
 };
-// Tick marks on round clock values for a fixed window: the step that yields three to six marks. Marks within
-// a few percent of either edge are dropped, since their labels would hang outside the axis.
+// Use three to six round clock ticks, excluding marks whose labels would overhang the axis.
 const tickSteps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400].map(s => s * 1000);
 function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
   const span = until - since;
@@ -141,11 +140,9 @@ const LazyAreaChart = lazy(() =>
       fmt: (v: number) => string;
       locale: string;
       height?: number;
-      // Grow with the card: `height` is then the floor, and a card stretched by its row neighbours fills
-      // the extra with chart rather than blank.
+      // Grow with the card, using height as the floor.
       fill?: boolean;
-      // A fixed span for the x axis: the chart is read against the window, so a young session sits at the
-      // right edge instead of being stretched across the width. Without it the axis fits the data.
+      // Fixed time bounds preserve a young session's position within the observation window.
       window?: {since: number; until: number};
       // Rates start at zero; a level such as memory zooms to its own range so small movements stay visible.
       baseline?: 'zero' | 'auto';
@@ -159,8 +156,7 @@ const LazyAreaChart = lazy(() =>
       const until = window?.until;
       const marks = useMemo(() => (since !== undefined && until !== undefined ? clockTicks(since, until) : undefined), [since, until]);
       const withSeconds = marks ? marks.step < 60000 : span < 3 * 60 * 1000;
-      // Day marks sit on midnight, so they read as dates; anything finer reads as a 24-hour clock, with seconds
-      // when the marks are closer than a minute.
+      // Use dates for day-scale windows and seconds for sub-minute tick spacing.
       const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
       const clock = useMemo(
         () =>

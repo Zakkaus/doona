@@ -15,8 +15,7 @@ import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 
-// One loader per page: `lazy` renders through it, and the nav warms it up when the pointer reaches a link, so
-// the chunk is usually in hand before the click lands. The first page stays eager.
+// Rendering and preloading share page loaders; the default page stays eager.
 const loaders = {
   overview: () => import('../features/overview/Overview').then(m => ({default: m.Overview})),
   connections: () => import('../features/connections/Connections').then(m => ({default: m.Connections})),
@@ -43,8 +42,7 @@ const Settings = lazy(loaders.settings);
 export function warmPage(id: string) {
   void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
 }
-// Once the first page is up and the browser is idle, the other page chunks come in so a first visit only waits
-// for its data.
+// Preload other pages when the browser is idle.
 export function warmAllPages() {
   const warm = () => Object.keys(loaders).forEach(warmPage);
   if ('requestIdleCallback' in window) requestIdleCallback(warm, {timeout: 3000});

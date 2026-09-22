@@ -44,7 +44,6 @@ export function DisclosureGroup({children}: {children: ReactNode}) {
   );
 }
 
-// Dialogs
 export function ModalDialog({
   trigger,
   title,
@@ -126,8 +125,7 @@ export function Tabs({
   );
 }
 
-// Detail beside a list: a non-modal side panel when the page is wide, a dismissable drawer otherwise.
-// Place it as the last child of a `.rp-with-panel` container; the container lays the list and panel out.
+// The last child of rp-with-panel is a side panel on wide screens and a drawer below the breakpoint.
 export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {
   const t = useT();
   const wide = useMediaQuery(panelQuery);
