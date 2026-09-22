@@ -258,7 +258,7 @@ export type FlowDetailView = {
   fields: [string, string][];
   connectionHref: string | null;
   seedHref: string | null;
-  steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
+  steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; frame: FlowStep}[];
 };
 export type FlowRecordsView = {rows: FlowRow[]; detail: FlowDetailView | null; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
 export function flowRecordsView(
@@ -324,7 +324,7 @@ export function flowRecordsView(
                     typeof key === 'string' ? t(key) : t(key.key, key.params),
                     typeof value === 'string' ? value : t(value.key, value.params)
                   ]) ?? null,
-                raw: fields ? '' : JSON.stringify(step.data, null, 2)
+                frame: step
               };
             })
         }

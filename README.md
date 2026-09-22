@@ -127,6 +127,8 @@ Every page remains in navigation. A page is marked unavailable only when every r
 
 DNS cache listings follow bounded summary pages and filter domains on the backend; “Clear all cache” still clears the whole cache. Nested group cards retain their group badge beside measured latency. When a group has no TCP observation, a separately labelled selected-TCP-node latency may be shown; it does not count as measured group health, and unknown or unresolved paths remain unmeasured.
 
+Flow details preserve the backend's completeness and missing-evidence reasons. Every retained step has a keyboard-accessible “Step evidence” disclosure with its original JSON, including nested rule evaluations, DNS/attempt lineage and source extensions; JSON formatting is deferred until the disclosure opens. A complete flow does not imply successful forwarding or complete global traffic coverage.
+
 <img src="docs/screenshots/en/rules-light.png" alt="The rules page" width="100%">
 
 ## Data and settings

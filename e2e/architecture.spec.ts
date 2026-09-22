@@ -358,6 +358,7 @@ test('search keeps the keyboard target when an earlier connection disappears', a
   await page.route('**/api/v1/connections**', route => route.fulfill({json: snapshot}));
   await page.clock.install();
   await page.goto('/#/config');
+  await expect(page.getByRole('button', {name: /^Search pages, connections/})).toBeVisible();
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('searchbox').fill('stable-');

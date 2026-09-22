@@ -3,6 +3,7 @@ import {defineMessages} from '../../i18n/defineMessages';
 export const messages = defineMessages({
   'zh-TW': {
     'flow.detailLoading': '流程記錄載入中…',
+    'flow.evidence': '步驟證據',
     'flow.allStates': '全部狀態',
     'flow.map': '流量路徑',
     'flow.topology': '連線拓撲',
@@ -113,6 +114,7 @@ export const messages = defineMessages({
   },
   'zh-CN': {
     'flow.detailLoading': '流程记录加载中…',
+    'flow.evidence': '步骤证据',
     'flow.allStates': '全部状态',
     'flow.map': '流量路径',
     'flow.topology': '连接拓扑',
@@ -223,6 +225,7 @@ export const messages = defineMessages({
   },
   en: {
     'flow.detailLoading': 'Loading flow trace…',
+    'flow.evidence': 'Step evidence',
     'flow.allStates': 'All states',
     'flow.map': 'Traffic path',
     'flow.topology': 'Connection topology',

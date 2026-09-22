@@ -46,6 +46,7 @@ test('search reads live connection addresses, node and group names, and availabl
     await route.fulfill({json: path.startsWith('/groups/') ? await api.group(decodeURIComponent(path.slice(8))) : responses[path]});
   });
   await page.goto('/#/connections?q=no-such-connection');
+  await expect(page.getByRole('button', {name: /^Search pages, connections/})).toBeVisible();
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog');
   for (const query of ['live-search.example', '198.51.100.42', '192.0.2.42']) {

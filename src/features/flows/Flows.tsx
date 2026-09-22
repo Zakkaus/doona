@@ -1,3 +1,5 @@
+import {useState} from 'react';
+import type {FlowStep} from '../../api/model';
 import Tree from './Tree';
 import {Badge, Button, DataTable, DetailPanel, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Segmented, RuleRef, Empty, Link} from '../../ui/ui';
 import {Coverage} from './Coverage';
@@ -133,20 +135,15 @@ export function FlowRecords(props: PageProps) {
               <div className="rp-list">
                 {!detail.steps.length && <Empty>{t('ui.empty')}</Empty>}
                 {detail.steps.map(step => (
-                  <div key={step.id} className="rp-col rp-step">
+                  <div key={`${view.id}:${step.id}`} className="rp-col rp-step">
                     <div className="rp-cluster">
                       <Badge>{step.stage}</Badge>
                       <TextTooltip text={step.observed} className="rp-label">
                         {step.elapsed}
                       </TextTooltip>
                     </div>
-                    {step.fields ? (
-                      <Kv inline items={step.fields} />
-                    ) : (
-                      <pre className="rp-flow-raw rp-code">
-                        <code>{step.raw}</code>
-                      </pre>
-                    )}
+                    {step.fields && <Kv inline items={step.fields} />}
+                    <StepEvidence frame={step.frame} defaultOpen={!step.fields} />
                   </div>
                 ))}
               </div>
@@ -155,5 +152,20 @@ export function FlowRecords(props: PageProps) {
         </DetailPanel>
       </div>
     </>
+  );
+}
+
+function StepEvidence({frame, defaultOpen}: {frame: FlowStep; defaultOpen: boolean}) {
+  const t = useT();
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+      <summary>{t('flow.evidence')}</summary>
+      {open && (
+        <pre className="rp-flow-raw rp-code">
+          <code>{JSON.stringify(frame, null, 2)}</code>
+        </pre>
+      )}
+    </details>
   );
 }

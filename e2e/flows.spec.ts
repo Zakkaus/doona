@@ -17,6 +17,22 @@ test('a flow opens its trace beside the list and links to its connection', async
   await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
   expect(await panel.locator('.rp-step').count()).toBeGreaterThan(3);
   await expect(panel.locator('.rp-step').first()).toContainText('Input');
+  const route = panel
+    .locator('.rp-step')
+    .filter({has: page.getByText('Route', {exact: true})})
+    .first();
+  const evidence = route.getByText('Step evidence', {exact: true});
+  await expect(route.locator('pre')).toHaveCount(0);
+  await evidence.focus();
+  await page.keyboard.press('Enter');
+  await expect(route.locator('pre')).toBeVisible();
+  expect(JSON.parse(await route.locator('pre').innerText())).toMatchObject({
+    stage: 'route',
+    evidence: 'observed',
+    data: {evaluation_id: 'eval-1', rules: [{result: 'matched'}]}
+  });
+  await page.keyboard.press('Enter');
+  await expect(route.locator('pre')).toHaveCount(0);
   await panel.getByRole('link', {name: 'View connection', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections\?id=1$/);
   await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
