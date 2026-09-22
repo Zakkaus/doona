@@ -15,12 +15,33 @@ it('groups by client address without losing IPv6 hosts or UInt64 precision', () 
       {...c, id: 'd', src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
     ],
     {hidden: [], sort: null, group: 'source'},
-    'en-US'
+    'en-US',
+    t
   );
   expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download] : row.id))).toEqual([
     ['2001:db8::1', 2, 2, 9007199254741000n],
     ['10.0.0.7', 2, 1, null]
   ]);
+});
+
+it('groups, sorts and describes by the displayed labels', () => {
+  const c = connections.tcp[0];
+  const list = [
+    {...c, id: 'a', outbound: 'direct', state: 'dialing' as const},
+    {...c, id: 'b', outbound: null, state: 'active' as const},
+    {...c, id: 'c', outbound: 'unknown', state: 'blocked' as const}
+  ];
+  const groups = tableRows(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', t);
+  expect(groups.map(row => ('group' in row ? [row.group, row.children.length] : row.id))).toEqual([
+    [t('ui.direct'), 1],
+    [t('ui.unknown'), 2]
+  ]);
+  const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, 'en-US', t);
+  expect(sorted.map(row => row.id)).toEqual(
+    [...list].sort((x, y) => t(`conn.state.${x.state}`).localeCompare(t(`conn.state.${y.state}`), 'en-US')).map(row => row.id)
+  );
+  const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
+  expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
 });
 
 it('drops columns by priority until the minimum widths fit, keeping the target', () => {

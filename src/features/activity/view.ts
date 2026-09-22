@@ -16,7 +16,6 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
-import {menuViews} from '../policies/view';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -75,9 +74,8 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
     summaryText: count > 1 ? `${summaryText} · ${t('act.noticeRepeat', {n: count})}` : summaryText
   }));
 }
-type NodeMenuItem = {id: string; label: string; description: string; className: string};
 export type ActivityNodeMenu = {
-  menu: {items: NodeMenuItem[]; sections: Array<{title: string; count: string; items: NodeMenuItem[]}>};
+  options: NodeOption[];
   big: boolean;
   id: string;
   name: string;
@@ -89,10 +87,12 @@ export function trafficState(series: {down: Array<number | null>; up: Array<numb
   return !loaded ? 'loading' : 'empty';
 }
 
+type NodeOption = {id: string; name: string; label: string; tcp?: number; alive?: boolean; unavailable: boolean; healthError?: string};
+// The picker's menu is built from `options` only while it is open (see NodeMenu), not on every poll.
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const counts = new Map<string, number>();
   for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);
-  const options = nodes.map(node => {
+  const options = nodes.map((node): NodeOption => {
     const health = preferredHealth(node);
     return {
       id: node.id,
@@ -107,7 +107,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const node =
     options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => n.name !== 'direct' && n.name !== 'block') ?? options[0];
   return {
-    menu: menuViews(options, t),
+    options,
     big: options.length > 12,
     id: node?.id ?? '',
     name: node?.name ?? '',

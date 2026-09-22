@@ -1,7 +1,7 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n/messages';
 import {formatDuration, lifecycleStates, lifecycleTone, localTime, shortId} from '../../api/selectors';
-import {formatBytes, pctU64} from '../../api/u64';
+import {formatBytes, parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
@@ -32,7 +32,7 @@ const datapathValues: Record<string, Key> = {
 export function datapathValue(value: string, label: LabelFn): string {
   return datapathValues[value] ? label(datapathValues[value]) : value;
 }
-export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn): Array<[string, string]> {
+export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn, locale: string): Array<[string, string]> {
   const ebpf = datapath.ebpf;
   const occupancy = ebpf?.maps?.conn_state;
   const v = (value: string) => datapathValue(value, label);
@@ -48,24 +48,31 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
           [label('ov.f.routing'), v(ebpf.routing.state)],
           [label('ov.f.health'), v(ebpf.health)],
           [label('ov.f.maps'), v(ebpf.maps?.state ?? 'unknown')],
-          [label('ov.f.connState'), occupancy?.occupancy_known && occupancy.occupancy !== null ? occupancy.occupancy + ' / ' + occupancy.capacity : unknown]
+          [
+            label('ov.f.connState'),
+            occupancy?.occupancy_known && occupancy.occupancy !== null
+              ? formatNumber(occupancy.occupancy, locale) + ' / ' + formatNumber(occupancy.capacity, locale)
+              : unknown
+          ]
         ] as Array<[string, string]>)
       : [])
   ];
 }
 const cgroupScopes: Record<'service' | 'shared' | 'unknown', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared', unknown: 'ui.unknown'};
-export function memoryFields(memory: RuntimeMemory, label: LabelFn, omit: Key[] = []): Array<[string, string]> {
-  const percent = pctU64(memory.cgroup?.current_bytes ?? null, memory.cgroup?.limit_bytes ?? null);
+export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: string, omit: Key[] = []): Array<[string, string]> {
+  const count = (value: string | null | undefined) => {
+    const parsed = parseU64(value ?? null);
+    return parsed === null ? '—' : formatNumber(parsed, locale);
+  };
   const rows: Array<[Key, string]> = [
     ['ov.f.rss', formatBytes(memory.process?.rss_bytes ?? null)],
     ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null)],
     ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null)],
-    ['ov.f.cgroupPercent', percent === null ? '—' : Math.round(percent) + '%'],
     // Distinguish service, shared, and unknown cgroups so shared usage is not attributed solely to the engine.
     ['ov.f.cgroupScope', memory.cgroup ? label(cgroupScopes[memory.cgroup.scope]) : '—'],
-    ['ov.f.oomHigh', memory.cgroup?.events?.high ?? '—'],
-    ['ov.f.oom', memory.cgroup?.events?.oom ?? '—'],
-    ['ov.f.oomKill', memory.cgroup?.events?.oom_kill ?? '—'],
+    ['ov.f.oomHigh', count(memory.cgroup?.events?.high)],
+    ['ov.f.oom', count(memory.cgroup?.events?.oom)],
+    ['ov.f.oomKill', count(memory.cgroup?.events?.oom_kill)],
     ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null)]
   ];
   return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
@@ -133,18 +140,18 @@ export function overviewView(
         }
       : null,
     engine: {
-      state: section(!!version && !!runtime, loading.capabilities || loading.version || loading.runtime),
-      fields:
-        version && runtime
-          ? ([
-              [t('ov.f.engine'), version.engine.name + ' ' + version.engine.version],
-              [t('ov.f.api'), `${version.api.name} v${version.api.major} · ${version.api.status}`],
-              [t('ov.f.build'), [version.build?.revision, version.build?.target].filter(Boolean).join(' · ') || '—'],
-              [t('ov.f.instance'), runtime.instance_id],
-              [t('ov.f.started'), localTime(runtime.lifecycle.started_at, locale)],
-              [t('ov.f.activated'), runtime.generation.activated_at ? localTime(runtime.generation.activated_at, locale) : '—']
-            ] as Array<[string, string]>)
-          : [],
+      // The version stands on its own: a failing runtime leaves its rows at a dash rather than hiding the build.
+      state: section(!!version, loading.version),
+      fields: version
+        ? ([
+            [t('ov.f.engine'), version.engine.name + ' ' + version.engine.version],
+            [t('ov.f.api'), `${version.api.name} v${version.api.major} · ${version.api.status}`],
+            [t('ov.f.build'), [version.build?.revision, version.build?.target].filter(Boolean).join(' · ') || '—'],
+            [t('ov.f.instance'), runtime?.instance_id ?? '—'],
+            [t('ov.f.started'), localTime(runtime?.lifecycle.started_at ?? null, locale)],
+            [t('ov.f.activated'), localTime(runtime?.generation.activated_at ?? null, locale)]
+          ] as Array<[string, string]>)
+        : [],
       profiles: capabilities?.profiles.map(id => ({id, text: t(id === 'base' ? 'ov.profileBase' : 'ov.profileFull')})) ?? []
     },
     counters: {
@@ -168,9 +175,7 @@ export function overviewView(
     },
     memory: {
       state: section(!!memory, loading.capabilities || loading.memory),
-      fields: memory
-        ? memoryFields(memory, t, percent === null ? ['ov.f.cgroupPercent'] : ['ov.f.cgroupPercent', 'ov.f.cgroupCurrent', 'ov.f.cgroupLimit'])
-        : [],
+      fields: memory ? memoryFields(memory, t, locale, percent === null ? [] : ['ov.f.cgroupCurrent', 'ov.f.cgroupLimit']) : [],
       bar:
         percent === null
           ? null
@@ -183,7 +188,7 @@ export function overviewView(
     },
     datapath: {
       state: section(!!datapath, loading.capabilities || loading.datapath),
-      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t) : [],
+      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t, locale) : [],
       showAttachments: !!datapath?.ebpf,
       attachments: (datapath?.ebpf?.attachments ?? []).map((a, i) => ({
         id: String(i),

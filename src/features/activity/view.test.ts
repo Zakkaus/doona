@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
+import {menuViews} from '../policies/view';
 import {activityOutbounds, activityRanking, activityView, interestingNotice, modeView, nodeView, noticeRows, trafficState} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};
@@ -61,8 +62,9 @@ it('selects duplicate node labels by ID and preserves independent health', () =>
   const view = nodeView([first, second], second.id, t);
   expect(view.id).toBe(second.id);
   expect(view.tone).toBe('err');
-  expect(view.menu.items.map(item => item.id)).toEqual([first.id, second.id]);
-  expect(new Set(view.menu.items.map(item => item.label)).size).toBe(2);
+  const menu = menuViews(view.options, t);
+  expect(menu.items.map(item => item.id)).toEqual([first.id, second.id]);
+  expect(new Set(menu.items.map(item => item.label)).size).toBe(2);
   expect(nodeView([first, second], first.id, t).tone).toBe('ok');
 });
 

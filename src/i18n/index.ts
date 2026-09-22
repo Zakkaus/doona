@@ -55,7 +55,7 @@ export function formatList(lang: Lang, values: string[]): string {
 }
 
 const numbers = new Map<string, Intl.NumberFormat>();
-export function formatNumber(value: number, locale: string, digits = 0): string {
+export function formatNumber(value: number | bigint, locale: string, digits = 0): string {
   const key = locale + '/' + digits;
   let formatter = numbers.get(key);
   if (!formatter) numbers.set(key, (formatter = new Intl.NumberFormat(locale, {minimumFractionDigits: digits, maximumFractionDigits: digits})));

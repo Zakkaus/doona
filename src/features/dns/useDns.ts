@@ -40,8 +40,8 @@ export function useDns({go, query}: PageProps) {
         if (!signal.aborted) setResult(value);
         return value;
       });
-    } catch (error) {
-      toast('negative', t('dns.queryFailed', {error: errorText(error)}));
+    } catch {
+      // The failure stays on the page as its banner until the next query; a toast would say it twice.
     }
   };
   return {
@@ -51,7 +51,8 @@ export function useDns({go, query}: PageProps) {
     type,
     setType,
     pending: busy === 'query',
-    error: error ?? capabilities.error,
+    error: capabilities.error,
+    queryError: error,
     submit: () => void submit(),
     setTab,
     tab: view.tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (view.tabs[0]?.id ?? 'query'),
@@ -89,7 +90,8 @@ export function useDnsCache(domain: string) {
   };
   return {
     ...view,
-    error: dns.error ?? dns.cache.error ?? dns.capabilities.error,
+    // Delete and flush failures arrive as toasts, and the page above already reports the capabilities.
+    error: dns.cache.error,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
     remove: (id: string) => void remove(id),
@@ -111,10 +113,8 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const log = useDnsLogResource(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
   const paging = useAction<'older'>({scope: key});
-  useLinked(key, () => {
-    setHeld(null);
-    paging.cancel();
-  });
+  // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.
+  useLinked(key, () => setHeld(null));
   const {data, newerWaiting} = useMemo(() => dnsLogWindow(log.data, held), [log.data, held]);
   const loadOlder = () =>
     void paging.run('older', async signal => {

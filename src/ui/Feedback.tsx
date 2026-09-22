@@ -49,11 +49,12 @@ export function errorText(error: unknown) {
 }
 
 // Retry refetches the failed resource rather than reloading the page.
-export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
+// `message` replaces the load-failure wording for a failed action.
+export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: string}) {
   const t = useT();
   return error ? (
     <p role="alert" className="rp-alert">
-      {t('ui.loadFailed', {error: errorText(error)})}
+      {message ?? t('ui.loadFailed', {error: errorText(error)})}
       {onRetry && (
         <Button small quiet onPress={onRetry}>
           {t('ui.retry')}

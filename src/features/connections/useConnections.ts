@@ -1,8 +1,8 @@
-import {useMemo, useState} from 'react';
+import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
 import {ApiError} from '../../api/error';
-import {chainNames, connectionRows, ipLiteral} from '../../api/selectors';
-import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
+import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
+import {downloadFile, errorText, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../types';
@@ -47,8 +47,15 @@ export function useConnections({go, query}: PageProps) {
   const sel = q.get('id');
   const [confirmed, setConfirmed] = useState<CloseSelection | null>(null);
   useLinked(q.get('q'), value => setText(value ?? ''));
-  const select = (id: string | null) => go('connections', within(query, {id}));
-  const settledText = useDebounced(text, 300);
+  // A close resolves after the person may have changed the filters; navigating from the query captured when it
+  // started would put the old ones back.
+  const latest = useRef(query);
+  useEffect(() => {
+    latest.current = query;
+  });
+  const select = (id: string | null) => go('connections', within(latest.current, {id}));
+  // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees the new list.
+  const settledText = useDeferredValue(text);
   const src = ipLiteral(q.get('src') ?? '');
   const resource = useConnectionResource(src);
   const capabilities = useCapabilities();
@@ -58,7 +65,7 @@ export function useConnections({go, query}: PageProps) {
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
-  const needle = text.trim().toLowerCase();
+  const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>
       rows.filter(
@@ -67,9 +74,12 @@ export function useConnections({go, query}: PageProps) {
           (out === 'all' || c.outbound === out) &&
           (rule === 'all' || c.rule_expression === rule) &&
           (!needle ||
-            [c.dst, c.domain, c.src, c.pname, c.outbound, chainNames(c.chain, names).join(' '), c.rule_expression].join(' ').toLowerCase().includes(needle))
+            [c.dst, c.domain, c.src, c.pname, outboundLabel(c.outbound, t), chainNames(c.chain, names).join(' '), c.rule_expression]
+              .join(' ')
+              .toLowerCase()
+              .includes(needle))
       ),
-    [rows, network, out, rule, needle, names]
+    [rows, network, out, rule, needle, names, t]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const model = useMemo(
