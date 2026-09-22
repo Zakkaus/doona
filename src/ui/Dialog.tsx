@@ -1,4 +1,4 @@
-import {useEffect, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {useDeferredValue, useEffect, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -104,6 +104,9 @@ export function Tabs({
 }) {
   // The marker lives beside the TabList, not inside it: anything inside is part of the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
+  // The selected tab and its marker answer the click in the urgent render; a heavy panel (a table of
+  // log rows) mounts in the deferred one, so the click never waits for it.
+  const shown = useDeferredValue(value);
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
@@ -118,7 +121,7 @@ export function Tabs({
       </div>
       {items.map(item => (
         <TabPanel key={item.id} id={item.id} className="rp-tabpanel">
-          {item.content}
+          {item.id === shown ? item.content : null}
         </TabPanel>
       ))}
     </RTabs>

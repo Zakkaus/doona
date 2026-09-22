@@ -35,7 +35,9 @@
   cursor: pointer;
   outline: none;
   /* The label takes the selection colour as the slider arrives, not the moment it leaves the old tab. */
-  transition: color 120ms var(--rp-ease) 100ms;
+  transition:
+    color 120ms var(--rp-ease) 100ms,
+    scale var(--rp-duration) var(--rp-ease-out);
 }
 .rp-tab[data-hovered] {
   color: var(--rp-text);

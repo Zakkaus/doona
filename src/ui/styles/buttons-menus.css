@@ -125,11 +125,16 @@
 .rp-item .rp-check-mark {
   width: 16px;
   height: 16px;
-  visibility: hidden;
+  opacity: 0;
+  scale: 0.6;
   color: var(--rp-text);
+  transition:
+    opacity var(--rp-duration) var(--rp-ease),
+    scale var(--rp-duration) var(--rp-ease-out);
 }
 .rp-item[data-selected] .rp-check-mark {
-  visibility: visible;
+  opacity: 1;
+  scale: 1;
 }
 .rp-item.plain {
   grid-template-columns: minmax(0, 1fr) auto;

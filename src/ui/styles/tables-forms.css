@@ -59,6 +59,7 @@
   touch-action: none;
   border-inline-end: 2px solid transparent;
   outline: none;
+  transition: border-color var(--rp-duration) var(--rp-ease);
 }
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],

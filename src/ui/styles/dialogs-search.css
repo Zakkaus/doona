@@ -85,8 +85,16 @@
 .rp-input .clear[data-hovered] {
   background: var(--rp-hl-med);
 }
+.rp-input .clear {
+  transition:
+    opacity var(--rp-duration) var(--rp-ease),
+    scale var(--rp-duration) var(--rp-ease-out),
+    background-color var(--rp-duration) var(--rp-ease);
+}
 .rp-input[data-empty] .clear {
-  display: none;
+  opacity: 0;
+  scale: 0.6;
+  pointer-events: none;
 }
 .rp-input input {
   flex: 1;

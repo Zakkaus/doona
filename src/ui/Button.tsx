@@ -84,6 +84,7 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
   const ref = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(false);
   const [nested, setNested] = useState(false);
+  const active = overflow || !!text;
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -93,20 +94,24 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [children, text]);
+    // The span remounts when the trigger wraps it, so the observer follows `active` too.
+  }, [children, text, active]);
   useLayoutEffect(() => {
     const el = ref.current;
     // Nested tab stops swallow their ancestor's press; grid navigation still focuses cell text.
     if (el)
       setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]'));
   }, []);
+  const span = (
+    <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1}>
+      {children}
+    </span>
+  );
+  // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
+  if (!active) return span;
   return (
-    <TooltipTrigger delay={400} isDisabled={!overflow && !text}>
-      <Focusable>
-        <span ref={ref} className={cx('rp-truncate', className)} tabIndex={(overflow || text) && !nested ? 0 : -1}>
-          {children}
-        </span>
-      </Focusable>
+    <TooltipTrigger delay={400}>
+      <Focusable>{span}</Focusable>
       <Tip>{text ?? children}</Tip>
     </TooltipTrigger>
   );
