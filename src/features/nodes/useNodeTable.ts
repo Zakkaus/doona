@@ -9,6 +9,7 @@ import {toast, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../config/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
+import {policyLabel} from '../policies/policies';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {
@@ -91,7 +92,7 @@ export function useNodeTable(input: NodeTableInput) {
         menu: () => [
           ...entries
             .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
-            .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
+            .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
           {id: '/new', label: t('nodes.newGroup')}
         ],
         join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
