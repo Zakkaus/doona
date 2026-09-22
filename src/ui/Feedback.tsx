@@ -1,4 +1,4 @@
-import {useContext, useEffect, useState, type CSSProperties, type ReactNode} from 'react';
+import {useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
   UNSTABLE_Toast as RToast,
@@ -46,6 +46,31 @@ export function errorText(error: unknown) {
   if (error instanceof ApiError && error.text) return translate(readLang(), error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
+}
+
+// A message about a whole form or view, as S2's InlineAlert: a negative one takes focus when it appears after a
+// submit, so the result is announced where the person is looking.
+export function InlineAlert({
+  tone = 'negative',
+  title,
+  children,
+  takeFocus
+}: {
+  tone?: 'negative' | 'informative';
+  title?: string;
+  children: ReactNode;
+  takeFocus?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (takeFocus) ref.current?.focus();
+  }, [takeFocus]);
+  return (
+    <div ref={ref} role={tone === 'negative' ? 'alert' : 'status'} tabIndex={takeFocus ? -1 : undefined} className={cx('rp-alert', tone)}>
+      {title && <strong className="rp-alert-title">{title}</strong>}
+      <span>{children}</span>
+    </div>
+  );
 }
 
 // Retry refetches the failed resource rather than reloading the page.

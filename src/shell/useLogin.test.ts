@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {credentialProblem, loginProfiles, signInRefusal} from './useLogin';
+import {credentialProblems, loginProfiles, signInRefusal} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
 
@@ -19,13 +19,12 @@ it('updates only the challenged endpoint, preserving concurrent profile changes'
   expect(renamed.token).toBe('');
 });
 
-it('checks credentials against the backend limits before any attempt', () => {
-  expect(credentialProblem('login', 'admin', 'correct horse battery', '')).toBeNull();
-  expect(credentialProblem('login', 'ad min', 'correct horse battery', '')).toBe('login.badUsername');
-  expect(credentialProblem('login', 'admin', 'short', '')).toBe('login.badPassword');
+it('checks credentials against the backend limits before any attempt, per field', () => {
+  expect(credentialProblems('login', 'admin', 'correct horse battery', '')).toEqual({});
+  expect(credentialProblems('login', 'ad min', 'short', '')).toEqual({username: 'login.badUsername', password: 'login.badPassword'});
   // Twelve scalar values, not twelve UTF-16 units: an emoji counts once.
-  expect(credentialProblem('login', 'admin', '😀'.repeat(12), '')).toBeNull();
-  expect(credentialProblem('setup', 'admin', 'correct horse battery', 'correct horse batterx')).toBe('login.mismatch');
+  expect(credentialProblems('login', 'admin', '😀'.repeat(12), '')).toEqual({});
+  expect(credentialProblems('setup', 'admin', 'correct horse battery', 'correct horse batterx')).toEqual({confirm: 'login.mismatch'});
 });
 
 it('maps refusals by code and follows a moved account state', () => {

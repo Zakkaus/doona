@@ -14,12 +14,14 @@ export function loginProfiles(profiles: Profile[], profileId: string, api: strin
 
 const USERNAME = /^[A-Za-z0-9_.-]{1,64}$/;
 // The backend's own limits, checked first so a typo costs no attempt against its rate limit.
-export function credentialProblem(kind: 'setup' | 'login', username: string, password: string, confirm: string): Key | null {
-  if (!USERNAME.test(username)) return 'login.badUsername';
+type Field = 'username' | 'password' | 'confirm';
+export function credentialProblems(kind: 'setup' | 'login', username: string, password: string, confirm: string): Partial<Record<Field, Key>> {
+  const problems: Partial<Record<Field, Key>> = {};
+  if (!USERNAME.test(username)) problems.username = 'login.badUsername';
   const length = [...password].length;
-  if (length < 12 || length > 128 || new TextEncoder().encode(password).length > 512) return 'login.badPassword';
-  if (kind === 'setup' && password !== confirm) return 'login.mismatch';
-  return null;
+  if (length < 12 || length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.badPassword';
+  else if (kind === 'setup' && password !== confirm) problems.confirm = 'login.mismatch';
+  return problems;
 }
 
 type Refusal = {key: Key; params?: Params; switchTo?: SignIn};
@@ -57,7 +59,14 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const [confirm, setConfirm] = useState('');
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A field's own problem shows on that field until it is edited; a refusal of the whole form shows once above it.
+  const [problems, setProblems] = useState<Partial<Record<Field, Key>>>({});
   const [failure, setFailure] = useState<{key: Key; params?: Params} | string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const edit = (field: Field, set: (value: string) => void) => (value: string) => {
+    set(value);
+    if (problems[field]) setProblems(({[field]: _, ...rest}) => rest);
+  };
   const submitToken = () => {
     if (!token.trim()) return;
     try {
@@ -75,11 +84,9 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     location.reload();
   };
   const submitPassword = async (mode: 'setup' | 'login') => {
-    const problem = credentialProblem(mode, username, password, confirm);
-    if (problem) {
-      setFailure({key: problem});
-      return;
-    }
+    const found = credentialProblems(mode, username, password, confirm);
+    setProblems(found);
+    if (Object.keys(found).length) return;
     setBusy(true);
     try {
       const session = await openSession(api, mode, {username, password});
@@ -96,37 +103,42 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     }
   };
   const usesPassword = kind === 'setup' || kind === 'login';
-  const error =
-    typeof failure === 'string'
-      ? failure
-      : failure
-        ? t(failure.key, failure.params)
-        : ended
-          ? t('login.sessionEnded')
-          : rejected && kind === 'token'
-            ? t('login.rejected')
-            : null;
+  // A refusal after a submit takes focus; the notes shown on arrival do not.
+  const alert =
+    failure !== null
+      ? {tone: 'negative' as const, text: typeof failure === 'string' ? failure : t(failure.key, failure.params), focus: true, id: attempt}
+      : ended
+        ? {tone: 'informative' as const, text: t('login.sessionEnded'), focus: false, id: 0}
+        : rejected && kind === 'token'
+          ? {tone: 'negative' as const, text: t('login.rejected'), focus: false, id: 0}
+          : null;
+  const fieldError = (field: Field) => (problems[field] ? t(problems[field]) : undefined);
   return {
     kind,
     title: t(kind === 'setup' ? 'login.setupTitle' : kind === 'login' ? 'login.passwordTitle' : 'login.title'),
     note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? t('login.passwordNote', {backend}) : t('login.note', {backend}),
-    error,
+    alert,
     busy,
     token,
     setToken,
     username,
-    setUsername,
+    setUsername: edit('username', setUsername),
+    usernameError: fieldError('username'),
     password,
-    setPassword,
+    setPassword: edit('password', setPassword),
+    passwordError: fieldError('password'),
     confirm,
-    setConfirm,
+    setConfirm: edit('confirm', setConfirm),
+    confirmError: fieldError('confirm'),
     submit: () => {
       if (busy) return;
       setFailure(null);
+      setAttempt(value => value + 1);
       if (usesPassword) void submitPassword(kind);
       else submitToken();
     },
-    canSubmit: usesPassword ? !!username && !!password && (kind === 'login' || !!confirm) : !!token.trim(),
+    // Credentials are checked on submit and each problem shows on its field, so the button stays enabled for them.
+    canSubmit: usesPassword || !!token.trim(),
     secretType: shown ? 'text' : 'password',
     toggle: () => setShown(value => !value),
     toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken')

@@ -50,7 +50,10 @@ test('a first visit creates the administrator and continues with its session', a
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse batterx');
   await form.getByRole('button', {name: 'Create and sign in'}).click();
-  await expect(form.getByRole('alert')).toHaveText('The passwords do not match.');
+  // A field's own problem is reported on that field and costs no attempt against the backend.
+  const confirm = form.getByLabel('Confirm password', {exact: true});
+  await expect(confirm).toHaveAttribute('aria-invalid', 'true');
+  await expect(form.locator('.rp-field', {hasText: 'Confirm password'})).toContainText('The passwords do not match.');
   expect(state.attempts).toHaveLength(0);
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Create and sign in'}).click()]);
@@ -68,14 +71,17 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('wrong password here');
   await form.getByRole('button', {name: 'Sign in'}).click();
-  await expect(form.getByRole('alert')).toHaveText('The username or password is incorrect.');
+  // A refusal of the whole form shows once above it and takes focus.
+  const refusal = form.locator('.rp-alert');
+  await expect(refusal).toHaveText('The username or password is incorrect.');
+  await expect(refusal).toBeFocused();
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Sign in'}).click()]);
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   // The backend ends the session (restart, logout elsewhere): the next load asks to sign in and says why.
   state.token = 'hnk1_other';
   await page.reload();
-  await expect(page.locator('.rp-login').getByRole('alert')).toHaveText('The session has ended; sign in again.');
+  await expect(page.locator('.rp-login').getByRole('status')).toHaveText('The session has ended; sign in again.');
   expect(await page.evaluate(() => sessionStorage.getItem('doona-session'))).toBeNull();
 });
 
@@ -92,5 +98,5 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   await page.goto('/#/activity');
   await expect(page.locator('.rp-login').getByRole('heading')).toHaveText('Sign in');
   // Signing out is not an ended session: no warning greets the next sign-in.
-  await expect(page.locator('.rp-login').getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);
 });

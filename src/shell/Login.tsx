@@ -1,6 +1,6 @@
 import {useT} from '../i18n';
 import {useLogin} from './useLogin';
-import {Button, Link, Loading, TextField} from '../ui/ui';
+import {Button, InlineAlert, Link, Loading, TextField} from '../ui/ui';
 
 export function Login({profileId, api, backend, rejected}: {profileId: string; api: string; backend: string; rejected: boolean}) {
   const t = useT();
@@ -24,7 +24,11 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
       ) : (
         <>
           <span className="rp-label">{view.note}</span>
-          {view.error && <p role="alert">{view.error}</p>}
+          {view.alert && (
+            <InlineAlert key={view.alert.id} tone={view.alert.tone} takeFocus={view.alert.focus}>
+              {view.alert.text}
+            </InlineAlert>
+          )}
           {view.kind === 'token' ? (
             <TextField
               label={t('login.token')}
@@ -43,6 +47,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 value={view.username}
                 autoComplete="username"
                 spellCheck="false"
+                error={view.usernameError}
                 onChange={view.setUsername}
               />
               <TextField
@@ -52,6 +57,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 value={view.password}
                 autoComplete={view.kind === 'setup' ? 'new-password' : 'current-password'}
                 description={view.kind === 'setup' ? t('login.passwordRule') : undefined}
+                error={view.passwordError}
                 onChange={view.setPassword}
                 action={reveal}
               />
@@ -62,6 +68,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                   type={view.secretType}
                   value={view.confirm}
                   autoComplete="new-password"
+                  error={view.confirmError}
                   onChange={view.setConfirm}
                 />
               )}

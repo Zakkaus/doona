@@ -67,6 +67,16 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.rp-alert.informative {
+  border-color: var(--rp-foam);
+}
+.rp-alert:focus-visible {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-alert-title {
+  font-weight: 600;
+}
 .rp-spinner {
   width: 14px;
   height: 14px;
