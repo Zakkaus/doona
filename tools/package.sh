@@ -34,6 +34,8 @@ for entry in dist/* dist/.[!.]* dist/..?*; do
     cp -R "$entry" "$stage/program/"
 done
 cp LICENSE NOTICE CHANGELOG.md README.md "$stage/program/"
+mkdir "$stage/program/LICENSES"
+cp LICENSES/Apache-2.0.txt "$stage/program/LICENSES/"
 cp -R dist/fonts "$stage/font-package/"
 
 archive() {

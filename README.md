@@ -159,20 +159,23 @@ pnpm e2e                         # rebuild, then test against the mock at the ro
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
+For a read-only pass against a live backend, run `DOONA_API=http://router:9527 DOONA_TOKEN=… pnpm e2e:live` from the repository root. `DOONA_API` is required; omit `DOONA_TOKEN` when authentication is not required. The command runs accessibility, mobile-navigation and keyboard specs, rejects backend overrides in fixture storage, and aborts control requests, including DNS queries. Ordinary `pnpm e2e` runs reject `DOONA_API` unless `DOONA_LIVE_OBSERVE=1` is explicitly set.
+
 `pnpm dev` serves the mock on Vite's dev server. Archive versions come from `package.json` locally and from the Git description on tags; timestamps use `SOURCE_DATE_EPOCH` or the HEAD commit time. `node tools/screenshots.mjs <url> docs/screenshots` captures pages and the palette sheet from a running build as lossless WebP; it requires `cwebp`. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
-| Path            | Purpose                                                                    |
-| --------------- | -------------------------------------------------------------------------- |
-| `src/features/` | Pages, their hooks and messages, one folder each                           |
-| `src/shell/`    | Application shell, navigation and search                                   |
-| `src/ui/`       | Shared components, theme and icons                                         |
-| `src/api/`      | Client, backend profiles, resource store, mock backend and generated types |
-| `src/i18n/`     | Translations and locale helpers                                            |
-| `contract/`     | The vendored OpenAPI contract and its pin                                  |
-| `public/`       | Static assets, fonts and the service worker                                |
-| `e2e/`          | Browser tests                                                              |
-| `tools/`        | Build, packaging, conformance and screenshot tools                         |
-| `install/`      | nfpm configs, OpenWrt, Alpine, Gentoo and Nix recipes                      |
+| Path            | Purpose                                                    |
+| --------------- | ---------------------------------------------------------- |
+| `src/features/` | Pages, their hooks and messages, one folder each           |
+| `src/shell/`    | Application shell, navigation and search                   |
+| `src/ui/`       | Shared components, theme and icons                         |
+| `src/api/`      | Client, backend profiles, mock backend and generated types |
+| `src/store/`    | Resource watching, cached reads and action hooks           |
+| `src/i18n/`     | Translations and locale helpers                            |
+| `contract/`     | The vendored OpenAPI contract and its pin                  |
+| `public/`       | Static assets, fonts and the service worker                |
+| `e2e/`          | Browser tests                                              |
+| `tools/`        | Build, packaging, conformance and screenshot tools         |
+| `install/`      | nfpm configs, OpenWrt, Alpine, Gentoo and Nix recipes      |
 
 ### Contract
 

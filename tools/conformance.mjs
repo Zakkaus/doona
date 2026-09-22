@@ -6,19 +6,8 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import {parse} from 'yaml';
 
-const contractArg = process.argv.indexOf('--contract');
-const contractPath =
-  contractArg > 0 && process.argv[contractArg + 1]
-    ? pathToFileURL(process.argv[contractArg + 1])
-    : new URL('../contract/api-standardize/openapi.yaml', import.meta.url);
-const contract = parse(readFileSync(contractPath, 'utf8'));
+let contract, operations, byId, schemas;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
-const operations = Object.entries(contract.paths).flatMap(([path, item]) =>
-  Object.entries(item)
-    .filter(([method]) => methods.has(method))
-    .map(([method, operation]) => ({...operation, path, method, parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])]}))
-);
-const byId = new Map(operations.map(operation => [operation.operationId, operation]));
 const firstPaths = ['/api', '/api/v1/version', '/api/v1/capabilities'];
 const resourceByOperation = {
   getConfig: 'config',
@@ -47,10 +36,20 @@ const resourceByOperation = {
 };
 const ajv = new Ajv2020({allErrors: true, strict: false, validateFormats: true});
 addFormats(ajv, {mode: 'full'});
-const schemas = structuredClone(contract.components.schemas);
-// Keep string enforcement independent of the vendored UInt64 type annotation.
-schemas.UInt64 = {allOf: [schemas.UInt64, {type: 'string'}]};
 const validators = new Map();
+
+function loadContract(file = new URL('../contract/api-standardize/openapi.yaml', import.meta.url)) {
+  contract = parse(readFileSync(file, 'utf8'));
+  operations = Object.entries(contract.paths).flatMap(([path, item]) =>
+    Object.entries(item)
+      .filter(([method]) => methods.has(method))
+      .map(([method, operation]) => ({...operation, path, method, parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])]}))
+  );
+  byId = new Map(operations.map(operation => [operation.operationId, operation]));
+  schemas = structuredClone(contract.components.schemas);
+  // Keep string enforcement independent of the vendored UInt64 type annotation.
+  schemas.UInt64 = {allOf: [schemas.UInt64, {type: 'string'}]};
+}
 
 function resolve(value) {
   if (!value?.$ref) return value;
@@ -382,6 +381,7 @@ async function main(args) {
     if (!args.length || args[0].startsWith('--')) throw new Error(usage);
     const config = {baseUrl: args[0]};
     let json = false;
+    let contractFile;
     const seen = new Set();
     for (let i = 1; i < args.length; i++) {
       const flag = args[i];
@@ -394,10 +394,13 @@ async function main(args) {
       if (!['--token', '--only', '--skip', '--timeout', '--contract'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error(usage);
       const value = args[++i];
       const name = flag.slice(2);
-      // --contract was read at module load; here it only needs to pass the argument check.
-      if (name === 'contract') continue;
+      if (name === 'contract') {
+        contractFile = value;
+        continue;
+      }
       config[name] = name === 'timeout' ? Number(value) : name === 'only' || name === 'skip' ? value.split(',') : value;
     }
+    loadContract(contractFile);
     const result = await walk(config);
     if (json) console.log(JSON.stringify(result));
     else if (result.summary.exitCode === 2) console.error(result.checks.find(entry => entry.status === 'FAIL' && entry.id.endsWith('.request')).detail);
@@ -414,3 +417,4 @@ async function main(args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = await main(process.argv.slice(2));
+else loadContract();

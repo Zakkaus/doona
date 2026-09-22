@@ -24,9 +24,10 @@ unpack() {
 package() {
 	mkdir -p "$pkgdir"/usr/share/doona
 	cp -a "$srcdir"/web/. "$pkgdir"/usr/share/doona/
-	rm -f "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
+	rm -rf "$pkgdir"/usr/share/doona/LICENSE "$pkgdir"/usr/share/doona/LICENSES "$pkgdir"/usr/share/doona/NOTICE "$pkgdir"/usr/share/doona/*.md
 	install -Dm644 "$srcdir"/web/NOTICE -t "$pkgdir"/usr/share/doc/$pkgname/
 	install -Dm644 "$srcdir"/web/LICENSE -t "$pkgdir"/usr/share/doc/$pkgname/
+	install -Dm644 "$srcdir"/web/LICENSES/Apache-2.0.txt -t "$pkgdir"/usr/share/doc/$pkgname/LICENSES/
 }
 
 fonts() {

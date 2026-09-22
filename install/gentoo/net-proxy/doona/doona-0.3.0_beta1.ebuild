@@ -21,7 +21,7 @@ IUSE="+fonts"
 
 src_install() {
 	dodoc NOTICE README.md CHANGELOG.md
-	rm LICENSE NOTICE README.md CHANGELOG.md || die
+	rm -r LICENSE LICENSES NOTICE README.md CHANGELOG.md || die
 	insinto /usr/share/"${PN}"
 	doins -r .
 }

@@ -78,8 +78,10 @@ endef
 define Package/doona/install
 	$(INSTALL_DIR) $(1)/usr/share/doona $(1)/usr/share/doc/doona
 	$(CP) $(PKG_BUILD_DIR)/web/* $(1)/usr/share/doona/
-	rm -f $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
+	rm -rf $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/LICENSES $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/web/LICENSE $(PKG_BUILD_DIR)/web/NOTICE $(1)/usr/share/doc/doona/
+	$(INSTALL_DIR) $(1)/usr/share/doc/doona/LICENSES
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/web/LICENSES/Apache-2.0.txt $(1)/usr/share/doc/doona/LICENSES/
 endef
 
 define Package/doona-fonts/install
