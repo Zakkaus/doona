@@ -211,16 +211,21 @@ function parseLine(filter: string): Term[] | null {
 }
 const BUILTIN = new Set(['direct', 'block']);
 export type FilterNode = {name: string; subscription_tag: string | null};
-// Whether a group with these filter lines holds the node, as honk decides it.
-export function groupAdmits(filters: string[], node: FilterNode): boolean {
+// A group's filter lines parsed and compiled once, as a test honk would apply to each node.
+export function compileFilters(filters: string[]): (node: FilterNode) => boolean {
   const lines = filters.map(parseLine).filter((line): line is Term[] => line !== null);
-  if (!lines.length) return !filters.some(filter => filter.startsWith('group(')) && !BUILTIN.has(node.name);
-  return lines.some(
-    line =>
-      (!BUILTIN.has(node.name) || line.some(term => term.call === 'name' && !term.negated && term.exact.includes(node.name))) &&
-      line.every(term => term.tests.some(test => test(term.call === 'name' ? node.name : (node.subscription_tag ?? ''))) !== term.negated)
-  );
+  if (!lines.length) {
+    const subgroupsOnly = filters.some(filter => filter.startsWith('group('));
+    return node => !subgroupsOnly && !BUILTIN.has(node.name);
+  }
+  return node =>
+    lines.some(
+      line =>
+        (!BUILTIN.has(node.name) || line.some(term => term.call === 'name' && !term.negated && term.exact.includes(node.name))) &&
+        line.every(term => term.tests.some(test => test(term.call === 'name' ? node.name : (node.subscription_tag ?? ''))) !== term.negated)
+    );
 }
+export const groupAdmits = (filters: string[], node: FilterNode) => compileFilters(filters)(node);
 
 // An edit staged by the arrange view, applied to the source text in the order it was made.
 export type GroupChange =
