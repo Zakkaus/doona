@@ -126,7 +126,9 @@ export function DataTable<T extends {id: string}>({
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
   // Include the border-box frame to avoid a two-pixel scroll on short tables.
   const frame = 2;
-  const fitted = Math.min(height, frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
+  // While the first page is loading the box keeps its full height: growing from two rows to full height as the
+  // rows land pushed everything below it down the page.
+  const fitted = loading && !rows.length ? height : Math.min(height, frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight);
   const [virtual, setVirtual] = useState(rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;
