@@ -1,6 +1,6 @@
 import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
-import {namedIn, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {groupAdmits, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 
 // The demo engine's view of a native policy expression: which contract kind it behaves as.
 const policyKinds: Record<string, Group['policy']['kind']> = {
@@ -60,17 +60,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
   const memberships = new Map(nextNodes.map(node => [node.id, [] as string[]]));
   const nextGroups = entries.map((entry): Group => {
     const previous = groups.find(group => group.name === entry.name);
-    const names = new Set(namedIn(entry));
-    const tags = new Set(
-      entry.filters.flatMap(
-        filter =>
-          /^subtag\(([^()]*)\)$/
-            .exec(filter)?.[1]
-            .split(',')
-            .map(value => unquote(value.trim())) ?? []
-      )
-    );
-    const memberNodes = nextNodes.filter(node => !entry.filters.length || names.has(node.name) || tags.has(node.subscription_tag ?? ''));
+    const memberNodes = nextNodes.filter(node => groupAdmits(entry.filters, node));
     const members: Group['members'] = memberNodes.map(node => ({id: node.id, name: node.name, kind: 'node'}));
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
