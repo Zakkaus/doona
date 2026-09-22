@@ -83,7 +83,7 @@
 .rp-tray-row[data-dragging] {
   opacity: 0.5;
 }
-.rp-tray-row > .rp-grow {
+.rp-tray-row .rp-grow {
   display: flex;
   flex-direction: column;
   min-width: 0;
