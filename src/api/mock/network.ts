@@ -7,7 +7,14 @@ import {instanceId, observedAt} from './fixtures/clock';
 import {found, createPager} from './common';
 import {routingTrace} from './routing';
 
+const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
+// Derived once per flows array; a real backend keeps its ring, so the mock should not re-sort on every poll.
 function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
+  let ring = dnsRings.get(flows);
+  if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows)));
+  return ring;
+}
+function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
   return [...flows]
     .filter(flow => flow.input.domain)
     .sort((a, b) => Date.parse(b.started_at ?? '') - Date.parse(a.started_at ?? ''))

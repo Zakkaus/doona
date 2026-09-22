@@ -13,11 +13,57 @@
 .rp-table [role='row'],
 .rp-switch,
 .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color, scale, translate;
   transition-duration: var(--rp-duration);
   transition-timing-function: var(--rp-ease);
 }
-/* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
+/* Press feedback after S2 `pressScale`: the control sinks 2px in perspective, about 0.95 of its size; the same
+   controls S2 applies it to (buttons, pickers, the clear button), not tabs, rows or navigation. */
+.rp-btn[data-pressed],
+.rp-select[data-pressed],
+.rp-selectbtn[data-pressed],
+.rp-input .clear[data-pressed] {
+  scale: 0.95;
+}
+/* The refresh icon spins from the click until the refetch returns, in place of the generic pending spinner.
+   Other pending buttons show their spinner after one second, as S2 does, so a quick action never flashes one. */
+.rp-btn[data-pending] > .rp-refresh {
+  animation: rp-spin 700ms linear infinite;
+}
+.rp-btn[data-pending] > .rp-spinner:has(+ .rp-refresh) {
+  display: none;
+}
+.rp-btn > .rp-spinner {
+  animation:
+    rp-spin 800ms linear infinite,
+    rp-delayed 1ms linear 1s both;
+}
+@keyframes rp-delayed {
+  from {
+    opacity: 0;
+  }
+}
+/* The switch handle takes the press with the control. */
+.rp-switch .track::after {
+  transition:
+    transform var(--rp-duration) var(--rp-ease-out),
+    scale var(--rp-duration) var(--rp-ease-out);
+}
+.rp-switch[data-pressed] .track::after {
+  scale: 0.9;
+}
+/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours instead of flipping. */
+.rp-node,
+.rp-tree-tile,
+.rp-node .ms,
+.rp-tree-tile .s,
+.rp-light,
+.rp-light::before {
+  transition:
+    background-color var(--rp-duration) var(--rp-ease),
+    border-color var(--rp-duration) var(--rp-ease),
+    color var(--rp-duration) var(--rp-ease);
+}
 :root {
   color-scheme: light;
   --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);

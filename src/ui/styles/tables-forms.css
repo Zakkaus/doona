@@ -42,6 +42,17 @@
   background: var(--rp-selected);
 }
 /* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
+/* The sort arrow is one chevron that turns: ascending points up, descending down. */
+.rp-th > .rp-sort {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: 2px;
+  rotate: 180deg;
+  transition: rotate 200ms var(--rp-ease-out);
+}
+.rp-th > .rp-sort.descending {
+  rotate: 0deg;
+}
 .rp-th {
   display: inline-block;
   max-width: 100%;
@@ -59,6 +70,7 @@
   touch-action: none;
   border-inline-end: 2px solid transparent;
   outline: none;
+  transition: border-color var(--rp-duration) var(--rp-ease);
 }
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],

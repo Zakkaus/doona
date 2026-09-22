@@ -30,7 +30,19 @@ export const capabilities: Capabilities = {
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
-    runtime_settings: {available: true, fields: ['log.level', 'log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']},
+    runtime_settings: {
+      available: true,
+      fields: [
+        'log.level',
+        'log.buffered_records',
+        'dns_log.max_records',
+        'flows.max_flows',
+        'flows.retention_seconds',
+        'record_flows',
+        'record_logs',
+        'record_dns_log'
+      ]
+    },
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},
     probes: {
       available: true,

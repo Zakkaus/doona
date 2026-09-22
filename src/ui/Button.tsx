@@ -1,4 +1,4 @@
-import {useLayoutEffect, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
+import {useEffect, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
 
@@ -36,6 +36,13 @@ export function Button({
 }) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
   const ref = useRef<HTMLButtonElement>(null);
+  const press = () => {
+    // An icon marked rp-spin-on-press turns once per press (the refresh arrows); reduced motion skips it.
+    const icon = ref.current?.querySelector<SVGElement>('.rp-spin-on-press');
+    if (icon && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      icon.animate([{rotate: '0deg'}, {rotate: '360deg'}], {duration: 600, easing: 'cubic-bezier(0, 0, 0.4, 1)'});
+    onPress?.();
+  };
   const btn = (
     <RButton
       ref={ref}
@@ -47,7 +54,7 @@ export function Button({
         accent && 'accent',
         negative && 'negative'
       )}
-      onPress={onPress}
+      onPress={press}
       aria-label={label}
       isDisabled={isDisabled}
       isPending={isPending}
@@ -80,33 +87,62 @@ function Tip({children, triggerRef}: {children: ReactNode; triggerRef?: RefObjec
   );
 }
 
+// Every mounted TextTooltip measures in one pass per frame, after paint, through one shared observer: a table
+// mounts hundreds of them, and one layout read each in its own layout effect held the first paint of a page.
+const measures = new WeakMap<Element, () => void>();
+const queue = new Set<() => void>();
+let frame = 0;
+function enqueue(measure: () => void) {
+  queue.add(measure);
+  if (frame) return;
+  frame = requestAnimationFrame(() => {
+    frame = 0;
+    const batch = [...queue];
+    queue.clear();
+    for (const fn of batch) fn();
+  });
+}
+const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entries => entries.forEach(entry => measures.get(entry.target)?.()));
+const STOPS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]';
+
 export function TextTooltip({children, text, className}: {children: ReactNode; text?: string; className?: string}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(false);
-  const [nested, setNested] = useState(false);
-  useLayoutEffect(() => {
+  // Not a tab stop until measured: a focusable span inside a row would swallow the row's own press.
+  const [nested, setNested] = useState(true);
+  const active = overflow || !!text;
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (text) return;
-    const measure = () => setOverflow(el.scrollWidth > el.clientWidth);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [children, text]);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    // Nested tab stops swallow their ancestor's press; grid navigation still focuses cell text.
-    if (el)
-      setNested(!!el.closest('button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]'));
-  }, []);
+    if (text) {
+      setNested(!!el.closest(STOPS));
+      return;
+    }
+    const measure = () => {
+      setOverflow(el.scrollWidth > el.clientWidth);
+      // Nested tab stops swallow their ancestor's press; grid navigation still focuses cell text.
+      setNested(!!el.closest(STOPS));
+    };
+    measures.set(el, measure);
+    enqueue(measure);
+    resized?.observe(el);
+    return () => {
+      resized?.unobserve(el);
+      measures.delete(el);
+      queue.delete(measure);
+    };
+    // The span remounts when the trigger wraps it, so the observer follows `active` too.
+  }, [children, text, active]);
+  const span = (
+    <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1}>
+      {children}
+    </span>
+  );
+  // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
+  if (!active) return span;
   return (
-    <TooltipTrigger delay={400} isDisabled={!overflow && !text}>
-      <Focusable>
-        <span ref={ref} className={cx('rp-truncate', className)} tabIndex={(overflow || text) && !nested ? 0 : -1}>
-          {children}
-        </span>
-      </Focusable>
+    <TooltipTrigger delay={400}>
+      <Focusable>{span}</Focusable>
       <Tip>{text ?? children}</Tip>
     </TooltipTrigger>
   );

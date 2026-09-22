@@ -10,10 +10,16 @@ import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type
 import {useValidationSources} from './useValidationSources';
 import {useBackgroundValidation} from './useBackgroundValidation';
 
-export type ModulesProps = {config: EffectiveConfig; editor: ConfigEditor; canWrite: boolean; canValidate: boolean};
+export type ModulesProps = {
+  config: EffectiveConfig;
+  editor: ConfigEditor;
+  canWrite: boolean;
+  canValidate: boolean;
+  open: (sourceId: string, line: number | null) => void;
+};
 type Draft = {section: ModuleSection & {source: ConfigSource; block: NonNullable<ModuleSection['block']>}; text: string};
 
-export function useModules({config, editor, canWrite, canValidate}: ModulesProps) {
+export function useModules({config, editor, canWrite, canValidate, open}: ModulesProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const sections = useMemo(() => sectionSummaries(config.sources, t), [config, t]);
@@ -80,6 +86,8 @@ export function useModules({config, editor, canWrite, canValidate}: ModulesProps
       editDisabled: dirty || !!editor.busy,
       note: section.note ?? (section.source && section.block && checked.get(section.source) === false ? t('config.incomplete') : null),
       muted: !section.block,
+      // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.
+      manual: section.source && section.source.content !== undefined ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
       edit: () => {
         if (dirty || editor.busy || !canWrite || !section.source?.writable || !section.block || checked.get(section.source) !== true) return;
         setFound(null);

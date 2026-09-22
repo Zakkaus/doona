@@ -10,7 +10,7 @@ export function useEvents() {
   const capabilities = useCapabilities();
   const kinds = capabilities.data?.resources.events.kinds;
   const [kind, setKind] = useState('without-runtime');
-  const feed = useEventFeed();
+  const feed = useEventFeed(kind !== 'without-runtime');
   const view = useMemo(
     () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? []),
     [feed.events, kind, feed.connected, feed.available, locale, t, kinds]

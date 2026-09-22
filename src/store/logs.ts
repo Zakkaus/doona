@@ -8,7 +8,11 @@ import {createFeed} from './feed';
 export const EVENT_FEED_LIMIT = 200;
 // Runtime heartbeats arrive every second and would evict every other kind from one bounded ring, so they get a
 // ring of their own; the page merges both by time.
-export function useEventFeed() {
+const silent = () => () => {};
+const none = {records: [] as ApiEvent[]};
+// `withRuntime` false leaves the heartbeat ring unsubscribed: the default view hides heartbeats, so a beat every
+// second must not re-render and re-sort the page.
+export function useEventFeed(withRuntime = true) {
   const feeds = useMemo(
     () => ({
       changes: createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace'),
@@ -17,10 +21,13 @@ export function useEventFeed() {
     []
   );
   const changes = useSyncExternalStore(feeds.changes.subscribe, feeds.changes.getSnapshot);
-  const runtime = useSyncExternalStore(feeds.runtime.subscribe, feeds.runtime.getSnapshot);
+  const runtime = useSyncExternalStore(withRuntime ? feeds.runtime.subscribe : silent, withRuntime ? feeds.runtime.getSnapshot : () => none);
   const status = useEvents(event => (event.event === 'runtime.updated' ? feeds.runtime : feeds.changes).append(event));
   const events = useMemo(
-    () => [...changes.records, ...runtime.records].sort((a, b) => Date.parse(b.data.observed_at) - Date.parse(a.data.observed_at)),
+    () =>
+      runtime.records.length
+        ? [...changes.records, ...runtime.records].sort((a, b) => Date.parse(b.data.observed_at) - Date.parse(a.data.observed_at))
+        : changes.records,
     [changes.records, runtime.records]
   );
   return {...status, events};

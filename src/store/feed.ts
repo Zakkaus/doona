@@ -3,13 +3,17 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
   const listeners = new Set<() => void>();
   let snapshot = {records: [] as T[], ...status};
   let dirty = false;
-  // While held, records keep accumulating in the bounded ring but the published list stays as it was.
+  let statusDirty = false;
+  // While held, records keep accumulating in the bounded ring but the published list stays as it was, and a
+  // record-only change publishes nothing: a paused 10 Hz stream causes no renders.
   let held = false;
   let timer: number | undefined;
   const publish = () => {
     timer = undefined;
     if (document.hidden || !dirty) return;
+    if (held && !statusDirty) return;
     dirty = false;
+    statusDirty = false;
     snapshot = {records: held ? snapshot.records : [...records.values()].reverse(), ...status};
     listeners.forEach(notify => notify());
   };
@@ -50,12 +54,14 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
     },
     update(change: Partial<S>) {
       status = {...status, ...change};
+      statusDirty = true;
       schedule();
     },
     // Clearing is explicit, so it empties the published list even while held.
     clear() {
       records.clear();
       snapshot = {...snapshot, records: []};
+      statusDirty = true;
       schedule();
     },
     hold(on: boolean) {

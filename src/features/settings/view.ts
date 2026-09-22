@@ -1,10 +1,38 @@
-import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
+import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Params, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 
-export type Numeric = Exclude<RuntimeSettingField, 'log.level'>;
+export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
+export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;
+export type RecorderChoice = 'auto' | 'on' | 'off';
+export const recorderFields: Recorder[] = ['record_flows', 'record_logs', 'record_dns_log'];
+export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {
+  record_flows: {state: 'flows', label: 'settings.recordFlows'},
+  record_logs: {state: 'logs', label: 'settings.recordLogs'},
+  record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
+};
+const recorderChoiceLabel: Record<RecorderChoice, Key> = {auto: 'settings.record.auto', on: 'settings.record.on', off: 'settings.record.off'};
+// The wire form: booleans pin a recorder, the string follows attachment.
+export const recorderPatchValue = (choice: RecorderChoice): RecorderMode => (choice === 'auto' ? 'auto' : choice === 'on');
+export function recorderView(id: Recorder, choice: RecorderChoice, state: RecorderState | undefined, t: Translator) {
+  const forbidden = state ? !state.allowed : false;
+  return {
+    id,
+    label: t(recorderAccess[id].label),
+    value: choice,
+    items: (['auto', 'on', 'off'] as const).map(mode => ({id: mode, label: t(recorderChoiceLabel[mode])})),
+    disabled: forbidden,
+    tone: forbidden ? ('muted' as const) : state?.active ? ('ok' as const) : ('neutral' as const),
+    status: t(forbidden ? 'settings.recordingForbidden' : state?.active ? 'settings.recordingActive' : 'settings.recordingIdle')
+  };
+}
+export function recordingNote(recording: RuntimeSettings['recording'] | undefined, t: Translator) {
+  if (!recording) return null;
+  if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
+  return t(recording.events.active ? 'settings.recordingAttached' : 'settings.recordingDetached');
+}
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
   Numeric,

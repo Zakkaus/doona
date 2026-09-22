@@ -87,6 +87,8 @@ export type ConfigValidationRequest = Schema['ConfigValidationRequest'];
 export type ConfigValidationResult = Schema['ConfigValidationResult'];
 export type RuntimeSettingsPatch = Schema['RuntimeSettingsPatch'];
 export type RuntimeSettingField = Schema['RuntimeSettingField'];
+export type RecorderMode = Schema['RecorderMode'];
+export type RecorderState = Schema['RecorderState'];
 export type EventKind = Schema['EventKind'];
 type EventData = {
   'stream.ready': Schema['StreamReadyEvent'];

@@ -336,7 +336,7 @@ paths:
                     revision: '17'
                     sources:
                       - id: source-main
-                        path: <redacted>
+                        path: api.dae
                         kind: main
                         content_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
                         bytes: 128
@@ -816,7 +816,7 @@ paths:
                 redacted:
                   value:
                     id: source-main
-                    path: <redacted>
+                    path: api.dae
                     kind: main
                     content_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
                     bytes: 128
@@ -6512,7 +6512,7 @@ components:
             $ref: '#/components/schemas/ConfigDiagnostic'
         secrets_redacted:
           type: boolean
-          description: True when content is withheld or paths, text, or diagnostic messages are redacted under visibility policy.
+          description: True when a listener-secret value (native_api.secret, clash_api.secret) was masked somewhere in this response. Content, paths and diagnostics are otherwise returned in the clear to an admitted request.
     ConfigSource:
       type: object
       required:
@@ -6532,7 +6532,11 @@ components:
         path:
           type: string
           minLength: 1
-          description: Display path only, replaced with <redacted> when hidden by visibility policy; not a file-access capability.
+          description: The path relative to the entry directory, as the configuration references it; not a file-access capability.
+        absolute_path:
+          type: string
+          minLength: 1
+          description: The file's absolute path on the engine host.
         kind:
           type: string
           enum:
@@ -7567,7 +7571,7 @@ components:
             - string
             - 'null'
           minLength: 1
-          description: Display-only source URL with userinfo, query, fragment and secret-bearing path segments removed or redacted. Null for file/inline sources or when safe display is impossible. Never a fetchable credential source.
+          description: The configured source URL as written, with only listener-secret values (native_api.secret, clash_api.secret) masked. Null for file/inline sources. The wire name is kept for compatibility.
         node_count:
           $ref: '#/components/schemas/SafeUInt'
         updated_at:
@@ -10842,6 +10846,9 @@ components:
         - dns_log.max_records
         - flows.max_flows
         - flows.retention_seconds
+        - record_flows
+        - record_logs
+        - record_dns_log
     RuntimeSettings:
       type: object
       required:
@@ -10895,11 +10902,49 @@ components:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
               description: How long a terminal flow stays, at most flows.retention_seconds.
+        recording:
+          type: object
+          required:
+            - flows
+            - logs
+            - dns_log
+            - events
+            - grace_remaining_seconds
+          description: |
+            Read-only recorder state. A client is attached while an admitted GET SSE stream on
+            /events or /logs is open, or for 60 seconds after the last stream closed or a successful
+            GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
+            renew attachment. Recording starts on attachment, so the first history a client reads may
+            be empty.
+          properties:
+            flows:
+              $ref: '#/components/schemas/RecorderState'
+            logs:
+              $ref: '#/components/schemas/RecorderState'
+            dns_log:
+              $ref: '#/components/schemas/RecorderState'
+            events:
+              type: object
+              required:
+                - active
+              properties:
+                active:
+                  type: boolean
+                  description: Event capture runs while a client is attached or any permitted recorder is pinned on.
+            grace_remaining_seconds:
+              $ref: '#/components/schemas/SafeUInt'
+              description: Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached.
     RuntimeSettingsPatch:
       type: object
       additionalProperties: false
       minProperties: 1
       properties:
+        record_flows:
+          $ref: '#/components/schemas/RecorderMode'
+        record_logs:
+          $ref: '#/components/schemas/RecorderMode'
+        record_dns_log:
+          $ref: '#/components/schemas/RecorderMode'
         log:
           type: object
           additionalProperties: false
@@ -10929,6 +10974,32 @@ components:
             retention_seconds:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
+    RecorderMode:
+      description: true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment.
+      oneOf:
+        - type: boolean
+        - type: string
+          enum:
+            - auto
+    RecorderState:
+      type: object
+      required:
+        - allowed
+        - mode
+        - active
+      properties:
+        allowed:
+          type: boolean
+          description: The configuration permits this recorder; false means never, whatever the mode.
+        mode:
+          type: string
+          enum:
+            - auto
+            - 'on'
+            - 'off'
+        active:
+          type: boolean
+          description: The recorder is capturing right now.
     StreamReadyEvent:
       type: object
       required:

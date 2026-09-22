@@ -41,6 +41,25 @@ export function RuntimeSettingsCard() {
                   />
                 ))}
               </div>
+              {m.recorders.length > 0 && (
+                <div className="rp-toolbar" role="group" aria-label={t('settings.recording')}>
+                  {m.recorders.map(recorder => (
+                    <div key={recorder.id} className="rp-field">
+                      <LabeledSelect
+                        label={recorder.label}
+                        value={recorder.value}
+                        onChange={recorder.change}
+                        items={recorder.items}
+                        isDisabled={m.busy || recorder.disabled}
+                      />
+                      <Light tone={recorder.tone} small>
+                        {recorder.status}
+                      </Light>
+                    </div>
+                  ))}
+                  {m.recordingNote && <span className="rp-label">{m.recordingNote}</span>}
+                </div>
+              )}
               <div className="rp-toolbar">
                 <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
                   {t('settings.apply')}

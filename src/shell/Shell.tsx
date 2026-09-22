@@ -145,7 +145,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
             </Button>
           </span>
           <Button quiet icon label={t('refresh')} isPending={view.spinning} onPress={view.refresh}>
-            <Refresh />
+            <Refresh className="rp-refresh rp-spin-on-press" />
           </Button>
           <Separator orientation="vertical" className="rp-vrule" />
           <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>

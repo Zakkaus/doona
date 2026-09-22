@@ -90,7 +90,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
               <span className="rp-chain">
                 {row.refreshable && (
                   <Button small quiet icon isPending={row.refreshing} isDisabled={row.refreshDisabled} label={row.refreshLabel} onPress={row.refresh}>
-                    <Refresh />
+                    <Refresh className="rp-spin-on-press" />
                   </Button>
                 )}
                 {row.removable && (

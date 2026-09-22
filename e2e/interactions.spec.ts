@@ -137,7 +137,10 @@ test('shared controls distinguish a held press from hover without moving', async
     await page.mouse.down();
     await expect(control).toHaveAttribute('data-pressed');
     expect(await control.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(hovered);
-    expect(await control.boundingBox()).toEqual(bounds);
+    // The press scales the control about its centre; nothing around it moves.
+    const pressed = (await control.boundingBox())!;
+    expect(pressed.x + pressed.width / 2).toBeCloseTo(bounds!.x + bounds!.width / 2, 0);
+    expect(pressed.y + pressed.height / 2).toBeCloseTo(bounds!.y + bounds!.height / 2, 0);
     await page.mouse.move(0, 0);
     await page.mouse.up();
     await page.keyboard.press('Escape');

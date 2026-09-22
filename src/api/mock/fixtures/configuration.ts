@@ -14,7 +14,14 @@ export const runtimeSettings: RuntimeSettings = {
   source: 'config',
   log: {level: 'info', buffered_records: 1024},
   dns_log: {max_records: 2048},
-  flows: {max_flows: 4096, retention_seconds: 300}
+  flows: {max_flows: 4096, retention_seconds: 300},
+  recording: {
+    flows: {allowed: true, mode: 'auto', active: true},
+    logs: {allowed: true, mode: 'auto', active: true},
+    dns_log: {allowed: true, mode: 'auto', active: true},
+    events: {active: true},
+    grace_remaining_seconds: 0
+  }
 };
 
 // Initial routing dictionary for fixture flow evidence and stable rule IDs.

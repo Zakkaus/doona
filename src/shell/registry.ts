@@ -42,11 +42,19 @@ const Settings = lazy(loaders.settings);
 export function warmPage(id: string) {
   void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
 }
-// Preload other pages when the browser is idle.
+// Preload other pages one per idle slice, so parsing them never competes with the page being used; the config
+// page carries the editor and loads on intent (hover, focus, click) only.
 export function warmAllPages() {
-  const warm = () => Object.keys(loaders).forEach(warmPage);
-  if ('requestIdleCallback' in window) requestIdleCallback(warm, {timeout: 3000});
-  else setTimeout(warm, 1000);
+  const queue = Object.keys(loaders).filter(id => id !== 'config');
+  const next = () => {
+    const id = queue.shift();
+    if (!id) return;
+    warmPage(id);
+    if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
+    else setTimeout(next, 250);
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
+  else setTimeout(next, 1000);
 }
 
 type Feature = {

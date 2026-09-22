@@ -40,6 +40,8 @@
   padding: 24px;
   text-align: center;
   color: var(--rp-subtle);
+  /* Loading and empty notices fade in rather than pop; reduced motion zeroes it. */
+  animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
 html,
 body {

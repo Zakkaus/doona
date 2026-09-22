@@ -134,6 +134,11 @@ function Modules(props: ModulesProps) {
                   {t('config.edit')}
                 </Button>
               )}
+              {card.manual && !card.editing && (
+                <Button small quiet tip={t('config.moduleManualTip')} onPress={card.manual}>
+                  {t('config.moduleManual')}
+                </Button>
+              )}
             </span>
           </div>
           <Light small tone={card.muted ? 'muted' : 'info'}>
@@ -295,7 +300,7 @@ function ValidateTab(props: ValidateTabProps) {
         <span className="rp-grow" />
         {canValidate && (
           <Button isPending={validating} isDisabled={blocked} tip={tip} onPress={validate}>
-            <Refresh />
+            <Refresh className="rp-spin-on-press" />
             {t('config.revalidate')}
           </Button>
         )}
