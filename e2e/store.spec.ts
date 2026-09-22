@@ -74,6 +74,7 @@ test('query simulation refuses DNS fan-out above the advertised address limit', 
   handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
+  await page.getByLabel('Destination port', {exact: true}).fill('443');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await expect(page.getByText(/DNS returned more than 1 distinct addresses/)).toBeVisible();
   expect(requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))).toHaveLength(0);
