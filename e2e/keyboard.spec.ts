@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, isLive, mockBackend, test} from './fixtures';
 
 test('search shortcut moves focus into a dismissible dialog', async ({page}) => {
   await page.goto('/#/activity');
@@ -68,7 +68,9 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await page.keyboard.press('ArrowRight');
   await expect(traffic.locator('.recharts-tooltip-wrapper')).toBeVisible();
   await expect(traffic.locator('.recharts-tooltip-item').first()).toContainText(/\d/);
+  // A live backend that has carried no traffic since it started has no donut to step through.
   const donut = page.locator('.rp-donut');
+  if (isLive && !(await donut.count())) return;
   await donut.getByRole('application').focus();
   await page.keyboard.press('ArrowRight');
   await expect(donut.locator('.recharts-tooltip-wrapper')).toBeVisible();
@@ -112,8 +114,12 @@ test('idle traffic has distinct fractional rate labels', async ({page}) => {
 test('charts are named and icon buttons show their tooltip on keyboard focus', async ({page}) => {
   await page.goto('/#/activity');
   // The three cards' charts take focus under their card's name; the tile sparks are decoration and do not.
-  for (const name of ['Traffic', 'Memory', 'Outbound downloads']) await expect(page.getByRole('application', {name, exact: true})).toBeVisible();
-  await expect(page.getByRole('application')).toHaveCount(3);
+  const names = ['Traffic', 'Memory', 'Outbound downloads'];
+  await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
+  // Live, the donut exists only once the backend has carried traffic.
+  if (isLive && !(await page.locator('.rp-donut').count())) names.pop();
+  for (const name of names) await expect(page.getByRole('application', {name, exact: true})).toBeVisible();
+  await expect(page.getByRole('application')).toHaveCount(names.length);
   await page.locator('.rp-search').focus();
   await page.keyboard.press('Tab');
   await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);
