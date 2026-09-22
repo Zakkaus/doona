@@ -1,32 +1,30 @@
 import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
-import {eventStatus, subscribeEvents} from './events';
+import {useEvents} from './events';
 import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
 
 export const EVENT_FEED_LIMIT = 200;
+// Runtime heartbeats arrive every second and would evict every other kind from one bounded ring, so they get a
+// ring of their own; the page merges both by time.
 export function useEventFeed() {
-  const api = getApi();
-  const stream = useMemo(() => {
-    const feed = createFeed<ApiEvent, typeof status>(EVENT_FEED_LIMIT, status, 'replace');
-    return {
-      getSnapshot: feed.getSnapshot,
-      subscribe(notify: () => void) {
-        const stopPublishing = feed.subscribe(notify);
-        const stopStream = subscribeEvents(api, feed.append, () => feed.update(eventStatus(api)));
-        feed.update(eventStatus(api));
-        return () => {
-          stopStream();
-          stopPublishing();
-        };
-      }
-    };
-  }, [api]);
-  const {records: events, ...state} = useSyncExternalStore(stream.subscribe, stream.getSnapshot);
-  return {...state, events};
+  const feeds = useMemo(
+    () => ({
+      changes: createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace'),
+      runtime: createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace')
+    }),
+    []
+  );
+  const changes = useSyncExternalStore(feeds.changes.subscribe, feeds.changes.getSnapshot);
+  const runtime = useSyncExternalStore(feeds.runtime.subscribe, feeds.runtime.getSnapshot);
+  const status = useEvents(event => (event.event === 'runtime.updated' ? feeds.runtime : feeds.changes).append(event));
+  const events = useMemo(
+    () => [...changes.records, ...runtime.records].sort((a, b) => Date.parse(b.data.observed_at) - Date.parse(a.data.observed_at)),
+    [changes.records, runtime.records]
+  );
+  return {...status, events};
 }
-const status = {connected: false, cursor: null as string | null, error: null as Error | null, available: null as boolean | null};
 
 export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLevel; target?: string; paused: boolean; limit?: number}) {
   const api = getApi();

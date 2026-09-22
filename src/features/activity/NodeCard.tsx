@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ErrorMessage, Light, Loading} from '../../ui/ui';
+import {ErrorMessage, Light, Loading, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode} from './useActivityNode';
 import {NodeMenu} from './NodeMenu';
@@ -23,9 +23,11 @@ export function NodeCard() {
             <span className="rp-tile-val">
               <span className="rp-big">{vm.latency}</span>
             </span>
-            <Light small tone={vm.tone}>
-              {vm.status}
-            </Light>
+            <TextTooltip text={vm.healthError}>
+              <Light small tone={vm.tone}>
+                {vm.status}
+              </Light>
+            </TextTooltip>
           </>
         )}
       </div>

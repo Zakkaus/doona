@@ -77,8 +77,27 @@ it('captures IDs without expanding the confirmed selection when live rows arrive
 
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
-  const model = connectionsView([row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
+  const model = connectionsView([row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t, new Map(), false);
   expect(model.detail?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
+});
+
+it('keeps resolved routing diagnostics in details when table columns are hidden', () => {
+  const row = {
+    ...connections.tcp[0],
+    network: 'tcp',
+    outbound: 'proxy',
+    chain: ['group-id', 'node-id'],
+    rule_expression: 'domain(example.com)',
+    rule_id: 'rule-1'
+  };
+  const names = new Map([
+    ['group-id', 'proxy'],
+    ['node-id', 'HK']
+  ]);
+  const detail = connectionsView([row], row, connections, undefined, 'all', 'en-US', t, names, true).detail;
+  expect(detail?.chain).toBe('proxy → HK');
+  expect(detail?.outbound).toBe('proxy');
+  expect(detail?.rule).toEqual({expression: 'domain(example.com)', ruleId: 'rule-1', linked: true});
 });

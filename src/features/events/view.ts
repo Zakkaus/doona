@@ -1,10 +1,23 @@
-import type {ApiEvent} from '../../api/model';
-import {eventKindLabels, eventKinds, eventSummary, localTime} from '../../api/selectors';
+import type {ApiEvent, EventKind} from '../../api/model';
+import {eventKindLabels, eventSummary, localTime} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 
-export function eventsView(events: ApiEvent[], kind: string, connected: boolean, available: boolean | null, limit: number, locale: string, t: LabelFn) {
-  const shown = events.filter(event => kind === 'all' || event.event === kind);
+export function eventsView(
+  events: ApiEvent[],
+  selected: string,
+  connected: boolean,
+  available: boolean | null,
+  limit: number,
+  locale: string,
+  t: LabelFn,
+  advertised: EventKind[]
+) {
+  const kind = selected === 'without-runtime' || advertised.includes(selected as EventKind) ? selected : 'all';
+  const shown = events
+    .filter(event => kind === 'all' || (kind === 'without-runtime' ? event.event !== 'runtime.updated' : event.event === kind))
+    .slice(0, limit);
   return {
+    kind,
     rows: shown.map(event => {
       const summary = eventSummary(event, t);
       return {
@@ -16,7 +29,11 @@ export function eventsView(events: ApiEvent[], kind: string, connected: boolean,
         summary: t(summary.key, summary.params)
       };
     }),
-    kinds: [{id: 'all', label: t('event.allKinds')}, ...eventKinds.map(id => ({id, label: t(eventKindLabels[id])}))],
+    kinds: [
+      {id: 'without-runtime', label: t('event.withoutRuntime')},
+      {id: 'all', label: t('event.allKinds')},
+      ...advertised.map(id => ({id, label: t(eventKindLabels[id])}))
+    ],
     // Before capabilities answer nothing has failed yet; a warning only fits a stream that was expected.
     status: {
       tone: connected ? ('ok' as const) : available === null ? ('muted' as const) : ('warn' as const),

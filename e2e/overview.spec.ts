@@ -108,3 +108,20 @@ test('an accepted source reload respects Retry-After and retains the draft on te
   expect(write.postDataJSON()).toEqual({content: draft});
   expect(write.headers()['if-match']).toBe(`"${source.content_sha256}"`);
 });
+
+test('backend feature labels and statuses use one stacked layout', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/overview');
+  const card = page.getByRole('region', {name: 'Backend features', exact: true});
+  await expect(card.getByText('Connections', {exact: true})).toBeVisible();
+  const rows = await card.locator('.rp-list-columns > div').evaluateAll(elements =>
+    elements.map(element => {
+      const [label, status] = [...element.children].map(child => child.getBoundingClientRect());
+      return {label: {left: label.left, bottom: label.bottom}, status: {left: status.left, top: status.top}};
+    })
+  );
+  for (const row of rows) {
+    expect(row.status.top).toBeGreaterThanOrEqual(row.label.bottom);
+    expect(row.status.left).toBeCloseTo(row.label.left, 0);
+  }
+});

@@ -1,6 +1,16 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
-import {chainLabel, chainNames, connectionStates, localTime, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {
+  chainLabel,
+  chainNames,
+  connectionStates,
+  localTime,
+  outboundLabel,
+  relativeStart,
+  sourceIp,
+  type MessageRef,
+  type OutboundNames
+} from '../../api/selectors';
 import type {Translator as LabelFn} from '../../i18n';
 import {word} from '../flows/view';
 import type {Key} from '../../i18n/messages';
@@ -159,7 +169,9 @@ export function connectionsView(
   src: string | undefined,
   rule: string,
   locale: string,
-  t: LabelFn
+  t: LabelFn,
+  names: OutboundNames,
+  rulesListed: boolean
 ) {
   const seen = (values: Array<string | null | undefined>) => {
     const counts = new Map<string, number>();
@@ -192,6 +204,9 @@ export function connectionsView(
           title: current.domain || current.dst || current.id,
           tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
           status: `${t(connectionStates[current.state])} · ${current.network.toUpperCase()}`,
+          chain: chainLabel(current, t, names),
+          outbound: outboundLabel(current.outbound, t),
+          rule: {expression: current.rule_expression, ruleId: current.rule_id, linked: rulesListed},
           fields: connectionDetails(current, locale).map(
             ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
           ),

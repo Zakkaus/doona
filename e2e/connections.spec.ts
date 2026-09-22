@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
@@ -306,6 +306,23 @@ test('closing a connection removes it from the list and clears the selection', a
   await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('cannot be closed');
   await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
+});
+
+test('phone details retain routing diagnostics and omit unsupported flow actions', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.flows.available = false;
+  const connections = await api.connections();
+  const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText('Chain', {exact: true})).toBeVisible();
+  await expect(drawer.getByText(row.rule_expression!, {exact: true})).toBeVisible();
+  await expect(drawer.getByRole('link', {name: `Open ${row.rule_expression!} in the rule list`, exact: true})).toHaveAttribute(
+    'href',
+    '#/rules?tab=list&rule=' + encodeURIComponent(row.rule_id!)
+  );
+  await expect(drawer.getByRole('button', {name: 'View flow', exact: true})).toHaveCount(0);
 });
 
 test('the connection list exports the filtered rows as CSV', async ({page}) => {

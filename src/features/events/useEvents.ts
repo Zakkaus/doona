@@ -1,21 +1,23 @@
 import {useMemo, useState} from 'react';
-import {EVENT_FEED_LIMIT, refetchAll, useEventFeed} from '../../store';
+import {EVENT_FEED_LIMIT, refetchAll, useCapabilities, useEventFeed} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName} from '../../ui/ui';
+import {downloadFile, exportName, useLinked} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';
 
 export function useEvents() {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const [kind, setKind] = useState('all');
+  const capabilities = useCapabilities();
+  const kinds = capabilities.data?.resources.events.kinds;
+  const [kind, setKind] = useState('without-runtime');
   const feed = useEventFeed();
   const view = useMemo(
-    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t),
-    [feed.events, kind, feed.connected, feed.available, locale, t]
+    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? []),
+    [feed.events, kind, feed.connected, feed.available, locale, t, kinds]
   );
+  useLinked(view.kind, setKind);
   return {
     ...view,
-    kind,
     setKind,
     cursor: feed.cursor,
     error: feed.error,

@@ -54,6 +54,7 @@ export function useConnections({go, query}: PageProps) {
   const capabilities = useCapabilities();
   const canClose = capabilities.data?.resources.connections.can_close === true;
   const rulesListed = capabilities.data?.resources.rules.available === true;
+  const canViewFlow = capabilities.data?.resources.flows.available === true;
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
@@ -71,7 +72,10 @@ export function useConnections({go, query}: PageProps) {
     [rows, network, out, rule, needle, names]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  const model = useMemo(() => connectionsView(rows, cur, resource.data, src, rule, locale, t), [rows, cur, resource.data, src, rule, locale, t]);
+  const model = useMemo(
+    () => connectionsView(rows, cur, resource.data, src, rule, locale, t, names, rulesListed),
+    [rows, cur, resource.data, src, rule, locale, t, names, rulesListed]
+  );
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
@@ -135,6 +139,7 @@ export function useConnections({go, query}: PageProps) {
     loading: resource.loading && !resource.data,
     truncated: !!resource.data?.truncated,
     canClose,
+    canViewFlow,
     closeAll: {
       confirmationText: confirmed?.query
         ? t(
@@ -161,7 +166,7 @@ export function useConnections({go, query}: PageProps) {
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
     showFlow: () => {
-      if (model.detail) go('rules', model.detail.flowQuery);
+      if (model.detail && canViewFlow) go('rules', model.detail.flowQuery);
     },
     onlyClient: () => {
       if (model.detail?.source) {

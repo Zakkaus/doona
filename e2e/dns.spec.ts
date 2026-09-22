@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {downloadText, expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest} from '@playwright/test';
 
@@ -127,4 +127,69 @@ browserTest('a transient DNS refusal stays pending until the advertised retry su
   expect(times[1] - times[0]).toBeGreaterThanOrEqual(1000);
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('paging holds the DNS window through new arrivals until Refresh', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 2;
+  const seed = await api.dnsLog();
+  const record = seed.records[0];
+  let arrived = false;
+  let heads = 0;
+  handlers['GET dns/log'] = async request => {
+    const cursor = new URL(request.url()).searchParams.get('cursor');
+    if (!cursor) heads++;
+    const ids = cursor ? ['d2', 'd1'] : arrived ? ['d5', 'd4'] : ['d4', 'd3'];
+    return {...seed, records: ids.map(id => ({...record, id, question: {...record.question, name: id + '.test'}})), next_cursor: cursor ? null : 'older'};
+  };
+  await page.clock.install();
+  await page.goto('/#/dns?tab=log');
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  const rows = page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader');
+  await expect(rows).toHaveText(['d4.test', 'd3.test', 'd2.test', 'd1.test']);
+  const before = heads;
+  arrived = true;
+  await page.clock.fastForward(5100);
+  await expect.poll(() => heads).toBeGreaterThan(before);
+  await expect(page.getByText('Newer records are waiting. Refresh replaces the loaded records.', {exact: true})).toBeVisible();
+  await expect(rows).toHaveText(['d4.test', 'd3.test', 'd2.test', 'd1.test']);
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Export CSV'}).click();
+  const body = await downloadText(await downloading);
+  for (const id of ['d4', 'd3', 'd2', 'd1']) expect(body).toContain(id + '.test');
+  expect(body).not.toContain('d5.test');
+  await page.getByRole('tabpanel', {name: 'Resolution log'}).getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect(rows).toHaveText(['d5.test', 'd4.test']);
+  await expect(page.getByRole('button', {name: 'Load older records'})).toBeVisible();
+  await expect(page.getByText(/Newer records are waiting/)).toHaveCount(0);
+});
+
+test('DNS source filters send IP literals only on head and older requests', async ({page}) => {
+  const {api, capabilities, handlers, requests} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 1;
+  const seed = await api.dnsLog();
+  handlers['GET dns/log'] = async request => ({
+    ...seed,
+    records: seed.records.slice(0, 1),
+    next_cursor: new URL(request.url()).searchParams.has('cursor') ? null : 'older'
+  });
+  await page.goto('/#/dns?tab=log');
+  const source = page.getByRole('searchbox', {name: 'Source', exact: true});
+  await source.fill('2001:db8::1');
+  await expect.poll(() => requests.filter(request => new URL(request.url()).searchParams.get('src') === '2001:db8::1').length).toBeGreaterThan(0);
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  await expect
+    .poll(
+      () =>
+        requests.filter(request => {
+          const params = new URL(request.url()).searchParams;
+          return params.get('src') === '2001:db8::1' && params.has('cursor');
+        }).length
+    )
+    .toBe(1);
+  await source.fill('10.0.0.12:53211');
+  await expect(page.getByRole('button', {name: 'Load older records'})).toBeVisible();
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  const logRequests = requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/log');
+  expect(logRequests.every(request => !new URL(request.url()).searchParams.get('src')?.includes('53211'))).toBe(true);
 });

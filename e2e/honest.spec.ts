@@ -10,8 +10,10 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');
-  // The stream reconnects on the new page; the next tick lands after the mock's five-second cadence.
-  await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
+  // Runtime heartbeats are hidden by default; the stream reconnects on the new page and the next tick lands
+  // after the mock's five-second cadence.
+  await page.getByRole('button', {name: 'Exclude runtime updates Kind', exact: true}).click();
+  await page.getByRole('option', {name: 'Runtime updated', exact: true}).click();
   await page.clock.fastForward(5100);
   await page.clock.fastForward(5100);
   await expect(page.locator('.rp-table [role=row][data-key]').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');

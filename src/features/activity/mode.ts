@@ -37,24 +37,32 @@ export function writeMode(text: string, next: OutboundMode): string {
   const indent = body.match(/\n([ \t]+)\S/)?.[1] ?? '    ';
   let at = block.open + 1;
   if (text[at] === '\n') at++;
-  // Mandatory rules retain precedence over the mode catch-all.
-  for (let i = 4; i < tokens.length; i++) {
-    const token = tokens[i];
-    if (token.from <= block.open || token.to > block.close || token.depth !== 1 || token.kind !== 'symbol' || text[token.from] !== ')') continue;
-    const arrow = tokens[i - 4],
-      target = tokens[i - 3],
-      open = tokens[i - 2],
-      modifier = tokens[i - 1];
-    if (
-      arrow.parens !== 0 ||
-      text.slice(arrow.from, arrow.to) !== '->' ||
-      target.kind === 'comment' ||
-      text.slice(open.from, open.to) !== '(' ||
-      text.slice(modifier.from, modifier.to) !== 'must'
-    )
+  let ordinary = false;
+  // Mandatory rules must form a prefix or the catch-all cannot preserve their precedence.
+  for (let i = 0; i < tokens.length; i++) {
+    const arrow = tokens[i];
+    if (arrow.from <= block.open || arrow.to > block.close || arrow.depth !== 1 || arrow.parens !== 0 || text.slice(arrow.from, arrow.to) !== '->') continue;
+    const target = tokens[i + 1],
+      open = tokens[i + 2],
+      modifier = tokens[i + 3],
+      close = tokens[i + 4];
+    const mandatory =
+      target &&
+      open &&
+      modifier &&
+      close &&
+      text.slice(open.from, open.to) === '(' &&
+      text.slice(modifier.from, modifier.to) === 'must' &&
+      text.slice(close.from, close.to) === ')';
+    if (!mandatory) {
+      ordinary = true;
       continue;
-    const end = text.indexOf('\n', token.to);
-    at = end !== -1 && end < block.close ? end + 1 : token.to;
+    }
+    if (ordinary) throw new LocalError('act.modeInterleaved');
+    const end = text.indexOf('\n', close.to);
+    at = end !== -1 && end < block.close ? end + 1 : close.to;
+    const following = tokens[i + 5];
+    if (following && following.from < at && following.kind !== 'comment') throw new LocalError('act.modeInterleaved');
   }
   const outbound = next.mode === 'direct' ? 'direct' : next.target;
   return text.slice(0, at) + (text[at - 1] === '\n' ? '' : '\n') + `${indent}l4proto(tcp, udp) -> ${outbound} ${MODE_MARK}\n` + text.slice(at);

@@ -40,12 +40,13 @@ export function Logs() {
         loading={vm.loading}
         empty={t('log.empty')}
         cols={[
-          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, render: record => <span className="rp-code">{record.timestamp}</span>},
+          {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, drop: 2, render: record => <span className="rp-code">{record.timestamp}</span>},
           {
             id: 'level',
             label: t('log.level'),
             minWidth: 90,
             grow: 0,
+            drop: 3,
             render: record => (
               <Light small tone={record.tone}>
                 {record.levelText}
@@ -59,7 +60,7 @@ export function Logs() {
             minWidth: 280,
             grow: 3,
             isRowHeader: true,
-            render: record => <TextTooltip text={record.tooltip}>{record.message}</TextTooltip>
+            render: record => <TextTooltip>{record.message}</TextTooltip>
           }
         ]}
       />

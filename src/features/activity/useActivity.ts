@@ -15,13 +15,13 @@ export function useActivity() {
   const p = usePalette();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime();
+  const runtime = useRuntime(resources?.runtime.available === true);
   const outbounds = useRuntimeOutbounds(resources?.runtime_outbounds.available === true);
   const memory = useRuntimeMemory(resources?.runtime_memory.available === true);
   const [range, setRange] = useState('live');
   const [by, setBy] = useState('dev');
   const windowSeconds = trafficWindows[range] ?? 120;
-  const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
   const connections = useConnections(undefined, resources?.connections.available === true);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   const polledTraffic = useTrafficSamples(runtime.data);
@@ -46,7 +46,10 @@ export function useActivity() {
   const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
   const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
-  const view = useMemo(() => activityView(runtime.data, memory.data, t), [runtime.data, memory.data, t]);
+  const view = useMemo(
+    () => activityView(runtime.data, memory.data, t, resources?.runtime.available),
+    [runtime.data, memory.data, t, resources?.runtime.available]
+  );
   const outboundView = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
   const ranking = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
   const notices = useNotices();
@@ -72,11 +75,11 @@ export function useActivity() {
     memoryBounds,
     trafficTimestamps: series.timestamps,
     memoryTimestamps: memoryHistory.timestamps,
-    ready: !!runtime.data,
+    ready: !!capabilities.data,
     error: runtime.error ?? capabilities.error,
     retry: () => {
       capabilities.refetch();
-      runtime.refetch();
+      if (resources?.runtime.available) runtime.refetch();
     },
     showMemory: !!resources?.runtime_memory.available,
     history: {

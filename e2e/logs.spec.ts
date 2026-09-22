@@ -63,3 +63,27 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   await expect(rows.filter({hasText: /DNS slow|Received after resume/})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Export', exact: true})).toBeDisabled();
 });
+
+test('phone logs keep the message visible and reveal its full text and fields', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  const message = 'A long diagnostic message '.repeat(20) + 'final detail';
+  await page.route('**/api/v1/logs?*', route =>
+    fulfillStream(route, [
+      {id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}},
+      {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'warn', target: 'dns', message, fields: {attempts: 2}}}
+    ])
+  );
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/logs');
+  const grid = page.getByRole('grid', {name: 'Logs', exact: true});
+  await expect(grid.getByRole('columnheader', {name: /^Message /})).toBeInViewport({ratio: 1});
+  // The truncated cell carries the tooltip once it has measured its overflow.
+  const cell = grid.getByRole('rowheader').locator('.rp-truncate');
+  await expect.poll(() => cell.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(async () => {
+    await cell.hover();
+    await expect(page.getByRole('tooltip')).toContainText(message, {timeout: 1500});
+  }).toPass();
+  await expect(page.getByRole('tooltip')).toContainText('attempts=2');
+});

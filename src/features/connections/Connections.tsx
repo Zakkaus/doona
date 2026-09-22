@@ -1,5 +1,19 @@
 import {Menu, MenuSection, Header} from 'react-aria-components';
-import {Badge, Button, DetailPanel, Kv, LabeledSelect, Light, MenuButton, MenuChoice, Segmented, TextField, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DetailPanel,
+  Kv,
+  LabeledSelect,
+  Light,
+  MenuButton,
+  MenuChoice,
+  RuleRef,
+  Segmented,
+  TextField,
+  ErrorMessage,
+  TextTooltip
+} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
@@ -101,8 +115,18 @@ export function Connections(props: PageProps) {
                 {cur.status}
               </Light>
               <Kv items={cur.fields} />
+              <Kv
+                items={[
+                  [t('ui.outbound'), cur.outbound],
+                  [t('conn.chain'), cur.chain]
+                ]}
+              />
+              <div className="rp-list">
+                <span className="rp-label">{t('conn.rule')}</span>
+                <RuleRef {...cur.rule} />
+              </div>
               <div className="rp-cluster">
-                <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>
+                {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
                 {cur.source && (
                   <Button quiet onPress={vm.onlyClient}>
                     {t('conn.onlyThisClient')}

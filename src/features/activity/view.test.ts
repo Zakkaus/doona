@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {activityOutbounds, activityRanking, activityView, modeView, nodeView, noticeRows, trafficState} from './view';
+import {activityOutbounds, activityRanking, activityView, interestingNotice, modeView, nodeView, noticeRows, trafficState} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
@@ -27,6 +27,8 @@ it('chooses measured nodes and preserves an explicitly selected unavailable node
   const unavailable = nodeView(nodes, 'jp-01', t);
   expect(unavailable.tone).toBe('err');
   expect(unavailable.latency).toBe('—');
+  expect(unavailable.status).toBe(t('act.unavailable'));
+  expect(unavailable.healthError).toBe(nodes.find(node => node.id === 'jp-01')?.health[0].error);
   expect(nodeView([], '', t).tone).toBe('muted');
 });
 
@@ -41,11 +43,15 @@ it('stages global targets without changing the current mode and detects an uncha
   expect(staged.incomplete).toBe(false);
 });
 
-it('prepares notice summaries without discarding event identity', () => {
-  const rows = noticeRows([{id: 'ready', event: 'stream.ready', data: {instance_id: 'instance', observed_at: '2026-01-01T00:00:00Z'}}], t);
-  expect(rows[0]).toMatchObject({id: 'ready', tone: 'info'});
-  expect(rows[0].summaryText).toContain('stream.ready');
-  expect(rows[0].summaryText).toContain('instance');
+it('localizes notice kinds and shortens UUIDs without changing event identity', () => {
+  const event = {id: 'ready', event: 'stream.ready' as const, data: {instance_id: '8936fe2c-bbbd-4c16-8336-7a5eb3119589', observed_at: '2026-01-01T00:00:00Z'}};
+  const [row] = noticeRows([event], t);
+  expect(row.id).toBe(event.id);
+  expect(row.summaryText).toContain(t('event.k.streamReady'));
+  expect(row.summaryText).toContain('8936fe2c');
+  expect(row.summaryText).not.toContain(event.data.instance_id);
+  expect(interestingNotice(event)).toBe(true);
+  expect(interestingNotice({id: 'runtime', event: 'runtime.updated', data: {...event.data, href: '/api/v1/runtime'}})).toBe(false);
 });
 
 it('selects duplicate node labels by ID and preserves independent health', () => {
@@ -65,4 +71,11 @@ it('renders measured local traffic even without backend history', () => {
   expect(trafficState({down: [12], up: [1]}, true, true)).toBe('ready');
   expect(trafficState({down: [null], up: [null]}, false, false)).toBe('unavailable');
   expect(trafficState({down: [], up: []}, true, true)).toBe('empty');
+});
+
+it('distinguishes unsupported runtime from loading without hiding independent memory metrics', () => {
+  const view = activityView(undefined, runtimeMemory, t, false);
+  expect(view.status.text).toBe(t('act.modeUnavailable'));
+  expect(view.rss).not.toBe('—');
+  expect(activityView(undefined, undefined, t).status.text).toBe(t('act.loading'));
 });

@@ -119,7 +119,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           {
             id: 'a',
             label: t('ui.delete'),
-            minWidth: 56,
+            minWidth: 80,
             grow: 0,
             render: entry => (
               <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => vm.remove(entry.id)}>
@@ -157,6 +157,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         )}
       </div>
       {vm.error && <ErrorMessage error={vm.error} />}
+      {vm.newerWaiting && <p className="rp-label">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable
           label={t('dns.log')}

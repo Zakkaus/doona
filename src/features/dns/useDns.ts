@@ -3,10 +3,11 @@ import {getApi} from '../../api';
 import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
+import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
-import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {within} from '../../shell/route';
 import {pageSize} from '../../store/resource';
 import {queryTypes} from './query';
@@ -106,32 +107,32 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const [src, setSrc] = useState('');
   const api = getApi();
   const capabilities = useCapabilities();
-  const filter = {name: useDebounced(name, 300), type, src: useDebounced(src, 300)};
+  const filter = {name: useDebounced(name, 300), type, src: ipLiteral(useDebounced(src, 300))};
   const key = JSON.stringify(filter);
   const log = useDnsLogResource(filter, enabled === true);
-  // Older pages stay appended behind whatever the poll delivers next, so new resolutions keep arriving.
-  const [older, setOlder] = useState<DnsLogList[]>([]);
+  const [held, setHeld] = useState<DnsLogList | null>(null);
   const paging = useAction<'older'>({scope: key});
   useLinked(key, () => {
-    setOlder([]);
+    setHeld(null);
     paging.cancel();
   });
-  const data = useMemo(() => (log.data ? older.reduce(appendDnsLog, log.data) : undefined), [log.data, older]);
+  const {data, newerWaiting} = useMemo(() => dnsLogWindow(log.data, held), [log.data, held]);
   const loadOlder = () =>
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
+      setHeld(data);
       const limit = pageSize(capabilities.data, capabilities.data?.resources.dns_log.max_page_size);
       const page = await api.dnsLog(
         {
           name: filter.name.trim() || undefined,
           type: type === 'all' ? undefined : type,
-          src: filter.src.trim() || undefined,
+          src: filter.src,
           cursor: data.next_cursor,
           limit: limit === undefined ? undefined : Math.min(200, limit)
         },
         signal
       );
-      if (!signal.aborted) setOlder(pages => [...pages, page]);
+      if (!signal.aborted) setHeld(appendDnsLog(data, page));
     });
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
@@ -140,6 +141,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   return {
     ...view,
     name,
+    newerWaiting,
     setName,
     type,
     setType,
@@ -155,7 +157,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
     loadOlder,
     refresh: () => {
       paging.cancel();
-      setOlder([]);
+      setHeld(null);
       log.refetch();
     },
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')
