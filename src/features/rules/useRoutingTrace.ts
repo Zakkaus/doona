@@ -32,9 +32,9 @@ export function useRoutingTrace() {
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
   const [form, setForm] = useState({
     network: 'tcp' as 'tcp' | 'udp',
-    domain: 'api.telegram.org',
+    domain: '',
     dst_ip: '',
-    dst_port: '443',
+    dst_port: '',
     src_ip: '',
     src_port: '',
     pname: '',

@@ -346,9 +346,10 @@ test('trace headings and selected leaves retain the submitted domain and network
     await route.fulfill({json: response});
   });
   await page.goto('/#/rules?tab=trace');
+  await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
+  await page.getByLabel('Destination port', {exact: true}).fill('443');
   await page.getByRole('button', {name: / Resolution mode$/}).click();
   await page.getByRole('option', {name: /No resolution/}).click();
-  await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
   const tracing = page.waitForRequest('**/routing/trace');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await tracing;
@@ -652,4 +653,139 @@ test('routing map selections separate missing outbounds from a backend name of u
   await known.click();
   await expect(known).toHaveAttribute('aria-pressed', 'true');
   await expect(missing).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('node creation freezes its submitted draft until the response arrives', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/nodes', async route => {
+    await gate;
+    await route.fulfill({json: await api.createNode(route.request().postDataJSON())});
+  });
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('submitted-node');
+  await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#submitted-node');
+  const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/nodes'));
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await request;
+  try {
+    await expect(dialog.getByLabel('Name')).toBeDisabled();
+    await expect(dialog.getByLabel('Node link')).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page
+      .locator('.rp-table')
+      .nth(1)
+      .getByRole('row', {name: /submitted-node/})
+  ).toBeVisible();
+});
+
+test('redacted rule labels edit accepted source and freeze the draft through validation', async ({page}) => {
+  const api = await backend(page);
+  await page.route('**/api/v1/rules', async route => {
+    const rules = await api.rules();
+    rules.rules = rules.rules.map(rule => ({...rule, expression: rule.kind === 'fallback' ? 'fallback' : 'domain(<redacted>)'}));
+    await route.fulfill({json: rules});
+  });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await gate;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+  });
+  await page.route('**/api/v1/config/sources/*', async route => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    await route.fulfill({json: await api.replaceConfigSource(id, route.request().postDataJSON().content, route.request().headers()['if-match'])});
+  });
+  await page.route('**/api/v1/operations/*', async route => {
+    await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
+  });
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  await page.goto('/#/rules?tab=list');
+  await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('accepted.example');
+  const validating = page.waitForRequest('**/config/validate');
+  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await validating;
+  try {
+    await expect(dialog.getByRole('textbox', {name: 'Values', exact: true})).toBeDisabled();
+    await expect(dialog.getByRole('radio', {name: 'Expression', exact: true})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Match by$/})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Outbound$/})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Insert$/})).toBeDisabled();
+    await expect(dialog.getByRole('switch', {name: 'must', exact: true})).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
+  const rows = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=row][data-key]');
+  await expect(rows).toHaveCount(10);
+  await rows.nth(8).getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
+});
+
+test('withheld rule source disables editing and explains the restriction', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  config.sources = config.sources.map(source => ({...source, content: undefined}));
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/rules?tab=list');
+  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
+});
+
+test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {
+  const api = await backend(page);
+  const dictionary = await api.rules();
+  dictionary.rules = Array.from({length: 4096}, (_, i) => ({...dictionary.rules[0], rule_id: String(i), expression: `rule-${i}`, outbound: 'direct'}));
+  const groups = await api.groups();
+  groups[0].policy = {...groups[0].policy, kind: 'urltest', native: 'min_avg10'};
+  const flows = {...(await api.flows()), flows: []};
+  await page.route('**/api/v1/rules', route => route.fulfill({json: dictionary}));
+  await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
+  await page.goto('/#/rules?tab=map');
+  const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
+  await expect(leaves).toHaveCount(30);
+  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('min_avg10');
+  const first = await leaves.first().boundingBox();
+  await page.getByRole('button', {name: 'Show 30 more items', exact: true}).click();
+  await expect(leaves).toHaveCount(60);
+  const after = await leaves.first().boundingBox();
+  expect(after!.width).toBe(first!.width);
+  expect(after!.height).toBe(first!.height);
+  await leaves.nth(59).click();
+  await expect(leaves.nth(59)).toHaveAttribute('aria-pressed', 'true');
+  await leaves.nth(59).press('Escape');
+  await expect(page).not.toHaveURL(/path=/);
+  await page.getByRole('button', {name: 'Show only the first 30 items', exact: true}).click();
+  await expect(leaves).toHaveCount(30);
+});
+
+test('flow input identifiers stay literal beside localized enums and incomplete coverage', async ({page}) => {
+  const api = await backend(page);
+  const detail = await api.flow('flow-1');
+  const input = detail.trace.steps.find(step => step.stage === 'input')!;
+  input.data.values = {...input.data.values, domain: 'cache', pname: 'drop'};
+  await page.route('**/api/v1/flows/flow-1', route => route.fulfill({json: detail}));
+  await page.goto('/#/rules?tab=flows&id=flow-1');
+  const step = page.locator('.rp-step').filter({hasText: 'Input'});
+  await expect(step.getByText('cache', {exact: true})).toBeVisible();
+  await expect(step.getByText('drop', {exact: true})).toBeVisible();
+  await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('not fully observed');
 });

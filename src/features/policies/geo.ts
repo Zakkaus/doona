@@ -1,5 +1,4 @@
-// Region guessed from a node name: common airport/ISO codes, English names and Chinese names. Used only to
-// group and filter node lists by region; unknown names fall into their own bucket.
+// Name-based region guesses are only for grouping and filtering, not geolocation.
 const TABLE: Array<[string, string[]]> = [
   ['HK', ['hk', 'hkg', 'hongkong', 'hong kong', '香港', '港']],
   ['TW', ['tw', 'tpe', 'taiwan', 'taipei', '台灣', '台湾', '臺灣', '台北']],

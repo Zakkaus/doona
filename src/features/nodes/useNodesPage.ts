@@ -22,6 +22,8 @@ export function useNodesPage({go, query}: PageProps) {
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
   const session = useRef(0);
+  const submitting = useRef<NodeDialog | null>(null);
+  const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
   useLinked(guard.revision, () => {
     session.current++;
@@ -77,7 +79,9 @@ export function useNodesPage({go, query}: PageProps) {
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   const submit = async (close: () => void) => {
-    if (!dialog) return;
+    if (!dialog || submitting.current) return;
+    submitting.current = dialog;
+    setPendingDialog(dialog);
     const submitted = session.current;
     try {
       if (dialog.kind === 'provider') {
@@ -119,6 +123,9 @@ export function useNodesPage({go, query}: PageProps) {
       }
     } catch (error) {
       fail(error);
+    } finally {
+      submitting.current = null;
+      setPendingDialog(null);
     }
   };
   const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode';
@@ -186,12 +193,14 @@ export function useNodesPage({go, query}: PageProps) {
       setDialog(next);
     },
     form,
-    setForm,
+    setForm: (next: typeof form) => {
+      if (submitting.current !== dialog) setForm(next);
+    },
     removing,
     dialogTitle,
     formValid,
     submit,
-    pending: !!manage.busy || (dialog?.kind === 'group' && source.busy),
+    pending: dialog !== null && pendingDialog === dialog,
     submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : ''
   };

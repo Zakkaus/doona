@@ -1,9 +1,6 @@
 import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
 import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../api/selectors';
 
-// The routing tree as the config lays it out, weighted by the flows the backend retained:
-// rule → outbound (a policy group, or direct / block) → the node the outbound currently selects.
-// Seen by client instead, the leaves are the source addresses the flows came from.
 export type TreeBy = 'rule' | 'client';
 export type TreeItem = {id: string; label: string; count: number; unknown?: boolean};
 type TreeLeaf = TreeItem & {outbound: string | null; must: boolean; fallback: boolean};
@@ -21,9 +18,7 @@ const terminal = (outbound: string | null) => outbound === 'direct' || outbound 
 
 type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
-// A rule is identified by the backend's rule id where it gives one, so a flow joins the configured rule it
-// matched even when two rules display alike; the expression is only the label. A retained flow from an
-// earlier generation whose id now names a different rule keeps its own entry, keyed by id and expression.
+// Retained flows whose rule ID now has another expression keep a separate historical entry.
 const HISTORICAL = '\u0000';
 function ruleKey(flow: FlowSummary, rules: ReadonlyMap<string, RoutingRule>): string | undefined {
   if (!flow.rule_id) return undefined;
@@ -52,8 +47,7 @@ function stagePart(
     }
   }
 }
-// A missing entry has an empty identity, which no backend id or label can be, so it never collides with a value
-// literally named "unknown".
+// Empty identities distinguish missing values from identifiers literally named "unknown".
 const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => stage + ':' + (part.unknown ? '' : (part.key ?? part.label));
 
 export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames, rules: RoutingRule[]): FlowSummary[] {
@@ -66,8 +60,6 @@ export function flowsThrough(flows: FlowSummary[], id: string, names: NodeNames,
   });
 }
 
-// What the flow records call a pinned tree id: the rule's expression, the node's name, the outbound as shown,
-// the client's address.
 export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
   const stage = id.slice(0, id.indexOf(':'));
   const key = id.slice(id.indexOf(':') + 1);
@@ -109,8 +101,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     }
     return entry;
   };
-  // An outbound that names a group follows its selection through nested groups to the node it ends at, on one
-  // transport throughout: TCP where the group selects one, else UDP.
+  // Follow one transport throughout the selection chain: TCP when selected, otherwise UDP.
   const outboundItem = (name: string, unknown = false) => {
     const id = stageId('outbound', {label: name, unknown});
     let entry = outboundItems.get(id);
@@ -160,8 +151,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
       previous = current;
     }
   }
-  // Groups nothing routes to still belong on the tree, after the used ones; a group only reached through
-  // another group's selection is drawn inside that outbound instead.
+  // Unused groups remain visible unless nested in another outbound's selection.
   for (const group of groups) outboundItem(group.name);
   const referenced = new Set([...leafItems.values()].map(leaf => leaf.outbound));
   const nested = new Set([...outboundItems.values()].flatMap(outbound => outbound.groups.slice(1).map(group => group.name)));
@@ -209,8 +199,7 @@ export function parentOf(tree: RoutingTree, item: TreeLeaf | TreeOutbound): stri
   return treeIndex(tree).parents.get(item.id) ?? null;
 }
 
-// Rows of the drawn tree: one leaf per row in config order, grouped under their outbound; a parent sits level
-// with the middle of its children. Nothing crosses.
+// Parents sit midway between their children, whose rows retain configuration order.
 export function treeRows(tree: RoutingTree): {rows: number; at: Map<string, number>} {
   const at = new Map<string, number>();
   let row = 0;
@@ -240,4 +229,25 @@ export function treeRows(tree: RoutingTree): {rows: number; at: Map<string, numb
   for (const leaf of tree.leaves) if (!parents.has(leaf.id)) roots.add(leaf.id);
   for (const root of roots) place(root);
   return {rows: row, at};
+}
+
+export function treeReach(index: TreeIndex, id: string) {
+  const items = new Set([id]);
+  const edges = new Set<TreeLink>();
+  for (const [links, to] of [
+    [index.outgoing, 'target'],
+    [index.incoming, 'source']
+  ] as const) {
+    const queue = [id];
+    for (const current of queue)
+      for (const link of links.get(current) ?? [])
+        if (!edges.has(link)) {
+          edges.add(link);
+          if (!items.has(link[to])) {
+            items.add(link[to]);
+            queue.push(link[to]);
+          }
+        }
+  }
+  return {items, edges};
 }
