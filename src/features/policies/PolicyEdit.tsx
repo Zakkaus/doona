@@ -2,6 +2,7 @@ import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {Button, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PolicyEditView} from './usePolicyEdit';
+import {PolicyPicker} from './PolicyPicker';
 export function PolicyEdit({model: m}: {model: PolicyEditView}) {
   const t = useT();
   return (
@@ -36,7 +37,7 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
               {m.problem.text}
             </InlineAlert>
           )}
-          <TextField label={t('policy.policy')} value={m.policy} onChange={m.setPolicy} description={m.policyHint} spellCheck={false} />
+          <PolicyPicker value={m.policy} onChange={m.setPolicy} />
           {m.filters.map(field => (
             <TextField
               key={field.id}

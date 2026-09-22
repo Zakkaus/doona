@@ -11,11 +11,12 @@ test('a node joins an existing group or a new one through the name filter', asyn
   await page.getByRole('menuitemradio', {name: 'New group...', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('backup');
+  await expect(dialog.getByRole('button', {name: /How it chooses/})).toContainText('Fastest on average');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sg-01 added to backup'})).toBeVisible();
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText('resilient {\n    filter: name(hk-01, sg-01, us-01, jp-01)\n    policy: min_avg10\n  }');
-  await expect(page.locator('.cm-content')).toContainText('backup {\n    filter: name(sg-01)\n  }');
+  await expect(page.locator('.cm-content')).toContainText('backup {\n    filter: name(sg-01)\n    policy: min_moving_avg\n  }');
 });
 
 test('a group card edits its policy and filters in the main source', async ({page}) => {
@@ -24,21 +25,24 @@ test('a group card edits its policy and filters in the main source', async ({pag
   await card.getByRole('button', {name: 'Edit', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveValue('name(jp-01, hk-02)');
-  await expect(dialog.getByRole('textbox', {name: 'Policy', exact: true})).toHaveValue('min_last_delay');
-  await dialog.getByRole('textbox', {name: 'Policy', exact: true}).fill('random');
+  const policy = dialog.getByRole('button', {name: /How it chooses/});
+  // A policy the picker does not offer stays selected as written.
+  await expect(policy).toContainText('min_last_delay');
+  await policy.click();
+  await page.getByRole('option', {name: /^First that works/}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 2'}).fill("subtag('sub-c')");
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Config updated for gaming');
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText("gaming {\n    filter: name(jp-01, hk-02)\n    filter: subtag('sub-c')\n    policy: random\n  }");
+  await expect(page.locator('.cm-content')).toContainText("gaming {\n    filter: name(jp-01, hk-02)\n    filter: subtag('sub-c')\n    policy: fallback\n  }");
 });
 
 test('editing only filters preserves the native policy spelling', async ({page}) => {
   await page.goto('/#/policies');
   await page.getByRole('region', {name: 'resilient'}).getByRole('button', {name: 'Edit', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
-  await expect(dialog.getByRole('textbox', {name: 'Policy', exact: true})).toHaveValue('min_avg10');
+  await expect(dialog.getByRole('button', {name: /How it chooses/})).toContainText('min_avg10');
   await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Config updated for resilient');

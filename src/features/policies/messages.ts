@@ -120,7 +120,6 @@ export const messages = defineMessages({
     'policy.edit': '編輯',
     'policy.editTitle': '編輯群組 {name}',
     'policy.editHelp': '改寫主組態 group 區段中此群組的策略與篩選條件，保留其他欄位；驗證通過後儲存並重載。',
-    'policy.policy': '策略',
     'policy.filterN': '篩選 {n}',
     'policy.removeFilter': '移除篩選 {n}',
     'policy.addFilter': '新增篩選',
@@ -259,7 +258,6 @@ export const messages = defineMessages({
     'policy.edit': '编辑',
     'policy.editTitle': '编辑组 {name}',
     'policy.editHelp': '改写主配置 group 区段中此组的策略与筛选条件，保留其他字段；校验通过后保存并重载。',
-    'policy.policy': '策略',
     'policy.filterN': '筛选 {n}',
     'policy.removeFilter': '移除筛选 {n}',
     'policy.addFilter': '新增筛选',
@@ -404,7 +402,6 @@ export const messages = defineMessages({
     'policy.editTitle': 'Edit group {name}',
     'policy.editHelp':
       "Rewrites this group's policy and filters in the group section of the main configuration, keeping its other fields. Saves and reloads after validation passes.",
-    'policy.policy': 'Policy',
     'policy.filterN': 'Filter {n}',
     'policy.removeFilter': 'Remove filter {n}',
     'policy.addFilter': 'Add filter',

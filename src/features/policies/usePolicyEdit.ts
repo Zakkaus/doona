@@ -2,7 +2,6 @@ import {isFragment} from '../../dae/text';
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
-import {policies} from '../../dae/vocab';
 import {editProblem, type MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast, useLinked} from '../../ui/ui';
@@ -17,8 +16,7 @@ export type PolicyEditView = {
   busy: boolean;
   // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
   problem: {id: number; text: string} | null;
-  policy: string;
-  policyHint: string;
+  policy: string | null;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
   show: () => void;
   close: () => void;
@@ -77,8 +75,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     tip: source.error ? errorText(source.error, t) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
     busy: source.busy,
     problem,
-    policy: draft?.policy ?? '',
-    policyHint: policies.join(', '),
+    policy: draft?.policy ?? null,
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,
@@ -98,7 +95,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       guard.clear();
       setDraft(null);
     },
-    setPolicy: policy => edit(prev => ({...prev, policy: policy || null})),
+    setPolicy: policy => edit(prev => ({...prev, policy})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
     save
   };

@@ -6,7 +6,7 @@ import type {Key} from '../../i18n/messages';
 import {fileName, redacted} from './names';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
-import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {buildHash} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 
@@ -233,7 +233,7 @@ export function wizardInitial(content: string): WizardState {
   return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
 // A value the file cannot hold is flagged on its own field, not on every row.
-const writableName = (name: string) => /^[\w.-]+$/.test(name.trim()) || isQuotable(name.trim());
+const writableName = (name: string) => isBareName(name.trim()) || isQuotable(name.trim());
 export function wizardRows(state: WizardState, lang: Lang, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
   return {
     groupUsedText:

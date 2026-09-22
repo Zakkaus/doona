@@ -1,4 +1,4 @@
-import {blockFields, quote, scanConfig, unquote} from './text';
+import {blockFields, isBareName, quote, scanConfig, unquote} from './text';
 
 export type GroupEntry = {
   name: string;
@@ -26,7 +26,12 @@ export function readGroupEntries(text: string): GroupEntry[] {
     );
 }
 
-export const quoteName = (value: string) => (/^[\w.-]+$/.test(value) ? value : quote(value));
+export const quoteName = (value: string) => (isBareName(value) ? value : quote(value));
+
+// doona creates groups only under bare names, so a new name never needs quoting where filters or rules cite it.
+export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'invalid' | 'taken' | null {
+  return !isBareName(name) ? 'invalid' : taken.has(name) ? 'taken' : null;
+}
 
 export function writeGroupEntry(text: string, name: string, next: {filters: string[]; policy: string | null}): string {
   const {blocks, tokens} = scanConfig(text);

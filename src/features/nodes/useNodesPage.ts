@@ -4,7 +4,9 @@ import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderR
 import type {Node, Provider} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../config/mainSource';
-import {addNamesToGroup} from '../../dae/groups';
+import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
+import {isBareName} from '../../dae/text';
+import {groupNameError, newGroupPolicies} from '../policies/policies';
 import type {PageProps} from '../types';
 import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';
@@ -22,6 +24,7 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
+  const [policy, setPolicy] = useState(newGroupPolicies[0].id);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
@@ -35,6 +38,7 @@ export function useNodesPage({go, query}: PageProps) {
   const open = useCallback((next: NodeDialog) => {
     session.current++;
     setForm({name: '', value: ''});
+    setPolicy(newGroupPolicies[0].id);
     setProblem(null);
     setDialog(next);
   }, []);
@@ -53,6 +57,7 @@ export function useNodesPage({go, query}: PageProps) {
   const refreshing = useProviderRefresh(reload);
   const source = useMainSourceEdit();
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   // Default to the first real source: the built-in and unattributed rows only lead when nothing else exists.
@@ -113,11 +118,17 @@ export function useNodesPage({go, query}: PageProps) {
         toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'group') {
         const group = form.name.trim();
-        const result = await apply(text => addNamesToGroup(text, group, [dialog.item.name]));
+        const node = dialog.item.name;
+        const result = await apply(text =>
+          applyChanges(text, [
+            {kind: 'createGroup', group, policy},
+            {kind: 'addNode', group, value: node}
+          ])
+        );
         const text = editProblem(result, 'nodes.writeInvalid', t);
         if (text) refuse(text);
         if (result.kind !== 'ok') return;
-        toast('positive', t('nodes.joined', {name: dialog.item.name, group}));
+        toast('positive', t('nodes.joined', {name: node, group}));
       } else if (dialog.kind === 'removeProvider') {
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
@@ -147,13 +158,14 @@ export function useNodesPage({go, query}: PageProps) {
           : dialog.kind === 'group'
             ? t('nodes.newGroup')
             : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+  const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
   const formValid =
     dialog?.kind === 'provider'
-      ? /^[\w.-]+$/.test(form.name.trim()) && isSubscriptionUrl(form.value)
+      ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value)
       : dialog?.kind === 'node'
         ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
         : dialog?.kind === 'group'
-          ? form.name.trim() !== '' && !form.name.includes('{') && !form.name.includes('}')
+          ? nameError === null
           : true;
   const providerTable = useProviderTable({
     rows: list,
@@ -214,6 +226,12 @@ export function useNodesPage({go, query}: PageProps) {
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
-    groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : ''
+    groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
+    // Only a name already typed is judged; an empty field is simply not ready.
+    groupNameError: form.name.trim() ? nameError : null,
+    policy,
+    setPolicy: (next: string) => {
+      if (submitting.current !== dialog) setPolicy(next);
+    }
   };
 }

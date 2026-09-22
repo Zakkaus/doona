@@ -4,6 +4,7 @@ import type {PageProps} from '../types';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
+import {PolicyPicker} from '../policies/PolicyPicker';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {
@@ -22,7 +23,10 @@ export function Nodes(props: PageProps) {
     submit,
     pending,
     submitLabel,
-    groupHelp
+    groupHelp,
+    groupNameError,
+    policy,
+    setPolicy
   } = useNodesPage(props);
   return (
     <div className="rp-page">
@@ -68,7 +72,17 @@ export function Nodes(props: PageProps) {
         {dialog?.kind === 'group' && (
           <div className="rp-list">
             <span className="rp-label">{groupHelp}</span>
-            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk" onChange={name => setForm({...form, name})} />
+            <TextField
+              isDisabled={pending}
+              label={t('nodes.name')}
+              value={form.name}
+              placeholder="hk"
+              spellCheck={false}
+              description={t('arrange.groupNameHint')}
+              error={groupNameError ?? undefined}
+              onChange={name => setForm({...form, name})}
+            />
+            <PolicyPicker value={policy} onChange={setPolicy} isDisabled={pending} />
           </div>
         )}
         {dialog?.kind === 'node' && (

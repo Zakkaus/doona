@@ -3,6 +3,7 @@ import {
   addNamesToGroup,
   addSubtagsToGroup,
   groupAdmits,
+  groupNameProblem,
   applyChanges,
   classifyFilters,
   readGroupEntries,
@@ -233,4 +234,12 @@ describe('group filters decide membership as honk does', () => {
     expect(groupAdmits(["name(keyword: 'dir')"], {name: 'direct', subscription_tag: null})).toBe(false);
     expect(groupAdmits(['name(direct)'], {name: 'direct', subscription_tag: null})).toBe(true);
   });
+});
+
+it('accepts only bare, unused names for a new group', () => {
+  const taken = new Set(['proxy']);
+  expect(groupNameProblem('hk.auto-1', taken)).toBeNull();
+  expect(groupNameProblem('proxy', taken)).toBe('taken');
+  expect(groupNameProblem('hk auto', taken)).toBe('invalid');
+  expect(groupNameProblem('', taken)).toBe('invalid');
 });

@@ -1,15 +1,8 @@
 import {applyChanges, classifyFilters, compileFilters, readGroupEntries, removalWidens, type GroupChange} from '../../../dae/groups';
 import type {Node, Provider} from '../../../api/model';
 import type {Translator} from '../../../i18n';
-import type {Key} from '../../../i18n/messages';
 
-// The policies a new group can start with, in the order the picker offers them.
-export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
-  {id: 'min_moving_avg', label: 'arrange.policy.fastest', description: 'arrange.policy.fastestHint'},
-  {id: 'fallback', label: 'arrange.policy.fallback', description: 'arrange.policy.fallbackHint'},
-  {id: 'roundrobin', label: 'arrange.policy.spread', description: 'arrange.policy.spreadHint'},
-  {id: 'select', label: 'arrange.policy.manual', description: 'arrange.policy.manualHint'}
-];
+export {newGroupPolicies} from '../policies';
 
 export type TraySubscription = {tag: string; label: string; count: number};
 export type Placeable = {kind: 'node' | 'subscription'; value: string};
