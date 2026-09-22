@@ -23,7 +23,6 @@ import {
   Empty,
   ErrorMessage,
   InlineAlert,
-  LabeledSelect,
   Light,
   Link,
   Loading,
@@ -41,7 +40,9 @@ import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary, Node} from '../../../api/model';
 import type {MainSourceEdit} from '../../config/mainSource';
 import {policyKindLabels} from '../view';
-import {holds, newGroupPolicies, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
+import {newGroupPolicies} from '../policies';
+import {PolicyPicker} from '../PolicyPicker';
+import {holds, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
 
 type Model = ReturnType<typeof useArrange>;
@@ -387,12 +388,7 @@ function NewGroup({m}: {m: Model}) {
             error={tried && problem ? problem : undefined}
             spellCheck={false}
           />
-          <LabeledSelect
-            label={t('arrange.policy')}
-            value={policy}
-            onChange={setPolicy}
-            items={newGroupPolicies.map(item => ({id: item.id, label: t(item.label), desc: t(item.description)}))}
-          />
+          <PolicyPicker value={policy} onChange={setPolicy} />
           <p className="rp-note">{t('arrange.newGroupNote')}</p>
         </form>
       </ModalDialog>

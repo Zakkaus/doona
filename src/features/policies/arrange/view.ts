@@ -2,8 +2,6 @@ import {applyChanges, classifyFilters, compileFilters, readGroupEntries, removal
 import type {Node, Provider} from '../../../api/model';
 import type {Translator} from '../../../i18n';
 
-export {newGroupPolicies} from '../policies';
-
 export type TraySubscription = {tag: string; label: string; count: number};
 export type Placeable = {kind: 'node' | 'subscription'; value: string};
 

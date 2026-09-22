@@ -8,12 +8,12 @@ import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/gro
 import {toast, useLinked} from '../../../ui/ui';
 import {useDraftGuard} from '../../config/useDraftGuard';
 import type {MainSourceEdit} from '../../config/mainSource';
+import {groupNameError} from '../policies';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
 
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
-const GROUP_NAME = /^[\w.-]+$/;
 
 export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>, nodes: Node[] | undefined) {
   const t = useT();
@@ -55,7 +55,7 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const unplace = (group: string, item: Placeable) =>
     edit(current => stage(current, {kind: item.kind === 'node' ? 'removeNode' : 'removeSubscription', group, value: item.value}));
   const existing = new Set(view.groups.map(group => group.name));
-  const nameProblem = (name: string) => (!GROUP_NAME.test(name) ? t('arrange.badName') : existing.has(name) ? t('arrange.takenName') : null);
+  const nameProblem = (name: string) => groupNameError(name, existing, t);
   const apply = async () => {
     setApplying(true);
     setFailure(null);
