@@ -3,7 +3,19 @@ import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {toast, errorText, useLinked} from '../../ui/ui';
-import {numericFields, numericAccess, numericFieldView, type Numeric} from './view';
+import {
+  numericFields,
+  numericAccess,
+  numericFieldView,
+  recorderFields,
+  recorderAccess,
+  recorderPatchValue,
+  recorderView,
+  recordingNote,
+  type Numeric,
+  type Recorder,
+  type RecorderChoice
+} from './view';
 import {useDraftGuard} from '../config/useDraftGuard';
 
 export function useRuntimeSettingsForm() {
@@ -15,11 +27,17 @@ export function useRuntimeSettingsForm() {
   const fields = new Set<RuntimeSettingField>(capabilities?.runtime_settings.fields ?? []);
   const settings = useRuntimeSettings(available);
   const baseline = settings.data;
-  const stamp = baseline ? JSON.stringify([baseline.log, baseline.dns_log, baseline.flows]) : '';
-  const [draft, setDraft] = useState<{at: string; level?: string; values: Partial<Record<Numeric, string>>} | null>(null);
-  const edits = draft ?? {at: stamp, values: {}};
+  const modeOf = (id: Recorder): RecorderChoice => baseline?.recording?.[recorderAccess[id].state].mode ?? 'auto';
+  const stamp = baseline ? JSON.stringify([baseline.log, baseline.dns_log, baseline.flows, recorderFields.map(modeOf)]) : '';
+  const [draft, setDraft] = useState<{
+    at: string;
+    level?: string;
+    values: Partial<Record<Numeric, string>>;
+    modes: Partial<Record<Recorder, RecorderChoice>>;
+  } | null>(null);
+  const edits = draft ?? {at: stamp, values: {}, modes: {}};
   const level = edits.level ?? baseline?.log.level ?? '';
-  const dirty = !!draft && (draft.level !== undefined || Object.keys(draft.values).length > 0);
+  const dirty = !!draft && (draft.level !== undefined || Object.keys(draft.values).length > 0 || Object.keys(draft.modes).length > 0);
   const guard = useDraftGuard(dirty);
   useLinked(guard.revision, () => setDraft(null));
   const ceilings: Record<Numeric, number | undefined> = {
@@ -36,8 +54,17 @@ export function useRuntimeSettingsForm() {
         if (!settings.busy) setDraft({...edits, values: {...edits.values, [id]: value.trim()}});
       }
     }));
+  const recorders = recorderFields
+    .filter(id => fields.has(id))
+    .map(id => ({
+      ...recorderView(id, edits.modes[id] ?? modeOf(id), baseline?.recording?.[recorderAccess[id].state], t),
+      change: (value: string) => {
+        if (!settings.busy) setDraft({...edits, modes: {...edits.modes, [id]: value as RecorderChoice}});
+      }
+    }));
   const patch: RuntimeSettingsPatch = {};
   if (baseline) {
+    for (const recorder of recorders) if (recorder.value !== modeOf(recorder.id)) patch[recorder.id] = recorderPatchValue(recorder.value);
     if (fields.has('log.level') && level !== baseline.log.level) patch.log = {level: level as RuntimeSettings['log']['level']};
     for (const field of numeric)
       if (!field.invalid && Number(field.value) !== numericAccess[field.id].read(baseline)) numericAccess[field.id].write(patch, Number(field.value));
@@ -56,6 +83,8 @@ export function useRuntimeSettingsForm() {
   };
   return {
     numeric,
+    recorders,
+    recordingNote: recordingNote(baseline?.recording, t),
     level,
     setLevel: (value: string) => {
       if (!settings.busy) setDraft({...edits, level: value});

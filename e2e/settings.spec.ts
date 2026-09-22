@@ -1,5 +1,5 @@
 import {test as browserTest} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {translate} from '../src/i18n';
 
 const t = (key: Parameters<typeof translate>[1]) => translate('en', key);
@@ -233,4 +233,21 @@ test('profile switching confirms draft loss without saving edits to the profile 
   await page.locator('[name=token]').fill('explicitly-saved');
   await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!))).toEqual([{...profiles[0], token: 'explicitly-saved'}, profiles[1]]);
+});
+
+test('a recorder can be pinned on or off and the state light follows the backend', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: t('settings.runtime')});
+  const recording = card.getByRole('group', {name: t('settings.recording')});
+  await expect(recording.getByText(t('settings.recordingActive'))).toHaveCount(3);
+  const flows = recording.getByRole('button', {name: t('settings.recordFlows')});
+  await flows.click();
+  await page.getByRole('option', {name: t('settings.record.off'), exact: true}).click();
+  const saving = page.waitForRequest(request => request.method() === 'PATCH' && request.url().endsWith('/runtime/settings'));
+  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
+  expect((await saving).postDataJSON()).toEqual({record_flows: false});
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.runtimeSaved')})).toBeVisible();
+  await expect(recording.getByText(t('settings.recordingIdle'))).toHaveCount(1);
+  expect((await api.runtimeSettings()).recording?.flows.mode).toBe('off');
 });

@@ -152,6 +152,7 @@ export async function mockBackend(page: Page) {
         result = await api.clearGroupOverride(parts[1], url.searchParams.get('network') as 'tcp' | 'udp' | 'both');
       else if (method === 'POST' && path === 'probes') result = await api.startProbe(request.postDataJSON());
       else if (method === 'POST' && path === 'operations/reload') result = await api.startReload();
+      else if (method === 'PATCH' && path === 'runtime/settings') result = await api.patchRuntimeSettings(request.postDataJSON());
       else if (method === 'POST' && path === 'operations/suspend') result = await api.startSuspend();
       else if (method === 'POST' && path === 'operations/resume') result = await api.startResume();
       else if (method === 'POST' && path === 'dns/cache/flush') result = await api.flushDnsCache();

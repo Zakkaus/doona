@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {Capabilities, ConfigSource, RuleList, Runtime, RuntimeSettingsPatch} from '../model';
+import type {Capabilities, ConfigSource, RuleList, Runtime} from '../model';
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
@@ -198,9 +198,22 @@ export function createConfiguration(
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
-      const fields = Object.entries(patch).flatMap(([section, values]) =>
-        Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const)
-      );
+      // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
+      const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
+      const modes = Object.entries(recorders).flatMap(([field, store]) => {
+        const value = patch[field as keyof typeof recorders];
+        return value === undefined ? [] : [[field, store, value] as const];
+      });
+      for (const [field, store, value] of modes) {
+        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (value !== 'auto' && typeof value !== 'boolean') throw invalid(`${field} must be true, false or auto`);
+        if (value === true && !settings.recording?.[store].allowed) throw invalid(`${field} is forbidden by the configuration`);
+      }
+      const fields = Object.entries(patch)
+        .filter(([section]) => !(section in recorders))
+        .flatMap(([section, values]) =>
+          Object.entries((values ?? {}) as Record<string, unknown>).map(([field, value]) => [`${section}.${field}`, value] as const)
+        );
       for (const [field, value] of fields) {
         if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
         if (field === 'log.level') {
@@ -211,10 +224,16 @@ export function createConfiguration(
         const floor = field === 'flows.retention_seconds' ? 1 : 64;
         if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
       }
-      const apply = <S extends keyof RuntimeSettingsPatch>(section: S) => Object.assign(settings[section], patch[section] ?? {});
+      const apply = (section: 'log' | 'dns_log' | 'flows') => Object.assign(settings[section], patch[section] ?? {});
       apply('log');
       apply('dns_log');
       apply('flows');
+      for (const [, store, value] of modes) {
+        const state = settings.recording![store];
+        state.mode = value === 'auto' ? 'auto' : value ? 'on' : 'off';
+        state.active = state.allowed && state.mode !== 'off';
+      }
+      if (settings.recording) settings.recording.events.active = true;
       // A smaller ring drops its oldest records at once, not when the next one arrives.
       trimLogs();
       settings.source = 'runtime';
