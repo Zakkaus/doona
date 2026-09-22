@@ -263,10 +263,15 @@
     padding-inline: 16px;
   }
 }
-/* Narrower still: the wordmark goes too, leaving the duck and the actions. */
+/* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. */
 @media (max-width: 339px) {
   .rp-brand-text {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 .rp-side {
@@ -364,6 +369,8 @@
 }
 @media (min-width: 1024px) {
   .rp-main {
+    /* Pinned to the content column, so the startup screen without a side nav lands where the page will. */
+    grid-column: 2;
     margin-inline-end: 16px;
   }
 }

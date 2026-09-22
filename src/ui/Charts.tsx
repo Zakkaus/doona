@@ -126,6 +126,7 @@ export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null 
 const LazyAreaChart = lazy(() =>
   import('recharts').then(({AreaChart: RAreaChart, Area, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis}) => ({
     default: function AreaChart({
+      label,
       series,
       timestamps,
       fmt,
@@ -135,6 +136,8 @@ const LazyAreaChart = lazy(() =>
       window,
       fill
     }: {
+      // The chart takes keyboard focus to step through samples, so it needs a name of its own.
+      label: string;
       series: Series[];
       timestamps: number[];
       fmt: (v: number) => string;
@@ -165,8 +168,8 @@ const LazyAreaChart = lazy(() =>
             withDate
               ? {month: 'numeric', day: 'numeric'}
               : withSeconds
-                ? {hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false}
-                : {hour: '2-digit', minute: '2-digit', hour12: false}
+                ? {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}
+                : {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}
           ),
         [locale, withSeconds, withDate]
       );
@@ -195,11 +198,12 @@ const LazyAreaChart = lazy(() =>
         () => (since !== undefined && until !== undefined ? [since, until] : ['dataMin', 'dataMax']),
         [since, until]
       );
-      if (!timestamps.length) return null;
+      const box = {height, width: '100%', flex: fill ? '1 1 auto' : undefined};
+      if (!timestamps.length) return <div style={box} />;
       return (
-        <div style={{height, width: '100%', flex: fill ? '1 1 auto' : undefined}} {...hover.handlers}>
+        <div style={box} {...hover.handlers}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
-            <RAreaChart data={data} margin={areaMargin}>
+            <RAreaChart data={data} margin={areaMargin} aria-label={label}>
               <defs>
                 {series.map((s, k) => (
                   <linearGradient key={s.label} id={uid + k} x1="0" y1="0" x2="0" y2="1">
@@ -297,11 +301,12 @@ const LazySpark = lazy(() =>
           domain: [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)]
         };
       }, [values, floor]);
-      if (!hasValues) return null;
+      if (!hasValues) return <div style={{height, width: '100%'}} />;
       return (
-        <div style={{height, width: '100%'}}>
+        <div style={{height, width: '100%'}} aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
-            <RAreaChart data={data} margin={sparkMargin}>
+            {/* Decorative: the tile states the value, so the spark is no focus stop. */}
+            <RAreaChart data={data} margin={sparkMargin} accessibilityLayer={false}>
               <defs>
                 <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={color} stopOpacity={0.35} />
@@ -330,7 +335,7 @@ export const Spark = memo(function Spark(props: ComponentProps<typeof LazySpark>
 });
 // Scroll long legends so the chart does not stretch adjacent cards.
 export const Donut = memo(
-  function Donut({rows, total}: {rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
+  function Donut({label, rows, total}: {label: string; rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
     const t = useT();
     const legend = useMemo(() => rows.map(row => ({...row, percent: row.value === null ? '—' : t('ui.percent', {n: row.value})})), [rows, t]);
     return (
@@ -338,7 +343,7 @@ export const Donut = memo(
         <div className="box">
           <LoadBoundary>
             <Suspense fallback={null}>
-              <LazyDonut rows={rows} />
+              <LazyDonut label={label} rows={rows} />
             </Suspense>
           </LoadBoundary>
           <div className="center">{total}</div>
@@ -357,6 +362,7 @@ export const Donut = memo(
     );
   },
   (previous, next) =>
+    previous.label === next.label &&
     previous.total === next.total &&
     (previous.rows === next.rows ||
       (previous.rows.length === next.rows.length &&
@@ -368,7 +374,7 @@ export const Donut = memo(
 
 const LazyDonut = lazy(() =>
   import('recharts').then(({PieChart, Pie, Cell, ResponsiveContainer, Tooltip}) => ({
-    default: function DonutPlot({rows}: Pick<ComponentProps<typeof Donut>, 'rows'>) {
+    default: function DonutPlot({label, rows}: Pick<ComponentProps<typeof Donut>, 'label' | 'rows'>) {
       const t = useT();
       const p = usePalette();
       const style = useChartStyle(p);
@@ -377,7 +383,7 @@ const LazyDonut = lazy(() =>
       return (
         <div style={{height: '100%', width: '100%'}} {...hover.handlers}>
           <ResponsiveContainer width="100%" height="100%" debounce={RESIZE_DEBOUNCE}>
-            <PieChart margin={donutMargin}>
+            <PieChart margin={donutMargin} aria-label={label}>
               <Pie
                 data={data}
                 dataKey="value"

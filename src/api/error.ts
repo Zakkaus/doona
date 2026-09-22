@@ -1,6 +1,7 @@
 import type {ErrorResponse} from './model';
 
 import type {Key} from '../i18n/messages';
+import type {Params} from '../i18n/index';
 
 export class ApiError extends Error {
   constructor(
@@ -10,7 +11,9 @@ export class ApiError extends Error {
     public requestId: string | null = null,
     public details: unknown = null,
     // Seconds the backend asked to wait before trying again, when it said so.
-    public retryAfter: number | null = null
+    public retryAfter: number | null = null,
+    // Set when doona raised the error itself, so the text shown is translated rather than the English message.
+    public text: {key: Key; params?: Params} | null = null
   ) {
     super(message);
     this.name = 'ApiError';
@@ -34,6 +37,10 @@ export async function responseError(response: Response): Promise<ApiError> {
     retryAfter > 0 ? retryAfter : null
   );
 }
+
+// A contract failure detected by doona: it keeps the status and code callers branch on, and a translated text.
+export const clientError = (status: number, code: string, message: string, key: Key, params?: Params) =>
+  new ApiError(status, code, message, null, null, null, {key, params});
 
 // Local failures carry a message key; detail preserves backend text.
 export class LocalError extends Error {

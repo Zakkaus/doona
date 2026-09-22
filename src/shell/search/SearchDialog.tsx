@@ -1,4 +1,4 @@
-import {ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
+import {Autocomplete, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
@@ -17,36 +17,39 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
         if (!open) onClose();
       }}
     >
-      <div className="rp-toolbar">
-        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-        <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
-        <Button quiet icon onPress={onClose} label={t('close')}>
-          <Close />
-        </Button>
-      </div>
-      {error && <ErrorMessage error={error} />}
-      {partial && (
-        <div className="rp-note" role="status">
-          {partial}
-          <Button small quiet onPress={openConnections}>
-            {t('nav.connections')}
+      {/* The field and the results form one combobox: arrow keys move through results while typing continues. */}
+      <Autocomplete inputValue={q} onInputChange={setQ}>
+        <div className="rp-toolbar">
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
+          <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
+          <Button quiet icon onPress={onClose} label={t('close')}>
+            <Close />
           </Button>
         </div>
-      )}
-      {empty && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
-      <ListBox aria-label={t('search')} className="rp-results" onAction={select}>
-        {sections.map(section => (
-          <ListBoxSection key={section.id} id={section.id}>
-            <Header className="rp-section-h">{section.title}</Header>
-            {section.items.map(item => (
-              <ListBoxItem key={item.id} id={item.id} className="rp-item plain" textValue={item.label}>
-                <span>{item.label}</span>
-                {item.description && <span className="desc">{item.description}</span>}
-              </ListBoxItem>
-            ))}
-          </ListBoxSection>
-        ))}
-      </ListBox>
+        {error && <ErrorMessage error={error} />}
+        {partial && (
+          <div className="rp-note" role="status">
+            {partial}
+            <Button small quiet onPress={openConnections}>
+              {t('nav.connections')}
+            </Button>
+          </div>
+        )}
+        {empty && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
+        <ListBox aria-label={t('search')} className="rp-results" onAction={select}>
+          {sections.map(section => (
+            <ListBoxSection key={section.id} id={section.id}>
+              <Header className="rp-section-h">{section.title}</Header>
+              {section.items.map(item => (
+                <ListBoxItem key={item.id} id={item.id} className="rp-item plain" textValue={item.label}>
+                  <span>{item.label}</span>
+                  {item.description && <span className="desc">{item.description}</span>}
+                </ListBoxItem>
+              ))}
+            </ListBoxSection>
+          ))}
+        </ListBox>
+      </Autocomplete>
     </ModalDialog>
   );
 }

@@ -95,9 +95,12 @@ export function useRoute(api: string | null) {
   );
   useEffect(() => {
     const on = () => {
-      if (restoring.current) {
-        setPending(restoring.current);
-        restoring.current = null;
+      // Only the traversal back to the draft's own entry completes a restore; if the browser dropped it, this
+      // is an ordinary navigation and is handled as one.
+      const restored = restoring.current;
+      restoring.current = null;
+      if (restored && history.state?.doonaPosition === position.current) {
+        setPending(restored);
         return;
       }
       const hash = currentHash(api);

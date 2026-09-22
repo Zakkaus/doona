@@ -135,7 +135,16 @@ export function Activity() {
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
-              <AreaChart series={traffic} timestamps={vm.trafficTimestamps} fmt={chartRate} locale={locale} height={120} fill window={vm.trafficBounds} />
+              <AreaChart
+                label={t('act.traffic')}
+                series={traffic}
+                timestamps={vm.trafficTimestamps}
+                fmt={chartRate}
+                locale={locale}
+                height={120}
+                fill
+                window={vm.trafficBounds}
+              />
             </>
           )}
         </section>
@@ -159,6 +168,7 @@ export function Activity() {
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
               <AreaChart
+                label={t('act.memory')}
                 series={memorySeries}
                 timestamps={vm.memoryTimestamps}
                 fmt={memoryBytes}

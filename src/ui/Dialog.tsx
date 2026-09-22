@@ -138,7 +138,8 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   useEffect(() => {
     if (!open || !wide) return;
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"]')) onClose();
+      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"], .rp-toasts'))
+        onClose();
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

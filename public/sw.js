@@ -4,20 +4,30 @@ const PRECACHE = '__PRECACHE__';
 const ROOT = new URL(self.registration.scope);
 
 // A new build takes over on the next online load, including open dashboard tabs.
+// Each build records when it was installed, so activation can tell the build it replaces from older ones.
+const STAMP = new URL('__installed__', ROOT);
 self.addEventListener('install', event => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then(cache => cache.addAll(PRECACHE))
+      .then(cache => Promise.all([cache.addAll(PRECACHE), cache.put(STAMP, new Response(String(Date.now())))]))
       .then(() => self.skipWaiting())
   );
 });
+// The build just replaced stays: tabs still showing it load their remaining chunks from it until reloaded.
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches
-      .keys()
-      .then(keys => Promise.all(keys.filter(key => key.startsWith(PREFIX) && key !== CACHE).map(key => caches.delete(key))))
-      .then(() => self.clients.claim())
+    (async () => {
+      const older = [];
+      for (const key of await caches.keys()) {
+        if (!key.startsWith(PREFIX) || key === CACHE) continue;
+        const stamp = await (await caches.open(key)).match(STAMP);
+        older.push({key, installed: stamp ? Number(await stamp.text()) : 0});
+      }
+      older.sort((a, b) => b.installed - a.installed);
+      await Promise.all(older.slice(1).map(({key}) => caches.delete(key)));
+      await self.clients.claim();
+    })()
   );
 });
 
@@ -44,7 +54,7 @@ self.addEventListener('fetch', event => {
           return hit(await cache.match(new URL('index.html', ROOT)));
         }
       }
-      const response = await cache.match(request);
+      const response = (await cache.match(request)) ?? (await caches.match(request));
       if (response) return hit(response);
       const fresh = await fetch(request);
       if (fresh.ok && fresh.type === 'basic' && !fresh.redirected) await cache.put(request, fresh.clone());

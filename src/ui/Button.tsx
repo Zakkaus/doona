@@ -158,7 +158,6 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
       setNested(!!el.closest(STOPS));
     };
     measures.set(el, measure);
-    enqueue(measure);
     resized?.observe(el);
     return () => {
       resized?.unobserve(el);
@@ -166,6 +165,11 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
       queue.delete(measure);
     };
     // The span remounts when the trigger wraps it, so the observer follows `active` too.
+  }, [text, active]);
+  // New content can overflow without resizing the box, so it is measured again; the observer stays attached.
+  useEffect(() => {
+    const measure = ref.current && measures.get(ref.current);
+    if (measure) enqueue(measure);
   }, [children, text, active]);
   const span = (
     <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1}>

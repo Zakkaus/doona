@@ -38,7 +38,7 @@ export function OutboundsCard() {
           <Empty>{t('ui.empty')}</Empty>
         </div>
       ) : (
-        <Donut rows={view.rows} total={view.total} />
+        <Donut label={t('act.outUsage')} rows={view.rows} total={view.total} />
       )}
     </div>
   );

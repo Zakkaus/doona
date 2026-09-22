@@ -108,3 +108,14 @@ test('idle traffic has distinct fractional rate labels', async ({page}) => {
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   await expect(traffic.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['0.6 KB/s', '1.2 KB/s']);
 });
+
+test('charts are named and icon buttons show their tooltip on keyboard focus', async ({page}) => {
+  await page.goto('/#/activity');
+  // The three cards' charts take focus under their card's name; the tile sparks are decoration and do not.
+  for (const name of ['Traffic', 'Memory', 'Outbound downloads']) await expect(page.getByRole('application', {name, exact: true})).toBeVisible();
+  await expect(page.getByRole('application')).toHaveCount(3);
+  await page.locator('.rp-search').focus();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);
+  await expect(page.getByRole('tooltip')).toBeVisible();
+});

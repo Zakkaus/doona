@@ -43,6 +43,7 @@ export function errorText(error: unknown) {
     const text = translate(readLang(), error.key);
     return error.detail ? `${text}: ${error.detail}` : text;
   }
+  if (error instanceof ApiError && error.text) return translate(readLang(), error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
 }
@@ -132,8 +133,11 @@ export function Toasts() {
   );
   useEffect(() => {
     if (!expanded) return;
+    // One Escape closes one layer: an open dialog takes it unless focus is in the toasts themselves.
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setExpanded(false);
+      if (e.key !== 'Escape') return;
+      const inToasts = (e.target as Element | null)?.closest?.('.rp-toasts');
+      if (inToasts || !document.querySelector('[role="dialog"], [role="alertdialog"]')) setExpanded(false);
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

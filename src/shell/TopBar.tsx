@@ -65,7 +65,7 @@ export const TopBar = memo(function TopBar({
       <About
         onHonk={honk}
         trigger={
-          <Button className="rp-brand" label={t('about.title')}>
+          <Button className="rp-brand" tip={t('about.title')}>
             <img src={logo} alt="" />
             <span className="rp-brand-text">
               <span>{wordmark}</span>
