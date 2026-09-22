@@ -1,8 +1,15 @@
 import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../../dae/text';
 
-export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null; from: number; to: number};
+export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};
-type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null; comment?: string};
+type SubscriptionRange = SubscriptionEntry & {
+  from: number;
+  to: number;
+  block?: TextBlock;
+  fields: TextField[];
+  parts: ScalarSubscription | null;
+  comment?: string;
+};
 
 export function parseInterval(text: string): number | null {
   const found = /^(\d+(?:\.\d+)?)(ms|s|m|h)?$/.exec(text.trim());
@@ -10,7 +17,8 @@ export function parseInterval(text: string): number | null {
   const scale: Record<string, number> = {ms: 1 / 1000, s: 1, m: 60, h: 3600};
   return Math.ceil(Number(found[1]) * (scale[found[2] ?? 's'] ?? 1));
 }
-function host(url: string): string | null {
+export function urlHost(url: string | null): string | null {
+  if (!url) return null;
   try {
     return new URL(url).hostname || null;
   } catch {
@@ -37,7 +45,7 @@ function scalarParts(code: string) {
     if (split !== -1 && !url.startsWith('://', split)) {
       tag = url.slice(0, split).trim();
       url = url.slice(split + 1);
-    } else tag = host(url);
+    } else tag = urlHost(url);
   }
   const suffix = quoted ? text.slice(valueToken.to).trim() : '';
   const ua = suffix.startsWith('(') && suffix.endsWith(')') ? unquote(suffix.slice(1, -1)) : null;
@@ -67,7 +75,7 @@ function subscriptionRanges(text: string) {
           to: block.to,
           block,
           tag: block.name,
-          host: url ? host(unquote(url.value)) : null,
+          host: url ? urlHost(unquote(url.value)) : null,
           interval: interval ? parseInterval(unquote(interval.value)) : null,
           fields,
           parts: null
@@ -92,21 +100,14 @@ function subscriptionRanges(text: string) {
         to = tokens[++i].to;
       }
       const parts = scalarParts(text.slice(from, to));
-      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: null, fields: [], parts, comment});
+      if (parts) entries.push({from, to, tag: parts.tag, host: urlHost(parts.url), interval: null, fields: [], parts, comment});
     }
   }
   return entries;
 }
 
 export function readSubscriptions(text: string): SubscriptionEntry[] {
-  let offset = 0;
-  let line = 0;
-  return subscriptionRanges(text).map(entry => {
-    while (offset < entry.from) if (text[offset++] === '\n') line++;
-    const from = line;
-    while (offset < entry.to) if (text[offset++] === '\n') line++;
-    return {tag: entry.tag, host: entry.host, interval: entry.interval, from, to: line};
-  });
+  return subscriptionRanges(text).map(({tag, host, interval}) => ({tag, host, interval}));
 }
 
 export function writeInterval(text: string, tag: string, seconds: number): string {

@@ -2,6 +2,7 @@ import {useCapabilities} from '../../store';
 import {useT} from '../../i18n';
 import type {PageProps} from '../types';
 import {rulesView} from './view';
+import {within} from '../../shell/route';
 
 export function useRulesPage({go, query}: PageProps) {
   const t = useT();
@@ -11,10 +12,6 @@ export function useRulesPage({go, query}: PageProps) {
     ...rulesView(capabilities.data?.resources, params.get('tab'), t),
     loading: capabilities.loading && !capabilities.data,
     error: capabilities.error,
-    changeTab: (tab: string) => {
-      const next = new URLSearchParams(query);
-      next.set('tab', tab);
-      go('rules', next.toString());
-    }
+    changeTab: (tab: string) => go('rules', within(query, {tab}))
   };
 }

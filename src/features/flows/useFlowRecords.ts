@@ -6,7 +6,7 @@ import {within} from '../../shell/route';
 import {panelQuery, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {flowsThrough, pinnedLabel} from './map';
-import {flowRecordsView} from './view';
+import {flowDetailView, flowRecordsView} from './view';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
@@ -32,12 +32,11 @@ export function useFlowRecords({go, query}: PageProps) {
     const all = resource.data?.flows ?? [];
     return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
   }, [resource.data, pinned, rules.data]);
-  const view = useMemo(
-    () => flowRecordsView(shown, detail.data ?? undefined, resource.data, names, canAdd, t, lang),
-    [shown, detail.data, resource.data, names, canAdd, t, lang]
-  );
+  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
+  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang), [detail.data, canAdd, t, lang]);
   return {
     ...view,
+    detail: detailView,
     network,
     setNetwork: (value: string) => go('rules', within(query, {network: value === 'all' ? null : value})),
     state,
@@ -48,7 +47,7 @@ export function useFlowRecords({go, query}: PageProps) {
     error: resource.error,
     loading: resource.loading && !resource.data,
     panelOpen: !!id && (!!detail.data || detail.loading || !!detail.error),
-    panelTitle: view.detail?.title ?? id ?? '',
+    panelTitle: detailView?.title ?? id ?? '',
     detailError: detail.error,
     detailRetry: detail.refetch,
     detailLoading: !detail.data && detail.loading,

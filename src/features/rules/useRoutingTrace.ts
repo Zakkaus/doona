@@ -6,13 +6,14 @@ import {useAction} from '../../store/action';
 import {useCapabilities} from '../../store/runtime';
 import {routingTrace} from '../../store/flows';
 import {useGroups, useNodeProbe, useNodes, useRules} from '../../store';
-import {resolveSelectedLeaf} from '../../api/selectors';
+import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
+import {isPort} from '../../dae/setup';
 import {millis} from '../../api/u64';
 import {useLang, useT} from '../../i18n';
 import {errorText, toast} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
-type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
+type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 const blankForm = {
@@ -49,7 +50,6 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
-  const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
   const problem = error ?? capabilities.error;
   useEffect(() => {
     if (problem) toast('negative', errorText(problem));
@@ -57,15 +57,19 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const invalid: TraceProblem | null =
     !form.domain.trim() && !form.dst_ip.trim()
       ? {field: 'domain', key: 'rule.invalidTarget'}
-      : !portValid(form.dst_port)
-        ? {field: 'dst_port', key: 'rule.invalidPort'}
-        : form.src_port.trim() && !portValid(form.src_port)
-          ? {field: 'src_port', key: 'rule.invalidPort'}
-          : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
-            ? {field: 'domain', key: 'rule.invalidLive'}
-            : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
-              ? {field: 'dst_ip', key: 'rule.invalidLive'}
-              : null;
+      : form.dst_ip.trim() && !ipLiteral(form.dst_ip)
+        ? {field: 'dst_ip', key: 'rule.invalidIp'}
+        : !isPort(form.dst_port)
+          ? {field: 'dst_port', key: 'rule.invalidPort'}
+          : form.src_ip.trim() && !ipLiteral(form.src_ip)
+            ? {field: 'src_ip', key: 'rule.invalidIp'}
+            : form.src_port.trim() && !isPort(form.src_port)
+              ? {field: 'src_port', key: 'rule.invalidPort'}
+              : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
+                ? {field: 'domain', key: 'rule.invalidLive'}
+                : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
+                  ? {field: 'dst_ip', key: 'rule.invalidLive'}
+                  : null;
   const resource = capabilities.data?.resources.routing_trace;
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
@@ -83,8 +87,8 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const canSubmit = !invalid && available && modes.includes(resolve);
   const submit = useCallback(async () => {
     if (busy || !canSubmit) return;
-    setResult(null);
-    const address = (value: string) => value.trim().replace(/^\[|\]$/g, '');
+    // `invalid` has already refused anything that is not an IP literal.
+    const address = (value: string) => ipLiteral(value)!;
     // One of the two targets is always present; the address rides along with a domain when both are given.
     const input: RoutingTraceRequest['input'] = {
       network: form.network,
@@ -105,22 +109,31 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         signal
       )
     );
-    if (response) setResult({response, input});
+    // The previous result stays up while the rerun is pending; a failed rerun clears it rather than leave it looking current.
+    setResult(response ? {response, input} : null);
   }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
-  const evaluations =
-    accepted?.response.evaluations.map((evaluation, index) => {
-      const matched = evaluation.rules.find(rule => rule.result === 'matched');
-      const likely =
-        evaluation.decision !== 'determinate' && !evaluation.outbound && rules.data?.generation_id === accepted.response.generation_id
-          ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
-          : null;
-      const outbound = evaluation.outbound ?? likely;
-      const selected =
-        outbound && outbound !== 'direct' && outbound !== 'block'
-          ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById)
-          : null;
-      return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
-    }) ?? [];
+  const generation = rules.data?.generation_id;
+  const evaluations = useMemo(
+    () =>
+      accepted?.response.evaluations.map((evaluation, index) => {
+        const matched = evaluation.rules.find(rule => rule.result === 'matched');
+        const likely =
+          evaluation.decision !== 'determinate' && !evaluation.outbound && generation === accepted.response.generation_id
+            ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
+            : null;
+        const outbound = evaluation.outbound ?? likely;
+        const selected =
+          outbound && outbound !== 'direct' && outbound !== 'block'
+            ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById)
+            : null;
+        return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
+      }) ?? [],
+    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]
+  );
+  const result = useMemo(
+    () => (accepted ? {status: traceStatusView(accepted.response, t, lang), dns: accepted.response.dns.map(dns => dnsView(dns, t, lang))} : null),
+    [accepted, t, lang]
+  );
   const probeNode = async (id: string) => {
     const node = nodesById.get(id);
     if (!node) return;
@@ -149,12 +162,13 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
       domain: invalid?.field === 'domain' ? t(invalid.key) : undefined,
       dst_ip: invalid?.field === 'dst_ip' ? t(invalid.key) : undefined,
       dst_port: invalid?.field === 'dst_port' ? t(invalid.key) : undefined,
+      src_ip: invalid?.field === 'src_ip' ? t(invalid.key) : undefined,
       src_port: invalid?.field === 'src_port' ? t(invalid.key) : undefined
     },
-    advanced: advanced || invalid?.field === 'src_port',
+    advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port',
     setAdvanced,
     ipOnly: !invalid && !!form.dst_ip.trim() && !form.domain.trim(),
-    result: accepted ? {status: traceStatusView(accepted.response, t, lang), evaluations, dns: accepted.response.dns.map(dns => dnsView(dns, t, lang))} : null,
+    result: result && {...result, evaluations},
     probeNode
   };
 }

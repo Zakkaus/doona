@@ -25,7 +25,7 @@ export function useNodes(enabled = true) {
 }
 export function useProviders(enabled = true) {
   const api = getApi();
-  const capabilities = useCapabilities().data;
+  const {data: capabilities, error: capabilitiesError} = useCapabilities();
   const limit = pageSize(capabilities, capabilities?.resources.providers.max_page_size);
   return useResource(
     {
@@ -40,7 +40,7 @@ export function useProviders(enabled = true) {
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined}
+    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined && !capabilitiesError}
   );
 }
 export function useProviderRefresh(refetch: () => void) {

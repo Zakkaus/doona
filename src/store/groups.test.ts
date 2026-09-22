@@ -50,6 +50,7 @@ it('retains completed batches and fails the action when a later job is refused',
   expect(new Set(error.partialResult.results.map((row: {member_id: string}) => row.member_id))).toEqual(
     new Set(group.members.slice(0, 64).map(member => member.id))
   );
+  expect(error).toMatchObject({key: 'ui.operationFailed', detail: null, completed: 64, total: group.members.length, cause: {message: 'offline'}});
   expect(api.startProbe).toHaveBeenCalledTimes(2);
 });
 

@@ -108,7 +108,7 @@ function PolicyDetail(props: PolicyGroupInput) {
 const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<PolicyGroupInput, 'paused'> & {focused: boolean; domId: string}) {
   const {ref, active, visible, expand} = usePolicyVisibility(focused);
   return (
-    <section ref={ref} className="rp-card" id={domId} aria-label={props.name}>
+    <section ref={ref} className="rp-card" id={domId} aria-label={props.name} tabIndex={-1}>
       {active ? (
         <PolicyDetail {...props} paused={!visible} />
       ) : (

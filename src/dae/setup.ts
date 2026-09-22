@@ -15,9 +15,9 @@ export type WizardState = {
 
 const networkDefaults = {listenerPort: '12345', defaultDns: 'tls://1.1.1.1:853', chinaDns: 'udp://223.5.5.5:53'};
 
+export const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
 export function validNetwork(state: WizardState): boolean {
-  const port = Number(state.listenerPort);
-  return /^\d+$/.test(state.listenerPort) && port >= 1 && port <= 65535 && !!state.defaultDns.trim() && !!state.chinaDns.trim();
+  return isPort(state.listenerPort) && !!state.defaultDns.trim() && !!state.chinaDns.trim();
 }
 
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());

@@ -1,7 +1,8 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
-import {translate, type Translator} from '../../i18n';
-import {groupConfigFields, memberViews, menuViews, nodeGridView, policyCardView, probeSummary} from './view';
+import {readLang, translate, type Translator} from '../../i18n';
+import {ApiError, LocalError} from '../../api/error';
+import {actionErrorText, groupConfigFields, memberViews, menuViews, nodeGridView, policyCardView, probeSummary} from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
@@ -9,7 +10,6 @@ it('projects nested, failed and unmeasured members without inventing latency', (
   const members = memberViews(memberHealth(groups[0], new Map()), t);
   expect(members.find(member => member.id === 'jp-01')).toMatchObject({unavailable: true, tcp: undefined, status: {text: t('ui.unavailable'), tone: 'err'}});
   expect(members.find(member => member.id === 'resilient')).toMatchObject({
-    nested: true,
     healthy: false,
     description: ' ',
     status: {text: t('ui.group'), badge: true}
@@ -62,7 +62,6 @@ it('filters large grids by region and observed health without mutating member or
   const nodes = Array.from({length: 13}, (_, index) => ({
     id: String(index),
     name: `node-${index}`,
-    nested: false,
     tcp: 20 - index,
     unavailable: index === 0,
     healthy: index > 0,
@@ -87,4 +86,15 @@ it('names the default member and describes an observation in words', () => {
   expect(fields).toContainEqual(['policy.cfg.defaultMember', member.name]);
   const [view] = memberViews([{...member, kind: 'node', health: {...g.runtime.health[0], transport: 'udp', purpose: 'dns'}}], t);
   expect(view.description).toBe(t('policy.observedVia', {transport: 'UDP', purpose: 'DNS'}));
+});
+
+it('reports a partial probe with translated counts and the stopping error', () => {
+  const lang = readLang();
+  const cause = new LocalError('ui.operationFailed', 'member refused');
+  const error = Object.assign(new LocalError('ui.operationFailed'), {cause, partialResult: {}, completed: 1200, total: 1500});
+  const text = actionErrorText(error);
+  expect(text).toContain(translate(lang, 'policy.probePartial', {done: 1200, n: 1500, error: translate(lang, 'ui.operationFailed') + ': member refused'}));
+  expect(text).toContain('1,200');
+  expect(text).not.toContain('ui.operationFailed');
+  expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'))).toBe('offline');
 });

@@ -1,7 +1,7 @@
 import type {Node, Provider} from '../../api/model';
 import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
-import type {SubscriptionEntry} from './subscriptions';
+import {urlHost, type SubscriptionEntry} from './subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 import type {OutboundNames} from '../../api/selectors';
@@ -35,15 +35,6 @@ export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin'
 export const collator = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 
-function redactedHost(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    return new URL(url).hostname || null;
-  } catch {
-    return null;
-  }
-}
-
 export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translator) {
   // Node metadata authorizes a tag; URL and unmatched-entry guesses are display-only.
   const tags = new Map<string, Set<string>>();
@@ -58,7 +49,7 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
     return known?.size === 1 ? [...known][0] : undefined;
   };
   const byHost = (item: Provider) => {
-    const hostname = redactedHost(item.url_redacted);
+    const hostname = urlHost(item.url_redacted);
     const same = hostname ? entries.filter(entry => entry.host === hostname) : [];
     return same.length === 1 ? same[0].tag : undefined;
   };

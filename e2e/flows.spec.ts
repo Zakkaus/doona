@@ -40,8 +40,9 @@ test('a pinned tree item carries into the records', async ({page}) => {
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(4);
   await expect(rows.first()).toContainText('dip(geoip: private)');
-  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: dip(geoip: private)');
-  await page.getByRole('button', {name: 'Clear path filter', exact: true}).click();
+  const clearPath = page.getByRole('button', {name: 'Clear path filter: Path: dip(geoip: private)', exact: true});
+  await expect(clearPath).toHaveText('Path: dip(geoip: private)');
+  await clearPath.click();
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(() => rows.count()).toBeGreaterThan(4);
   await page.goto('/#/flows');
@@ -82,7 +83,7 @@ test('filters narrow the list and the connection chip clears its filter', async 
   await page.goto('/#/rules?tab=flows&connection_id=1');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('api.telegram.org');
-  await page.getByRole('button', {name: 'Clear connection filter', exact: true}).click();
+  await page.getByRole('button', {name: 'Clear connection filter: Connection: 1', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
   await expect(rows).toHaveCount(total);
 });
@@ -169,7 +170,7 @@ test('the tree can be seen by device, with the toggle in the address and pins ca
   await device.click();
   await expect(page).toHaveURL(/path=client%3A10\.0\.0\.12/);
   await page.getByRole('button', {name: /^Show the \d+ flows on this path$/}).click();
-  await expect(page.getByRole('button', {name: 'Clear path filter', exact: true})).toHaveText('Path: 10.0.0.12');
+  await expect(page.getByRole('button', {name: 'Clear path filter: Path: 10.0.0.12', exact: true})).toHaveText('Path: 10.0.0.12');
   await page.goBack();
   await expect(page).toHaveURL(/tab=map&by=client&path=client%3A10\.0\.0\.12/);
   await page.getByRole('radio', {name: 'By rule', exact: true}).click();
