@@ -10,11 +10,11 @@ epoch: '0'
 section: fonts
 priority: optional
 maintainer: Zakkaus <zakk@gentoozh.org>
-vendor: daeuniverse
+vendor: Zakkaus
 homepage: https://github.com/Zakkaus/doona
 license: OFL-1.1
 description: |
-  Noto Sans TC and SC for doona.
+  Noto Sans TC and SC for doona
   Without this package the browser falls back to its own fonts.
 depends:
   - doona
@@ -24,3 +24,17 @@ contents:
     type: tree
   - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
     dst: /usr/share/doc/doona/OFL.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+    dst: /usr/share/doc/doona/OFL.txt
+    packager: deb
+  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+    dst: /usr/share/doc/doona/OFL.txt
+    packager: ipk
+  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+    dst: /usr/share/doc/doona/OFL.txt
+    packager: archlinux
+  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+    dst: /usr/share/doc/doona/OFL.txt
+    packager: apk

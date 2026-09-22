@@ -4,7 +4,7 @@
 EAPI=8
 
 # The release tag keeps honk's dotted shape: v0.3.0.beta.1 for 0.3.0_beta1.
-MY_TAG="v$(ver_rs 4 . "${PV/_/.}")"
+MY_TAG="v$(ver_rs 3-4 .)"
 MY_URI="https://github.com/Zakkaus/doona/releases/download/${MY_TAG}"
 DESCRIPTION="Web UI for the daeuniverse engines"
 HOMEPAGE="https://github.com/Zakkaus/doona"

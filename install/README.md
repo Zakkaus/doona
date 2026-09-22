@@ -30,12 +30,22 @@ keyworded untested; the overlay's CI installs it). Only the hashes changed betwe
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
 under the subject `net-proxy/doona: new package, add 0.3.0_beta1`, keep the `Manifest` in the same commit, and add
-a `.github/workflows/overlay.toml` entry in `category/package` order. The release tags (`v0.3.0.beta.1`) do not
-spell the ebuild version, so that entry stays commented with the reason until the tag shape can be tracked:
+a `.github/workflows/overlay.toml` entry in `category/package` order. The tag shape maps onto the ebuild version
+the way `dev-util/deepseek-harness` maps its pre-release tags:
 
 ```toml
-#["net-proxy/doona"] tags spell the version as v0.3.0.beta.1, which nvchecker cannot map onto 0.3.0_beta1
+["net-proxy/doona"]
+source = "github"
+github = "Zakkaus/doona"
+use_latest_release = true
+prefix = "v"
+from_pattern = '\.(alpha|beta|rc)\.(\d+)$'
+to_pattern = '_\1\2'
+github_account = "Zakkaus"
 ```
+
+The nixpkgs expression names a `zakkaus` maintainer; nixpkgs wants that entry in `maintainers/maintainer-list.nix`
+as its own commit before the package.
 
 The release workflow runs `tools/package.sh --git-version`: tag `v0.3.0.beta.1` produces
 `doona-v0.3.0.beta.1.tar.gz` and `doona-fonts-v0.3.0.beta.1.tar.gz`, matching the binary recipes.
