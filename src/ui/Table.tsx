@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
+import {cx} from './cx';
 import {
   Table,
   ResizableTableContainer,
@@ -13,6 +14,7 @@ import {
   type Selection
 } from 'react-aria-components';
 import {useT} from '../i18n';
+import ChevronDown from './icons/ChevronDown';
 import {useContentWidth} from './hooks';
 import {TextTooltip} from './Button';
 import {Loading} from './Feedback';
@@ -40,7 +42,7 @@ export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisi
             <>
               <span className="rp-th">
                 {c.label}
-                {sortDirection && <span aria-hidden="true">{sortDirection === 'ascending' ? ' ↑' : ' ↓'}</span>}
+                {sortDirection && <ChevronDown className={cx('rp-sort', sortDirection)} />}
               </span>
               <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
             </>
@@ -84,7 +86,7 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
 
 // Row and header heights match theme.css (8px padding twice, 20px line, 1px border).
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
-const virtualiseFrom = 200;
+const virtualiseFrom = 40;
 // Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.
 export function DataTable<T extends {id: string}>({
   label,

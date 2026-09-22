@@ -300,7 +300,7 @@ function ValidateTab(props: ValidateTabProps) {
         <span className="rp-grow" />
         {canValidate && (
           <Button isPending={validating} isDisabled={blocked} tip={tip} onPress={validate}>
-            <Refresh />
+            <Refresh className="rp-spin-on-press" />
             {t('config.revalidate')}
           </Button>
         )}

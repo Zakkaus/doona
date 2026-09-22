@@ -39,7 +39,7 @@ function PolicyDetail(props: PolicyGroupInput) {
             <span className="rp-cluster">
               <PolicyEdit model={m.edit} />
               <Button isPending={m.probing} isDisabled={m.probeDisabled} tip={m.probeTip} onPress={m.probe}>
-                <Refresh />
+                <Refresh className="rp-spin-on-press" />
                 {m.probeText}
               </Button>
             </span>
