@@ -172,14 +172,14 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
   return [...sections, ...withheld];
 }
 
-const kinds: Record<ConfigSource['kind'], Key> = {
+export const sourceKinds: Record<ConfigSource['kind'], Key> = {
   main: 'config.kind.main',
   include: 'config.kind.include',
   subscription: 'config.kind.subscription',
   generated: 'config.kind.generated'
 };
 export function sourceView(source: ConfigSource, locale: string, t: Translator): SourceView {
-  const kind = t(kinds[source.kind]);
+  const kind = t(sourceKinds[source.kind]);
   return {
     id: source.id,
     label: redacted(source) ? `${kind} · ${source.id.slice(0, 8)}` : source.path,
@@ -205,7 +205,6 @@ type DiagnosticRow = {
   where: string;
   message: string;
   code: string;
-  inline: string;
   detail: string;
 };
 type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
@@ -225,7 +224,6 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
       where: item.line === null ? path : `${path}:${item.line}`,
       message: item.message,
       code: item.code,
-      inline: item.line === null ? item.message : t('config.atLine', {line: formatNumber(item.line, locale), message: item.message}),
       detail: item.line === null ? item.message : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: item.message})
     };
   });

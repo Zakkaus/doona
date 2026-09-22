@@ -5,9 +5,9 @@ import type {HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
-import {memberViews, policyCardView, probeSummary} from './view';
+import {actionErrorText, memberViews, policyCardView, probeSummary} from './view';
 import {usePolicyEdit} from './usePolicyEdit';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 export type PolicyGroupInput = {
   id: string;
   name: string;
@@ -25,7 +25,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   useEffect(() => {
-    if (control.actionError) toast('negative', errorText(control.actionError));
+    if (control.actionError) toast('negative', actionErrorText(control.actionError));
   }, [control.actionError]);
   const g = control.data;
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);

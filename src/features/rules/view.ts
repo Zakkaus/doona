@@ -191,7 +191,7 @@ const outcomes: Record<string, Key> = {
   skipped: 'rule.result.skipped',
   indeterminate: 'rule.result.indeterminate'
 };
-type EvaluationView = {
+export type EvaluationView = {
   heading: string;
   fields: [string, string][];
   hint: string | null;

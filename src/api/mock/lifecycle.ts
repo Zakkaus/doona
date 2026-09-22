@@ -1,3 +1,4 @@
+import {uuid} from '../hash';
 import type {Api} from '../api';
 import type {
   ApiEvent,
@@ -58,7 +59,7 @@ export function createLifecycle(
     const key = JSON.stringify([stream, filter, position]);
     const previous = cursorIds.get(key);
     if (previous) return previous;
-    const id = crypto.randomUUID();
+    const id = uuid();
     cursors.set(id, {stream, filter, position, issued: Date.now()});
     cursorIds.set(key, id);
     return id;

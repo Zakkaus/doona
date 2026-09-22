@@ -1,6 +1,5 @@
 import './install';
-import {Login} from './Login';
-import {Suspense, type ContextType} from 'react';
+import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
 import {Button, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
@@ -16,6 +15,8 @@ import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
+// Only a backend that refuses the request needs the sign-in forms, so they load on demand.
+const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
 
 // The startup entry calls this before mounting React to avoid a palette flash.
 export function stampAppearance() {
@@ -128,7 +129,9 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <SettingsContext.Provider value={settingsValue}>
             {view.content.kind === 'login' ? (
-              <Login profileId={view.content.profileId} api={view.content.api} backend={view.content.backend} rejected={view.content.rejected} />
+              <Suspense fallback={<Loading />}>
+                <Login profileId={view.content.profileId} api={view.content.api} backend={view.content.backend} rejected={view.content.rejected} />
+              </Suspense>
             ) : view.content.kind === 'loading' ? (
               <Loading />
             ) : view.content.kind === 'unavailable' ? (

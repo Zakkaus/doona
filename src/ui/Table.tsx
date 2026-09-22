@@ -92,7 +92,7 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
   return kept.size === cols.length ? cols : cols.filter(column => kept.has(column.id));
 }
 
-// Row and header heights match theme.css (8px padding twice, 20px line, 1px border).
+// Heights match tables-forms.css: a row is a fixed 40px; the heading is 8px padding twice, a 20px line and a 1px border.
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
 const virtualiseFrom = 40;
 // Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.

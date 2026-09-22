@@ -6,6 +6,8 @@ import {LocalError} from '../api/error';
 import {useResource} from './resource';
 import {etag, finished, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
+// A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
+export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
 export async function probeGroup(api: Api, capabilities: Capabilities, group: Group, signal: AbortSignal): Promise<ProbeResult> {
   const request = tcpProbe(capabilities, {type: 'group', group_id: group.id});
   const limits = capabilities.resources.probes.limits;
@@ -30,11 +32,13 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
     }
   } catch (error) {
     if (signal.aborted || !result) throw error;
-    const completed = new Set(result.results.map(row => row.member_id)).size;
-    throw Object.assign(
-      new LocalError('ui.operationFailed', `${completed}/${group.members.length}; ${error instanceof Error ? error.message : String(error)}`),
-      {partialResult: result}
-    );
+    // The batch's own error stays as `cause`, so the caller renders it translated next to the counts.
+    throw Object.assign(new LocalError('ui.operationFailed'), {
+      cause: error,
+      partialResult: result,
+      completed: new Set(result.results.map(row => row.member_id)).size,
+      total: group.members.length
+    });
   }
   return result!;
 }

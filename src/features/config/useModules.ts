@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useState} from 'react';
-import {completeSource} from '../../store/config';
 import {ApiError} from '../../api/error';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
@@ -9,6 +8,7 @@ import {useDraftGuard} from './useDraftGuard';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
 import {useValidationSources} from './useValidationSources';
+import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 
 export type ModulesProps = {
@@ -18,7 +18,6 @@ export type ModulesProps = {
   canValidate: boolean;
   open: (sourceId: string, line: number | null) => void;
 };
-const checkKey = (source: ConfigSource) => JSON.stringify([source.id, source.content_sha256, source.content ?? null]);
 type Draft = {section: ModuleSection & {source: ConfigSource; block: NonNullable<ModuleSection['block']>}; text: string};
 
 export function useModules({config, editor, canWrite, canValidate, open}: ModulesProps) {
@@ -26,20 +25,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const lang = useLang();
   const locale = LOCALE[lang];
   const sections = useMemo(() => sectionSummaries(config.sources, lang, t), [config, lang, t]);
-  // Keyed by digest, not by object: a refetch returns new objects for the same text, and the edit buttons would drop
-  // out until the check reran.
-  const [checked, setChecked] = useState<Map<string, boolean>>(new Map());
-  const keys = useMemo(() => new Map(config.sources.map(source => [source, checkKey(source)])), [config]);
-  const isComplete = (source: ConfigSource | null) => (source ? checked.get(keys.get(source) ?? checkKey(source)) : undefined);
-  useEffect(() => {
-    let live = true;
-    void Promise.all(config.sources.map(async source => [checkKey(source), await completeSource(source)] as const)).then(entries => {
-      if (live) setChecked(new Map(entries));
-    });
-    return () => {
-      live = false;
-    };
-  }, [config]);
+  const isComplete = useCompleteness(config.sources);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const dirty = draft !== null && draft.text !== draft.section.source.content!.slice(draft.section.block.from, draft.section.block.to);
@@ -63,7 +49,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   const fullText = useMemo(() => (draft ? splice(draft.section.source.content!, draft.section.block, draft.text) : null), [draft]);
   const sourceId = draft?.section.source.id;
-  const candidates = useValidationSources(config.sources, sourceId && fullText !== null ? {id: sourceId, content: fullText} : undefined);
+  const candidates = useValidationSources(config.sources, isComplete, sourceId && fullText !== null ? {id: sourceId, content: fullText} : undefined);
   useBackgroundValidation(canValidate && fullText !== null ? candidates : null, setFound);
   const shown = (editor.errorSource === sourceId ? editor.diagnostics : null) ?? found ?? config.diagnostics;
   // The editor holds one file; diagnostics from other sources belong to their own cards.

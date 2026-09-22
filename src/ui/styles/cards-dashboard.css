@@ -1,4 +1,4 @@
-/* Holds a chart's height while its first samples arrive, so the card does not jump. */
+/* Holds a chart's or a card body's height while its first data arrives, so the card does not jump. */
 .rp-chart-wait {
   min-height: 182px;
   display: flex;
@@ -10,6 +10,32 @@
 }
 .rp-chart-wait.bars {
   min-height: 136px;
+}
+/* The runtime settings form: a row of described fields, the recorders and the apply row. */
+.rp-chart-wait.form {
+  min-height: 204px;
+}
+/* The four backend action groups. */
+.rp-chart-wait.ops {
+  min-height: 164px;
+}
+/* A card body held by invisible placeholders (Overview's BodyWait), with the loading notice centred over them. */
+.rp-body-wait {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-body-wait > :not(.rp-empty) {
+  visibility: hidden;
+}
+.rp-body-wait > .rp-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 /* An error from the mode card spans the row rather than taking one of its three slots. */
 .rp-quick > .rp-alert {
@@ -66,6 +92,17 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+/* A header that must keep its height: the title gives way (truncating) instead of the row wrapping. */
+.rp-row.nowrap,
+.rp-cluster.nowrap {
+  flex-wrap: nowrap;
+}
+.rp-row.nowrap > .rp-cluster {
+  flex: 1 1 auto;
+}
+.rp-row.nowrap .rp-h3 {
   min-width: 0;
 }
 .rp-label {
@@ -133,10 +170,12 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* A feed inside a card fills the card's height and scrolls past it, so the row's cards stay level. */
+/* A feed takes no height from its rows: it fills what the row's other cards give its card and scrolls inside,
+   with the chart-wait floor for a card that stands alone. */
 .rp-feed {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 182px;
+  contain: size;
   overflow-y: auto;
 }
 .rp-quick {

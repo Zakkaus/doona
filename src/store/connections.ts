@@ -4,9 +4,12 @@ import type {BulkCloseQuery, BulkCloseResult} from '../api/model';
 import {ApiError} from '../api/error';
 import {useResource} from './resource';
 import {useAction} from './action';
-export function useConnections(src?: string, enabled = true) {
+export function useConnections(src?: string, enabled = true, paused = false) {
   const api = getApi();
-  return useResource({key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)}, {enabled});
+  return useResource(
+    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
+    {enabled, paused}
+  );
 }
 // Totals count every matching entry before the limit, so one returned entry is enough to read them.
 export function useConnectionTotals(enabled = true) {

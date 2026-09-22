@@ -1,5 +1,5 @@
 import {ApiError} from '../api/error';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {getApi} from '../api/index';
 import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
 import {LocalError} from '../api/error';
@@ -17,20 +17,37 @@ export async function completeSource(source: Pick<ConfigSource, 'content' | 'con
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
 }
 
-export function useSourceComplete(source: ConfigSource | null): boolean | null {
-  const content = source?.content;
-  const digest = source?.content_sha256 ?? '';
-  const [checked, setChecked] = useState<{content: string | undefined; digest: string; complete: boolean} | null>(null);
+type Check = {digest: string; content: string | undefined; complete: boolean};
+
+// Whether each source's text matches its digest; undefined until checked. Results are kept by id, digest and text
+// rather than by object, so a refetch of the same text keeps its answer instead of dropping back to unknown.
+export function useCompleteness(sources: ConfigSource[]): (source: ConfigSource) => boolean | undefined {
+  const [checked, setChecked] = useState<Map<string, Check>>(new Map());
   useEffect(() => {
     let live = true;
-    void completeSource({content, content_sha256: digest}).then(complete => {
-      if (live) setChecked({content, digest, complete});
+    void Promise.all(
+      sources.map(async source => [source.id, {digest: source.content_sha256, content: source.content, complete: await completeSource(source)}] as const)
+    ).then(entries => {
+      if (live) setChecked(new Map(entries));
     });
     return () => {
       live = false;
     };
-  }, [content, digest]);
-  return checked?.content === content && checked?.digest === digest ? checked.complete : null;
+  }, [sources]);
+  return useCallback(
+    (source: ConfigSource) => {
+      const check = checked.get(source.id);
+      return check && check.digest === source.content_sha256 && check.content === source.content ? check.complete : undefined;
+    },
+    [checked]
+  );
+}
+
+// One source's verdict: null until checked, and for no source at all.
+export function useSourceComplete(source: ConfigSource | null): boolean | null {
+  const sources = useMemo(() => (source ? [source] : []), [source]);
+  const isComplete = useCompleteness(sources);
+  return source ? (isComplete(source) ?? null) : null;
 }
 
 export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {

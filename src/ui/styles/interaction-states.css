@@ -67,6 +67,16 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.rp-alert.informative {
+  border-color: var(--rp-foam);
+}
+.rp-alert:focus-visible {
+  outline: 2px solid var(--rp-pine);
+  outline-offset: 2px;
+}
+.rp-alert-title {
+  font-weight: 600;
+}
 .rp-spinner {
   width: 14px;
   height: 14px;
@@ -95,7 +105,8 @@
   border-color: color-mix(in srgb, currentColor 35%, transparent);
   border-top-color: currentColor;
 }
-.rp-btn.icon[data-pending] > svg {
+/* The refresh arrows keep turning in place of the spinner (motion.css). */
+.rp-btn.icon[data-pending] > svg:not(.rp-refresh) {
   display: none;
 }
 .rp-switch {

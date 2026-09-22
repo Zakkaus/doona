@@ -66,7 +66,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
     await expect(page.locator('.rp-nav[href="#/policies"]')).toHaveAttribute('aria-current', 'page');
     const fallback = page.locator('.rp-content > .rp-empty');
     await page.clock.runFor(149);
-    await expect(fallback).toHaveCount(0);
+    await expect(fallback).toBeHidden();
     await expect(page.locator('.rp-content')).toBeVisible();
     await page.clock.runFor(1);
     await expect(fallback).toBeVisible();

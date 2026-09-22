@@ -89,7 +89,6 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const dnsError = (value: string) => (isQuotable(value.trim()) ? undefined : t('config.unquotable'));
   return {
     state,
-    current,
     text,
     busy,
     rows: rows.rows,

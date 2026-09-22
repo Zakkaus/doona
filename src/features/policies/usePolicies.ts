@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../config/mainSource';
@@ -77,18 +77,35 @@ export function usePolicies(query: string) {
 export function usePolicyVisibility(focused: boolean) {
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);
-  const ref = useCallback((element: HTMLElement | null) => {
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        const near = entries.at(-1)!.isIntersecting;
-        setVisible(near);
-        if (near) setExpanded(true);
-      },
-      {rootMargin: '400px'}
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
+  const card = useRef<HTMLElement | null>(null);
+  // Expanding removes the focused placeholder button, so the card itself takes focus instead of the page body.
+  const refocus = useRef(false);
+  const open = useCallback(() => {
+    refocus.current = !!card.current?.contains(document.activeElement);
+    setExpanded(true);
   }, []);
-  return {ref, active: focused || expanded, visible, expand: () => setExpanded(true)};
+  const ref = useCallback(
+    (element: HTMLElement | null) => {
+      card.current = element;
+      if (!element) return;
+      const observer = new IntersectionObserver(
+        entries => {
+          const near = entries.at(-1)!.isIntersecting;
+          setVisible(near);
+          if (near) open();
+        },
+        {rootMargin: '400px'}
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [open]
+  );
+  const active = focused || expanded;
+  useLayoutEffect(() => {
+    if (!active || !refocus.current) return;
+    refocus.current = false;
+    if (!card.current?.contains(document.activeElement)) card.current?.focus();
+  }, [active]);
+  return {ref, active, visible, expand: open};
 }

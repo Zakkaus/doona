@@ -13,10 +13,10 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
-export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
+// `href` is the rule's place in the rule list, built by the feature; without it the expression stands alone.
+export function RuleRef({expression, href}: {expression: string | null; href?: string}) {
   const t = useT();
   if (!expression) return <>—</>;
-  const href = linked && ruleId ? '#/rules?tab=list&rule=' + encodeURIComponent(ruleId) : undefined;
   return (
     <>
       <TextTooltip text={expression}>{expression}</TextTooltip>

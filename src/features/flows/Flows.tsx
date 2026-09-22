@@ -22,6 +22,7 @@ import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
+import {ruleHref} from '../rules/link';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 
@@ -79,7 +80,7 @@ export function FlowRecords(props: PageProps) {
         drop: 1,
         render: row => (
           <span className="rp-rule">
-            <RuleRef expression={row.expression} ruleId={row.ruleId} linked={view.rulesListed} />
+            <RuleRef expression={row.expression} href={ruleHref(row.ruleId, view.rulesListed)} />
             {row.recomputed && <small className="rp-provenance">{t('conn.recomputed')}</small>}
           </span>
         )
@@ -106,13 +107,13 @@ export function FlowRecords(props: PageProps) {
         />
         <LabeledSelect label={t('ui.state')} side value={view.state} onChange={view.setState} items={view.stateOptions} />
         {view.pinLabel && (
-          <Button small label={t('flow.clearMapFilter')} onPress={view.clearPin}>
+          <Button small label={t('ui.valuePair', {label: t('flow.clearMapFilter'), value: view.pinLabel})} onPress={view.clearPin}>
             {view.pinLabel}
             <Close />
           </Button>
         )}
         {view.connectionLabel && (
-          <Button small label={t('flow.clearConnectionFilter')} onPress={view.clearConnection}>
+          <Button small label={t('ui.valuePair', {label: t('flow.clearConnectionFilter'), value: view.connectionLabel})} onPress={view.clearConnection}>
             {view.connectionLabel}
             <Close />
           </Button>

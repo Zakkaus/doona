@@ -147,10 +147,19 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
 }
 
 type TileNote = {text: string; tone?: 'ok' | 'warn' | 'err'};
-export type TileView = {id: string; stage: TreeBy | 'outbound' | 'node'; name: string; badge?: string; notes: TileNote[]; count: number; label: string};
+export type TileView = {
+  id: string;
+  stage: TreeBy | 'outbound' | 'node';
+  name: string;
+  badge?: string;
+  notes: TileNote[];
+  count: number;
+  countText: string;
+  label: string;
+};
 export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileView[] {
   const unknown = (item: TreeItem, name: string) => (item.unknown ? t('flow.mapUnknown') : name);
-  type Bare = Omit<TileView, 'label'>;
+  type Bare = Omit<TileView, 'label' | 'countText'>;
   const tiles: Bare[] = [
     ...tree.leaves.map<Bare>(leaf => ({
       id: leaf.id,
@@ -193,7 +202,7 @@ export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileVie
     const parts = [tile.name, ...(tile.badge ? [tile.badge] : []), ...tile.notes.map(note => note.text), t('flow.treeFlows', {n: tile.count})];
     if (from.length) parts.push(t('flow.treeFrom', {names: formatList(lang, from)}));
     if (to.length) parts.push(t('flow.treeTo', {names: formatList(lang, to)}));
-    return {...tile, label: parts.join(' · ')};
+    return {...tile, countText: formatNumber(tile.count, LOCALE[lang]), label: parts.join(' · ')};
   });
 }
 
@@ -263,19 +272,9 @@ type FlowDetailView = {
   seedHref: string | null;
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
-type FlowRecordsView = {rows: FlowRow[]; detail: FlowDetailView | null; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(
-  flows: FlowSummary[],
-  detail: FlowDetail | undefined,
-  list: FlowList | undefined,
-  names: OutboundNames,
-  canAdd: boolean,
-  t: Translator,
-  lang: Lang
-): FlowRecordsView {
+type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
+export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
   const locale = LOCALE[lang];
-  const ip = detail ? sourceIp(detail.input.dst ?? undefined) : undefined;
-  const seed = detail?.input.domain ? {kind: 'domainSuffix' as const, value: detail.input.domain} : ip ? {kind: 'dip' as const, value: ip} : null;
   return {
     rows: flows.map(flow => ({
       id: flow.id,
@@ -289,49 +288,54 @@ export function flowRecordsView(
       started: relativeStart(flow.started_at, locale)
     })),
     coverage: list ? coverageView(list, t, lang) : null,
-    stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))],
-    detail: detail
-      ? {
-          title: detail.input.domain || detail.input.dst || detail.id,
-          status: t(traceStates[detail.trace.status]),
-          tone: detail.trace.status === 'complete' ? undefined : 'warn',
-          revision: t('flow.revision', {n: detail.revision}),
-          fields: [
-            [t('ui.state'), t(connectionStates[detail.state])],
-            [t('ui.outbound'), outboundLabel(detail.outbound, t)],
-            ...(detail.trace.missing.length
-              ? [
-                  [
-                    t('flow.missing'),
-                    formatList(
-                      lang,
-                      detail.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
-                    )
-                  ] as [string, string]
-                ]
-              : [])
-          ],
-          connectionHref: detail.connection_id ? buildHash('connections', 'id=' + encodeURIComponent(detail.connection_id)) : null,
-          seedHref: canAdd && seed ? ruleSeedHref(seed) : null,
-          steps: [...detail.trace.steps]
-            .sort((a, b) => a.seq - b.seq)
-            .map(step => {
-              const fields = flowStepFields(step);
-              return {
-                id: step.seq,
-                stage: stages[step.stage] ? t(stages[step.stage]) : step.stage,
-                observed: localTime(step.observed_at, locale),
-                elapsed: step.elapsed_us == null ? '—' : t('ui.microseconds', {n: step.elapsed_us}),
-                fields:
-                  fields?.map(([key, value]) => [
-                    typeof key === 'string' ? t(key) : t(key.key, key.params),
-                    typeof value === 'string' ? value : t(value.key, value.params)
-                  ]) ?? null,
-                raw: fields ? '' : JSON.stringify(step.data, null, 2)
-              };
-            })
-        }
-      : null
+    stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]
+  };
+}
+// Kept apart from the rows, so selecting a flow or an update to it does not remap the list.
+export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, t: Translator, lang: Lang): FlowDetailView | null {
+  if (!detail) return null;
+  const locale = LOCALE[lang];
+  const ip = sourceIp(detail.input.dst ?? undefined);
+  const seed = detail.input.domain ? {kind: 'domainSuffix' as const, value: detail.input.domain} : ip ? {kind: 'dip' as const, value: ip} : null;
+  return {
+    title: detail.input.domain || detail.input.dst || detail.id,
+    status: t(traceStates[detail.trace.status]),
+    tone: detail.trace.status === 'complete' ? undefined : 'warn',
+    revision: t('flow.revision', {n: detail.revision}),
+    fields: [
+      [t('ui.state'), t(connectionStates[detail.state])],
+      [t('ui.outbound'), outboundLabel(detail.outbound, t)],
+      ...(detail.trace.missing.length
+        ? [
+            [
+              t('flow.missing'),
+              formatList(
+                lang,
+                detail.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
+              )
+            ] as [string, string]
+          ]
+        : [])
+    ],
+    connectionHref: detail.connection_id ? buildHash('connections', 'id=' + encodeURIComponent(detail.connection_id)) : null,
+    seedHref: canAdd && seed ? ruleSeedHref(seed) : null,
+    steps: [...detail.trace.steps]
+      .sort((a, b) => a.seq - b.seq)
+      .map(step => {
+        const fields = flowStepFields(step);
+        return {
+          id: step.seq,
+          stage: stages[step.stage] ? t(stages[step.stage]) : step.stage,
+          observed: localTime(step.observed_at, locale),
+          elapsed: step.elapsed_us == null ? '—' : t('ui.microseconds', {n: step.elapsed_us}),
+          fields:
+            fields?.map(([key, value]) => [
+              typeof key === 'string' ? t(key) : t(key.key, key.params),
+              typeof value === 'string' ? value : t(value.key, value.params)
+            ]) ?? null,
+          raw: fields ? '' : JSON.stringify(step.data, null, 2)
+        };
+      })
   };
 }
 

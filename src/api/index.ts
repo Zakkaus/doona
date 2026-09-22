@@ -1,6 +1,7 @@
 import type {Api} from './api';
 import {createApi} from './client';
 import {readProfiles} from './profiles';
+import {sessionToken} from './session';
 
 let selected: Api | undefined;
 let configuration = '';
@@ -17,7 +18,8 @@ export function getApi(): Api {
   const {profiles, activeId} = readProfiles();
   const profile = profiles.find(profile => profile.id === activeId);
   const base = profile?.api;
-  const token = profile?.token;
+  // A password session opened in this tab takes the place of the profile's configured bearer.
+  const token = (profile && base ? sessionToken(profile.id, base) : null) ?? profile?.token;
   const key = JSON.stringify([activeId, base, token]);
   if (!selected || configuration !== key) {
     if (base && base !== 'mock') selected = createApi(base, token ?? undefined);

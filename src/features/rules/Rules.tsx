@@ -1,10 +1,12 @@
+import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
-import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField} from '../../ui/ui';
+import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from '../flows/Flows';
 import type {PageProps} from '../types';
 import {useRulesPage} from './useRulesPage';
+import type {EvaluationView} from './view';
 
 export function Rules(props: PageProps) {
   const t = useT();
@@ -24,6 +26,36 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
   const t = useT();
   const trace = useRoutingTrace(state);
   const {form, setForm} = trace;
+  // Stable columns: an inline array would re-render every rule row of every result card on each keystroke.
+  const columns = useMemo(
+    (): TableColumn<EvaluationView['rows'][number]>[] => [
+      {
+        id: 'expression',
+        label: t('rule.expression'),
+        minWidth: 240,
+        grow: 2,
+        isRowHeader: true,
+        render: row => (
+          <TextTooltip className="rp-code" text={row.id}>
+            {row.expression}
+          </TextTooltip>
+        )
+      },
+      {
+        id: 'result',
+        label: t('rule.outcome'),
+        minWidth: 120,
+        grow: 0,
+        render: row => (
+          <Light small tone={row.tone}>
+            {row.outcome}
+          </Light>
+        )
+      },
+      {id: 'missing', label: t('rule.missing'), minWidth: 144, render: row => row.missing}
+    ],
+    [t]
+  );
   return (
     <>
       <form
@@ -70,7 +102,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
         </div>
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
           <div className="rp-toolbar">
-            <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} />
+            <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
             <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
           </div>
@@ -102,37 +134,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
                 )}
               </div>
               {evaluation.hint && <p className="rp-label">{evaluation.hint}</p>}
-              <DataTable
-                label={evaluation.label}
-                height={360}
-                rows={evaluation.rows}
-                cols={[
-                  {
-                    id: 'expression',
-                    label: t('rule.expression'),
-                    minWidth: 240,
-                    grow: 2,
-                    isRowHeader: true,
-                    render: row => (
-                      <TextTooltip className="rp-code" text={row.id}>
-                        {row.expression}
-                      </TextTooltip>
-                    )
-                  },
-                  {
-                    id: 'result',
-                    label: t('rule.outcome'),
-                    minWidth: 120,
-                    grow: 0,
-                    render: row => (
-                      <Light small tone={row.tone}>
-                        {row.outcome}
-                      </Light>
-                    )
-                  },
-                  {id: 'missing', label: t('rule.missing'), minWidth: 144, render: row => row.missing}
-                ]}
-              />
+              <DataTable label={evaluation.label} height={360} rows={evaluation.rows} cols={columns} />
             </section>
           ))}
           {trace.result.dns.map(dns => (

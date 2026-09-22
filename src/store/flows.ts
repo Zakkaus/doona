@@ -59,7 +59,7 @@ export async function routingTrace(
 export type FlowFilter = {connection_id?: string; network?: NonNullable<FlowQuery>['network']; state?: NonNullable<FlowQuery>['state']};
 export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFilter = {}, enabled = true) {
   const api = getApi();
-  const capabilities = useCapabilities().data;
+  const {data: capabilities, error: capabilitiesError} = useCapabilities();
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
   return useResource(
     {
@@ -75,7 +75,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined}
+    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined && !capabilitiesError}
   );
 }
 

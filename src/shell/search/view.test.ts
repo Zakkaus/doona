@@ -1,7 +1,10 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate} from '../../i18n';
-import {searchView, type SearchSources} from './view';
+import {searchIndex, searchView as project, type SearchSources} from './view';
+import {sourceKinds} from '../../features/config/view';
+import type {Translator} from '../../i18n';
+const searchView = (q: string, sources: SearchSources, t: Translator) => project(q, searchIndex(sources, 'en', t));
 
 it('keeps destination identity and encoded queries when different hit types have the same label', async () => {
   const api = createMockApi();
@@ -79,4 +82,26 @@ it('resolves loose nodes through collision-safe provider rows and qualifies an e
   expect(empty.partial).not.toBeNull();
   connections.truncated = false;
   expect(searchView('nothing-matches-this', sources, t).partial).toBeNull();
+});
+
+it('formats rule positions, source kinds and node groups for the language', async () => {
+  const api = createMockApi();
+  const node = (await api.nodes()).nodes[0];
+  const rules = await api.rules();
+  const config = await api.config();
+  const rule = rules.rules.find(item => item.kind === 'rule')!;
+  const sources: SearchSources = {
+    capabilities: {data: await api.capabilities()},
+    connections: {data: undefined},
+    nodes: {data: [{...node, group_ids: ['a', 'b']}]},
+    groups: {data: undefined},
+    providers: {data: undefined},
+    config: {data: config},
+    rules: {data: {...rules, rules: [{...rule, index: 1233}]}}
+  };
+  const t = translate.bind(null, 'zh-CN');
+  const view = project('', searchIndex(sources, 'zh-CN', t));
+  expect(view.byId.get(`rule:${rule.rule_id}`)!.description).toBe(`#1,234 → ${rule.outbound}`);
+  expect(view.byId.get(`source:${config.sources[0].id}`)!.description).toBe(t(sourceKinds[config.sources[0].kind]));
+  expect(view.byId.get(`node:${node.id}`)!.description).toBe('a、b');
 });

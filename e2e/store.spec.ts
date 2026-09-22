@@ -28,7 +28,7 @@ test('a failed second probe batch reports partial completion instead of success'
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'skylink', exact: true});
   await card.getByRole('button', {name: 'Test all', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('64/100');
+  await expect(page.locator('.rp-toast.negative')).toContainText('Tested 64 of 100 members');
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await expect(card.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
 });

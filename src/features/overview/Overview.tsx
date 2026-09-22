@@ -2,7 +2,29 @@ import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
 import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import {tableLayout} from '../../ui/Table';
 import {LifecycleActions} from './Lifecycle';
+
+// While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
+// card keeps its height when the values arrive; `extra` holds the lines below the grid.
+function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
+  return (
+    <div className="rp-body-wait">
+      <div className="rp-kv" aria-hidden="true">
+        {Array.from({length: cells}, (_, i) => (
+          <div key={i}>
+            <span className="k">{'\u00a0'}</span>
+            <span className="v">{'\u00a0'}</span>
+          </div>
+        ))}
+      </div>
+      {extra > 0 && <div aria-hidden="true" style={{height: extra}} />}
+      <Loading />
+    </div>
+  );
+}
+// The least the attachments table takes: its frame, heading and two rows.
+const attachmentsFloor = 2 + tableLayout.headingHeight + 2 * tableLayout.rowHeight;
 export function Overview() {
   const t = useT();
   const vm = useOverview();
@@ -47,7 +69,7 @@ export function Overview() {
               )}
             </>
           ) : vm.engine.state === 'loading' ? (
-            <Loading />
+            <BodyWait cells={6} extra={vm.engine.profiles.length > 0 ? 20 : 0} />
           ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -63,7 +85,7 @@ export function Overview() {
               <span className="rp-label">{vm.counters.since}</span>
             </>
           ) : vm.counters.state === 'loading' ? (
-            <Loading />
+            <BodyWait cells={6} extra={16} />
           ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -79,7 +101,7 @@ export function Overview() {
               <Kv items={vm.memory.fields} />
             </>
           ) : vm.memory.state === 'loading' ? (
-            <Loading />
+            <BodyWait cells={8} />
           ) : vm.errors.memory ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -126,7 +148,7 @@ export function Overview() {
               )}
             </>
           ) : vm.datapath.state === 'loading' ? (
-            <Loading />
+            <BodyWait cells={10} extra={attachmentsFloor} />
           ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}

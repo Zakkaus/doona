@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
-import {coverageView, flowRecordsView, routingMapView, tileViews, treeGeometry, treeWindow} from './view';
+import {coverageView, flowDetailView, flowRecordsView, routingMapView, tileViews, treeGeometry, treeWindow} from './view';
 import {routingTree, treeIndex, treeReach} from './map';
 
 const t: Translator = (key, params) => translate('en', key, params);
@@ -33,14 +33,14 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   const detail = await api.flow(list.flows[0].id);
   detail.input = {...detail.input, domain: null, dst: '[2001:db8::5]:443'};
   detail.trace.steps.reverse();
-  const view = flowRecordsView([{...list.flows[0], input: undefined}], detail, list, new Map(), true, t, 'en');
+  const view = {...flowRecordsView([{...list.flows[0], input: undefined}], list, new Map(), t, 'en'), detail: flowDetailView(detail, true, t, 'en')};
   expect(view.rows[0].target).toBe(list.flows[0].id);
   expect(view.detail!.seedHref).toBe('#/rules?tab=list&add=dip%3A2001%3Adb8%3A%3A5');
   const inputStep = detail.trace.steps.find(step => step.stage === 'input')!;
   expect(view.detail!.steps.map(step => step.id)).toEqual(detail.trace.steps.map(step => step.seq).sort((a, b) => a - b));
   expect(view.detail!.steps.find(step => step.stage === t('flow.stage.input'))?.fields).toContainEqual([t('conn.f.dst'), inputStep.data.values.dst]);
-  expect(flowRecordsView([], detail, undefined, new Map(), false, t, 'en').detail!.seedHref).toBeNull();
-  expect(flowRecordsView([], undefined, undefined, new Map(), false, t, 'en').detail).toBeNull();
+  expect(flowDetailView(detail, false, t, 'en')!.seedHref).toBeNull();
+  expect(flowDetailView(undefined, false, t, 'en')).toBeNull();
 });
 
 it('prepares tile labels with configured destinations, nested policies and unknown nodes', async () => {
@@ -52,6 +52,8 @@ it('prepares tile labels with configured destinations, nested policies and unkno
   const tile = tiles.find(tile => tile.id === 'rule:' + rule.rule_id)!;
   expect(tile.label).toContain('→ ' + t('ui.block'));
   expect(tile.name).toBe(rule.expression);
+  tree.leaves[0].count = 12345;
+  expect(tileViews(tree, t, 'en')[0].countText).toBe('12,345');
   const map = routingMapView(tree, true, false, null, 0, t);
   expect(map.state).toBe('ready');
 });
@@ -64,7 +66,7 @@ it('preserves input identifiers that collide with translated enum values in ever
   input.data.values = {...input.data.values, domain: 'cache', pname: 'drop', ingress: 'lan', domain_source: 'tls_sni'};
   for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
     const t: Translator = (key, params) => translate(lang, key, params);
-    const fields = flowRecordsView([], detail, list, new Map(), false, t, lang).detail!.steps.find(step => step.id === input.seq)!.fields;
+    const fields = flowDetailView(detail, false, t, lang)!.steps.find(step => step.id === input.seq)!.fields;
     expect(fields).toContainEqual([t('ui.domain'), 'cache']);
     expect(fields).toContainEqual([t('ui.process'), 'drop']);
     expect(fields).toContainEqual([t('conn.f.ingress'), t('flow.v.lan')]);
@@ -117,5 +119,5 @@ it('names the groups leading to a node tile and leaves an unmeasured step withou
   expect(tiles.find(tile => tile.id === link.target)!.label).toContain('← ' + source.name);
   const detail = await api.flow(list.flows[0].id);
   detail.trace.steps = detail.trace.steps.map(step => ({...step, elapsed_us: null}));
-  expect(flowRecordsView([], detail, list, new Map(), false, t, 'en').detail!.steps.every(step => step.elapsed === '—')).toBe(true);
+  expect(flowDetailView(detail, false, t, 'en')!.steps.every(step => step.elapsed === '—')).toBe(true);
 });

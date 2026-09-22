@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
@@ -31,16 +31,22 @@ export function BackendActionsCard() {
     canUpdate,
     hasGeodata,
     rows,
-    update
+    update,
+    waiting
   } = useBackendActions();
   return (
     <section className="rp-card" aria-labelledby="settings-actions">
       <h2 className="rp-h3" id="settings-actions">
         {t('settings.actions')}
       </h2>
-      <span className="rp-label">{note}</span>
+      <span className="rp-label">{waiting ? '\u00a0' : note}</span>
       <ErrorMessage error={runtimeError} />
       <div className="rp-ops">
+        {waiting && (
+          <div className="rp-chart-wait ops">
+            <Loading />
+          </div>
+        )}
         {lifecycle.length > 0 && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.groupLifecycle')}</span>

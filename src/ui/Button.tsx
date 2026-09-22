@@ -137,7 +137,10 @@ function enqueue(measure: () => void) {
   });
 }
 const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entries => entries.forEach(entry => measures.get(entry.target)?.()));
-const STOPS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"], [role="row"]';
+// Keyboard focus on one of these opens the first nested tooltip, which cannot take focus itself; a row is left
+// out, since it holds many cells and its name already carries their full text.
+const REVEALS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"]';
+const STOPS = REVEALS + ', [role="row"]';
 
 export function TextTooltip({children, text, className}: {children: ReactNode; text?: string; className?: string}) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -145,6 +148,7 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
   // Not a tab stop until measured: a focusable span inside a row would swallow the row's own press.
   const [nested, setNested] = useState(true);
   const active = overflow || !!text;
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -166,20 +170,36 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     };
     // The span remounts when the trigger wraps it, so the observer follows `active` too.
   }, [text, active]);
+  useEffect(() => {
+    const el = ref.current;
+    const stop = active && nested ? el?.closest<HTMLElement>(REVEALS) : null;
+    if (!el || !stop) return;
+    const show = () => {
+      if (stop.matches(':focus-visible') && stop.querySelector('[data-tip]') === el) setOpen(true);
+    };
+    const hide = () => setOpen(false);
+    stop.addEventListener('focus', show);
+    stop.addEventListener('blur', hide);
+    return () => {
+      stop.removeEventListener('focus', show);
+      stop.removeEventListener('blur', hide);
+      setOpen(false);
+    };
+  }, [active, nested]);
   // New content can overflow without resizing the box, so it is measured again; the observer stays attached.
   useEffect(() => {
     const measure = ref.current && measures.get(ref.current);
     if (measure) enqueue(measure);
   }, [children, text, active]);
   const span = (
-    <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1}>
+    <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1} data-tip={active ? '' : undefined}>
       {children}
     </span>
   );
   // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
   if (!active) return span;
   return (
-    <TooltipTrigger delay={400}>
+    <TooltipTrigger delay={400} isOpen={open} onOpenChange={setOpen}>
       <Focusable>{span}</Focusable>
       <Tip>{text ?? children}</Tip>
     </TooltipTrigger>

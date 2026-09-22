@@ -1,12 +1,13 @@
-import {useState} from 'react';
+import {useMemo, useState} from 'react';
 import type {Key} from 'react-aria-components';
-import {useT} from '../../i18n';
+import {useLang, useT} from '../../i18n';
 import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
 import type {PageProps} from '../../features/types';
-import {searchView} from './view';
+import {connectionEntries, groupEntries, nodeEntries, pageEntries, providerEntries, ruleEntries, searchSections, searchView, sourceEntries} from './view';
 
 export function useSearch(go: PageProps['go'], onClose: () => void) {
   const t = useT();
+  const lang = useLang();
   const [q, setQ] = useState('');
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
@@ -17,7 +18,18 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const config = useConfig(resources?.config.available === true);
   const rules = useRules(resources?.rules.available === true);
   const sources = [capabilities, connections, nodes, groups, providers, config, rules];
-  const view = searchView(q, {capabilities, connections, nodes, groups, providers, config, rules}, t);
+  // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
+  const pages = useMemo(() => pageEntries(capabilities.data, config.data, t), [capabilities.data, config.data, t]);
+  const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
+  const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang, t), [nodes.data, providers.data, lang, t]);
+  const groupHits = useMemo(() => groupEntries(groups.data), [groups.data]);
+  const providerHits = useMemo(() => providerEntries(providers.data, t), [providers.data, t]);
+  const sourceHits = useMemo(() => sourceEntries(config.data, t), [config.data, t]);
+  const ruleHits = useMemo(() => ruleEntries(rules.data, lang), [rules.data, lang]);
+  const view = searchView(
+    q,
+    searchSections({pages, conns, nodes: nodeHits, groups: groupHits, providers: providerHits, sources: sourceHits, rules: ruleHits}, connections.data, t)
+  );
   return {
     q,
     setQ,

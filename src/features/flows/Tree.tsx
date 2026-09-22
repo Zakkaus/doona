@@ -44,7 +44,7 @@ const TreeTile = memo(function TreeTile({
         ))}
       </span>
       {view.badge && <Badge>{view.badge}</Badge>}
-      <span className="c">{view.count}</span>
+      <span className="c">{view.countText}</span>
     </ToggleButton>
   );
 });

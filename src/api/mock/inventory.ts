@@ -7,6 +7,17 @@ import {found, createPager} from './common';
 import {patchGroupConfig, probeMembers, probeResult, resolveLeaf} from './control';
 import type {MockLifecycle} from './lifecycle';
 import {activateInventory, writeGroupConfig} from './activation';
+import {quote} from '../../dae/text';
+import {quoteName} from '../../dae/groups';
+
+// The backend refuses a value the configuration cannot hold instead of altering it.
+function configLine(format: () => string): string {
+  try {
+    return format();
+  } catch {
+    throw new ApiError(422, 'unsupported_value', 'The value cannot be written to the configuration');
+  }
+}
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 type InventoryApi = Pick<
@@ -229,7 +240,8 @@ export function createInventory(
       if (providers.some(item => item.name === request.name)) throw new ApiError(409, 'state_conflict', `A provider named ${request.name} already exists`);
       const url = URL.parse(request.url);
       if (!url) throw new ApiError(422, 'unsupported_value', 'The subscription URL cannot be parsed');
-      const activate = await editMain(text => text.replace(/^(subscription \{\n)/m, `$1  ${request.name}: '${request.url.replace(/'/g, '')}'\n`));
+      const line = configLine(() => `  ${quoteName(request.name)}: ${quote(request.url)}\n`);
+      const activate = await editMain(text => text.replace(/^(subscription \{\n)/m, `$1${line}`));
       log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
       activate();
       return structuredClone(
@@ -257,9 +269,8 @@ export function createInventory(
       const scheme = /^([a-z][a-z0-9+.-]*):\/\/\S+$/i.exec(request.link.trim())?.[1]?.toLowerCase();
       if (!scheme || !fixtures.linkSchemes.includes(scheme)) throw new ApiError(422, 'unsupported_value', `Unsupported share link scheme "${scheme ?? ''}"`);
       if (nodes.some(n => n.name === request.name)) throw new ApiError(409, 'state_conflict', `An inline node named ${request.name} already exists`);
-      const activate = await editMain(text =>
-        text.replace(/^(node \{\n)/m, `$1  '${request.name.replace(/'/g, '')}': '${request.link.trim().replace(/'/g, '')}'\n`)
-      );
+      const line = configLine(() => `  ${quote(request.name)}: ${quote(request.link.trim())}\n`);
+      const activate = await editMain(text => text.replace(/^(node \{\n)/m, `$1${line}`));
       log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
       activate();
       return structuredClone(

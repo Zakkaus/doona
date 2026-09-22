@@ -8,10 +8,10 @@ import {downloadFile, errorText, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
-import {useSourceComplete} from '../../store/config';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
 import {useDraftGuard} from './useDraftGuard';
 import {useValidationSources} from './useValidationSources';
+import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
@@ -66,6 +66,8 @@ export function useConfigPage({go, query}: PageProps) {
   const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
   const selectedId = source?.id ?? null;
   const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
+  const openSource = (sourceId: string, line: number | null) =>
+    go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
@@ -78,7 +80,7 @@ export function useConfigPage({go, query}: PageProps) {
     ? {
         source,
         sources,
-        open: (sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)})),
+        open: openSource,
         diagnostics: sourceDiagnostics,
         canValidate,
         canWrite: resources?.config.writable === true && source.writable,
@@ -95,7 +97,7 @@ export function useConfigPage({go, query}: PageProps) {
         config: config.data,
         editor,
         canValidate,
-        open: (sourceId, line) => go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))
+        open: openSource
       }
     : null;
   return {
@@ -122,8 +124,7 @@ export function useConfigPage({go, query}: PageProps) {
           editor,
           canWrite: resources?.config.writable === true,
           canValidate,
-          open: (sourceId: string, line: number | null) =>
-            go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}))
+          open: openSource
         }
       : null,
     validateProps,
@@ -158,7 +159,8 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   // If-Match uses the draft's original digest to reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
-  const complete = useSourceComplete(source);
+  const isComplete = useCompleteness(sources);
+  const complete = isComplete(source);
   const editing = draft !== null;
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
   const shown = saveErrors ?? found ?? diagnostics;
@@ -180,7 +182,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   });
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   const draftText = draft?.text;
-  const candidates = useValidationSources(sources, {id: source.id, content: text});
+  const candidates = useValidationSources(sources, isComplete, {id: source.id, content: text});
   useBackgroundValidation(canValidate && draftText !== undefined ? candidates : null, setFound);
   const presentValidation = (result: Pick<ConfigValidationResult, 'valid' | 'diagnostics'>, announce = true) => {
     setFound(result.diagnostics);
@@ -218,7 +220,6 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   const view = sourceView(source, locale, t);
   return {
     editing,
-    complete,
     shown: diagnosticRows(shown, sources, locale, t),
     marks,
     text,
@@ -265,7 +266,8 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
   const warnings = count('warning');
   const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
   const cur = rows.find(item => item.id === selected) ?? null;
-  const candidates = useValidationSources(config.sources);
+  const isComplete = useCompleteness(config.sources);
+  const candidates = useValidationSources(config.sources, isComplete);
   const validate = () => {
     if (!candidates) return;
     void editor.validate({sources: candidates, mode: 'full'}).then(result => {

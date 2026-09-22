@@ -1,4 +1,4 @@
-import {useContext, useEffect, useState, type CSSProperties, type ReactNode} from 'react';
+import {useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
   UNSTABLE_Toast as RToast,
@@ -30,12 +30,12 @@ export function Loading({children}: {children?: ReactNode}) {
     const timer = setTimeout(() => setVisible(true), 150);
     return () => clearTimeout(timer);
   }, []);
-  return visible ? (
-    <div className="rp-empty" role="status">
+  return (
+    <div className="rp-empty" role="status" data-wait={visible ? undefined : ''}>
       <span className="rp-spinner" aria-hidden="true" />
       {children ?? t('ui.loading')}
     </div>
-  ) : null;
+  );
 }
 
 export function errorText(error: unknown) {
@@ -46,6 +46,31 @@ export function errorText(error: unknown) {
   if (error instanceof ApiError && error.text) return translate(readLang(), error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
+}
+
+// A message about a whole form or view, as S2's InlineAlert: a negative one takes focus when it appears after a
+// submit, so the result is announced where the person is looking.
+export function InlineAlert({
+  tone = 'negative',
+  title,
+  children,
+  takeFocus
+}: {
+  tone?: 'negative' | 'informative';
+  title?: string;
+  children: ReactNode;
+  takeFocus?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (takeFocus) ref.current?.focus();
+  }, [takeFocus]);
+  return (
+    <div ref={ref} role={tone === 'negative' ? 'alert' : 'status'} tabIndex={takeFocus ? -1 : undefined} className={cx('rp-alert', tone)}>
+      {title && <strong className="rp-alert-title">{title}</strong>}
+      <span>{children}</span>
+    </div>
+  );
 }
 
 // Retry refetches the failed resource rather than reloading the page.
@@ -113,8 +138,22 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastMessage = {kind: ToastKind; text: string};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
+// A repeated message replaces its earlier copy at the front instead of stacking behind it.
+const queued = new Map<string, string>();
 export const toast = (kind: ToastKind, text: string) => {
-  toasts.add({kind, text}, {timeout: 5000});
+  const id = kind + '\n' + text;
+  const earlier = queued.get(id);
+  if (earlier) toasts.close(earlier);
+  const key = toasts.add(
+    {kind, text},
+    {
+      timeout: 5000,
+      onClose: () => {
+        if (queued.get(id) === key) queued.delete(id);
+      }
+    }
+  );
+  queued.set(id, key);
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 export function Toasts() {

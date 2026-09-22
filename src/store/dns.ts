@@ -33,9 +33,10 @@ function useDnsCache(enabled = true) {
       key: ['dnsCache'],
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
       every: 15000,
+      // The cache table shows no answers, so the summary listing, which leaves them out, is enough.
       fetch: signal =>
         walk(
-          cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),
+          cursor => api.dnsCache({cursor, limit: 1000, detail: 'summary'}, signal),
           (acc: DnsCacheList | undefined, page) => {
             if (!acc) return {...page, entries: [...page.entries]};
             acc.entries.push(...page.entries);

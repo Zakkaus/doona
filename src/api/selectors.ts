@@ -1,4 +1,5 @@
 import type {Key} from '../i18n/messages';
+import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
@@ -121,13 +122,16 @@ export function formatDuration(seconds: string | null, locale: string): string {
   return unit(total, 'second');
 }
 const localTimes = new Map<string, Intl.DateTimeFormat>();
+export function localTimeFormat(locale: string) {
+  let formatter = localTimes.get(locale);
+  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
+  return formatter;
+}
 export function localTime(iso: string | null, locale: string): string {
   if (!iso) return '—';
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return iso;
-  let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
-  return formatter.format(t);
+  return localTimeFormat(locale).format(t);
 }
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 export const eventKindLabels: Record<EventKind, Key> = {
@@ -150,6 +154,13 @@ const gapReasons: Record<string, Key> = {
   evicted: 'event.gap.evicted',
   recording_changed: 'event.gap.recording'
 };
+// A safe integer goes to the translator, which groups it in the caller's language; a larger UInt64 is grouped
+// here as a bigint, since a JS number would round it.
+function droppedCount(value: string | null): string | number {
+  const count = parseU64(value);
+  if (count === null) return value ?? '—';
+  return count <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(count) : formatNumber(count, LOCALE[readLang()]);
+}
 export function eventSummary(event: ApiEvent, t?: (key: Key) => string): MessageRef {
   switch (event.event) {
     case 'stream.ready':
@@ -171,7 +182,7 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
         params: {
           id: event.data.resource_id ?? '—',
           reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
-          n: event.data.dropped_records ?? '—'
+          n: droppedCount(event.data.dropped_records)
         }
       };
   }

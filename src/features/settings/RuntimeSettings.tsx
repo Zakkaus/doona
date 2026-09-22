@@ -13,7 +13,17 @@ export function RuntimeSettingsCard() {
         </h2>
         {m.source && <Light tone={m.sourceTone}>{m.source}</Light>}
       </div>
-      {m.waiting ? m.capsError ? <ErrorMessage error={m.capsError} /> : <Loading /> : <span className="rp-label">{m.note}</span>}
+      {m.waiting && m.capsError ? (
+        <ErrorMessage error={m.capsError} />
+      ) : (
+        // The note's line is held while capabilities load, so the form's reserved box below starts where the form will.
+        <span className="rp-label">{m.waiting ? '\u00a0' : m.note}</span>
+      )}
+      {m.waiting && !m.capsError && (
+        <div className="rp-chart-wait form">
+          <Loading />
+        </div>
+      )}
       {!m.waiting && m.available && (
         <>
           <ErrorMessage error={m.error} />
@@ -22,7 +32,11 @@ export function RuntimeSettingsCard() {
               {m.conflict}
             </p>
           )}
-          {m.loading && <Loading />}
+          {m.loading && (
+            <div className="rp-chart-wait form">
+              <Loading />
+            </div>
+          )}
           {m.hasBaseline && (
             <>
               <div className="rp-toolbar top">

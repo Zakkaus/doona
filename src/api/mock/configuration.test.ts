@@ -95,6 +95,14 @@ it('admits AnyTLS share links and retains their protocol through reload', async 
   expect((await api.nodes()).nodes.find(node => node.id === created.id)?.protocol).toBe('anytls');
 });
 
+it('refuses names the configuration cannot quote instead of altering them', async () => {
+  const api = createMockApi();
+  const before = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  await expect(api.createNode({name: "O'Reilly", link: 'anytls://demo@edge.example.net:443'})).rejects.toMatchObject({status: 422});
+  await expect(api.createProvider({name: "O'Reilly", kind: 'subscription', url: 'https://example.net/sub'})).rejects.toMatchObject({status: 422});
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(before);
+});
+
 it('activates included groups and rules and rejects an unresolved native include without writing', async () => {
   vi.useFakeTimers();
   const api = createMockApi();

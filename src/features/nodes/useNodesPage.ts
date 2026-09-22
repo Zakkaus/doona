@@ -11,6 +11,7 @@ import {ownedNodes, providerRows} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../config/useDraftGuard';
+import {isSubscriptionUrl} from '../../dae/setup';
 import {useLinked} from '../../ui/ui';
 
 type NodeDialog =
@@ -142,7 +143,7 @@ export function useNodesPage({go, query}: PageProps) {
             : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const formValid =
     dialog?.kind === 'provider'
-      ? /^[\w.-]+$/.test(form.name.trim()) && /^https?:\/\/\S+$/.test(form.value.trim())
+      ? /^[\w.-]+$/.test(form.name.trim()) && isSubscriptionUrl(form.value)
       : dialog?.kind === 'node'
         ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
         : dialog?.kind === 'group'

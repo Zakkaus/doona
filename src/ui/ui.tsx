@@ -6,5 +6,5 @@ export {TextField, Switch, Segmented} from './Fields';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey} from './Select';
 export {ModalDialog, DetailPanel, Disclosure, DisclosureGroup, Tabs} from './Dialog';
 export {DataTable, fitColumns, type TableSort, type TableColumn} from './Table';
-export {Empty, Loading, errorText, ErrorMessage, toast, Toasts, Light, Badge, Bar, Kv} from './Feedback';
+export {Empty, Loading, errorText, ErrorMessage, InlineAlert, toast, Toasts, Light, Badge, Bar, Kv} from './Feedback';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
