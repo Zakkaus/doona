@@ -43,7 +43,7 @@ function SelectBody({items, value, onChange, label, isDisabled, className}: Pick
     >
       <RButton className={className}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
-        <ChevronDown className="rp-chevron" />
+        <ChevronDown />
       </RButton>
       <Popover className="rp-popover" placement="bottom start">
         <ListBox items={items}>
@@ -89,12 +89,12 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
       {appearance ? (
         <Button appearance={appearance} quiet={quiet} icon={!chevron} label={label} isDisabled={isDisabled}>
           {children}
-          {chevron && <ChevronDown className="rp-chevron" />}
+          {chevron && <ChevronDown />}
         </Button>
       ) : (
         <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} isDisabled={isDisabled}>
           {children}
-          {chevron && <ChevronDown className="rp-chevron" />}
+          {chevron && <ChevronDown />}
         </RButton>
       )}
       <Popover className="rp-popover" placement={placement}>

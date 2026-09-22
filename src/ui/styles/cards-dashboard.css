@@ -12,10 +12,7 @@
   outline: none;
   transition:
     border-color 150ms var(--rp-ease),
-    background 150ms var(--rp-ease),
-    box-shadow 150ms var(--rp-ease),
-    translate 150ms var(--rp-ease-out),
-    scale 150ms var(--rp-ease-out);
+    background 150ms var(--rp-ease);
 }
 .rp-card-link[data-hovered] {
   border-color: var(--rp-pine);

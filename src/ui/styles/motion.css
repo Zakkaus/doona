@@ -17,119 +17,52 @@
   transition-duration: var(--rp-duration);
   transition-timing-function: var(--rp-ease);
 }
-/* Press feedback: S2's one colour step, plus a short press-in. Transforms only, so nothing around the control moves. */
+/* Press feedback after S2 `pressScale`: the control sinks 2px in perspective, about 0.95 of its size; the same
+   controls S2 applies it to (buttons, pickers, the clear button), not tabs, rows or navigation. */
 .rp-btn[data-pressed],
-.rp-tab[data-pressed],
-.rp-nav[data-pressed],
 .rp-select[data-pressed],
-.rp-selectbtn[data-pressed] {
-  scale: 0.97;
+.rp-selectbtn[data-pressed],
+.rp-input .clear[data-pressed] {
+  scale: 0.95;
 }
-.rp-btn.icon[data-pressed] {
-  scale: 0.9;
-}
-.rp-btn > svg,
-.rp-nav > svg,
-.rp-select > svg,
-.rp-selectbtn > svg {
-  transition:
-    rotate 200ms var(--rp-ease-out),
-    scale var(--rp-duration) var(--rp-ease-out);
-}
-.rp-btn.icon[data-hovered] > svg,
-.rp-nav[data-hovered] > svg {
-  scale: 1.1;
-}
-/* An open menu or select turns its chevron. The refresh icon spins from the click until the refetch returns,
-   in place of the generic pending spinner. */
-[aria-expanded='true'] > .rp-chevron,
-[data-open] > .rp-select > .rp-chevron {
-  rotate: 180deg;
-}
+/* The refresh icon spins from the click until the refetch returns, in place of the generic pending spinner.
+   Other pending buttons show their spinner after one second, as S2 does, so a quick action never flashes one. */
 .rp-btn[data-pending] > .rp-refresh {
   animation: rp-spin 700ms linear infinite;
 }
 .rp-btn[data-pending] > .rp-spinner:has(+ .rp-refresh) {
   display: none;
 }
-/* Tiles and card links lift under the pointer and settle when pressed. */
-.rp-node,
-.rp-tree-tile {
-  transition:
-    background-color var(--rp-duration) var(--rp-ease),
-    border-color var(--rp-duration) var(--rp-ease),
-    box-shadow var(--rp-duration) var(--rp-ease),
-    translate var(--rp-duration) var(--rp-ease-out),
-    scale var(--rp-duration) var(--rp-ease-out);
+.rp-btn > .rp-spinner {
+  animation:
+    rp-spin 800ms linear infinite,
+    rp-delayed 1ms linear 1s both;
 }
-.rp-node[data-hovered]:not([data-disabled]),
-.rp-tree-tile[data-hovered],
-.rp-card-link[data-hovered] {
-  translate: 0 -1px;
-  box-shadow: var(--rp-elevated);
+@keyframes rp-delayed {
+  from {
+    opacity: 0;
+  }
 }
-.rp-node[data-pressed],
-.rp-tree-tile[data-pressed],
-.rp-card-link[data-pressed] {
-  translate: 0 0;
-  scale: 0.99;
-  box-shadow: none;
-}
-/* The switch knob squeezes while pressed. */
+/* The switch handle takes the press with the control. */
 .rp-switch .track::after {
   transition:
     transform var(--rp-duration) var(--rp-ease-out),
     scale var(--rp-duration) var(--rp-ease-out);
 }
 .rp-switch[data-pressed] .track::after {
-  scale: 0.85;
+  scale: 0.9;
 }
-/* A full-size green light breathes: the engine is running, not a static label. Small lights in lists stay still. */
-.rp-light.ok:not(.sm)::before {
-  animation: rp-breathe 2.4s var(--rp-ease) infinite;
-}
-@keyframes rp-breathe {
-  50% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot, var(--rp-muted)) 25%, transparent);
-  }
-}
-/* Content that arrives rises in: a tab panel's content, a page, the side panel, a new notice, a pending spinner. */
-.rp-tabpanel > *,
-.rp-panel,
-.rp-feed > * {
-  animation: rp-rise 180ms var(--rp-ease-out) both;
-}
-.rp-content > * {
-  animation: rp-fade-in 200ms var(--rp-ease) both;
-}
-.rp-btn > .rp-spinner {
-  animation:
-    rp-spin 800ms linear infinite,
-    rp-pop-badge 200ms var(--rp-ease-out);
-}
-/* Status text on tiles and lights recolours instead of flipping. */
+/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours instead of flipping. */
+.rp-node,
+.rp-tree-tile,
 .rp-node .ms,
 .rp-tree-tile .s,
 .rp-light,
 .rp-light::before {
   transition:
-    color var(--rp-duration) var(--rp-ease),
-    background-color var(--rp-duration) var(--rp-ease);
-}
-.rp-badge.warn {
-  animation: rp-pop-badge 200ms var(--rp-ease-out);
-}
-@keyframes rp-rise {
-  from {
-    opacity: 0;
-    translate: 0 4px;
-  }
-}
-@keyframes rp-pop-badge {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
+    background-color var(--rp-duration) var(--rp-ease),
+    border-color var(--rp-duration) var(--rp-ease),
+    color var(--rp-duration) var(--rp-ease);
 }
 :root {
   color-scheme: light;

@@ -49,7 +49,6 @@
   margin-inline-start: 2px;
   rotate: 180deg;
   transition: rotate 200ms var(--rp-ease-out);
-  animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
 .rp-th > .rp-sort.descending {
   rotate: 0deg;
