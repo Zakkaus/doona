@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {completeSource} from '../../store/config';
+import {ApiError} from '../../api/error';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
@@ -42,6 +43,17 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const [draft, setDraft] = useState<Draft | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const dirty = draft !== null && draft.text !== draft.section.source.content!.slice(draft.section.block.from, draft.section.block.to);
+  // A save refused because the file changed on disk: the refetched section becomes the base and the typed text
+  // stays, so the next save carries the new digest instead of failing with 412 again.
+  const stale = editor.error instanceof ApiError && editor.error.status === 412 && !!draft && editor.errorSource === draft.section.source.id;
+  const rebased = stale
+    ? sections.find(
+        section => section.id === draft.section.id && section.source && section.block && section.source.content_sha256 !== draft.section.source.content_sha256
+      )
+    : undefined;
+  useLinked(rebased ?? null, next => {
+    if (next?.source && next.block) setDraft(current => current && {...current, section: {...next, source: next.source!, block: next.block!}});
+  });
   const guard = useDraftGuard(dirty);
   const {clear} = guard;
   useLinked(guard.revision, () => {

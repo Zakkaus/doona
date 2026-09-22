@@ -53,7 +53,7 @@
   outline: 2px solid var(--rp-pine);
   outline-offset: 2px;
 }
-/* The about box. The duck hops on a tap; after five it honks and the name cycles its colours for a while. */
+/* The about box. The duck hops on a tap; after five it honks, and from then on the name cycles its colours. */
 .rp-about {
   display: flex;
   flex-direction: column;

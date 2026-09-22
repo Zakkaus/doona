@@ -146,5 +146,6 @@ export function useRings<S, T extends Timed>(name: string, source: S | undefined
   useEffect(() => {
     record(name, source && sample(source), fold);
   }, [name, source, sample, fold]);
-  return useSyncExternalStore(subscribe, () => load<T>(name).rings);
+  // A render reads the ring already loaded; the next record re-checks the profile, so storage is not read per render.
+  return useSyncExternalStore(subscribe, () => ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings);
 }
