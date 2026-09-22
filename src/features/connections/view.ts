@@ -17,6 +17,7 @@ import type {Key} from '../../i18n/messages';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
 import {ruleHref} from '../rules/link';
+import {within} from '../../shell/route';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
@@ -216,7 +217,7 @@ export function connectionsView(
           fields: connectionDetails(current, locale).map(
             ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
           ),
-          flowQuery: 'tab=flows&' + (current.flow_id ? 'id=' + encodeURIComponent(current.flow_id) : 'connection_id=' + encodeURIComponent(current.id)),
+          flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
           source: current.src ? (sourceIp(current.src) ?? current.src) : null,
           closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
         }

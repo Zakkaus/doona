@@ -1,4 +1,5 @@
 import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../../dae/text';
+import {quoteName} from '../../dae/groups';
 
 export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};
@@ -116,7 +117,7 @@ export function writeInterval(text: string, tag: string, seconds: number): strin
   const indent = text.slice(entry.from, entry.to).match(/^[ \t]*/)?.[0] ?? '  ';
   const inner = indent + (indent.includes('\t') ? '\t' : '  ');
   if (entry.parts) {
-    const body = [`${indent}${/^[\w.-]+$/.test(tag) ? tag : quote(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
+    const body = [`${indent}${quoteName(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
     if (entry.parts.ua !== null) body.push(`${inner}ua: ${quote(entry.parts.ua)}`);
     body.push(`${inner}interval: '${seconds}s'`, `${indent}}${entry.comment ? ' ' + entry.comment : ''}`);
     return text.slice(0, entry.from) + body.join('\n') + text.slice(entry.to);

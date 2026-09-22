@@ -9,6 +9,7 @@ import {fileName} from '../config/names';
 import {coverageView, word, type CoverageView} from '../flows/view';
 import {sourceFor} from './source';
 import {ruleDistribution} from './distribution';
+import {pickTab, within} from '../../shell/route';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -88,7 +89,7 @@ export function dictionaryView(
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
       removable: rule.kind === 'rule' && !!source?.writable && source.content !== undefined,
-      sourceQuery: linked && rule.source ? `tab=source&source=${encodeURIComponent(linked.id)}&line=${rule.source.line}` : null
+      sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
   });
   const writable = (rule: RoutingRule) => {
@@ -173,7 +174,7 @@ export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Trans
 }
 
 type RulesView = {tabs: {id: 'map' | 'list' | 'flows' | 'trace'; label: string}[]; tab: string};
-export function rulesView(resources: Capabilities['resources'] | undefined, requested: string | null, t: Translator): RulesView {
+export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
   const flows = resources?.flows.available !== false;
   const rules = resources?.rules.available === true;
   const tabs: RulesView['tabs'] = [
@@ -182,7 +183,14 @@ export function rulesView(resources: Capabilities['resources'] | undefined, requ
     ...(flows ? [{id: 'flows' as const, label: t('rule.flows')}] : []),
     ...(resources?.routing_trace.available !== false ? [{id: 'trace' as const, label: t('rule.trace')}] : [])
   ];
-  return {tabs, tab: tabs.some(tab => tab.id === requested) ? requested! : (tabs[0]?.id ?? 'map')};
+  return {
+    tabs,
+    tab: pickTab(
+      query,
+      tabs.map(tab => tab.id),
+      tabs[0]?.id ?? 'map'
+    )
+  };
 }
 
 const outcomes: Record<string, Key> = {

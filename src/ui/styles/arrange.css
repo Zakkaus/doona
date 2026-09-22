@@ -1,0 +1,111 @@
+/* ---- Policies, Arrange tab: group cards on the left take drops from the tray on the right. ---- */
+.rp-arrange {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Room for the action bar, so it never covers the last card. */
+  padding-bottom: calc(var(--rp-control) + 48px);
+}
+.rp-arrange-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.rp-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  outline: none;
+  transition:
+    background-color var(--rp-duration) var(--rp-ease),
+    border-color var(--rp-duration) var(--rp-ease);
+}
+.rp-drop[data-drop-target] {
+  border-color: var(--rp-accent);
+  background: var(--rp-hl-low);
+}
+.rp-drop[data-focus-visible] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+/* Laid over the card while something is dragged over it, so the card keeps its size. */
+.rp-drop-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  color: var(--rp-accent);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--rp-surface) 70%, transparent);
+  pointer-events: none;
+}
+.rp-tags-title {
+  flex-basis: 100%;
+}
+.rp-arrange-rules {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.rp-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  /* A hundred nodes must not make the page a hundred rows longer, least of all on a phone. */
+  height: 60vh;
+}
+@media (min-width: 1024px) {
+  .rp-arrange-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  .rp-tray {
+    position: sticky;
+    top: calc(var(--rp-control) * 2 + 16px);
+    height: calc(100vh - var(--rp-control) * 4 - 32px);
+  }
+}
+.rp-tray-list {
+  flex: 1;
+  min-height: 0;
+  /* The virtualiser scrolls the list itself; without this the rows spill over the bar below. */
+  overflow: auto;
+  outline: none;
+}
+.rp-tray-row {
+  grid-template-columns: auto 16px minmax(0, 1fr);
+  padding-inline-start: 0;
+}
+.rp-tray-row[data-dragging] {
+  opacity: 0.5;
+}
+.rp-tray-row .rp-grow {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rp-drag {
+  color: var(--rp-muted);
+}
+.rp-tray-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rp-hl-med);
+}
+.rp-arrange-changes {
+  margin: 0;
+  padding-inline-start: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rp-arrange-preview {
+  white-space: pre-wrap;
+  margin: 0 0 8px;
+}

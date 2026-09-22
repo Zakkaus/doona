@@ -39,17 +39,17 @@
   height: 8px;
 }
 .rp-light.ok {
-  --dot: var(--rp-foam);
+  --dot: var(--rp-positive);
 }
 .rp-light.warn {
-  --dot: var(--rp-gold);
+  --dot: var(--rp-notice);
 }
 .rp-light.err {
-  --dot: var(--rp-love);
+  --dot: var(--rp-negative);
 }
 .rp-light.info {
   /* Foam is the info colour everywhere (toasts too); it shares the dot with ok, which text tells apart. */
-  --dot: var(--rp-foam);
+  --dot: var(--rp-positive);
 }
 .rp-light.neutral {
   --dot: var(--rp-subtle);

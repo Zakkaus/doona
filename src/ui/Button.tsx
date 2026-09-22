@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
+import {motionEase, motionMs} from './motion';
 
 // accent / negative are the coloured variants; every neutral button shares one look.
 export function Button({
@@ -16,6 +17,7 @@ export function Button({
   isPending,
   tip,
   type,
+  form,
   appearance,
   className
 }: {
@@ -31,6 +33,8 @@ export function Button({
   isPending?: boolean;
   tip?: string;
   type?: 'button' | 'submit' | 'reset';
+  // The id of a form this button submits from outside it, such as a dialog footer.
+  form?: string;
   appearance?: 'select';
   className?: string;
 }) {
@@ -50,16 +54,16 @@ export function Button({
       return;
     }
     spin.current = icon.animate([{rotate: '0deg'}, {rotate: '360deg'}], {
-      duration: 600,
+      duration: motionMs('--rp-duration-refresh', 600),
       iterations,
-      easing: iterations === 1 ? 'cubic-bezier(0, 0, 0.4, 1)' : 'linear'
+      easing: iterations === 1 ? motionEase('--rp-ease-out', 'cubic-bezier(0, 0, 0.4, 1)') : 'linear'
     });
   };
   useEffect(() => {
     if (isPending) turn(Infinity);
     else if (spin.current?.playState === 'running') {
       const elapsed = Number(spin.current.currentTime ?? 0);
-      spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / 600))});
+      spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / motionMs('--rp-duration-refresh', 600)))});
     }
   }, [isPending]);
   useEffect(() => {
@@ -93,12 +97,14 @@ export function Button({
       isDisabled={disabled}
       isPending={isPending}
       type={type}
+      form={form}
     >
       {isPending ? <span className="rp-spinner" aria-hidden="true" /> : null}
       {children}
     </RButton>
   );
-  const text = label ?? tip;
+  // A tip adds what the name cannot say (why the button is disabled), so it wins; the label stays the accessible name.
+  const text = tip ?? label;
   if (!text) return btn;
   // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts focus and pointer events only when the native button cannot.
   return (

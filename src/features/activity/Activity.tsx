@@ -4,7 +4,7 @@ import LinkIcon from '../../ui/icons/Link';
 import Data from '../../ui/icons/Data';
 import {useT} from '../../i18n';
 import {CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
-import {buildHash} from '../../shell/route';
+import {href} from '../../shell/route';
 import {AreaChart, Legend, Spark} from '../../ui/Charts';
 import {ModeCards} from './ModeSwitch';
 import {Notices} from './Notices';
@@ -27,7 +27,7 @@ export function Activity() {
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
-            <Link appearance="button" className="quiet" href={buildHash('overview')}>
+            <Link appearance="button" className="quiet" href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
           </div>
@@ -63,7 +63,7 @@ export function Activity() {
             </span>
           </div>
         </div>
-        <CardLink href={buildHash('connections')} label={t('act.active')}>
+        <CardLink href={href('connections')} label={t('act.active')}>
           <span className="rp-tile-head rp-tint-c3">
             <LinkIcon />
             {t('act.active')}
@@ -158,7 +158,7 @@ export function Activity() {
             <h3 className="rp-h3" id="activity-memory">
               {t('act.memory')}
             </h3>
-            <Link appearance="button" className="quiet sm" href={buildHash('overview')}>
+            <Link appearance="button" className="quiet sm" href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
           </div>

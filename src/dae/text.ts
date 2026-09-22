@@ -1,5 +1,7 @@
 import {LocalError} from '../api/error';
 
+// A value honk reads without quotes.
+export const isBareName = (value: string) => /^[\w.-]+$/.test(value);
 export function quote(value: string): string {
   // honk skips escaped delimiters but retains the backslash in the value.
   if (value.includes("'") || /[\r\n]|(^|[^\\])(?:\\\\)*\\$/.test(value)) throw new LocalError('config.unquotable');

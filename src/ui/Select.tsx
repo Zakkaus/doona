@@ -10,6 +10,7 @@ import {
   SelectValue,
   ListBox,
   ListBoxItem,
+  Label,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
@@ -31,16 +32,27 @@ const ItemBody = ({i}: {i: Item}) => (
     {i.desc && <span className="desc">{i.desc}</span>}
   </>
 );
-function SelectBody({items, value, onChange, label, isDisabled, className}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string}) {
+// With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
+function SelectBody({
+  items,
+  value,
+  onChange,
+  label,
+  isDisabled,
+  className,
+  layout
+}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'}) {
   return (
     <Select
-      aria-label={label}
+      aria-label={layout ? undefined : label}
+      className={layout === 'field' ? 'rp-field' : layout === 'side' ? 'rp-cluster' : undefined}
       selectedKey={value}
       onSelectionChange={(k: Key | null) => {
         if (k != null) onChange(String(k));
       }}
       isDisabled={isDisabled}
     >
+      {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
       <RButton className={className}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
         <ChevronDown />
@@ -148,19 +160,15 @@ export function LabeledSelect({
   side?: boolean;
   bare?: boolean;
 }) {
-  const sel = <SelectBody items={items} value={value} onChange={onChange} label={label} isDisabled={isDisabled} className="rp-selectbtn" />;
-  if (bare) return sel;
-  if (side)
-    return (
-      <span className="rp-cluster">
-        <span className="rp-label">{label}</span>
-        {sel}
-      </span>
-    );
   return (
-    <div className="rp-field">
-      <span className="lbl">{label}</span>
-      {sel}
-    </div>
+    <SelectBody
+      items={items}
+      value={value}
+      onChange={onChange}
+      label={label}
+      isDisabled={isDisabled}
+      className="rp-selectbtn"
+      layout={bare ? undefined : side ? 'side' : 'field'}
+    />
   );
 }

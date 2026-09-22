@@ -64,10 +64,10 @@ type Feature = {
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;
-  requires: {resources?: Array<keyof Capabilities['resources']>};
+  requires: {resources?: ReadonlyArray<keyof Capabilities['resources']>};
 };
 
-export const features: Feature[] = [
+const definitions = [
   // The default page stays eager so first paint has no second round trip.
   {id: 'activity', path: 'activity', shortcut: 'a', nav: {group: 'grp.status', titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
   {
@@ -141,7 +141,14 @@ export const features: Feature[] = [
     requires: {resources: ['logs']}
   },
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
-];
+] as const satisfies ReadonlyArray<Feature>;
+
+export type RoutePath = (typeof definitions)[number]['path'];
+export const features: ReadonlyArray<Feature & {path: RoutePath}> = definitions;
+
+export function isRoutePath(path: string): path is RoutePath {
+  return features.some(feature => feature.path === path);
+}
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
   const requires = features.find(feature => feature.path === path)?.requires;
@@ -150,20 +157,20 @@ export function navAvailable(path: string, capabilities: Capabilities | undefine
 }
 
 // Search applies the destination's tab availability before offering these links.
-export const subpages: Array<{path: string; query: string; titleKey: Key}> = [
-  {path: 'rules', query: 'tab=map', titleKey: 'rule.map'},
-  {path: 'rules', query: 'tab=list', titleKey: 'rule.listTitle'},
-  {path: 'rules', query: 'tab=flows', titleKey: 'rule.flows'},
-  {path: 'rules', query: 'tab=trace', titleKey: 'rule.trace'},
-  {path: 'dns', query: 'tab=query', titleKey: 'dns.query'},
-  {path: 'dns', query: 'tab=log', titleKey: 'dns.log'},
-  {path: 'dns', query: 'tab=cache', titleKey: 'ui.cache'},
-  {path: 'config', query: 'tab=setup', titleKey: 'config.wizard'},
-  {path: 'config', query: 'tab=source', titleKey: 'config.tabSource'},
-  {path: 'config', query: 'tab=validate', titleKey: 'config.tabValidate'},
-  {path: 'settings', query: 'card=backend', titleKey: 'settings.backend'},
-  {path: 'settings', query: 'card=runtime', titleKey: 'settings.runtime'},
-  {path: 'settings', query: 'card=actions', titleKey: 'settings.actions'},
-  {path: 'settings', query: 'card=appearance', titleKey: 'settings.appearance'},
-  {path: 'settings', query: 'card=about', titleKey: 'settings.about'}
+export const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
+  {path: 'rules', params: {tab: 'map'}, titleKey: 'rule.map'},
+  {path: 'rules', params: {tab: 'list'}, titleKey: 'rule.listTitle'},
+  {path: 'rules', params: {tab: 'flows'}, titleKey: 'rule.flows'},
+  {path: 'rules', params: {tab: 'trace'}, titleKey: 'rule.trace'},
+  {path: 'dns', params: {tab: 'query'}, titleKey: 'dns.query'},
+  {path: 'dns', params: {tab: 'log'}, titleKey: 'dns.log'},
+  {path: 'dns', params: {tab: 'cache'}, titleKey: 'ui.cache'},
+  {path: 'config', params: {tab: 'setup'}, titleKey: 'config.wizard'},
+  {path: 'config', params: {tab: 'source'}, titleKey: 'config.tabSource'},
+  {path: 'config', params: {tab: 'validate'}, titleKey: 'config.tabValidate'},
+  {path: 'settings', params: {card: 'backend'}, titleKey: 'settings.backend'},
+  {path: 'settings', params: {card: 'runtime'}, titleKey: 'settings.runtime'},
+  {path: 'settings', params: {card: 'actions'}, titleKey: 'settings.actions'},
+  {path: 'settings', params: {card: 'appearance'}, titleKey: 'settings.appearance'},
+  {path: 'settings', params: {card: 'about'}, titleKey: 'settings.about'}
 ];

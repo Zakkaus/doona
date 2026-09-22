@@ -1,4 +1,4 @@
-import {useId, type ComponentProps, type ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
 import {
   Button as RButton,
   ToggleButton,
@@ -8,6 +8,7 @@ import {
   SearchField as RSearchField,
   Text,
   Label,
+  FieldError,
   Input as RInput
 } from 'react-aria-components';
 import Close from './icons/Close';
@@ -107,7 +108,6 @@ export function TextField({
     action?: ReactNode;
   }) {
   const t = useT();
-  const errorId = useId();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
   const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   if (search) {
@@ -123,7 +123,7 @@ export function TextField({
   }
   const input = (
     <span className={cx('rp-input', (side || !!action) && 'rp-grow')}>
-      <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} aria-describedby={error ? errorId : undefined} />
+      <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} />
     </span>
   );
   return (
@@ -142,11 +142,7 @@ export function TextField({
           {description}
         </Text>
       )}
-      {error && (
-        <span id={errorId} role="alert">
-          {error}
-        </span>
-      )}
+      {error && <FieldError>{error}</FieldError>}
     </RTextField>
   );
 }

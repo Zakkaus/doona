@@ -63,7 +63,7 @@ test('search reads live connection addresses, node and group names, and availabl
   await expect(page).not.toHaveURL(/id=/);
   await expect(detail(page)).toHaveCount(0);
   const targets: Array<[string, RegExp]> = [
-    ['Live node', /#\/nodes\?provider=inline&q=Live%20node$/],
+    ['Live node', /#\/nodes\?provider=inline&q=Live\+node$/],
     ['Live group', /#\/policies\?group=proxy$/],
     ['Settings', /#\/settings$/]
   ];

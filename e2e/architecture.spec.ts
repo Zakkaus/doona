@@ -426,7 +426,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
   await refreshed;
   await expect(filter).toHaveValue('name(hk-01)');
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  await expect(dialog.getByRole('alert')).toContainText('changed');
   await expect(filter).toHaveValue('name(hk-01)');
 });
 
@@ -525,7 +525,7 @@ test('new group validation refusal retains the dialog and its name without a suc
   await validating;
   await expect(dialog).toBeVisible();
   release();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Validation');
+  await expect(dialog.getByRole('alert')).toContainText('Validation');
   await expect(dialog.getByLabel('Name', {exact: true})).toHaveValue('retained-group');
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
 });

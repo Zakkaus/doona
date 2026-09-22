@@ -3,6 +3,7 @@ import type {PageProps} from '../features/types';
 import {useT} from '../i18n';
 import {Button, ModalDialog} from '../ui/ui';
 import type {ShortcutView} from './view';
+import {isRoutePath} from './registry';
 
 export function Shortcuts({
   go,
@@ -70,7 +71,7 @@ export function Shortcuts({
       reset();
       if (pending !== null && performance.now() - pending <= 800) {
         const path = paths[event.key];
-        if (path) {
+        if (path && isRoutePath(path)) {
           event.preventDefault();
           go(path);
           return;

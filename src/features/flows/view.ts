@@ -7,7 +7,7 @@ import {latencyTone} from '../../ui/ui';
 import {policyKindLabels} from '../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
-import {buildHash} from '../../shell/route';
+import {href} from '../../shell/route';
 import {ruleSeedHref} from '../rules/seed';
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
@@ -317,7 +317,7 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
           ]
         : [])
     ],
-    connectionHref: detail.connection_id ? buildHash('connections', 'id=' + encodeURIComponent(detail.connection_id)) : null,
+    connectionHref: detail.connection_id ? href('connections', {id: detail.connection_id}) : null,
     seedHref: canAdd && seed ? ruleSeedHref(seed) : null,
     steps: [...detail.trace.steps]
       .sort((a, b) => a.seq - b.seq)

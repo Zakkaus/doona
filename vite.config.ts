@@ -82,8 +82,11 @@ export default defineConfig({
       output: {
         chunkFileNames: 'assets/[name]-[hash].js',
         manualChunks(id) {
-          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
-          if (/\/node_modules\/(react-aria-components|@react-aria\/[^/]+|@react-stately\/[^/]+|@internationalized\/[^/]+)\//.test(id)) return 'vendor-aria';
+          // clsx and use-sync-external-store are shared by react-aria and recharts; pinned here so the startup code does
+          // not pull them from the charts chunk, and with it the whole of recharts.
+          if (/\/node_modules\/(react|react-dom|scheduler|clsx|use-sync-external-store)\//.test(id)) return 'vendor-react';
+          // react-aria is left to Rollup: forcing all of it into one startup chunk shipped the components that only lazy
+          // pages use (drag and drop, grids) with the shell.
           if (/\/node_modules\/(recharts|d3-[^/]+|victory-vendor)\//.test(id)) return 'vendor-charts';
           if (/\/node_modules\/(@codemirror|@lezer|style-mod|w3c-keyname|crelt)\//.test(id)) return 'vendor-editor';
         }

@@ -1,5 +1,18 @@
 import {describe, expect, it} from 'vitest';
-import {addNamesToGroup, readGroupEntries, ruleCondition, writeGroupEntry} from './groups';
+import {
+  addNamesToGroup,
+  addSubtagsToGroup,
+  groupAdmits,
+  groupNameProblem,
+  applyChanges,
+  classifyFilters,
+  readGroupEntries,
+  removalWidens,
+  removeNamesFromGroup,
+  ruleCondition,
+  writeGroupEntry,
+  type GroupChange
+} from './groups';
 
 const text = `global {
   lan_interface: br-lan
@@ -146,4 +159,87 @@ describe('group edits keep the rest of the source intact', () => {
 it('quotes IPv6 ranges in address rules and leaves IPv4 bare', () => {
   expect(ruleCondition('dip', '10.0.0.0/8, ff00::/8')).toBe("dip(10.0.0.0/8, 'ff00::/8')");
   expect(ruleCondition('sip', '2001:db8::1')).toBe("sip('2001:db8::1')");
+});
+
+describe('arranging groups edits only exact lists', () => {
+  it('classifies each filter line', () => {
+    const [hk, proxy] = readGroupEntries(text);
+    expect(classifyFilters(hk)).toEqual({names: [], subtags: [], rules: ["subtag('airport') && name(keyword: 'HK')", "name(regex: '^Hong Kong ')"]});
+    expect(classifyFilters(proxy)).toEqual({names: ['backup', 'b2'], subtags: [], rules: ["group('hk')"]});
+  });
+
+  it('adds to the exact list, never to a line with other terms', () => {
+    const added = addNamesToGroup(text, 'hk', ['JP 01']);
+    expect(readGroupEntries(added)[0].filters).toEqual(["subtag('airport') && name(keyword: 'HK')", "name(regex: '^Hong Kong ')", "name('JP 01')"]);
+    expect(readGroupEntries(addNamesToGroup(text, 'proxy', ['b3']))[1].filters).toEqual(["group('hk')", "name('backup', b2, b3)"]);
+    expect(readGroupEntries(addSubtagsToGroup(text, 'proxy', ['sub-a']))[1].filters).toEqual(["group('hk')", "name('backup', b2)", 'subtag(sub-a)']);
+  });
+
+  it('removes from exact lists, drops an emptied line, and never leaves a group without filters', () => {
+    const one = removeNamesFromGroup(text, 'proxy', ['backup']);
+    expect(readGroupEntries(one)[1].filters).toEqual(["group('hk')", 'name(b2)']);
+    expect(readGroupEntries(removeNamesFromGroup(one, 'proxy', ['b2']))[1].filters).toEqual(["group('hk')"]);
+    const only = writeGroupEntry(text, 'solo', {filters: ['name(a)'], policy: 'fixed(0)'});
+    const solo = readGroupEntries(only).find(entry => entry.name === 'solo')!;
+    expect(removalWidens(solo, 'name', 'a')).toBe(true);
+    expect(removeNamesFromGroup(only, 'solo', ['a'])).toBe(only);
+    expect(removalWidens(readGroupEntries(text)[1], 'name', 'b2')).toBe(false);
+  });
+
+  it('applies staged changes in order and ignores repeats', () => {
+    const changes: GroupChange[] = [
+      {kind: 'createGroup', group: 'streaming', policy: 'min_moving_avg'},
+      {kind: 'addNode', group: 'streaming', value: 'US 01'},
+      {kind: 'addNode', group: 'streaming', value: 'US 01'},
+      {kind: 'addSubscription', group: 'streaming', value: 'sub-b'}
+    ];
+    const next = applyChanges(text, changes);
+    const streaming = readGroupEntries(next).find(entry => entry.name === 'streaming')!;
+    expect(streaming).toMatchObject({filters: ["name('US 01')", 'subtag(sub-b)'], policy: 'min_moving_avg'});
+    expect(applyChanges(next, changes)).toBe(next);
+    // The rest of the file is untouched.
+    expect(next.startsWith(text.slice(0, text.indexOf('group {')))).toBe(true);
+    expect(next).toContain('routing {\n  fallback: proxy\n}');
+  });
+});
+
+it('reads bare non-ASCII names as exact, as honk does', () => {
+  // A CJK name, built at runtime because the i18n check refuses CJK literals in source.
+  const hong = String.fromCodePoint(0x9999, 0x6e2f) + '01';
+  const source = `group {\n    hk {\n        filter: name(${hong}, hk-02)\n    }\n}\n`;
+  const [hk] = readGroupEntries(source);
+  expect(classifyFilters(hk).names).toEqual([hong, 'hk-02']);
+  expect(readGroupEntries(addNamesToGroup(source, 'hk', [hong]))[0].filters).toEqual([`name(${hong}, hk-02)`]);
+  expect(readGroupEntries(removeNamesFromGroup(source, 'hk', [hong]))[0].filters).toEqual(['name(hk-02)']);
+});
+
+describe('group filters decide membership as honk does', () => {
+  const hk = {name: 'HK 01', subscription_tag: 'airport'};
+  const jp = {name: 'JP 01', subscription_tag: 'airport'};
+  const own = {name: 'home', subscription_tag: null};
+  it('joins lines with OR and terms with AND', () => {
+    const filters = ["subtag('airport') && name(keyword: 'HK')", 'name(home)'];
+    expect([hk, jp, own].map(node => groupAdmits(filters, node))).toEqual([true, false, true]);
+  });
+  it('negates, matches regexes and ignores lines it cannot read', () => {
+    expect(groupAdmits(["subtag(airport) && !name(regex: '^HK')"], hk)).toBe(false);
+    expect(groupAdmits(["subtag(airport) && !name(regex: '^HK')"], jp)).toBe(true);
+    expect(groupAdmits(['nonsense(x)', 'name(home)'], own)).toBe(true);
+    expect(groupAdmits(['nonsense(x)'], own)).toBe(true);
+  });
+  it('holds every node without a filter, none with only subgroups, and a built-in only by exact name', () => {
+    expect(groupAdmits([], jp)).toBe(true);
+    expect(groupAdmits(["group('hk')"], jp)).toBe(false);
+    expect(groupAdmits([], {name: 'direct', subscription_tag: null})).toBe(false);
+    expect(groupAdmits(["name(keyword: 'dir')"], {name: 'direct', subscription_tag: null})).toBe(false);
+    expect(groupAdmits(['name(direct)'], {name: 'direct', subscription_tag: null})).toBe(true);
+  });
+});
+
+it('accepts only bare, unused names for a new group', () => {
+  const taken = new Set(['proxy']);
+  expect(groupNameProblem('hk.auto-1', taken)).toBeNull();
+  expect(groupNameProblem('proxy', taken)).toBe('taken');
+  expect(groupNameProblem('hk auto', taken)).toBe('invalid');
+  expect(groupNameProblem('', taken)).toBe('invalid');
 });

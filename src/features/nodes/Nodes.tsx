@@ -1,13 +1,33 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, ModalDialog, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
+import {PolicyPicker} from '../policies/PolicyPicker';
 export function Nodes(props: PageProps) {
   const t = useT();
-  const {providerTable, nodeTable, error, reload, dialog, setDialog, form, setForm, removing, dialogTitle, formValid, submit, pending, submitLabel, groupHelp} =
-    useNodesPage(props);
+  const {
+    providerTable,
+    nodeTable,
+    error,
+    reload,
+    dialog,
+    setDialog,
+    problem,
+    form,
+    setForm,
+    removing,
+    dialogTitle,
+    formValid,
+    submit,
+    pending,
+    submitLabel,
+    groupHelp,
+    groupNameError,
+    policy,
+    setPolicy
+  } = useNodesPage(props);
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
@@ -31,6 +51,11 @@ export function Nodes(props: PageProps) {
           </>
         )}
       >
+        {problem && (
+          <InlineAlert key={problem.id} takeFocus>
+            {problem.text}
+          </InlineAlert>
+        )}
         {dialog?.kind === 'provider' && (
           <div className="rp-list">
             <span className="rp-label">{t('nodes.addProviderHelp')}</span>
@@ -47,7 +72,17 @@ export function Nodes(props: PageProps) {
         {dialog?.kind === 'group' && (
           <div className="rp-list">
             <span className="rp-label">{groupHelp}</span>
-            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk" onChange={name => setForm({...form, name})} />
+            <TextField
+              isDisabled={pending}
+              label={t('nodes.name')}
+              value={form.name}
+              placeholder="hk"
+              spellCheck={false}
+              description={t('arrange.groupNameHint')}
+              error={groupNameError ?? undefined}
+              onChange={name => setForm({...form, name})}
+            />
+            <PolicyPicker value={policy} onChange={setPolicy} isDisabled={pending} />
           </div>
         )}
         {dialog?.kind === 'node' && (

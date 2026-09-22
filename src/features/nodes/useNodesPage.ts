@@ -2,9 +2,11 @@ import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
-import {useMainSourceEdit} from '../config/mainSource';
-import {addNamesToGroup} from '../../dae/groups';
+import {toast} from '../../ui/ui';
+import {editProblem, useMainSourceEdit} from '../config/mainSource';
+import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
+import {isBareName} from '../../dae/text';
+import {groupNameError, newGroupPolicies} from '../policies/policies';
 import type {PageProps} from '../types';
 import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';
@@ -13,18 +15,21 @@ import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {useLinked} from '../../ui/ui';
+import {errorText} from '../../api/error';
 
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
-const fail = (error: unknown) => toast('negative', errorText(error));
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
+  const [policy, setPolicy] = useState(newGroupPolicies[0].id);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
+  // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
+  const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
   const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
   useLinked(guard.revision, () => {
     session.current++;
@@ -33,6 +38,8 @@ export function useNodesPage({go, query}: PageProps) {
   const open = useCallback((next: NodeDialog) => {
     session.current++;
     setForm({name: '', value: ''});
+    setPolicy(newGroupPolicies[0].id);
+    setProblem(null);
     setDialog(next);
   }, []);
   const locale = LOCALE[useLang()];
@@ -50,6 +57,7 @@ export function useNodesPage({go, query}: PageProps) {
   const refreshing = useProviderRefresh(reload);
   const source = useMainSourceEdit();
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   // Default to the first real source: the built-in and unattributed rows only lead when nothing else exists.
@@ -60,22 +68,15 @@ export function useNodesPage({go, query}: PageProps) {
     return ownedNodes(nodes.data ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
   }, [nodes.data, list, selectedId]);
   const {apply} = source;
-  const joinGroup = useCallback(
-    async (node: Node, group: string) => {
-      const written = await apply(
-        text => addNamesToGroup(text, group, [node.name]),
-        errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
-      );
-      if (written) toast('positive', t('nodes.joined', {name: node.name, group}));
-      return written;
-    },
-    [apply, t, locale]
-  );
   const joinExistingGroup = useCallback(
     (node: Node, group: string) => {
-      void joinGroup(node, group).catch(fail);
+      void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
+        if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}));
+        const problem = editProblem(result, 'nodes.writeInvalid', t);
+        if (problem) toast('negative', problem);
+      });
     },
-    [joinGroup]
+    [apply, t]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
@@ -85,6 +86,11 @@ export function useNodesPage({go, query}: PageProps) {
     submitting.current = dialog;
     setPendingDialog(dialog);
     const submitted = session.current;
+    // A refusal after the dialog closed has nowhere inline to go.
+    const refuse = (text: string) => {
+      if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
+      else toast('negative', text);
+    };
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
@@ -101,7 +107,7 @@ export function useNodesPage({go, query}: PageProps) {
             result => {
               if (result) toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
             },
-            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error)}))
+            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error, t)}))
           );
           return;
         }
@@ -111,7 +117,18 @@ export function useNodesPage({go, query}: PageProps) {
         if (!created) return;
         toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'group') {
-        if (!(await joinGroup(dialog.item, form.name.trim()))) return;
+        const group = form.name.trim();
+        const node = dialog.item.name;
+        const result = await apply(text =>
+          applyChanges(text, [
+            {kind: 'createGroup', group, policy},
+            {kind: 'addNode', group, value: node}
+          ])
+        );
+        const text = editProblem(result, 'nodes.writeInvalid', t);
+        if (text) refuse(text);
+        if (result.kind !== 'ok') return;
+        toast('positive', t('nodes.joined', {name: node, group}));
       } else if (dialog.kind === 'removeProvider') {
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
@@ -124,7 +141,7 @@ export function useNodesPage({go, query}: PageProps) {
         close();
       }
     } catch (error) {
-      fail(error);
+      refuse(errorText(error, t));
     } finally {
       submitting.current = null;
       setPendingDialog(null);
@@ -141,13 +158,14 @@ export function useNodesPage({go, query}: PageProps) {
           : dialog.kind === 'group'
             ? t('nodes.newGroup')
             : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+  const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
   const formValid =
     dialog?.kind === 'provider'
-      ? /^[\w.-]+$/.test(form.name.trim()) && isSubscriptionUrl(form.value)
+      ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value)
       : dialog?.kind === 'node'
         ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
         : dialog?.kind === 'group'
-          ? form.name.trim() !== '' && !form.name.includes('{') && !form.name.includes('}')
+          ? nameError === null
           : true;
   const providerTable = useProviderTable({
     rows: list,
@@ -194,8 +212,10 @@ export function useNodesPage({go, query}: PageProps) {
     dialog,
     setDialog: (next: NodeDialog | null) => {
       session.current++;
+      setProblem(null);
       setDialog(next);
     },
+    problem,
     form,
     setForm: (next: typeof form) => {
       if (submitting.current !== dialog) setForm(next);
@@ -206,6 +226,12 @@ export function useNodesPage({go, query}: PageProps) {
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
-    groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : ''
+    groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
+    // Only a name already typed is judged; an empty field is simply not ready.
+    groupNameError: form.name.trim() ? nameError : null,
+    policy,
+    setPolicy: (next: string) => {
+      if (submitting.current !== dialog) setPolicy(next);
+    }
   };
 }

@@ -1,10 +1,11 @@
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
-import {errorText, toast} from '../../ui/ui';
-import type {MainSourceEdit} from '../config/mainSource';
+import {toast} from '../../ui/ui';
+import {editProblem, type MainSourceEdit} from '../config/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
+import {errorText} from '../../api/error';
 
 type ProviderTableInput = {
   rows: ProviderRow[];
@@ -26,7 +27,7 @@ export function useProviderTable(input: ProviderTableInput) {
   const locale = LOCALE[useLang()];
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
-  const fail = (error: unknown) => toast('negative', errorText(error));
+  const fail = (error: unknown) => toast('negative', errorText(error, t));
   const rows = input.rows.map(item => ({
     ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
     refreshable: item.kind === 'subscription' && input.canRefresh,
@@ -44,13 +45,12 @@ export function useProviderTable(input: ProviderTableInput) {
       if (!item.configTag) return;
       const seconds = Number(key);
       void input.source
-        .apply(
-          text => writeInterval(text, item.configTag!, seconds),
-          errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
-        )
-        .then(written => {
-          if (written) toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
-        }, fail);
+        .apply(text => writeInterval(text, item.configTag!, seconds))
+        .then(result => {
+          if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
+          const problem = editProblem(result, 'nodes.writeInvalid', t);
+          if (problem) toast('negative', problem);
+        });
     }
   }));
   return {
@@ -62,7 +62,7 @@ export function useProviderTable(input: ProviderTableInput) {
     busy: input.busy,
     writable: input.source.writable,
     sourceBusy: input.source.busy || !input.source.main,
-    sourceTip: input.source.error ? errorText(input.source.error) : undefined,
+    sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
     onAdd: input.onAdd
   };
 }

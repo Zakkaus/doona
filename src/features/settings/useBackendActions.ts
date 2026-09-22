@@ -11,8 +11,9 @@ import {
 } from '../../store';
 import {lifecycleActions, operationLabels} from '../overview/view';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
+import {errorText} from '../../api/error';
 export function useBackendActions() {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -27,7 +28,7 @@ export function useBackendActions() {
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const geodata = useGeodata(resources?.geodata.available ?? false);
-  const fail = (error: unknown) => toast('negative', errorText(error));
+  const fail = (error: unknown) => toast('negative', errorText(error, t));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const offered =
     lifecycle ||
@@ -55,7 +56,7 @@ export function useBackendActions() {
         toast(
           done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
           failures.length
-            ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0])})
+            ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
             : t('settings.refreshedAll', counts)
         );
       }, fail);
@@ -65,7 +66,7 @@ export function useBackendActions() {
       result => {
         if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
       },
-      error => toast('negative', t('ov.operationError', {error: errorText(error)}))
+      error => toast('negative', t('ov.operationError', {error: errorText(error, t)}))
     );
   const closeAll = () =>
     void closing.closeAll({ids: [], query: {all: true}}).then(tally => {

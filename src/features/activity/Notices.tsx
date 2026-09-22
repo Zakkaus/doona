@@ -6,7 +6,7 @@ type NoticesModel = {
   empty: string;
 };
 import {useT} from '../../i18n';
-import {buildHash} from '../../shell/route';
+import {href} from '../../shell/route';
 import {Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 
 export function Notices({rows, total, error, loading, empty}: NoticesModel) {
@@ -21,7 +21,7 @@ export function Notices({rows, total, error, loading, empty}: NoticesModel) {
           </h3>
           {total > 0 && <span className="rp-label">{total}</span>}
         </div>
-        <Link appearance="button" className="quiet sm" href={buildHash('events')}>
+        <Link appearance="button" className="quiet sm" href={href('events')}>
           {t('act.viewAll')}
         </Link>
       </div>

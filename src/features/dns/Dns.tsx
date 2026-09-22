@@ -7,7 +7,6 @@ import {
   Button,
   DataTable,
   ErrorMessage,
-  errorText,
   Light,
   TextTooltip,
   Kv,
@@ -21,6 +20,7 @@ import {
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCache, useDnsLog} from './useDns';
+import {errorText} from '../../api/error';
 
 type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
 
@@ -86,7 +86,7 @@ export function Dns(props: PageProps) {
   return (
     <div className="rp-page">
       {vm.error && <ErrorMessage error={vm.error} />}
-      {vm.queryError && <ErrorMessage error={vm.queryError} message={t('dns.queryFailed', {error: errorText(vm.queryError)})} />}
+      {vm.queryError && <ErrorMessage error={vm.queryError} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
       <Tabs label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
     </div>
   );

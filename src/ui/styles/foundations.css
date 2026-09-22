@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   transition:
-    opacity 200ms ease-out,
-    transform 200ms ease-out;
+    opacity var(--rp-duration-panel) var(--rp-ease-out),
+    transform var(--rp-duration-panel) var(--rp-ease-out);
 }
 .rp-icon-stack > .sun {
   opacity: 0;
@@ -37,7 +37,7 @@
 }
 /* An icon that stands for a chosen value (language, palette) turns in the same way when the value changes. */
 .rp-icon-in {
-  animation: rp-icon-in 200ms ease-out;
+  animation: rp-icon-in var(--rp-duration-panel) var(--rp-ease-out);
 }
 @keyframes rp-icon-in {
   from {

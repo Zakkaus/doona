@@ -87,19 +87,19 @@
 }
 .rp-badge.warn {
   border-color: transparent;
-  background: var(--rp-gold);
+  background: var(--rp-notice);
   color: var(--rp-on-accent);
 }
 .rp-btn.negative {
   background: transparent;
-  border-color: var(--rp-love);
-  color: var(--rp-love);
+  border-color: var(--rp-negative);
+  color: var(--rp-negative);
 }
 .rp-btn.negative[data-hovered] {
-  background: color-mix(in srgb, var(--rp-love) 12%, transparent);
+  background: color-mix(in srgb, var(--rp-negative) 12%, transparent);
 }
 .rp-btn.negative[data-pressed] {
-  background: color-mix(in srgb, var(--rp-love) 20%, transparent);
+  background: color-mix(in srgb, var(--rp-negative) 20%, transparent);
 }
 
 .rp-btn[data-disabled] {

@@ -82,7 +82,9 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
   await page.locator('[name=token]').fill('not-saved');
   await page.locator('form button[type=submit]').click();
   await expect(page.locator('[name=api]')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('form').getByRole('alert')).toBeVisible();
+  // The error joins the hint in the field's description rather than replacing it.
+  await expect(page.locator('[name=api]')).toHaveAccessibleDescription(/not \/api\/v1/);
+  await expect(page.locator('[name=api]')).toHaveAccessibleDescription(/without credentials/);
   expect(await page.evaluate(() => [localStorage.getItem('doona-api'), localStorage.getItem('doona-api-token')])).toEqual([null, null]);
 });
 

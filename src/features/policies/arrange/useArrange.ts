@@ -1,0 +1,120 @@
+import {useCallback, useDeferredValue, useMemo, useState} from 'react';
+import {useFilter} from 'react-aria-components';
+import {useT} from '../../../i18n';
+import type {Key} from '../../../i18n/messages';
+import type {Node} from '../../../api/model';
+import {useCapabilities, useProviders} from '../../../store';
+import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
+import {toast, useLinked} from '../../../ui/ui';
+import {useDraftGuard} from '../../config/useDraftGuard';
+import type {MainSourceEdit} from '../../config/mainSource';
+import {groupNameError} from '../policies';
+import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
+import {errorText} from '../../../api/error';
+
+// What a dragged tray row carries.
+export const PLACEABLE = 'application/x-doona-placeable';
+
+export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>, nodes: Node[] | undefined) {
+  const t = useT();
+  const resources = useCapabilities().data?.resources;
+  const providers = useProviders(resources?.providers.available === true);
+  const [changes, setChanges] = useState<GroupChange[]>([]);
+  const guard = useDraftGuard(changes.length > 0);
+  // Leaving the page after confirming the draft guard drops what was staged.
+  useLinked(guard.revision, () => setChanges([]));
+  const text = source.main?.content ?? '';
+  const subscriptions = useMemo(() => traySubscriptions(providers.data?.providers ?? [], nodes ?? []), [providers.data, nodes]);
+  const view = useMemo(() => arrangeView(text, changes, subscriptions, nodes ?? [], t), [text, changes, subscriptions, nodes, t]);
+  const byGroup = useMemo(() => new Map(view.groups.map(group => [group.name, group])), [view.groups]);
+  const {contains} = useFilter({sensitivity: 'base'});
+  const [search, setSearch] = useState('');
+  const needle = useDeferredValue(search).trim();
+  const trayNodes = useMemo(
+    () => (nodes ?? []).filter(node => !needle || contains(node.name, needle) || contains(node.protocol ?? '', needle)),
+    [nodes, needle, contains]
+  );
+  const traySubs = useMemo(() => subscriptions.filter(item => !needle || contains(item.label, needle)), [subscriptions, needle, contains]);
+  const [reviewing, setReviewing] = useState(false);
+  const [applying, setApplying] = useState(false);
+  // A refused or failed apply is reported inside the review sheet, where it happened.
+  const [failure, setFailure] = useState<string | null>(null);
+  const blockedReason: Key | null = !source.writable ? 'arrange.readOnly' : !source.main ? 'arrange.noMain' : null;
+  const edit = (next: (current: GroupChange[]) => GroupChange[]) => {
+    if (applying) return;
+    setFailure(null);
+    setChanges(next);
+  };
+  // Items the group already holds exactly are skipped: adding them again would stage an edit that writes nothing.
+  const place = (group: string, items: Placeable[]) =>
+    edit(current =>
+      items
+        .filter(item => !holds(byGroup.get(group), item))
+        .reduce((staged, item) => stage(staged, {kind: item.kind === 'node' ? 'addNode' : 'addSubscription', group, value: item.value}), current)
+    );
+  const unplace = (group: string, item: Placeable) =>
+    edit(current => stage(current, {kind: item.kind === 'node' ? 'removeNode' : 'removeSubscription', group, value: item.value}));
+  const existing = new Set(view.groups.map(group => group.name));
+  const nameProblem = (name: string) => groupNameError(name, existing, t);
+  const apply = async () => {
+    setApplying(true);
+    setFailure(null);
+    try {
+      const result = await source.apply(current => applyChanges(current, changes));
+      if (result.kind === 'invalid') setFailure(t('arrange.invalid', {n: result.errors}));
+      if (result.kind === 'failed') setFailure(t('arrange.failed', {error: errorText(result.error, t)}));
+      if (result.kind === 'ok') {
+        toast('positive', t('arrange.applied', {n: changes.length}));
+        setChanges([]);
+        guard.clear();
+        setReviewing(false);
+      }
+    } finally {
+      setApplying(false);
+    }
+  };
+  // The review shows each touched group as it will be written, not a line diff of the whole file.
+  const preview = useMemo(() => {
+    if (!changes.length) return [];
+    const lines = view.stagedText.split('\n');
+    const touched = new Set(changes.map(change => change.group));
+    return readGroupEntries(view.stagedText)
+      .filter(entry => touched.has(entry.name))
+      .map(entry => ({group: entry.name, text: lines.slice(entry.from, entry.to + 1).join('\n')}));
+  }, [view.stagedText, changes]);
+  return {
+    groups: view.groups,
+    unknown: view.unknown,
+    byGroup,
+    subscriptions: traySubs,
+    nodes: trayNodes,
+    search,
+    setSearch,
+    loading: nodes === undefined || (providers.loading && !providers.data),
+    error: source.error ?? providers.error,
+    retry: useCallback(() => void providers.refetch?.(), [providers]),
+    blocked: blockedReason ? t(blockedReason) : null,
+    busy: source.busy || applying,
+    applying,
+    failure,
+    changes,
+    changeLines: changes.map(change => changeText(change, subscriptions, t)),
+    pendingText: t('arrange.pending', {n: changes.length}),
+    place,
+    unplace,
+    drop: (index: number) => edit(current => unstage(current, index)),
+    discard: () => edit(() => []),
+    nameProblem,
+    create: (name: string, policy: string) => edit(current => stage(current, {kind: 'createGroup', group: name, policy})),
+    // With nothing left to review the sheet closes by itself.
+    reviewing: reviewing && changes.length > 0,
+    setReviewing: (open: boolean) => {
+      // The sheet stays open while its apply runs, so what is being written stays in view.
+      if (!applying) setReviewing(open);
+    },
+    preview,
+    canApply: changes.length > 0 && view.emptyNew.length === 0 && !blockedReason && !applying,
+    applyNote: view.emptyNew.length ? t('arrange.emptyNew', {group: view.emptyNew[0]}) : null,
+    apply
+  };
+}

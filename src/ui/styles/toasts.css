@@ -7,7 +7,7 @@
   position: fixed;
   inset: 0;
   background: var(--rp-underlay);
-  animation: rp-fade-in 250ms var(--rp-ease);
+  animation: rp-fade-in var(--rp-duration-modal-in) var(--rp-ease);
 }
 .rp-toasts {
   position: fixed;
@@ -65,12 +65,12 @@
   box-shadow: var(--rp-shadow-lg);
   flex-shrink: 0;
   transition:
-    translate 400ms var(--rp-ease),
-    scale 400ms var(--rp-ease),
-    opacity 400ms var(--rp-ease);
+    translate var(--rp-duration-toast) var(--rp-ease),
+    scale var(--rp-duration-toast) var(--rp-ease),
+    opacity var(--rp-duration-toast) var(--rp-ease);
 }
 .rp-toast[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-toast .main {
@@ -119,16 +119,16 @@
   height: 12px;
 }
 .rp-toast.negative {
-  background: var(--rp-love);
+  background: var(--rp-negative);
   color: var(--rp-on-accent);
 }
 /* Success takes the same tone as the ok light and a good latency; info the accent. */
 .rp-toast.positive {
-  background: var(--rp-foam);
+  background: var(--rp-positive);
   color: var(--rp-on-accent);
 }
 .rp-toast.info {
-  background: var(--rp-pine);
+  background: var(--rp-info);
   color: var(--rp-on-accent);
 }
 
@@ -151,7 +151,7 @@
 }
 /* Arrival runs once, when the toast mounts; a toast promoted from the background of the stack does not arrive again. */
 .rp-toast {
-  animation: rp-toast-in 400ms var(--rp-ease);
+  animation: rp-toast-in var(--rp-duration-toast) var(--rp-ease);
 }
 @keyframes rp-toast-in {
   from {
@@ -162,7 +162,7 @@
 /* The sidebar marker slides to the active page; palette and scheme changes crossfade (view transitions). Page changes themselves are instant, as in S2. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 300ms;
+  animation-duration: var(--rp-duration-view);
 }
 @keyframes rp-spin {
   to {

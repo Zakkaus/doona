@@ -1,9 +1,9 @@
 import {createContext, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
-import {features} from './registry';
+import {features, type RoutePath} from './registry';
 
-type Route = {route: string; query: string};
+type Route = {route: RoutePath; query: string};
 export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
 
 export function parseHash(hash: string): Route {
@@ -11,7 +11,7 @@ export function parseHash(hash: string): Route {
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
   if (route.route === 'flows') return legacyFlows(route.query);
-  return features.some(feature => feature.path === route.route) ? route : {...route, route: 'activity'};
+  return {route: features.find(feature => feature.path === route.route)?.path ?? 'activity', query: route.query};
 }
 // The flow map and records moved under rules; old links keep working.
 function legacyFlows(query: string): Route {
@@ -29,7 +29,16 @@ export function within(query: string, patch: Record<string, string | null>): str
   return next.toString();
 }
 
-export function buildHash(route: string, query?: string): string {
+export function href(route: RoutePath, params: Record<string, string | null> = {}): string {
+  return buildHash(route, within('', params));
+}
+
+export function pickTab<T extends string>(query: string, ids: readonly T[], fallback: T): T {
+  const requested = new URLSearchParams(query).get('tab');
+  return ids.find(id => id === requested) ?? fallback;
+}
+
+export function buildHash(route: RoutePath, query?: string): string {
   return '#/' + route + (query ? '?' + query : '');
 }
 

@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
 import type {Key} from '../../i18n/messages';
 import {getApi} from '../../api';
 import type {RoutingTraceRequest, RoutingTraceResponse} from '../../api/model';
@@ -10,9 +10,10 @@ import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {millis} from '../../api/u64';
 import {useLang, useT} from '../../i18n';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
+import {errorText} from '../../api/error';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -51,8 +52,9 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
+  const report = useEffectEvent((error: Error) => toast('negative', errorText(error, t)));
   useEffect(() => {
-    if (problem) toast('negative', errorText(problem));
+    if (problem) report(problem);
   }, [problem]);
   const invalid: TraceProblem | null =
     !form.domain.trim() && !form.dst_ip.trim()
@@ -146,7 +148,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
       );
     } catch (error) {
-      toast('negative', errorText(error));
+      toast('negative', errorText(error, t));
     }
   };
   return {

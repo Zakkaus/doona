@@ -5,7 +5,7 @@ import type {PaletteId, Scheme, Settings} from '../features/settings/settings';
 import type {PageProps} from '../features/types';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
-import {buildHash} from './route';
+import {href} from './route';
 
 export type ShortcutView = {id: string; path: string; key: string; sequence: string; label: string};
 export type AboutView = {
@@ -66,7 +66,7 @@ export function shellView(
             {
               id: item.id,
               path: item.path,
-              href: buildHash(item.path),
+              href: href(item.path),
               label: t(item.nav.titleKey),
               Icon: item.nav.Icon,
               current: item.path === route,

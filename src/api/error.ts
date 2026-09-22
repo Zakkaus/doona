@@ -1,7 +1,7 @@
 import type {ErrorResponse} from './model';
 
 import type {Key} from '../i18n/messages';
-import type {Params} from '../i18n/index';
+import type {Params, Translator} from '../i18n/index';
 
 export class ApiError extends Error {
   constructor(
@@ -51,4 +51,15 @@ export class LocalError extends Error {
     super(key);
     this.name = 'LocalError';
   }
+}
+
+// The words for a failure: doona's own errors in the current language, the backend's message as it sent it.
+export function errorText(error: unknown, t: Translator): string {
+  if (error instanceof LocalError) {
+    const text = t(error.key);
+    return error.detail ? `${text}: ${error.detail}` : text;
+  }
+  if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
+  const message = error instanceof Error ? error.message : String(error);
+  return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
 }

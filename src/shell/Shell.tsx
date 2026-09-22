@@ -15,6 +15,7 @@ import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
+import {isRoutePath} from './registry';
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
 const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
 
@@ -123,7 +124,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
             </div>
             <div className="rp-mobile-nav">
-              <LabeledSelect label={t('page')} value={route} onChange={k => go(k)} items={view.choices} bare />
+              <LabeledSelect label={t('page')} value={route} onChange={k => isRoutePath(k) && go(k)} items={view.choices} bare />
             </div>
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />

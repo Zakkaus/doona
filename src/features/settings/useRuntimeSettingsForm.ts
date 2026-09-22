@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {toast, errorText, useLinked} from '../../ui/ui';
+import {toast, useLinked} from '../../ui/ui';
 import {
   numericFields,
   numericAccess,
@@ -18,6 +18,7 @@ import {
 } from './view';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {logLevelLabels} from '../logs/view';
+import {errorText} from '../../api/error';
 
 export function useRuntimeSettingsForm() {
   const t = useT();
@@ -79,7 +80,7 @@ export function useRuntimeSettingsForm() {
         setDraft(current => (current === submitted ? null : current));
         toast('positive', t('settings.runtimeSaved'));
       },
-      (error: unknown) => toast('negative', errorText(error))
+      (error: unknown) => toast('negative', errorText(error, t))
     );
   };
   return {

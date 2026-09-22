@@ -1,8 +1,8 @@
 import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
-import {ApiError} from '../../api/error';
+import {ApiError, errorText} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
-import {downloadFile, errorText, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../types';
@@ -96,7 +96,7 @@ export function useConnections({go, query}: PageProps) {
     } catch (error) {
       toast(
         'negative',
-        error instanceof ApiError && error.code === 'state_conflict' ? t('conn.notClosable') : t('conn.closeFailed', {error: errorText(error)})
+        error instanceof ApiError && error.code === 'state_conflict' ? t('conn.notClosable') : t('conn.closeFailed', {error: errorText(error, t)})
       );
     }
   };
@@ -108,7 +108,7 @@ export function useConnections({go, query}: PageProps) {
       select(null);
       toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
     } catch (error) {
-      toast('negative', t('conn.closeFailed', {error: errorText(error)}));
+      toast('negative', t('conn.closeFailed', {error: errorText(error, t)}));
     }
   };
   return {
