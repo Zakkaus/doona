@@ -1,4 +1,4 @@
-import {createContext, useCallback, useEffect, useRef, useState} from 'react';
+import {createContext, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {Go} from '../features/types';
 import {shouldOpenSettings} from '../features/settings/settings';
 import {features} from './registry';
@@ -79,14 +79,19 @@ export function useRoute(api: string | null) {
     history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
     setLoc(next);
   }, []);
+  // `go` keeps one identity across navigations, so memoised pages and tiles are not re-rendered by the callback alone.
+  const current = useRef(loc);
+  useLayoutEffect(() => {
+    current.current = loc;
+  }, [loc]);
   const go = useCallback<Go>(
     (route, query = '') => {
-      const next = updateRoute(loc, buildHash(route, query));
-      if (next === loc) return;
+      const next = updateRoute(current.current, buildHash(route, query));
+      if (next === current.current) return;
       if (dirty.current) setPending(next);
       else push(next);
     },
-    [loc, push]
+    [push]
   );
   useEffect(() => {
     const on = () => {

@@ -113,7 +113,11 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
   const active = overflow || !!text;
   useEffect(() => {
     const el = ref.current;
-    if (!el || text) return;
+    if (!el) return;
+    if (text) {
+      setNested(!!el.closest(STOPS));
+      return;
+    }
     const measure = () => {
       setOverflow(el.scrollWidth > el.clientWidth);
       // Nested tab stops swallow their ancestor's press; grid navigation still focuses cell text.

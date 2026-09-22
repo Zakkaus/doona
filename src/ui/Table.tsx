@@ -81,7 +81,7 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
     kept.delete(column.id);
     total -= column.minWidth;
   }
-  return cols.filter(column => kept.has(column.id));
+  return kept.size === cols.length ? cols : cols.filter(column => kept.has(column.id));
 }
 
 // Row and header heights match theme.css (8px padding twice, 20px line, 1px border).

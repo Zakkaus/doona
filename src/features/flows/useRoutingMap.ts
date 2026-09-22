@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useCallback, useLayoutEffect, useMemo, useRef} from 'react';
 import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../store';
 import {useT} from '../../i18n';
 import {within} from '../../shell/route';
@@ -20,6 +20,12 @@ export function useRoutingMap({go, query}: PageProps) {
     [resource.data, groups.data, nodes.data, rules.data, by]
   );
   const pinned = params.get('path');
+  // Memoised tree tiles keep one `pin` across navigations; the query is read when the tile is pressed.
+  const latest = useRef(query);
+  useLayoutEffect(() => {
+    latest.current = query;
+  }, [query]);
+  const pin = useCallback((path: string | null) => go('rules', within(latest.current, {path})), [go]);
   const count = pinned ? flowsThrough(resource.data?.flows ?? [], pinned, nodeNames(nodes.data ?? []), rules.data?.rules ?? []).length : 0;
   return {
     ...routingMapView(tree, !!(resource.data || rules.data || groups.data), !!resource.error, pinned, count, t),
@@ -32,7 +38,7 @@ export function useRoutingMap({go, query}: PageProps) {
       nodes.refetch();
       rules.refetch();
     },
-    pin: (path: string | null) => go('rules', within(query, {path})),
+    pin,
     changeBy: (next: string) => go('rules', within(query, {by: next === 'client' ? 'client' : null, path: null})),
     viewPinned: () => go('rules', within(query, {tab: 'flows'}))
   };

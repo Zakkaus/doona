@@ -21,7 +21,8 @@ export function useBackendActions() {
   const runtime = useRuntime(!!resources?.runtime.available);
   const providers = useProviders(resources?.providers.available === true);
   const refresh = useProviderRefresh(providers.refetch);
-  const connections = useConnections(undefined, resources?.connections.available === true);
+  // Only the close-all action needs the live count, so the poll runs only where that action exists.
+  const connections = useConnections(undefined, resources?.connections.available === true && resources.connections.can_close === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);

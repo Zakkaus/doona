@@ -61,7 +61,9 @@ export function usePolicyVisibility(focused: boolean) {
     if (!element) return;
     const observer = new IntersectionObserver(
       entries => {
-        if (entries.some(entry => entry.isIntersecting)) setExpanded(true);
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        setExpanded(true);
+        observer.disconnect();
       },
       {rootMargin: '400px'}
     );
