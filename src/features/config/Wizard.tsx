@@ -4,12 +4,30 @@ import type {ConfigEditor} from './useConfigPage';
 import {Button, LabeledSelect, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
-import type {WizardState} from './wizard';
+import type {WizardState} from '../../dae/setup';
 import {useWizard} from './useWizard';
 export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
-  const {state, text, busy, rows, groupUsedText, patch, setSubscription, apply, saveDisabled, saving, saveTip, writeHelp, showLan, templates, add, remove} =
-    useWizard(props);
+  const {
+    state,
+    text,
+    busy,
+    rows,
+    groupUsedText,
+    templateHelp,
+    networkError,
+    patch,
+    setSubscription,
+    apply,
+    saveDisabled,
+    saving,
+    saveTip,
+    writeHelp,
+    showLan,
+    templates,
+    add,
+    remove
+  } = useWizard(props);
   return (
     <section className="rp-card" aria-label={t('config.wizard')}>
       <span className="rp-label">{t('config.wizardNote')}</span>
@@ -20,7 +38,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
           <div className="rp-toolbar top" key={item.index}>
             {item.raw !== null ? (
               // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
-              <span className="rp-code rp-grow">{item.raw}</span>
+              <span className="rp-code rp-grow rp-config-raw">{item.raw}</span>
             ) : (
               <>
                 <TextField
@@ -42,9 +60,11 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
                 />
               </>
             )}
-            <Button isDisabled={busy} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
-              <Close />
-            </Button>
+            <span className={item.raw === null ? 'rp-field-row' : undefined}>
+              <Button isDisabled={busy} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
+                <Close />
+              </Button>
+            </span>
           </div>
         ))}
         <div>
@@ -74,7 +94,22 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
           />
         )}
       </div>
-      <span className="rp-label">{groupUsedText}</span>
+      {groupUsedText && <span className="rp-label">{groupUsedText}</span>}
+      {templateHelp && <span className="rp-label">{templateHelp}</span>}
+      {showLan && (
+        <div className="rp-toolbar top">
+          <TextField
+            isDisabled={busy}
+            label={t('config.wizardListenerPort')}
+            value={state.listenerPort}
+            width={140}
+            onChange={listenerPort => patch({listenerPort})}
+            error={networkError}
+          />
+          <TextField isDisabled={busy} label={t('config.wizardDefaultDns')} value={state.defaultDns} onChange={defaultDns => patch({defaultDns})} />
+          <TextField isDisabled={busy} label={t('config.wizardChinaDns')} value={state.chinaDns} onChange={chinaDns => patch({chinaDns})} />
+        </div>
+      )}
 
       <h3 className="rp-h3">{t('config.wizardPreview')}</h3>
       <CodeEditor label={t('config.wizardPreview')} value={text} readOnly compact />

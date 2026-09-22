@@ -200,3 +200,37 @@ test('an unknown stored palette falls back to the supported moon palette', async
   await page.getByRole('button', {name: 'Palette', exact: true}).first().click();
   await expect(page.getByRole('menuitemradio', {name: /Moon/})).toHaveAttribute('aria-checked', 'true');
 });
+
+test('profile switching confirms draft loss without saving edits to the profile being left', async ({page}) => {
+  const profiles = [
+    {id: 'a', name: 'Backend A', api: 'mock', token: 'saved-a'},
+    {id: 'b', name: 'Backend B', api: 'mock', token: 'saved-b'}
+  ];
+  await page.addInitScript(profiles => {
+    if (localStorage.getItem('doona-profiles') !== null) return;
+    localStorage.setItem('doona-profiles', JSON.stringify(profiles));
+    localStorage.setItem('doona-profile', 'a');
+  }, profiles);
+  await page.goto('/#/settings');
+  await page.getByLabel('Server URL', {exact: true}).fill('https://unsaved.example');
+  await page.locator('[name=token]').fill('unsaved-token');
+  const picker = page.getByRole('button', {name: /Backend profile$/});
+  await picker.click();
+  await page.getByRole('option', {name: /Backend B/}).click();
+  const confirm = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page.getByLabel('Server URL', {exact: true})).toHaveValue('https://unsaved.example');
+  expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');
+  await picker.click();
+  await page.getByRole('option', {name: /Backend B/}).click();
+  await Promise.all([page.waitForEvent('load'), confirm.getByRole('button', {name: 'Discard changes', exact: true}).click()]);
+  await expect(page.locator('[name=token]')).toHaveValue('saved-b');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!))).toEqual(profiles);
+  expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('b');
+  await picker.click();
+  await page.getByRole('option', {name: /Backend A/}).click();
+  await expect(page.locator('[name=token]')).toHaveValue('saved-a');
+  await page.locator('[name=token]').fill('explicitly-saved');
+  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!))).toEqual([{...profiles[0], token: 'explicitly-saved'}, profiles[1]]);
+});

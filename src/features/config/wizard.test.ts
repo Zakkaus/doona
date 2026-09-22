@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {readState, validSubscriptions, writeState} from './wizard';
+import {readState, validNetwork, validSubscriptions, writeState} from '../../dae/setup';
 import {readGroupEntries} from '../../dae/groups';
 
 it('keeps template groups inside an inline group section', () => {
@@ -132,7 +132,7 @@ describe('quick setup text transforms', () => {
     const state = readState(noGroup);
     expect(state.group).toBeNull();
     expect(writeState(noGroup, state)).toBe(noGroup);
-    const fresh = writeState('', {subscriptions: [{name: 'sub', url: 'https://example.org/sub'}], group: null, rules: 'keep', lanInterface: ''});
+    const fresh = writeState('', {...readState(''), subscriptions: [{name: 'sub', url: 'https://example.org/sub'}]});
     expect(fresh).toContain('lan_interface: auto');
     expect(fresh).toContain('      qname(geosite:cn) -> alidns\n      fallback: cloudflare');
     expect(fresh).toContain("  proxy {\n    filter: group('auto')\n    filter: !name('direct', 'block')\n    policy: select\n    default: 'auto'\n  }");
@@ -174,4 +174,27 @@ it('preserves subscription identity when only its URL changes and rejects duplic
 it('does not inject subscriptions or groups into untouched setup', () => {
   const source = 'global {\n  tproxy_port: 12345\n}\nrouting {\n  fallback: direct\n}\n';
   expect(writeState(source, readState(source))).toBe(source);
+});
+
+it('replaces every top-level routing block without changing nested DNS routing or other bytes', () => {
+  const dns = "dns { upstream { local: 'udp://192.0.2.1:53' } routing { request { fallback: local } } }";
+  const text = `group { mix {} }\nrouting { fallback: direct }\n${dns}\n# retained\nrouting { domain(example.org) -> block }\nnode {}\n`;
+  const written = writeState(text, {...readState(text), rules: 'global'});
+  expect(written).not.toContain('domain(example.org)');
+  expect(written.match(/^routing \{/gm)).toHaveLength(1);
+  expect(written).toContain('fallback: mix');
+  expect(written).toContain(`${dns}\n# retained\n\nnode {}\n`);
+});
+
+it('writes explicit first-run network inputs and rejects missing or invalid listener settings', () => {
+  const state = {...readState(''), listenerPort: '23456', defaultDns: 'udp://192.0.2.1:53', chinaDns: 'tls://resolver.example:853'};
+  const written = writeState('', state);
+  expect(written).toContain('tproxy_port: 23456');
+  expect(written).toContain("cloudflare: 'udp://192.0.2.1:53'");
+  expect(written).toContain("alidns: 'tls://resolver.example:853'");
+  expect(validNetwork(state)).toBe(true);
+  expect(validNetwork({...state, listenerPort: '65536'})).toBe(false);
+  expect(validNetwork({...state, listenerPort: '0'})).toBe(false);
+  expect(validNetwork({...state, listenerPort: '53\nnode {}'})).toBe(false);
+  expect(validNetwork({...state, defaultDns: ' '})).toBe(false);
 });

@@ -293,6 +293,16 @@ for (const tab of ['source', 'setup']) {
 
 test('global target cannot change during a pending mode apply', async ({page}) => {
   const api = await backend(page);
+  // The catch-all only goes after a prefix of must rules; the demo source is reordered to allow it.
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const ordinary = '  domain(suffix: doubleclick.net) -> block\n';
+  await api.pollOperation(
+    await api.replaceConfigSource(
+      source.id,
+      source.content!.replace(ordinary, '').replace('  domain(geosite: cn)', ordinary + '  domain(geosite: cn)'),
+      `"${source.content_sha256}"`
+    )
+  );
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;

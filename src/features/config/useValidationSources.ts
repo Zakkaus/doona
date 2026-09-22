@@ -4,12 +4,12 @@ import {completeSource} from '../../store/config';
 import {validationSources} from './names';
 
 export function useValidationSources(sources: ConfigSource[], replacement?: {id: string; content: string}) {
-  const [checked, setChecked] = useState<ConfigSource[] | null>(null);
+  const [checked, setChecked] = useState<{sources: ConfigSource[]; complete: ConfigSource[]} | null>(null);
   useEffect(() => {
     let live = true;
     const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
     void Promise.all(authored.map(completeSource)).then(results => {
-      if (live) setChecked(results.every(Boolean) ? sources : null);
+      if (live) setChecked({sources, complete: authored.filter((_, index) => results[index])});
     });
     return () => {
       live = false;
@@ -18,7 +18,7 @@ export function useValidationSources(sources: ConfigSource[], replacement?: {id:
   const id = replacement?.id;
   const content = replacement?.content;
   return useMemo(
-    () => (checked === sources ? validationSources(sources, id !== undefined && content !== undefined ? {id, content} : undefined) : null),
+    () => (checked?.sources === sources ? validationSources(checked.complete, id !== undefined && content !== undefined ? {id, content} : undefined) : null),
     [checked, sources, id, content]
   );
 }

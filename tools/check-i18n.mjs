@@ -4,8 +4,7 @@ import {dirname, resolve, relative} from 'node:path';
 
 const languages = ['zh-TW', 'zh-CN', 'en'];
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
-const excluded =
-  /(?:^src\/i18n\/|\/messages\.ts$|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/policies\/geo\.ts$|^src\/features\/config\/templates\.ts$)/;
+const excluded = /(?:^src\/i18n\/|\/messages\.ts$|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/policies\/geo\.ts$|^src\/dae\/templates\.ts$)/;
 function files(path) {
   return readdirSync(path, {withFileTypes: true}).flatMap(entry => (entry.isDirectory() ? files(`${path}/${entry.name}`) : [`${path}/${entry.name}`]));
 }

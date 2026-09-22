@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useState} from 'react';
-import {getApi} from '../../api';
 import {completeSource} from '../../store/config';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
@@ -9,6 +8,7 @@ import {useDraftGuard} from './useDraftGuard';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
 import {useValidationSources} from './useValidationSources';
+import {useBackgroundValidation} from './useBackgroundValidation';
 
 export type ModulesProps = {config: EffectiveConfig; editor: ConfigEditor; canWrite: boolean; canValidate: boolean};
 type Draft = {section: ModuleSection & {source: ConfigSource; block: NonNullable<ModuleSection['block']>}; text: string};
@@ -16,7 +16,6 @@ type Draft = {section: ModuleSection & {source: ConfigSource; block: NonNullable
 export function useModules({config, editor, canWrite, canValidate}: ModulesProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const api = getApi();
   const sections = useMemo(() => sectionSummaries(config.sources, t), [config, t]);
   const [checked, setChecked] = useState<Map<ConfigSource, boolean>>(new Map());
   useEffect(() => {
@@ -41,22 +40,7 @@ export function useModules({config, editor, canWrite, canValidate}: ModulesProps
   const fullText = useMemo(() => (draft ? splice(draft.section.source.content!, draft.section.block, draft.text) : null), [draft]);
   const sourceId = draft?.section.source.id;
   const candidates = useValidationSources(config.sources, sourceId && fullText !== null ? {id: sourceId, content: fullText} : undefined);
-  useEffect(() => {
-    if (!canValidate || !candidates || fullText === null || !sourceId) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      void api.validateConfig({sources: candidates, mode: 'full'}, controller.signal).then(
-        result => {
-          if (!controller.signal.aborted) setFound(result.diagnostics);
-        },
-        () => undefined
-      );
-    }, 600);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [api, canValidate, candidates, fullText, sourceId]);
+  useBackgroundValidation(canValidate && fullText !== null ? candidates : null, setFound);
   const shown = (editor.errorSource === sourceId ? editor.diagnostics : null) ?? found ?? config.diagnostics;
   const marks = useMemo(() => (draft ? sectionMarks(shown, draft.section.source.id, draft.section.block, draft.text) : []), [shown, draft]);
   const outbounds = useMemo(() => groupNames(fullText ?? config.sources.find(source => source.kind === 'main')?.content ?? ''), [fullText, config]);

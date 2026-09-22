@@ -39,7 +39,6 @@ it('initializes empty setup and preserves opaque subscription lines while hiding
   expect(view.rows.map(row => row.index)).toEqual([1, 2]);
   expect(view.rows[0].raw).toBe('file: /etc/nodes');
   expect(view.rows[1].error).toBe(t('config.wizardSubscriptionHelp'));
-  expect(view.groupUsedText).toContain('proxy');
 });
 
 function source(content: string, id = 'main'): ConfigSource {
@@ -120,11 +119,11 @@ it('maps only diagnostics within the edited section using its current line count
   ]);
 });
 
-it('withholds editing for credential sources and native_api sections', () => {
+it('withholds editing for missing source text and native_api sections', () => {
   const hidden = {...source(''), content: undefined};
   const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
-  expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentCredential')});
+  expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentWithheld')});
 });
 
 it('marks only the edited source while retaining cross-source diagnostic locations', () => {
@@ -144,6 +143,23 @@ it('constructs main-first candidates with include paths and refuses missing cont
     {id: include.id, path: include.path, content: 'routing { fallback: direct }'}
   ]);
   expect(validationSources([include])).toBeNull();
-  expect(validationSources([main, {...include, content: undefined}])).toBeNull();
+  expect(validationSources([main, {...include, content: undefined}])).toEqual([{id: main.id, path: main.path, content: main.content}]);
   expect(validationSources([{...main, path: '<redacted>'}, include])![0]).toEqual({id: main.id, content: main.content});
+});
+
+it('does not submit pathless includes or validate an omitted replacement source', () => {
+  const main = source('include {}');
+  const include = {...source('routing {}', 'include'), path: '<redacted>'};
+  expect(validationSources([main, include])).toEqual([{id: main.id, path: main.path, content: main.content}]);
+  expect(validationSources([main, include], {id: include.id, content: 'routing { fallback: direct }'})).toBeNull();
+  expect(validationSources([{...main, content: undefined}, include])).toBeNull();
+});
+
+it('describes only the selected template’s groups and omits routing changes for keep', () => {
+  const state = {...wizardInitial('group { mix {} }'), group: 'mix'};
+  expect(wizardRows(state, undefined, t).groupUsedText).toBeNull();
+  expect(wizardRows({...state, rules: 'global'}, undefined, t).groupUsedText).toContain('mix');
+  const named = wizardRows({...state, rules: 'standard'}, undefined, t).groupUsedText;
+  expect(named).toContain('proxy, auto, telegram, media, apple');
+  expect(named).not.toContain('mix');
 });

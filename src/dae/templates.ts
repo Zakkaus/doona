@@ -1,16 +1,14 @@
 // Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
-import {quote} from '../../dae/text';
-import {templateText} from './messages';
+import {quote} from './text';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
 export const defaultTemplate: RuleTemplate = 'standard';
-// The preset lines dae ships in example.dae: keep the local network manager and LAN traffic off the proxy, and
-// drop HTTP/3, which the engine cannot proxy well and which browsers retry over TCP anyway.
+// Keep local traffic direct and block UDP/443 before template-specific routing.
 const preset = [
   '# dae presets: the local network manager, the LAN and multicast stay off the proxy',
   'pname(NetworkManager) -> direct',
   "dip(224.0.0.0/3, 'ff00::/8') -> direct",
   'dip(geoip:private) -> direct',
-  '# HTTP/3 cannot be proxied; block it so browsers fall back to TCP',
+  '# Block UDP/443',
   'l4proto(udp) && dport(443) -> block'
 ];
 const ads = ['# BanAD, BanProgramAD', 'domain(geosite:category-ads-all) -> block'];
@@ -36,6 +34,25 @@ const region = (name: string, label: string, pattern: string): GroupSpec => ({
   label,
   lines: [`filter: name(regex: ${quote(pattern)})`, 'policy: min_moving_avg']
 });
+// Native ACL4SSR labels and match patterns are configuration data, not translated UI copy.
+const templateText = {
+  proxy: '节点选择',
+  auto: '自动选择',
+  hk: ['香港节点', '港|HK|Hong Kong|HongKong'],
+  jp: ['日本节点', '日|JP|Japan|Tokyo'],
+  us: ['美国节点', '美|US|United States|America'],
+  tw: ['台湾节点', '台|TW|Taiwan'],
+  sg: ['狮城节点', '新加坡|獅城|狮城|SG|Singapore'],
+  kr: ['韩国节点', '韓|韩|KR|Korea'],
+  telegram: '电报消息',
+  media: '国外媒体',
+  apple: '苹果服务',
+  ai: 'Ai平台',
+  youtube: '油管视频',
+  netflix: '奈飞视频',
+  bahamut: '巴哈姆特'
+} as const;
+
 const proxy = selectGroup('proxy', templateText.proxy, ['auto']);
 const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: min_moving_avg']};
 const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1]));

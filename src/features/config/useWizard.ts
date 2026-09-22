@@ -5,7 +5,8 @@ import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../store/config';
 import {errorText, toast, useLinked} from '../../ui/ui';
-import {validSubscriptions, writeState, type RuleTemplate, type WizardState} from './wizard';
+import {validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
+import {type RuleTemplate} from '../../dae/templates';
 import {wizardInitial, wizardRows} from './view';
 import {useDraftGuard} from './useDraftGuard';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
@@ -42,7 +43,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     setState(wizardInitial(main.content ?? ''));
   });
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
-  const valid = validSubscriptions(state.subscriptions);
+  const valid = validSubscriptions(state.subscriptions) && (!!current.trim() || validNetwork(state));
   const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));
   // Editing a line hands it to the form; the original text is no longer written back for it.
   const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
@@ -71,6 +72,8 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     busy,
     rows: rows.rows,
     groupUsedText: rows.groupUsedText,
+    templateHelp: state.rules === 'keep' ? null : t('config.wizardPresetHelp'),
+    networkError: !current.trim() && !validNetwork(state) ? t('config.wizardNetworkError') : undefined,
     patch,
     setSubscription,
     apply,

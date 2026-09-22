@@ -29,6 +29,10 @@ export function Settings({query}: PageProps) {
     setName,
     confirmProfile,
     save,
+    switchProfile,
+    confirmSwitch,
+    switchPending,
+    cancelSwitch,
     testConnection,
     lang,
     pickLang,
@@ -58,7 +62,14 @@ export function Settings({query}: PageProps) {
         </h2>
         <ErrorMessage error={error} />
         <div className="rp-toolbar">
-          <LabeledSelect label={t('settings.profile')} side value={activeId} isDisabled={!hasActive} items={profile.choices} onChange={save} />
+          <LabeledSelect
+            label={t('settings.profile')}
+            side
+            value={activeId}
+            isDisabled={!hasActive || saving}
+            items={profile.choices}
+            onChange={switchProfile}
+          />
           <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
           <Button isDisabled={!hasActive} onPress={renameProfile}>
             {t('settings.renameProfile')}
@@ -182,6 +193,25 @@ export function Settings({query}: PageProps) {
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
         </div>
       </section>
+      <ModalDialog
+        title={t('config.discardTitle')}
+        isOpen={switchPending}
+        alert
+        narrow
+        onOpenChange={open => {
+          if (!open) cancelSwitch();
+        }}
+        footer={() => (
+          <>
+            <Button onPress={cancelSwitch}>{t('ui.cancel')}</Button>
+            <Button negative isDisabled={saving} onPress={confirmSwitch}>
+              {t('config.discard')}
+            </Button>
+          </>
+        )}
+      >
+        <p>{t('settings.switchProfileHelp')}</p>
+      </ModalDialog>
       {dialog && (
         <ModalDialog
           title={dialogTitle}

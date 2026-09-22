@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {quote, unquote} from '../../dae/text';
 import {addNamesToGroup, namedIn, readGroupEntries} from '../../dae/groups';
-import {readState, writeState} from './wizard';
+import {readState, writeState} from '../../dae/setup';
 import {writeInterval} from '../nodes/subscriptions';
 import {LocalError} from '../../api/error';
 
@@ -21,5 +21,5 @@ it('refuses apostrophes instead of silently changing group names or subscription
   expect(() => quote("o'brien")).toThrowError(new LocalError('config.unquotable'));
   expect(() => addNamesToGroup('group { proxy {} }', 'proxy', ["o'brien"])).toThrowError(LocalError);
   expect(() => writeInterval(`subscription {\n  paid: "${url}"\n}`, 'paid', 3600)).toThrowError(LocalError);
-  expect(() => writeState('', {subscriptions: [{name: 'paid', url}], group: null, rules: 'keep', lanInterface: ''})).toThrowError(LocalError);
+  expect(() => writeState('', {...readState(''), subscriptions: [{name: 'paid', url}]})).toThrowError(LocalError);
 });
