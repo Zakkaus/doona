@@ -8,21 +8,25 @@ rather than with each other.
 | `nfpm/doona.yaml`, `nfpm/doona-fonts.yaml` | the nfpm configs in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux/tree/main/nfpm) (`dae.yaml`, `v2ray-rules-dat.yaml`)                                                                             |
 | `openwrt/doona/Makefile`                   | [openwrt/packages](https://github.com/openwrt/packages) `net/v2ray-geodata` (data-only, `PKGARCH:=all`, `Download/` blocks) and `net/v2raya` (unpacking a release tarball in `Build/Prepare`)                                   |
 | `alpine/APKBUILD`                          | [aports](https://gitlab.alpinelinux.org/alpine/aports) `community/font-noto-cjk` (noarch, subpackage)                                                                                                                           |
+| `gentoo/www-apps/doona`                    | a data-only ebuild for the [gentoo-zh overlay](https://github.com/gentoo-zh/overlay): release archives in `SRC_URI`, `doins -r`, fonts behind a USE flag                                                                        |
 | `nix/package.nix`                          | [nixpkgs](https://github.com/NixOS/nixpkgs) `pkgs/by-name/da/daed/package.nix` (the `web` derivation: `fetchPnpmDeps`, `pnpmConfigHook`, `pnpm build`) and the pnpm section of `doc/languages-frameworks/javascript.section.md` |
 | the AUR `doona-bin` (separate repository)  | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                                      |
 
-The OpenWrt, Alpine and Nix recipes are unpublished templates. Replace every marked hash before submission;
-none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, and Nix needs the
-source hash from `nix-prefetch-github` and the dependency hash from the first build's mismatch message.
+The OpenWrt, Alpine, Gentoo and Nix recipes are unpublished templates. Replace every marked hash before submission;
+none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, Gentoo
+`ebuild … manifest`, and Nix needs the source hash from `nix-prefetch-github` and the dependency hash from the
+first build's mismatch message.
 
 Version spellings differ by packager and are all derived from the same tag: nfpm takes `0.3.0~beta.1` so deb,
-rpm and its ipk sort before the release; the OpenWrt feed Makefile and the APKBUILD use `0.3.0_beta1`, the
-only pre-release form apk accepts (OpenWrt 25 and later build apk packages from the same Makefile that builds
+rpm and its ipk sort before the release; the OpenWrt feed Makefile, the APKBUILD and the ebuild use `0.3.0_beta1`, the
+only pre-release form apk and Portage accept (OpenWrt 25 and later build apk packages from the same Makefile that builds
 ipk on 24.10).
 
 The binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
-installed and removed in its target root filesystem. Only the hashes changed between that run and a tag.
+installed and removed in its target root filesystem (Debian 13, Fedora 42, openSUSE Tumbleweed, Arch, OpenWrt 24.10
+and 25.12, Alpine 3.22), and the ebuild through `pkgcheck scan` and `emerge` on a Gentoo host. Only the hashes
+changed between that run and a tag.
 
 The release workflow runs `tools/package.sh --git-version`: tag `v0.3.0.beta.1` produces
 `doona-v0.3.0.beta.1.tar.gz` and `doona-fonts-v0.3.0.beta.1.tar.gz`, matching the binary recipes.
