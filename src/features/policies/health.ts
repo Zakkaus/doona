@@ -1,7 +1,23 @@
-import type {Group, HealthObservation} from '../../api/model';
-import {preferredObservation} from '../../api/selectors';
+import type {Group, GroupSummary, HealthObservation, Node} from '../../api/model';
+import {healthMillis, preferredHealth, preferredObservation, resolveSelectedLeaf} from '../../api/selectors';
 
-export function memberHealth(group: Group | undefined, fallback: ReadonlyMap<string, HealthObservation | undefined>) {
+export type MemberHealth = {health?: HealthObservation; selectedNode?: {name: string; latency: number}};
+
+export function policyHealth(nodes: Node[], groups: GroupSummary[]) {
+  const fallback = new Map<string, MemberHealth>(nodes.map(node => [node.id, {health: preferredHealth(node)}]));
+  const nodesById = new Map(nodes.map(node => [node.id, node]));
+  const groupsById = new Map(groups.map(group => [group.id, group]));
+  const groupsByName = new Map(groups.map(group => [group.name, group]));
+  for (const group of groups) {
+    const {node} = resolveSelectedLeaf(group.name, 'tcp', groupsByName, groupsById, nodesById);
+    const latency = node && healthMillis(fallback.get(node.id)?.health);
+    // A selected node's latency is display context, not an observation of this group.
+    if (node && latency != null) fallback.set(group.id, {selectedNode: {name: node.name, latency}});
+  }
+  return fallback;
+}
+
+export function memberHealth(group: Group | undefined, fallback: ReadonlyMap<string, MemberHealth>) {
   if (!group) return [];
   const observations = new Map<string, HealthObservation[]>();
   for (const observation of group.runtime.health) {
@@ -9,5 +25,8 @@ export function memberHealth(group: Group | undefined, fallback: ReadonlyMap<str
     if (member) member.push(observation);
     else observations.set(observation.member_id, [observation]);
   }
-  return group.members.map(member => ({...member, health: preferredObservation(observations.get(member.id) ?? []) ?? fallback.get(member.id)}));
+  return group.members.map(member => {
+    const health = preferredObservation(observations.get(member.id) ?? []) ?? (member.kind === 'node' ? fallback.get(member.id)?.health : undefined);
+    return {...member, ...(health ? {health} : member.kind === 'group' ? {selectedNode: fallback.get(member.id)?.selectedNode} : {})};
+  });
 }

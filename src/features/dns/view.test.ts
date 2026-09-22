@@ -42,12 +42,15 @@ it('disables unsupported query types and omits explicitly unavailable tabs', () 
   expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['query', 'cache']);
 });
 
-it('filters cache rows case-insensitively without narrowing the flush scope or coverage', () => {
-  const view = dnsCacheView(dnsCache, capabilities.resources, 'TELEGRAM', 'c1', 'en-US', t);
+it('shows the filtered snapshot count without narrowing the global flush scope or coverage', () => {
+  const filtered = {...dnsCache, entries: [dnsCache.entries[0]], total: 1};
+  const view = dnsCacheView(filtered, capabilities.resources, 'TELEGRAM', 'c1', 'en-US', t);
   expect(view.rows.map(row => row.id)).toEqual(['c1']);
   expect(view.rows[0]).toMatchObject({pending: true, disabled: true, staleTooltip: undefined});
   expect(view.coverage.map(badge => badge.id)).toEqual(['persistent']);
-  expect(view.confirmationText).toBe(t('dns.flushConfirm', {n: dnsCache.total}));
+  expect(view.fields).toContainEqual([t('dns.entries'), '1']);
+  expect(view.confirmationText).toBe(t('dns.flushConfirmAll'));
+  expect(dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t).confirmationText).toBe(t('dns.flushConfirm', {n: dnsCache.total}));
   expect(dnsCacheView(undefined, undefined, '', null, 'en-US', t).confirmationText).toBe(t('dns.flushConfirmAll'));
 });
 

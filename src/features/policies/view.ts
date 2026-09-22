@@ -1,10 +1,11 @@
-import type {Group, HealthObservation, ProbeResult} from '../../api/model';
+import type {Group, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n/messages';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
 import type {Params} from '../../i18n';
 import {millis} from '../../api/u64';
 import {latencyTone} from '../../ui/ui';
 import {regionOf} from './geo';
+import type {MemberHealth} from './health';
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   selector: 'policy.kind.selector',
   urltest: 'policy.kind.urltest',
@@ -56,15 +57,19 @@ export function probeSummary(result: ProbeResult): MessageRef {
 
 type Translate = (key: Key, params?: Params) => string;
 export type MemberView = {id: string; name: string; nested: boolean; tcp?: number; unavailable: boolean; healthy: boolean; description: string; region: string};
-export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>): MemberView[] {
+export function memberViews(members: Array<Group['members'][number] & MemberHealth>, t: Translate): MemberView[] {
   return members.map(member => ({
     id: member.id,
     name: member.name,
     nested: member.kind === 'group',
-    tcp: healthMillis(member.health),
+    tcp: healthMillis(member.health) ?? member.selectedNode?.latency,
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',
-    description: member.health ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}` : ' ',
+    description: member.health
+      ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}`
+      : member.selectedNode
+        ? t('policy.selectedNode', {name: member.selectedNode.name})
+        : ' ',
     region: regionOf(member.name) ?? '?'
   }));
 }

@@ -6,7 +6,7 @@ import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
   const {groups} = nodeFixtures(0);
-  const members = memberViews(memberHealth(groups[0], new Map()));
+  const members = memberViews(memberHealth(groups[0], new Map()), t);
   expect(members.find(member => member.id === 'jp-01')).toMatchObject({unavailable: true, tcp: undefined});
   expect(members.find(member => member.id === 'resilient')).toMatchObject({nested: true, healthy: false, description: ' '});
   const menu = menuViews([{name: 'unknown'}, {name: 'down', alive: false, tcp: 5}, {name: 'fast', tcp: 0}], t);
@@ -15,7 +15,7 @@ it('projects nested, failed and unmeasured members without inventing latency', (
 });
 it('keeps split network selection unset for both and omits mutable interrupt configuration from readonly fields', () => {
   const g = nodeFixtures(0).groups[0];
-  const members = memberViews(memberHealth(g, new Map()));
+  const members = memberViews(memberHealth(g, new Map()), t);
   expect(policyCardView(g, members, 'both', t).selected).toBeUndefined();
   expect(policyCardView(g, members, 'tcp', t).selected).toBe('hk-01');
   expect(policyCardView(g, members, 'udp', t).selected).toBe('hk-02');

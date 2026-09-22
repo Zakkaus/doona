@@ -184,8 +184,11 @@ export function resolveSelectedLeaf(
   nodesById: ReadonlyMap<string, Node>
 ): {groups: GroupSummary[]; member: string | null; node: Node | null} {
   const groups: GroupSummary[] = [];
+  const seen = new Set<string>();
   let group = groupsByName.get(outbound);
-  while (group && groups.length < 8) {
+  while (group && !seen.has(group.id)) {
+    if (nodesById.has(group.id)) return {groups, member: null, node: null};
+    seen.add(group.id);
     groups.push(group);
     const member = network === 'udp' ? group.selection.udp_member_id : group.selection.tcp_member_id;
     if (!member) return {groups, member: null, node: null};

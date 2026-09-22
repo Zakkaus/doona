@@ -50,7 +50,6 @@ export function dnsCacheView(
   locale: string,
   t: LabelFn
 ) {
-  const filter = domain.toLowerCase();
   return {
     fields: [[t('dns.entries'), data ? String(data.total) : '—']] as Array<[string, string]>,
     coverage: data
@@ -66,25 +65,23 @@ export function dnsCacheView(
             })
           }))
       : [],
-    filterText: filter ? t('dns.cacheFilter', {domain}) : '',
-    confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
+    filterText: domain ? t('dns.cacheFilter', {domain}) : '',
+    confirmationText: data && !domain ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
     empty: t(resources?.dns_cache.available && resources.dns_cache.read ? 'dns.empty' : 'dns.cacheUnavailable'),
-    rows: (data?.entries ?? [])
-      .filter(entry => !filter || entry.domain.toLowerCase().includes(filter))
-      .map(entry => ({
-        id: entry.entry_id,
-        domain: entry.domain,
-        type: entry.type,
-        status: entry.status,
-        expires: relativeStart(entry.expires_at, locale),
-        expiresTooltip: entry.expires_at,
-        stale: relativeStart(entry.stale_until, locale),
-        staleTooltip: entry.stale_until ?? undefined,
-        deleteLabel: t('dns.deleteEntry', {id: entry.entry_id}),
-        pending: busy === entry.entry_id,
-        disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
-      }))
+    rows: (data?.entries ?? []).map(entry => ({
+      id: entry.entry_id,
+      domain: entry.domain,
+      type: entry.type,
+      status: entry.status,
+      expires: relativeStart(entry.expires_at, locale),
+      expiresTooltip: entry.expires_at,
+      stale: relativeStart(entry.stale_until, locale),
+      staleTooltip: entry.stale_until ?? undefined,
+      deleteLabel: t('dns.deleteEntry', {id: entry.entry_id}),
+      pending: busy === entry.entry_id,
+      disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
+    }))
   };
 }
 export function dnsLogView(data: DnsLogList | undefined, selected: string | null, enabled: boolean, locale: string, t: LabelFn) {

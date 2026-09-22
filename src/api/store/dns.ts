@@ -19,27 +19,28 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const limit = advertised === undefined ? undefined : Math.min(200, advertised);
   return useResource({key: ['dnsLog', {name, type, src, limit}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)}, {enabled});
 }
-function useDnsCache(enabled = true) {
+function useDnsCache(domain: string, enabled = true) {
   const api = getApi();
+  const filter = domain.toLowerCase() || undefined;
   return useResource(
     {
-      key: ['dnsCache'],
+      key: ['dnsCache', {domain: filter}],
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
       every: 15000,
       fetch: signal =>
         walk(
-          cursor => api.dnsCache({cursor, limit: 1000, detail: 'full'}, signal),
+          cursor => api.dnsCache({cursor, domain: filter, limit: 100, detail: 'summary'}, signal),
           (acc: DnsCacheList | undefined, page) => (acc ? {...acc, entries: [...acc.entries, ...page.entries]} : page)
         )
     },
     {enabled}
   );
 }
-export function useDnsControl() {
+export function useDnsControl(domain: string) {
   const api = getApi();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const cache = useDnsCache(!!resources?.dns_cache.available && !!resources.dns_cache.read);
+  const cache = useDnsCache(domain, !!resources?.dns_cache.available && !!resources.dns_cache.read);
   const {refetch} = cache;
   const {busy, error, run} = useAction<string>({rethrow: true});
   return {

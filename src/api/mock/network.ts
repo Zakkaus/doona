@@ -145,8 +145,14 @@ export function createNetwork(
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
-      const name = query?.name ?? query?.domain;
-      const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
+      const name = query?.name?.toLowerCase().replace(/\.$/, '');
+      const domain = query?.domain?.toLowerCase();
+      const entries = dnsCache.entries.filter(
+        e =>
+          (!name || e.domain.toLowerCase() === name + '.') &&
+          (!domain || e.domain.toLowerCase().includes(domain)) &&
+          (!query?.type || query.type.includes(e.type))
+      );
       const result = page(entries, query?.cursor, query?.limit);
       return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
     },

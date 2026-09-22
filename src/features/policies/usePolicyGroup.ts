@@ -1,17 +1,16 @@
 import {useEffect, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useGroupControl} from '../../api/store';
-import type {HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {GroupEntry} from '../config/groups';
-import {memberHealth} from './health';
+import {memberHealth, type MemberHealth} from './health';
 import {memberViews, policyCardView, probeSummary} from './view';
 import {usePolicyEdit} from './usePolicyEdit';
 import {errorText, toast} from '../../ui/ui';
 export type PolicyGroupInput = {
   id: string;
   name: string;
-  health: Map<string, HealthObservation | undefined>;
+  health: ReadonlyMap<string, MemberHealth>;
   refreshGroups: () => void;
   refreshNodes: () => void;
   source: MainSourceEdit;
@@ -25,7 +24,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (control.actionError) toast('negative', errorText(control.actionError));
   }, [control.actionError]);
   const g = control.data;
-  const members = useMemo(() => memberViews(memberHealth(g, health)), [g, health]);
+  const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, entry);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;

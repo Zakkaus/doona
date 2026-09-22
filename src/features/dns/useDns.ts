@@ -57,7 +57,7 @@ export function useDns({go, query}: PageProps) {
 export function useDnsCache(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const dns = useDnsControl();
+  const dns = useDnsControl(domain);
   const view = useMemo(
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
     [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]

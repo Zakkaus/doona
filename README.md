@@ -125,6 +125,8 @@ Every write goes through the engine: the text is validated in full, saved with t
 
 Every page remains in navigation. A page is marked unavailable only when every resource listed for it in [registry.ts](src/shell/registry.ts) is unavailable; opening it shows an unavailable notice. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere.
 
+DNS cache listings follow bounded summary pages and filter domains on the backend; “Clear all cache” still clears the whole cache. Nested group cards retain their group badge beside measured latency. When a group has no TCP observation, a separately labelled selected-TCP-node latency may be shown; it does not count as measured group health, and unknown or unresolved paths remain unmeasured.
+
 <img src="docs/screenshots/en/rules-light.png" alt="The rules page" width="100%">
 
 ## Data and settings

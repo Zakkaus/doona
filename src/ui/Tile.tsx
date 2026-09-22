@@ -67,9 +67,8 @@ export function NodeTile({
         <span className="n">
           <TextTooltip>{name}</TextTooltip>
         </span>
-        {nested ? (
-          <Badge>{t('ui.group')}</Badge>
-        ) : alive && tcp != null ? (
+        {nested && <Badge>{t('ui.group')}</Badge>}
+        {alive && tcp != null ? (
           <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
         ) : (
           <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>

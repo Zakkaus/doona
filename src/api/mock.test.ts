@@ -349,6 +349,20 @@ it('deletes entries idempotently and flushes exactly the remaining cache', async
   expect((await createMockApi().dnsCache()).total).toBe(before.total);
 });
 
+it('filters cache domains case-insensitively before paging without changing global flush scope', async () => {
+  const api = createMockApi();
+  const before = await api.dnsCache();
+  const first = await api.dnsCache({domain: 'BiLiBiLi', limit: 1});
+  expect(first.total).toBe(2);
+  expect(first.entries.map(entry => entry.type)).toEqual(['A']);
+  const second = await api.dnsCache({domain: 'BiLiBiLi', limit: 1, cursor: first.next_cursor!});
+  expect(second.entries.map(entry => entry.type)).toEqual(['AAAA']);
+  expect(second.next_cursor).toBeNull();
+  expect((await api.dnsCache({name: 'CDN.BILIBILI.COM', domain: 'BiLiBiLi'})).total).toBe(2);
+  expect((await api.dnsCache({name: 'cdn.bilibili.com', domain: 'telegram'})).total).toBe(0);
+  await expect(api.flushDnsCache()).resolves.toEqual({matched: before.total, deleted: before.total});
+});
+
 it('traces a geosite domain and resolves each cached address in live mode', async () => {
   const api = createMockApi();
   const request = {input: {network: 'tcp' as const, domain: 'api.telegram.org', dst_port: 443}, resolve: 'live' as const};

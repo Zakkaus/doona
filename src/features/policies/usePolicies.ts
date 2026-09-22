@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useGroups, useNodes} from '../../api/store';
-import {preferredHealth} from '../../api/selectors';
+import {policyHealth} from './health';
 import {useMainSourceEdit} from '../config/mainSource';
 import {readGroupEntries} from '../config/groups';
 
@@ -9,7 +9,7 @@ export function usePolicies(query: string) {
   const groups = useGroups();
   const nodes = useNodes(resources?.nodes.available === true);
   const focus = new URLSearchParams(query).get('group');
-  const health = useMemo(() => new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)])), [nodes.data]);
+  const health = useMemo(() => policyHealth(nodes.data ?? [], groups.data ?? []), [nodes.data, groups.data]);
   const sourceState = useMainSourceEdit();
   const {main, writable, busy, apply} = sourceState;
   const source = useMemo(() => ({main, writable, busy, apply}), [main, writable, busy, apply]);
