@@ -35,7 +35,7 @@ function useConfigEditorController(refetch: () => void) {
   useEffect(() => {
     if (!editor.error) return;
     if (diagnostics) {
-      toast('negative', t('config.invalid', {n: String(diagnostics.filter(d => d.level === 'error').length)}));
+      toast('negative', t('config.invalid', {n: diagnostics.filter(d => d.level === 'error').length}));
     } else toast('negative', errorText(editor.error));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};

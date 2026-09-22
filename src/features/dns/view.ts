@@ -1,6 +1,6 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {localTime, relativeStart} from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
 
@@ -52,7 +52,7 @@ export function dnsCacheView(
 ) {
   const filter = domain.toLowerCase();
   return {
-    fields: [[t('dns.entries'), data ? String(data.total) : '—']] as Array<[string, string]>,
+    fields: [[t('dns.entries'), data ? formatNumber(data.total, locale) : '—']] as Array<[string, string]>,
     coverage: data
       ? (['positive', 'negative', 'persistent'] as const)
           .filter(key => !data.coverage[key])

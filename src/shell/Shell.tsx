@@ -1,6 +1,6 @@
 import './install';
 import {Login} from './Login';
-import {Suspense, type ContextType} from 'react';
+import {Suspense, type ContextType, useState} from 'react';
 import {I18nProvider, RouterProvider, Link as RLink, Separator, Menu, MenuSection, Header} from 'react-aria-components';
 import Search from '../ui/icons/Search';
 import Refresh from '../ui/icons/Refresh';
@@ -115,6 +115,8 @@ function ShellFrame(props: FrameProps) {
 function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
   const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
+  // The language and palette icons turn in when their value changes, like the scheme icon; not on first paint.
+  const [first] = useState({lang, palette: ap.palette});
   const Page = view.current.Page;
   return (
     <div className="rp-shell">
@@ -149,7 +151,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           </Button>
           <Separator orientation="vertical" className="rp-vrule" />
           <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
-            <Translate />
+            <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
           </ChoiceMenu>
           <MenuButton
             quiet
@@ -185,7 +187,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               </Menu>
             }
           >
-            <Color />
+            <Color key={ap.palette} className={ap.palette !== first.palette ? 'rp-icon-in' : undefined} />
           </MenuButton>
           <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
             <SchemeIcon dark={ap.dark} />

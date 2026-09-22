@@ -149,7 +149,8 @@
 .rp-toasts:not(.expanded) .rp-toast-list {
   cursor: default;
 }
-.rp-toast:not(.background) {
+/* Arrival runs once, when the toast mounts; a toast promoted from the background of the stack does not arrive again. */
+.rp-toast {
   animation: rp-toast-in 400ms var(--rp-ease);
 }
 @keyframes rp-toast-in {

@@ -38,7 +38,8 @@ export function useBackendActions() {
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const providersReady = !!providers.data && !providers.error && !providers.loading;
   const connectionsReady = !!connections.data && !connections.error && !connections.loading;
-  const liveCount = connectionsReady ? connections.data!.tcp.length + connections.data!.udp.length : null;
+  // Totals, not the returned page: the list is capped at 1,000 entries.
+  const liveCount = connectionsReady ? connections.data!.total_tcp + connections.data!.total_udp : null;
   const refreshingAll = refresh.busy === '*';
   const refreshAll = () =>
     refresh

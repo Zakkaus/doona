@@ -44,17 +44,35 @@ export function modeView(
 }
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 
+// The home card holds this many rows; the rest is one click away on the events page.
+export const NOTICE_ROWS = 8;
+// Repeats of one problem (a run of gaps with the same reason) fold into one row with a count, so a
+// backend dropping records at pace does not push everything else off the card.
 export function noticeRows(events: ApiEvent[], t: LabelFn) {
-  return events.map(event => {
+  const rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; key: string; count: number}> = [];
+  for (const event of events) {
     const summary = eventSummary(event, t);
+    const key = event.event === 'flow.gap' ? `gap:${event.data.reason}` : `${event.event}:${summary.key}`;
+    const last = rows[rows.length - 1];
+    if (last && last.key === key) {
+      last.count += 1;
+      continue;
+    }
+    if (rows.length === NOTICE_ROWS) break;
     const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
-    return {
+    rows.push({
       id: event.id,
       tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
       kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
-      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`
-    };
-  });
+      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`,
+      key,
+      count: 1
+    });
+  }
+  return rows.map(({key: _key, count, summaryText, ...row}) => ({
+    ...row,
+    summaryText: count > 1 ? `${summaryText} · ${t('act.noticeRepeat', {n: count})}` : summaryText
+  }));
 }
 type NodeMenuItem = {id: string; label: string; description: string; className: string};
 export type ActivityNodeMenu = {

@@ -25,6 +25,9 @@ export function readLang(storage?: Pick<Storage, 'getItem'>): Lang {
   }
 }
 const plurals = new Map<Lang, Intl.PluralRules>();
+// An integer parameter is written with the language's grouping, so a count reads as 1,000 rather than 1000;
+// a measurement with decimals is already formatted by its caller.
+const param = (lang: Lang, value: unknown) => (typeof value === 'number' && Number.isInteger(value) ? formatNumber(value, LOCALE[lang]) : String(value));
 export function translate(lang: Lang, key: Key, params?: Params): string {
   const message = table[lang][key];
   let text: string;
@@ -34,7 +37,7 @@ export function translate(lang: Lang, key: Key, params?: Params): string {
     if (!rules) plurals.set(lang, (rules = new Intl.PluralRules(LOCALE[lang])));
     text = message[rules.select(Number(params?.n)) === 'one' ? 'one' : 'other'];
   }
-  return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name])) : text;
+  return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => param(lang, params[name])) : text;
 }
 // One translator per language, so effects and memos that list `t` do not re-run every render.
 export function useT(): Translator {

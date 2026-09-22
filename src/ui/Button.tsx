@@ -36,11 +36,32 @@ export function Button({
 }) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
   const ref = useRef<HTMLButtonElement>(null);
-  const press = () => {
-    // An icon marked rp-spin-on-press turns once per press (the refresh arrows); reduced motion skips it.
+  // An icon marked rp-spin-on-press (the refresh arrows) turns once per press and keeps turning while the button is
+  // pending, always finishing a whole turn; one animation owns the rotation, so a long refetch never hands over.
+  const spin = useRef<Animation | null>(null);
+  const turn = (iterations: number) => {
     const icon = ref.current?.querySelector<SVGElement>('.rp-spin-on-press');
-    if (icon && !matchMedia('(prefers-reduced-motion: reduce)').matches)
-      icon.animate([{rotate: '0deg'}, {rotate: '360deg'}], {duration: 600, easing: 'cubic-bezier(0, 0, 0.4, 1)'});
+    if (!icon || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const current = spin.current;
+    if (current && current.playState === 'running') {
+      current.effect?.updateTiming({iterations});
+      return;
+    }
+    spin.current = icon.animate([{rotate: '0deg'}, {rotate: '360deg'}], {
+      duration: 600,
+      iterations,
+      easing: iterations === 1 ? 'cubic-bezier(0, 0, 0.4, 1)' : 'linear'
+    });
+  };
+  useEffect(() => {
+    if (isPending) turn(Infinity);
+    else if (spin.current?.playState === 'running') {
+      const elapsed = Number(spin.current.currentTime ?? 0);
+      spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / 600))});
+    }
+  }, [isPending]);
+  const press = () => {
+    turn(1);
     onPress?.();
   };
   const btn = (
@@ -56,7 +77,7 @@ export function Button({
       )}
       onPress={press}
       aria-label={label}
-      isDisabled={isDisabled}
+      isDisabled={isDisabled && !isPending}
       isPending={isPending}
       type={type}
     >

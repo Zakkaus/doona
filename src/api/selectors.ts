@@ -158,8 +158,11 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
       return {key: 'event.resource', params: {resource: event.data.href}};
     case 'flow.updated':
       return {key: 'event.flow', params: {id: event.data.resource_id, revision: event.data.revision}};
-    case 'operation.updated':
-      return {key: 'event.operation', params: {id: event.data.resource_id, status: event.data.status}};
+    case 'operation.updated': {
+      const status = event.data.status;
+      const label = status === 'running' || status === 'succeeded' || status === 'failed' ? (`ov.${status}` as Key) : null;
+      return {key: 'event.operation', params: {id: event.data.resource_id, status: t && label ? t(label) : status}};
+    }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
     case 'flow.gap':

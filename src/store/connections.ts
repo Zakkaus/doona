@@ -22,7 +22,8 @@ export function useConnectionClose(refetch: () => void) {
               return await api.closeConnections(selection.query, signal);
             } catch (error) {
               // Over the advertised bulk limit the backend closes nothing; the listed ids still get closed one by one.
-              if (!(error instanceof ApiError && error.status === 413)) throw error;
+              // With no ids to fall back to, the caller sees the limit instead of "closed 0".
+              if (!(error instanceof ApiError && error.status === 413) || !selection.ids.length) throw error;
             }
           const tally = {closed: 0, skipped: 0};
           for (const id of selection.ids) {

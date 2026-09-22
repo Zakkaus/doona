@@ -15,6 +15,12 @@ export function useNotices() {
   const feed = useEvents(event => {
     if (interestingNotice(event)) buffer.append(event);
   });
-  const rows = useMemo(() => noticeRows(snapshot.records.slice(0, 30), t), [snapshot.records, t]);
-  return {rows, error: feed.error, loading: !feed.error && feed.available === null, empty: t(feed.available === false ? 'event.unavailable' : 'act.noIssues')};
+  const rows = useMemo(() => noticeRows(snapshot.records, t), [snapshot.records, t]);
+  return {
+    rows,
+    total: snapshot.records.length,
+    error: feed.error,
+    loading: !feed.error && feed.available === null,
+    empty: t(feed.available === false ? 'event.unavailable' : 'act.noIssues')
+  };
 }

@@ -31,7 +31,7 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
 export function recordingNote(recording: RuntimeSettings['recording'] | undefined, t: Translator) {
   if (!recording) return null;
   if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
-  return t(recording.events.active ? 'settings.recordingAttached' : 'settings.recordingDetached');
+  return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<

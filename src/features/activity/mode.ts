@@ -5,7 +5,7 @@ import {scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};
 
 const MODE_MARK = '# doona: outbound mode';
-const modeLine = /^(\s*)l4proto\(tcp, udp\) -> (\S+)\s*# doona: outbound mode\s*$/;
+const modeLine = /^(\s*)l4proto\(tcp, udp\) -> (.+?)\s*# doona: outbound mode\s*$/;
 
 function modeRanges(text: string, blocks: TextBlock[], tokens: TextToken[]) {
   return tokens

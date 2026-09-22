@@ -17,31 +17,28 @@
   transition-duration: var(--rp-duration);
   transition-timing-function: var(--rp-ease);
 }
-/* Press feedback after S2 `pressScale`: the control sinks 2px in perspective, about 0.95 of its size; the same
-   controls S2 applies it to (buttons, pickers, the clear button), not tabs, rows or navigation. */
-.rp-btn[data-pressed],
+/* Press feedback after S2 `pressScale`: a text button sinks to about 0.95 of its size; icon buttons, tabs, rows
+   and navigation take the colour step only. */
+.rp-btn:not(.icon)[data-pressed],
 .rp-select[data-pressed],
-.rp-selectbtn[data-pressed],
-.rp-input .clear[data-pressed] {
+.rp-selectbtn[data-pressed] {
   scale: 0.95;
 }
-/* The refresh icon spins from the click until the refetch returns, in place of the generic pending spinner.
-   Other pending buttons show their spinner after one second, as S2 does, so a quick action never flashes one. */
-.rp-btn[data-pending] > .rp-refresh {
-  animation: rp-spin 700ms linear infinite;
+/* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
+.rp-btn[aria-expanded='true'] {
+  background-color: var(--rp-hl-high);
 }
+/* A pending button keeps its colour and shows its spinner at once, with the label dimmed behind it; the refresh
+   icon's own rotation (Button.tsx) stands in for the spinner. */
 .rp-btn[data-pending] > .rp-spinner:has(+ .rp-refresh) {
   display: none;
 }
-.rp-btn > .rp-spinner {
-  animation:
-    rp-spin 800ms linear infinite,
-    rp-delayed 1ms linear 1s both;
+.rp-btn[data-pending] > :not(.rp-spinner) {
+  opacity: 0.55;
+  transition: opacity var(--rp-duration) var(--rp-ease);
 }
-@keyframes rp-delayed {
-  from {
-    opacity: 0;
-  }
+.rp-btn[data-pending] > .rp-refresh {
+  opacity: 1;
 }
 /* The switch handle takes the press with the control. */
 .rp-switch .track::after {

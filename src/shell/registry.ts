@@ -42,8 +42,8 @@ const Settings = lazy(loaders.settings);
 export function warmPage(id: string) {
   void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
 }
-// Preload other pages one per idle slice, so parsing them never competes with the page being used; the config
-// page carries the editor and loads on intent (hover, focus, click) only.
+// Preload other pages one per idle slice (the callback may still run on its timeout while the page is busy); the
+// config page carries the editor and loads on intent (hover, focus, click) only.
 export function warmAllPages() {
   const queue = Object.keys(loaders).filter(id => id !== 'config');
   const next = () => {
