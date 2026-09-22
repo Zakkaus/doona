@@ -22,6 +22,7 @@ import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
+import {ruleHref} from '../rules/link';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 
@@ -79,7 +80,7 @@ export function FlowRecords(props: PageProps) {
         drop: 1,
         render: row => (
           <span className="rp-rule">
-            <RuleRef expression={row.expression} ruleId={row.ruleId} linked={view.rulesListed} />
+            <RuleRef expression={row.expression} href={ruleHref(row.ruleId, view.rulesListed)} />
             {row.recomputed && <small className="rp-provenance">{t('conn.recomputed')}</small>}
           </span>
         )

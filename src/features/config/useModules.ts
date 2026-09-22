@@ -8,7 +8,7 @@ import {useDraftGuard} from './useDraftGuard';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
 import {useValidationSources} from './useValidationSources';
-import {useCompleteness} from './useCompleteness';
+import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 
 export type ModulesProps = {

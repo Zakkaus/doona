@@ -16,6 +16,7 @@ import {word} from '../flows/view';
 import type {Key} from '../../i18n/messages';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
+import {ruleHref} from '../rules/link';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
@@ -124,7 +125,7 @@ export type ConnectionRowView = {
   target: string;
   source: string;
   chain: string;
-  rule: {expression: string | null; ruleId: string | null; linked: boolean};
+  rule: {expression: string | null; href: string | undefined};
   recomputed: string | null;
   state: string;
   download: string;
@@ -145,7 +146,7 @@ export function connectionTableView(
     target: c.domain || c.dst || '—',
     source: c.src ?? '—',
     chain: chainLabel(c, t, names),
-    rule: {expression: c.rule_expression, ruleId: c.rule_id, linked: rulesListed},
+    rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
     download: formatBytes(c.download_bytes),
@@ -211,7 +212,7 @@ export function connectionsView(
           status: `${t(connectionStates[current.state])} · ${current.network.toUpperCase()}`,
           chain: chainLabel(current, t, names),
           outbound: outboundLabel(current.outbound, t),
-          rule: {expression: current.rule_expression, ruleId: current.rule_id, linked: rulesListed},
+          rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
           fields: connectionDetails(current, locale).map(
             ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
           ),

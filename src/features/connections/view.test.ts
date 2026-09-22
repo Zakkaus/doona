@@ -77,7 +77,7 @@ it('prepares grouped cells and rule-link availability without losing unknown cou
   const group = collection[0];
   expect('children' in group).toBe(true);
   if (!('children' in group)) throw new Error('Expected client group');
-  expect(group.children[0]).toMatchObject({target: '—', source: '—', download: '—', rule: {linked: false}});
+  expect(group.children[0]).toMatchObject({target: '—', source: '—', download: '—', rule: {href: undefined}});
   expect(group.totals.down).toBe('—');
   expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.source', '—']);
 });
@@ -120,5 +120,5 @@ it('keeps resolved routing diagnostics in details when table columns are hidden'
   const detail = connectionsView([row], row, connections, undefined, 'all', 'en-US', t, names, true).detail;
   expect(detail?.chain).toBe('proxy → HK');
   expect(detail?.outbound).toBe('proxy');
-  expect(detail?.rule).toEqual({expression: 'domain(example.com)', ruleId: 'rule-1', linked: true});
+  expect(detail?.rule).toEqual({expression: 'domain(example.com)', href: '#/rules?tab=list&rule=rule-1'});
 });

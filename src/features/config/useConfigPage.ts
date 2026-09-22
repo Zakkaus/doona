@@ -11,7 +11,7 @@ import {within} from '../../shell/route';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
 import {useDraftGuard} from './useDraftGuard';
 import {useValidationSources} from './useValidationSources';
-import {useCompleteness} from './useCompleteness';
+import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
