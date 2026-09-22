@@ -29,8 +29,11 @@ type NavItem = {
   description: string | undefined;
   desc: string | undefined;
 };
+export type NavGroup = {id: string; label: string; items: NavItem[]};
+export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
+export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
-  groups: Array<{id: string; label: string; items: NavItem[]}>;
+  groups: NavGroup[];
   choices: Array<{id: string; label: string; desc: string | undefined}>;
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
   content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
