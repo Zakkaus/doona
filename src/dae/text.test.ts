@@ -39,3 +39,10 @@ describe('isFragment', () => {
     for (const bad of ['domain(a) # x', 'domain(a', 'domain(a))', 'a } routing {', 'domain(a)\nb', 'name({a})']) expect(isFragment(bad)).toBe(false);
   });
 });
+
+it('scans the routing arrow as its own token when written without spaces', () => {
+  const text = 'routing { dip(geoip:private)->direct\n domain(a)->proxy(must) }';
+  const arrows = scanConfig(text).tokens.filter(token => text.slice(token.from, token.to) === '->');
+  expect(arrows).toHaveLength(2);
+  expect(scanConfig('a-b c->d').tokens.map(token => 'a-b c->d'.slice(token.from, token.to))).toEqual(['a-b', 'c', '->', 'd']);
+});

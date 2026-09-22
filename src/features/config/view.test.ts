@@ -35,7 +35,7 @@ it('initializes empty setup and preserves opaque subscription lines while hiding
     {name: '', url: '', raw: 'file: /etc/nodes'},
     {name: 'bad', url: 'ftp://example.org'}
   ];
-  const view = wizardRows(state, undefined, t);
+  const view = wizardRows(state, 'en', t);
   expect(view.rows.map(row => row.index)).toEqual([1, 2]);
   expect(view.rows[0].raw).toBe('file: /etc/nodes');
   expect(view.rows[1].error).toBe(t('config.wizardSubscriptionHelp'));
@@ -85,7 +85,7 @@ routing {
   fallback: proxy
 }`);
   const include = source('routing { fallback: direct }', 'include');
-  const cards = sectionSummaries([main, include], t);
+  const cards = sectionSummaries([main, include], 'en', t);
   expect(cards.map(card => card.kind)).toEqual(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'routing']);
   expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstream, 1 request rule, 1 response rule');
   expect(cards.filter(card => card.kind === 'routing').map(card => [card.range, card.summary])).toEqual([
@@ -121,9 +121,52 @@ it('maps only diagnostics within the edited section using its current line count
 
 it('withholds editing for missing source text and native_api sections', () => {
   const hidden = {...source(''), content: undefined};
-  const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], t);
+  const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], 'en', t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
   expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentWithheld')});
+  // One card says the main text is withheld; no per-section cards repeat it.
+  expect(cards.filter(card => card.note === t('config.contentWithheld'))).toHaveLength(1);
+});
+
+it('counts untagged entries and arrows written without spaces', () => {
+  const main = source(`subscription {
+  tagged: 'https://example.org/a'
+  'https://example.org/b'
+}
+node {
+  'vless://x'
+}
+routing {
+  dip(geoip:private)->direct
+  domain(example.org) -> proxy
+  fallback: proxy
+}`);
+  const cards = sectionSummaries([main], 'en', t);
+  expect(cards.find(card => card.kind === 'subscription')?.summary).toBe('2 subscriptions');
+  expect(cards.find(card => card.kind === 'node')?.summary).toBe('1 node');
+  expect(cards.find(card => card.kind === 'routing')?.summary).toBe('2 rules · fallback: proxy');
+});
+
+it('keeps a card id when text before the section changes', () => {
+  const id = (text: string) => sectionSummaries([source(text)], 'en', t).find(card => card.kind === 'routing')!.id;
+  expect(id('# a\nrouting { fallback: direct }')).toBe(id('# a longer comment\n\nrouting { fallback: direct }'));
+});
+
+it('flags only the row whose value cannot be quoted', () => {
+  const state = {
+    ...wizardInitial(''),
+    subscriptions: [
+      {name: 'good', url: 'https://example.org/a'},
+      {name: 'bad', url: "https://example.org/it's"},
+      {name: "o'neil", url: 'https://example.org/c'}
+    ]
+  };
+  const rows = wizardRows(state, 'en', t).rows;
+  expect(rows.map(row => [row.nameError, row.error])).toEqual([
+    [undefined, undefined],
+    [undefined, t('config.unquotable')],
+    [t('config.unquotable'), undefined]
+  ]);
 });
 
 it('marks only the edited source while retaining cross-source diagnostic locations', () => {
@@ -157,9 +200,9 @@ it('does not submit pathless includes or validate an omitted replacement source'
 
 it('describes only the selected template’s groups and omits routing changes for keep', () => {
   const state = {...wizardInitial('group { mix {} }'), group: 'mix'};
-  expect(wizardRows(state, undefined, t).groupUsedText).toBeNull();
-  expect(wizardRows({...state, rules: 'global'}, undefined, t).groupUsedText).toContain('mix');
-  const named = wizardRows({...state, rules: 'standard'}, undefined, t).groupUsedText;
+  expect(wizardRows(state, 'en', t).groupUsedText).toBeNull();
+  expect(wizardRows({...state, rules: 'global'}, 'en', t).groupUsedText).toContain('mix');
+  const named = wizardRows({...state, rules: 'standard'}, 'en', t).groupUsedText;
   expect(named).toContain('proxy, auto, telegram, media, apple');
   expect(named).not.toContain('mix');
 });

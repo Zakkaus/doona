@@ -9,6 +9,7 @@ it('validates numeric bounds and writes typed partial patches without losing sib
   expect(numericFieldView('flows.max_flows', '128', 128, 'en-US', t).invalid).toBe(false);
   expect(numericFieldView('flows.max_flows', '129', 128, 'en-US', t).invalid).toBe(true);
   expect(numericFieldView('flows.retention_seconds', '1.5', undefined, 'en-US', t).invalid).toBe(true);
+  expect(numericFieldView('flows.max_flows', '100', undefined, 'en-US', t).description).toBe('At least 64');
   const patch: RuntimeSettingsPatch = {log: {level: 'debug'}};
   numericAccess['log.buffered_records'].write(patch, 128);
   numericAccess['flows.max_flows'].write(patch, 256);

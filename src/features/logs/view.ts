@@ -4,7 +4,7 @@ import type {Translator as LabelFn} from '../../i18n';
 import type {Key} from '../../i18n/messages';
 
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
-const labels: Record<LogLevel, Key> = {
+export const logLevelLabels: Record<LogLevel, Key> = {
   trace: 'log.level.trace',
   debug: 'log.level.debug',
   info: 'log.level.info',
@@ -20,7 +20,7 @@ function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): L
   const row: LogRow = {
     id: record.id,
     timestamp: localTime(record.ts, locale),
-    levelText: t(labels[record.level]),
+    levelText: t(logLevelLabels[record.level]),
     tone: tones[record.level],
     target: record.target,
     message:
@@ -41,12 +41,16 @@ export function logView(
   connected: boolean,
   engine: string | undefined,
   locale: string,
-  t: LabelFn
+  t: LabelFn,
+  failed = false
 ) {
   return {
     rows: records.map(record => logRow(record, locale, t)),
-    levels: levels.map(id => ({id, label: t(labels[id])})),
-    status: {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')},
+    levels: levels.map(id => ({id, label: t(logLevelLabels[id])})),
+    // A failed stream is not retried until asked, so it is not "connecting".
+    status: failed
+      ? {tone: 'err' as const, text: t('log.disconnected')}
+      : {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')},
     exportBase: `${engine || 'engine'}-log`
   };
 }

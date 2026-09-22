@@ -1,14 +1,15 @@
 import {ApiError} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
-import {useT} from '../../i18n';
+import {LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n/messages';
-import type {ConfigSource} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../store/config';
 import {errorText, toast, useLinked} from '../../ui/ui';
-import {validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
+import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
+import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
-import {wizardInitial, wizardRows} from './view';
+import {diagnosticRows, sourceView, wizardInitial, wizardRows} from './view';
 import {useDraftGuard} from './useDraftGuard';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
@@ -22,6 +23,8 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
 // Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
 export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
+  const lang = useLang();
+  const locale = LOCALE[lang];
   // Keep the accepted snapshot so a concurrent file change is rejected by If-Match.
   const [origin, setOrigin] = useState(() => main);
   const complete = useSourceComplete(origin);
@@ -38,10 +41,15 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const {text} = preview;
   const busy = !!editor.busy;
   const dirty = preview.error !== null || (complete === true && text !== baseline);
+  // An empty file is written as generated, so the untouched form is already something to save; it does not count as
+  // a draft to guard.
+  const pending = dirty || (complete === true && !current.trim());
+  const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const guard = useDraftGuard(dirty);
   useLinked(guard.revision, () => {
     setOrigin(main);
     setState(wizardInitial(main.content ?? ''));
+    setFound(null);
   });
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   // A save refused because the file changed on disk: the refetched file becomes the base, the form stays as typed.
@@ -50,7 +58,10 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     if (next) setOrigin(next);
   });
   const valid = validSubscriptions(state.subscriptions) && (!!current.trim() || validNetwork(state));
-  const patch = (next: Partial<WizardState>) => setState(prev => ({...prev, ...next}));
+  const patch = (next: Partial<WizardState>) => {
+    setFound(null);
+    setState(prev => ({...prev, ...next}));
+  };
   // Editing a line hands it to the form; the original text is no longer written back for it.
   const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
@@ -63,36 +74,44 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     const result = await editor.apply(origin, text);
     if (!result) return;
     if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+      setFound(result.diagnostics);
+      toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return;
     }
-    toast('positive', t('config.saved', {path: main.path}));
+    toast('positive', t('config.saved', {path: label}));
     guard.clear();
     onDone();
   };
-  const rows = wizardRows(state, preview.error ? errorText(preview.error) : undefined, t);
+  const label = sourceView(main, locale, t).label;
+  const rows = wizardRows(state, lang, t);
+  // A save refused with 422 carries the same diagnostics as a validation refusal.
+  const diagnostics = (editor.errorSource === origin.id ? editor.diagnostics : null) ?? found ?? [];
+  const dnsError = (value: string) => (isQuotable(value.trim()) ? undefined : t('config.unquotable'));
   return {
     state,
     current,
     text,
     busy,
     rows: rows.rows,
+    diagnostics: diagnosticRows(diagnostics, [main], locale, t),
+    defaultDnsError: dnsError(state.defaultDns),
+    chinaDnsError: dnsError(state.chinaDns),
     groupUsedText: rows.groupUsedText,
     templateHelp: state.rules === 'keep' ? null : t('config.wizardPresetHelp'),
     networkError: !current.trim() && !validNetwork(state) ? t('config.wizardNetworkError') : undefined,
     patch,
     setSubscription,
     apply,
-    saveDisabled: !complete || !valid || busy || !dirty,
+    saveDisabled: !complete || !valid || busy || !pending,
     saving: editor.busy === 'save',
     saveTip: complete === false ? t('config.incomplete') : undefined,
-    writeHelp: current.trim() ? t('config.wizardWriteHelp', {path: main.path}) : null,
+    writeHelp: current.trim() ? t('config.wizardWriteHelp', {path: label}) : null,
     showLan: !current.trim(),
     templates: [
       ...(current.trim() ? [{id: 'keep', label: t('config.wizardKeep'), desc: t('config.wizardKeepHelp')}] : []),
       ...templateIds.map(id => ({id, label: t(templateLabels[id][0]), desc: t(templateLabels[id][1])}))
     ],
-    add: () => patch({subscriptions: [...state.subscriptions, {name: `sub-${state.subscriptions.length + 1}`, url: ''}]}),
+    add: () => patch({subscriptions: [...state.subscriptions, {name: nextSubscriptionName(state.subscriptions), url: ''}]}),
     remove: (index: number) => patch({subscriptions: state.subscriptions.filter((_, i) => i !== index)})
   };
 }

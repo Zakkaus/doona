@@ -8,6 +8,11 @@ export function useConnections(src?: string, enabled = true) {
   const api = getApi();
   return useResource({key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)}, {enabled});
 }
+// Totals count every matching entry before the limit, so one returned entry is enough to read them.
+export function useConnectionTotals(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['connections', {totals: true}], fetch: signal => api.connections({type: 'all', detail: 'summary', limit: 1}, signal)}, {enabled});
+}
 export function useConnectionClose(refetch: () => void) {
   const api = getApi();
   const {busy, run} = useAction<string>({rethrow: true});

@@ -17,6 +17,7 @@ import {
   type RecorderChoice
 } from './view';
 import {useDraftGuard} from '../config/useDraftGuard';
+import {logLevelLabels} from '../logs/view';
 
 export function useRuntimeSettingsForm() {
   const t = useT();
@@ -89,7 +90,7 @@ export function useRuntimeSettingsForm() {
     setLevel: (value: string) => {
       if (!settings.busy) setDraft({...edits, level: value});
     },
-    levels: (capabilities?.logs.levels ?? ['trace', 'debug', 'info', 'warn', 'error']).map(id => ({id, label: id})),
+    levels: (capabilities?.logs.levels ?? (['trace', 'debug', 'info', 'warn', 'error'] as const)).map(id => ({id, label: t(logLevelLabels[id])})),
     hasLevel: fields.has('log.level'),
     hasBaseline: !!baseline,
     source: baseline ? t(baseline.source === 'runtime' ? 'settings.sourceRuntime' : 'settings.sourceConfig') : null,

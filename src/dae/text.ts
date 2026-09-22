@@ -5,6 +5,14 @@ export function quote(value: string): string {
   if (value.includes("'") || /[\r\n]|(^|[^\\])(?:\\\\)*\\$/.test(value)) throw new LocalError('config.unquotable');
   return `'${value}'`;
 }
+export function isQuotable(value: string): boolean {
+  try {
+    quote(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 export type TextToken = {from: number; to: number; line: number; kind: 'text' | 'quoted' | 'comment' | 'symbol'; depth: number; parens: number};
 export type TextBlock = {
   name: string;
@@ -53,8 +61,11 @@ export function scanConfig(text: string) {
     } else if ('{}:(),'.includes(c)) {
       kind = 'symbol';
       i++;
+    } else if (c === '-' && text[i + 1] === '>') {
+      // The routing arrow is its own token even when written flush against its neighbours, as in `dip(x)->direct`.
+      i += 2;
     } else {
-      while (i < text.length && !/[\s{}:(),'"]/.test(text[i])) i++;
+      while (i < text.length && !/[\s{}:(),'"]/.test(text[i]) && !(text[i] === '-' && text[i + 1] === '>')) i++;
     }
     const token = {from, to: i, line: startLine, kind, depth: stack.length, parens};
     if (kind === 'symbol' && c === '{') {

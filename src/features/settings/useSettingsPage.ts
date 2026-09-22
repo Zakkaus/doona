@@ -46,6 +46,8 @@ export function useSettingsPage(query: string) {
       form.setName('');
       form.setDialog('add');
     },
+    // Add, rename and delete write the saved profiles and reload, so edits in the form are lost rather than saved.
+    dialogDiscards: form.dirty,
     renameProfile: () => {
       form.setName(form.active?.name ?? '');
       form.setDialog('rename');

@@ -26,6 +26,14 @@ export function validSubscriptions(subscriptions: Subscription[]): boolean {
   return new Set(names).size === names.length && subscriptions.every(item => item.raw !== undefined || (!!item.name.trim() && isSubscriptionUrl(item.url)));
 }
 
+// The first free `sub-N`: counting rows alone repeats a name once one was removed or already taken.
+export function nextSubscriptionName(subscriptions: Subscription[]): string {
+  const taken = new Set(subscriptions.map(item => item.name.trim() || item.tag));
+  let n = subscriptions.length + 1;
+  while (taken.has(`sub-${n}`)) n++;
+  return `sub-${n}`;
+}
+
 export function readState(text: string): WizardState {
   const {blocks, tokens} = scanConfig(text);
   const subscriptions: Subscription[] = [];

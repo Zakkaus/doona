@@ -20,6 +20,7 @@ it('exports only the selected event kind while preserving raw data', () => {
 it('offers only advertised event kinds and resets an unsupported selection', () => {
   const view = eventsView([], 'flow.updated', true, true, 200, 'en-US', t, ['stream.ready', 'runtime.updated']);
   expect(view.kind).toBe('all');
+  expect(eventsView([], 'all', false, true, 200, 'en-US', t, [], true).status.text).toBe(t('event.disconnected'));
   expect(view.kinds.map(item => item.id)).toEqual(['without-runtime', 'all', 'stream.ready', 'runtime.updated']);
 });
 

@@ -78,7 +78,10 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
     value,
     label: t(access.label),
     invalid: !/^\d+$/.test(value) || Number(value) < access.floor || (ceiling !== undefined && Number(value) > ceiling),
-    description: ceiling === undefined ? undefined : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
+    description:
+      ceiling === undefined
+        ? t('settings.rangeMin', {min: formatNumber(access.floor, locale)})
+        : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
 export function geodataRows(assets: GeoData['assets'], locale: string) {

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {readState, validNetwork, validSubscriptions, writeState} from '../../dae/setup';
+import {nextSubscriptionName, readState, validNetwork, validSubscriptions, writeState} from '../../dae/setup';
 import {readGroupEntries} from '../../dae/groups';
 
 it('keeps template groups inside an inline group section', () => {
@@ -225,4 +225,15 @@ describe('setup writes what dae reads back', () => {
     const out = writeState(text, {...state, subscriptions: [{name: 'paid', url: 'https://example.org/sub'}]});
     expect(out).toContain("subscription {\n  paid: 'https://example.org/sub'\n}");
   });
+});
+
+it('names a new subscription after the first free sub-N', () => {
+  expect(nextSubscriptionName([])).toBe('sub-1');
+  expect(nextSubscriptionName([{name: 'sub-2', url: ''}])).toBe('sub-3');
+  expect(
+    nextSubscriptionName([
+      {name: 'a', url: ''},
+      {name: '', url: '', raw: 'sub-3 {}', tag: 'sub-3'}
+    ])
+  ).toBe('sub-4');
 });

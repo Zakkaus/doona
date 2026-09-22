@@ -6,7 +6,7 @@ import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
-import {errorText, toast, useLinked} from '../../ui/ui';
+import {toast, useLinked} from '../../ui/ui';
 import {readSettings} from './settings';
 import {useDraftGuard} from '../config/useDraftGuard';
 
@@ -181,7 +181,8 @@ export function useBackendForm(query: string) {
       else if (error instanceof TypeError && new URL(base).origin !== location.origin) failure = {key: 'settings.cors'};
       else failure = {key: 'settings.network'};
       setResult({...failure, error: true, requestId: error instanceof ApiError ? error.requestId : null});
-      toast('negative', `${t(failure.key, failure.params)} · ${errorText(error)}`);
+      // The failure is already named in the page language; the raw message (a DOMException, "Failed to fetch") is not.
+      toast('negative', t(failure.key, failure.params));
     } finally {
       clearTimeout(timer);
       if (request.current === controller) {
@@ -191,7 +192,12 @@ export function useBackendForm(query: string) {
     }
   };
 
-  const [dialog, setDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
+  const [dialog, showDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
+  // A dialog shows only what happens in it; a connection test from before is dropped.
+  const setDialog = (next: typeof dialog) => {
+    if (next) resetProbe();
+    showDialog(next);
+  };
   const [name, setName] = useState('');
   const confirmProfile = () => {
     if (dialog === 'delete') {
@@ -199,19 +205,14 @@ export function useBackendForm(query: string) {
       persist(profiles, profiles[0]?.id ?? '');
       return;
     }
-    const profiles = dialog === 'add' && !active ? [] : editedProfiles();
-    if (!profiles) {
-      setDialog(null);
-      toast('negative', t('settings.invalidUrl'));
-      return;
-    }
     if (!name.trim()) return;
+    // The saved profiles, not the form: an unsaved URL or token is written only by Save.
     if (dialog === 'add') {
       const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
-      persist([...profiles, profile], profile.id);
+      persist([...saved.profiles, profile], profile.id);
     } else {
       persist(
-        profiles.map(profile => (profile.id === active?.id ? {...profile, name: name.trim()} : profile)),
+        saved.profiles.map(profile => (profile.id === active?.id ? {...profile, name: name.trim()} : profile)),
         saved.activeId
       );
     }
@@ -230,6 +231,7 @@ export function useBackendForm(query: string) {
     token,
     changeToken,
     paired,
+    dirty,
     invalid,
     result,
     pending,
