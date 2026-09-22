@@ -2,7 +2,7 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
 import {toast} from '../../ui/ui';
-import type {MainSourceEdit} from '../config/mainSource';
+import {editProblem, type MainSourceEdit} from '../config/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
 import {errorText} from '../../api/error';
@@ -45,13 +45,12 @@ export function useProviderTable(input: ProviderTableInput) {
       if (!item.configTag) return;
       const seconds = Number(key);
       void input.source
-        .apply(
-          text => writeInterval(text, item.configTag!, seconds),
-          errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
-        )
-        .then(written => {
-          if (written) toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
-        }, fail);
+        .apply(text => writeInterval(text, item.configTag!, seconds))
+        .then(result => {
+          if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
+          const problem = editProblem(result, 'nodes.writeInvalid', t);
+          if (problem) toast('negative', problem);
+        });
     }
   }));
   return {

@@ -3,7 +3,7 @@ import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
 import {policies} from '../../dae/vocab';
-import type {MainSourceEdit} from '../config/mainSource';
+import {editProblem, type MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast, useLinked} from '../../ui/ui';
 import {useDraftGuard} from '../config/useDraftGuard';
@@ -15,6 +15,8 @@ export type PolicyEditView = {
   disabled: boolean;
   tip?: string;
   busy: boolean;
+  // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
+  problem: {id: number; text: string} | null;
   policy: string;
   policyHint: string;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
@@ -28,37 +30,40 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
   const t = useT();
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
   const session = useRef(0);
+  const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
+  const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
   const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)));
   useLinked(guard.revision, () => {
     session.current++;
     setDraft(null);
+    setProblem(null);
   });
   const save = (close: () => void) => {
     if (!draft) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
     if (![...filters, draft.policy ?? ''].every(isFragment)) {
-      toast('negative', t('policy.editUnsafe'));
+      refuse(t('policy.editUnsafe'));
       return;
     }
     const submitted = session.current;
     void source
-      .apply(
-        text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}),
-        errors => toast('negative', t('policy.editInvalid', {n: errors})),
-        draft.origin
-      )
-      .then(
-        written => {
-          if (written) {
-            if (session.current === submitted) {
-              guard.clear();
-              close();
-            }
-            toast('positive', t('policy.updated', {name: draft.name}));
+      .apply(text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}), draft.origin)
+      .then(result => {
+        const open = session.current === submitted;
+        if (result.kind === 'ok') {
+          if (open) {
+            guard.clear();
+            close();
           }
-        },
-        error => toast('negative', errorText(error, t))
-      );
+          toast('positive', t('policy.updated', {name: draft.name}));
+        }
+        const text = editProblem(result, 'policy.editInvalid', t);
+        // A refusal after the dialog closed has nowhere inline to go.
+        if (text) {
+          if (open) refuse(text);
+          else toast('negative', text);
+        }
+      });
   };
   // Edits wait while a save is in flight; what was submitted is what the outcome describes.
   const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
@@ -71,6 +76,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     disabled: source.busy || !entry || !source.main,
     tip: source.error ? errorText(source.error, t) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
     busy: source.busy,
+    problem,
     policy: draft?.policy ?? '',
     policyHint: policies.join(', '),
     filters: (draft?.filters ?? []).map((value, id) => ({
@@ -83,10 +89,12 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     })),
     show: () => {
       session.current++;
+      setProblem(null);
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
     },
     close: () => {
       session.current++;
+      setProblem(null);
       guard.clear();
       setDraft(null);
     },

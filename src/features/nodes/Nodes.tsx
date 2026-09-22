@@ -1,13 +1,29 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, ModalDialog, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
 export function Nodes(props: PageProps) {
   const t = useT();
-  const {providerTable, nodeTable, error, reload, dialog, setDialog, form, setForm, removing, dialogTitle, formValid, submit, pending, submitLabel, groupHelp} =
-    useNodesPage(props);
+  const {
+    providerTable,
+    nodeTable,
+    error,
+    reload,
+    dialog,
+    setDialog,
+    problem,
+    form,
+    setForm,
+    removing,
+    dialogTitle,
+    formValid,
+    submit,
+    pending,
+    submitLabel,
+    groupHelp
+  } = useNodesPage(props);
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
@@ -31,6 +47,11 @@ export function Nodes(props: PageProps) {
           </>
         )}
       >
+        {problem && (
+          <InlineAlert key={problem.id} takeFocus>
+            {problem.text}
+          </InlineAlert>
+        )}
         {dialog?.kind === 'provider' && (
           <div className="rp-list">
             <span className="rp-label">{t('nodes.addProviderHelp')}</span>

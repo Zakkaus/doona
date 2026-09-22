@@ -60,18 +60,15 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     setApplying(true);
     setFailure(null);
     try {
-      const written = await source.apply(
-        current => applyChanges(current, changes),
-        errors => setFailure(t('arrange.invalid', {n: errors}))
-      );
-      if (written) {
+      const result = await source.apply(current => applyChanges(current, changes));
+      if (result.kind === 'invalid') setFailure(t('arrange.invalid', {n: result.errors}));
+      if (result.kind === 'failed') setFailure(t('arrange.failed', {error: errorText(result.error, t)}));
+      if (result.kind === 'ok') {
         toast('positive', t('arrange.applied', {n: changes.length}));
         setChanges([]);
         guard.clear();
         setReviewing(false);
       }
-    } catch (error) {
-      setFailure(t('arrange.failed', {error: errorText(error, t)}));
     } finally {
       setApplying(false);
     }

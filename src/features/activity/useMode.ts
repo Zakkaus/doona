@@ -1,12 +1,11 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../store';
-import {useMainSourceEdit} from '../config/mainSource';
+import {editProblem, useMainSourceEdit} from '../config/mainSource';
 import {useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
-import {errorText} from '../../api/error';
 
 export function useMode() {
   const t = useT();
@@ -22,19 +21,14 @@ export function useMode() {
   const apply = async () => {
     if (!staged || view.incomplete) return;
     const submitted = staged;
-    try {
-      const written = await write(
-        text => writeMode(text, submitted),
-        errors => toast('negative', t('act.modeInvalid', {n: errors}))
-      );
-      if (written) {
-        guard.clear();
-        setStaged(current => (current === submitted ? null : current));
-        toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
-      }
-    } catch (error) {
-      toast('negative', errorText(error, t));
+    const result = await write(text => writeMode(text, submitted));
+    if (result.kind === 'ok') {
+      guard.clear();
+      setStaged(current => (current === submitted ? null : current));
+      toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
+    const problem = editProblem(result, 'act.modeInvalid', t);
+    if (problem) toast('negative', problem);
   };
   return {
     ...view,

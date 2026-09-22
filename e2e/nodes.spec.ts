@@ -35,7 +35,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await dialog.getByLabel('Name').fill('hk-03');
   await dialog.getByLabel('Node link').fill('foo://nope');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Unsupported share link scheme');
+  await expect(dialog.getByRole('alert')).toContainText('Unsupported share link scheme');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 added'})).toBeVisible();

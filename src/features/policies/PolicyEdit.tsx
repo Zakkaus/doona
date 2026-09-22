@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
-import {Button, ModalDialog, TextField} from '../../ui/ui';
+import {Button, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PolicyEditView} from './usePolicyEdit';
 export function PolicyEdit({model: m}: {model: PolicyEditView}) {
   const t = useT();
@@ -31,6 +31,11 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
       {m.open && (
         <div className="rp-list">
           <span className="rp-label">{t('policy.editHelp')}</span>
+          {m.problem && (
+            <InlineAlert key={m.problem.id} takeFocus>
+              {m.problem.text}
+            </InlineAlert>
+          )}
           <TextField label={t('policy.policy')} value={m.policy} onChange={m.setPolicy} description={m.policyHint} spellCheck={false} />
           {m.filters.map(field => (
             <TextField
