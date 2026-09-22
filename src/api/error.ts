@@ -28,7 +28,7 @@ export async function responseError(response: Response): Promise<ApiError> {
   return new ApiError(
     response.status,
     body?.error?.code ?? '',
-    body?.error?.message ?? response.statusText,
+    body?.error?.message ?? (response.statusText || `HTTP ${response.status}`),
     body?.request_id ?? null,
     body?.error?.details ?? null,
     retryAfter > 0 ? retryAfter : null

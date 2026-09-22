@@ -3,6 +3,7 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
   const listeners = new Set<() => void>();
   let snapshot = {records: [] as T[], ...status};
   let dirty = false;
+  let recordsDirty = false;
   let statusDirty = false;
   // While held, records keep accumulating in the bounded ring but the published list stays as it was, and a
   // record-only change publishes nothing: a paused 10 Hz stream causes no renders.
@@ -14,12 +15,16 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
     if (held && !statusDirty) return;
     dirty = false;
     statusDirty = false;
-    snapshot = {records: held ? snapshot.records : [...records.values()].reverse(), ...status};
+    // A status-only change keeps the list reference, so memoised rows downstream do not recompute.
+    const list = held || !recordsDirty ? snapshot.records : [...records.values()].reverse();
+    if (!held) recordsDirty = false;
+    snapshot = {records: list, ...status};
     listeners.forEach(notify => notify());
   };
   const schedule = () => {
     dirty = true;
-    if (!document.hidden && timer === undefined) timer = window.setTimeout(publish, 100);
+    // Nobody is reading: the first subscriber publishes what accumulated.
+    if (!document.hidden && listeners.size && timer === undefined) timer = window.setTimeout(publish, 100);
   };
   const visibility = () => {
     if (document.hidden) {
@@ -50,9 +55,11 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
       }
       records.set(record.id, record);
       if (records.size > limit) records.delete(records.keys().next().value!);
+      recordsDirty = true;
       schedule();
     },
     update(change: Partial<S>) {
+      if (Object.entries(change).every(([key, value]) => status[key as keyof S] === value)) return;
       status = {...status, ...change};
       statusDirty = true;
       schedule();

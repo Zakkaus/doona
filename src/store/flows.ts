@@ -75,7 +75,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined}
+    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined}
   );
 }
 

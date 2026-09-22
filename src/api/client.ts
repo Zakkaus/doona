@@ -63,10 +63,20 @@ export function createApi(base: string, token?: string): Api {
   };
   async function pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState> {
     let delay = accepted.retryAfter;
+    let dropped = 0;
     const url = resolveHref(accepted.href);
     while (true) {
       await wait(delay, signal);
-      const response = await fetch(url, {headers, cache: 'no-store', signal});
+      let response: Response;
+      try {
+        response = await fetch(url, {headers, cache: 'no-store', signal});
+        dropped = 0;
+      } catch (error) {
+        // A dropped connection says nothing about the accepted operation; ask again a few times before giving up.
+        if (signal?.aborted || ++dropped > 3) throw error;
+        delay = Math.min(delay * 2, 30);
+        continue;
+      }
       if (!response.ok) {
         const error = await responseError(response);
         // Rate limited or briefly unavailable: the accepted operation is still running, so keep polling.

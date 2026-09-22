@@ -104,6 +104,7 @@ function createWatcher<T>(
   let deadline = Infinity;
   let retryAt = 0;
   let refused = 0;
+  let failure: Error | null = null;
   let recoveryDelay = 5000;
   const clear = () => {
     clearTimeout(timer);
@@ -153,6 +154,7 @@ function createWatcher<T>(
         retryAt = 0;
         recoveryDelay = 5000;
         data = value;
+        failure = null;
         publish({data, loading: false, error: null});
         finish({key: name, ok: true});
       },
@@ -169,6 +171,7 @@ function createWatcher<T>(
             return;
           }
         }
+        failure = error;
         publish({data, loading: false, error});
         finish({key: name, ok: false, error});
         if (retryErrors && !(error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429)) {
@@ -183,7 +186,8 @@ function createWatcher<T>(
     if (disposed) return Promise.resolve({key: name, ok: false, error: new DOMException('Resource unsubscribed', 'AbortError')});
     if (phase !== 'idle') return settled!;
     clear();
-    if (settled && data === undefined && Date.now() >= retryAt) publish({data, loading: true, error: null});
+    // A retry after a failure keeps the error in place, so the banner does not flicker out and back.
+    if (settled && data === undefined && Date.now() >= retryAt) publish({data, loading: true, error: failure});
     refused = 0;
     settled = new Promise<RefreshOutcome>(complete => {
       resolve = complete;
@@ -246,7 +250,8 @@ function createWatcher<T>(
   };
 }
 
-export function useResource<T>(resource: Resource<T>, {enabled = true}: {enabled?: boolean} = {}) {
+// A resource held back only until the capabilities arrive reports loading, not an empty result.
+export function useResource<T>(resource: Resource<T>, {enabled = true, pending = false}: {enabled?: boolean; pending?: boolean} = {}) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
   const current = useRef(resource);
@@ -260,7 +265,7 @@ export function useResource<T>(resource: Resource<T>, {enabled = true}: {enabled
     },
     [api, name, enabled]
   );
-  const getSnapshot = useCallback(() => (enabled ? snapshot<T>(api, name) : disabledState), [api, name, enabled]);
+  const getSnapshot = useCallback(() => (enabled ? snapshot<T>(api, name) : pending ? initialState : disabledState), [api, name, enabled, pending]);
   const refetch = useCallback(() => (enabled ? stores.get(api)?.active.get(name)?.watcher.refetch() : undefined), [api, name, enabled]);
   return {...useSyncExternalStore(subscribe, getSnapshot), refetch};
 }

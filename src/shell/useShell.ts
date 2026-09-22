@@ -24,8 +24,9 @@ export function useShell(settings: Settings, route: string): ShellModel {
     setSpinning(true);
     try {
       const outcomes = await refetchAll();
-      const failure = outcomes.find(outcome => !outcome.ok);
-      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure.error)}) : t('ui.refreshed'));
+      // A resource unsubscribed by navigating away mid-refresh did not fail.
+      const failure = outcomes.flatMap(outcome => (outcome.ok || outcome.error.name === 'AbortError' ? [] : [outcome.error]))[0];
+      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure)}) : t('ui.refreshed'));
     } finally {
       refreshLock.current = false;
       setSpinning(false);

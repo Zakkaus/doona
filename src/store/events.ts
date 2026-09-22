@@ -19,6 +19,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
     streams.set(api, stream);
     const shared = stream;
     const update = (change: Partial<StreamStatus>) => {
+      if (Object.entries(change).every(([key, value]) => shared.status[key as keyof StreamStatus] === value)) return;
       shared.status = {...shared.status, ...change};
       shared.statuses.forEach(fn => fn());
     };
@@ -51,6 +52,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
             const reconnected = event.event === 'stream.ready' && (!!shared.ready || failed);
             if (event.event === 'stream.ready') {
               shared.ready = event;
+              failed = false;
               update({cursor: event.id, error: null});
             }
             if (shouldRefetch('capabilities', event, reconnected)) capabilities.invalidate(reconnected);
