@@ -71,6 +71,11 @@
   --rp-popover-border: transparent;
   --rp-on-accent: var(--rp-surface);
   --rp-on-text: var(--rp-surface);
+  --rp-accent: var(--rp-pine);
+  --rp-negative: var(--rp-love);
+  --rp-positive: var(--rp-foam);
+  --rp-notice: var(--rp-gold);
+  --rp-info: var(--rp-pine);
   --rp-line: var(--rp-hl-low);
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
@@ -84,7 +89,19 @@
   --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
-  --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
+  --rp-duration-modal-in: 250ms;
+  --rp-duration-modal-out: 130ms;
+  --rp-duration-toast: 400ms;
+  --rp-duration-slow: 400ms;
+  --rp-duration-tab: 120ms;
+  --rp-delay-tab: 100ms;
+  --rp-delay-dialog: 160ms;
+  --rp-duration-hop: 360ms;
+  --rp-duration-pop: 240ms;
+  --rp-duration-view: 300ms;
+  --rp-duration-spin: 800ms;
+  --rp-duration-refresh: 600ms;
+  --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
 }
 /* A finger needs more than a pointer does; table rows are already 40px. */
@@ -104,7 +121,7 @@
 .rp-bar .fill {
   height: 100%;
   border-radius: 2px;
-  transition: width 200ms var(--rp-ease-out);
+  transition: width var(--rp-duration-panel) var(--rp-ease-out);
 }
 /* Segmented control: the selection slides between items (200ms, ease-out). */
 .rp-seg {
@@ -125,11 +142,11 @@
   left: 0;
   border-radius: var(--rp-r-md);
   background: var(--rp-surface);
-  border: 2px solid var(--rp-pine);
+  border: 2px solid var(--rp-accent);
   /* Animate layout to avoid text rasterisation flicker from a composited slider beneath the labels. */
   transition:
-    left 200ms var(--rp-ease-out),
-    width 200ms var(--rp-ease-out);
+    left var(--rp-duration-panel) var(--rp-ease-out),
+    width var(--rp-duration-panel) var(--rp-ease-out);
   pointer-events: none;
 }
 .rp-seg .rp-btn {
@@ -144,22 +161,22 @@
   position: relative;
   z-index: 1;
   /* Like a tab: the label recolours as the slider arrives. */
-  transition: color 120ms var(--rp-ease) 100ms;
+  transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,
 .rp-tip {
   transition:
-    opacity 200ms var(--rp-ease),
-    translate 200ms var(--rp-ease);
+    opacity var(--rp-duration-panel) var(--rp-ease),
+    translate var(--rp-duration-panel) var(--rp-ease);
 }
 .rp-popover[data-entering],
 .rp-tip[data-entering] {
-  animation: rp-pop-in 200ms var(--rp-ease);
+  animation: rp-pop-in var(--rp-duration-panel) var(--rp-ease);
 }
 .rp-popover[data-exiting],
 .rp-tip[data-exiting] {
-  animation: rp-pop-out 200ms var(--rp-ease-in);
+  animation: rp-pop-out var(--rp-duration-panel) var(--rp-ease-in);
   pointer-events: none;
 }
 .rp-popover[data-placement='top'],
@@ -193,16 +210,16 @@
 }
 /* Modal: underlay fades, the dialog follows with a short delay and a 20px rise. */
 .rp-underlay[data-entering] {
-  animation: rp-fade-in 250ms var(--rp-ease);
+  animation: rp-fade-in var(--rp-duration-modal-in) var(--rp-ease);
 }
 .rp-underlay[data-exiting] {
-  animation: rp-fade-out 130ms var(--rp-ease);
+  animation: rp-fade-out var(--rp-duration-modal-out) var(--rp-ease);
 }
 .rp-underlay[data-entering] .rp-modal {
-  animation: rp-dialog-in 250ms var(--rp-ease) 160ms both;
+  animation: rp-dialog-in var(--rp-duration-modal-in) var(--rp-ease) var(--rp-delay-dialog) both;
 }
 .rp-underlay[data-exiting] .rp-modal {
-  animation: rp-fade-out 130ms var(--rp-ease) both;
+  animation: rp-fade-out var(--rp-duration-modal-out) var(--rp-ease) both;
 }
 @keyframes rp-fade-in {
   from {

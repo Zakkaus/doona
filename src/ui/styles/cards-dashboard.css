@@ -47,17 +47,17 @@
   cursor: pointer;
   outline: none;
   transition:
-    border-color 150ms var(--rp-ease),
-    background 150ms var(--rp-ease);
+    border-color var(--rp-duration) var(--rp-ease),
+    background var(--rp-duration) var(--rp-ease);
 }
 .rp-card-link[data-hovered] {
-  border-color: var(--rp-pine);
+  border-color: var(--rp-accent);
 }
 .rp-card-link[data-pressed] {
   background: var(--rp-overlay);
 }
 .rp-card-link[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-card {
@@ -278,7 +278,7 @@
 }
 .rp-nav[aria-current='page'] {
   font-weight: 600;
-  color: var(--rp-group, var(--rp-pine));
+  color: var(--rp-group, var(--rp-accent));
 }
 .rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c1);

@@ -26,6 +26,9 @@
   --rp-hl-high: rgba(255, 255, 255, 0.24);
   --rp-on-accent: #ffffff;
   --rp-on-text: #1c1c1e;
+  /* Apple's increased-contrast system blue: the plain one under dark text reads below 4.5:1 once hovered. */
+  --rp-accent-fill: #409cff;
+  --rp-on-accent-fill: #1c1c1e;
   --rp-line: rgba(255, 255, 255, 0.12);
   --rp-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
   --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
@@ -80,6 +83,9 @@
   --rp-hl-high: rgba(60, 60, 67, 0.28);
   --rp-on-accent: #ffffff;
   --rp-on-text: #ffffff;
+  /* Apple's increased-contrast system blue: white on the plain one is 4.0:1. */
+  --rp-accent-fill: #0040dd;
+  --rp-on-accent-fill: #ffffff;
   --rp-line: rgba(60, 60, 67, 0.14);
   --rp-shadow: 0 8px 32px rgba(31, 38, 135, 0.16);
   --rp-shadow-lg: 0 24px 64px rgba(31, 38, 135, 0.3);
@@ -292,7 +298,8 @@
   background: var(--rp-hl-low);
 }
 :root[data-family='glass'] .rp-btn.accent {
-  background: var(--rp-pine);
+  background: var(--rp-accent-fill);
+  color: var(--rp-on-accent-fill);
   border-color: transparent;
   box-shadow: none;
 }
@@ -307,10 +314,10 @@
   color: var(--rp-muted);
 }
 :root[data-family='glass'] .rp-btn.accent[data-hovered] {
-  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
+  background: color-mix(in srgb, var(--rp-accent-fill) 86%, var(--rp-ink-mix));
 }
 :root[data-family='glass'] .rp-btn.accent[data-pressed] {
-  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
+  background: color-mix(in srgb, var(--rp-accent-fill) 76%, var(--rp-ink-mix));
 }
 :root[data-family='glass'] .rp-seg,
 :root[data-family='glass'] .rp-tabbar {
@@ -337,7 +344,7 @@
   background: var(--rp-track);
 }
 :root[data-family='glass'] .rp-switch[data-selected] .track {
-  background: var(--rp-pine);
+  background: var(--rp-accent);
 }
 :root[data-family='glass'] .rp-switch .track::after {
   background: #ffffff;
@@ -349,8 +356,8 @@
 }
 :root[data-family='glass'] .rp-node[data-selected],
 :root[data-family='glass'] .rp-node.cur {
-  border-color: var(--rp-pine);
-  background: color-mix(in srgb, var(--rp-pine) 14%, var(--rp-ctl));
+  border-color: var(--rp-accent);
+  background: color-mix(in srgb, var(--rp-accent) 14%, var(--rp-ctl));
 }
 :root[data-family='glass'] .rp-input {
   background: var(--rp-ctl);
@@ -364,13 +371,13 @@
   box-shadow: var(--rp-glow), var(--rp-shadow-lg);
 }
 :root[data-family='glass'] .rp-toast.positive {
-  background: var(--rp-sheen), color-mix(in srgb, var(--rp-foam) 84%, transparent);
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-positive) 84%, transparent);
 }
 :root[data-family='glass'] .rp-toast.negative {
-  background: var(--rp-sheen), color-mix(in srgb, var(--rp-love) 84%, transparent);
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-negative) 84%, transparent);
 }
 :root[data-family='glass'] .rp-toast.info {
-  background: var(--rp-sheen), color-mix(in srgb, var(--rp-pine) 84%, transparent);
+  background: var(--rp-sheen), color-mix(in srgb, var(--rp-info) 84%, transparent);
 }
 :root[data-family='glass'] .rp-underlay {
   backdrop-filter: blur(8px);

@@ -40,17 +40,17 @@
   cursor: pointer;
   outline: none;
   /* The label takes the selection colour as the slider arrives, not the moment it leaves the old tab. */
-  transition: color 120ms var(--rp-ease) 100ms;
+  transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
 }
 .rp-tab[data-hovered] {
   color: var(--rp-text);
   transition-delay: 0ms;
 }
 .rp-tab[data-selected] {
-  color: var(--rp-pine);
+  color: var(--rp-accent);
 }
 .rp-tab[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-tabpanel {
@@ -91,7 +91,7 @@
   border-radius: var(--rp-r-xl) 0 0 var(--rp-r-xl);
 }
 .rp-underlay[data-entering] .rp-modal.rp-drawer {
-  animation: rp-drawer-in 250ms var(--rp-ease) both;
+  animation: rp-drawer-in var(--rp-duration-modal-in) var(--rp-ease) both;
 }
 @keyframes rp-drawer-in {
   from {

@@ -22,7 +22,7 @@
   background: var(--rp-hl-high);
 }
 .rp-btn[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-btn.quiet {
@@ -46,14 +46,14 @@
   justify-content: center;
 }
 .rp-btn.accent {
-  background: var(--rp-pine);
+  background: var(--rp-accent);
   color: var(--rp-on-accent);
 }
 .rp-btn.accent[data-hovered] {
-  background: color-mix(in srgb, var(--rp-pine) 86%, var(--rp-ink-mix));
+  background: color-mix(in srgb, var(--rp-accent) 86%, var(--rp-ink-mix));
 }
 .rp-btn.accent[data-pressed] {
-  background: color-mix(in srgb, var(--rp-pine) 76%, var(--rp-ink-mix));
+  background: color-mix(in srgb, var(--rp-accent) 76%, var(--rp-ink-mix));
 }
 
 .rp-seg .rp-btn[data-hovered] {
@@ -64,7 +64,7 @@
   /* The slider draws the selection; the button itself stays flat. */
   background: transparent;
   border-color: transparent;
-  color: var(--rp-pine);
+  color: var(--rp-accent);
 }
 .rp-sec-h {
   font-size: 12px;
@@ -141,11 +141,11 @@
   font-variant-numeric: tabular-nums;
 }
 .rp-item .desc.ok {
-  color: var(--rp-foam);
+  color: var(--rp-positive);
 }
 .rp-item .desc.warn {
-  color: var(--rp-gold);
+  color: var(--rp-notice);
 }
 .rp-item .desc.err {
-  color: var(--rp-love);
+  color: var(--rp-negative);
 }

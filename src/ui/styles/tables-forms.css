@@ -25,7 +25,7 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 700;
-  color: var(--rp-pine);
+  color: var(--rp-accent);
   padding: 8px var(--rp-cell-padding, 16px);
   background: var(--rp-base);
   border-bottom: 1px solid var(--rp-hl-med);
@@ -48,7 +48,7 @@
   height: 14px;
   margin-inline-start: 2px;
   rotate: 180deg;
-  transition: rotate 200ms var(--rp-ease-out);
+  transition: rotate var(--rp-duration-panel) var(--rp-ease-out);
 }
 .rp-th > .rp-sort.descending {
   rotate: 0deg;
@@ -75,16 +75,16 @@
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],
 .rp-resizer[data-focus-visible] {
-  border-inline-end-color: var(--rp-pine);
+  border-inline-end-color: var(--rp-accent);
 }
 .rp-table [role='columnheader'][data-resizing] {
-  color: var(--rp-pine);
+  color: var(--rp-accent);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);
 }
 .rp-table [role='row'][data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
 .rp-table [role='rowheader'],

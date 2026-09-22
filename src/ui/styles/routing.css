@@ -42,16 +42,16 @@
   transition: opacity var(--rp-duration) var(--rp-ease);
 }
 .rp-tree-links path[data-kind='direct'] {
-  stroke: var(--rp-foam);
+  stroke: var(--rp-positive);
 }
 .rp-tree-links path[data-kind='block'] {
-  stroke: var(--rp-love);
+  stroke: var(--rp-negative);
 }
 .rp-tree-links path[data-kind='group'] {
   stroke: var(--rp-iris);
 }
 .rp-tree-links path[data-kind='node'] {
-  stroke: var(--rp-pine);
+  stroke: var(--rp-accent);
 }
 .rp-tree-links path[data-state='active'] {
   opacity: 1;
@@ -84,11 +84,11 @@
   background: var(--rp-hl-med);
 }
 .rp-tree-tile[data-selected] {
-  border-color: var(--rp-pine);
+  border-color: var(--rp-accent);
   background: var(--rp-selected);
 }
 .rp-tree-tile[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-tree-tile .l {
@@ -108,13 +108,13 @@
   color: var(--rp-subtle);
 }
 .rp-tree-tile .s.ok {
-  color: var(--rp-foam);
+  color: var(--rp-positive);
 }
 .rp-tree-tile .s.warn {
-  color: var(--rp-gold);
+  color: var(--rp-notice);
 }
 .rp-tree-tile .s.err {
-  color: var(--rp-love);
+  color: var(--rp-negative);
 }
 .rp-tree-tile .c {
   flex: none;

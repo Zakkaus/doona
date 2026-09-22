@@ -4,12 +4,12 @@ button.rp-node {
   cursor: pointer;
 }
 button.rp-node[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-node[data-selected],
 .rp-node.cur {
-  border-color: var(--rp-pine);
+  border-color: var(--rp-accent);
   background: var(--rp-selected);
 }
 .rp-node .top {
@@ -31,13 +31,13 @@ button.rp-node[data-focus-visible] {
   font-variant-numeric: tabular-nums;
 }
 .ms.ok {
-  color: var(--rp-foam);
+  color: var(--rp-positive);
 }
 .ms.warn {
-  color: var(--rp-gold);
+  color: var(--rp-notice);
 }
 .ms.err {
-  color: var(--rp-love);
+  color: var(--rp-negative);
 }
 .rp-node .s {
   display: flex;
@@ -51,7 +51,7 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
 }
 .rp-node .cur {
-  color: var(--rp-pine);
+  color: var(--rp-accent);
   font-weight: 600;
 }
 .rp-nodegrid {
@@ -65,7 +65,7 @@ button.rp-node[data-focus-visible] {
   outline: none;
 }
 .rp-nodegrid .rp-node[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
 /* One control row, reserved in a policy card while its details load. */
