@@ -2,7 +2,7 @@ import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {useMainSourceEdit} from '../config/mainSource';
 import {addNamesToGroup} from '../../dae/groups';
 import type {PageProps} from '../types';
@@ -13,13 +13,14 @@ import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {useLinked} from '../../ui/ui';
+import {errorText} from '../../api/error';
 
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
-const fail = (error: unknown) => toast('negative', errorText(error));
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
+  const fail = useCallback((error: unknown) => toast('negative', errorText(error, t)), [t]);
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState({name: '', value: ''});
   const session = useRef(0);
@@ -75,7 +76,7 @@ export function useNodesPage({go, query}: PageProps) {
     (node: Node, group: string) => {
       void joinGroup(node, group).catch(fail);
     },
-    [joinGroup]
+    [joinGroup, fail]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
@@ -101,7 +102,7 @@ export function useNodesPage({go, query}: PageProps) {
             result => {
               if (result) toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
             },
-            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error)}))
+            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error, t)}))
           );
           return;
         }

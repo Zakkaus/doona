@@ -2,9 +2,9 @@ import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
-import {ApiError} from '../../api/error';
+import {ApiError, errorText} from '../../api/error';
 import {localTime} from '../../api/selectors';
-import {downloadFile, errorText, isMac, toast, useLinked} from '../../ui/ui';
+import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -36,7 +36,7 @@ function useConfigEditorController(refetch: () => void) {
     if (!editor.error) return;
     if (diagnostics) {
       toast('negative', t('config.invalid', {n: diagnostics.filter(d => d.level === 'error').length}));
-    } else toast('negative', errorText(editor.error));
+    } else toast('negative', errorText(editor.error, t));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};
 }

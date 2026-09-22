@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
-import {readLang, translate, type Translator} from '../../i18n';
+import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
 import {actionErrorText, groupConfigFields, memberViews, menuViews, nodeGridView, policyCardView, probeSummary} from './view';
 import {memberHealth} from './health';
@@ -89,12 +89,11 @@ it('names the default member and describes an observation in words', () => {
 });
 
 it('reports a partial probe with translated counts and the stopping error', () => {
-  const lang = readLang();
   const cause = new LocalError('ui.operationFailed', 'member refused');
   const error = Object.assign(new LocalError('ui.operationFailed'), {cause, partialResult: {}, completed: 1200, total: 1500});
-  const text = actionErrorText(error);
-  expect(text).toContain(translate(lang, 'policy.probePartial', {done: 1200, n: 1500, error: translate(lang, 'ui.operationFailed') + ': member refused'}));
+  const text = actionErrorText(error, t);
+  expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.operationFailed') + ': member refused'}));
   expect(text).toContain('1,200');
   expect(text).not.toContain('ui.operationFailed');
-  expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'))).toBe('offline');
+  expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe('offline');
 });

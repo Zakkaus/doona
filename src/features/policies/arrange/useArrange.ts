@@ -5,10 +5,11 @@ import type {Key} from '../../../i18n/messages';
 import type {Node} from '../../../api/model';
 import {useCapabilities, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
-import {errorText, toast, useLinked} from '../../../ui/ui';
+import {toast, useLinked} from '../../../ui/ui';
 import {useDraftGuard} from '../../config/useDraftGuard';
 import type {MainSourceEdit} from '../../config/mainSource';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
+import {errorText} from '../../../api/error';
 
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
@@ -70,7 +71,7 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
         setReviewing(false);
       }
     } catch (error) {
-      setFailure(t('arrange.failed', {error: errorText(error)}));
+      setFailure(t('arrange.failed', {error: errorText(error, t)}));
     } finally {
       setApplying(false);
     }

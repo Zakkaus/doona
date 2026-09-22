@@ -3,7 +3,8 @@ import {useT} from '../../i18n';
 import {closeSession} from '../../api/auth';
 import {clearSession, sessionToken} from '../../api/session';
 import {readProfiles} from '../../api/profiles';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
+import {errorText} from '../../api/error';
 
 // Offered only while this tab holds a password session for the saved active profile.
 export function useSignOut() {
@@ -22,7 +23,7 @@ export function useSignOut() {
       } catch (error) {
         // The session stays usable on the backend, so it is kept here too rather than silently orphaned.
         setBusy(false);
-        toast('negative', t('settings.signOutFailed', {error: errorText(error)}));
+        toast('negative', t('settings.signOutFailed', {error: errorText(error, t)}));
         return;
       }
       clearSession();

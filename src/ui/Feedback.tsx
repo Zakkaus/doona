@@ -14,8 +14,8 @@ import Close from './icons/Close';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
-import {readLang, translate, useT} from '../i18n';
-import {ApiError, LocalError} from '../api/error';
+import {useT} from '../i18n';
+import {errorText} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 
@@ -38,27 +38,19 @@ export function Loading({children}: {children?: ReactNode}) {
   );
 }
 
-export function errorText(error: unknown) {
-  if (error instanceof LocalError) {
-    const text = translate(readLang(), error.key);
-    return error.detail ? `${text}: ${error.detail}` : text;
-  }
-  if (error instanceof ApiError && error.text) return translate(readLang(), error.text.key, error.text.params);
-  const message = error instanceof Error ? error.message : String(error);
-  return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
-}
-
 // A message about a whole form or view, as S2's InlineAlert: a negative one takes focus when it appears after a
 // submit, so the result is announced where the person is looking.
 export function InlineAlert({
   tone = 'negative',
   title,
   children,
+  action,
   takeFocus
 }: {
   tone?: 'negative' | 'informative';
   title?: string;
   children: ReactNode;
+  action?: ReactNode;
   takeFocus?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -69,6 +61,7 @@ export function InlineAlert({
     <div ref={ref} role={tone === 'negative' ? 'alert' : 'status'} tabIndex={takeFocus ? -1 : undefined} className={cx('rp-alert', tone)}>
       {title && <strong className="rp-alert-title">{title}</strong>}
       <span>{children}</span>
+      {action}
     </div>
   );
 }
@@ -78,14 +71,17 @@ export function InlineAlert({
 export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: string}) {
   const t = useT();
   return error ? (
-    <p role="alert" className="rp-alert">
-      {message ?? t('ui.loadFailed', {error: errorText(error)})}
-      {onRetry && (
-        <Button small quiet onPress={onRetry}>
-          {t('ui.retry')}
-        </Button>
-      )}
-    </p>
+    <InlineAlert
+      action={
+        onRetry && (
+          <Button small quiet onPress={onRetry}>
+            {t('ui.retry')}
+          </Button>
+        )
+      }
+    >
+      {message ?? t('ui.loadFailed', {error: errorText(error, t)})}
+    </InlineAlert>
   ) : null;
 }
 

@@ -1,11 +1,12 @@
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n/messages';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
-import {formatNumber, readLang, translate, type Translator} from '../../i18n';
+import {formatNumber, type Translator} from '../../i18n';
 import {millis} from '../../api/u64';
-import {errorText, latencyTone, type NodeStatus} from '../../ui/ui';
+import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
 import type {PartialProbeError} from '../../store/groups';
+import {errorText} from '../../api/error';
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   selector: 'policy.kind.selector',
   urltest: 'policy.kind.urltest',
@@ -37,14 +38,12 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
     });
 }
 
-// A partial probe says how far it got and why it stopped. Like `errorText`, it reads the language when shown,
-// so the toast effect does not rerun on a language switch.
-export function actionErrorText(error: Error): string {
-  if (!('partialResult' in error)) return errorText(error);
+// A partial probe says how far it got and why it stopped.
+export function actionErrorText(error: Error, t: Translator): string {
+  if (!('partialResult' in error)) return errorText(error, t);
   const {completed, total, cause} = error as PartialProbeError;
-  const lang = readLang();
-  const progress = translate(lang, 'policy.probePartial', {done: completed, n: total, error: errorText(cause)});
-  return translate(lang, 'ui.valuePair', {label: errorText(error), value: progress});
+  const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t)});
+  return t('ui.valuePair', {label: errorText(error, t), value: progress});
 }
 // Count each member's worst address-family outcome, without letting an absent address hide a measured result.
 const probeRank = {unknown: 0, healthy: 1, unavailable: 2};

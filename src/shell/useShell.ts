@@ -2,8 +2,9 @@ import {createContext, useCallback, useContext, useMemo, useRef, useState} from 
 import {refetchAll, useCapabilities, useVersion} from '../store';
 import type {Settings} from '../features/settings/settings';
 import {useT} from '../i18n';
-import {errorText, toast} from '../ui/ui';
+import {toast} from '../ui/ui';
 import {duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
+import {errorText} from '../api/error';
 
 export const AboutContext = createContext<AboutView | null>(null);
 export type ShellModel = ShellView & {spinning: boolean; refresh: () => Promise<void>; wordmark: string; honk: () => void};
@@ -26,7 +27,7 @@ export function useShell(settings: Settings, route: string): ShellModel {
       const outcomes = await refetchAll();
       // A resource unsubscribed by navigating away mid-refresh did not fail.
       const failure = outcomes.flatMap(outcome => (outcome.ok || outcome.error.name === 'AbortError' ? [] : [outcome.error]))[0];
-      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure)}) : t('ui.refreshed'));
+      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure, t)}) : t('ui.refreshed'));
     } finally {
       refreshLock.current = false;
       setSpinning(false);

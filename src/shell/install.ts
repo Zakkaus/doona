@@ -1,5 +1,7 @@
 import {useSyncExternalStore} from 'react';
-import {toast, errorText} from '../ui/Feedback';
+import {toast} from '../ui/Feedback';
+import {errorText} from '../api/error';
+import {useT} from '../i18n';
 
 // Cache beforeinstallprompt so a later button can trigger it. Chrome and Edge emit the event; unsupported browsers keep the button hidden.
 type InstallPrompt = Event & {prompt: () => Promise<void>; userChoice: Promise<{outcome: 'accepted' | 'dismissed'}>};
@@ -18,6 +20,7 @@ if (typeof window !== 'undefined') {
   });
 }
 export function useInstallOffer(): (() => Promise<boolean>) | null {
+  const t = useT();
   const offer = useSyncExternalStore(
     listener => {
       listeners.add(listener);
@@ -35,7 +38,7 @@ export function useInstallOffer(): (() => Promise<boolean>) | null {
       await offer.prompt();
       return (await offer.userChoice).outcome === 'accepted';
     } catch (error) {
-      toast('negative', errorText(error));
+      toast('negative', errorText(error, t));
       return false;
     }
   };

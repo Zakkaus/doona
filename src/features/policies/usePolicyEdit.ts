@@ -5,8 +5,9 @@ import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
 import {policies} from '../../dae/vocab';
 import type {MainSourceEdit} from '../config/mainSource';
 import type {ConfigSource} from '../../api/model';
-import {errorText, toast, useLinked} from '../../ui/ui';
+import {toast, useLinked} from '../../ui/ui';
 import {useDraftGuard} from '../config/useDraftGuard';
+import {errorText} from '../../api/error';
 export type PolicyEditView = {
   title: string;
   open: boolean;
@@ -56,7 +57,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
             toast('positive', t('policy.updated', {name: draft.name}));
           }
         },
-        error => toast('negative', errorText(error))
+        error => toast('negative', errorText(error, t))
       );
   };
   // Edits wait while a save is in flight; what was submitted is what the outcome describes.
@@ -68,7 +69,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     open: !!draft,
     available: !!draft || source.writable,
     disabled: source.busy || !entry || !source.main,
-    tip: source.error ? errorText(source.error) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
+    tip: source.error ? errorText(source.error, t) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
     busy: source.busy,
     policy: draft?.policy ?? '',
     policyHint: policies.join(', '),

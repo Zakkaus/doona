@@ -2,10 +2,11 @@ import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../store';
 import {useMainSourceEdit} from '../config/mainSource';
 import {useT} from '../../i18n';
-import {errorText, toast, useLinked} from '../../ui/ui';
+import {toast, useLinked} from '../../ui/ui';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
+import {errorText} from '../../api/error';
 
 export function useMode() {
   const t = useT();
@@ -32,7 +33,7 @@ export function useMode() {
         toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
       }
     } catch (error) {
-      toast('negative', errorText(error));
+      toast('negative', errorText(error, t));
     }
   };
   return {

@@ -1,11 +1,10 @@
 import {useEffect, useState} from 'react';
 import {useT, type Params} from '../i18n';
 import type {Key} from '../i18n/messages';
-import {ApiError} from '../api/error';
+import {ApiError, errorText} from '../api/error';
 import {discoverAuth, openSession, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
 import {normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
-import {errorText} from '../ui/ui';
 
 export function loginProfiles(profiles: Profile[], profileId: string, api: string, token: string): Profile[] | null {
   if (!profiles.some(profile => profile.id === profileId && normalizeApi(profile.api) === normalizeApi(api))) return null;
@@ -99,7 +98,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
         setKind(refusal.switchTo);
         setConfirm('');
       }
-      setFailure(refusal ?? t('login.failed', {error: errorText(error)}));
+      setFailure(refusal ?? t('login.failed', {error: errorText(error, t)}));
     }
   };
   const usesPassword = kind === 'setup' || kind === 'login';

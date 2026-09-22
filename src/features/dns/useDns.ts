@@ -5,11 +5,12 @@ import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {within} from '../../shell/route';
 import {queryTypes} from './query';
+import {errorText} from '../../api/error';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -77,7 +78,7 @@ export function useDnsCache(domain: string) {
       const result = await dns.remove(id);
       if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.deleteFailed', {error: errorText(error)}));
+      toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}));
     }
   };
   const flush = async () => {
@@ -85,7 +86,7 @@ export function useDnsCache(domain: string) {
       const result = await dns.flush();
       if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: errorText(error)}));
+      toast('negative', t('dns.flushFailed', {error: errorText(error, t)}));
     }
   };
   return {

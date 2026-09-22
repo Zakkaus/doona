@@ -1,8 +1,8 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../store';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {PageProps} from '../types';
 import {within} from '../../shell/route';
@@ -11,6 +11,7 @@ import {parseRuleSeed, type RuleSeed} from './seed';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../config/useDraftGuard';
 import {useLinked} from '../../ui/ui';
+import {errorText} from '../../api/error';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
 const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
@@ -67,8 +68,9 @@ export function useRuleList({go, query}: PageProps) {
     rules.refetch();
   };
   const editor = useConfigEditor(retry);
+  const report = useEffectEvent((error: Error) => toast('negative', errorText(error, t)));
   useEffect(() => {
-    if (editor.error) toast('negative', errorText(editor.error));
+    if (editor.error) report(editor.error);
   }, [editor.error]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const pending = useRef(false);

@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useEffectEvent, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useGroupControl} from '../../store';
 import type {HealthObservation} from '../../api/model';
@@ -24,8 +24,10 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const {id, health, refreshGroups, refreshNodes, source, entry, paused} = input;
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
+  // A language switch does not repeat the toast.
+  const report = useEffectEvent((error: Error) => toast('negative', actionErrorText(error, t)));
   useEffect(() => {
-    if (control.actionError) toast('negative', actionErrorText(control.actionError));
+    if (control.actionError) report(control.actionError);
   }, [control.actionError]);
   const g = control.data;
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
