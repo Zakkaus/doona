@@ -75,8 +75,9 @@ export function useRoute(api: string | null) {
   }, []);
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<PendingRoute | null>(null);
-  const push = useCallback((next: Route) => {
-    history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+  const push = useCallback((next: Route, replace = false) => {
+    if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
+    else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
     setLoc(next);
   }, []);
   // `go` keeps one identity across navigations, so memoised pages and tiles are not re-rendered by the callback alone.
@@ -85,11 +86,11 @@ export function useRoute(api: string | null) {
     current.current = loc;
   }, [loc]);
   const go = useCallback<Go>(
-    (route, query = '') => {
+    (route, query = '', options) => {
       const next = updateRoute(current.current, buildHash(route, query));
       if (next === current.current) return;
       if (dirty.current) setPending(next);
-      else push(next);
+      else push(next, options?.replace);
     },
     [push]
   );

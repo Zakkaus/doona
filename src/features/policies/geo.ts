@@ -32,7 +32,7 @@ const TABLE: Array<[string, string[]]> = [
   ['CA', ['can', 'canada', 'toronto', 'yyz', '加拿大']],
   ['GB', ['gb', 'uk', 'united kingdom', 'britain', 'london', 'lhr', '英國', '英国', '倫敦', '伦敦']],
   ['DE', ['de', 'deu', 'germany', 'frankfurt', 'fra', '德國', '德国', '法蘭克福', '法兰克福']],
-  ['FR', ['fr', 'fra', 'france', 'paris', 'cdg', '法國', '法国', '巴黎']],
+  ['FR', ['fr', 'france', 'paris', 'cdg', '法國', '法国', '巴黎']],
   ['NL', ['nl', 'nld', 'netherlands', 'amsterdam', 'ams', '荷蘭', '荷兰', '阿姆斯特丹']],
   ['RU', ['ru', 'rus', 'russia', 'moscow', '俄羅斯', '俄罗斯', '莫斯科']],
   ['AU', ['au', 'aus', 'australia', 'sydney', 'syd', '澳洲', '澳大利亞', '澳大利亚', '悉尼']],
@@ -56,16 +56,15 @@ const TABLE: Array<[string, string[]]> = [
   ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
 ];
 const ASCII = /[a-z0-9]+/g;
+// Latin keys match whole tokens (or a spaced phrase); CJK keys match anywhere in the name.
+const LATIN = /^[a-z0-9 ]+$/;
+const KEYS = TABLE.map(([iso, keys]) => ({iso, latin: keys.filter(k => LATIN.test(k)), other: keys.filter(k => !LATIN.test(k))}));
 
 export function regionOf(name: string): string | null {
   const lower = name.toLowerCase();
   const tokens = new Set(lower.match(ASCII) ?? []);
-  for (const [iso, keys] of TABLE) {
-    for (const k of keys) {
-      if (/^[a-z0-9 ]+$/.test(k)) {
-        if (tokens.has(k) || (k.includes(' ') && lower.includes(k))) return iso;
-      } else if (name.includes(k)) return iso;
-    }
+  for (const {iso, latin, other} of KEYS) {
+    if (latin.some(k => tokens.has(k) || (k.includes(' ') && lower.includes(k))) || other.some(k => name.includes(k))) return iso;
   }
   return null;
 }

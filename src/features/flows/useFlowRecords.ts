@@ -1,6 +1,6 @@
-import {useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
-import {outboundLabel} from '../../api/selectors';
+import {connectionStates, outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';
 import {panelQuery, useMediaQuery} from '../../ui/ui';
@@ -11,10 +11,13 @@ import {flowRecordsView} from './view';
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
-  const [network, setNetwork] = useState<NonNullable<FlowFilter['network']>>('all');
-  const [state, setState] = useState<NonNullable<FlowFilter['state']>>('all');
   const wide = useMediaQuery(panelQuery);
   const params = useMemo(() => new URLSearchParams(query), [query]);
+  // Filters live in the address, so they survive a tab switch like the other pages' filters.
+  const requestedNetwork = params.get('network');
+  const network: NonNullable<FlowFilter['network']> = requestedNetwork === 'tcp' || requestedNetwork === 'udp' ? requestedNetwork : 'all';
+  const requestedState = params.get('state') ?? '';
+  const state = (Object.hasOwn(connectionStates, requestedState) ? requestedState : 'all') as NonNullable<FlowFilter['state']>;
   const connectionId = params.get('connection_id') ?? undefined;
   const resource = useFlows({connection_id: connectionId, network, state});
   const resources = useCapabilities().data?.resources;
@@ -27,8 +30,8 @@ export function useFlowRecords({go, query}: PageProps) {
   const pinned = params.get('path');
   const shown = useMemo(() => {
     const all = resource.data?.flows ?? [];
-    return pinned ? flowsThrough(all, pinned, names, rules.data?.rules ?? []) : all;
-  }, [resource.data, pinned, names, rules.data]);
+    return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
+  }, [resource.data, pinned, rules.data]);
   const view = useMemo(
     () => flowRecordsView(shown, detail.data ?? undefined, resource.data, names, canAdd, t, lang),
     [shown, detail.data, resource.data, names, canAdd, t, lang]
@@ -36,9 +39,9 @@ export function useFlowRecords({go, query}: PageProps) {
   return {
     ...view,
     network,
-    setNetwork: (value: string) => setNetwork(value as NonNullable<FlowFilter['network']>),
+    setNetwork: (value: string) => go('rules', within(query, {network: value === 'all' ? null : value})),
     state,
-    setState: (value: string) => setState(value as NonNullable<FlowFilter['state']>),
+    setState: (value: string) => go('rules', within(query, {state: value === 'all' ? null : value})),
     wide,
     id,
     rulesListed,
@@ -49,7 +52,8 @@ export function useFlowRecords({go, query}: PageProps) {
     detailError: detail.error,
     detailRetry: detail.refetch,
     detailLoading: !detail.data && detail.loading,
-    select: (value: string | null) => go('rules', within(query, {id: value})),
+    // Opening a record adds a history entry; moving between records or closing rewrites it, so Back is not one step per row.
+    select: (value: string | null) => go('rules', within(query, {id: value}), {replace: id !== null}),
     pinLabel: pinned
       ? t('flow.mapFilter', {
           label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => (name === null ? t('flow.mapUnknown') : outboundLabel(name, t)))

@@ -71,11 +71,20 @@ it('filters large grids by region and observed health without mutating member or
     region: index < 3 ? 'HK' : '?'
   }));
   const contains = (value: string, query: string) => value.includes(query);
-  const view = nodeGridView(nodes, {q: 'node', region: 'HK', sort: 'latency', aliveOnly: true}, contains, t);
+  const view = nodeGridView(nodes, {q: 'node', region: 'HK', sort: 'latency', aliveOnly: true}, contains, t, 'en-US');
   expect(view.shown.map(node => node.id)).toEqual(['2', '1']);
   expect(nodes[0].id).toBe('0');
   expect(view.regions).toContainEqual({id: 'HK', label: 'HK', desc: '3'});
   expect(view.count).toBe(t('policy.members', {n: 2}));
-  const small = nodeGridView(nodes.slice(0, 2), {q: 'missing', region: '?', sort: 'latency', aliveOnly: true}, contains, t);
+  const small = nodeGridView(nodes.slice(0, 2), {q: 'missing', region: '?', sort: 'latency', aliveOnly: true}, contains, t, 'en-US');
   expect(small.shown.map(node => node.id)).toEqual(['0', '1']);
+});
+
+it('names the default member and describes an observation in words', () => {
+  const g = nodeFixtures(0).groups[0];
+  const member = g.members[0];
+  const fields = groupConfigFields({...g, config: {...g.config, default_member_id: member.id}});
+  expect(fields).toContainEqual(['policy.cfg.defaultMember', member.name]);
+  const [view] = memberViews([{...member, kind: 'node', health: {...g.runtime.health[0], transport: 'udp', purpose: 'dns'}}], t);
+  expect(view.description).toBe(t('policy.observedVia', {transport: 'UDP', purpose: 'DNS'}));
 });

@@ -68,3 +68,7 @@ button.rp-node[data-focus-visible] {
   outline: 2px solid var(--rp-pine);
   outline-offset: -2px;
 }
+/* One control row, reserved in a policy card while its details load. */
+.rp-wait-line {
+  height: var(--rp-control);
+}

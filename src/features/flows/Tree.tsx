@@ -5,7 +5,7 @@ import type {RoutingTree} from './map';
 import type {TreePlacement, TileView} from './view';
 import {useTree} from './useTree';
 
-// Stable tile props keep unrelated hover changes from rerendering each tile.
+// Views, placements and callbacks keep their identity across hover and pin changes, so only a tile whose dim or selected state flips rerenders.
 const TreeTile = memo(function TreeTile({
   view,
   style,

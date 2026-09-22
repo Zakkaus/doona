@@ -11,7 +11,7 @@ it('suppresses full coverage and keeps exact dropped counts and partial scopes',
   const coverage = Object.fromEntries(Object.keys(list.coverage).map(scope => [scope, 'full'])) as typeof list.coverage;
   expect(coverageView({coverage, dropped_records: null}, t, 'en')).toBeNull();
   const view = coverageView({coverage: {...coverage, userspace_tcp: 'partial', kernel_direct: 'none'}, dropped_records: '18446744073709551615'}, t, 'en')!;
-  expect(view.dropped).toContain('18446744073709551615');
+  expect(view.dropped).toContain('18,446,744,073,709,551,615');
   expect(view.summary).toBe(t('flow.coverageSummary', {n: 2}));
   expect(view.detail).toContain(t('flow.userspaceTcp'));
   expect(view.detail).toContain(t('flow.partialVisibility'));
@@ -47,7 +47,7 @@ it('prepares tile labels with configured destinations, nested policies and unkno
   const api = createMockApi();
   const [rules, groups, nodes] = await Promise.all([api.rules(), api.groups(), api.nodes({limit: 1000})]);
   const tree = routingTree([], groups, nodes.nodes, rules.rules);
-  const tiles = tileViews(tree, t);
+  const tiles = tileViews(tree, t, 'en');
   const rule = rules.rules.find(rule => rule.outbound === 'block')!;
   const tile = tiles.find(tile => tile.id === 'rule:' + rule.rule_id)!;
   expect(tile.label).toContain('→ ' + t('ui.block'));
@@ -76,7 +76,7 @@ it('keeps native policy names distinct and falls back only when the native name 
   const api = createMockApi();
   const groups = await api.groups();
   const group = {...groups[0], policy: {...groups[0].policy, kind: 'urltest' as const, native: 'min_avg10'}};
-  const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], []), t)[0].notes;
+  const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], []), t, 'en')[0].notes;
   expect(notes('min_avg10')).toContainEqual({text: 'min_avg10'});
   expect(notes('min_last_delay')).toContainEqual({text: 'min_last_delay'});
   expect(notes('')).toContainEqual({text: 'urltest'});
@@ -91,7 +91,7 @@ it('bounds each tree reveal while keeping layout, connector endpoints and branch
     Array.from({length: 4096}, (_, i) => ({...rule, rule_id: String(i), outbound: 'direct'}))
   );
   const shown = treeWindow(tree, 30);
-  const view = treeGeometry(shown, 720, t);
+  const view = treeGeometry(shown, 720, t, 'en');
   expect(view.placed.filter(tile => tile.view.stage === 'rule')).toHaveLength(30);
   expect(treeWindow(tree, 60).leaves.at(-1)?.id).toBe('rule:59');
   expect(view.placed.find(tile => tile.view.id === 'rule:0')?.style.top).toBe(0);
@@ -101,8 +101,21 @@ it('bounds each tree reveal while keeping layout, connector endpoints and branch
   expect(view.geometry).toHaveLength(30);
   const edge = view.geometry[0];
   expect(edge.path).toBe('M253.33333333333331,16 C281.3333333333333,16 281.3333333333333,596 309.3333333333333,596');
-  expect(treeGeometry(shown, 390, t).width).toBe(720);
+  expect(treeGeometry(shown, 390, t, 'en').width).toBe(720);
   const reached = treeReach(treeIndex(tree), 'rule:0');
   expect([...reached.items]).toEqual(['rule:0', 'outbound:direct']);
   expect([...reached.edges]).toEqual([tree.links[0]]);
+});
+
+it('names the groups leading to a node tile and leaves an unmeasured step without a unit', async () => {
+  const api = createMockApi();
+  const [rules, groups, nodes, list] = await Promise.all([api.rules(), api.groups(), api.nodes({limit: 1000}), api.flows()]);
+  const tree = routingTree(list.flows, groups, nodes.nodes, rules.rules);
+  const tiles = tileViews(tree, t, 'en');
+  const link = tree.links.find(link => link.target.startsWith('node:'))!;
+  const source = tiles.find(tile => tile.id === link.source)!;
+  expect(tiles.find(tile => tile.id === link.target)!.label).toContain('← ' + source.name);
+  const detail = await api.flow(list.flows[0].id);
+  detail.trace.steps = detail.trace.steps.map(step => ({...step, elapsed_us: null}));
+  expect(flowRecordsView([], detail, list, new Map(), false, t, 'en').detail!.steps.every(step => step.elapsed === '—')).toBe(true);
 });

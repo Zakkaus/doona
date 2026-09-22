@@ -72,7 +72,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   expect(ids.slice(0, 3)).toEqual(['domain(full: rule-0.example)', 'domain(full: rule-1.example)', 'domain(full: rule-2.example)']);
   expect(ids.slice(-2)).toEqual(['Unknown rule', 'Unknown rule']);
   await expect(rows.first()).toContainText('6.7%');
-  await expect(panel.getByText('18446744073709551615 dropped records', {exact: true})).toBeVisible();
+  await expect(panel.getByText('18,446,744,073,709,551,615 dropped records', {exact: true})).toBeVisible();
   await panel.getByRole('radio', {name: 'Unknown', exact: true}).click();
   await expect(rows).toHaveCount(1);
   snapshot.flows = [];

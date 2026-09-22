@@ -15,10 +15,27 @@ import {queryTypes} from '../dns/query';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
-export function useRoutingTrace() {
+const blankForm = {
+  network: 'tcp' as 'tcp' | 'udp',
+  domain: '',
+  dst_ip: '',
+  dst_port: '',
+  src_ip: '',
+  src_port: '',
+  pname: '',
+  // Null until the backend says what it offers: live when it can resolve, else none.
+  resolve: null as TraceResolve | null
+};
+export type TraceForm = typeof blankForm;
+// Held by the rules page rather than the trace tab, so what was typed survives a tab switch.
+export function useTraceForm() {
+  const [form, setForm] = useState(blankForm);
+  const [advanced, setAdvanced] = useState(false);
+  return {form, setForm, advanced, setAdvanced};
+}
+export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>) {
   const t = useT();
   const lang = useLang();
-  const [advanced, setAdvanced] = useState(false);
   const api = getApi();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
@@ -30,17 +47,6 @@ export function useRoutingTrace() {
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
-  const [form, setForm] = useState({
-    network: 'tcp' as 'tcp' | 'udp',
-    domain: '',
-    dst_ip: '',
-    dst_port: '',
-    src_ip: '',
-    src_port: '',
-    pname: '',
-    // Null until the backend says what it offers: live when it can resolve, else none.
-    resolve: null as TraceResolve | null
-  });
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const portValid = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
@@ -64,7 +70,8 @@ export function useRoutingTrace() {
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
   const dnsQuery = capabilities.data?.resources.dns_query;
-  const recordTypes = (dnsQuery?.record_types ?? []).filter(type => type === 'A' || type === 'AAAA');
+  const offered = dnsQuery?.record_types;
+  const recordTypes = useMemo(() => (offered ?? []).filter(type => type === 'A' || type === 'AAAA'), [offered]);
   const maxTypes = dnsQuery?.limits?.max_types_per_request ?? 1;
   const modes: TraceResolve[] = [
     ...backendModes,
@@ -77,13 +84,15 @@ export function useRoutingTrace() {
   const submit = useCallback(async () => {
     if (busy || !canSubmit) return;
     setResult(null);
+    const address = (value: string) => value.trim().replace(/^\[|\]$/g, '');
+    // One of the two targets is always present; the address rides along with a domain when both are given.
     const input: RoutingTraceRequest['input'] = {
       network: form.network,
       dst_port: Number(form.dst_port),
-      ...(form.domain.trim() ? {domain: form.domain.trim()} : {dst_ip: form.dst_ip.trim().replace(/^\[|\]$/g, '')})
+      ...(form.domain.trim() ? {domain: form.domain.trim()} : {dst_ip: address(form.dst_ip)})
     };
-    if (form.dst_ip.trim()) input.dst_ip = form.dst_ip.trim().replace(/^\[|\]$/g, '');
-    if (form.src_ip.trim()) input.src_ip = form.src_ip.trim().replace(/^\[|\]$/g, '');
+    if (form.domain.trim() && form.dst_ip.trim()) input.dst_ip = address(form.dst_ip);
+    if (form.src_ip.trim()) input.src_ip = address(form.src_ip);
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
     const response = await run('trace', signal =>

@@ -49,7 +49,8 @@
 .rp-switch[data-pressed] .track::after {
   scale: 0.9;
 }
-/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours instead of flipping. */
+/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours instead of flipping.
+   Later sheets must not set `transition` on these, or the colour fades are lost. */
 .rp-node,
 .rp-tree-tile,
 .rp-node .ms,
@@ -59,7 +60,8 @@
   transition:
     background-color var(--rp-duration) var(--rp-ease),
     border-color var(--rp-duration) var(--rp-ease),
-    color var(--rp-duration) var(--rp-ease);
+    color var(--rp-duration) var(--rp-ease),
+    opacity var(--rp-duration) var(--rp-ease);
 }
 :root {
   color-scheme: light;

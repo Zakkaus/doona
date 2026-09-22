@@ -1,7 +1,7 @@
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n/messages';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
-import type {Translator} from '../../i18n';
+import {formatNumber, type Translator} from '../../i18n';
 import {millis} from '../../api/u64';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
@@ -31,6 +31,7 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
       const label: Key | MessageRef = groupConfigLabels[key] ?? {key: 'flow.f.input', params: {name: key}};
       if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
       if (typeof value === 'number' && units[key]) return [label, {key: units[key], params: {n: value}}];
+      if (key === 'default_member_id') return [label, group.members.find(member => member.id === value)?.name ?? String(value)];
       return [label, String(value)];
     });
 }
@@ -65,6 +66,7 @@ export type MemberView = {
   description: string;
   region: string;
 };
+const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpose.data', dns: 'policy.purpose.dns', shared: 'policy.purpose.shared'};
 // The tile's status slot: a group badge, a latency with its tone, or the state when there is no latency.
 function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
   if (member.kind === 'group') return {text: t('ui.group'), badge: true};
@@ -81,7 +83,9 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',
     status: memberStatus(member, t),
-    description: member.health ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}` : ' ',
+    description: member.health
+      ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
+      : ' ',
     region: regionOf(member.name) ?? '?'
   }));
 }
@@ -101,7 +105,7 @@ export function menuViews(nodes: Array<{id?: string; name: string; label?: strin
     if (group) group.push(node);
     else groups.set(node.region, [node]);
   }
-  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: ` · ${items.length}`}))};
+  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: t('policy.sectionCount', {n: items.length})}))};
 }
 export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator) {
   const tcp = g.runtime.selection.tcp?.member_id;
@@ -116,7 +120,7 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
   return {
     id: g.id,
     name: g.name,
-    kind: g.policy.native || g.policy.kind,
+    kind: g.policy.native || t(policyKindLabels[g.policy.kind]),
     selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
     selectable,
     overridable,
@@ -143,7 +147,8 @@ export function nodeGridView(
   nodes: MemberView[],
   filter: {q: string; region: string; sort: string; aliveOnly: boolean},
   contains: (value: string, query: string) => boolean,
-  t: Translator
+  t: Translator,
+  locale: string
 ) {
   const big = nodes.length > 12;
   const counts = new Map<string, number>();
@@ -162,7 +167,7 @@ export function nodeGridView(
     shown,
     regions: [
       {id: 'all', label: t('policy.allRegions')},
-      ...[...counts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({id, label: id === '?' ? '—' : id, desc: String(count)}))
+      ...[...counts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({id, label: id === '?' ? '—' : id, desc: formatNumber(count, locale)}))
     ],
     regionLabel: filter.region === 'all' ? t('policy.allRegions') : filter.region === '?' ? '—' : filter.region,
     count: down ? t('policy.membersDown', {n: shown.length, down}) : t('policy.members', {n: shown.length})

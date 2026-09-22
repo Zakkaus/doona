@@ -251,7 +251,11 @@ function createWatcher<T>(
 }
 
 // A resource held back only until the capabilities arrive reports loading, not an empty result.
-export function useResource<T>(resource: Resource<T>, {enabled = true, pending = false}: {enabled?: boolean; pending?: boolean} = {}) {
+// A paused resource stops fetching but keeps showing what it last had.
+export function useResource<T>(
+  resource: Resource<T>,
+  {enabled = true, pending = false, paused = false}: {enabled?: boolean; pending?: boolean; paused?: boolean} = {}
+) {
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
   const current = useRef(resource);
@@ -260,10 +264,10 @@ export function useResource<T>(resource: Resource<T>, {enabled = true, pending =
   });
   const subscribe = useCallback(
     (notify: () => void) => {
-      if (!enabled) return () => {};
+      if (!enabled || paused) return () => {};
       return watchResource(api, current.current, notify, name).dispose;
     },
-    [api, name, enabled]
+    [api, name, enabled, paused]
   );
   const getSnapshot = useCallback(() => (enabled ? snapshot<T>(api, name) : pending ? initialState : disabledState), [api, name, enabled, pending]);
   const refetch = useCallback(() => (enabled ? stores.get(api)?.active.get(name)?.watcher.refetch() : undefined), [api, name, enabled]);

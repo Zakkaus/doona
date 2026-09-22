@@ -1,4 +1,4 @@
-import {memo} from 'react';
+import {memo, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty} from '../../ui/ui';
@@ -8,6 +8,29 @@ import type {PageProps} from '../types';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
 
+// Holds roughly the loaded card's height, so cards below do not move when the details arrive.
+function PolicyWait({heading, members, label}: {heading: ReactNode; members: number; label?: string}) {
+  return (
+    <>
+      <div className="rp-row">{heading}</div>
+      <div className="rp-wait-line" />
+      <div className="rp-form" role={label ? 'status' : undefined} aria-label={label}>
+        {members > 12 ? (
+          <>
+            <div className="rp-wait-line" />
+            <div className="rp-nodegrid" />
+          </>
+        ) : (
+          <div className="rp-nodes">
+            {Array.from({length: Math.max(members, 1)}, (_, i) => (
+              <span key={i} className="rp-node" />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 function PolicyDetail(props: PolicyGroupInput) {
   const t = useT();
   const m = usePolicyGroup(props);
@@ -15,7 +38,7 @@ function PolicyDetail(props: PolicyGroupInput) {
   return (
     <>
       <ErrorMessage error={m.error} />
-      {m.loading && <Loading>{m.loadingText}</Loading>}
+      {m.loading && <PolicyWait heading={<h3 className="rp-h3">{props.name}</h3>} members={props.members} label={m.loadingText} />}
       {g && (
         <>
           <div className="rp-row">
@@ -82,16 +105,21 @@ function PolicyDetail(props: PolicyGroupInput) {
     </>
   );
 }
-const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: PolicyGroupInput & {focused: boolean; domId: string}) {
-  const {ref, active, expand} = usePolicyVisibility(focused);
+const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<PolicyGroupInput, 'paused'> & {focused: boolean; domId: string}) {
+  const {ref, active, visible, expand} = usePolicyVisibility(focused);
   return (
     <section ref={ref} className="rp-card" id={domId} aria-label={props.name}>
       {active ? (
-        <PolicyDetail {...props} />
+        <PolicyDetail {...props} paused={!visible} />
       ) : (
-        <Button quiet onPress={expand}>
-          {props.name}
-        </Button>
+        <PolicyWait
+          heading={
+            <Button quiet onPress={expand}>
+              {props.name}
+            </Button>
+          }
+          members={props.members}
+        />
       )}
     </section>
   );

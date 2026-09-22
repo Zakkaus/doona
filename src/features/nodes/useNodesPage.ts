@@ -156,7 +156,8 @@ export function useNodesPage({go, query}: PageProps) {
       if (!id) return;
       const next = new URLSearchParams(query);
       next.set('provider', id);
-      go('nodes', next.toString());
+      // A source is always selected, so switching it rewrites the entry rather than stacking one per row.
+      go('nodes', next.toString(), {replace: true});
     },
     canManage: !!resources?.providers.can_manage,
     canRefresh: !!resources?.providers.can_refresh,

@@ -42,10 +42,10 @@ export function useGroups(enabled = true) {
   const api = getApi();
   return useResource({key: ['groups'], every: 30000, fetch: signal => api.groups(signal)}, {enabled});
 }
-export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void) {
+export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void, paused = false) {
   const api = getApi();
   const capabilities = useCapabilities().data;
-  const resource = useResource({key: ['group', {id}], every: 30000, fetch: signal => api.group(id, signal)});
+  const resource = useResource({key: ['group', {id}], every: 30000, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
   const action = useAction<'selection' | 'probe' | 'config'>({scope: id});

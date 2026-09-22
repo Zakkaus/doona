@@ -68,7 +68,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     open: !!draft,
     available: !!draft || source.writable,
     disabled: source.busy || !entry || !source.main,
-    tip: source.error ? errorText(source.error) : undefined,
+    tip: source.error ? errorText(source.error) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
     busy: source.busy,
     policy: draft?.policy ?? '',
     policyHint: policies.join(', '),

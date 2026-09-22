@@ -59,7 +59,15 @@ export const messages = defineMessages({
     'policy.editInvalid': '驗證發現 {n} 個錯誤，未寫入',
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇已變更',
-    'policy.probeUnchanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇未變更'
+    'policy.probeUnchanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇未變更',
+    'policy.purpose.data': '資料',
+    'policy.purpose.dns': 'DNS',
+    'policy.purpose.shared': '共用',
+    'policy.observedVia': '{transport} · {purpose}',
+    'policy.sectionCount': ' · {n}',
+    'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
+    'policy.editNoMain': '尚未取得主組態，無法編輯',
+    'policy.editNoEntry': '主組態 group 區段中沒有此群組，無法編輯'
   },
   'zh-CN': {
     'policy.kind.selector': 'selector',
@@ -119,7 +127,15 @@ export const messages = defineMessages({
     'policy.editInvalid': '校验发现 {n} 个错误，未写入',
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择已更改',
-    'policy.probeUnchanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择未更改'
+    'policy.probeUnchanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择未更改',
+    'policy.purpose.data': '数据',
+    'policy.purpose.dns': 'DNS',
+    'policy.purpose.shared': '共用',
+    'policy.observedVia': '{transport} · {purpose}',
+    'policy.sectionCount': ' · {n}',
+    'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
+    'policy.editNoMain': '尚未取得主配置，无法编辑',
+    'policy.editNoEntry': '主配置 group 区段中没有此组，无法编辑'
   },
   en: {
     'policy.kind.selector': 'selector',
@@ -184,6 +200,14 @@ export const messages = defineMessages({
     'policy.editInvalid': {one: 'Validation found {n} error; nothing written', other: 'Validation found {n} errors; nothing written'},
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection changed',
-    'policy.probeUnchanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection unchanged'
+    'policy.probeUnchanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection unchanged',
+    'policy.purpose.data': 'data',
+    'policy.purpose.dns': 'DNS',
+    'policy.purpose.shared': 'shared',
+    'policy.observedVia': '{transport} · {purpose}',
+    'policy.sectionCount': ' · {n}',
+    'policy.memberPerNetwork': 'TCP {tcp}, UDP {udp}',
+    'policy.editNoMain': 'The main configuration is not available yet',
+    'policy.editNoEntry': 'This group is not defined in the group section of the main configuration'
   }
 });
