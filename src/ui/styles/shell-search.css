@@ -375,6 +375,9 @@
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  /* Fill the column even while a page's chunk is still loading: without this the content collapses to the
+     heading and springs back to full height a tenth of a second later. */
+  flex: 1;
 }
 .rp-head {
   display: flex;
