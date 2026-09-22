@@ -63,10 +63,16 @@ it('prepares grouped cells and rule-link availability without losing unknown cou
 
 it('captures IDs without expanding the confirmed selection when live rows arrive', () => {
   const rows = connections.tcp.slice(0, 2);
-  const selection = closeSelection(rows);
+  const scope = {network: 'tcp', src: undefined, narrowed: true, truncated: false, bulkLimit: 1000};
+  const selection = closeSelection(rows, scope);
   rows.push({...rows[0], id: 'later'});
-  expect(selection.ids).toEqual(connections.tcp.slice(0, 2).map(row => row.id));
-  expect(selection.ids).not.toContain('later');
+  expect(selection).toEqual({ids: connections.tcp.slice(0, 2).map(row => row.id)});
+  expect(closeSelection(rows, {...scope, narrowed: false, src: '10.0.0.7'})).toEqual({
+    ids: rows.map(row => row.id),
+    query: {type: 'tcp', src: '10.0.0.7', all: true}
+  });
+  expect(closeSelection(rows, {...scope, narrowed: false, truncated: true}).query).toBeUndefined();
+  expect(closeSelection(rows, {...scope, narrowed: false, bulkLimit: 1}).query).toBeUndefined();
 });
 
 it('prepares fallback flow links and exports only visible raw counters', () => {

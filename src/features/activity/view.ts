@@ -23,6 +23,8 @@ export function modeView(
     targetText: target || '—',
     writable,
     dirty: staged !== null && !sameMode(staged, current),
+    // Global mode needs a group to send everything to; without one there is nothing valid to write.
+    incomplete: shown.mode === 'global' && !target,
     status: t(configAvailable ? 'act.modeNeedsWrite' : 'act.modeUnavailable'),
     modes: (['rule', 'direct', 'global'] as const).map(mode => [mode, t(modeLabels[mode])] as [string, string]),
     targets: groups.map(group => ({id: group.name, label: group.name}))

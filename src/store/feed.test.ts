@@ -59,3 +59,32 @@ it('buffers events and status while hidden, then publishes one current snapshot'
   stop();
   expect(vi.getTimerCount()).toBe(0);
 });
+
+it('holds the published list while paused and shows what arrived meanwhile on resume', () => {
+  const feed = createFeed<{id: string}, {connected: boolean}>(2, {connected: false}, 'ignore');
+  const stop = feed.subscribe(vi.fn());
+  feed.append({id: 'first'});
+  vi.advanceTimersByTime(100);
+  feed.hold(true);
+  feed.append({id: 'second'});
+  feed.update({connected: true});
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'first'}]});
+  feed.append({id: 'third'});
+  feed.hold(false);
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().records).toEqual([{id: 'third'}, {id: 'second'}]);
+  stop();
+});
+
+it('clears the published list even while held', () => {
+  const feed = createFeed<{id: string}, {connected: boolean}>(2, {connected: false}, 'ignore');
+  const stop = feed.subscribe(vi.fn());
+  feed.append({id: 'first'});
+  vi.advanceTimersByTime(100);
+  feed.hold(true);
+  feed.clear();
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().records).toEqual([]);
+  stop();
+});

@@ -6,7 +6,17 @@ import {downloadFile, errorText, exportName, panelQuery, toast, useDebounced, us
 import {within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../types';
-import {columns, readView, viewKey, closeSelection, connectionsExport, connectionsView, connectionTableView, type ConnectionView} from './view';
+import {
+  columns,
+  readView,
+  viewKey,
+  closeSelection,
+  connectionsExport,
+  connectionsView,
+  connectionTableView,
+  type CloseSelection,
+  type ConnectionView
+} from './view';
 
 export function useConnections({go, query}: PageProps) {
   const t = useT();
@@ -35,7 +45,7 @@ export function useConnections({go, query}: PageProps) {
   const rule = q.get('rule') ?? 'all';
   const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
   const sel = q.get('id');
-  const [confirmed, setConfirmed] = useState<{ids: string[]} | null>(null);
+  const [confirmed, setConfirmed] = useState<CloseSelection | null>(null);
   useLinked(q.get('q'), value => setText(value ?? ''));
   const select = (id: string | null) => go('connections', within(query, {id}));
   const settledText = useDebounced(text, 300);
@@ -126,9 +136,25 @@ export function useConnections({go, query}: PageProps) {
     truncated: !!resource.data?.truncated,
     canClose,
     closeAll: {
-      confirmationText: t('conn.closeAllHelp', {n: confirmed?.ids.length ?? 0}),
+      confirmationText: confirmed?.query
+        ? t(
+            confirmed.query.type === 'all' ? 'conn.closeAllLive' : confirmed.query.type === 'tcp' ? 'conn.closeAllLiveTcp' : 'conn.closeAllLiveUdp',
+            src ? {n: confirmed.ids.length, src} : {n: confirmed.ids.length, src: t('conn.anySource')}
+          )
+        : t('conn.closeAllHelp', {n: confirmed?.ids.length ?? 0}),
       open: !!confirmed,
-      setOpen: (open: boolean) => setConfirmed(open ? closeSelection(shown) : null),
+      setOpen: (open: boolean) =>
+        setConfirmed(
+          open
+            ? closeSelection(shown, {
+                network,
+                src,
+                narrowed: out !== 'all' || rule !== 'all' || !!needle,
+                truncated: !!resource.data?.truncated,
+                bulkLimit: capabilities.data?.resources.connections.max_bulk_close
+              })
+            : null
+        ),
       disabled: !shown.length || !!closing.busy || text !== settledText,
       pending: closing.busy === 'all',
       run: () => void closeAll()

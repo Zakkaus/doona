@@ -133,7 +133,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
   );
 }
 
-function DnsLog({enabled, initialName}: {enabled: boolean; initialName: string}) {
+function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialName: string}) {
   const t = useT();
   const vm = useDnsLog(enabled, initialName);
   return (

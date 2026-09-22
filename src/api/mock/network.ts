@@ -160,14 +160,16 @@ export function createNetwork(
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
-      const records = dnsLogRecords(flows).filter(
+      const ring = dnsLogRecords(flows);
+      const records = ring.filter(
         r =>
           (!needle || r.question.name.toLowerCase().includes(needle)) &&
           (!query?.type || r.question.type === query.type) &&
           (!src || (r.src !== null && sourceIp(r.src) === src))
       );
       const result = logPage(records, {...query, limit: query?.limit ?? 200});
-      return {observed_at: new Date().toISOString(), total: result.total, next_cursor: result.next_cursor, records: result.items};
+      // total counts the ring before filters, as the contract defines it.
+      return {observed_at: new Date().toISOString(), total: ring.length, next_cursor: result.next_cursor, records: result.items};
     },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();

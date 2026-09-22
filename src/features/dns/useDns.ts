@@ -56,7 +56,8 @@ export function useDns({go, query}: PageProps) {
     setTab,
     tab: view.tabs.some(item => item.id === params.get('tab')) ? params.get('tab')! : (view.tabs[0]?.id ?? 'query'),
     filterDomain: params.get('domain') ?? '',
-    logEnabled: resources?.dns_log.available === true,
+    // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
+    logEnabled: resources?.dns_log.available,
     viewCache: () => setTab('cache', {domain: result?.domain ?? ''}),
     clearCacheFilter: () => go('dns', within(query, {tab: 'cache', domain: null}))
   };
@@ -96,7 +97,7 @@ export function useDnsCache(domain: string) {
   };
 }
 
-export function useDnsLog(enabled: boolean, initialName: string) {
+export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
@@ -107,14 +108,15 @@ export function useDnsLog(enabled: boolean, initialName: string) {
   const capabilities = useCapabilities();
   const filter = {name: useDebounced(name, 300), type, src: useDebounced(src, 300)};
   const key = JSON.stringify(filter);
-  const log = useDnsLogResource(filter, enabled);
-  const [older, setOlder] = useState<DnsLogList | null>(null);
+  const log = useDnsLogResource(filter, enabled === true);
+  // Older pages stay appended behind whatever the poll delivers next, so new resolutions keep arriving.
+  const [older, setOlder] = useState<DnsLogList[]>([]);
   const paging = useAction<'older'>({scope: key});
   useLinked(key, () => {
-    setOlder(null);
+    setOlder([]);
     paging.cancel();
   });
-  const data = older ?? log.data;
+  const data = useMemo(() => (log.data ? older.reduce(appendDnsLog, log.data) : undefined), [log.data, older]);
   const loadOlder = () =>
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
@@ -129,7 +131,7 @@ export function useDnsLog(enabled: boolean, initialName: string) {
         },
         signal
       );
-      if (!signal.aborted) setOlder(appendDnsLog(data, page));
+      if (!signal.aborted) setOlder(pages => [...pages, page]);
     });
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
@@ -153,7 +155,7 @@ export function useDnsLog(enabled: boolean, initialName: string) {
     loadOlder,
     refresh: () => {
       paging.cancel();
-      setOlder(null);
+      setOlder([]);
       log.refetch();
     },
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')

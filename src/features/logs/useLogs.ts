@@ -33,7 +33,8 @@ export function useLogs() {
     error: capabilities.error ?? feed.error,
     loading: !capabilities.error && !feed.error && !feed.connected && !feed.records.length,
     clear: feed.clear,
-    retry: feed.retry,
+    // A failed capabilities read is what blocks the page; otherwise the stream itself is reopened.
+    retry: capabilities.error ? capabilities.refetch : feed.retry,
     export: () => downloadFile(exportName(view.exportBase, 'txt'), logsExport(feed.records), 'text/plain;charset=utf-8')
   };
 }

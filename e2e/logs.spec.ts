@@ -13,8 +13,13 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   await page.route('**/api/v1/logs?*', async route => {
     const params = new URL(route.request().url()).searchParams;
     const levels = ['trace', 'debug', 'info', 'warn', 'error'];
+    // A resumed stream continues after the cursor the client sends, as a real backend would.
+    const after = Number(route.request().headers()['last-event-id']?.split(':')[1] ?? 0);
     const selected = records.filter(
-      record => levels.indexOf(record.level) >= levels.indexOf(params.get('level')!) && record.target.startsWith(params.get('target') ?? '')
+      record =>
+        Number(record.id.split(':')[1]) > after &&
+        levels.indexOf(record.level) >= levels.indexOf(params.get('level')!) &&
+        record.target.startsWith(params.get('target') ?? '')
     );
     await fulfillStream(route, [
       {id: 'ready:0', event: 'stream.ready', data},
@@ -35,13 +40,15 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   await page.getByRole('searchbox', {name: 'Module', exact: true}).fill('honk::dns');
   await expect(rows).toHaveText(['DNS slow']);
   await page.getByRole('switch', {name: 'Pause', exact: true}).press('Space');
-  records.push({id: 'log:4', level: 'warn', target: 'honk::dns', message: 'Ignored while paused'});
+  records.push({id: 'log:4', level: 'warn', target: 'honk::dns', message: 'Held while paused'});
   const before = sent;
   await expect.poll(() => sent).toBeGreaterThan(before);
+  // Paused freezes the list; what arrived meanwhile shows on resume rather than being lost.
   await expect(rows).toHaveText(['DNS slow']);
   await page.getByRole('switch', {name: 'Pause', exact: true}).press('Space');
-  records.splice(3, 1, {id: 'log:5', level: 'warn', target: 'honk::dns', message: 'Received after resume'});
-  await expect(rows).toHaveText(['Received after resume', 'DNS slow']);
+  await expect(rows).toHaveText(['Held while paused', 'DNS slow']);
+  records.push({id: 'log:5', level: 'warn', target: 'honk::dns', message: 'Received after resume'});
+  await expect(rows).toHaveText(['Received after resume', 'Held while paused', 'DNS slow']);
   await page.getByRole('switch', {name: 'Pause', exact: true}).press('Space');
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export', exact: true}).click();
@@ -49,6 +56,7 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   expect(download.suggestedFilename()).toMatch(/^honk-log-.*\.txt$/);
   expect((await downloadText(download)).trim().split('\n')).toEqual([
     `${runtime.observed_at} WARN  honk::dns DNS slow`,
+    `${runtime.observed_at} WARN  honk::dns Held while paused`,
     `${runtime.observed_at} WARN  honk::dns Received after resume`
   ]);
   await page.getByRole('button', {name: 'Clear', exact: true}).filter({hasText: 'Clear'}).click();

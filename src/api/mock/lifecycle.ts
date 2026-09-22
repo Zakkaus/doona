@@ -115,6 +115,7 @@ export function createLifecycle(
   async function logs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
     if (signal?.aborted) return;
     if (!logsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Logs are unavailable');
+    if (level && !logsCapability.levels?.includes(level)) throw new ApiError(400, 'invalid_request', `Level ${level} is not advertised`);
     const floor = level ? levels.indexOf(level) : 0;
     const emit = (record: LogRecord & {id: string}) => {
       if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target))) onRecord(structuredClone(record));
