@@ -5,9 +5,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_VERSION:=0.3.0~beta.1
+PKG_VERSION:=0.3.0_beta1
 PKG_RELEASE:=1
-# The release tag follows honk's shape: dots, no hyphen.
+# apk (OpenWrt 25 and later) only accepts _beta1-style pre-release versions; the tag keeps honk's dotted shape.
 PKG_TAG:=v0.3.0.beta.1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_TAG).tar.gz
