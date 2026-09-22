@@ -29,6 +29,7 @@ export interface MockLifecycle {
 }
 export function createLifecycle(
   logsCapability: Capabilities['resources']['logs'],
+  eventsCapability: Capabilities['resources']['events'],
   runtime: Pick<Runtime, 'observed_at' | 'last_reload'>,
   logSettings: () => RuntimeSettings['log'],
   revision: () => string
@@ -37,12 +38,46 @@ export function createLifecycle(
   let sequence = 0;
   const listeners = new Set<(event: ApiEvent) => void>();
   const history: ApiEvent[] = [];
+  const cursors = new Map<string, {stream: 'events' | 'logs'; filter: string; position: number; issued: number}>();
+  const cursorIds = new Map<string, string>();
+  const pruneCursors = () => {
+    while (history.length && Date.now() - Date.parse(history[0].data.observed_at) > eventsCapability.retention_seconds! * 1000) history.shift();
+    const eventFloor = history.length ? Number(history[0].id.split(':')[1]) - 1 : sequence;
+    const logFloor = logRing.length ? Number(logRing[0].id.split(':')[2]) - 1 : logSequence;
+    for (const [id, cursor] of cursors) {
+      if (
+        cursor.position < (cursor.stream === 'events' ? eventFloor : logFloor) ||
+        (cursor.stream === 'events' && Date.now() - cursor.issued > eventsCapability.retention_seconds! * 1000)
+      ) {
+        cursors.delete(id);
+        cursorIds.delete(JSON.stringify([cursor.stream, cursor.filter, cursor.position]));
+      }
+    }
+  };
+  const issueCursor = (stream: 'events' | 'logs', filter: string, position: number) => {
+    const key = JSON.stringify([stream, filter, position]);
+    const previous = cursorIds.get(key);
+    if (previous) return previous;
+    const id = crypto.randomUUID();
+    cursors.set(id, {stream, filter, position, issued: Date.now()});
+    cursorIds.set(key, id);
+    return id;
+  };
+  const resume = (id: string | undefined, stream: 'events' | 'logs', filter: string, baseline: number) => {
+    if (id === undefined) return baseline;
+    pruneCursors();
+    const cursor = cursors.get(id);
+    if (!cursor || cursor.stream !== stream || cursor.filter !== filter)
+      throw new ApiError(409, 'event_cursor_expired', 'The stream cursor cannot be replayed');
+    return cursor.position;
+  };
   let timer: ReturnType<typeof setInterval> | undefined;
   const eventData = () => ({instance_id: instanceId, observed_at: new Date().toISOString()});
   function publish(event: ApiEvent) {
     event.id = `${instanceId}:${++sequence}`;
     history.push(event);
-    if (history.length > 1024) history.shift();
+    if (history.length > eventsCapability.max_buffered_events!) history.shift();
+    pruneCursors();
     listeners.forEach(listener => listener(event));
   }
   function runtimeUpdated() {
@@ -96,6 +131,7 @@ export function createLifecycle(
   function trimLogs() {
     const limit = logSettings().buffered_records;
     if (logRing.length > limit) logRing.splice(0, logRing.length - limit);
+    pruneCursors();
   }
   const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null) => {
     const record = {id: `${instanceId}:logs:${++logSequence}`, ts: new Date().toISOString(), level, target, message, fields};
@@ -117,12 +153,18 @@ export function createLifecycle(
     if (!logsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Logs are unavailable');
     if (level && !logsCapability.levels?.includes(level)) throw new ApiError(400, 'invalid_request', `Level ${level} is not advertised`);
     const floor = level ? levels.indexOf(level) : 0;
+    const filter = JSON.stringify([level ?? null, target ?? null]);
     const emit = (record: LogRecord & {id: string}) => {
-      if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target))) onRecord(structuredClone(record));
+      if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target)))
+        onRecord({...structuredClone(record), id: issueCursor('logs', filter, Number(record.id.split(':')[2]))});
     };
-    const cursor = lastEventId?.startsWith(instanceId + ':logs:') ? Number(lastEventId.split(':')[2]) : 0;
+    const cursor = resume(lastEventId, 'logs', filter, 0);
     onConnectionChange?.(true);
     for (const record of logRing) if (Number(record.id.split(':')[2]) > cursor) emit(record);
+    if (signal?.aborted) {
+      onConnectionChange?.(false);
+      return;
+    }
     logListeners.add(emit);
     if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), 2500);
     await new Promise<void>(resolve => {
@@ -143,10 +185,13 @@ export function createLifecycle(
   }
   async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     if (signal?.aborted) return;
+    if (!eventsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Events are unavailable');
+    const filter = JSON.stringify([...new Set(kinds ?? [])].sort());
     const emit = (event: ApiEvent) => {
-      if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event)) onEvent(structuredClone(event));
+      if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event))
+        onEvent({...structuredClone(event), id: issueCursor('events', filter, Number(event.id.split(':')[1]))});
     };
-    const cursor = lastEventId?.startsWith(instanceId + ':') ? Number(lastEventId.split(':')[1]) : sequence;
+    const cursor = resume(lastEventId, 'events', filter, sequence);
     onConnectionChange?.(true);
     emit({id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
     for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);

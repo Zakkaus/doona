@@ -4,7 +4,7 @@ import {ApiError} from '../error';
 import * as fixtures from './fixtures/inventory';
 import {observedAt} from './fixtures/clock';
 import {found, createPager} from './common';
-import {patchGroupConfig, probeResult, resolveLeaf} from './control';
+import {patchGroupConfig, probeMembers, probeResult, resolveLeaf} from './control';
 import type {MockLifecycle} from './lifecycle';
 import {activateInventory, writeGroupConfig} from './activation';
 
@@ -155,6 +155,17 @@ export function createInventory(
     },
     startProbe: async (request, signal) => {
       signal?.throwIfAborted();
+      const probes = capabilities.resources.probes;
+      if (!probes.available) throw new ApiError(404, 'capability_not_supported', 'Probes are unavailable');
+      const versions = request.ip_version === 'any' ? (['ipv4', 'ipv6'] as const) : [request.ip_version];
+      if (
+        !probes.targets?.includes(request.target.type) ||
+        !probes.kinds?.includes(request.kind) ||
+        !probes.purposes?.includes(request.purpose) ||
+        request.transport.some(transport => !probes.transports?.includes(transport)) ||
+        versions.some(version => !probes.ip_versions?.includes(version))
+      )
+        throw new ApiError(422, 'unsupported_value', 'Probe dimensions are not advertised');
       const target = request.target;
       const group =
         target.type === 'group'
@@ -177,6 +188,10 @@ export function createInventory(
         throw new ApiError(422, 'unsupported_value', 'Unsupported probe dimensions');
       if (group && Array.isArray(request.members) && request.members.some(id => !group.members.some(m => m.id === id)))
         throw new ApiError(422, 'unsupported_value', 'Probe member is not in this group');
+      const members = probeMembers(request, nodes, groups).length;
+      const limits = probes.limits!;
+      if (members > limits.max_members_per_job || members * request.transport.length * versions.length > limits.max_results_per_job)
+        throw new ApiError(413, 'request_too_large', 'Probe exceeds the advertised member or result limit');
       const input = structuredClone(request);
       return enqueue('probe', () => probeResult(input, nodes, groups, new Date().toISOString()));
     },

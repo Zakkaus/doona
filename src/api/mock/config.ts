@@ -2,13 +2,13 @@ import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigVali
 import {ApiError} from '../error';
 import {sha256} from '../hash';
 import * as vocab from '../../dae/vocab';
-import {blockEntries, scanConfig, uncomment, type TextBlock} from '../../dae/text';
+import {blockEntries, scanConfig, uncomment, unquote, type TextBlock} from '../../dae/text';
 
 // `onDisk` is the text the digest and size describe when the served content is a redacted copy of it.
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};
 type Stored = ConfigSource & {content: string};
 
-const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response']);
+const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response', 'include']);
 const builtinOutbounds = new Set(vocab.builtinOutbounds);
 const globalKeys = new Set(vocab.globalKeys);
 
@@ -30,6 +30,20 @@ export function sectionLines(text: string, section: string, bare = false) {
       .map((raw, index) => ({code: uncomment(raw).trim(), raw, line: firstLine + index}));
   });
 }
+
+export function includePaths(text: string) {
+  return [
+    ...sectionLines(text, 'include')
+      .filter(({code}) => code)
+      .map(({code, line}) => ({path: unquote(code), line})),
+    ...sectionLines(text, 'routing', true).flatMap(({code, line}) => {
+      const match = /^include\s+(\S+)$/.exec(code);
+      return match ? [{path: unquote(match[1]), line}] : [];
+    })
+  ];
+}
+
+export const resolveIncludePath = (base: string | undefined, path: string) => new URL(path, new URL(base ?? '', 'file:///')).pathname;
 
 // Demo-only validation checks braces, sections, routing syntax, and outbound references.
 export function diagnose(sourceId: string, text: string, groups: Set<string>, mode: 'syntax' | 'full'): ConfigDiagnostic[] {
@@ -79,11 +93,40 @@ function groupsIn(text: string): Set<string> {
   );
 }
 
-export function validate(request: ConfigValidationRequest, generationId: string): ConfigValidationResult {
-  const ids = request.sources.map((source, index) => source.id ?? `source-${index + 1}`);
-  if (new Set(ids).size !== ids.length) throw new ApiError(400, 'invalid_request', 'Source IDs must be unique');
-  const main = request.sources[0]?.content ?? '';
-  const groups = request.mode === 'full' ? groupsIn(main) : new Set<string>();
-  const diagnostics = request.sources.flatMap((source, index) => diagnose(ids[index], source.content, groups, request.mode));
+export function validate(
+  request: ConfigValidationRequest,
+  generationId: string,
+  localSources: ConfigValidationRequest['sources'] = []
+): ConfigValidationResult {
+  const sources = request.sources.map((source, index) => ({...source, id: source.id ?? `source-${index + 1}`}));
+  if (new Set(sources.map(source => source.id)).size !== sources.length) throw new ApiError(400, 'invalid_request', 'Source IDs must be unique');
+  const diagnostics: ConfigDiagnostic[] = [];
+  if (request.mode === 'full') {
+    const byPath = new Map([...localSources, ...sources].filter(source => source.path).map(source => [resolveIncludePath(undefined, source.path!), source]));
+    const visited = new Set(sources.map(source => source.path && resolveIncludePath(undefined, source.path)));
+    for (let index = 0; index < sources.length; index++) {
+      const source = sources[index];
+      for (const {path, line} of includePaths(source.content)) {
+        const resolved = resolveIncludePath(source.path, path);
+        const dependency = byPath.get(resolved);
+        if (!dependency) {
+          diagnostics.push({
+            source_id: source.id,
+            line,
+            column: 1,
+            span: null,
+            level: 'error',
+            code: 'include_not_found',
+            message: `Include \"${path}\" cannot be resolved`
+          });
+        } else if (!visited.has(resolved)) {
+          visited.add(resolved);
+          sources.push({...dependency, id: dependency.id ?? `source-${sources.length + 1}`});
+        }
+      }
+    }
+  }
+  const groups = request.mode === 'full' ? new Set(sources.flatMap(source => [...groupsIn(source.content)])) : new Set<string>();
+  diagnostics.push(...sources.flatMap(source => diagnose(source.id, source.content, groups, request.mode)));
   return {valid: !diagnostics.some(item => item.level === 'error'), diagnostics, generation_id: generationId, validated_at: new Date().toISOString()};
 }

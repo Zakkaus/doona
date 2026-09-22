@@ -14,13 +14,7 @@ export function useAction<K extends string>({scope, rethrow = false}: {scope?: u
     setBusy(null);
     setError(null);
   }, []);
-  useEffect(
-    () => () => {
-      active.current?.abort();
-      active.current = null;
-    },
-    [api, scope]
-  );
+  useEffect(() => cancel, [api, scope, cancel]);
   const run = useCallback(
     async <T>(kind: K, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> => {
       if (active.current) return undefined;
@@ -60,13 +54,16 @@ export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRe
   const probes = capabilities?.resources.probes;
   if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
     return null;
+  const ipv4 = probes.ip_versions?.includes('ipv4');
+  const ipv6 = probes.ip_versions?.includes('ipv6');
+  if (!ipv4 && !ipv6) return null;
   const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
     target,
     kind: 'tcp_connect',
     purpose: 'data',
     transport: ['tcp'],
     warmth: 'warm',
-    ip_version: probes.ip_versions?.includes('ipv6') ? 'any' : 'ipv4'
+    ip_version: ipv4 && ipv6 ? 'any' : ipv6 ? 'ipv6' : 'ipv4'
   };
   if (target.type === 'group') request.members = 'direct';
   // The generated type reads the contract's `default: direct` as "always present"; the contract itself forbids

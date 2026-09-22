@@ -1,7 +1,13 @@
-import type {RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
+import type {Group, RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
 import {rules, type ConfigRule} from '../rules';
 import {runtime} from './runtime';
 import {ago, observedAt} from './clock';
+export const groupPolicies = {
+  proxy: {kind: 'selector', native: 'fixed(0)'},
+  resilient: {kind: 'urltest', native: 'min_avg10'},
+  gaming: {kind: 'urltest', native: 'min_last_delay'},
+  skylink: {kind: 'urltest', native: 'min_moving_avg'}
+} satisfies Record<string, Group['policy']>;
 // Runtime-setting defaults come from configuration; capability values provide their ceilings.
 export const runtimeSettings: RuntimeSettings = {
   observed_at: observedAt,
@@ -33,14 +39,14 @@ node {
   'hk-02': 'vless://demo@hk-02.example.net:443?security=tls#hk-02'
   'sg-01': 'trojan://demo@sg-01.example.net:443#sg-01'
   'jp-01': 'vless://demo@jp-01.example.net:443?security=tls#jp-01'
-  'us-01': 'trojan://demo@us-01.example.net:443#us-01'
+  'us-01': 'anytls://demo@us-01.example.net:443#us-01'
 }
 
 group {
-  proxy { policy: fixed(0) }
-  resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }
-  gaming { filter: name(jp-01, hk-02) policy: min_last_delay }
-  skylink { filter: subtag(sub-c) policy: min_moving_avg }
+  proxy { policy: ${groupPolicies.proxy.native} }
+  resilient { filter: name(hk-01, sg-01, us-01) policy: ${groupPolicies.resilient.native} }
+  gaming { filter: name(jp-01, hk-02) policy: ${groupPolicies.gaming.native} }
+  skylink { filter: subtag(sub-c) policy: ${groupPolicies.skylink.native} }
 }
 
 dns {

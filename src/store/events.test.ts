@@ -4,6 +4,7 @@ import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
 import {eventStatus, subscribeEvents} from './events';
 import {watchResource} from './resource';
+import type {EventOptions} from '../api/model';
 
 const disposers: Array<() => void> = [];
 beforeEach(() => {
@@ -82,4 +83,68 @@ it('starts from capabilities already loaded by a mounted consumer without anothe
   disposers.push(subscribeEvents(api, () => {}));
   expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
   expect(api.capabilities).toHaveBeenCalledTimes(1);
+});
+
+it('refreshes capabilities on generation and reconnect without replacing a healthy stream', async () => {
+  const api = createMockApi();
+  let options!: EventOptions;
+  api.subscribeEvents = vi.fn(async value => {
+    options = value;
+    value.onConnectionChange?.(true);
+    value.onEvent({id: 'ready', event: 'stream.ready', data: {instance_id: 'first', observed_at: ''}});
+  });
+  api.capabilities = vi.fn(async () => structuredClone(capabilities));
+  const resource = watchResource(api, {key: ['capabilities'], every: 0, followEvents: false, fetch: signal => api.capabilities(signal)}, () => {});
+  disposers.push(
+    resource.dispose,
+    subscribeEvents(api, () => {})
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  await resource.refetch();
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  expect(eventStatus(api).connected).toBe(true);
+  const changed = structuredClone(capabilities);
+  changed.resources.probes.limits!.max_members_per_job = 3;
+  vi.mocked(api.capabilities).mockResolvedValue(changed);
+  options.onEvent({
+    id: 'generation',
+    event: 'generation.changed',
+    data: {instance_id: 'first', observed_at: '', generation_id: 'new', previous_generation_id: 'old'}
+  });
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(resource.getSnapshot().data?.resources.probes.limits?.max_members_per_job).toBe(3);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  const replaced = structuredClone(changed);
+  replaced.resources.geodata.can_update = false;
+  vi.mocked(api.capabilities).mockResolvedValue(replaced);
+  options.onEvent({id: 'reconnected', event: 'stream.ready', data: {instance_id: 'second', observed_at: ''}});
+  await vi.advanceTimersByTimeAsync(0);
+  expect(resource.getSnapshot().data?.resources.geodata.can_update).toBe(false);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  const unavailable = structuredClone(replaced);
+  unavailable.resources.events.available = false;
+  vi.mocked(api.capabilities).mockResolvedValue(unavailable);
+  await resource.refetch();
+  expect(options.signal?.aborted).toBe(true);
+  expect(eventStatus(api)).toMatchObject({available: false, connected: false});
+});
+
+it('leaves history and connection polling on their own cadence under runtime heartbeats', async () => {
+  const api = createMockApi();
+  let options!: EventOptions;
+  api.subscribeEvents = async value => {
+    options = value;
+  };
+  const fetches = ['trafficHistory', 'memoryHistory', 'connections'].map(name => {
+    const fetch = vi.fn(async () => name);
+    const resource = watchResource(api, {key: [name as 'trafficHistory' | 'memoryHistory' | 'connections'], every: 5000, fetch}, () => {});
+    disposers.push(resource.dispose);
+    return fetch;
+  });
+  await vi.advanceTimersByTimeAsync(0);
+  for (let second = 0; second < 15; second++) {
+    options.onEvent({id: String(second), event: 'runtime.updated', data: {instance_id: 'first', observed_at: '', href: '/api/v1/runtime'}});
+    await vi.advanceTimersByTimeAsync(1000);
+  }
+  for (const fetch of fetches) expect(fetch).toHaveBeenCalledTimes(4);
 });

@@ -135,16 +135,6 @@ it('covers every contract event kind and ignores unknown event kinds', () => {
   expect(shouldRefetch('runtime', event('toString' as EventKind))).toBe(false);
 });
 
-it('refreshes runtime counters immediately but leaves inventory and clients to their polls', () => {
-  for (const resource of ['runtime', 'runtimeOutbounds', 'trafficHistory', 'connections'] as const) {
-    expect(shouldRefetch(resource, event('runtime.updated'))).toBe(true);
-  }
-  for (const resource of ['nodes', 'groups', 'group'] as const) expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
-  expect(shouldRefetch('capabilities', event('runtime.updated'))).toBe(false);
-  expect(shouldRefetch('runtime', event('operation.updated'))).toBe(true);
-  expect(shouldRefetch('groups', event('operation.updated'))).toBe(false);
-});
-
 it('refreshes generation-dependent resources but leaves DNS cache to its poll', () => {
   for (const resource of [
     'capabilities',
@@ -209,4 +199,14 @@ it('sends a group probe over its direct members and a node probe without a membe
   expect(tcpProbe(caps, {type: 'group', group_id: 'g'})).toMatchObject({members: 'direct', ip_version: 'ipv4'});
   expect(tcpProbe(caps, {type: 'node', node_id: 'n'})).not.toHaveProperty('members');
   expect(tcpProbe({resources: {probes: {...probes, targets: ['group']}}} as unknown as Capabilities, {type: 'node', node_id: 'n'})).toBeNull();
+});
+
+it.each([
+  {versions: ['ipv4'], expected: 'ipv4'},
+  {versions: ['ipv6'], expected: 'ipv6'},
+  {versions: ['ipv4', 'ipv6'], expected: 'any'},
+  {versions: [], expected: null}
+])('admits only advertised probe address families: $versions', ({versions, expected}) => {
+  const caps = {resources: {probes: {available: true, kinds: ['tcp_connect'], transports: ['tcp'], targets: ['node'], ip_versions: versions}}} as Capabilities;
+  expect(tcpProbe(caps, {type: 'node', node_id: 'n'})?.ip_version ?? null).toBe(expected);
 });

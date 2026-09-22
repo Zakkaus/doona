@@ -45,8 +45,20 @@ it.each(['generation_id', 'instance_id'] as const)('rejects a batch spanning dif
 });
 it('rejects oversized answer sets explicitly without silently omitting addresses', async () => {
   const api = createMockApi();
-  api.dnsQuery = vi.fn().mockResolvedValue(query(Array.from({length: 65}, (_, i) => `192.0.2.${i}`)));
+  const caps = await api.capabilities();
+  caps.resources.routing_trace.max_addresses = 1;
+  api.capabilities = vi.fn().mockResolvedValue(caps);
+  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '192.0.2.2']));
   api.routingTrace = vi.fn();
   await expect(routingTrace(api, request, new AbortController().signal)).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
   expect(api.routingTrace).not.toHaveBeenCalled();
+});
+
+it('uses a supplied capability limit without another discovery request', async () => {
+  const api = createMockApi();
+  api.capabilities = vi.fn();
+  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '192.0.2.2']));
+  const result = await routingTrace(api, {...request, maxAddresses: 2}, new AbortController().signal);
+  expect(result.evaluations.map(item => item.dst_ip)).toEqual(['192.0.2.1', '192.0.2.2']);
+  expect(api.capabilities).not.toHaveBeenCalled();
 });

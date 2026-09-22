@@ -40,8 +40,8 @@ export const capabilities: Capabilities = {
       transports: ['tcp', 'udp'],
       ip_versions: ['ipv4', 'ipv6'],
       limits: {
-        max_members_per_job: 1000,
-        max_results_per_job: 4000,
+        max_members_per_job: 64,
+        max_results_per_job: 256,
         max_active_jobs: 4,
         max_queued_jobs: 16,
         max_concurrent_per_target: 1,

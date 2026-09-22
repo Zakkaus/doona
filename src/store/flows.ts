@@ -7,10 +7,21 @@ import {useCapabilities} from './runtime';
 
 export async function routingTrace(
   api: Api,
-  {input, resolve, recordTypes}: Omit<RoutingTraceRequest, 'resolve'> & {resolve: RoutingTraceRequest['resolve'] | 'query'; recordTypes: string[]},
+  {
+    input,
+    resolve,
+    recordTypes,
+    maxAddresses
+  }: Omit<RoutingTraceRequest, 'resolve'> & {
+    resolve: RoutingTraceRequest['resolve'] | 'query';
+    recordTypes: string[];
+    maxAddresses?: number;
+  },
   signal: AbortSignal
 ): Promise<RoutingTraceResponse> {
   if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
+  const limit = maxAddresses ?? (await api.capabilities(signal)).resources.routing_trace.max_addresses;
+  if (limit === undefined) throw new ApiError(422, 'unsupported_value', 'Routing trace address limits are unavailable');
   const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
   const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
     lookup_id: `query:${item.type}`,
@@ -32,10 +43,12 @@ export async function routingTrace(
     error: null
   }));
   const addresses = [...new Set(dns.filter(item => item.qtype === 'A' || item.qtype === 'AAAA').flatMap(item => item.addresses))];
-  if (addresses.length > 64) throw new ApiError(422, 'unsupported_value', 'DNS returned more than 64 distinct addresses; narrow the query before simulating');
-  const traces = await Promise.all(
-    (addresses.length ? addresses : [null]).map(address => api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal))
-  );
+  if (addresses.length > limit)
+    throw new ApiError(422, 'unsupported_value', `DNS returned more than ${limit} distinct addresses; narrow the query before simulating`);
+  const traces: RoutingTraceResponse[] = [];
+  for (const address of addresses.length ? addresses : [null]) {
+    traces.push(await api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal));
+  }
   if (traces.some(trace => trace.instance_id !== traces[0].instance_id || trace.generation_id !== traces[0].generation_id))
     throw new ApiError(409, 'snapshot_unavailable', 'The routing generation changed during simulation; retry the query');
   return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
@@ -62,17 +75,20 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    {enabled}
+    {enabled: enabled && capabilities !== undefined}
   );
 }
 
 export function useFlow(id: string | null) {
   const api = getApi();
-  return useResource({
-    key: ['flow', {id}],
-    fetch: signal => (id ? api.flow(id, signal) : Promise.resolve(null)),
-    acceptEvent: event => event.event !== 'flow.updated' || event.data.resource_id === id
-  });
+  return useResource(
+    {
+      key: ['flow', {id}],
+      fetch: signal => (id ? api.flow(id, signal) : Promise.resolve(null)),
+      acceptEvent: event => event.event !== 'flow.updated' || event.data.resource_id === id
+    },
+    {enabled: id !== null}
+  );
 }
 export function useRules(enabled = true) {
   const api = getApi();

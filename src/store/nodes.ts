@@ -40,7 +40,7 @@ export function useProviders(enabled = true) {
           }
         )
     },
-    {enabled}
+    {enabled: enabled && capabilities !== undefined}
   );
 }
 export function useProviderRefresh(refetch: () => void) {
