@@ -123,6 +123,8 @@ export function useConnections({go, query}: PageProps) {
     sel,
     select,
     collection,
+    // The filtered connections the table shows, for the traffic chart.
+    records: shown,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {

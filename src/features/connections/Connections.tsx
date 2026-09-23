@@ -15,6 +15,7 @@ import {
   TextTooltip
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
@@ -98,6 +99,7 @@ export function Connections(props: PageProps) {
           {t('conn.export')}
         </Button>
       </div>
+      <Traffic records={vm.records} truncated={vm.truncated} onSelect={vm.select} />
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
           collection={vm.collection}
