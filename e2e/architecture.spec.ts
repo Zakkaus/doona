@@ -187,34 +187,19 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   await expect(dialog.getByRole('textbox', {name: 'Condition'})).toHaveValue('domain(example.org)');
 });
 
-for (const action of ['add', 'remove'] as const) {
-  test(`${action} refuses a shifted source even when its generation and digest are current`, async ({page}) => {
-    const api = await backend(page);
-    const config = await api.config();
-    const main = config.sources.find(source => source.kind === 'main')!;
-    main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
-    main.content_sha256 = await sha256(main.content);
-    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-    let validations = 0;
-    await page.route('**/api/v1/config/validate', async route => {
-      validations++;
-      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-    });
-    await page.goto('/#/rules?tab=list');
-    if (action === 'add') {
-      await page.getByRole('button', {name: 'Add rule', exact: true}).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('example.org');
-      await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-    } else {
-      await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
-      await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
-    }
-    await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
-    expect(validations).toBe(0);
-    await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
-  });
-}
+test('a source shifted since the rule list was read offers no rule edits', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
+  main.content_sha256 = await sha256(main.content);
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/rules?tab=list');
+  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  await expect(panel.getByRole('row').nth(1)).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+});
 
 test('routing map shows a failed rules request and retries it', async ({page}) => {
   await backend(page);

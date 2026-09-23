@@ -1,5 +1,5 @@
 import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
-import {scanConfig} from '../../dae/text';
+import {scanConfig, uncomment} from '../../dae/text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -28,6 +28,11 @@ export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: Retur
   if (!blocks.some(block => block.name === 'routing' && first.from > block.open && last.to <= block.close && first.depth === 1)) return null;
   const fallback = actual.length >= 3 && text.slice(first.from, first.to) === 'fallback' && text.slice(actual[1].from, actual[1].to) === ':';
   if ((rule.kind === 'fallback') !== fallback) return null;
+  // The line must still hold this rule: a source shifted since the list was read would otherwise edit its neighbour.
+  const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
+  const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
+  if (!arrow || bare(arrow.to, last.to) !== (rule.outbound + (rule.must ? '(must)' : '')).replace(/\s+/g, '')) return null;
+  if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== rule.expression.replace(/\s+/g, '')) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
   const to = newline === -1 ? text.length : newline + 1;
