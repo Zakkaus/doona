@@ -53,10 +53,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
           (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]')?.focus({preventScroll: true});
       }}
     >
-      <ResizableTableContainer
-        className="rp-table"
-        style={{height: fitted}}
-      >
+      <ResizableTableContainer className="rp-table" style={{height: fitted}}>
         <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
           <Table
             ref={element => {

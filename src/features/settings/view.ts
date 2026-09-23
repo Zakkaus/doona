@@ -84,12 +84,12 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
         : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
-export function geodataRows(assets: GeoData['assets'], locale: string) {
+export function geodataRows(assets: GeoData['assets'], locale: string, now = Date.now()) {
   return assets.map(asset => ({
     id: asset.kind,
     kind: asset.kind,
     size: formatBytes(asset.size_bytes),
-    modified: relativeStart(asset.modified_at, locale),
+    modified: relativeStart(asset.modified_at, locale, now),
     modifiedTitle: asset.modified_at ? localTime(asset.modified_at, locale) : undefined,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,

@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useT, type Translator} from '../../i18n';
-import {useDnsControl, useDnsLog} from '../../store';
+import {useDnsControl, useDnsLog, useNow} from '../../store';
 import {Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import type {DnsCacheList, DnsLogRecord} from '../../api/model';
 import {millis} from '../../api/u64';
@@ -121,7 +121,8 @@ function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCache
 // how many there are and how fresh, rather than how full.
 function CacheCard({cache, t, shareText}: {cache: DnsCacheList | undefined | null; t: Translator; shareText: (count: number, total: number) => string}) {
   const p = usePalette();
-  const state = useMemo(() => cacheState(cache ?? undefined), [cache]);
+  const now = useNow();
+  const state = useMemo(() => cacheState(cache ?? undefined, now), [cache, now]);
   return (
     <ChartCard title={t('dns.chart.cache')} note={state ? t('dns.chart.cacheNote', {n: state.total}) : undefined}>
       {cache === null ? (

@@ -140,7 +140,8 @@ export function connectionTableView(
   locale: string,
   names: OutboundNames,
   rulesListed: boolean,
-  t: LabelFn
+  t: LabelFn,
+  now = Date.now()
 ): ConnectionTableRow[] {
   const project = (c: Connection): ConnectionRowView => ({
     id: c.id,
@@ -151,7 +152,7 @@ export function connectionTableView(
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
     download: formatBytes(c.download_bytes),
-    age: relativeStart(c.started_at, locale)
+    age: relativeStart(c.started_at, locale, now)
   });
   return tableRows(rows, view, locale, t).map(row =>
     'connection' in row

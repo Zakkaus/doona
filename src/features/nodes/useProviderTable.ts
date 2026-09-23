@@ -1,6 +1,6 @@
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
-import {useProviderRefresh} from '../../store';
+import {useNow, useProviderRefresh} from '../../store';
 import {toast} from '../../ui/ui';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
@@ -25,11 +25,12 @@ type ProviderTableInput = {
 export function useProviderTable(input: ProviderTableInput) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const now = useNow();
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const fail = (error: unknown) => toast('negative', errorText(error, t));
   const rows = input.rows.map(item => ({
-    ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
+    ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t, now),
     refreshable: item.kind === 'subscription' && input.canRefresh,
     refreshing: refresh.busy === item.id,
     refreshDisabled: !!refresh.busy,

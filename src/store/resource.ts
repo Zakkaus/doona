@@ -6,6 +6,7 @@ import {ApiError} from '../api/error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../api/inflight';
 import {shouldRefetch} from '../api/invalidation';
 import {subscribeEvents} from './events';
+import {replaceEqualDeep} from './share';
 
 type RefreshOutcome = {key: string} & ({ok: true} | {ok: false; error: Error});
 type Resource<T> = {
@@ -49,6 +50,9 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
       snapshot: state,
       subscribers,
       watcher: createWatcher(api, resource, state.data, next => {
+        // An unchanged poll keeps the snapshot, so subscribers do not re-render.
+        const {data, loading, error} = shared.snapshot;
+        if (next.data === data && next.loading === loading && next.error === error) return;
         shared.snapshot = next;
         subscribers.forEach(fn => fn());
       })
@@ -153,7 +157,7 @@ function createWatcher<T>(
         request = undefined;
         retryAt = 0;
         recoveryDelay = 5000;
-        data = value;
+        data = replaceEqualDeep(data, value);
         failure = null;
         publish({data, loading: false, error: null});
         finish({key: name, ok: true});

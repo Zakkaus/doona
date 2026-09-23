@@ -273,7 +273,14 @@ type FlowDetailView = {
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
+export function flowRecordsView(
+  flows: FlowSummary[],
+  list: FlowList | undefined,
+  names: OutboundNames,
+  t: Translator,
+  lang: Lang,
+  now = Date.now()
+): FlowRecordsView {
   const locale = LOCALE[lang];
   return {
     rows: flows.map(flow => ({
@@ -285,7 +292,7 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: t(connectionStates[flow.state]),
-      started: relativeStart(flow.started_at, locale)
+      started: relativeStart(flow.started_at, locale, now)
     })),
     coverage: list ? coverageView(list, t, lang) : null,
     stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]
