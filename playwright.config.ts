@@ -1,5 +1,9 @@
 import {defineConfig, devices} from '@playwright/test';
 
+// WebKit needs the Ubuntu libraries Playwright installs with --with-deps; CI sets this, and elsewhere the official
+// Playwright image runs it.
+const webkit = process.env.DOONA_E2E_WEBKIT === '1';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -14,7 +18,20 @@ export default defineConfig({
   },
   projects: [
     {name: 'chromium', testIgnore: 'subpath.spec.ts', use: {...devices['Desktop Chrome']}},
-    {name: 'subpath', testMatch: 'subpath.spec.ts', use: {...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:4186'}}
+    {name: 'subpath', testMatch: 'subpath.spec.ts', use: {...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:4186'}},
+    ...(webkit
+      ? [
+          // Safari carries the installed iOS app: a smoke pass over navigation, drag and drop, dialogs and the keyboard.
+          // WebKit's request interception does not see what a service worker fetches, so the mock backend needs it
+          // blocked; the PWA spec, which is about the worker, runs with it.
+          {
+            name: 'webkit',
+            testMatch: ['routes.spec.ts', 'arrange.spec.ts', 'keyboard.spec.ts', 'mobile.spec.ts'],
+            use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
+          },
+          {name: 'webkit-pwa', testMatch: 'pwa.spec.ts', use: {...devices['Desktop Safari']}}
+        ]
+      : [])
   ],
   webServer: [
     {
