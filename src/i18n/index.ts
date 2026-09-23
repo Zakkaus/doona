@@ -27,9 +27,9 @@ export function readLang(storage?: Pick<Storage, 'getItem'>): Lang {
 }
 // Each language is its own chunk, loaded on first use; `translate` reads only what has loaded.
 const loaders: Record<Lang, () => Promise<{messages: Record<Key, Message>}>> = {
-  'zh-TW': () => import('./locales/zh-TW'),
-  // zh-CN prefers the SC glyph forms, so its faces arrive with its catalogue, before the page renders in it. Without
-  // them the TC faces still render the text.
+  // Each Chinese catalogue brings its ideograph faces, so they are declared before the page renders in it; a face
+  // stylesheet that fails to load leaves the text to the system font.
+  'zh-TW': () => Promise.all([import('./locales/zh-TW'), import('../fonts-tc.css').catch(() => undefined)]).then(([module]) => module),
   'zh-CN': () => Promise.all([import('./locales/zh-CN'), import('../fonts-sc.css').catch(() => undefined)]).then(([module]) => module),
   en: () => import('./locales/en')
 };

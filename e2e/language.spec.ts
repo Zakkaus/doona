@@ -100,6 +100,26 @@ test.describe('language loading', () => {
     expect(await scFaces()).toBeGreaterThan(0);
   });
 
+  test('declares the TC ideograph faces only once zh-TW is chosen, before the page renders in it', async ({page}) => {
+    await page.goto('/#/activity');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    // Counted in the same task that switches the language, before the browser paints it.
+    const latin = await page.evaluate(() => {
+      const html = document.documentElement;
+      const count = () => [...document.fonts].filter(face => face.family.replace(/["']/g, '') === 'Noto Sans TC').length;
+      new MutationObserver((_, observer) => {
+        if (html.lang !== 'zh-TW') return;
+        html.dataset.tcFaces = String(count());
+        observer.disconnect();
+      }).observe(html, {attributes: true, attributeFilter: ['lang']});
+      return count();
+    });
+    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+    expect(Number(await page.locator('html').getAttribute('data-tc-faces'))).toBeGreaterThan(latin + 50);
+  });
+
   test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {
     const family = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
     await page.goto('/#/activity');
