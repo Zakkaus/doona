@@ -24,6 +24,7 @@ export function Settings({query}: PageProps) {
     changeApi,
     token,
     changeToken,
+    demo,
     passwordMode,
     paired,
     invalidText,
@@ -108,7 +109,9 @@ export function Settings({query}: PageProps) {
             value={api}
             onChange={changeApi}
           />
-          {passwordMode ? (
+          {demo ? (
+            <p className="rp-label">{t('settings.demoToken')}</p>
+          ) : passwordMode ? (
             <p className="rp-label">{t('settings.passwordMode')}</p>
           ) : (
             <TextField

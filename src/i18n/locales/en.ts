@@ -900,6 +900,7 @@ export const messages = {
   'settings.api': 'Backend URL',
   'settings.apiHelp': 'Backend root or reverse-proxy prefix, not /api/v1. Leave empty or enter mock for built-in demo data.',
   'settings.invalidUrl': 'Enter http(s)://host[:port][/prefix] without credentials, a query, or a fragment, or enter mock.',
+  'settings.demoToken': 'Built-in demo data needs no token.',
   'settings.passwordMode': 'This backend signs in with a username and password, so no token is needed; sign out here once signed in.',
   'settings.token': 'Token',
   'settings.showToken': 'Show token',

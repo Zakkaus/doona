@@ -874,6 +874,7 @@ export const messages = {
   'settings.api': '后端网址',
   'settings.apiHelp': '填写后端的根网址或反向代理前缀，不是 /api/v1；留空或填写 mock 可使用内置演示数据。',
   'settings.invalidUrl': '请输入 http(s)://主机[:端口][/前缀] 或 mock。网址不能包含账号密码、查询参数或片段。',
+  'settings.demoToken': '内置演示数据不需要 Token。',
   'settings.passwordMode': '此后端使用账号和密码登录，不需要 Token；登录后可在此退出登录。',
   'settings.token': 'Token',
   'settings.showToken': '显示 Token',

@@ -873,6 +873,7 @@ export const messages = {
   'settings.api': '後端網址',
   'settings.apiHelp': '填寫後端的根網址或反向代理前綴，不是 /api/v1；留空或填入 mock 可使用內建示範資料。',
   'settings.invalidUrl': '請輸入 http(s)://主機[:連接埠][/前綴] 或 mock。網址不可含帳號密碼、查詢參數或片段。',
+  'settings.demoToken': '內建示範資料不需要 Token。',
   'settings.passwordMode': '此後端使用帳號與密碼登入，不需要 Token；登入後可在此登出。',
   'settings.token': 'Token',
   'settings.showToken': '顯示 Token',

@@ -3,7 +3,7 @@ import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../
 import type {Settings} from './preferences';
 import {useT} from '../i18n';
 import {toast} from '../ui/ui';
-import {duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
+import {accessError, duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
 import {errorText} from '../api/error';
 
 export const AboutContext = createContext<AboutView | null>(null);
@@ -13,7 +13,7 @@ export function useShell(settings: Settings, route: string): ShellModel {
   const capabilities = useCapabilities();
   const version = useVersion();
   const refusal = useCredentialRefusal();
-  const capabilityError = capabilities.error ?? refusal;
+  const capabilityError = accessError(capabilities.error, refusal);
   const [spinning, setSpinning] = useState(false);
   const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
