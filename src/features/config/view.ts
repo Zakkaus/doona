@@ -101,7 +101,7 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
     case 'routing': {
       const rules = t('config.moduleRules', {n: ruleCount(text, block, tokens)});
       const fallback = fields.find(field => field.name === 'fallback')?.value;
-      return fallback ? `${rules} · fallback: ${fallback}` : rules;
+      return fallback ? rules + t('ui.separator') + t('ui.valuePair', {label: 'fallback', value: fallback}) : rules;
     }
   }
 }
@@ -182,7 +182,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
   const kind = t(sourceKinds[source.kind]);
   return {
     id: source.id,
-    label: redacted(source) ? `${kind} · ${source.id.slice(0, 8)}` : source.path,
+    label: redacted(source) ? `${kind} ${source.id.slice(0, 8)}` : source.path,
     kind,
     editable: t(source.writable ? 'config.editable' : 'config.readOnly'),
     tone: source.writable ? ('ok' as const) : ('muted' as const),

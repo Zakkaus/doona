@@ -107,7 +107,7 @@ export function profileView(
       ? {
           text: t(result.key, result.params),
           role: result.error ? ('alert' as const) : ('status' as const),
-          request: result.requestId ? ` · request_id: ${result.requestId}` : '',
+          request: result.requestId ? t('ui.requestNote', {id: result.requestId}) : '',
           error: !!result.error
         }
       : null

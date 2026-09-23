@@ -210,7 +210,7 @@ export function connectionsView(
           id: current.id,
           title: current.domain || current.dst || current.id,
           tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
-          status: `${t(connectionStates[current.state])} · ${current.network.toUpperCase()}`,
+          status: t('ui.aside', {text: t(connectionStates[current.state]), note: current.network.toUpperCase()}),
           chain: chainLabel(current, t, names),
           outbound: outboundLabel(current.outbound, t),
           rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},

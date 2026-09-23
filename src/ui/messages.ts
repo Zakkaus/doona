@@ -2,6 +2,10 @@ import {defineMessages} from '../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'ui.separator': '，',
+    'ui.aside': '{text}（{note}）',
+    'ui.requestNote': '（request_id：{id}）',
+    'ui.apiVersion': '{name} v{major}（{status}）',
     'lifecycle.starting': '啟動中',
     'lifecycle.running': '運作中',
     'lifecycle.reloading': '重載中',
@@ -106,6 +110,10 @@ export const messages = defineMessages({
     'toast.showAllCount': '顯示全部（{n}）'
   },
   'zh-CN': {
+    'ui.separator': '，',
+    'ui.aside': '{text}（{note}）',
+    'ui.requestNote': '（request_id：{id}）',
+    'ui.apiVersion': '{name} v{major}（{status}）',
     'lifecycle.starting': '启动中',
     'lifecycle.running': '运行中',
     'lifecycle.reloading': '重载中',
@@ -210,6 +218,10 @@ export const messages = defineMessages({
     'toast.showAllCount': '显示全部（{n}）'
   },
   en: {
+    'ui.separator': ', ',
+    'ui.aside': '{text} ({note})',
+    'ui.requestNote': ' (request_id: {id})',
+    'ui.apiVersion': '{name} v{major} ({status})',
     'lifecycle.starting': 'Starting',
     'lifecycle.running': 'Running',
     'lifecycle.reloading': 'Reloading',

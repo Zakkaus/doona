@@ -117,7 +117,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     const alive = rnd() > 0.06;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    airport.push(node(region + ' ' + n + (tag ? ' · ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
+    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
   }
   if (airport.length) {
     nodes.push(...airport);

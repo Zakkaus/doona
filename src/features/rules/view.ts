@@ -277,7 +277,7 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
 export function traceStatusView(result: RoutingTraceResponse, t: Translator, lang: Lang): string {
   return (
     t('ui.valuePair', {label: t('rule.observed'), value: localTime(result.observed_at, LOCALE[lang])}) +
-    ' · ' +
+    t('ui.separator') +
     t('ui.valuePair', {label: t('ui.generation'), value: result.generation_id})
   );
 }

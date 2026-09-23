@@ -90,7 +90,7 @@ export function shellView(
   const org = import.meta.env.VITE_ENGINE_ORG;
   const engineText = version ? `${version.engine.name} ${version.engine.version}` : '—';
   const build = version?.build?.revision ? ` (${version.build.revision.slice(0, 12)})` : '';
-  const apiText = version ? `${version.api.name} v${version.api.major} · ${version.api.status}` : '—';
+  const apiText = version ? t('ui.apiVersion', {name: version.api.name, major: version.api.major, status: version.api.status}) : '—';
   const contractText = import.meta.env.VITE_DOONA_CONTRACT_COMMIT;
   const shortcuts = features.flatMap(item =>
     item.shortcut && item.nav && offered(item.path)

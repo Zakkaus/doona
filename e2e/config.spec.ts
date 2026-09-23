@@ -342,7 +342,7 @@ test('modules list top-level counts and edit only routing through reload', async
   );
   await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rule, 0 response rules');
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
-  await expect(routing).toContainText('5 rules · fallback: resilient');
+  await expect(routing).toContainText('5 rules, fallback: resilient');
   await routing.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = routing.locator('.cm-content');
   const section = await editor.innerText();
@@ -351,7 +351,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  await expect(routing).toContainText('6 rules · fallback: resilient');
+  await expect(routing).toContainText('6 rules, fallback: resilient');
   const expected = original.replace(section, edited);
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(expected);
   await page.getByRole('tab', {name: 'Sources', exact: true}).click();

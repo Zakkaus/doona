@@ -98,7 +98,7 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
           step.data.rules
             .filter(rule => rule.result === 'matched')
             .map(rule => rule.expression ?? rule.rule_id)
-            .join(' · ') || '—'
+            .join(', ') || '—'
         ],
         ['ui.outbound', text(step.data.outbound)],
         ['flow.f.must', yesNo(step.data.must)]
@@ -202,7 +202,7 @@ export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileVie
     const parts = [tile.name, ...(tile.badge ? [tile.badge] : []), ...tile.notes.map(note => note.text), t('flow.treeFlows', {n: tile.count})];
     if (from.length) parts.push(t('flow.treeFrom', {names: formatList(lang, from)}));
     if (to.length) parts.push(t('flow.treeTo', {names: formatList(lang, to)}));
-    return {...tile, countText: formatNumber(tile.count, LOCALE[lang]), label: parts.join(' · ')};
+    return {...tile, countText: formatNumber(tile.count, LOCALE[lang]), label: parts.join(t('ui.separator'))};
   });
 }
 

@@ -145,8 +145,8 @@ export function overviewView(
       fields: version
         ? ([
             [t('ov.f.engine'), version.engine.name + ' ' + version.engine.version],
-            [t('ov.f.api'), `${version.api.name} v${version.api.major} · ${version.api.status}`],
-            [t('ov.f.build'), [version.build?.revision, version.build?.target].filter(Boolean).join(' · ') || '—'],
+            [t('ov.f.api'), t('ui.apiVersion', {name: version.api.name, major: version.api.major, status: version.api.status})],
+            [t('ov.f.build'), [version.build?.revision, version.build?.target].filter(Boolean).join(t('ui.separator')) || '—'],
             [t('ov.f.instance'), runtime?.instance_id ?? '—'],
             [t('ov.f.started'), localTime(runtime?.lifecycle.started_at ?? null, locale)],
             [t('ov.f.activated'), localTime(runtime?.generation.activated_at ?? null, locale)]
