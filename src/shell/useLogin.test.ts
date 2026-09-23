@@ -22,8 +22,9 @@ it('updates only the challenged endpoint, preserving concurrent profile changes'
 it('checks credentials against the backend limits before any attempt, per field', () => {
   expect(credentialProblems('login', 'admin', 'correct horse battery', '')).toEqual({});
   expect(credentialProblems('login', 'ad min', 'short', '')).toEqual({username: 'login.badUsername', password: 'login.badPassword'});
-  // Twelve scalar values, not twelve UTF-16 units: an emoji counts once.
-  expect(credentialProblems('login', 'admin', '😀'.repeat(12), '')).toEqual({});
+  // Eight scalar values, not eight UTF-16 units: an emoji counts once.
+  expect(credentialProblems('login', 'admin', '😀'.repeat(8), '')).toEqual({});
+  expect(credentialProblems('login', 'admin', '😀'.repeat(7), '')).toEqual({password: 'login.badPassword'});
   expect(credentialProblems('setup', 'admin', 'correct horse battery', 'correct horse batterx')).toEqual({confirm: 'login.mismatch'});
 });
 

@@ -18,7 +18,7 @@ export function credentialProblems(kind: 'setup' | 'login', username: string, pa
   const problems: Partial<Record<Field, Key>> = {};
   if (!USERNAME.test(username)) problems.username = 'login.badUsername';
   const length = [...password].length;
-  if (length < 12 || length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.badPassword';
+  if (length < 8 || length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.badPassword';
   else if (kind === 'setup' && password !== confirm) problems.confirm = 'login.mismatch';
   return problems;
 }
