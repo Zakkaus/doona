@@ -26,6 +26,7 @@ export function Nodes(props: PageProps) {
     formValid,
     submit,
     pending,
+    submitting,
     submitLabel,
     groupHelp,
     groupNameError,
@@ -67,7 +68,7 @@ export function Nodes(props: PageProps) {
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent isDisabled={!formValid} isPending={pending} onPress={() => void submit(close)}>
+            <Button accent isDisabled={!formValid || submitting} isPending={pending} onPress={() => void submit(close)}>
               {submitLabel}
             </Button>
           </>
@@ -121,6 +122,7 @@ export function Nodes(props: PageProps) {
         onCancel={() => setDialog(null)}
         confirmLabel={submitLabel}
         isPending={pending}
+        isDisabled={submitting}
         error={problem}
         onConfirm={() => void submit(() => setDialog(null))}
       >

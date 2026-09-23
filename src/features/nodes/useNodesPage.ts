@@ -230,6 +230,8 @@ export function useNodesPage({go, query}: PageProps) {
     formValid,
     submit,
     pending: dialog !== null && pendingDialog === dialog,
+    // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.
+    submitting: pendingDialog !== null,
     submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
     // Only a name already typed is judged; an empty field is simply not ready.

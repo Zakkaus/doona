@@ -105,7 +105,11 @@ export function useDnsCacheTab(domain: string) {
     flushPending: dns.busy === 'flush',
     remove,
     flush,
-    abortFlush: dns.cancel
+    // The abandoned flush may still land, so the table is read again rather than left showing flushed entries.
+    abortFlush: () => {
+      dns.cancel();
+      dns.cache.refetch();
+    }
   };
 }
 

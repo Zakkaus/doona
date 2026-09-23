@@ -96,3 +96,27 @@ for (const way of ['Cancel', 'Escape'] as const) {
     await expect(page.locator('.rp-toast')).toHaveCount(0);
   });
 }
+
+test('Cancel on a pending flush reads the cache again, since the flush may already have landed', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries;
+  let flushed!: () => void;
+  const landed = new Promise<void>(resolve => (flushed = resolve));
+  handlers['POST dns/cache/flush'] = async () => {
+    const value = await api.flushDnsCache();
+    flushed();
+    await new Promise(() => {});
+    return value;
+  };
+  await page.goto('/#/dns?tab=cache');
+  const rows = page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader');
+  await expect(rows).toHaveCount(entries.length);
+  await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
+  await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  await landed;
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  // The cache polls every 15 s; the empty table must come from the read that Cancel starts.
+  await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
+});

@@ -130,11 +130,12 @@ export function useRuleList({go, query}: PageProps) {
     setConsumption({seed, consumed: true});
     initialize({kind: 'add'}, parsedSeed);
   }
-  // Cancel while a write is pending abandons it.
+  // Cancel while a write is pending abandons it; the write may still land, so the rules and sources are read again.
   const close = () => {
     if (pending.current) {
       editor.cancel();
       pending.current = false;
+      retry();
     }
     guard.clear();
     setDialog(null);

@@ -155,3 +155,26 @@ test('without a rule dictionary, Retry refetches the flows the distribution is b
   await expect(alert).toHaveCount(0);
   await expect(panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first()).toBeVisible();
 });
+
+test('Cancel on a rule write that has landed reads the sources again, so the next write starts from it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  // The page's polls of the accepted write never answer; only the backend finishes it.
+  await page.route('**/api/v1/operations/**', () => {});
+  await page.goto('/#/rules?tab=list');
+  const add = page.getByRole('button', {name: 'Add rule', exact: true});
+  const dialog = page.getByRole('dialog');
+  const write = async (value: string) => {
+    await add.click();
+    await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill(value);
+    const written = page.waitForResponse(response => response.request().method() === 'PUT');
+    await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+    return written;
+  };
+  const first = await write('example.org');
+  expect(first.status()).toBe(202);
+  const {operation_id} = await first.json();
+  await expect.poll(async () => (await api.operation(operation_id)).status).toBe('succeeded');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  expect((await write('example.net')).status()).toBe(202);
+});

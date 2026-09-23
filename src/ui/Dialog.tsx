@@ -94,8 +94,9 @@ export function ModalDialog({
 }
 
 // A dialog with Cancel and one action. While the action is pending the dialog stays open and the action button
-// waits; Cancel and Escape still work, and `onCancel` must then abandon the action, so a request that never answers
-// cannot hold the page. A failure shows inside the dialog, and a new `error.id` moves focus to it again.
+// waits; Cancel and Escape still work, and `onCancel` must then abandon the action or report its late result
+// elsewhere, so a request that never answers cannot hold the page. A failure shows inside the dialog, and a new
+// `error.id` moves focus to it again.
 export function ConfirmDialog({
   title,
   isOpen,
@@ -149,8 +150,8 @@ export function ConfirmDialog({
 }
 
 // A negative trigger button and its ConfirmDialog. `onConfirm` resolves to the failure to show, if any; the dialog
-// closes once it resolves without one. Cancel while it is pending calls `onAbort` and ignores the late result.
-// `open`/`setOpen` let a caller act when the dialog opens.
+// closes once it resolves without one. Cancel or unmounting while it is pending calls `onAbort` and ignores the late
+// result. `open`/`setOpen` let a caller act when the dialog opens.
 export function ConfirmButton({
   label,
   confirmationText,
@@ -177,21 +178,28 @@ export function ConfirmButton({
   // Counts failures so a repeated one still moves focus; `attempt` tells the current run from an abandoned one.
   const failures = useRef(0);
   const attempt = useRef(0);
+  // Set while a run is pending: invalidates it and calls the `onAbort` it started with.
+  const abandon = useRef<(() => void) | null>(null);
+  useEffect(() => () => abandon.current?.(), []);
   const isOpen = open ?? local;
   const change = (next: boolean) => {
     setError(null);
     (setOpen ?? setLocal)(next);
   };
   const cancel = () => {
-    if (running) {
-      attempt.current++;
+    if (abandon.current) {
+      abandon.current();
       setRunning(false);
-      onAbort?.();
     }
     change(false);
   };
   const confirm = async () => {
     const current = ++attempt.current;
+    abandon.current = () => {
+      abandon.current = null;
+      attempt.current++;
+      onAbort?.();
+    };
     setRunning(true);
     setError(null);
     let failure: string | null | undefined | void;
@@ -201,6 +209,7 @@ export function ConfirmButton({
       failure = errorText(reason, t);
     }
     if (current !== attempt.current) return;
+    abandon.current = null;
     setRunning(false);
     if (failure) setError({id: ++failures.current, text: failure});
     else change(false);
