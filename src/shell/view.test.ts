@@ -43,4 +43,6 @@ it('surfaces discovery failures and suppresses authentication only on the login 
   const auth = new ApiError(401, 'authentication_required', 'Token required');
   expect(shellView(settings, 'config', undefined, auth, undefined, versionError, t).error).toBe(versionError);
   expect(shellView(settings, 'settings', undefined, auth, undefined, null, t).error).toBe(auth);
+  // Before sign-in the version read is refused too; the login surface shows no error banner for it.
+  expect(shellView(settings, 'config', undefined, auth, undefined, auth, t).error).toBeNull();
 });

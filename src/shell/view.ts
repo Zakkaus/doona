@@ -78,7 +78,8 @@ export function shellView(
         : []
     )
   }));
-  const needsToken = capabilityError instanceof ApiError && (capabilityError.status === 401 || capabilityError.status === 403);
+  const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
+  const needsToken = refused(capabilityError);
   const content: ShellView['content'] =
     needsToken && feature.id !== 'settings'
       ? {kind: 'login', profileId: profile?.id ?? '', api: profile?.api ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
@@ -109,7 +110,8 @@ export function shellView(
     },
     content,
     busy: !capabilities && !capabilityError,
-    error: (content.kind === 'login' ? null : capabilityError) ?? versionError,
+    // The login surface explains a refused credential itself; the version read is refused the same way before sign-in.
+    error: content.kind === 'login' ? (refused(versionError) ? null : versionError) : (capabilityError ?? versionError),
     engine: {text: engineText, href: version ? `${org}/${version.engine.name}` : org},
     shortcuts,
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),
