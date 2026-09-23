@@ -35,6 +35,7 @@ const disabledState: ResourceState<never> = {data: undefined, loading: false, er
 // A page left and soon revisited shows what it had at once; after this long nobody is coming back, and a large list
 // is not worth holding.
 const keepInactive = 60000;
+const eventGap = 5000;
 
 export async function refetchAll(): Promise<RefreshOutcome[]> {
   return Promise.all([...(stores.get(getApi())?.active.values() ?? [])].map(entry => entry.watcher.refetch()));
@@ -130,9 +131,9 @@ function createWatcher<T>(
     timer = undefined;
     deadline = Infinity;
   };
-  // An event brings a fetch forward, but a polled resource still fetches at most once per interval, so a burst of
-  // events costs one request rather than one every two seconds.
-  const eventDue = () => Math.max(Date.now() + 2000, startedAt + every);
+  // An event brings a fetch forward, at most once per five seconds (or per interval, if shorter): a burst of flow
+  // events costs a few requests, and a configuration change still shows within seconds on a 30-second poll.
+  const eventDue = () => Math.max(Date.now() + 2000, startedAt + Math.min(every, eventGap));
   const schedule = (at: number) => {
     at = Math.max(at, retryAt);
     if (document.hidden) {

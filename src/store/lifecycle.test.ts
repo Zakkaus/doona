@@ -177,6 +177,22 @@ it('answers a burst of events with one fetch per poll interval', async () => {
   }
 });
 
+it('brings a slow poll forward within five seconds of an event, and no more often during a burst', async () => {
+  const resource = consumer(30000);
+  resource.response.resolve(version);
+  await vi.advanceTimersByTimeAsync(0);
+  resource.invalidate(false);
+  await vi.advanceTimersByTimeAsync(4999);
+  expect(resource.fetch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(resource.fetch).toHaveBeenCalledTimes(2);
+  for (let at = 0; at < 20000; at += 250) {
+    resource.invalidate(false);
+    await vi.advanceTimersByTimeAsync(250);
+  }
+  expect(resource.fetch).toHaveBeenCalledTimes(6);
+});
+
 it.each(['manual', 'reconnect'] as const)('%s refresh clears an armed invalidation and resets polling', async trigger => {
   const resource = consumer();
   resource.response.resolve(version);
