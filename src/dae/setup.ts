@@ -2,7 +2,8 @@ import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from '
 import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
-type Subscription = {name: string; url: string; raw?: string; section?: number; tag?: string};
+// `suffix` is an option written after the quoted URL, such as the user agent in `'https://…'(clash)`.
+type Subscription = {name: string; url: string; suffix?: string; raw?: string; section?: number; tag?: string};
 export type WizardState = {
   subscriptions: Subscription[];
   group: string | null;
@@ -44,8 +45,9 @@ export function readState(text: string): WizardState {
       const line = text.slice(entry.from, entry.to);
       const entryFields = fields.filter(field => field.from >= entry.from && field.to <= entry.to);
       const field = entry.block ? undefined : entryFields.length === 1 ? entryFields[0] : undefined;
-      const url = field ? unquote(field.value) : '';
-      if (field && isSubscriptionUrl(url)) subscriptions.push({name: field.name, url, raw: line, section});
+      const option = field && /^(['"])(.*)\1(\([^()]*\))$/.exec(field.value);
+      const url = option ? option[2] : field ? unquote(field.value) : '';
+      if (field && isSubscriptionUrl(url)) subscriptions.push({name: field.name, url, ...(option ? {suffix: option[3]} : {}), raw: line, section});
       else subscriptions.push({name: '', url: '', raw: line, section, ...(entry.block || field ? {tag: entry.block?.name ?? field!.name} : {})});
     }
   }
@@ -56,8 +58,9 @@ export function readState(text: string): WizardState {
 }
 
 function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(s => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}`), '}'];
+  return ['subscription {', ...state.subscriptions.map(subscriptionLine), '}'];
 }
+const subscriptionLine = (s: Subscription) => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}${s.suffix ?? ''}`;
 export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
   // The name as written: the templates must route to the group the file already has.
@@ -123,7 +126,7 @@ export function writeState(current: string, state: WizardState): string {
   const subscriptionSections = blocks.filter(block => block.name === 'subscription');
   for (const [section, block] of subscriptionSections.entries()) {
     const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
-    const body = subscriptions.map(item => item.raw ?? `  ${quoteName(item.name.trim())}: ${quote(item.url.trim())}`);
+    const body = subscriptions.map(subscriptionLine);
     if (body.join('\n') !== blockBody(current, block).join('\n')) {
       edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
     }

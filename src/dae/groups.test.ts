@@ -245,3 +245,20 @@ it('accepts only bare, unused names for a new group', () => {
   expect(groupNameProblem('hk auto', taken)).toBe('invalid');
   expect(groupNameProblem('', taken)).toBe('invalid');
 });
+
+it('keeps a comment inside a multi-line filter within that filter and the rest of the file unchanged', () => {
+  const before = 'group {\n  hk {\n';
+  const filter = 'name(a,\n      # keep\n      b)';
+  const after = '\n    policy: select\n  }\n}\n';
+  const source = `${before}    filter: ${filter}${after}`;
+  expect(readGroupEntries(source)[0].filters).toEqual([filter]);
+  expect(addNamesToGroup(source, 'hk', ['c'])).toBe(`${before}    filter: ${filter}\n    filter: name(c)${after}`);
+});
+
+it('edits a group in place and keeps its comments, other fields and the rest of the file byte-identical', () => {
+  const head = 'global {\n  lan_interface: br-lan\n}\n\ngroup {\n  hk {\n    # primary\n    check_url: x\n    filter: ';
+  const tail = '\n    # set by hand\n    policy: select # pick\n    final: direct\n  }\n}\n';
+  const source = `${head}name(a)${tail}`;
+  expect(writeGroupEntry(source, 'hk', {filters: ['name(b)', 'name(c)'], policy: 'select'})).toBe(`${head}name(b)\n    filter: name(c)${tail}`);
+  expect(writeGroupEntry(source, 'hk', {filters: ['name(a)'], policy: 'min'})).toBe(source.replace('policy: select', 'policy: min'));
+});

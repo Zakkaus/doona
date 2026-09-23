@@ -48,3 +48,13 @@ it('links basename-only sources only when the match is unique', () => {
   expect(sourceFor(sources, {...source, source_id: 'a'})?.id).toBe('a');
   expect(sourceFor(sources, {...source, source_id: 'missing'})).toBeUndefined();
 });
+
+it('removes a rule continued over several lines as a whole and leaves the rest byte-identical', () => {
+  const head = 'routing {\n  pname(a) -> direct\n';
+  const multi = '  domain(suffix: a.com,\n    # mirror\n    suffix: b.com) -> proxy # tail\n';
+  const tail = '  fallback: direct\n}\n';
+  const content = head + multi + tail;
+  const anchor = ruleAnchor({id: 'source', content} as ConfigSource, {...rule, source: {...rule.source!, line: 3}})!;
+  expect(removeRule(content, anchor)).toBe(head + tail);
+  expect(addRule(content, anchor, 'dip(a)', 'direct', false)).toBe(head + '  dip(a) -> direct\n' + multi + tail);
+});
