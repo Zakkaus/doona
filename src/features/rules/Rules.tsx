@@ -96,7 +96,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
             onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
             items={trace.modes}
           />
-          <Button accent className="rp-btn rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
+          <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
             {t('rule.run')}
           </Button>
         </div>

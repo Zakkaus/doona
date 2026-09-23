@@ -1,8 +1,8 @@
-import {useMemo, type ComponentProps, type ReactNode, useState} from 'react';
+import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {Table, ResizableTableContainer, TableBody, Row, Cell, Virtualizer, TableLayout} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Badge, DataTable, TextTooltip, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
-import {TableColumns, fitColumns, selectedRow, tableLayout, useTableReveal} from '../../ui/Table';
+import {TableColumns, fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from '../../ui/Table';
 import {columns, type ConnectionView, type ConnectionRowView, type ConnectionTableRow} from './view';
 
 type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
@@ -12,9 +12,6 @@ type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading'
 export function ConnectionTable({collection, view, loading, selected, onSelect, selectOnFocus, onSort}: Props) {
   const t = useT();
   const [ref, height] = useFillHeight<HTMLDivElement>(442);
-  // As in DataTable: once the box has shown its full height while loading, it keeps it.
-  const [reserved, setReserved] = useState(!!loading && !collection.length);
-  if (!reserved && loading && !collection.length) setReserved(true);
   const [gridRef, width] = useContentWidth<HTMLElement>();
   const definitions = useMemo(() => {
     const renderers: Record<string, (c: ConnectionRowView) => ReactNode> = {
@@ -35,6 +32,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
   }, [view.hidden, t]);
   const shown: TableColumn<ConnectionRowView>[] = useMemo(() => fitColumns(definitions, width), [definitions, width]);
   const flatRows = useMemo(() => collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children])), [collection]);
+  const fitted = useTableHeight(height, flatRows.length, loading);
   const groupKeys = useMemo(() => collection.filter(row => !('connection' in row)).map(row => row.id), [collection]);
   useTableReveal(selected ?? null, selected ? flatRows.findIndex(row => row?.id === selected) : -1, gridRef);
   const renderRow = (row: ConnectionRowView) => (
@@ -57,7 +55,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
     >
       <ResizableTableContainer
         className="rp-table"
-        style={{height: reserved ? height : Math.min(height, 2 + tableLayout.headingHeight + Math.max(flatRows.length, 2) * tableLayout.rowHeight)}}
+        style={{height: fitted}}
       >
         <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
           <Table

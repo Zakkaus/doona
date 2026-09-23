@@ -65,7 +65,7 @@ export const TopBar = memo(function TopBar({
       <About
         onHonk={honk}
         trigger={
-          <Button className="rp-brand" tip={t('about.title')}>
+          <Button appearance="plain" className="rp-brand" tip={t('about.title')}>
             <img src={logo} alt="" />
             <span className="rp-brand-text">
               <span>{wordmark}</span>
@@ -75,7 +75,7 @@ export const TopBar = memo(function TopBar({
         }
       />
       <div className="rp-search-wrap">
-        <Button className="rp-search" onPress={openSearch}>
+        <Button appearance="plain" className="rp-search" onPress={openSearch}>
           <Search />
           <span className="grow">{t('search')}</span>
           <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>

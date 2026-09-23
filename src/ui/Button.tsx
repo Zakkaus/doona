@@ -35,7 +35,9 @@ export function Button({
   type?: 'button' | 'submit' | 'reset';
   // The id of a form this button submits from outside it, such as a dialog footer.
   form?: string;
-  appearance?: 'select';
+  // `select` looks like a picker; `plain` has no base class, for a surface that draws itself (the brand, the search
+  // field). `className` is added to the base, never in place of it.
+  appearance?: 'select' | 'plain';
   className?: string;
 }) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
@@ -85,7 +87,8 @@ export function Button({
     <RButton
       ref={ref}
       className={cx(
-        className ?? (appearance ? `rp-${appearance}` : 'rp-btn'),
+        appearance === 'plain' ? undefined : appearance ? `rp-${appearance}` : 'rp-btn',
+        className,
         quiet && 'quiet',
         small && 'sm',
         icon && 'icon',

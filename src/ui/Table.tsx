@@ -109,6 +109,15 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
 
 // Heights match tables-forms.css: a row is a fixed 40px; the heading is 8px padding twice, a 20px line and a 1px border.
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
+// A table's height: its rows' height up to `height`, but a table that has shown its full height while loading keeps
+// it, since growing from two rows to full height, or shrinking back when few rows arrive, moves everything below it.
+export function useTableHeight(height: number, count: number, loading?: boolean) {
+  const [reserved, setReserved] = useState(!!loading && !count);
+  if (!reserved && loading && !count) setReserved(true);
+  // Include the border-box frame to avoid a two-pixel scroll on short tables.
+  const content = 2 + tableLayout.headingHeight + Math.max(count, 2) * tableLayout.rowHeight;
+  return reserved ? height : Math.min(height, content);
+}
 const virtualiseFrom = 40;
 // Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.
 export function DataTable<T extends {id: string}>({
@@ -150,14 +159,7 @@ export function DataTable<T extends {id: string}>({
   const keys: Selection = selected ? new Set([selected]) : new Set();
   const [ref, width] = useContentWidth<HTMLElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
-  // Include the border-box frame to avoid a two-pixel scroll on short tables.
-  const frame = 2;
-  // A table that has shown its full height while loading keeps it: growing from two rows to full height, or
-  // shrinking back when few rows arrive, moves everything below it on the page.
-  const [reserved, setReserved] = useState(loading && !rows.length);
-  if (!reserved && loading && !rows.length) setReserved(true);
-  const content = frame + tableLayout.headingHeight + Math.max(rows.length, 2) * tableLayout.rowHeight;
-  const fitted = reserved ? height : Math.min(height, content);
+  const fitted = useTableHeight(height, rows.length, loading);
   const [virtual, setVirtual] = useState(stream || rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;

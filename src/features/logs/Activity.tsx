@@ -58,7 +58,7 @@ export function LogActivity({
                 <Button
                   quiet
                   small
-                  className={row.level === minimum ? 'rp-btn current' : undefined}
+                  className={row.level === minimum ? 'current' : undefined}
                   label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
                   onPress={() => setMinimum(row.level)}
                 >
