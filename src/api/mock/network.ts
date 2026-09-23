@@ -25,7 +25,7 @@ function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
       // Enough variety for the analysis card: a cached negative answer, a no-such-name, a third upstream, slow tails.
       const missing = i % 13 === 5 || i % 13 === 4;
       const status = failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
-      const type = flow.network === 'udp' && i % 2 ? 'AAAA' : 'A';
+      const type = (flow.network === 'udp' && i % 2) || i % 5 === 2 ? 'AAAA' : i % 11 === 3 ? 'HTTPS' : 'A';
       const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
       return {
         id: 'dl-' + String(i + 1).padStart(6, '0'),

@@ -56,10 +56,11 @@ export function useDns({go, query}: PageProps) {
     queryError: error,
     submit: () => void submit(),
     setTab,
+    // A link that filters the log by domain opens the log, not the statistics.
     tab: pickTab(
       query,
       view.tabs.map(item => item.id),
-      view.tabs[0]?.id ?? 'query'
+      params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query')
     ),
     filterDomain: params.get('domain') ?? '',
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
@@ -144,8 +145,6 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,
-    // The records the table is built from, for the analysis card; never the formatted rows.
-    records: data?.records,
     detail,
     detailTitle: detail?.title ?? '',
     name,

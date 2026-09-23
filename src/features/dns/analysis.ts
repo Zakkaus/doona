@@ -1,5 +1,5 @@
 import type {DnsLogRecord} from '../../api/model';
-import {percentile} from '../../ui/charts/layout';
+import {percentile, timeBuckets} from '../../ui/charts/layout';
 
 // Mutually exclusive outcomes: a cache hit counts as that whatever its status, then uncached records by status.
 export const dnsOutcomes = ['cached', 'answered', 'nxdomain', 'failed'] as const;
@@ -35,6 +35,24 @@ export function dnsAnalysis(records: DnsLogRecord[]) {
   upstreams.sort((a, b) => b.samples.length - a.samples.length || a.upstream.localeCompare(b.upstream));
   const uncached = records.length - counts.cached;
   return {
+    domains: ranked(
+      records.map(record => record.question.name.replace(/\.$/, '')),
+      10
+    ),
+    // A record without a source was asked by the resolver itself.
+    clients: ranked(
+      records.map(record => (record.src === null ? null : clientAddress(record.src))),
+      10
+    ),
+    types: ranked(
+      records.map(record => record.question.type),
+      Infinity
+    ),
+    routes: ranked(
+      records.map(record => record.route.rule ?? record.route.source),
+      8
+    ),
+    timeline: outcomeTimeline(records),
     total: records.length,
     counts,
     uncached,
@@ -48,3 +66,35 @@ export function dnsAnalysis(records: DnsLogRecord[]) {
   };
 }
 export type DnsAnalysis = ReturnType<typeof dnsAnalysis>;
+
+// Counts by key, largest first then by name, keeping the first `limit` and the total of the rest.
+export function ranked<K extends string | null>(keys: K[], limit: number): {top: Array<{key: K; count: number}>; rest: number} {
+  const counts = new Map<K, number>();
+  for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1);
+  // Ties go by code point, the same in every language; a missing key (null) comes last.
+  const order = (a: K, b: K) => (a === b ? 0 : a === null ? 1 : b === null ? -1 : a < b ? -1 : 1);
+  const all = [...counts].map(([key, count]) => ({key, count})).sort((a, b) => b.count - a.count || order(a.key, b.key));
+  return {top: all.slice(0, limit), rest: all.slice(limit).reduce((sum, item) => sum + item.count, 0)};
+}
+// The client's address without its port; IPv6 stays in its brackets.
+export const clientAddress = (src: string) => src.replace(/:\d+$/, '');
+
+// Outcomes per time bucket over the span the records cover.
+export function outcomeTimeline(records: DnsLogRecord[], room = 24) {
+  const times = records.map(record => Date.parse(record.observed_at)).filter(Number.isFinite);
+  if (!times.length)
+    return {
+      buckets: [] as number[],
+      width: 0,
+      counts: Object.fromEntries(dnsOutcomes.map(outcome => [outcome, [] as number[]])) as Record<DnsOutcome, number[]>
+    };
+  const buckets = timeBuckets(Math.min(...times), Math.max(...times), room);
+  const width = buckets.length > 1 ? buckets[1] - buckets[0] : 60000;
+  const counts = Object.fromEntries(dnsOutcomes.map(outcome => [outcome, new Array<number>(buckets.length).fill(0)])) as Record<DnsOutcome, number[]>;
+  for (const record of records) {
+    const time = Date.parse(record.observed_at);
+    if (!Number.isFinite(time)) continue;
+    counts[outcomeOf(record)][Math.min(buckets.length - 1, Math.floor((time - buckets[0]) / width))]++;
+  }
+  return {buckets, width, counts};
+}
