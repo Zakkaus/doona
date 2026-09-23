@@ -37,7 +37,7 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases); until the first tag, build them yourself as described under [Development](#development). Verify and extract the files into the directory the engine or web server will serve:
 
 ```sh
-VERSION=v0.1.0-beta.1  # replace with the downloaded release tag
+VERSION=v0.1.0-beta.2  # replace with the downloaded release tag
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona

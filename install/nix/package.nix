@@ -16,13 +16,12 @@ let
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doona";
-  version = "0.1.0-beta.1";
+  version = "0.1.0-beta.2";
 
   src = fetchFromGitHub {
     owner = "Zakkaus";
     repo = "doona";
-    # The release tag follows honk's shape: dots, no hyphen.
-    tag = "v${lib.replaceStrings [ "-" ] [ "." ] finalAttrs.version}";
+    tag = "v${finalAttrs.version}";
     hash = lib.fakeHash; # Placeholder: replace with the published tag's source hash.
   };
 

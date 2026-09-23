@@ -17,21 +17,20 @@ none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild c
 `ebuild … manifest`, and Nix needs the source hash from `nix-prefetch-github` and the dependency hash from the
 first build's mismatch message.
 
-Version spellings differ by packager and are all derived from the same tag: nfpm takes `0.1.0~beta.1` so deb,
-rpm and its ipk sort before the release; the OpenWrt feed Makefile, the APKBUILD and the ebuild use `0.1.0_beta1`, the
-only pre-release form apk and Portage accept (OpenWrt 25 and later build apk packages from the same Makefile that builds
-ipk on 24.10).
+The package recipes use tag `v0.1.0-beta.2`. nfpm receives `VERSION=0.1.0` and
+`PRERELEASE=beta.2`, yielding `0.1.0~beta.2` for deb and rpm. OpenWrt, Alpine and
+Gentoo use `0.1.0_beta2` for their package version and download the same tag.
 
-The binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
+The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
 installed and removed in its target root filesystem (Debian 13, Fedora 42, openSUSE Tumbleweed, Arch, OpenWrt 24.10
 and 25.12, Alpine 3.22), and the ebuild through `pkgcheck scan` and `emerge` in both USE states on an amd64 Gentoo host (`~arm64` is
-keyworded untested; the overlay's CI installs it). Only the hashes changed between that run and a tag.
+keyworded untested; the overlay's CI installs it). The recipes need new release hashes before submission.
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
-under the subject `net-proxy/doona: new package, add 0.1.0_beta1`, keep the `Manifest` in the same commit, and add
-a `.github/workflows/overlay.toml` entry in `category/package` order. The tag shape maps onto the ebuild version
-the way `dev-util/deepseek-harness` maps its pre-release tags:
+under the subject `net-proxy/doona: new package, add 0.1.0_beta2`, keep the `Manifest` in the same commit, and add
+a `.github/workflows/overlay.toml` entry in `category/package` order. The semver beta tag maps onto the
+ebuild's pre-release version with this overlay rule:
 
 ```toml
 ["net-proxy/doona"]
@@ -39,7 +38,7 @@ source = "github"
 github = "Zakkaus/doona"
 use_latest_release = true
 prefix = "v"
-from_pattern = '\.(alpha|beta|rc)\.(\d+)$'
+from_pattern = '-(alpha|beta|rc)\.(\d+)$'
 to_pattern = '_\1\2'
 github_account = "Zakkaus"
 ```
@@ -47,8 +46,8 @@ github_account = "Zakkaus"
 The nixpkgs expression names a `zakkaus` maintainer; nixpkgs wants that entry in `maintainers/maintainer-list.nix`
 as its own commit before the package.
 
-The release workflow runs `tools/package.sh --git-version`: tag `v0.1.0-beta.1` produces
-`doona-v0.1.0-beta.1.tar.gz` and `doona-fonts-v0.1.0-beta.1.tar.gz`, matching the binary recipes.
+The release workflow runs `tools/package.sh --git-version`: tag `v0.1.0-beta.2` produces
+`doona-v0.1.0-beta.2.tar.gz` and `doona-fonts-v0.1.0-beta.2.tar.gz`, matching the binary recipes.
 The program archive has `index.html`, assets and notices at its root. The separate font archive has a
 `fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.

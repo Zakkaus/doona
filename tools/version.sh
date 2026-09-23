@@ -1,15 +1,17 @@
 #!/bin/sh
-# The version fields behind a tag: v0.1.0 -> VERSION=0.1.0, PRERELEASE= ; v0.1.0.beta.2 -> VERSION=0.1.0,
-# PRERELEASE=beta.2, and NPM (the package.json form) 0.1.0-beta.2. The tag shape follows honk's.
+# A stable tag has no prerelease; v0.1.0-beta.2 yields VERSION=0.1.0 and PRERELEASE=beta.2.
 set -eu
-tag=${1:?usage: tools/version.sh vX.Y.Z[.pre.N]}
+tag=${1:?usage: tools/version.sh vX.Y.Z[-pre.N]}
+case "$tag" in
+    v*) ;;
+    *) echo "unexpected tag: $tag (want vX.Y.Z or vX.Y.Z-pre.N)" >&2; exit 1 ;;
+esac
 bare=${tag#v}
-# Three numbers, then nothing or a lower-case label and a number: v0.1.0, v0.1.0.beta.2.
-printf '%s\n' "$bare" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.[a-z]+\.[0-9]+)?$' || {
-    echo "unexpected tag: $tag (want vX.Y.Z or vX.Y.Z.label.N)" >&2
+printf '%s\n' "$bare" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$' || {
+    echo "unexpected tag: $tag (want vX.Y.Z or vX.Y.Z-pre.N)" >&2
     exit 1
 }
-version=$(printf '%s' "$bare" | cut -d. -f1-3)
+version=${bare%%-*}
 pre=${bare#"$version"}
-pre=${pre#.}
+pre=${pre#-}
 printf 'VERSION=%s\nPRERELEASE=%s\nNPM=%s\n' "$version" "$pre" "$version${pre:+-$pre}"

@@ -5,11 +5,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-# apk (OpenWrt 25 and later) accepts only _beta1-style pre-release versions; opkg sorts it after 0.1.0, as it does for netdiscover.
-PKG_VERSION:=0.1.0_beta1
+PKG_VERSION:=0.1.0_beta2
 PKG_RELEASE:=1
-# The release tag keeps honk's dotted shape.
-PKG_REAL_VERSION:=v0.1.0-beta.1
+PKG_REAL_VERSION:=v0.1.0-beta.2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
