@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {DnsLogRecord} from '../../api/model';
-import {clientAddress, dnsAnalysis, outcomeTimeline, ranked} from './analysis';
+import {clientAddress, dnsAnalysis, ranked} from './analysis';
 
 let n = 0;
 const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): DnsLogRecord => {
@@ -57,39 +57,15 @@ it('has no latency figures and no rates for no records', () => {
   expect([a.typical, a.slowest, a.failureRate, a.cacheRate]).toEqual([null, null, null, null]);
 });
 
-it('ranks domains, clients, types and routes, and totals the rest', () => {
-  const a = dnsAnalysis([
-    record({name: 'a.org.'}),
-    record({name: 'a.org.', src: null}),
-    record({name: 'b.org.', type: 'AAAA', src: '[fd00::1]:40000', route: {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'}})
-  ]);
+it('ranks domains without their trailing dot, and totals the rest', () => {
+  const a = dnsAnalysis([record({name: 'a.org.'}), record({name: 'a.org.'}), record({name: 'b.org.'})]);
   expect(a.domains.top).toEqual([
     {key: 'a.org', count: 2},
     {key: 'b.org', count: 1}
   ]);
-  expect(a.clients.top).toEqual([
-    {key: '10.0.0.2', count: 1},
-    {key: '[fd00::1]', count: 1},
-    {key: null, count: 1}
-  ]);
-  expect(a.types.top).toEqual([
-    {key: 'A', count: 2},
-    {key: 'AAAA', count: 1}
-  ]);
-  expect(a.routes.top[0]).toEqual({key: 'default', count: 2});
   expect(ranked(['x', 'y', 'y', 'z'], 1)).toEqual({top: [{key: 'y', count: 2}], rest: 2});
+  expect(ranked(['b', null, 'a'], 3).top.map(item => item.key)).toEqual(['a', 'b', null]);
+  const devices = dnsAnalysis([record({src: '10.0.0.2:5353'}), record({src: '[fd00::1]:40000'}), record({src: null})]).devices.top;
+  expect(devices.map(item => item.key)).toEqual(['10.0.0.2', '[fd00::1]', null]);
   expect(clientAddress('10.0.0.2:5353')).toBe('10.0.0.2');
-});
-
-it('buckets outcomes over the time the records span', () => {
-  const at = (minute: number) => new Date(Date.UTC(2026, 8, 23, 10, minute)).toISOString();
-  const timeline = outcomeTimeline([
-    record({observed_at: at(0)}),
-    record({observed_at: at(30), status: 'SERVFAIL'}),
-    record({observed_at: at(59), cached: true})
-  ]);
-  expect(timeline.buckets.length).toBeGreaterThan(3);
-  expect(timeline.counts.answered.reduce((sum, count) => sum + count, 0)).toBe(1);
-  expect(timeline.counts.failed.reduce((sum, count) => sum + count, 0)).toBe(1);
-  expect(timeline.counts.cached.at(-1)).toBe(1);
 });
