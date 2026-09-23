@@ -1,7 +1,7 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
-import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
+import {addU64, parseU64} from '../../api/u64';
 import {chainLabel, chainNames, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
-import {localTime} from '../../i18n/format';
+import {localTime, formatBytes, formatRate} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../../api/labels';
 import type {Key} from '../../i18n';
@@ -19,10 +19,10 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
     ['conn.f.domainSource', word(c.domain_source)],
     ['ui.process', c.pname ?? '—'],
     ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by],
-    ['ui.upload', formatBytes(c.upload_bytes)],
-    ['ui.download', formatBytes(c.download_bytes)],
-    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second)],
-    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second)],
+    ['ui.upload', formatBytes(c.upload_bytes, locale)],
+    ['ui.download', formatBytes(c.download_bytes, locale)],
+    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second, locale)],
+    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second, locale)],
     ['conn.f.started', localTime(c.started_at, locale)]
   ];
 }
@@ -141,7 +141,7 @@ export function connectionTableView(
     rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
-    download: formatBytes(c.download_bytes),
+    download: formatBytes(c.download_bytes, locale),
     startedAt: c.started_at
   });
   return tableRows(rows, view, locale, t).map(row =>
@@ -152,7 +152,7 @@ export function connectionTableView(
           group: row.group,
           children: row.children.map(project),
           label: t('conn.groupCount', {name: row.group, n: row.children.length}),
-          totals: {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})}
+          totals: {down: formatBytes(row.download, locale), state: t('conn.activeCount', {n: row.active})}
         }
   );
 }

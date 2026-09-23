@@ -1,11 +1,11 @@
+import {formatLatency} from '../../i18n/format';
 import {useMemo, useState} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {useNow} from '../../store';
 import {useDnsStatsTab} from './useDns';
 import {Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import type {DnsCacheList, DnsLogRecord} from '../../api/model';
-import {millis} from '../../api/u64';
-import {usePalette, Beeswarm, ChartCard, FactStrip, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
+import {usePalette, Beeswarm, ChartCard, FactStrip, LegendItem, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
 import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './analysis';
 import {cacheState} from './cache';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
@@ -37,7 +37,6 @@ function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCache
   const a = useMemo(() => dnsAnalysis(records), [records]);
   // Answered takes a category colour, since info and positive are both blue-green in some palettes.
   const colors: Record<DnsOutcome, string> = {cached: p.positive, answered: p.cat[2], nxdomain: p.notice, failed: p.negative};
-  const ms = (value: number) => t('ui.latency', {n: millis(value)});
   const percent = (share: number | null) => t('ui.percent', {n: share === null ? 0 : Math.round(share * 100)});
   // A share is never rounded to 0% or 100% when that would contradict a cell the waffle draws or leaves out.
   const shareText = (count: number, total: number) => {
@@ -48,13 +47,12 @@ function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCache
     id: sample.id,
     value: sample.value,
     color: colors[sample.outcome],
-    lines: [sample.name, ms(sample.value), t(labels[sample.outcome])]
+    lines: [sample.name, formatLatency(sample.value, t), t(labels[sample.outcome])]
   });
-  const dash = (value: number | null) => (value === null ? '—' : ms(value));
   if (a.total < 5) return <Empty>{t('dns.chart.tooFew')}</Empty>;
   const facts: ChartFact[] = [
-    {label: t('dns.chart.median'), value: dash(a.typical), icon: <SpeedFast />, tint: 'c1'},
-    {label: t('dns.chart.p95'), value: dash(a.slowest), icon: <Clock />, tint: 'c4'},
+    {label: t('dns.chart.median'), value: formatLatency(a.typical, t), icon: <SpeedFast />, tint: 'c1'},
+    {label: t('dns.chart.p95'), value: formatLatency(a.slowest, t), icon: <Clock />, tint: 'c4'},
     {label: t('dns.chart.cacheRate'), value: percent(a.cacheRate), icon: <Data />, tint: 'c2'},
     {label: t('dns.chart.failureRate'), value: percent(a.failureRate), icon: <AlertTriangle />, tint: 'c5', tone: a.counts.failed ? 'negative' : undefined}
   ];
@@ -70,31 +68,25 @@ function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCache
             marks={
               a.typical !== null && a.slowest !== null
                 ? [
-                    {value: a.typical, label: t('dns.chart.typical', {value: ms(a.typical)})},
-                    {value: a.slowest, label: t('dns.chart.slowest', {value: ms(a.slowest)})}
+                    {value: a.typical, label: t('dns.chart.typical', {value: formatLatency(a.typical, t)})},
+                    {value: a.slowest, label: t('dns.chart.slowest', {value: formatLatency(a.slowest, t)})}
                   ]
                 : []
             }
             rows={a.upstreams.map(row => ({
               id: row.upstream,
               label: row.upstream,
-              detail: t('dns.chart.upstream', {n: row.samples.length, median: ms(row.median)}),
+              detail: t('dns.chart.upstream', {n: row.samples.length, median: formatLatency(row.median, t)}),
               points: row.samples.map(point),
               mark: row.median
             }))}
-            fmt={ms}
+            fmt={value => formatLatency(value, t)}
           />
           <div className="rp-legend">
             {(['answered', 'nxdomain', 'failed'] as const).map(outcome => (
-              <span key={outcome} className="it">
-                <i className="sw" style={{background: colors[outcome]}} />
-                {t(labels[outcome])}
-              </span>
+              <LegendItem key={outcome} swatch={colors[outcome]} label={t(labels[outcome])} />
             ))}
-            <span className="it">
-              <i className="rp-median-key" aria-hidden="true" />
-              {t('dns.chart.medianKey')}
-            </span>
+            <LegendItem swatch={<i className="rp-median-key" aria-hidden="true" />} label={t('dns.chart.medianKey')} />
           </div>
         </ChartCard>
         <ChartCard title={t('dns.chart.outcomes')}>

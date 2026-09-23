@@ -2,7 +2,7 @@ import {expect, it, vi} from 'vitest';
 import {capabilities, datapath, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, lifecycleActions, memoryFields, overviewExport, overviewView} from './view';
-import {formatBytes} from '../../api/u64';
+import {formatBytes} from '../../i18n/format';
 const t: Translator = (key, params) => translate('en', key, params);
 const loading = {capabilities: false, runtime: false, version: false, memory: false, datapath: false};
 
@@ -68,7 +68,7 @@ it('retains each known cgroup measurement when the other is unknown', () => {
     t
   ).memory;
   expect(current.bar).toBeNull();
-  expect(current.fields).toContainEqual([t('ov.f.cgroupCurrent'), formatBytes('83886080')]);
+  expect(current.fields).toContainEqual([t('ov.f.cgroupCurrent'), formatBytes('83886080', 'en')]);
   expect(current.fields).toContainEqual([t('ov.f.cgroupLimit'), '—']);
   const limit = overviewView(
     {memory: {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: null, limit_bytes: '83886080'}}},
@@ -78,5 +78,5 @@ it('retains each known cgroup measurement when the other is unknown', () => {
   ).memory;
   expect(limit.bar).toBeNull();
   expect(limit.fields).toContainEqual([t('ov.f.cgroupCurrent'), '—']);
-  expect(limit.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('83886080')]);
+  expect(limit.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('83886080', 'en')]);
 });

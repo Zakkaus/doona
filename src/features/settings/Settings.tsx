@@ -1,6 +1,5 @@
-import {Menu, MenuSection, Header} from 'react-aria-components';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ConfirmDialog, TextField} from '../../ui/ui';
+import {Button, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -146,29 +145,12 @@ export function Settings({query}: PageProps) {
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           <div className="rp-field">
             <span className="lbl">{t('palette')}</span>
-            <MenuButton
+            <ChoiceMenu
               label={t('palette')}
-              content={
-                <Menu aria-label={t('palette')}>
-                  {paletteSections.map(section => (
-                    <MenuSection
-                      key={section.title}
-                      id={section.title}
-                      selectionMode="single"
-                      selectedKeys={[ap.palette]}
-                      onSelectionChange={pickMenuKey(value => ap.pickPalette(value as PaletteId))}
-                    >
-                      <Header className="rp-sec-h">{section.title}</Header>
-                      {section.items.map(item => (
-                        <MenuChoice key={item.id} item={item} />
-                      ))}
-                    </MenuSection>
-                  ))}
-                </Menu>
-              }
+              sections={paletteSections.map(section => ({...section, value: ap.palette, onChange: (value: string) => ap.pickPalette(value as PaletteId)}))}
             >
               {palette}
-            </MenuButton>
+            </ChoiceMenu>
           </div>
           <LabeledSelect
             label={t('settings.scheme')}

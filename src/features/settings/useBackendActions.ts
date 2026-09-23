@@ -121,7 +121,7 @@ export function useBackendActions() {
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: !!resources?.geodata.available,
-    rows: geodataRows(geodata.data?.assets ?? []),
+    rows: geodataRows(geodata.data?.assets ?? [], locale),
     update: () =>
       void geodata.update().then(result => {
         if (result) toast('positive', t('settings.geodataUpdated'));

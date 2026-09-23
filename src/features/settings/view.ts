@@ -1,5 +1,5 @@
+import {formatBytes} from '../../i18n/format';
 import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
-import {formatBytes} from '../../api/u64';
 import {formatNumber, type Params, type Translator} from '../../i18n';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
@@ -98,11 +98,11 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
         : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
-export function geodataRows(assets: GeoData['assets']) {
+export function geodataRows(assets: GeoData['assets'], locale: string) {
   return assets.map(asset => ({
     id: asset.kind,
     kind: asset.kind,
-    size: formatBytes(asset.size_bytes),
+    size: formatBytes(asset.size_bytes, locale),
     modifiedAt: asset.modified_at,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,

@@ -1,12 +1,13 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useCapabilities, useConnections} from '../../store';
-import {useT} from '../../i18n';
+import {LOCALE, useLang, useT} from '../../i18n';
 import {usePalette} from '../../ui/charts';
 import {activityRanking} from './view';
 
 // The poll runs only while the card is near the viewport; off screen it is paused and keeps its last list.
 export function useRankingCard() {
   const t = useT();
+  const locale = LOCALE[useLang()];
   const p = usePalette();
   const [by, setBy] = useState('dev');
   const available = useCapabilities().data?.resources.connections.available;
@@ -21,7 +22,7 @@ export function useRankingCard() {
   const [loaded, setLoaded] = useState(false);
   const connections = useConnections(undefined, available === true, !near && loaded);
   if (connections.data && !loaded) setLoaded(true);
-  const rows = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
+  const rows = useMemo(() => activityRanking(connections.data, by, p, locale, t), [connections.data, by, p, locale, t]);
   const state = connections.data ? (rows.length ? 'ready' : 'empty') : connections.error ? 'error' : available === true ? 'loading' : 'unavailable';
   return {
     ref,

@@ -1,5 +1,5 @@
 import {memo, useState} from 'react';
-import {Header, Menu, MenuSection, Separator} from 'react-aria-components';
+import {Separator} from 'react-aria-components';
 import {About} from './About';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
@@ -9,7 +9,7 @@ import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu, MenuButton, MenuChoice, pickMenuKey} from '../ui/ui';
+import {Button, ChoiceMenu} from '../ui/ui';
 import type {SettingsContext} from './preferences';
 import type {PaletteId, Wordmark} from './preferences';
 import type {AppearanceMenu, PaletteSection} from './view';
@@ -95,42 +95,17 @@ export const TopBar = memo(function TopBar({
         <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
           <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
         </ChoiceMenu>
-        <MenuButton
+        <ChoiceMenu
           quiet
           chevron={false}
           label={t('palette')}
-          content={
-            <Menu aria-label={t('palette')}>
-              {paletteSections.map(section => (
-                <MenuSection
-                  key={section.title}
-                  id={section.title}
-                  selectionMode="single"
-                  selectedKeys={[ap.palette]}
-                  onSelectionChange={pickMenuKey(k => ap.pickPalette(k as PaletteId))}
-                >
-                  <Header className="rp-sec-h">{section.title}</Header>
-                  {section.items.map(item => (
-                    <MenuChoice key={item.id} item={item} />
-                  ))}
-                </MenuSection>
-              ))}
-              <MenuSection
-                id="wordmark"
-                selectionMode="single"
-                selectedKeys={[ap.wordmark]}
-                onSelectionChange={pickMenuKey(k => ap.pickWordmark(k as Wordmark))}
-              >
-                <Header className="rp-sec-h">{t('wordmark')}</Header>
-                {menu.wordmarks.map(item => (
-                  <MenuChoice key={item.id} item={item} />
-                ))}
-              </MenuSection>
-            </Menu>
-          }
+          sections={[
+            ...paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)})),
+            {title: t('wordmark'), items: menu.wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)}
+          ]}
         >
           <Color key={ap.palette} className={ap.palette !== first.palette ? 'rp-icon-in' : undefined} />
-        </MenuButton>
+        </ChoiceMenu>
         <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
           <SchemeIcon dark={ap.dark} />
         </Button>

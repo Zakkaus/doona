@@ -110,7 +110,7 @@ test('idle traffic has distinct fractional rate labels', async ({page}) => {
   });
   await page.goto('/#/activity');
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  await expect(traffic.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['0.6 KB/s', '1.2 KB/s']);
+  await expect(traffic.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['600 B/s', '1.2 KB/s']);
 });
 
 test('charts are named and icon buttons show their tooltip on keyboard focus', async ({page}) => {

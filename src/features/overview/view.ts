@@ -1,8 +1,8 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n';
-import {formatDuration, localTime} from '../../i18n/format';
+import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {operationLabels, lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
-import {formatBytes, parseU64, pctU64} from '../../api/u64';
+import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
@@ -66,15 +66,15 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
     return parsed === null ? '—' : formatNumber(parsed, locale);
   };
   const rows: Array<[Key, string]> = [
-    ['ov.f.rss', formatBytes(memory.process?.rss_bytes ?? null)],
-    ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null)],
-    ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null)],
+    ['ov.f.rss', formatBytes(memory.process?.rss_bytes ?? null, locale)],
+    ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null, locale)],
+    ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null, locale)],
     // Distinguish service, shared, and unknown cgroups so shared usage is not attributed solely to the engine.
     ['ov.f.cgroupScope', memory.cgroup ? label(cgroupScopes[memory.cgroup.scope]) : '—'],
     ['ov.f.oomHigh', count(memory.cgroup?.events?.high)],
     ['ov.f.oom', count(memory.cgroup?.events?.oom)],
     ['ov.f.oomKill', count(memory.cgroup?.events?.oom_kill)],
-    ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null)]
+    ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null, locale)]
   ];
   return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
 }
@@ -161,8 +161,8 @@ export function overviewView(
             [t('ov.f.tcp'), count(runtime.traffic.connections.tcp)],
             [t('ov.f.udp'), count(runtime.traffic.connections.udp)],
             [t('ov.f.total'), count(runtime.traffic.connections.total)],
-            [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload)],
-            [t('ui.download'), formatBytes(runtime.traffic.bytes.download)],
+            [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload, locale)],
+            [t('ui.download'), formatBytes(runtime.traffic.bytes.download, locale)],
             [t('ov.f.rateWindow'), runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—']
           ] as Array<[string, string]>)
         : [],
@@ -181,7 +181,7 @@ export function overviewView(
           ? null
           : {
               label: t('ov.f.cgroupPercent'),
-              value: formatBytes(memory?.cgroup?.current_bytes ?? null) + ' / ' + formatBytes(memory?.cgroup?.limit_bytes ?? null),
+              value: formatBytes(memory?.cgroup?.current_bytes ?? null, locale) + ' / ' + formatBytes(memory?.cgroup?.limit_bytes ?? null, locale),
               pct: percent,
               tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const)
             }

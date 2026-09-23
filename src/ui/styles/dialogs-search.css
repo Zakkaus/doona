@@ -112,9 +112,7 @@
   overflow: auto;
   padding-inline-end: 12px;
 }
-.rp-section-h {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--rp-subtle);
+.rp-results .rp-sec-h {
+  /* Search results have no check column to align with. */
   padding: 8px 12px 4px;
 }

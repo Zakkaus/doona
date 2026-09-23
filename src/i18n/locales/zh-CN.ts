@@ -1165,8 +1165,6 @@ export const messages = {
   'ui.latency': '{n} ms',
   'ui.microseconds': '{n} μs',
   'ui.seconds': '{n} 秒',
-  'unit.mbPerSecond': '{n} MB/s',
-  'unit.kbPerSecond': '{n} KB/s',
   'ui.unavailable': '不可用',
   'ui.group': '组',
   'ui.current': '当前',

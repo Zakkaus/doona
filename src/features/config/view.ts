@@ -1,6 +1,5 @@
 import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
-import {formatBytes} from '../../api/u64';
-import {localTime} from '../../i18n/format';
+import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';
@@ -201,7 +200,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
     tone: source.writable ? ('ok' as const) : ('muted' as const),
     facts: t('config.sourceFacts', {
       lines: formatNumber(source.line_count, locale),
-      size: formatBytes(String(source.bytes)),
+      size: formatBytes(String(source.bytes), locale),
       time: localTime(source.loaded_at, locale)
     }),
     hasContent: source.content !== undefined

@@ -39,7 +39,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
         <ListBox aria-label={t('search')} className="rp-results" onAction={select}>
           {sections.map(section => (
             <ListBoxSection key={section.id} id={section.id}>
-              <Header className="rp-section-h">{section.title}</Header>
+              <Header className="rp-sec-h">{section.title}</Header>
               {section.items.map(item => (
                 <ListBoxItem key={item.id} id={item.id} className="rp-item plain" textValue={item.label}>
                   <span>{item.label}</span>

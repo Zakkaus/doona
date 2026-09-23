@@ -3,8 +3,8 @@ import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
 import {chainLabel, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
 import {word} from '../../../api/labels';
-import {localTime} from '../../../i18n/format';
-import {millis, parseU64} from '../../../api/u64';
+import {localTime, formatLatency} from '../../../i18n/format';
+import {parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
 import {policyKindLabels} from '../../../api/selectors';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
@@ -144,7 +144,7 @@ export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileVie
       name: unknown(node, node.label),
       notes:
         node.latency != null
-          ? [{text: t('ui.latency', {n: millis(node.latency)}), tone: latencyTone(node.latency)}]
+          ? [{text: formatLatency(node.latency, t), tone: latencyTone(node.latency)}]
           : node.unavailable
             ? [{text: t('ui.unavailable'), tone: 'err'}]
             : [],

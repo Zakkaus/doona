@@ -1,4 +1,4 @@
-import {Menu, MenuSection, Header} from 'react-aria-components';
+import {Menu} from 'react-aria-components';
 import {
   Badge,
   Button,
@@ -7,6 +7,7 @@ import {
   Kv,
   LabeledSelect,
   Light,
+  ChoiceMenu,
   MenuButton,
   MenuChoice,
   RuleRef,
@@ -35,24 +36,9 @@ export function Connections(props: PageProps) {
         <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} width={260} />
         <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
         <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
-        <MenuButton
-          quiet
-          label={t('conn.pick')}
-          content={
-            <Menu aria-label={t('conn.pick')} onAction={vm.pick}>
-              {vm.picks.map(section => (
-                <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[section.value]}>
-                  <Header className="rp-sec-h">{section.title}</Header>
-                  {section.items.map(item => (
-                    <MenuChoice key={item.id} item={item} />
-                  ))}
-                </MenuSection>
-              ))}
-            </Menu>
-          }
-        >
+        <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick}>
           {t('conn.pick')}
-        </MenuButton>
+        </ChoiceMenu>
         <LabeledSelect
           label={t('conn.group')}
           side

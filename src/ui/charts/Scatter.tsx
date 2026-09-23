@@ -1,4 +1,5 @@
 import {useChartDescription} from './description';
+import {LegendItem} from './ChartCard';
 import {useContentWidth} from '../hooks';
 import {ChartTip, useChartTip} from './tip';
 import {symlogAxis, symlogPosition} from './layout';
@@ -108,10 +109,7 @@ export function ScatterLegend({series}: {series: ScatterSeries[]}) {
   return (
     <div className="rp-legend">
       {series.map(s => (
-        <span key={s.id} className="it">
-          <i className="sw" style={{background: s.color}} />
-          {s.label} <b>{s.points.length}</b>
-        </span>
+        <LegendItem key={s.id} swatch={s.color} label={s.label} value={String(s.points.length)} />
       ))}
     </div>
   );

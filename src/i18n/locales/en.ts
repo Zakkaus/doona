@@ -1196,8 +1196,6 @@ export const messages = {
   'ui.latency': '{n} ms',
   'ui.microseconds': '{n} μs',
   'ui.seconds': '{n} s',
-  'unit.mbPerSecond': '{n} MB/s',
-  'unit.kbPerSecond': '{n} KB/s',
   'ui.unavailable': 'Unavailable',
   'ui.group': 'Group',
   'ui.current': 'Current',

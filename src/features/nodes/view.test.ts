@@ -4,7 +4,7 @@ import {readSubscriptions} from './subscriptions';
 import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
-import {formatBytes} from '../../api/u64';
+import {formatBytes} from '../../i18n/format';
 const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
 const t: Translator = (key, params) => translate('en', key, params);
 
@@ -153,7 +153,7 @@ it('projects node protocol, membership, measured zero and unavailable health', (
 
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {
   const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
-  expect(row.usage).toBe(formatBytes(1024n));
+  expect(row.usage).toBe(formatBytes(1024n, 'en'));
   expect(row.intervals.at(-1)).toEqual({id: '90', label: intervalText(90, 'en-US', t)});
   expect(intervalText(0, 'en-US', t)).toBe(t('nodes.manualOnly'));
   expect(intervalText(3600, 'en-US', t)).toBe(t('nodes.everyHours', {n: '1'}));

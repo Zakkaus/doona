@@ -20,7 +20,7 @@ it('validates numeric bounds and writes typed partial patches without losing sib
   expect(numericAccess['log.buffered_records'].read(runtimeSettings)).toBe(1024);
 });
 it('keeps full geodata digests in tooltips and handles absent provenance', () => {
-  const rows = geodataRows([{...geodata.assets[0], modified_at: null, source_redacted: null}]);
+  const rows = geodataRows([{...geodata.assets[0], modified_at: null, source_redacted: null}], 'en');
   expect(rows[0]).toMatchObject({sha: geodata.assets[0].sha256.slice(0, 12), shaTitle: geodata.assets[0].sha256, source: '—', modifiedAt: null});
 });
 it('distinguishes connection errors from successful status and falls back for unknown palettes', () => {

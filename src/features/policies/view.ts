@@ -1,8 +1,8 @@
+import {formatLatency} from '../../i18n/format';
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
 import {policyKindLabels, compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
 import {formatNumber, type Translator} from '../../i18n';
-import {millis} from '../../api/u64';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
 import type {PartialProbeError} from '../../store/groups';
@@ -71,7 +71,7 @@ const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpo
 function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
   if (member.kind === 'group') return {text: t('ui.group'), badge: true};
   const tcp = healthMillis(member.health);
-  if (tcp != null) return {text: t('ui.latency', {n: millis(tcp)}), tone: latencyTone(tcp)};
+  if (tcp != null) return {text: formatLatency(tcp, t), tone: latencyTone(tcp)};
   return member.health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err'} : {text: '—'};
 }
 export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>, t: Translator): MemberView[] {
@@ -95,7 +95,7 @@ export function menuViews(nodes: Array<{id?: string; name: string; label?: strin
     label: node.label ?? node.name,
     tcp: node.tcp,
     region: regionOf(node.name) ?? '—',
-    description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)}),
+    description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : formatLatency(node.tcp, t),
     className: node.alive === false ? 'desc err' : node.tcp === undefined ? 'desc' : `desc ${latencyTone(node.tcp)}`
   }));
   const groups = new Map<string, typeof items>();
