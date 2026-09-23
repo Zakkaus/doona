@@ -1,5 +1,5 @@
 /* Self-hosted Noto Sans TC and SC subsets (public/fonts, OFL) so every machine renders CJK the same way; the metric
-   overrides centre ideograph ink in controls (measured with tools/measure.mjs: |offset| <= 0.5 px).
+   overrides centre ideograph ink in controls.
    `optional` rather than `swap`: a subset that arrives after the first paint would re-measure every label and shift
    table columns sideways. The service worker caches each subset as it is fetched, so from the second visit the
    fonts are in place before the first paint and are used. Only the Latin, Cyrillic and Vietnamese faces are here,
