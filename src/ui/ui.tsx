@@ -4,7 +4,7 @@ export {exportName, downloadFile, csvLine} from './files';
 export {Button, TextTooltip, Link} from './Button';
 export {TextField, Switch, Segmented, Check} from './Fields';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey} from './Select';
-export {ModalDialog, DetailPanel, Disclosure, DisclosureGroup, Tabs} from './Dialog';
+export {ModalDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, DisclosureGroup, Tabs} from './Dialog';
 export {DataTable, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
 export {Empty, Loading, ErrorMessage, InlineAlert, toast, Toasts, Light, Badge, Bar, Kv} from './Feedback';

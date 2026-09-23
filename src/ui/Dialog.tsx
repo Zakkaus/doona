@@ -18,6 +18,8 @@ import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
 import {useT} from '../i18n';
 import {cx} from './cx';
+import {Button} from './Button';
+import {InlineAlert} from './Feedback';
 import {useSlider, useMediaQuery, panelQuery} from './hooks';
 
 export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
@@ -87,6 +89,120 @@ export function ModalDialog({
     </DialogTrigger>
   ) : (
     modal
+  );
+}
+
+// A dialog with Cancel and one action. While the action is pending it stays open and Cancel, Escape and the
+// underlay do nothing; a failure shows inside it, and a new `error.id` moves focus to it again.
+export function ConfirmDialog({
+  title,
+  isOpen,
+  onCancel,
+  confirmLabel,
+  onConfirm,
+  tone = 'negative',
+  isPending,
+  isDisabled,
+  error,
+  children
+}: {
+  title: string;
+  isOpen: boolean;
+  onCancel: () => void;
+  confirmLabel: string;
+  onConfirm: () => void;
+  tone?: 'negative' | 'accent';
+  isPending?: boolean;
+  isDisabled?: boolean;
+  error?: {id: number; text: string} | null;
+  children: ReactNode;
+}) {
+  const t = useT();
+  return (
+    <ModalDialog
+      title={title}
+      narrow
+      alert={tone === 'negative'}
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open && !isPending) onCancel();
+      }}
+      footer={() => (
+        <>
+          <Button isDisabled={isPending} onPress={onCancel}>
+            {t('ui.cancel')}
+          </Button>
+          <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </>
+      )}
+    >
+      {error && (
+        <InlineAlert key={error.id} takeFocus>
+          {error.text}
+        </InlineAlert>
+      )}
+      {children}
+    </ModalDialog>
+  );
+}
+
+// A negative trigger button and its ConfirmDialog. `onConfirm` resolves to the failure to show, if any; the dialog
+// closes once it resolves without one. `open`/`setOpen` let a caller act when the dialog opens.
+export function ConfirmButton({
+  label,
+  confirmationText,
+  isDisabled,
+  isPending,
+  onConfirm,
+  open,
+  setOpen
+}: {
+  label: string;
+  confirmationText: ReactNode;
+  isDisabled?: boolean;
+  isPending?: boolean;
+  onConfirm: () => Promise<string | null | undefined | void>;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+}) {
+  const [local, setLocal] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<{id: number; text: string} | null>(null);
+  const isOpen = open ?? local;
+  const change = (next: boolean) => {
+    setError(null);
+    (setOpen ?? setLocal)(next);
+  };
+  const confirm = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const failure = await onConfirm();
+      if (failure) setError(prev => ({id: (prev?.id ?? 0) + 1, text: failure}));
+      else change(false);
+    } finally {
+      setRunning(false);
+    }
+  };
+  return (
+    <>
+      <Button negative quiet isDisabled={isDisabled} isPending={isPending || running} onPress={() => change(true)}>
+        {label}
+      </Button>
+      <ConfirmDialog
+        title={label}
+        confirmLabel={label}
+        isOpen={isOpen}
+        isPending={running}
+        error={error}
+        onCancel={() => change(false)}
+        onConfirm={() => void confirm()}
+      >
+        <p>{confirmationText}</p>
+      </ConfirmDialog>
+    </>
   );
 }
 

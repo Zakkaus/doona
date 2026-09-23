@@ -6,7 +6,7 @@ import {
   DataTable,
   LabeledSelect,
   Light,
-  ModalDialog,
+  ConfirmDialog,
   Segmented,
   Switch,
   ErrorMessage,
@@ -106,30 +106,15 @@ function Dictionary({view}: {view: Model}) {
         empty={t('rule.dictionaryEmpty')}
         cols={columns}
       />
-      <ModalDialog
+      <ConfirmDialog
         title={view.dialogTitle}
-        narrow
-        alert={dialog?.kind === 'remove'}
         isOpen={dialog !== null}
-        onOpenChange={open => {
-          if (!open) view.close();
-        }}
-        footer={close => (
-          <>
-            <Button isDisabled={view.busy} onPress={close}>
-              {t('ui.cancel')}
-            </Button>
-            <Button
-              negative={dialog?.kind === 'remove'}
-              accent={dialog?.kind !== 'remove'}
-              isDisabled={view.submitDisabled}
-              isPending={view.busy}
-              onPress={() => void view.submit(close)}
-            >
-              {view.submitLabel}
-            </Button>
-          </>
-        )}
+        onCancel={view.close}
+        tone={dialog?.kind === 'remove' ? 'negative' : 'accent'}
+        confirmLabel={view.submitLabel}
+        isDisabled={view.submitDisabled}
+        isPending={view.busy}
+        onConfirm={() => void view.submit(view.close)}
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
@@ -204,7 +189,7 @@ function Dictionary({view}: {view: Model}) {
             />
           </div>
         )}
-      </ModalDialog>
+      </ConfirmDialog>
     </div>
   );
 }

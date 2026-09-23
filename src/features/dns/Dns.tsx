@@ -15,11 +15,11 @@ import {
   Tabs,
   TextField,
   DetailPanel,
+  ConfirmButton,
   Empty,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
-import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
 import {errorText} from '../../api/error';
@@ -148,7 +148,13 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           </Button>
         )}
         <span className="rp-grow" />
-        <FlushCacheButton confirmationText={vm.confirmationText} busy={vm.flushPending} isDisabled={vm.flushDisabled} onFlush={vm.flush} />
+        <ConfirmButton
+          label={t('dns.flushAll')}
+          confirmationText={vm.confirmationText}
+          isPending={vm.flushPending}
+          isDisabled={vm.flushPending || vm.flushDisabled}
+          onConfirm={vm.flush}
+        />
       </div>
       <DataTable label={t('ui.cache')} height={442} rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
     </>

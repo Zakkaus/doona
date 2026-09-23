@@ -2,6 +2,7 @@ import {Menu, MenuSection, Header} from 'react-aria-components';
 import {
   Badge,
   Button,
+  ConfirmButton,
   DetailPanel,
   Kv,
   LabeledSelect,
@@ -18,7 +19,6 @@ import {
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
-import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
@@ -94,7 +94,7 @@ export function Connections(props: PageProps) {
           </TextTooltip>
         )}
         <span className="rp-grow" />
-        {vm.canClose && <CloseAllButton {...vm.closeAll} />}
+        {vm.canClose && <ConfirmButton label={t('conn.closeAll')} {...vm.closeAll} />}
         <Button isDisabled={!vm.canExport} onPress={vm.export}>
           <Download />
           {t('conn.export')}

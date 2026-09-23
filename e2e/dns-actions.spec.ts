@@ -41,9 +41,34 @@ test('a failed cache flush preserves rows and reports failure', async ({page}) =
   const rows = page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader');
   await expect(rows).toHaveCount(entries.length);
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await page.getByRole('alertdialog').getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Cache is locked');
-  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+  const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
+  await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  // The failure stays in the open dialog, where the action was confirmed.
+  await expect(dialog.getByRole('alert')).toContainText('Cache is locked');
+  await expect(dialog.getByRole('alert')).toBeFocused();
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
   await expect(rows).toHaveText(entries.map(entry => entry.domain));
   expect(requests.filter(request => request.method() === 'POST')).toHaveLength(1);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('a confirmation stays open while its action is pending', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  handlers['POST dns/cache/flush'] = async () => {
+    await gate;
+    return api.flushDnsCache();
+  };
+  await page.goto('/#/dns?tab=cache');
+  await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
+  await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  await expect(dialog.getByRole('button', {name: 'Cancel', exact: true})).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  release();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('matched / deleted');
 });

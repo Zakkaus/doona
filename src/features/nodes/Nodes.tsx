@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -56,18 +56,18 @@ export function Nodes(props: PageProps) {
       ) : (
         list
       )}
+      {/* Adding leaves Cancel live while the write is pending: the controller drops a result that lands after it. */}
       <ModalDialog
         title={dialogTitle}
         narrow
-        alert={removing}
-        isOpen={dialog !== null}
+        isOpen={dialog !== null && !removing}
         onOpenChange={isOpen => {
           if (!isOpen) setDialog(null);
         }}
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent={!removing} negative={removing} isDisabled={!formValid} isPending={pending} onPress={() => void submit(close)}>
+            <Button accent isDisabled={!formValid} isPending={pending} onPress={() => void submit(close)}>
               {submitLabel}
             </Button>
           </>
@@ -114,9 +114,18 @@ export function Nodes(props: PageProps) {
             <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
           </div>
         )}
-        {dialog?.kind === 'removeProvider' && <span className="rp-label">{t('nodes.removeProviderHelp')}</span>}
-        {dialog?.kind === 'removeNode' && <span className="rp-label">{t('nodes.removeNodeHelp')}</span>}
       </ModalDialog>
+      <ConfirmDialog
+        title={dialogTitle}
+        isOpen={removing}
+        onCancel={() => setDialog(null)}
+        confirmLabel={submitLabel}
+        isPending={pending}
+        error={problem}
+        onConfirm={() => void submit(() => setDialog(null))}
+      >
+        <p>{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>
+      </ConfirmDialog>
     </div>
   );
 }

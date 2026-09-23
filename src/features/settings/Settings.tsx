@@ -1,6 +1,6 @@
 import {Menu, MenuSection, Header} from 'react-aria-components';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ConfirmDialog, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -204,47 +204,31 @@ export function Settings({query}: PageProps) {
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
         </div>
       </section>
-      <ModalDialog
+      <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={switchPending}
-        alert
-        narrow
-        onOpenChange={open => {
-          if (!open) cancelSwitch();
-        }}
-        footer={() => (
-          <>
-            <Button onPress={cancelSwitch}>{t('ui.cancel')}</Button>
-            <Button negative isDisabled={saving} onPress={confirmSwitch}>
-              {t('config.discard')}
-            </Button>
-          </>
-        )}
+        onCancel={cancelSwitch}
+        confirmLabel={t('config.discard')}
+        isPending={saving}
+        onConfirm={confirmSwitch}
       >
         <p>{t('settings.switchProfileHelp')}</p>
-      </ModalDialog>
+      </ConfirmDialog>
       {dialog && (
-        <ModalDialog
+        <ConfirmDialog
           title={dialogTitle}
           isOpen
-          narrow
-          alert={dialog === 'delete'}
-          onOpenChange={open => {
-            if (!open) setDialog(null);
-          }}
-          footer={() => (
-            <>
-              <Button onPress={() => setDialog(null)}>{t('ui.cancel')}</Button>
-              <Button accent={dialog !== 'delete'} negative={dialog === 'delete'} isDisabled={dialogBlocked} onPress={confirmProfile}>
-                {t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
-              </Button>
-            </>
-          )}
+          onCancel={() => setDialog(null)}
+          tone={dialog === 'delete' ? 'negative' : 'accent'}
+          confirmLabel={t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
+          isDisabled={dialogBlocked}
+          isPending={saving}
+          error={profile.result?.error ? {id: 0, text: profile.result.text} : null}
+          onConfirm={confirmProfile}
         >
           {dialog === 'delete' ? <p>{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
           {dialogDiscards && <p>{t('settings.profileDiscardHelp')}</p>}
-          {profile.result?.error && <p role="alert">{profile.result.text}</p>}
-        </ModalDialog>
+        </ConfirmDialog>
       )}
     </div>
   );

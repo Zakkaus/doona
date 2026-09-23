@@ -71,6 +71,8 @@ export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   failed: 'lifecycle.failed'
 };
 export const lifecycleTone = (state: Runtime['lifecycle']['state'] | undefined) => (state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn');
+// Nothing closed is a failure; some skipped (already gone or not closable) is worth a look.
+export const closedAllTone = (tally: {closed: number; skipped: number}) => (!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive');
 export const connectionStates: Record<Connection['state'], Key> = {
   observed: 'conn.state.observed',
   routing: 'conn.state.routing',

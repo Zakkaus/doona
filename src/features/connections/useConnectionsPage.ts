@@ -1,7 +1,7 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
-import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
+import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -117,9 +117,9 @@ export function useConnectionsPage({go, query}: PageProps) {
       const tally = await closing.closeAll(confirmed);
       if (!tally) return;
       select(null);
-      toast(tally.closed ? 'positive' : 'negative', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+      toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
     } catch (error) {
-      toast('negative', t('conn.closeFailed', {error: errorText(error, t)}));
+      return t('conn.closeFailed', {error: errorText(error, t)});
     }
   };
   const fallback = connectionsFallback(query);
@@ -190,9 +190,9 @@ export function useConnectionsPage({go, query}: PageProps) {
               })
             : null
         ),
-      disabled: !shown.length || !!closing.busy || text !== settledText,
-      pending: closing.busy === 'all',
-      run: () => void closeAll()
+      isDisabled: !shown.length || !!closing.busy || text !== settledText,
+      isPending: closing.busy === 'all',
+      onConfirm: closeAll
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
     showFlow: () => {

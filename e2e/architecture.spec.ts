@@ -133,7 +133,12 @@ for (const all of [false, true]) {
     } else await page.getByRole('button', {name: 'Close connection', exact: true}).click();
     await request;
     await expect(page).toHaveURL(/connections\?id=1$/);
-    await page.locator('.rp-nav[href="#/settings"]').click();
+    // A pending confirmation holds the page behind it, so bulk close leaves by address, as the back button would.
+    if (all)
+      await page.evaluate(() => {
+        location.hash = '#/settings';
+      });
+    else await page.locator('.rp-nav[href="#/settings"]').click();
     await expect(page.locator('[name=api]')).toBeVisible();
     release();
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

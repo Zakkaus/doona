@@ -1,8 +1,6 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
-import {CloseAllButton} from '../connections/CloseAll';
-import {FlushCacheButton} from '../dns/FlushCache';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './view';
 
@@ -62,7 +60,7 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.dns')}</span>
             <div className="rp-cluster">
-              <FlushCacheButton {...flush} />
+              <ConfirmButton label={t('dns.flushAll')} {...flush} />
             </div>
           </div>
         )}
@@ -83,7 +81,7 @@ export function BackendActionsCard() {
             <span className="rp-label">{t('nav.connections')}</span>
             <ErrorMessage error={connectionsError} onRetry={retryConnections} />
             <div className="rp-cluster">
-              <CloseAllButton {...closeAll} />
+              <ConfirmButton label={t('conn.closeAll')} {...closeAll} />
             </div>
           </div>
         )}

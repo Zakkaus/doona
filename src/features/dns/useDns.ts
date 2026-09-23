@@ -92,17 +92,17 @@ export function useDnsCacheTab(domain: string) {
       const result = await dns.flush();
       if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: errorText(error, t)}));
+      return t('dns.flushFailed', {error: errorText(error, t)});
     }
   };
   return {
     ...view,
-    // Delete and flush failures arrive as toasts, and the page above already reports the capabilities.
+    // Delete failures arrive as toasts, flush failures in its dialog, and the page above reports the capabilities.
     error: dns.cache.error,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
     remove,
-    flush: () => void flush()
+    flush
   };
 }
 

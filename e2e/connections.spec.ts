@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
@@ -470,6 +470,42 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
   await expect(page.locator('.rp-toast.positive')).toContainText('Closed 2, skipped 0');
   expect(deleted).toEqual(['first', 'second']);
   await expect(page.locator('[data-key="later"]')).toBeVisible();
+});
+
+test('close all reports skipped connections as information, as Settings does', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.connections.max_bulk_close = 1;
+  const list = await api.connections();
+  list.tcp = [
+    {...list.tcp[0], id: 'first'},
+    {...list.tcp[0], id: 'gone'}
+  ];
+  list.udp = [];
+  list.truncated = false;
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/runtime': await api.runtime(),
+    '/groups': await api.groups(),
+    '/nodes': await api.nodes()
+  };
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (route.request().method() === 'DELETE') {
+      if (path.endsWith('/gone')) return route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'Gone'}, request_id: 'e2e'}});
+      list.tcp = list.tcp.filter(row => row.id !== 'first');
+      return route.fulfill({status: 204});
+    }
+    return route.fulfill({json: path === '/connections' ? list : responses[path]});
+  });
+  expectLoadFailures(page, /\/connections\/gone$/);
+  await page.goto('/#/connections?tab=list');
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
+  await expect(page.locator('.rp-toast.info')).toContainText('Closed 1, skipped 1');
 });
 
 test('a hidden tab keeps its detail drawer closed when the window narrows', async ({page}) => {

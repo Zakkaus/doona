@@ -10,7 +10,7 @@ import {
   useRuntimeOperations
 } from '../../store';
 import {lifecycleActions} from '../overview/view';
-import {operationLabels} from '../../api/selectors';
+import {closedAllTone, operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
@@ -71,25 +71,32 @@ export function useBackendActions() {
       error => toast('negative', t('ov.operationError', {error: errorText(error, t)}))
     );
   const closeAll = () =>
-    void closing.closeAll({ids: [], query: {all: true}}).then(tally => {
-      if (tally) toast(!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
-    }, fail);
+    closing.closeAll({ids: [], query: {all: true}}).then(
+      tally => {
+        if (tally) toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+      },
+      error => t('conn.closeFailed', {error: errorText(error, t)})
+    );
   return {
     runtimeError: runtime.error,
     lifecycle: lifecycleActions(operations.canRun, operations.busy, runOperation, t),
     flush: {
       confirmationText: t('dns.flushConfirmAll'),
-      busy: flushing.busy,
-      onFlush: () =>
-        void flushing.flush().then(result => {
-          if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-        }, fail)
+      isPending: flushing.busy,
+      isDisabled: flushing.busy,
+      onConfirm: () =>
+        flushing.flush().then(
+          result => {
+            if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+          },
+          error => t('dns.flushFailed', {error: errorText(error, t)})
+        )
     },
     closeAll: {
       confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
-      disabled: !connectionsReady || !liveCount || !!closing.busy,
-      pending: closing.busy === 'all' || (connections.loading && !connections.data),
-      run: closeAll
+      isDisabled: !connectionsReady || !liveCount || !!closing.busy,
+      isPending: closing.busy === 'all' || (connections.loading && !connections.data),
+      onConfirm: closeAll
     },
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,
