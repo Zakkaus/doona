@@ -48,7 +48,9 @@ test('API requests bypass the worker even when a cached response exists', async 
   ).toBe('offline');
 });
 
-test('shell reloads offline and fonts and icons are cached on first use', async ({context}) => {
+test('shell reloads offline and fonts and icons are cached on first use', async ({context, browserName}) => {
+  // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
+  test.skip(browserName === 'webkit', 'offline navigation cannot be emulated in WebKit');
   const page = await context.newPage();
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));

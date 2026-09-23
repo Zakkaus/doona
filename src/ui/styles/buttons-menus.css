@@ -61,10 +61,10 @@
   transition-delay: 0ms;
 }
 .rp-seg .rp-btn[data-selected] {
-  /* The slider draws the selection; the button itself stays flat. */
+  /* The slider draws the selection; the label keeps the text colour, since accent or subtle text on the track
+     reads below 4.5:1 in some palettes. */
   background: transparent;
   border-color: transparent;
-  color: var(--rp-accent);
 }
 .rp-sec-h {
   font-size: 12px;

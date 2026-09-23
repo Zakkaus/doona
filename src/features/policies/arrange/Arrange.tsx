@@ -37,7 +37,7 @@ import {
 } from '../../../ui/ui';
 import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
-import type {GroupSummary, Node} from '../../../api/model';
+import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../config/mainSource';
 import {policyKindLabels} from '../view';
 import {newGroupPolicies} from '../policies';
@@ -48,9 +48,9 @@ import {PLACEABLE, useArrange} from './useArrange';
 type Model = ReturnType<typeof useArrange>;
 type Source = Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>;
 
-export function Arrange({source, nodes, groups}: {source: Source; nodes: Node[] | undefined; groups: GroupSummary[] | undefined}) {
+export function Arrange({source, groups}: {source: Source; groups: GroupSummary[] | undefined}) {
   const t = useT();
-  const m = useArrange(source, nodes);
+  const m = useArrange(source);
   // The live summary of each group, for the same header the Groups tab shows.
   const live = useMemo(() => new Map((groups ?? []).map(group => [group.name, group])), [groups]);
   if (m.error) return <ErrorMessage error={m.error} onRetry={m.retry} />;

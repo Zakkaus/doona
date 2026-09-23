@@ -193,7 +193,6 @@
   --rp-group: var(--rp-accent);
 }
 :root[data-family='glass'] .rp-nav[aria-current='page'] {
-  color: var(--rp-text);
   background: var(--rp-hl-high);
 }
 :root[data-family='glass'] .rp-nav-slider {
@@ -316,7 +315,6 @@
 :root[data-family='glass'] .rp-seg .rp-btn[data-hovered] {
   background: transparent;
 }
-:root[data-family='glass'] .rp-seg .rp-btn[data-selected],
 :root[data-family='glass'] .rp-tab[data-selected] {
   color: var(--rp-text);
 }

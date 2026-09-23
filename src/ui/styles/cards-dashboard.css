@@ -276,9 +276,11 @@
 .rp-nav > svg {
   color: var(--rp-group, currentColor);
 }
+/* The group colour marks the current page through its icon and the slider; as text, gold or iris on a light base
+   reads below 4.5:1. */
 .rp-nav[aria-current='page'] {
   font-weight: 600;
-  color: var(--rp-group, var(--rp-accent));
+  color: var(--rp-text);
 }
 .rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c1);
