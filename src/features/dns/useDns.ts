@@ -11,8 +11,8 @@ import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
 import {queryTypes} from './query';
-import {ApiError, errorText} from '../../api/error';
-import {cacheCard} from './cache';
+import {errorText} from '../../api/error';
+import {cacheCard, cacheCardState} from './cache';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -120,7 +120,7 @@ export function useDnsStatsTab(enabled: boolean | undefined) {
 }
 
 // The cache card reads usage once a minute while it is near the viewport; off screen or in a hidden tab it keeps its
-// last reading. A 503 means the backend has no cache to list right now, which the card shows as unavailable.
+// last reading.
 export function useDnsCacheCard(listed: boolean) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -136,11 +136,10 @@ export function useDnsCacheCard(listed: boolean) {
   const usage = useDnsCacheUsage(listed, !near && loaded);
   if (usage.data && !loaded) setLoaded(true);
   const card = useMemo(() => cacheCard(usage.data, locale, t), [usage.data, locale, t]);
-  const refused = usage.error instanceof ApiError && usage.error.status === 503;
   return {
     ref,
     card,
-    state: !listed || (refused && !usage.data) ? ('unavailable' as const) : card ? ('ready' as const) : usage.error ? ('error' as const) : ('loading' as const),
+    state: cacheCardState(listed, !!card, usage.error),
     error: usage.error,
     retry: usage.refetch
   };

@@ -2,6 +2,7 @@ import type {DnsCacheList} from '../../api/model';
 import {formatNumber, type Translator} from '../../i18n';
 import {formatBytes} from '../../i18n/format';
 import {parseU64, pctU64} from '../../api/u64';
+import {ApiError} from '../../api/error';
 
 // The cache card from one page of the listing: every page repeats the whole cache's usage and coverage. A backend that
 // reports usage is as full as the nearer of its two limits, entries or retained bytes; one that does not gets no
@@ -37,4 +38,12 @@ export function cacheCard(list: DnsCacheList | undefined, locale: string, t: Tra
       persistent: t(coverage.persistent ? 'dns.chart.persistent' : 'dns.chart.memoryOnly')
     })
   };
+}
+
+// A 503 means the backend cannot list its cache right now, which outranks a reading kept from an earlier poll: that
+// reading would still claim a fill level the backend no longer reports.
+export function cacheCardState(listed: boolean, card: boolean, error: Error | null) {
+  if (!listed) return 'unlisted' as const;
+  if (error instanceof ApiError && error.status === 503) return 'unavailable' as const;
+  return card ? ('ready' as const) : error ? ('error' as const) : ('loading' as const);
 }

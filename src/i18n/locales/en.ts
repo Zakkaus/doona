@@ -245,10 +245,7 @@ export const messages = {
   'dns.chart.byDomain': 'Domains',
   'dns.chart.resolver': 'The resolver itself',
   'dns.chart.cache': 'Cache',
-  'dns.chart.cacheNote': {
-    one: '{n} cache entry; this backend does not provide a capacity limit',
-    other: '{n} cache entries; this backend does not provide a capacity limit'
-  },
+  'dns.chart.cacheNote': 'Entries: {n}, capacity limit: not reported',
   'dns.chart.positive': 'Positive answers',
   'dns.chart.negative': 'Negative answers',
   'dns.chart.usage': 'Usage',
@@ -286,6 +283,7 @@ export const messages = {
   'dns.notCovered': 'Not covered',
   'dns.empty': 'No cache entries',
   'dns.cacheUnavailable': 'This backend does not provide a cache listing',
+  'dns.cacheBusy': 'The cache listing is temporarily unavailable',
   'dns.expires': 'Expires',
   'dns.staleUntil': 'Stale until',
   'dns.deleteEntry': 'Delete the {type} cache entry for {domain}',

@@ -1,7 +1,8 @@
 import {expect, it} from 'vitest';
 import type {DnsCacheList} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {cacheCard} from './cache';
+import {ApiError} from '../../api/error';
+import {cacheCard, cacheCardState} from './cache';
 
 const t: Translator = (key, params) => translate('en', key, params);
 const list = (usage?: DnsCacheList['usage']) =>
@@ -28,6 +29,17 @@ it('fills the bar by whichever limit is nearer, entries or bytes, and states bot
 it('claims no capacity when the backend does not report usage', () => {
   const card = cacheCard(list(), 'en-US', t)!;
   expect(card.usage).toBeNull();
-  expect(card.note).toBe('322 cache entries; this backend does not provide a capacity limit');
+  expect(card.note).toBe('Entries: 322, capacity limit: not reported');
   expect(cacheCard(undefined, 'en-US', t)).toBeNull();
+});
+
+it('says the listing is unavailable after a 503, even with a reading kept from an earlier poll', () => {
+  const unavailable = new ApiError(503, 'unavailable', 'DNS cache unavailable');
+  expect(cacheCardState(true, true, null)).toBe('ready');
+  expect(cacheCardState(true, true, unavailable)).toBe('unavailable');
+  expect(cacheCardState(true, false, unavailable)).toBe('unavailable');
+  // Any other failure keeps the last reading on screen.
+  expect(cacheCardState(true, true, new ApiError(500, 'internal', 'boom'))).toBe('ready');
+  expect(cacheCardState(true, false, new ApiError(500, 'internal', 'boom'))).toBe('error');
+  expect(cacheCardState(false, false, null)).toBe('unlisted');
 });

@@ -77,21 +77,41 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   const limits = listings.map(request => new URL(request.url()).searchParams.get('limit'));
   expect(limits.length).toBeGreaterThan(0);
   expect(new Set(limits)).toEqual(new Set(['1']));
+  // A 503 after a reading replaces that reading: the backend no longer reports how full its cache is.
+  backend.handlers['GET dns/cache'] = async () => {
+    throw new ApiError(503, 'unavailable', 'DNS cache unavailable');
+  };
+  await page.locator('.rp-top').getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect(card.getByText('The cache listing is temporarily unavailable', {exact: true})).toBeVisible();
+  await expect(card.getByText('Usage', {exact: true})).toHaveCount(0);
+  await page.reload();
+  await expect(card.getByText('The cache listing is temporarily unavailable', {exact: true})).toBeVisible();
   // A backend that predates usage reporting gets no capacity claim.
   backend.handlers['GET dns/cache'] = async () => {
     const {usage: _, ...list} = await backend.api.dnsCache({limit: 1});
     return list;
   };
   await page.reload();
-  await expect(card.getByText(/^\d+ cache entries; this backend does not provide a capacity limit$/)).toBeVisible();
+  await expect(card.getByText(/^Entries: \d+, capacity limit: not reported$/)).toBeVisible();
   await expect(card.getByText('Usage', {exact: true})).toHaveCount(0);
-  // A refused listing leaves the card unavailable rather than failed.
-  backend.handlers['GET dns/cache'] = async () => {
-    throw new ApiError(503, 'unavailable', 'DNS cache unavailable');
-  };
+  // A backend that cannot read its cache says so for good.
+  backend.capabilities.resources.dns_cache.read = false;
   await page.reload();
   await expect(card.getByText('This backend does not provide a cache listing', {exact: true})).toBeVisible();
 });
+
+for (const count of [0, 4]) {
+  test(`with ${count} resolution records the charts wait for more while the cache card still reports`, async ({page}) => {
+    const backend = await mockBackend(page);
+    const seed = await backend.api.dnsLog();
+    backend.handlers['GET dns/log'] = async () => ({...seed, records: seed.records.slice(0, count), next_cursor: null});
+    await page.goto('/#/dns');
+    const card = page.getByRole('region', {name: 'Cache', exact: true});
+    await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+    await expect(page.getByText('Too few records to chart yet', {exact: true})).toHaveCount(3);
+    await expect(page.locator('.rp-facts')).toHaveCount(0);
+  });
+}
 
 test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});
