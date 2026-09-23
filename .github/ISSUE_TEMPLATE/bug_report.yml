@@ -1,21 +1,30 @@
 name: Bug report
 description: Report a reproducible problem in doona.
 title: 'bug: '
-labels:
-  - bug
+labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: AI may help write this report. Unverified content may not be submitted.
   - type: input
     id: version
     attributes:
       label: doona version or commit
-      description: Enter the released version or commit you tested.
+      description: Enter the release tag or commit you tested.
     validations:
       required: true
   - type: input
     id: backend
     attributes:
       label: Backend and version
-      description: Enter the backend name and version, or enter "mock".
+      description: Enter the backend name and version, or "mock".
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Authentication mode
+      options: [Token, Password, Mock]
     validations:
       required: true
   - type: input
@@ -25,29 +34,57 @@ body:
       description: Enter the browser name and version.
     validations:
       required: true
+  - type: input
+    id: theme
+    attributes:
+      label: Palette and theme
+      description: Enter the palette and light or dark mode.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: Describe the actual result and the expected result.
+    validations:
+      required: true
   - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce
-      description: List the smallest sequence that reproduces the problem.
+      description: Give the smallest sequence that reproduces the problem.
     validations:
       required: true
   - type: textarea
-    id: expected
+    id: logs
     attributes:
-      label: Expected behavior
+      label: Logs
+      description: Include relevant browser console and honk-core logs. Remove credentials and private data. If none are available, say so.
+      render: shell
     validations:
       required: true
   - type: textarea
-    id: actual
+    id: screenshots
     attributes:
-      label: Actual behavior
+      label: Screenshots
+      description: Attach screenshots if they help reproduce or identify the problem.
+  - type: input
+    id: owner
+    attributes:
+      label: Human responsible
+      description: Enter your GitHub username. You must verify this report and answer follow-up questions; an AI cannot answer for you.
+      placeholder: '@your-name'
     validations:
       required: true
-  - type: textarea
-    id: console-errors
+  - type: checkboxes
+    id: confirm
     attributes:
-      label: Console errors
-      description: Paste console errors, or write None.
-    validations:
-      required: true
+      label: Confirm
+      description: Check only claims that are true. A false claim closes the issue.
+      options:
+        - label: I searched existing issues and pull requests and found no matching report.
+          required: true
+        - label: This report describes what I observed.
+          required: true
+        - label: I checked the boxes above without reading them.
+        - label: I am an AI agent, and this content was submitted without human review.

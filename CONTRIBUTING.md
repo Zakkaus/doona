@@ -59,6 +59,8 @@ Write the subject and body in English. Use an imperative subject and explain the
 
 Branch from `main`. Keep pull requests small and limited to one theme. Keep CI green.
 
+Use the GitHub issue and pull request templates, including their Chinese variants. Name the human responsible and report only verified results.
+
 Write the pull request body in English with one short paragraph under each of `## Problem`, `## How I fixed it` and `## Verified`, in that order: what is wrong, what changed, and what was checked, not the reasoning that led there. Verified lists the commands you ran and what they reported; link long evidence instead of pasting it.
 
 Use [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Start with `0.1.0`

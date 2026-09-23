@@ -1,0 +1,90 @@
+name: 错误报告（简体中文）
+description: 报告 doona 中可复现的问题。
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: AI 可以协助撰写报告，但不得提交未经核实的内容。
+  - type: input
+    id: version
+    attributes:
+      label: doona 版本或提交
+      description: 填写复现问题时使用的发行标签或提交。
+    validations:
+      required: true
+  - type: input
+    id: backend
+    attributes:
+      label: 后端及其版本
+      description: 填写后端名称和版本；使用模拟后端时填写 mock。
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: 认证方式
+      options: [Token, Password, Mock]
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器
+      description: 填写浏览器名称和版本。
+    validations:
+      required: true
+  - type: input
+    id: theme
+    attributes:
+      label: 配色和主题
+      description: 填写配色名称，以及浅色或深色模式。
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 问题现象
+      description: 分别说明实际结果和预期结果。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 列出能复现问题的最短操作步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 附上相关的浏览器控制台日志和 honk-core 日志。提交前删除凭据和私人信息；无法提供时请说明。
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 如果截图有助于复现或定位问题，请在此附上。
+  - type: input
+    id: owner
+    attributes:
+      label: 实际负责人
+      description: 填写你的 GitHub 用户名。你须核实报告并回复后续问题；AI 无法代答。
+      placeholder: '@your-name'
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      description: 仅勾选真实陈述。虚假勾选会导致此议题被关闭。
+      options:
+        - label: 我已检索现有议题和拉取请求，未发现相同报告。
+          required: true
+        - label: 本报告描述的是我实际观察到的结果。
+          required: true
+        - label: 我未阅读上述选项就勾选了它们。
+        - label: 我是 AI 代理，此内容未经人工审核便已提交。

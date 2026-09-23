@@ -1,0 +1,47 @@
+name: 功能请求（简体中文）
+description: 建议修改 doona 的功能。
+title: 'feature: '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: AI 可以协助撰写请求，但不得提交未经核实的内容。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题
+      description: 说明你的目标，以及目前无法实现目标的原因。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议
+      description: 说明希望增加或修改的行为。
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: 页面
+      description: 填写此请求涉及的页面。
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: 实际负责人
+      description: 填写你的 GitHub 用户名。你须核实请求并参与讨论；AI 无法代答。
+      placeholder: '@your-name'
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      description: 仅勾选真实陈述。虚假勾选会导致此议题被关闭。
+      options:
+        - label: 我已检索现有议题和拉取请求，未发现相同请求。
+          required: true
+        - label: 我未阅读上述选项就勾选了它们。
+        - label: 我是 AI 代理，此内容未经人工审核便已提交。

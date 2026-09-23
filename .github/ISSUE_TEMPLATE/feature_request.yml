@@ -1,21 +1,23 @@
 name: Feature request
 description: Propose a change to doona.
 title: 'feature: '
-labels:
-  - enhancement
+labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: AI may help write this request. Unverified content may not be submitted.
   - type: textarea
     id: problem
     attributes:
       label: Problem
-      description: Describe the user problem this request would solve.
+      description: Describe the user goal and what currently prevents it.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
       label: Proposal
-      description: Describe the proposed behavior or change.
+      description: Describe the behavior you propose.
     validations:
       required: true
   - type: input
@@ -25,3 +27,21 @@ body:
       description: Name the page this request affects.
     validations:
       required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Human responsible
+      description: Enter your GitHub username. You must verify this request and join the discussion; an AI cannot answer for you.
+      placeholder: '@your-name'
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      description: Check only claims that are true. A false claim closes the issue.
+      options:
+        - label: I searched existing issues and pull requests and found no matching request.
+          required: true
+        - label: I checked the boxes above without reading them.
+        - label: I am an AI agent, and this content was submitted without human review.
