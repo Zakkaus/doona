@@ -25,7 +25,7 @@
   scale: 0.95;
 }
 /* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
-.rp-btn[aria-expanded='true'] {
+.rp-btn[aria-expanded='true']:not(.rp-disclosure-trigger) {
   background-color: var(--rp-hl-high);
 }
 /* A pending button keeps its colour and shows its spinner at once, with the label dimmed behind it; the refresh
