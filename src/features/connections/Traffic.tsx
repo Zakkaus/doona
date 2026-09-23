@@ -4,7 +4,7 @@ import type {Connection} from '../../api/model';
 import {outboundLabel} from '../../api/selectors';
 import {formatBytes} from '../../api/u64';
 import {usePalette} from '../../ui/Charts';
-import {ChartCard, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
+import {ChartCard, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
 import {trafficSeries} from './scatter';
 
 // Upload against download for the connections the table shows; the heavy ones stand apart from the crowd.
@@ -50,21 +50,24 @@ export function Traffic({
     : [];
   const sample = view.unknown ? t('conn.chart.sampleUnknown', {n: records.length, unknown: view.unknown}) : t('conn.chart.sample', {n: records.length});
   return (
-    <ChartCard title={t('conn.chart.title')} facts={facts} sample={sample}>
-      {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
-      {view.placed > 0 && (
-        <>
-          <Scatter
-            label={t('conn.chart.title')}
-            series={series}
-            fmt={bytes}
-            onSelect={onSelect}
-            regions={{above: t('conn.chart.moreDown'), below: t('conn.chart.moreUp')}}
-          />
-          <ScatterLegend series={series} />
-          <p className="rp-note">{t('conn.chart.hint')}</p>
-        </>
-      )}
-    </ChartCard>
+    <div className="rp-chart-page">
+      <FactStrip facts={facts} />
+      <ChartCard title={t('conn.chart.title')} note={sample}>
+        {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
+        {view.placed > 0 && (
+          <>
+            <Scatter
+              label={t('conn.chart.title')}
+              series={series}
+              fmt={bytes}
+              onSelect={onSelect}
+              regions={{above: t('conn.chart.moreDown'), below: t('conn.chart.moreUp')}}
+            />
+            <ScatterLegend series={series} />
+            <p className="rp-note">{t('conn.chart.hint')}</p>
+          </>
+        )}
+      </ChartCard>
+    </div>
   );
 }
