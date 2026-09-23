@@ -44,8 +44,11 @@ test.use({storage: {'doona-lang': 'en'}});
 test('a first visit creates the administrator and continues with its session', async ({page}) => {
   const state = await passwordBackend(page, true);
   await page.goto('/#/activity');
-  const form = page.locator('.rp-login');
+  const form = page.getByRole('dialog');
   await expect(form.getByRole('heading')).toHaveText('Create the administrator');
+  // Nothing behind the dialog works before sign-in, so it cannot be dismissed.
+  await page.keyboard.press('Escape');
+  await expect(form).toBeVisible();
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse batterx');
@@ -58,14 +61,14 @@ test('a first visit creates the administrator and continues with its session', a
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Create and sign in'}).click()]);
   expect(state.attempts).toEqual([{path: 'setup', body: {username: 'admin', password: 'correct horse battery'}, authorization: undefined}]);
-  await expect(page.locator('.rp-login')).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.rp-nav').first()).toBeVisible();
 });
 
 test('login reports wrong credentials, then signs in; a refused session asks again', async ({page}) => {
   const state = await passwordBackend(page, false);
   await page.goto('/#/activity');
-  const form = page.locator('.rp-login');
+  const form = page.getByRole('dialog');
   await expect(form.getByRole('heading')).toHaveText('Sign in');
   await expect(form.getByLabel('Confirm password', {exact: true})).toHaveCount(0);
   await form.getByLabel('Username', {exact: true}).fill('admin');
@@ -87,7 +90,7 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
 
 test('signing out ends the session on the backend and in the tab', async ({page}) => {
   const state = await passwordBackend(page, false);
-  const form = page.locator('.rp-login');
+  const form = page.getByRole('dialog');
   await page.goto('/#/activity');
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
@@ -96,7 +99,7 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Sign out', exact: true}).click()]);
   expect(state.attempts.at(-1)).toMatchObject({path: 'logout', authorization: 'Bearer hnk1_session'});
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-login').getByRole('heading')).toHaveText('Sign in');
+  await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Sign in');
   // Signing out is not an ended session: no warning greets the next sign-in.
   await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);
 });

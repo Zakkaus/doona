@@ -56,7 +56,8 @@ export function ModalDialog({
   alert,
   isOpen,
   onOpenChange,
-  hideTitle
+  hideTitle,
+  locked
 }: {
   trigger?: ReactElement;
   title: string;
@@ -67,9 +68,11 @@ export function ModalDialog({
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTitle?: boolean;
+  // Neither the underlay nor Escape closes it: the app behind cannot be used until the dialog is done.
+  locked?: boolean;
 }) {
   const modal = (
-    <ModalOverlay className="rp-underlay" isDismissable={!alert} isOpen={isOpen} onOpenChange={onOpenChange}>
+    <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
         <Dialog className="rp-dialog" role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
           {({close}) => (
