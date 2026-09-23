@@ -64,15 +64,30 @@ export function useTableReveal(selected: string | null, at: number, ref: RefObje
   useEffect(() => {
     const at = index.current;
     if (!selected || !present) return;
-    const frame = requestAnimationFrame(() => {
+    const place = () => {
       const box = ref.current;
       if (!box) return;
       const top = tableLayout.headingHeight + at * tableLayout.rowHeight;
       const bottom = top + tableLayout.rowHeight;
       if (top < box.scrollTop + tableLayout.headingHeight) box.scrollTop = top - tableLayout.headingHeight;
       else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
-    });
-    return () => cancelAnimationFrame(frame);
+    };
+    const frame = requestAnimationFrame(place);
+    // The table may still settle its height after the reveal (a tab bar, the detail panel); until the person
+    // scrolls it themselves, a resize keeps the selected row in view.
+    const box = ref.current;
+    let held = true;
+    const release = () => (held = false);
+    const observer = new ResizeObserver(() => held && place());
+    if (box) {
+      observer.observe(box);
+      for (const type of ['wheel', 'pointerdown', 'touchstart'] as const) box.addEventListener(type, release, {passive: true});
+    }
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      if (box) for (const type of ['wheel', 'pointerdown', 'touchstart'] as const) box.removeEventListener(type, release);
+    };
   }, [selected, present, ref]);
 }
 
