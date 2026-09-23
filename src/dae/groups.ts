@@ -131,7 +131,9 @@ function editExact(text: string, group: string, call: ExactCall, add: string[], 
   if (!entry && !add.length) return text;
   const gone = new Set(remove);
   const present = new Set(exactIn(entry?.filters ?? [], call).filter(value => !gone.has(value)));
-  const added = [...new Set(add)].filter(value => !present.has(value) && !gone.has(value)).map(quoteName);
+  const added = [...new Set(add)].filter(value => !present.has(value) && !gone.has(value));
+  // Names join a list in its own style: a list written all in single quotes stays that way.
+  const written = (list: string[]) => added.map(list.length && list.every(value => value.startsWith("'")) ? quote : quoteName);
   let placed = !added.length;
   const filters: string[] = [];
   for (const filter of entry?.filters ?? []) {
@@ -141,11 +143,11 @@ function editExact(text: string, group: string, call: ExactCall, add: string[], 
       continue;
     }
     const kept = raw.filter(value => !gone.has(unquote(value)));
-    const values = placed ? kept : [...kept, ...added];
+    const values = placed ? kept : [...kept, ...written(kept)];
     placed = true;
     if (values.length) filters.push(`${call}(${values.join(', ')})`);
   }
-  if (!placed) filters.push(`${call}(${added.join(', ')})`);
+  if (!placed) filters.push(`${call}(${written([]).join(', ')})`);
   if (entry && filters.length === entry.filters.length && filters.every((filter, i) => filter === entry.filters[i])) return text;
   // A group with no filter line holds every node, so removing its last member would widen it, not empty it.
   if (entry?.filters.length && !filters.length) return text;

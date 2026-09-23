@@ -65,7 +65,9 @@ describe('group entries', () => {
   });
 
   it('adds node names to the name filter, or adds that filter', () => {
-    expect(addNamesToGroup(text, 'proxy', ['b2', 'jp 01'])).toContain("        filter: name('backup', b2, 'jp 01')\n");
+    expect(addNamesToGroup(text, 'proxy', ['b3', 'jp 01'])).toContain("        filter: name('backup', b2, b3, 'jp 01')\n");
+    // A list written all in single quotes stays that way.
+    expect(addNamesToGroup("group { g { filter: name('a', 'b c') } }", 'g', ['d'])).toContain("name('a', 'b c', 'd')");
     expect(addNamesToGroup(text, 'hk', ['hk-09'])).toContain(
       "        filter: name(regex: '^Hong Kong ')\n        filter: name(hk-09)\n        policy: min_moving_avg"
     );
