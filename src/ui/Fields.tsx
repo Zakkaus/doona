@@ -14,6 +14,9 @@ import {
 import Close from './icons/Close';
 import Checkmark from './icons/Checkmark';
 import Search from './icons/Search';
+import AlertTriangle from './icons/AlertTriangle';
+import Visibility from './icons/Visibility';
+import VisibilityOff from './icons/VisibilityOff';
 import {useT} from '../i18n';
 import {cx} from './cx';
 import {useSlider} from './hooks';
@@ -88,6 +91,7 @@ export function TextField({
   description,
   error,
   action,
+  reveal,
   autoComplete,
   spellCheck,
   ...props
@@ -106,6 +110,8 @@ export function TextField({
     description?: string;
     error?: string;
     action?: ReactNode;
+    // A secret's show or hide toggle, inside the field as in S2; `label` names what pressing it does now.
+    reveal?: {shown: boolean; label: string; onToggle: () => void};
   }) {
   const t = useT();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
@@ -124,6 +130,11 @@ export function TextField({
   const input = (
     <span className={cx('rp-input', (side || !!action) && 'rp-grow')}>
       <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} />
+      {reveal && (
+        <RButton className="reveal" aria-label={reveal.label} onPress={reveal.onToggle}>
+          {reveal.shown ? <VisibilityOff /> : <Visibility />}
+        </RButton>
+      )}
     </span>
   );
   return (
@@ -142,7 +153,12 @@ export function TextField({
           {description}
         </Text>
       )}
-      {error && <FieldError className="rp-field-error">{error}</FieldError>}
+      {error && (
+        <FieldError className="rp-field-error">
+          <AlertTriangle />
+          {error}
+        </FieldError>
+      )}
     </RTextField>
   );
 }

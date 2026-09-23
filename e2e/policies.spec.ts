@@ -48,3 +48,16 @@ test('a group card mounted on screen shows its members in the first frame', asyn
   await expect(page.locator('.rp-content .rp-node').first()).toBeVisible();
   await expect(page.locator('html')).not.toHaveAttribute('data-waited');
 });
+
+test('a group whose networks use different members marks each with its network', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/policies');
+  const proxy = page.getByRole('region', {name: 'proxy', exact: true});
+  const tcp = proxy.getByRole('button', {name: /^hk-01\b/});
+  const udp = proxy.getByRole('button', {name: /^hk-02\b/});
+  await expect(tcp).toHaveClass(/\bcur\b/);
+  await expect(udp).toHaveClass(/\bcur\b/);
+  await expect(tcp.locator('.cur')).toHaveText('TCP');
+  await expect(udp.locator('.cur')).toHaveText('UDP');
+  await expect(proxy.getByRole('button', {name: /^sg-01\b/})).not.toHaveClass(/\bcur\b/);
+});

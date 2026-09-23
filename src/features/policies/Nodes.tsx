@@ -9,12 +9,15 @@ export function NodeGrid({
   nodes,
   selected,
   cur,
+  marks = {},
   onSelect,
   isDisabled
 }: {
   nodes: MemberView[];
   selected?: string;
   cur?: string;
+  // Members in place without being the selection, each with a short tag such as the network it carries.
+  marks?: Record<string, string>;
   onSelect?: (id: string) => void;
   isDisabled?: boolean;
 }) {
@@ -26,8 +29,14 @@ export function NodeGrid({
       <div className="rp-nodes">
         {nodes.map(n =>
           onSelect ? (
-            <ToggleButton key={n.id} className="rp-node" isSelected={selected === n.id} isDisabled={isDisabled} onChange={() => onSelect(n.id)}>
-              <NodeTile name={n.name} status={n.status} description={n.description} />
+            <ToggleButton
+              key={n.id}
+              className={cx('rp-node', marks[n.id] && 'cur')}
+              isSelected={selected === n.id}
+              isDisabled={isDisabled}
+              onChange={() => onSelect(n.id)}
+            >
+              <NodeTile name={n.name} status={n.status} description={n.description} mark={marks[n.id]} />
             </ToggleButton>
           ) : (
             <div key={n.id} className={cx('rp-node', cur === n.id && 'cur')}>
@@ -77,8 +86,8 @@ export function NodeGrid({
           renderEmptyState={() => <Empty>{t('policy.none')}</Empty>}
         >
           {n => (
-            <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', cur === n.id && !onSelect && 'cur')}>
-              <NodeTile name={n.name} status={n.status} description={n.description} current={!onSelect && cur === n.id} />
+            <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', ((cur === n.id && !onSelect) || marks[n.id]) && 'cur')}>
+              <NodeTile name={n.name} status={n.status} description={n.description} current={!onSelect && cur === n.id} mark={marks[n.id]} />
             </GridListItem>
           )}
         </GridList>

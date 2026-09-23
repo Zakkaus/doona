@@ -32,9 +32,10 @@ export function RuleRef({expression, href}: {expression: string | null; href?: s
 // A node's tile body: the name, one prepared status (a latency, a state or a badge) and a description line.
 // The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
 export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
-type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean};
+// `mark` tags a member in place that is not the one selection, such as the member one network uses.
+type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean; mark?: string};
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
-export function NodeTile({name, status, description, current}: NodeTileProps) {
+export function NodeTile({name, status, description, current, mark}: NodeTileProps) {
   const t = useT();
   return (
     <>
@@ -46,7 +47,7 @@ export function NodeTile({name, status, description, current}: NodeTileProps) {
       </span>
       <span className="s">
         {description}
-        {current && <span className="cur">{t('ui.current')}</span>}
+        {(mark || current) && <span className="cur">{mark ?? t('ui.current')}</span>}
       </span>
     </>
   );

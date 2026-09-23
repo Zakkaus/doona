@@ -115,7 +115,7 @@ export function Settings({query}: PageProps) {
               label={t('settings.token')}
               autoComplete="off"
               spellCheck={false}
-              action={<Button onPress={toggleToken}>{tokenToggleText}</Button>}
+              reveal={{shown: tokenType === 'text', label: tokenToggleText, onToggle: toggleToken}}
               name="token"
               type={tokenType}
               value={token}
