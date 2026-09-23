@@ -37,8 +37,8 @@ export function normalizeCapabilities(raw: Capabilities): Capabilities {
   return {...raw, resources: resources as Capabilities['resources']};
 }
 
-// Whether the backend offers a resource. `whileLoading` answers before capabilities arrive: a page's own resource
-// starts at once (true), a resource that only enriches the page waits for the answer (false).
+// Whether the backend offers a resource. `whileLoading` answers while the capabilities are absent, before they arrive
+// or after they fail: a page's own resource starts at once (true), a resource that only enriches the page waits (false).
 export function offered(
   resources: Capabilities['resources'] | undefined,
   key: keyof Capabilities['resources'],

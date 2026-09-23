@@ -6,15 +6,16 @@ import {usePalette} from '../../ui/charts';
 import {lifecycleActions, overviewExport, overviewView} from './view';
 import {operationLabels} from '../../api/selectors';
 import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 
 export function useOverview() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
-  const datapath = useDatapath(!!resources?.datapath.available);
-  const memory = useRuntimeMemory(!!resources?.runtime_memory.available);
+  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
+  const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
+  const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const version = useVersion();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const run = async (kind: keyof typeof operationLabels) => {

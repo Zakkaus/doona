@@ -3,7 +3,7 @@ import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
 import {chainLabel, chainNames, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {word} from '../../api/selectors';
+import {word} from '../../api/labels';
 import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';

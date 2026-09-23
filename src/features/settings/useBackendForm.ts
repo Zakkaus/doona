@@ -10,7 +10,7 @@ import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
-import {probeFailure} from './view';
+import {cardHeadingId, probeFailure} from './view';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
@@ -55,7 +55,7 @@ export function useBackendForm(query: string) {
       history.replaceState(history.state, '', location.pathname + location.search + buildHash('settings', params.toString()));
     }
     const card = params.get('card');
-    if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
+    if (card) document.getElementById(cardHeadingId(card))?.scrollIntoView({block: 'start'});
   }, [query]);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [invalid, setInvalid] = useState(false);

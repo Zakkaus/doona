@@ -1,7 +1,8 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {word, chainLabel, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {chainLabel, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {word} from '../../../api/labels';
 import {localTime} from '../../../i18n/format';
 import {millis, parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';

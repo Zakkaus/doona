@@ -10,8 +10,7 @@ export function expectLoadFailures(page: Page, url: RegExp) {
   expectedLoadFailures.set(page, url);
 }
 
-// Route IDs from src/shell/registry.ts; importing it would load page components.
-export const routes = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules', 'nodes', 'config', 'events', 'logs', 'settings'] as const;
+export {routePaths as routes} from '../src/shell/routes';
 
 // DOONA_API and optional DOONA_TOKEN run read-only specs against a live backend; e2e has no Node globals.
 // Example: DOONA_API=http://127.0.0.1:9527 DOONA_TOKEN=... pnpm e2e:live

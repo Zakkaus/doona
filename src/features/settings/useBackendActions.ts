@@ -21,7 +21,7 @@ export function useBackendActions() {
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
+  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
   const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const refresh = useProviderRefresh(providers.refetch);
   // Only the close-all action needs the live count, so the poll runs only where that action exists.
@@ -29,7 +29,7 @@ export function useBackendActions() {
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
-  const geodata = useGeodata(resources?.geodata.available ?? false);
+  const geodata = useGeodata(offered(resources, 'geodata', {whileLoading: false}));
   const fail = (error: unknown) => toast('negative', errorText(error, t));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const anyAction =

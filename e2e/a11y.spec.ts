@@ -19,6 +19,7 @@ for (const [palette, scheme] of looks)
       test(route, async ({page}, testInfo) => {
         await page.goto(`/#/${route}`);
         test.skip(!(await offered(page, route)), 'not offered by this backend');
+        await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
         await expect(page.locator('.rp-content')).toBeVisible();
         await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
         await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);

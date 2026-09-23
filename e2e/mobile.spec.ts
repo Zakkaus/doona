@@ -106,6 +106,9 @@ test.describe('320px', () => {
     test(`no horizontal overflow on ${route}`, async ({page}) => {
       await page.goto(`/#/${route}`);
       await expect(page.locator('.rp-content > *').first()).toBeVisible();
+      // WebKit's per-page load check: the page is the current one and has finished loading.
+      if (route !== 'flows') await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
+      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }
