@@ -11,8 +11,9 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     sample_source: 'probe',
     state: latency === null ? 'unavailable' : 'healthy',
     latency_ms: latency,
-    moving_avg_ms: latency,
-    avg10_ms: latency,
+    // The averages differ from the latest sample, as they do on a live backend.
+    moving_avg_ms: latency === null ? null : Math.round(latency * (0.8 + (latency % 7) / 15)),
+    avg10_ms: latency === null ? null : Math.round(latency * (0.85 + (latency % 5) / 10)),
     observed_at: observedAt,
     error: latency === null ? 'timeout' : null
   };
