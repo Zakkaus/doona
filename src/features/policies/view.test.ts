@@ -52,10 +52,12 @@ it('counts worst probe outcome once per member and reports selection changes', (
   expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 0, unavailable: 1, unknown: 1}});
 });
 
-it('preserves native policy spelling and falls back to the canonical identifier', () => {
+it('names the policy as the picker does and keeps the engine spelling for the tooltip', () => {
   const group = nodeFixtures(0).groups[0];
-  expect(policyCardView({...group, policy: {kind: 'urltest', native: 'min_moving_avg'}}, [], 'both', t).kind).toBe('min_moving_avg');
-  expect(policyCardView({...group, policy: {kind: 'urltest', native: ''}}, [], 'both', t).kind).toBe('urltest');
+  const card = (native: string) => policyCardView({...group, policy: {kind: 'urltest', native}}, [], 'both', t).policy;
+  expect(card('min_moving_avg')).toEqual({label: t('arrange.policy.fastest'), id: 'min_moving_avg'});
+  expect(card('min_avg10')).toEqual({label: 'min_avg10'});
+  expect(card('')).toEqual({label: 'urltest'});
 });
 
 it('filters large grids by region and observed health without mutating member order', () => {

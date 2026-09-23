@@ -102,7 +102,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     answers: answer.answers,
     fields: [
       [t('ui.type'), record.question.type],
-      [t('ui.source'), record.src ?? '—'],
+      [t('ui.device'), record.src ?? '—'],
       answer.fields[0],
       [t('ui.cache'), answer.cacheText],
       ...answer.fields.slice(1),

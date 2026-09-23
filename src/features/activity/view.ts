@@ -125,7 +125,7 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
-      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'act.loading')
+      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading')
     },
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null, locale),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),

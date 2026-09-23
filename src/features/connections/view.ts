@@ -12,7 +12,7 @@ import {within} from '../../shell/route';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
-    ['ui.source', c.src ?? '—'],
+    ['ui.device', c.src ?? '—'],
     ['conn.f.dst', c.dst ?? '—'],
     ['ui.domain', c.domain ?? '—'],
     ['conn.f.ingress', word(c.ingress)],
@@ -31,7 +31,7 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 // the target column always stays.
 export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; align?: 'end'; drop?: number}> = [
   {id: 'dst', label: 'ui.target', minWidth: 200, sortable: true},
-  {id: 'src', label: 'ui.source', minWidth: 128, sortable: true, drop: 4},
+  {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 4},
   {id: 'chain', label: 'conn.chain', minWidth: 168, drop: 2},
   {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 1},
   {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 6},
@@ -185,7 +185,7 @@ export function connectionsView(
     ],
     picks: [
       {
-        title: t('ui.source'),
+        title: t('ui.device'),
         value: 'src:' + src,
         items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: formatNumber(n, locale)}))
       },

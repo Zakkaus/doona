@@ -1,6 +1,8 @@
 import {groupNameProblem} from '../../dae/groups';
 import type {Translator} from '../../i18n';
 import type {Key} from '../../i18n';
+import {policyKindLabels} from '../../api/selectors';
+import type {Group} from '../../api/model';
 
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
@@ -16,6 +18,13 @@ const IMPLIED = 'select';
 export function policyLabel(value: string | null, t: Translator): string {
   const known = newGroupPolicies.find(item => item.id === (value ?? IMPLIED));
   return known ? t(known.label) : value!;
+}
+
+// A live group's policy in the picker's words; `id` is the engine's spelling, set only when the label differs from it.
+export function groupPolicyText(policy: Pick<Group['policy'], 'kind' | 'native'>, t: Translator): {label: string; id?: string} {
+  const label = policy.native ? policyLabel(policy.native, t) : t(policyKindLabels[policy.kind]);
+  const id = policy.native || policy.kind;
+  return label === id ? {label} : {label, id};
 }
 
 // The picker keeps a policy it does not offer as its own choice, so opening an editor never rewrites it.

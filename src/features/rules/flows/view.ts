@@ -6,7 +6,7 @@ import {word} from '../../../api/labels';
 import {localTime, formatLatency} from '../../../i18n/format';
 import {parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
-import {policyKindLabels} from '../../../api/selectors';
+import {groupPolicyText} from '../../policies/policies';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
 import {href} from '../../../shell/route';
@@ -21,7 +21,7 @@ const traceGaps: Record<string, Key> = {
 };
 // The routing inputs a trace records, labelled like the connection detail; kernel field names stay as they are.
 const inputLabels: Record<string, Key | string> = {
-  src: 'ui.source',
+  src: 'ui.device',
   dst: 'conn.f.dst',
   domain: 'ui.domain',
   domain_source: 'conn.f.domainSource',
@@ -133,7 +133,7 @@ export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileVie
       name: unknown(outbound, outboundLabel(outbound.label, t)),
       notes: [
         ...outbound.groups.slice(1).map(group => ({text: '› ' + group.name})),
-        ...outbound.groups.slice(-1).map(group => ({text: group.policy || t(policyKindLabels[group.kind])})),
+        ...outbound.groups.slice(-1).map(group => ({text: groupPolicyText({kind: group.kind, native: group.policy}, t).label})),
         ...(outbound.kind === 'group' && !outbound.node ? [{text: t('flow.treeNoNode')}] : [])
       ],
       count: outbound.count

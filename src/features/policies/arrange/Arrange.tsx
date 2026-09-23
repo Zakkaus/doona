@@ -39,8 +39,7 @@ import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {policyKindLabels} from '../../../api/selectors';
-import {newGroupPolicies} from '../policies';
+import {groupPolicyText, newGroupPolicies} from '../policies';
 import {PolicyPicker} from '../PolicyPicker';
 import {holds, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
@@ -94,7 +93,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
   const lang = useLang();
   const heading = useId();
   const locked = !!m.blocked;
-  const policy = live ? live.policy.native || t(policyKindLabels[live.policy.kind]) : null;
+  const policy = live ? groupPolicyText(live.policy, t) : null;
   const accept = async (items: DropItem[]) => {
     const texts = await Promise.all(
       items
@@ -140,7 +139,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
               <h3 className="rp-h3" id={heading}>
                 {group.name}
               </h3>
-              {policy && <Badge>{policy}</Badge>}
+              {policy && <Badge tip={policy.id}>{policy.label}</Badge>}
               {live && (
                 <Light small tone="neutral">
                   {t('arrange.memberCount', {n: live.member_count})}

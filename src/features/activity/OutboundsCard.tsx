@@ -23,7 +23,7 @@ export function OutboundsCard() {
         </div>
       ) : state === 'loading' ? (
         <div className="rp-chart-wait tall">
-          <Loading>{t('act.loading')}</Loading>
+          <Loading>{t('ui.loading')}</Loading>
         </div>
       ) : state === 'empty' ? (
         <div className="rp-chart-wait tall">

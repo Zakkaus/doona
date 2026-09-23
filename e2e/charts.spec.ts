@@ -12,7 +12,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^\d+ cache entries; the backend reports no capacity$/)).toBeVisible();
+  await expect(page.getByText(/^\d+ cache entries; this backend does not provide a capacity limit$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);

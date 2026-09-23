@@ -18,7 +18,7 @@ export function Activity() {
   const vm = useActivity();
   const {p, locale, range, setRange, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
-  if (!vm.ready) return alert || <Loading>{t('act.loading')}</Loading>;
+  if (!vm.ready) return alert || <Loading>{t('ui.loading')}</Loading>;
   return (
     <>
       {alert}
@@ -125,7 +125,7 @@ export function Activity() {
             </div>
           ) : vm.history.state === 'loading' ? (
             <div className="rp-chart-wait tall">
-              <Loading>{t('act.loading')}</Loading>
+              <Loading>{t('ui.loading')}</Loading>
             </div>
           ) : vm.history.state === 'empty' ? (
             <div className="rp-chart-wait tall">

@@ -31,7 +31,7 @@ export function RankingCard() {
       )}
       {state === 'error' ? null : state === 'loading' ? (
         <div className="rp-chart-wait bars">
-          <Loading>{t('act.loading')}</Loading>
+          <Loading>{t('ui.loading')}</Loading>
         </div>
       ) : state === 'unavailable' ? (
         <div className="rp-chart-wait bars">

@@ -106,8 +106,12 @@ export function Bar({label, value, pct, color}: {label: ReactNode; value: string
   );
 }
 
-export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
-  return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
+export function Badge({children, tone, className, tip}: {children: ReactNode; tone?: 'warn'; className?: string; tip?: string}) {
+  return (
+    <TextTooltip className={cx('rp-badge', tone, className)} text={tip}>
+      {children}
+    </TextTooltip>
+  );
 }
 
 // `row` keeps label and value on one line; a third element is the full value, shown as a tooltip.

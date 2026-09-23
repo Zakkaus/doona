@@ -206,7 +206,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
     expect(await grid.getByRole('row').count()).toBeLessThan(60);
   }
   await page.getByRole('button', {name: 'Group by'}).click();
-  await page.getByRole('option', {name: 'By client', exact: true}).click();
+  await page.getByRole('option', {name: 'By device', exact: true}).click();
   await grid.evaluate(element => {
     element.scrollTop = 0;
   });
@@ -216,7 +216,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
 test('group slots stay expanded and unselectable across virtual keyboard navigation', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.getByRole('button', {name: 'Group by'}).click();
-  await page.getByRole('option', {name: 'By client', exact: true}).click();
+  await page.getByRole('option', {name: 'By device', exact: true}).click();
   const grid = page.getByRole('treegrid', {name: 'Connections'});
   const groups = grid.locator('[role=row][aria-level="1"]');
   const selected = grid.locator('[aria-selected="true"]');
@@ -255,7 +255,7 @@ test.describe('short connection lists', () => {
     const grid = page.getByRole('grid', {name: 'Connections'});
     await expect(grid).toHaveAttribute('aria-rowcount', '9');
     expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
-    const source = grid.getByRole('columnheader', {name: 'Source'});
+    const source = grid.getByRole('columnheader', {name: 'Device'});
     const chain = grid.getByRole('columnheader', {name: 'Chain'});
     await expect(source).toBeVisible();
     await expect.poll(async () => (await source.boundingBox())!.width / (await chain.boundingBox())!.width).toBeCloseTo(128 / 168, 2);
@@ -287,7 +287,7 @@ test.describe('default view', () => {
     await page.setViewportSize({width: 1440, height: 900});
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
-    await page.locator('.rp-panel').getByRole('button', {name: 'Only this client', exact: true}).click();
+    await page.locator('.rp-panel').getByRole('button', {name: 'Only this device', exact: true}).click();
     await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
     await expect(groups).toHaveCount(1);
   });

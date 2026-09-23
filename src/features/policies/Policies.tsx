@@ -52,7 +52,7 @@ function PolicyDetail(props: PolicyGroupInput) {
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3">{g.name}</h3>
-              <Badge>{g.kind}</Badge>
+              <Badge tip={g.policy.id}>{g.policy.label}</Badge>
               <Light small tone="ok">
                 {g.healthy}
               </Light>

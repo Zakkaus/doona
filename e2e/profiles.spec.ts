@@ -19,7 +19,7 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await expect(page.locator('[name=token]')).toHaveValue('');
   await page.locator('[name=token]').fill('office-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
-  await page.getByRole('button', {name: 'Backend profile'}).click();
+  await page.getByRole('button', {name: /Profile$/}).click();
   await Promise.all([page.waitForEvent('load'), page.getByRole('option', {name: 'Home', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/settings\?from=connections$/);
   await expect(page.locator('[name=token]')).toHaveValue('home-secret');

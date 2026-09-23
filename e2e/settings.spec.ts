@@ -217,14 +217,14 @@ test('profile switching confirms draft loss without saving edits to the profile 
     localStorage.setItem('doona-profile', 'a');
   }, profiles);
   await page.goto('/#/settings');
-  await page.getByLabel('Server URL', {exact: true}).fill('https://unsaved.example');
+  await page.getByLabel('Backend URL', {exact: true}).fill('https://unsaved.example');
   await page.locator('[name=token]').fill('unsaved-token');
-  const picker = page.getByRole('button', {name: /Backend profile$/});
+  const picker = page.getByRole('button', {name: /Profile$/});
   await picker.click();
   await page.getByRole('option', {name: /Backend B/}).click();
   const confirm = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
   await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(page.getByLabel('Server URL', {exact: true})).toHaveValue('https://unsaved.example');
+  await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('https://unsaved.example');
   expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');
   await picker.click();
   await page.getByRole('option', {name: /Backend B/}).click();

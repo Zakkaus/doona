@@ -96,7 +96,7 @@ for (const tab of ['source', 'setup']) {
       else {
         await expect(page.getByLabel('Subscription URL', {exact: true})).toBeDisabled();
         await expect(page.getByRole('button', {name: /Rules$/})).toBeDisabled();
-        await expect(page.getByRole('button', {name: 'Add a subscription', exact: true})).toBeDisabled();
+        await expect(page.getByRole('button', {name: 'Add subscription', exact: true})).toBeDisabled();
       }
       const writing = page.waitForRequest(request => request.method() === 'PUT');
       releaseValidation();
@@ -522,8 +522,8 @@ test('new group validation refusal retains the dialog and its name without a suc
   });
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'New group...', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'New group...', exact: true});
+  await page.getByRole('menuitemradio', {name: 'New group…', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group…', exact: true});
   await dialog.getByLabel('Name', {exact: true}).fill('retained-group');
   const validating = page.waitForRequest('**/api/v1/config/validate');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();

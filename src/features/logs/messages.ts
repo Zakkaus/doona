@@ -17,7 +17,7 @@ export const messages = defineMessages({
     'log.targetPlaceholder': '模組前綴',
     'log.pause': '暫停',
     'log.connected': '串流中',
-    'log.reconnecting': '連線中',
+    'log.reconnecting': '重新連線中',
     'log.disconnected': '已中斷連線',
     'log.clear': '清空',
     'log.export': '匯出',
@@ -27,7 +27,7 @@ export const messages = defineMessages({
     'log.chart.cell': '{time}，{level} {n} 筆',
     'log.chart.minimum': '顯示{level}及以上',
     'log.chart.current': '{level}：目前的最低等級',
-    'log.empty': '尚無日誌。'
+    'log.empty': '尚無日誌'
   },
   'zh-CN': {
     'log.chart.errors': '错误',
@@ -45,7 +45,7 @@ export const messages = defineMessages({
     'log.targetPlaceholder': '模块前缀',
     'log.pause': '暂停',
     'log.connected': '流式接收中',
-    'log.reconnecting': '连接中',
+    'log.reconnecting': '重新连接中',
     'log.disconnected': '已断开连接',
     'log.clear': '清空',
     'log.export': '导出',
@@ -55,7 +55,7 @@ export const messages = defineMessages({
     'log.chart.cell': '{time}，{level} {n} 条',
     'log.chart.minimum': '显示{level}及以上',
     'log.chart.current': '{level}：当前的最低等级',
-    'log.empty': '暂无日志。'
+    'log.empty': '暂无日志'
   },
   en: {
     'log.chart.errors': 'Errors',
@@ -73,7 +73,7 @@ export const messages = defineMessages({
     'log.targetPlaceholder': 'Module prefix',
     'log.pause': 'Pause',
     'log.connected': 'Streaming',
-    'log.reconnecting': 'Connecting',
+    'log.reconnecting': 'Reconnecting',
     'log.disconnected': 'Disconnected',
     'log.clear': 'Clear',
     'log.export': 'Export',
@@ -83,6 +83,6 @@ export const messages = defineMessages({
     'log.chart.cell': {one: '{time}: {n} {level} record', other: '{time}: {n} {level} records'},
     'log.chart.minimum': 'Show {level} and above',
     'log.chart.current': '{level}: the current minimum',
-    'log.empty': 'No log records yet.'
+    'log.empty': 'No log records yet'
   }
 });

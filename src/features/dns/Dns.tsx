@@ -170,7 +170,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
       {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TimeCell at={record.observedAt} />},
       {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
       {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
-      {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
+      {id: 's', label: t('ui.device'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
       {
         id: 'r',
         label: t('dns.result'),
@@ -208,7 +208,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
       <div className="rp-toolbar">
         <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-        <TextField search label={t('ui.source')} value={vm.src} onChange={vm.setSrc} placeholder="10.0.0.12" width={160} />
+        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} placeholder="10.0.0.12" width={160} />
         {vm.total && <span className="rp-label">{vm.total}</span>}
         {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
         <span className="rp-grow" />

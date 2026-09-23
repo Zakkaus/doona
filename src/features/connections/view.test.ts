@@ -79,7 +79,7 @@ it('prepares grouped cells and rule-link availability without losing unknown cou
   if (!('children' in group)) throw new Error('Expected client group');
   expect(group.children[0]).toMatchObject({target: '—', source: '—', download: '—', rule: {href: undefined}});
   expect(group.totals.down).toBe('—');
-  expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.source', '—']);
+  expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.device', '—']);
 });
 
 it('captures IDs without expanding the confirmed selection when live rows arrive', () => {

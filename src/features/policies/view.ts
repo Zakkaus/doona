@@ -1,7 +1,8 @@
 import {formatLatency} from '../../i18n/format';
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
-import {policyKindLabels, compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
+import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
+import {groupPolicyText} from './policies';
 import {formatNumber, type Translator} from '../../i18n';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
@@ -119,7 +120,7 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
   return {
     id: g.id,
     name: g.name,
-    kind: g.policy.native || t(policyKindLabels[g.policy.kind]),
+    policy: groupPolicyText(g.policy, t),
     selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
     selectable,
     overridable,

@@ -78,7 +78,7 @@ test('a login draft cannot be saved after another tab changes the challenged end
   });
   await other.close();
   await page.getByRole('button', {name: 'Connect', exact: true}).click();
-  await expect(page.getByRole('alert')).toContainText('The backend settings changed');
+  await expect(page.getByRole('alert')).toContainText('The profile changed');
   await page.getByRole('button', {name: 'Show token'}).click();
   await expect(token).toHaveValue('challenge-secret');
   expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe(saved);

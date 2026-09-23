@@ -174,7 +174,7 @@ test('DNS source filters send IP literals only on head and older requests', asyn
     next_cursor: new URL(request.url()).searchParams.has('cursor') ? null : 'older'
   });
   await page.goto('/#/dns?tab=log');
-  const source = page.getByRole('searchbox', {name: 'Source', exact: true});
+  const source = page.getByRole('searchbox', {name: 'Device', exact: true});
   await source.fill('2001:db8::1');
   await expect.poll(() => requests.filter(request => new URL(request.url()).searchParams.get('src') === '2001:db8::1').length).toBeGreaterThan(0);
   await page.getByRole('button', {name: 'Load older records'}).click();

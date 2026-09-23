@@ -89,7 +89,7 @@ test.describe('without flow capability', () => {
   test('the page leaves the navigation and a deep link says so', async ({page}) => {
     await page.goto('/#/rules');
     await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
-    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
+    await expect(page.locator('.rp-content')).toContainText('This backend does not provide this page');
     await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page).toHaveURL(/#\/rules$/);
   });
