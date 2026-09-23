@@ -46,7 +46,7 @@ export function Segmented({
         if (v != null) onChange(String(v));
       }}
     >
-      {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
+      {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       {items.map(([k, l]) => (
         <ToggleButton key={k} id={k} className="rp-btn">
           {l}

@@ -121,7 +121,7 @@ export function Tabs({
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
-        {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
+        {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         <TabList aria-label={label} className="rp-tablist">
           {items.map(item => (
             <Tab key={item.id} id={item.id} className="rp-tab">
