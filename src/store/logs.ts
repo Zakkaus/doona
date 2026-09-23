@@ -6,13 +6,14 @@ import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
 
 export const EVENT_FEED_LIMIT = 200;
+const LOG_FEED_LIMIT = 1000;
 // Runtime heartbeats arrive every second and would evict every other kind from one bounded ring, so they get a
 // ring of their own; the page merges both by time.
 const silent = () => () => {};
 const none = {records: [] as ApiEvent[]};
 // `withRuntime` false leaves the heartbeat ring unsubscribed: the default view hides heartbeats, so a beat every
 // second must not re-render and re-sort the page.
-export function useEventFeed(withRuntime = true) {
+export function useEventFeed(withRuntime: boolean) {
   const feeds = useMemo(
     () => ({
       changes: createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace'),
@@ -32,14 +33,14 @@ export function useEventFeed(withRuntime = true) {
   return {...status, events};
 }
 
-export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLevel; target?: string; paused: boolean; limit?: number}) {
+export function useLogFeed({level, target, paused}: {level?: LogLevel; target?: string; paused: boolean}) {
   const api = getApi();
   const capabilities = useCapabilities();
   const available = capabilities.data?.resources.logs.available;
   // A terminal stream error stays until the person asks again; retry reopens the stream and keeps the records.
   const reopen = useRef<() => void>(() => {});
   const stream = useMemo(() => {
-    const feed = createFeed<LogRecord & {id: string}, {connected: boolean; error: Error | null}>(limit, {connected: false, error: null}, 'ignore');
+    const feed = createFeed<LogRecord & {id: string}, {connected: boolean; error: Error | null}>(LOG_FEED_LIMIT, {connected: false, error: null}, 'ignore');
     return {
       getSnapshot: feed.getSnapshot,
       clear: feed.clear,
@@ -80,7 +81,7 @@ export function useLogFeed({level, target, paused, limit = 1000}: {level?: LogLe
         };
       }
     };
-  }, [api, available, level, target, limit]);
+  }, [api, available, level, target]);
   // Pausing freezes the shown list; records collected meanwhile appear on resume.
   useEffect(() => stream.hold(paused), [stream, paused]);
   return {...useSyncExternalStore(stream.subscribe, stream.getSnapshot), available, clear: stream.clear, retry: () => reopen.current()};

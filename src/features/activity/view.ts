@@ -44,7 +44,7 @@ export function modeView(
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 
 // The home card holds this many rows; the rest is one click away on the events page.
-export const NOTICE_ROWS = 8;
+const NOTICE_ROWS = 8;
 // A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
 // backend dropping records at pace does not push everything else off the card. Two notices that differ in
 // any of those never fold: a failure must not disappear behind a neighbouring success.

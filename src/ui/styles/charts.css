@@ -26,25 +26,6 @@
   flex-direction: column;
   gap: 16px;
 }
-.rp-chart-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
-}
-@media (min-width: 1024px) {
-  .rp-chart-grid.split {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  }
-  .rp-chart-grid.halves {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-}
-.rp-chart-title {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--rp-subtle);
-}
 /* ---- Beeswarm and strips ---- */
 .rp-swarm,
 .rp-scatter {

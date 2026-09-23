@@ -7,9 +7,9 @@ export function percentile(sorted: number[], p: number): number | null {
 }
 
 // A log axis from the decade at or below the least value to the decade at or above the greatest.
-export function logDomain(values: number[], floor = 1): [number, number] {
-  const positive = values.map(value => Math.max(value, floor));
-  if (!positive.length) return [floor, floor * 10];
+export function logDomain(values: number[]): [number, number] {
+  const positive = values.map(value => Math.max(value, 1));
+  if (!positive.length) return [1, 10];
   const lo = 10 ** Math.floor(Math.log10(Math.min(...positive)));
   const hi = 10 ** Math.ceil(Math.log10(Math.max(...positive)));
   return [lo, hi > lo ? hi : lo * 10];
@@ -61,8 +61,9 @@ export function swarm(xs: number[], radius: number, halfHeight: number): {ys: Ar
   return {ys, hidden};
 }
 
-// Whole cells for each count out of `cells`, by largest remainder so the cells always add up.
-export function waffleCells(counts: number[], cells = 100): number[] {
+// Whole cells for each count out of a hundred, by largest remainder so the cells always add up.
+export function waffleCells(counts: number[]): number[] {
+  const cells = 100;
   const total = counts.reduce((sum, count) => sum + count, 0);
   if (!total) return counts.map(() => 0);
   const exact = counts.map(count => (count / total) * cells);
@@ -84,10 +85,10 @@ export function waffleCells(counts: number[], cells = 100): number[] {
   return whole;
 }
 
-// Tone step 0 (empty) to `steps` (the busiest cell) for a heatmap; any non-zero count is at least step 1.
-export function heatTone(count: number, max: number, steps = 5): number {
+// Tone step 0 (empty) to 5 (the busiest cell) for a heatmap; any non-zero count is at least step 1.
+export function heatTone(count: number, max: number): number {
   if (count <= 0 || max <= 0) return 0;
-  return Math.max(1, Math.ceil((count / max) * steps));
+  return Math.max(1, Math.ceil((count / max) * 5));
 }
 
 // Time buckets covering [since, until]: the smallest round width whose aligned buckets number at most `room`.

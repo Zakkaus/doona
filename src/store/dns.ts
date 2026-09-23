@@ -5,7 +5,7 @@ import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
 import {offered} from '../api/capabilities';
-export function dnsLogLimit(capabilities: Capabilities | undefined) {
+function dnsLogLimit(capabilities: Capabilities | undefined) {
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
   return advertised === undefined ? undefined : Math.min(200, advertised);
 }

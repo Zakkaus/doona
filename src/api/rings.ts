@@ -142,6 +142,7 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
   }
   return store.rings;
 }
+// For tests.
 export function resetRings() {
   for (const store of stores.values()) {
     try {

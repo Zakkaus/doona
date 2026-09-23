@@ -29,7 +29,6 @@ const blankForm = {
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };
-export type TraceForm = typeof blankForm;
 // Held by the rules page rather than the trace tab, so what was typed survives a tab switch.
 export function useTraceForm() {
   const [form, setForm] = useState(blankForm);
