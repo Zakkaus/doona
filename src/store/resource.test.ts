@@ -41,6 +41,20 @@ it('evicts the oldest of 33 parameterised entries without evicting an unparamete
   expect(recall(api, ['version'])).toBe('version');
 });
 
+it('drops an inactive snapshot a minute after its last subscriber leaves', async () => {
+  const api = createMockApi();
+  await remember(api, ['version'], 'version');
+  await remember(api, ['flow', {id: 1}], 1);
+  await vi.advanceTimersByTimeAsync(30000);
+  // A visit in between starts the minute again.
+  expect(recall(api, ['version'])).toBe('version');
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(recall(api, ['flow', {id: 1}])).toBeUndefined();
+  expect(recall(api, ['version'])).toBe('version');
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(recall(api, ['version'])).toBeUndefined();
+});
+
 it('refreshes recency on reads and writes without counting an overwrite twice', async () => {
   const api = createMockApi();
   for (let id = 0; id < 32; id++) await remember(api, ['flow', {id}], id);

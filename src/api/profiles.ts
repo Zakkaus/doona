@@ -34,6 +34,12 @@ export function normalizeProfiles(value: unknown): Profile[] {
   });
 }
 
+// Bumped by every write to the profiles or the session and by another tab's storage event, so a reader that
+// caches what it derived from storage (the API client) knows when to look again.
+let revision = 0;
+export const storageRevision = () => revision;
+export const touchStorage = () => void revision++;
+
 let cachedProfiles: {raw: string; profiles: Profile[]} | undefined;
 // The profile this page load talks to. Another tab choosing a profile changes the saved choice, not this tab's
 // backend; this tab moves when it saves a choice itself (which reloads) or is reloaded.
@@ -88,6 +94,7 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
   store.setItem('doona-profiles', JSON.stringify(normalized));
   store.setItem('doona-profile', id);
   if (!storage) pinnedId = id;
+  touchStorage();
 }
 
 // Strip the hosted /ui/ suffix while preserving any reverse-proxy prefix.

@@ -23,10 +23,18 @@ type Entry = {
   subscribers: Set<() => void>;
   watcher: {refetch: () => Promise<RefreshOutcome>; invalidate: (reconnected: boolean) => void; dispose: () => void};
 };
-type Store = {active: Map<string, Entry>; inactive: Map<string, ResourceState<unknown>>; parameterised: Set<string>};
+type Store = {
+  active: Map<string, Entry>;
+  inactive: Map<string, ResourceState<unknown>>;
+  expiry: Map<string, ReturnType<typeof setTimeout>>;
+  parameterised: Set<string>;
+};
 const stores = new WeakMap<Api, Store>();
 const initialState: ResourceState<never> = {data: undefined, loading: true, error: null};
 const disabledState: ResourceState<never> = {data: undefined, loading: false, error: null};
+// A page left and soon revisited shows what it had at once; after this long nobody is coming back, and a large list
+// is not worth holding.
+const keepInactive = 60000;
 
 export async function refetchAll(): Promise<RefreshOutcome[]> {
   return Promise.all([...(stores.get(getApi())?.active.values() ?? [])].map(entry => entry.watcher.refetch()));
@@ -37,14 +45,20 @@ function snapshot<T>(api: Api, name: string): ResourceState<T> {
   return (store?.active.get(name)?.snapshot ?? store?.inactive.get(name) ?? initialState) as ResourceState<T>;
 }
 
+function forget(store: Store, name: string) {
+  clearTimeout(store.expiry.get(name));
+  store.expiry.delete(name);
+  store.inactive.delete(name);
+  store.parameterised.delete(name);
+}
+
 export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
   let store = stores.get(api);
-  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), parameterised: new Set()}));
+  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), expiry: new Map(), parameterised: new Set()}));
   let entry = store.active.get(name);
   if (!entry) {
     const state = snapshot<T>(api, name);
-    store.inactive.delete(name);
-    store.parameterised.delete(name);
+    forget(store, name);
     const subscribers = new Set<() => void>();
     const shared: Entry = {
       snapshot: state,
@@ -75,13 +89,13 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
       store.active.delete(name);
       if (shared.snapshot.data === undefined) return;
       store.inactive.set(name, {...shared.snapshot, error: null});
+      store.expiry.set(
+        name,
+        setTimeout(() => forget(store, name), keepInactive)
+      );
       if (resource.key.length > 1) {
         store.parameterised.add(name);
-        if (store.parameterised.size > 32) {
-          const oldest = store.parameterised.values().next().value!;
-          store.parameterised.delete(oldest);
-          store.inactive.delete(oldest);
-        }
+        if (store.parameterised.size > 32) forget(store, store.parameterised.values().next().value!);
       }
     }
   };
@@ -107,6 +121,7 @@ function createWatcher<T>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
   let retryAt = 0;
+  let startedAt = -Infinity;
   let refused = 0;
   let failure: Error | null = null;
   let recoveryDelay = 5000;
@@ -115,6 +130,9 @@ function createWatcher<T>(
     timer = undefined;
     deadline = Infinity;
   };
+  // An event brings a fetch forward, but a polled resource still fetches at most once per interval, so a burst of
+  // events costs one request rather than one every two seconds.
+  const eventDue = () => Math.max(Date.now() + 2000, startedAt + every);
   const schedule = (at: number) => {
     at = Math.max(at, retryAt);
     if (document.hidden) {
@@ -141,11 +159,12 @@ function createWatcher<T>(
     resolve = undefined;
     complete?.(outcome);
     if (disposed) return;
-    if (stale) schedule(Date.now() + 2000);
+    if (stale) schedule(eventDue());
     else if (every > 0) schedule(Date.now() + every);
   };
   const attempt = () => {
     phase = 'fetching';
+    startedAt = Date.now();
     dirty = false;
     stale = false;
     const lease = inflight.acquire(api, name, fetch);
@@ -221,7 +240,7 @@ function createWatcher<T>(
       dirty = true;
       clear();
     } else if (reconnected) load();
-    else schedule(Date.now() + 2000);
+    else schedule(eventDue());
   };
   const visibility = () => {
     if (document.hidden) {
