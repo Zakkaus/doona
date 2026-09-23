@@ -4,6 +4,7 @@ import {useLang, useT} from '../../i18n';
 import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
 import type {PageProps} from '../../features/types';
 import {connectionEntries, groupEntries, nodeEntries, pageEntries, providerEntries, ruleEntries, searchSections, searchView, sourceEntries} from './view';
+import {offered} from '../../api/capabilities';
 
 export function useSearch(go: PageProps['go'], onClose: () => void) {
   const t = useT();
@@ -11,12 +12,12 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const [q, setQ] = useState('');
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const connections = useConnections(undefined, resources?.connections.available === true);
-  const nodes = useNodes(resources?.nodes.available === true);
-  const groups = useGroups(resources?.groups.available === true);
-  const providers = useProviders(resources?.providers.available === true);
-  const config = useConfig(resources?.config.available === true);
-  const rules = useRules(resources?.rules.available === true);
+  const connections = useConnections(undefined, offered(resources, 'connections', {whileLoading: false}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
+  const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const sources = [capabilities, connections, nodes, groups, providers, config, rules];
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
   const pages = useMemo(() => pageEntries(capabilities.data, config.data, t), [capabilities.data, config.data, t]);

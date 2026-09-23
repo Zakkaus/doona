@@ -1,9 +1,9 @@
-import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
-import {within} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../types';
 import {
@@ -17,6 +17,7 @@ import {
   type CloseSelection,
   type ConnectionView
 } from './view';
+import {offered} from '../../api/capabilities';
 
 export function useConnections({go, query}: PageProps) {
   const t = useT();
@@ -60,8 +61,8 @@ export function useConnections({go, query}: PageProps) {
   const resource = useConnectionResource(src);
   const capabilities = useCapabilities();
   const canClose = capabilities.data?.resources.connections.can_close === true;
-  const rulesListed = capabilities.data?.resources.rules.available === true;
-  const canViewFlow = capabilities.data?.resources.flows.available === true;
+  const rulesListed = offered(capabilities.data?.resources, 'rules', {whileLoading: false});
+  const canViewFlow = offered(capabilities.data?.resources, 'flows', {whileLoading: false});
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
@@ -112,8 +113,15 @@ export function useConnections({go, query}: PageProps) {
       toast('negative', t('conn.closeFailed', {error: errorText(error, t)}));
     }
   };
+  // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
+  const listLink = ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(query).has(key));
+  const fallback = listLink ? 'list' : 'traffic';
+  const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   return {
     ...model,
+    tab: pickTab(query, ['traffic', 'list'], fallback),
+    setTab: (next: string) => go('connections', tabQuery(query, next, fallback)),
+    openInList,
     view,
     updateView,
     wide,

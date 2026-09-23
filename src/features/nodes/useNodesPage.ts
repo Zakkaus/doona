@@ -16,6 +16,8 @@ import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
+import {pickTab, tabQuery} from '../../shell/route';
+import {offered} from '../../api/capabilities';
 
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
@@ -44,8 +46,8 @@ export function useNodesPage({go, query}: PageProps) {
   }, []);
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
-  const providers = useProviders(resources?.providers.available !== false);
-  const nodes = useNodes(resources?.nodes.available !== false);
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const names = useOutboundNames();
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
@@ -204,7 +206,12 @@ export function useNodesPage({go, query}: PageProps) {
     onNewGroup: newGroup,
     onRemove: removeNode
   });
+  // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone.
+  const measured = offered(resources, 'nodes', {whileLoading: true});
   return {
+    measured,
+    tab: pickTab(query, ['list', 'latency'], 'list'),
+    setTab: (next: string) => go('nodes', tabQuery(query, next, 'list')),
     providerTable,
     nodeTable,
     error: providers.error ?? nodes.error,

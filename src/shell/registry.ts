@@ -156,23 +156,3 @@ export function navAvailable(path: string, capabilities: Capabilities | undefine
   const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
-
-// Search applies the destination's tab availability before offering these links.
-export const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
-  {path: 'rules', params: {tab: 'map'}, titleKey: 'rule.map'},
-  {path: 'rules', params: {tab: 'list'}, titleKey: 'rule.listTitle'},
-  {path: 'rules', params: {tab: 'flows'}, titleKey: 'rule.flows'},
-  {path: 'rules', params: {tab: 'trace'}, titleKey: 'rule.trace'},
-  {path: 'dns', params: {tab: 'stats'}, titleKey: 'dns.tab.stats'},
-  {path: 'dns', params: {tab: 'log'}, titleKey: 'dns.log'},
-  {path: 'dns', params: {tab: 'query'}, titleKey: 'dns.query'},
-  {path: 'dns', params: {tab: 'cache'}, titleKey: 'ui.cache'},
-  {path: 'config', params: {tab: 'setup'}, titleKey: 'config.wizard'},
-  {path: 'config', params: {tab: 'source'}, titleKey: 'config.tabSource'},
-  {path: 'config', params: {tab: 'validate'}, titleKey: 'config.tabValidate'},
-  {path: 'settings', params: {card: 'backend'}, titleKey: 'settings.backend'},
-  {path: 'settings', params: {card: 'runtime'}, titleKey: 'settings.runtime'},
-  {path: 'settings', params: {card: 'actions'}, titleKey: 'settings.actions'},
-  {path: 'settings', params: {card: 'appearance'}, titleKey: 'settings.appearance'},
-  {path: 'settings', params: {card: 'about'}, titleKey: 'settings.about'}
-];

@@ -1,4 +1,3 @@
-import {useCallback} from 'react';
 import {Menu, MenuSection, Header} from 'react-aria-components';
 import {
   Badge,
@@ -18,7 +17,6 @@ import {
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
-import {pickTab, within} from '../../shell/route';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
@@ -30,12 +28,6 @@ export function Connections(props: PageProps) {
   const t = useT();
   const vm = useConnections(props);
   const cur = vm.detail;
-  // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
-  const listLink = ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(props.query).has(key));
-  const fallback = listLink ? 'list' : 'traffic';
-  const tab = pickTab(props.query, ['traffic', 'list'], fallback);
-  const {go, query} = props;
-  const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   const list = (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
@@ -163,14 +155,13 @@ export function Connections(props: PageProps) {
       <Tabs
         keepMounted
         label={t('nav.connections')}
-        value={tab}
-        // The tab is written only when it differs from the default, which a link into the table turns to the list.
-        onChange={next => props.go('connections', within(props.query, {tab: next === fallback ? null : next}))}
+        value={vm.tab}
+        onChange={vm.setTab}
         items={[
           {
             id: 'traffic',
             label: t('conn.tab.traffic'),
-            content: <Traffic records={vm.rows} outbounds={vm.outboundKeys} truncated={vm.truncated} onSelect={openInList} />
+            content: <Traffic records={vm.rows} outbounds={vm.outboundKeys} truncated={vm.truncated} onSelect={vm.openInList} />
           },
           {id: 'list', label: t('conn.tab.list'), content: list}
         ]}

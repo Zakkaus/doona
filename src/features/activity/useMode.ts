@@ -6,11 +6,12 @@ import {toast, useLinked} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
+import {offered} from '../../api/capabilities';
 
 export function useMode() {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const groups = useGroups(resources?.groups.available === true);
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const {main, writable, busy, error, apply: write} = useMainSourceEdit();
   const content = main?.content;
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);

@@ -3,6 +3,14 @@ import {formatBytes} from '../../api/u64';
 import {formatNumber, type Params, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 
+// The page's cards in order; `?card=` scrolls to the section with id `settings-{id}`.
+export const settingsCards: ReadonlyArray<{id: 'backend' | 'runtime' | 'actions' | 'appearance' | 'about'; titleKey: Key}> = [
+  {id: 'backend', titleKey: 'settings.backend'},
+  {id: 'runtime', titleKey: 'settings.runtime'},
+  {id: 'actions', titleKey: 'settings.actions'},
+  {id: 'appearance', titleKey: 'settings.appearance'},
+  {id: 'about', titleKey: 'settings.about'}
+];
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;
 export type RecorderChoice = 'auto' | 'on' | 'off';

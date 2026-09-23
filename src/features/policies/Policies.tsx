@@ -4,7 +4,6 @@ import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
-import {pickTab, within} from '../../shell/route';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import type {PageProps} from '../types';
@@ -133,10 +132,9 @@ const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<Pol
     </section>
   );
 });
-export function Policies({go, query}: PageProps) {
+export function Policies(props: PageProps) {
   const t = useT();
-  const m = usePolicies(query);
-  const tab = pickTab(query, ['groups', 'arrange'], 'groups');
+  const m = usePolicies(props);
   const groups = (
     <>
       <p className="rp-note">{t('policy.note')}</p>
@@ -163,8 +161,8 @@ export function Policies({go, query}: PageProps) {
       <Tabs
         keepMounted
         label={t('nav.policies')}
-        value={tab}
-        onChange={next => go('policies', within(query, {tab: next === 'groups' ? null : next}))}
+        value={m.tab}
+        onChange={m.setTab}
         items={[
           {id: 'groups', label: t('policy.tab.groups'), content: groups},
           {

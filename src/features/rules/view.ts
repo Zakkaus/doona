@@ -10,6 +10,7 @@ import {coverageView, word, type CoverageView} from './flows/view';
 import {sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
+import {offered} from '../../api/capabilities';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -173,16 +174,20 @@ export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Trans
   };
 }
 
-type RulesView = {tabs: {id: 'map' | 'list' | 'flows' | 'trace'; label: string}[]; tab: string};
-export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
-  const flows = resources?.flows.available !== false;
-  const rules = resources?.rules.available === true;
-  const tabs: RulesView['tabs'] = [
-    ...(flows ? [{id: 'map' as const, label: t('rule.map')}] : []),
-    ...(flows || rules ? [{id: 'list' as const, label: t('rule.listTitle')}] : []),
-    ...(flows ? [{id: 'flows' as const, label: t('rule.flows')}] : []),
-    ...(resources?.routing_trace.available !== false ? [{id: 'trace' as const, label: t('rule.trace')}] : [])
+type RuleTab = 'map' | 'list' | 'flows' | 'trace';
+export function rulesTabs(resources: Capabilities['resources'] | undefined): Array<{id: RuleTab; titleKey: Key}> {
+  const flows = offered(resources, 'flows', {whileLoading: true});
+  const rules = offered(resources, 'rules', {whileLoading: false});
+  return [
+    ...(flows ? [{id: 'map' as const, titleKey: 'rule.map' as const}] : []),
+    ...(flows || rules ? [{id: 'list' as const, titleKey: 'rule.listTitle' as const}] : []),
+    ...(flows ? [{id: 'flows' as const, titleKey: 'rule.flows' as const}] : []),
+    ...(offered(resources, 'routing_trace', {whileLoading: true}) ? [{id: 'trace' as const, titleKey: 'rule.trace' as const}] : [])
   ];
+}
+type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string};
+export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
+  const tabs = rulesTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
   return {
     tabs,
     tab: pickTab(

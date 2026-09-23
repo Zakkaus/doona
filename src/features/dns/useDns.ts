@@ -8,7 +8,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../types';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
-import {pickTab, within} from '../../shell/route';
+import {pickTab, within, tabQuery} from '../../shell/route';
 import {queryTypes} from './query';
 import {errorText} from '../../api/error';
 
@@ -25,9 +25,8 @@ export function useDns({go, query}: PageProps) {
   const {busy, error, run} = useAction<'query'>({rethrow: true});
   const resources = capabilities.data?.resources;
   const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
-  const setTab = (tab: string, extra?: Record<string, string>) => {
-    go('dns', within(query, {tab, ...extra}));
-  };
+  // A link that filters the log by domain opens the log, not the statistics.
+  const fallback = params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query');
   const submit = async () => {
     try {
       await run('query', async signal => {
@@ -55,17 +54,16 @@ export function useDns({go, query}: PageProps) {
     error: capabilities.error,
     queryError: error,
     submit: () => void submit(),
-    setTab,
-    // A link that filters the log by domain opens the log, not the statistics.
+    setTab: (tab: string) => go('dns', tabQuery(query, tab, fallback)),
     tab: pickTab(
       query,
       view.tabs.map(item => item.id),
-      params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query')
+      fallback
     ),
     filterDomain: params.get('domain') ?? '',
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
     logEnabled: resources?.dns_log.available,
-    viewCache: () => setTab('cache', {domain: result?.domain ?? ''}),
+    viewCache: () => go('dns', within(query, {tab: 'cache', domain: result?.domain ?? ''})),
     clearCacheFilter: () => go('dns', within(query, {tab: 'cache', domain: null}))
   };
 }

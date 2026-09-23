@@ -84,3 +84,17 @@ test('a login draft cannot be saved after another tab changes the challenged end
   expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe(saved);
   expect(backend.requests.some(request => request.headers().authorization === 'Bearer challenge-secret')).toBe(false);
 });
+
+test('without discovery, the nodes page reads its nodes but not the groups it only sorts by', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(503, 'temporarily_unavailable', 'Discovery unavailable');
+  };
+  const nodesRead = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/v1/nodes'));
+  await page.goto('/#/nodes?tab=latency');
+  await expect(page.locator('.rp-content > .rp-alert')).toContainText('Discovery unavailable');
+  await nodesRead;
+  await expect(page.getByRole('tab', {name: 'Latency'})).toHaveAttribute('aria-selected', 'true');
+  await page.waitForTimeout(300);
+  expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
+});

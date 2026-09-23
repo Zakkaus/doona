@@ -10,6 +10,7 @@ import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupNameError} from '../policies';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
+import {offered} from '../../../api/capabilities';
 
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
@@ -18,8 +19,8 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const nodeList = useNodes(resources?.nodes.available === true);
-  const providers = useProviders(resources?.providers.available === true);
+  const nodeList = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const nodes = nodeList.data;
   const [changes, setChanges] = useState<GroupChange[]>([]);
   const guard = useDraftGuard(changes.length > 0);

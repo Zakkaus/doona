@@ -36,3 +36,13 @@ export function normalizeCapabilities(raw: Capabilities): Capabilities {
   for (const key of resourceKeys) if (!resources[key] || typeof resources[key] !== 'object') resources[key] = {available: false};
   return {...raw, resources: resources as Capabilities['resources']};
 }
+
+// Whether the backend offers a resource. `whileLoading` answers before capabilities arrive: a page's own resource
+// starts at once (true), a resource that only enriches the page waits for the answer (false).
+export function offered(
+  resources: Capabilities['resources'] | undefined,
+  key: keyof Capabilities['resources'],
+  {whileLoading}: {whileLoading: boolean}
+): boolean {
+  return resources ? resources[key].available === true : whileLoading;
+}

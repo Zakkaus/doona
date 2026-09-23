@@ -14,6 +14,7 @@ import {toast} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
 import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -41,9 +42,9 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const api = getApi();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const groups = useGroups(resources?.groups.available === true);
-  const nodes = useNodes(resources?.nodes.available === true);
-  const rules = useRules(resources?.rules.available === true);
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const probe = useNodeProbe(nodes.refetch);
   const groupsByName = useMemo(() => new Map(groups.data?.map(group => [group.name, group]) ?? []), [groups.data]);
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
@@ -76,8 +77,8 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
   const dnsQuery = capabilities.data?.resources.dns_query;
-  const offered = dnsQuery?.record_types;
-  const recordTypes = useMemo(() => (offered ?? []).filter(type => type === 'A' || type === 'AAAA'), [offered]);
+  const recordTypesOffered = dnsQuery?.record_types;
+  const recordTypes = useMemo(() => (recordTypesOffered ?? []).filter(type => type === 'A' || type === 'AAAA'), [recordTypesOffered]);
   const maxTypes = dnsQuery?.limits?.max_types_per_request ?? 1;
   const modes: TraceResolve[] = [
     ...backendModes,

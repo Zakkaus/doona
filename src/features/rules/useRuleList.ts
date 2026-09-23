@@ -12,6 +12,7 @@ import {dictionaryView, distributionView, removalView, ruleDraftView, type Dicti
 import {useDraftGuard} from '../../shell/draft';
 import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
 const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
@@ -57,11 +58,11 @@ export function useRuleList({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
-  const dictionary = resources?.rules.available === true;
+  const dictionary = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(dictionary);
-  const flows = useFlows({}, dictionary ? resources?.flows.available === true : true);
-  const groups = useGroups(dictionary && resources?.groups.available === true);
-  const canWrite = dictionary && resources?.config.available === true && resources.config.writable === true;
+  const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
+  const groups = useGroups(dictionary && offered(resources, 'groups', {whileLoading: false}));
+  const canWrite = dictionary && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(canWrite);
   const retry = () => {
     config.refetch();
