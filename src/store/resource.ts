@@ -28,6 +28,8 @@ type Store = {
   inactive: Map<string, ResourceState<unknown>>;
   expiry: Map<string, ReturnType<typeof setTimeout>>;
   parameterised: Set<string>;
+  // Paused consumers per name; their inactive snapshot does not expire.
+  retained: Map<string, number>;
 };
 const stores = new WeakMap<Api, Store>();
 const initialState: ResourceState<never> = {data: undefined, loading: true, error: null};
@@ -46,6 +48,40 @@ function snapshot<T>(api: Api, name: string): ResourceState<T> {
   return (store?.active.get(name)?.snapshot ?? store?.inactive.get(name) ?? initialState) as ResourceState<T>;
 }
 
+function ensureStore(api: Api) {
+  let store = stores.get(api);
+  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), expiry: new Map(), parameterised: new Set(), retained: new Map()}));
+  return store;
+}
+
+function expire(store: Store, name: string) {
+  if (!store.inactive.has(name) || store.retained.has(name)) return;
+  clearTimeout(store.expiry.get(name));
+  store.expiry.set(
+    name,
+    setTimeout(() => forget(store, name), keepInactive)
+  );
+}
+
+// Holds a snapshot for a paused consumer, which shows it without subscribing; the minute starts again on release.
+export function retainInactive(api: Api, name: string) {
+  const store = ensureStore(api);
+  store.retained.set(name, (store.retained.get(name) ?? 0) + 1);
+  clearTimeout(store.expiry.get(name));
+  store.expiry.delete(name);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const count = store.retained.get(name)! - 1;
+    if (count) store.retained.set(name, count);
+    else {
+      store.retained.delete(name);
+      expire(store, name);
+    }
+  };
+}
+
 function forget(store: Store, name: string) {
   clearTimeout(store.expiry.get(name));
   store.expiry.delete(name);
@@ -54,8 +90,7 @@ function forget(store: Store, name: string) {
 }
 
 export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
-  let store = stores.get(api);
-  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), expiry: new Map(), parameterised: new Set()}));
+  const store = ensureStore(api);
   let entry = store.active.get(name);
   if (!entry) {
     const state = snapshot<T>(api, name);
@@ -90,13 +125,11 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
       store.active.delete(name);
       if (shared.snapshot.data === undefined) return;
       store.inactive.set(name, {...shared.snapshot, error: null});
-      store.expiry.set(
-        name,
-        setTimeout(() => forget(store, name), keepInactive)
-      );
+      expire(store, name);
       if (resource.key.length > 1) {
         store.parameterised.add(name);
-        if (store.parameterised.size > 32) forget(store, store.parameterised.values().next().value!);
+        const oldest = store.parameterised.size > 32 && [...store.parameterised].find(key => !store.retained.has(key));
+        if (oldest) forget(store, oldest);
       }
     }
   };
@@ -288,7 +321,8 @@ export function useResource<T>(
   });
   const subscribe = useCallback(
     (notify: () => void) => {
-      if (!enabled || paused) return () => {};
+      if (!enabled) return () => {};
+      if (paused) return retainInactive(api, name);
       return watchResource(api, current.current, notify, name).dispose;
     },
     [api, name, enabled, paused]
