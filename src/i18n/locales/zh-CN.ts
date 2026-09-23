@@ -978,7 +978,6 @@ export const messages = {
   'login.setupTitle': '创建管理员',
   'login.passwordTitle': '登录',
   'login.setupNote': '{backend} 尚未设置管理员。创建账号后即登录；后端只接受来自本机、私有网络或链路本地地址的创建请求。',
-  'login.passwordNote': '使用 {backend} 的管理员账号登录。会话只保存在此标签页，关闭标签页即失效。',
   'login.username': '用户名',
   'login.password': '密码',
   'login.confirm': '确认密码',

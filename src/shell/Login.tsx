@@ -33,7 +33,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
           <Loading />
         ) : (
           <>
-            <span className="rp-label">{view.note}</span>
+            {view.note && <span className="rp-label">{view.note}</span>}
             {view.alert && (
               <InlineAlert key={view.alert.id} tone={view.alert.tone} takeFocus={view.alert.focus}>
                 {view.alert.text}

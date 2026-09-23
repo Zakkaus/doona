@@ -977,7 +977,6 @@ export const messages = {
   'login.setupTitle': '建立管理員',
   'login.passwordTitle': '登入',
   'login.setupNote': '{backend} 尚未設定管理員。建立帳號後即登入；後端只接受來自本機、私有網路或鏈路本地位址的建立請求。',
-  'login.passwordNote': '使用 {backend} 的管理員帳號登入。工作階段只保存在此分頁，關閉分頁即失效。',
   'login.username': '使用者名稱',
   'login.password': '密碼',
   'login.confirm': '確認密碼',

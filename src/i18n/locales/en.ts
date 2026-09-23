@@ -1012,7 +1012,6 @@ export const messages = {
   'login.passwordTitle': 'Sign in',
   'login.setupNote':
     '{backend} has no administrator yet. Creating one signs you in; the backend accepts this only from loopback, private or link-local addresses.',
-  'login.passwordNote': 'Sign in with the administrator account of {backend}. The session is kept only in this tab and ends when the tab closes.',
   'login.username': 'Username',
   'login.password': 'Password',
   'login.confirm': 'Confirm password',

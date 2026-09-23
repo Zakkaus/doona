@@ -115,7 +115,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   return {
     kind,
     title: t(kind === 'setup' ? 'login.setupTitle' : kind === 'login' ? 'login.passwordTitle' : 'login.title'),
-    note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? t('login.passwordNote', {backend}) : t('login.note', {backend}),
+    note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? null : t('login.note', {backend}),
     alert,
     busy,
     token,
