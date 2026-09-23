@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {blockFields, scanConfig, uncomment, isFragment} from './text';
+import {blockFields, scanConfig, uncomment, isFragment, quote, unquote} from './text';
+import {addNamesToGroup, namedIn, readGroupEntries} from './groups';
+import {readState, writeState} from './setup';
+import {writeInterval} from '../features/nodes/subscriptions';
+import {LocalError} from '../api/error';
 import {groupNames} from '../features/config/names';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
@@ -45,4 +49,23 @@ it('scans the routing arrow as its own token when written without spaces', () =>
   const arrows = scanConfig(text).tokens.filter(token => text.slice(token.from, token.to) === '->');
   expect(arrows).toHaveLength(2);
   expect(scanConfig('a-b c->d').tokens.map(token => 'a-b c->d'.slice(token.from, token.to))).toEqual(['a-b', 'c', '->', 'd']);
+});
+
+it('preserves representable names and URLs without decoding backslashes', () => {
+  const name = 'edge "west" \\ path';
+  expect(unquote(quote(name))).toBe(name);
+  const out = addNamesToGroup('group { proxy {} }', 'proxy', [name]);
+  expect(namedIn(readGroupEntries(out)[0])).toEqual([name]);
+  const url = 'https://example.org/{#}?token=a\\b';
+  const text = `subscription {\n  paid: '${url}'\n}\ngroup { proxy {} }\n`;
+  expect(writeInterval(text, 'paid', 3600)).toContain(`url: '${url}'`);
+  expect(writeState(text, {...readState(text), subscriptions: [{name: 'paid', url}]})).toBe(text);
+});
+
+it('refuses apostrophes instead of silently changing group names or subscription URLs', () => {
+  const url = "https://example.org/o'brien";
+  expect(() => quote("o'brien")).toThrowError(new LocalError('config.unquotable'));
+  expect(() => addNamesToGroup('group { proxy {} }', 'proxy', ["o'brien"])).toThrowError(LocalError);
+  expect(() => writeInterval(`subscription {\n  paid: "${url}"\n}`, 'paid', 3600)).toThrowError(LocalError);
+  expect(() => writeState('', {...readState(''), subscriptions: [{name: 'paid', url}]})).toThrowError(LocalError);
 });

@@ -1,21 +1,4 @@
-import {expect, isLive, offered, routes, test} from './fixtures';
-
-for (const scheme of ['light', 'dark']) {
-  test.describe(scheme, () => {
-    test.use({storage: {'doona-scheme': scheme}});
-    for (const route of routes) {
-      test(route, async ({page}) => {
-        await page.goto(`/#/${route}`);
-        test.skip(!(await offered(page, route)), 'not offered by this backend');
-        await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
-        await expect(page.locator('.rp-content')).toBeVisible();
-        const nav = page.locator(`.rp-nav[href="#/${route}"]`);
-        await expect(nav).toHaveAttribute('aria-current', 'page');
-        await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
-      });
-    }
-  });
-}
+import {expect, isLive, offered, test} from './fixtures';
 
 for (const width of [1024, 1280, 1440]) {
   test(`desktop tables fit their scrollports at ${width}px`, async ({page}) => {

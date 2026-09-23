@@ -98,3 +98,15 @@ for (const [scheme, palette] of [
     });
   });
 }
+
+// The narrowest supported phone: every page fits without scrolling sideways.
+test.describe('320px', () => {
+  test.use({viewport: {width: 320, height: 640}});
+  for (const route of [...routes, 'flows']) {
+    test(`no horizontal overflow on ${route}`, async ({page}) => {
+      await page.goto(`/#/${route}`);
+      await expect(page.locator('.rp-content > *').first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    });
+  }
+});

@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {detail, expect, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 const open = async (page: import('@playwright/test').Page, text: string) => {
@@ -114,4 +114,58 @@ test('search results are reached with arrow keys while the field keeps focus', a
   await expect(field).toHaveAttribute('aria-activedescendant', /.+/);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/config\?tab=validate$/);
+});
+
+test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  const connections = await api.connections();
+  const connection = connections.tcp[0];
+  connection.id = 'live/id:1';
+  connection.domain = 'live-search.example';
+  connection.dst = '198.51.100.42:443';
+  connection.src = '192.0.2.42:3210';
+  const nodes = await api.nodes();
+  nodes.nodes[0].name = 'Live node';
+  const groups = await api.groups();
+  groups[0].name = 'Live group';
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/connections': connections,
+    '/nodes': nodes,
+    '/groups': groups
+  };
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    await route.fulfill({json: path.startsWith('/groups/') ? await api.group(decodeURIComponent(path.slice(8))) : responses[path]});
+  });
+  await page.goto('/#/connections?q=no-such-connection');
+  // The shortcut only works once the shell has mounted its key handler.
+  await expect(page.getByRole('button', {name: /^Search pages/})).toBeVisible();
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog');
+  for (const query of ['live-search.example', '198.51.100.42', '192.0.2.42']) {
+    await dialog.getByRole('searchbox').fill(query);
+    await expect(dialog.getByRole('option', {name: /live-search.example/})).toBeVisible();
+  }
+  await dialog.getByRole('option', {name: /live-search.example/}).click();
+  await expect(page).toHaveURL(/#\/connections\?id=live%2Fid%3A1$/);
+  await expect(detail(page).getByRole('heading')).toHaveText('live-search.example');
+  await page.keyboard.press('Escape');
+  await expect(page).not.toHaveURL(/id=/);
+  await expect(detail(page)).toHaveCount(0);
+  const targets: Array<[string, RegExp]> = [
+    ['Live node', /#\/nodes\?provider=inline&q=Live\+node$/],
+    ['Live group', /#\/policies\?group=proxy$/],
+    ['Settings', /#\/settings$/]
+  ];
+  for (const [query, url] of targets) {
+    await page.keyboard.press('Control+K');
+    await dialog.getByRole('searchbox').fill(query);
+    await dialog.getByRole('option', {name: new RegExp('^' + query)}).click();
+    await expect(page).toHaveURL(url);
+  }
 });
