@@ -110,6 +110,13 @@ it('reads and expands the one-line form', () => {
   );
 });
 
+it('keeps the order of the other fields when it spreads a one-line entry', () => {
+  const text = "group {\n  g { check_url: 'https://example.org' filter: name(a) policy: min check_interval: 30s }\n}\n";
+  expect(writeGroupEntry(text, 'g', {filters: ['name(a, b)'], policy: 'random'})).toBe(
+    "group {\n  g {\n    check_url: 'https://example.org'\n    filter: name(a, b)\n    policy: random\n    check_interval: 30s\n  }\n}\n"
+  );
+});
+
 it('reads every group section and appends to the last', () => {
   const text = 'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n}\n';
   expect(readGroupEntries(text).map(e => e.name)).toEqual(['a', 'b']);

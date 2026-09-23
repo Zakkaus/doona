@@ -128,5 +128,5 @@ test('the cache table fits its entries instead of holding a page of empty space'
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Cache', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(entries);
   // Border, header and one row per entry; a fill-height table would stay at 442.
-  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries * 40 + 1);
+  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries * 40 + 1);
 });

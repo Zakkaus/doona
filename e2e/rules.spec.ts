@@ -185,5 +185,5 @@ test('the rule list fits its rows instead of holding a page of empty space', asy
   await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
   const rows = await table.locator('[role=row][data-key]').count();
   // Border, header and one row per rule; a fill-height table would stay at 560.
-  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + Math.max(rows, 2) * 40 + 1);
+  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + Math.max(rows, 2) * 40 + 1);
 });

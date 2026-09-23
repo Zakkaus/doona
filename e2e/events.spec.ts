@@ -65,5 +65,5 @@ test('a single event takes one row, not a blank one beneath it', async ({page}) 
   await page.goto('/#/events');
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Events', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(1);
-  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
+  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
 });
