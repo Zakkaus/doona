@@ -103,6 +103,7 @@ function Dictionary({view}: {view: Model}) {
         reveal
         onSelect={view.select}
         height={560}
+        fit
         empty={t('rule.dictionaryEmpty')}
         cols={columns}
       />
@@ -231,7 +232,7 @@ function Distribution({view}: {view: Model}) {
         )}
       </div>
       <ErrorMessage error={view.error} onRetry={view.retry} />
-      <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} empty={t('rule.distributionEmpty')} cols={columns} />
+      <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={t('rule.distributionEmpty')} cols={columns} />
     </div>
   );
 }

@@ -178,3 +178,12 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
   await expect(dialog).toHaveCount(0);
   expect((await write('example.net')).status()).toBe(202);
 });
+
+test('the rule list fits its rows instead of holding a page of empty space', async ({page}) => {
+  await page.goto('/#/rules?tab=list');
+  const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Rule list'})});
+  await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
+  const rows = await table.locator('[role=row][data-key]').count();
+  // Border, header and one row per rule; a fill-height table would stay at 560.
+  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + Math.max(rows, 2) * 40 + 1);
+});
