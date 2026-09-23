@@ -21,7 +21,8 @@ for (const width of [1024, 1280, 1440]) {
   test(`desktop tables fit their scrollports at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1400});
     for (const route of ['dns', 'rules', 'connections', 'events', 'overview']) {
-      await page.goto(`/#/${route}`);
+      // The connections table sits behind the traffic tab.
+      await page.goto(`/#/${route}${route === 'connections' ? '?tab=list' : ''}`);
       if (!(await offered(page, route))) continue;
       await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
       await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);

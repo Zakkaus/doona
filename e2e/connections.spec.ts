@@ -34,7 +34,7 @@ test('English Started values fit without truncation', async ({page}) => {
 });
 
 test('a column can be resized with the keyboard', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const header = page.getByRole('columnheader', {name: 'Target'});
   const resizer = header.getByRole('slider');
   await expect(header).toBeVisible();
@@ -57,7 +57,7 @@ test('a column can be resized with the keyboard', async ({page}) => {
 });
 
 test('connection selection follows clicks, arrows and Home/End across virtual rows', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await page.locator('.rp-table [data-key="c-0002"]').click();
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
@@ -85,7 +85,7 @@ test('connection selection follows clicks, arrows and Home/End across virtual ro
 });
 
 test('connection filtering narrows the collection and renders an empty result', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'});
   const filter = page.locator('.rp-toolbar input');
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
@@ -103,7 +103,7 @@ test('connection filtering narrows the collection and renders an empty result', 
 });
 
 test('activating a checked source or rule removes that filter', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const pick = page.getByRole('button', {name: 'Select', exact: true});
   const grid = page.getByRole('grid', {name: 'Connections'});
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
@@ -133,7 +133,7 @@ test('activating a checked source or rule removes that filter', async ({page}) =
 
 test('connection selection survives a runtime poll', async ({page}) => {
   await page.clock.install();
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await page.locator('.rp-table [data-key="c-0002"]').click();
   const age = await selected.getByRole('gridcell').last().textContent();
@@ -157,7 +157,7 @@ test('connection deep links reveal selected rows, including same-route query cha
 });
 
 test('1000 connections keep the DOM bounded at the top, middle and bottom', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'});
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
   await expect(page.locator('.rp-toolbar .rp-badge')).toHaveText('The connection list is truncated; only some records are shown.');
@@ -175,7 +175,7 @@ test('1000 connections keep the DOM bounded at the top, middle and bottom', asyn
 });
 
 test('column visibility, sorting and grouping persist without expanding the virtual DOM', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
   await page.getByRole('button', {name: 'Columns', exact: true}).click();
   await page.getByRole('menuitemcheckbox', {name: 'Rule', exact: true}).click();
@@ -214,7 +214,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
 });
 
 test('group slots stay expanded and unselectable across virtual keyboard navigation', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await page.getByRole('button', {name: 'Group by'}).click();
   await page.getByRole('option', {name: 'By client', exact: true}).click();
   const grid = page.getByRole('treegrid', {name: 'Connections'});
@@ -251,7 +251,7 @@ test.describe('short connection lists', () => {
   test.use({storage: {'doona-connections-view': JSON.stringify({hidden: ['dst'], sort: null, group: 'none'})}});
 
   test('virtualizes immediately and keeps first-visible sizing and type-ahead', async ({page}) => {
-    await page.goto('/#/connections');
+    await page.goto('/#/connections?tab=list');
     const grid = page.getByRole('grid', {name: 'Connections'});
     await expect(grid).toHaveAttribute('aria-rowcount', '9');
     expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
@@ -271,19 +271,19 @@ test.describe('default view', () => {
   test.use({storage: {'doona-mock-big': '100'}, viewport: {width: 1024, height: 768}});
 
   test('groups by client with counts and opens the selection beside the table', async ({page}) => {
-    await page.goto('/#/connections');
+    await page.goto('/#/connections?tab=list');
     const grid = page.getByRole('treegrid', {name: 'Connections'});
     const groups = grid.locator('[role=row][aria-level="1"]');
     await expect(groups.first()).toContainText('10.0.0.');
     await expect(groups.first()).toContainText('active');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await grid.locator('[role=row][aria-level="2"]').first().click();
-    await expect(page).toHaveURL(/#\/connections\?id=c-\d+$/);
+    await expect(page).toHaveURL(/#\/connections\?tab=list&id=c-\d+$/);
     const drawer = page.getByRole('dialog');
     await expect(drawer.getByRole('heading')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
-    await expect(page).toHaveURL(/#\/connections$/);
+    await expect(page).toHaveURL(/#\/connections\?tab=list$/);
     await page.setViewportSize({width: 1440, height: 900});
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
@@ -326,7 +326,7 @@ test('phone details retain routing diagnostics and omit unsupported flow actions
 });
 
 test('the connection list exports the filtered rows as CSV', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await page.locator('.rp-toolbar input').fill('api.telegram.org');
   const download = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export CSV', exact: true}).click();
@@ -344,7 +344,7 @@ test('the connection list exports the filtered rows as CSV', async ({page}) => {
 });
 
 test('connection filters live in the URL and survive a reload', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await page.getByRole('radio', {name: 'UDP', exact: true}).click();
   await expect(page).toHaveURL(/network=udp/);
   await page.reload();
@@ -354,7 +354,7 @@ test('connection filters live in the URL and survive a reload', async ({page}) =
 });
 
 test('close all with a rule filter closes the listed rows only', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
   const listed = async () => Number(await grid.getAttribute('aria-rowcount')) - 1;
   await expect.poll(listed).toBeGreaterThan(0);
@@ -383,7 +383,7 @@ test('a linked filter clears when the address loses it', async ({page}) => {
   await page.goto('/#/connections?q=hk-01');
   const filter = page.getByRole('searchbox', {name: 'Filter'});
   await expect(filter).toHaveValue('hk-01');
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await expect(filter).toHaveValue('');
 });
 
@@ -414,7 +414,7 @@ test('general IP search matches destinations while explicit source links constra
     }
     return route.fulfill({json: responses[path]});
   });
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const field = page.getByRole('searchbox', {name: 'Filter'});
   await field.fill('198.51.100.42');
   await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
@@ -457,7 +457,7 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
     }
     return route.fulfill({json: path === '/connections' ? list : responses[path]});
   });
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await expect(page.getByRole('grid', {name: 'Connections'})).toHaveAttribute('aria-rowcount', '3');
   await page.getByRole('button', {name: 'Close all', exact: true}).click();
   const dialog = page.getByRole('alertdialog');

@@ -149,7 +149,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');
-  await page.goto('/#/dns');
+  await page.goto('/#/dns?tab=query');
   await page.clock.fastForward(6000);
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await page.getByRole('textbox', {name: 'Domain', exact: true}).fill('example.com');

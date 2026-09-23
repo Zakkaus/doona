@@ -52,7 +52,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
 
 // The contract creates a provider unfetched; the page refreshes it right away so the person sees nodes, not "stale".
 test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources).toHaveCount(2);
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
@@ -88,7 +88,7 @@ test.describe('long lists', () => {
 });
 
 test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources).toHaveCount(2);
   await expect(sources.first()).toContainText('sub-c');
@@ -115,7 +115,7 @@ test('a subscription refresh interval is written into the configuration', async 
   );
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
@@ -127,7 +127,7 @@ test('a subscription refresh interval is written into the configuration', async 
   await expect(page.locator('.cm-content')).toContainText(
     "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
   );
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
@@ -156,7 +156,7 @@ test('built-in and unattributed provenance stay separate without granting inline
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: snapshot}));
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const list = rows(page.locator('.rp-table').nth(1));
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources.first()).toContainText('Built-in');
@@ -175,7 +175,7 @@ test('built-in and unattributed provenance stay separate without granting inline
 });
 
 test('an unspecified subscription interval claims neither manual-only nor an engine default but can be set', async ({page}) => {
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');

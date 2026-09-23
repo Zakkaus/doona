@@ -68,7 +68,7 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
     localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'}));
   });
   await page.route('**/api/v1/**', route => route.fulfill({json: responses[new URL(route.request().url()).pathname.replace('/api/v1', '')]}));
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const cell = page.getByRole('rowheader').getByText(full, {exact: true});
   await expect(cell).toBeVisible();
   expect(await cell.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
@@ -116,7 +116,7 @@ browserTest('API failures preserve request_id in the inline error', async ({page
   await page.route('**/api/v1/**', route =>
     route.fulfill({status: 503, json: {request_id: 'interaction-request-503', error: {code: 'unavailable', message: 'Backend unavailable'}}})
   );
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await expect(page.locator('.rp-content .rp-alert').first()).toContainText('request_id: interaction-request-503');
 });
 
