@@ -28,6 +28,17 @@ Eleven palettes support light and dark modes; Rosé Pine and Catppuccin include 
 
 </details>
 
+## Theme gallery
+
+The activity page in four palettes. Select a palette and mode from the top bar.
+
+| Theme gallery | Light                                                                | Dark                                                               |
+| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Rosé Pine     | ![Rosé Pine Light](docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](docs/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin    | ![Catppuccin Light](docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](docs/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord          | ![Nord Light](docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](docs/screenshots/en/theme-nord-dark.webp)             |
+| Glass         | ![Glass Light](docs/screenshots/en/theme-glass-light.webp)           | ![Glass Dark](docs/screenshots/en/theme-glass-dark.webp)           |
+
 ## Status
 
 doona targets the native API implemented by honk's `feat/native-api` branch; that API is not released yet. The contract it is built against is pinned in [SOURCE.md](contract/api-standardize/SOURCE.md). Backends that omit newer resource keys are accepted: doona fills those keys as unavailable. With no backend configured, a built-in mock supplies demo data; every screenshot here shows the mock.

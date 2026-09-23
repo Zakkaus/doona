@@ -1,5 +1,5 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
-// Also builds a two-column palette sheet from mock-backed screenshots.
+// Also builds a palette sheet and English theme gallery from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
 import {mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -23,35 +23,46 @@ const shots = [
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
-  ['Rosé Pine · Dawn', 'rose-pine/main', 'light'],
-  ['Rosé Pine · Main', 'rose-pine/main', 'dark'],
-  ['Rosé Pine · Moon', 'rose-pine/moon', 'dark'],
-  ['Catppuccin · Latte', 'catppuccin/mocha', 'light'],
-  ['Catppuccin · Frappé', 'catppuccin/frappe', 'dark'],
-  ['Catppuccin · Macchiato', 'catppuccin/macchiato', 'dark'],
-  ['Catppuccin · Mocha', 'catppuccin/mocha', 'dark'],
-  ['Nord · light', 'nord/nord', 'light'],
-  ['Nord · dark', 'nord/nord', 'dark'],
-  ['Kary Pro Colors · light', 'kary/kary', 'light'],
-  ['Kary Pro Colors · dark', 'kary/kary', 'dark'],
-  ['Ant Design · light', 'antd/antd', 'light'],
-  ['Ant Design · dark', 'antd/antd', 'dark'],
-  ['Arco Design · light', 'arco/arco', 'light'],
-  ['Arco Design · dark', 'arco/arco', 'dark'],
-  ['Semi Design · light', 'semi/semi', 'light'],
-  ['Semi Design · dark', 'semi/semi', 'dark'],
-  ['Glass · light', 'glass/glass', 'light'],
-  ['Glass · dark', 'glass/glass', 'dark']
+  ['Rosé Pine Dawn', 'rose-pine/main', 'light'],
+  ['Rosé Pine Main', 'rose-pine/main', 'dark'],
+  ['Rosé Pine Moon', 'rose-pine/moon', 'dark'],
+  ['Catppuccin Latte', 'catppuccin/mocha', 'light'],
+  ['Catppuccin Frappé', 'catppuccin/frappe', 'dark'],
+  ['Catppuccin Macchiato', 'catppuccin/macchiato', 'dark'],
+  ['Catppuccin Mocha', 'catppuccin/mocha', 'dark'],
+  ['Nord Light', 'nord/nord', 'light'],
+  ['Nord Dark', 'nord/nord', 'dark'],
+  ['Kary Pro Colors Light', 'kary/kary', 'light'],
+  ['Kary Pro Colors Dark', 'kary/kary', 'dark'],
+  ['Ant Design Light', 'antd/antd', 'light'],
+  ['Ant Design Dark', 'antd/antd', 'dark'],
+  ['Arco Design Light', 'arco/arco', 'light'],
+  ['Arco Design Dark', 'arco/arco', 'dark'],
+  ['Semi Design Light', 'semi/semi', 'light'],
+  ['Semi Design Dark', 'semi/semi', 'dark'],
+  ['Glass Light', 'glass/glass', 'light'],
+  ['Glass Dark', 'glass/glass', 'dark']
 ];
+const gallery = new Map([
+  ['Rosé Pine Dawn', 'rose-pine-light'],
+  ['Rosé Pine Moon', 'rose-pine-dark'],
+  ['Catppuccin Latte', 'catppuccin-light'],
+  ['Catppuccin Mocha', 'catppuccin-dark'],
+  ['Nord Light', 'nord-light'],
+  ['Nord Dark', 'nord-dark'],
+  ['Glass Light', 'glass-light'],
+  ['Glass Dark', 'glass-dark']
+]);
 execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
-async function screenshot(page, path, options = {}) {
+async function screenshot(page, path, options = {}, lossy = false) {
   const png = await page.screenshot(options);
-  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', '-o', path + '.webp', '--', '-'], {input: png});
+  execFileSync('cwebp', ['-quiet', ...(lossy ? ['-q', '78'] : ['-lossless', '-z', '9']), '-o', path + '.webp', '--', '-'], {input: png});
 }
 const browser = await chromium.launch();
 try {
   const tiles = [];
-  for (const [, palette, scheme] of looks) {
+  mkdirSync(join(dir, 'en'), {recursive: true});
+  for (const [label, palette, scheme] of looks) {
     const context = await browser.newContext({
       viewport: {width: 1440, height: 920},
       deviceScaleFactor: 0.5,
@@ -74,6 +85,7 @@ try {
     await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
     await page.evaluate(() => document.fonts.ready);
     tiles.push(await page.screenshot());
+    if (gallery.has(label)) await screenshot(page, join(dir, 'en', `theme-${gallery.get(label)}`), {}, true);
     await context.close();
   }
   // Embed tiles as data URLs because the blank sheet page may not load local files.

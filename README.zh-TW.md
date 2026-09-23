@@ -28,6 +28,17 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 ho
 
 </details>
 
+## 配色範例
+
+下圖展示活動頁的四種配色。可在頂欄切換配色和模式。
+
+| 配色       | 淺色                                                                | 深色                                                               |
+| ---------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Rosé Pine  | ![Rosé Pine 淺色](docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](docs/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin | ![Catppuccin 淺色](docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](docs/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord       | ![Nord 淺色](docs/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](docs/screenshots/en/theme-nord-dark.webp)             |
+| Glass      | ![Glass 淺色](docs/screenshots/en/theme-glass-light.webp)           | ![Glass 深色](docs/screenshots/en/theme-glass-dark.webp)           |
+
 ## 狀態
 
 doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚未發行。契約的釘點記錄在 [SOURCE.md](contract/api-standardize/SOURCE.md)。後端缺少較新的資源鍵時，doona 會把這些鍵視為不可用。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
