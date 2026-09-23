@@ -14,7 +14,9 @@ export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | '
       continue;
     }
     const point = {id: row.id, up: Number(row.upload_bytes), down: Number(row.download_bytes), name: row.domain || row.dst || row.id};
-    byOutbound.set(row.outbound, [...(byOutbound.get(row.outbound) ?? []), point]);
+    const points = byOutbound.get(row.outbound);
+    if (points) points.push(point);
+    else byOutbound.set(row.outbound, [point]);
   }
   const series: TrafficSeries[] = [...byOutbound]
     .map(([outbound, points]) => ({outbound, points}))

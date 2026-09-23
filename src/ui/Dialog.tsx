@@ -1,4 +1,4 @@
-import {useDeferredValue, useEffect, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {createContext, useContext, useDeferredValue, useEffect, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -134,27 +134,32 @@ export function Tabs({
         .filter(item => kept.has(item.id) || item.id === shown)
         .map(item => (
           <TabPanel key={item.id} id={item.id} shouldForceMount className="rp-tabpanel" data-shown={item.id === visible || undefined}>
-            {item.content}
+            <TabShown.Provider value={item.id === visible}>{item.content}</TabShown.Provider>
           </TabPanel>
         ))}
     </RTabs>
   );
 }
 
+// Whether the tab panel around a component is the one on screen. A kept panel stays mounted while hidden, so what
+// it renders outside itself (a drawer, a document-wide key handler) must follow this rather than its own state.
+const TabShown = createContext(true);
+
 // The last child of rp-with-panel is a side panel on wide screens and a drawer below the breakpoint.
 export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {
   const t = useT();
   const wide = useMediaQuery(panelQuery);
+  const showing = useContext(TabShown) && open;
   useEffect(() => {
-    if (!open || !wide) return;
+    if (!showing || !wide) return;
     const on = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"], .rp-toasts'))
         onClose();
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
-  }, [open, wide, onClose]);
-  if (!open) return null;
+  }, [showing, wide, onClose]);
+  if (!showing) return null;
   const head = (
     <div className="rp-row">
       <h3 className="rp-h3">{title}</h3>

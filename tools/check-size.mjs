@@ -57,4 +57,7 @@ for (const file of [...shell].sort()) {
   shellBytes += size;
   console.log(`  ${file}: ${size} bytes gzip`);
 }
-check('shell', shellBytes);
+// Startup loads one language catalogue before the first render, so the largest counts towards the shell.
+const locale = Math.max(0, ...[...sizes].filter(([file]) => file.startsWith('assets/locale-')).map(([, size]) => size));
+console.log(`  largest locale catalogue: ${locale} bytes gzip`);
+check('shell', shellBytes + locale);

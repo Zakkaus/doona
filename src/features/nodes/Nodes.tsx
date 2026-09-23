@@ -1,4 +1,5 @@
 import {useT} from '../../i18n';
+import {useCapabilities} from '../../store';
 import {Button, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
 import {pickTab, within} from '../../shell/route';
 import {NodeLatency} from './Latency';
@@ -30,29 +31,32 @@ export function Nodes(props: PageProps) {
     policy,
     setPolicy
   } = useNodesPage(props);
+  // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone.
+  const measured = useCapabilities().data?.resources.nodes.available !== false;
+  const list = (
+    <>
+      <ErrorMessage error={error} onRetry={reload} />
+      <ProviderTable model={providerTable} />
+      <NodeTable model={nodeTable} />
+    </>
+  );
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
-      <Tabs
-        keepMounted
-        label={t('nav.nodes')}
-        value={pickTab(props.query, ['list', 'latency'], 'list')}
-        onChange={next => props.go('nodes', within(props.query, {tab: next === 'list' ? null : next}))}
-        items={[
-          {
-            id: 'list',
-            label: t('nodes.tab.list'),
-            content: (
-              <>
-                <ErrorMessage error={error} onRetry={reload} />
-                <ProviderTable model={providerTable} />
-                <NodeTable model={nodeTable} />
-              </>
-            )
-          },
-          {id: 'latency', label: t('nodes.tab.latency'), content: <NodeLatency />}
-        ]}
-      />
+      {measured ? (
+        <Tabs
+          keepMounted
+          label={t('nav.nodes')}
+          value={pickTab(props.query, ['list', 'latency'], 'list')}
+          onChange={next => props.go('nodes', within(props.query, {tab: next === 'list' ? null : next}))}
+          items={[
+            {id: 'list', label: t('nodes.tab.list'), content: list},
+            {id: 'latency', label: t('nodes.tab.latency'), content: <NodeLatency />}
+          ]}
+        />
+      ) : (
+        list
+      )}
       <ModalDialog
         title={dialogTitle}
         narrow

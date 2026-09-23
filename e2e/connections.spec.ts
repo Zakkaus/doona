@@ -471,3 +471,14 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
   expect(deleted).toEqual(['first', 'second']);
   await expect(page.locator('[data-key="later"]')).toBeVisible();
 });
+
+test('a hidden tab keeps its detail drawer closed when the window narrows', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  await page.locator('.rp-table [data-key="c-0002"]').click();
+  await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
+  await page.getByRole('tab', {name: 'Traffic', exact: true}).click();
+  await page.setViewportSize({width: 600, height: 900});
+  await expect(page.locator('.rp-drawer')).toHaveCount(0);
+  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await expect(page.locator('.rp-drawer .rp-h3')).toHaveText('cdn.bilibili.com');
+});

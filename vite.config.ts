@@ -56,9 +56,11 @@ export default defineConfig({
         const files = Object.keys(bundle)
           .filter(name => name === 'index.html' || name.startsWith('assets/'))
           .sort();
-        // A reader needs one language, so the others are not installed up front; the worker caches whichever loads,
-        // as it does fonts and icons. Every file still counts towards the build hash.
-        const precache = files.filter(name => !name.startsWith('assets/locale-'));
+        // A reader needs one language, so only zh-TW, the fallback startup uses when the saved one does not load, is
+        // installed up front; the worker caches any other on first use, as it does fonts and icons. Offline after a new
+        // deployment, a page whose language is not yet cached therefore still starts, in zh-TW. Every file still
+        // counts towards the build hash.
+        const precache = files.filter(name => !name.startsWith('assets/locale-') || name.startsWith('assets/locale-zh-TW-'));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
