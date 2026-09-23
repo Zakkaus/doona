@@ -71,7 +71,6 @@ export function usePolicies(query: string) {
     reload,
     refreshGroups: groups.refetch,
     refreshNodes: nodes.refetch,
-    nodes: nodes.data,
     groups: groups.data
   };
 }

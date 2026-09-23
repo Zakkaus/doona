@@ -1,4 +1,5 @@
 import {expect, mockBackend, test} from './fixtures';
+import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
 
@@ -118,4 +119,19 @@ test('a pointer drag from the tray stages the node on the group it lands on', as
   await row.dispatchEvent('dragend', {dataTransfer});
   await expect(gaming).toContainText('us-01');
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toContainText('1 change not applied');
+});
+
+test('a failed node list is shown with a retry instead of loading forever', async ({page}) => {
+  const backend = await mockBackend(page);
+  let fail = true;
+  backend.handlers['GET nodes'] = async () => {
+    if (fail) throw new ApiError(503, 'unavailable', 'Node list unavailable');
+    return backend.api.nodes();
+  };
+  await page.goto('/#/policies?tab=arrange');
+  const alert = page.getByRole('alert').filter({hasText: 'Node list unavailable'});
+  await expect(alert).toBeVisible();
+  fail = false;
+  await alert.getByRole('button', {name: 'Retry'}).click();
+  await expect(page.getByRole('grid', {name: 'Nodes and subscriptions'})).toBeVisible();
 });

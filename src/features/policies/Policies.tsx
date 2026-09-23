@@ -166,7 +166,7 @@ export function Policies({go, query}: PageProps) {
             label: t('policy.tab.arrange'),
             content: (
               <Suspense fallback={<Loading />}>
-                <Arrange source={m.source} nodes={m.nodes} groups={m.groups} />
+                <Arrange source={m.source} groups={m.groups} />
               </Suspense>
             )
           }

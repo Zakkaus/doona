@@ -2,8 +2,7 @@ import {useCallback, useDeferredValue, useMemo, useState} from 'react';
 import {useFilter} from 'react-aria-components';
 import {useT} from '../../../i18n';
 import type {Key} from '../../../i18n/messages';
-import type {Node} from '../../../api/model';
-import {useCapabilities, useProviders} from '../../../store';
+import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
 import {toast, useLinked} from '../../../ui/ui';
 import {useDraftGuard} from '../../config/useDraftGuard';
@@ -15,10 +14,13 @@ import {errorText} from '../../../api/error';
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
 
-export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>, nodes: Node[] | undefined) {
+export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>) {
   const t = useT();
-  const resources = useCapabilities().data?.resources;
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
+  const nodeList = useNodes(resources?.nodes.available === true);
   const providers = useProviders(resources?.providers.available === true);
+  const nodes = nodeList.data;
   const [changes, setChanges] = useState<GroupChange[]>([]);
   const guard = useDraftGuard(changes.length > 0);
   // Leaving the page after confirming the draft guard drops what was staged.
@@ -90,9 +92,11 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     nodes: trayNodes,
     search,
     setSearch,
-    loading: nodes === undefined || (providers.loading && !providers.data),
-    error: source.error ?? providers.error,
-    retry: useCallback(() => void providers.refetch?.(), [providers]),
+    // A backend without a node or provider list still arranges what it has; only a request in flight waits.
+    loading: (capabilities.loading && !capabilities.data) || (nodeList.loading && !nodes) || (providers.loading && !providers.data),
+    // A failed poll with data already shown keeps the page and what is staged on it.
+    error: [capabilities, nodeList, providers].find(resource => resource.error && !resource.data)?.error ?? (source.main ? null : source.error),
+    retry: useCallback(() => void refetchAll(), []),
     blocked: blockedReason ? t(blockedReason) : null,
     busy: source.busy || applying,
     applying,
