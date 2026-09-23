@@ -7,7 +7,7 @@ import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {toast, useLinked} from '../../ui/ui';
-import {readSettings} from './settings';
+import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
 

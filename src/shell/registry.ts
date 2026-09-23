@@ -2,7 +2,7 @@ import type {Key} from '../i18n';
 import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';
-import type {PageProps} from '../features/types';
+import type {PageProps, RoutePath} from './routes';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
@@ -60,7 +60,7 @@ export function warmAllPages() {
 
 type Feature = {
   id: string;
-  path: string;
+  path: RoutePath;
   // The question shown beneath a page title to distinguish similar pages.
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
@@ -144,12 +144,7 @@ const definitions = [
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ] as const satisfies ReadonlyArray<Feature>;
 
-export type RoutePath = (typeof definitions)[number]['path'];
-export const features: ReadonlyArray<Feature & {path: RoutePath}> = definitions;
-
-export function isRoutePath(path: string): path is RoutePath {
-  return features.some(feature => feature.path === path);
-}
+export const features: ReadonlyArray<Feature> = definitions;
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
   const requires = features.find(feature => feature.path === path)?.requires;

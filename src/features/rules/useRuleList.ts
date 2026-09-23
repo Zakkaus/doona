@@ -4,7 +4,7 @@ import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {addRule, removeRule, ruleAnchor} from './source';
 import {parseRuleSeed, type RuleSeed} from './seed';

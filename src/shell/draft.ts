@@ -1,5 +1,6 @@
-import {useCallback, useContext, useEffect, useState} from 'react';
-import {DraftContext} from './route';
+import {createContext, useCallback, useContext, useEffect, useState} from 'react';
+
+export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
 
 const drafts = new WeakMap<(dirty: boolean) => void, Set<symbol>>();
 

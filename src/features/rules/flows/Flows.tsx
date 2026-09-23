@@ -18,7 +18,7 @@ import {
   type TableColumn
 } from '../../../ui/ui';
 import {Coverage} from './Coverage';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {useT} from '../../../i18n';
 import Close from '../../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';

@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {ApiError} from '../api/error';
 import {capabilitiesBase, version} from '../api/mock/fixtures';
-import {readSettings} from '../features/settings/settings';
+import {readSettings} from './preferences';
 import {translate} from '../i18n';
 import {shellView} from './view';
 

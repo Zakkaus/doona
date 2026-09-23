@@ -4,7 +4,7 @@ import {connectionStates, outboundLabel} from '../../../api/selectors';
 import {useLang, useT} from '../../../i18n';
 import {within} from '../../../shell/route';
 import {panelQuery, useMediaQuery} from '../../../ui/ui';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 import {offered} from '../../../api/capabilities';

@@ -1,6 +1,6 @@
 import {useCapabilities} from '../../store';
 import {useT} from '../../i18n';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {rulesView} from './view';
 import {tabQuery} from '../../shell/route';
 

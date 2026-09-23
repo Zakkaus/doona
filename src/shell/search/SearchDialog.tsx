@@ -2,7 +2,7 @@ import {Autocomplete, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-
 import {useT} from '../../i18n';
 import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
-import type {PageProps} from '../../features/types';
+import type {PageProps} from '../routes';
 import {useSearch} from './useSearch';
 
 export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {

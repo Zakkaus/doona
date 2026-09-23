@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures';
-import type {PaletteId} from '../src/features/settings/settings';
+import type {PaletteId} from '../src/shell/preferences';
 
 // Every palette, both schemes: the accent as text on the base and surface, text on an accent fill, and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.

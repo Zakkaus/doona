@@ -4,7 +4,7 @@ import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
 import {useModules, type ModulesProps} from './useModules';
 export function Config(props: PageProps) {

@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {buildHash, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
-import type {RoutePath} from './registry';
+import type {RoutePath} from './routes';
 
 afterEach(() => vi.unstubAllGlobals());
 

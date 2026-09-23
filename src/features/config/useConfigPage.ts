@@ -6,7 +6,7 @@ import {ApiError, errorText} from '../../api/error';
 import {localTime} from '../../api/selectors';
 import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs} from './view';
 import {useDraftGuard} from '../../shell/draft';

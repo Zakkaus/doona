@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import type {Key} from 'react-aria-components';
 import {useLang, useT} from '../../i18n';
 import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
-import type {PageProps} from '../../features/types';
+import type {PageProps} from '../routes';
 import {connectionEntries, groupEntries, nodeEntries, pageEntries, providerEntries, ruleEntries, searchSections, searchView, sourceEntries} from './view';
 import {offered} from '../../api/capabilities';
 

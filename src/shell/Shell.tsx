@@ -3,11 +3,10 @@ import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
 import {Button, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
-import type {PageProps} from '../features/types';
-import {DraftContext} from './route';
+import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
-import {SettingsContext} from '../features/settings/context';
-import type {Settings} from '../features/settings/settings';
+import {SettingsContext} from './preferences';
+import type {Settings} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
 import {TopBar} from './TopBar';
@@ -15,7 +14,7 @@ import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
-import {isRoutePath} from './registry';
+import {isRoutePath, type PageProps} from './routes';
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
 const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
 

@@ -7,7 +7,7 @@ import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
 import {groupNameError, newGroupPolicies} from '../policies/policies';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';
 import {useProviderTable} from './useProviderTable';

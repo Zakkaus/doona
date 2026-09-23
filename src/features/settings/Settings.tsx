@@ -1,13 +1,13 @@
 import {Menu, MenuSection, Header} from 'react-aria-components';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField} from '../../ui/ui';
-import type {PaletteId, Scheme, Wordmark} from './settings';
+import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {About} from '../../shell/About';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 
 export function Settings({query}: PageProps) {
   const t = useT();

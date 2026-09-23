@@ -75,7 +75,7 @@ doona 没有用于存储自身界面设置的服务器端存储。配置与运�
 | 使用中的 | `doona-profile`  | 所选后端的 `id`                                                                                                                                                                                     |
 | 语言     | `doona-lang`     | `zh-TW`（默认）、`zh-CN`、`en`                                                                                                                                                                      |
 | 配色方案 | `doona-scheme`   | `system`（默认）、`light`、`dark`                                                                                                                                                                   |
-| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；其他值见 [settings.ts](../src/features/settings/settings.ts) 的 `PaletteId`                                                                                               |
+| 配色     | `doona-palette`  | `rose-pine/moon`（默认）；其他值见 [preferences.ts](../src/shell/preferences.ts) 的 `PaletteId`                                                                                                     |
 | 字标     | `doona-wordmark` | `gradient`（默认）、`plain`                                                                                                                                                                         |
 
 保存的主题与语言在第一帧之前就应用，重新加载不会闪出默认外观。

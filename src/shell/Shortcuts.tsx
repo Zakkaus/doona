@@ -1,9 +1,8 @@
 import {useEffect, useState} from 'react';
-import type {PageProps} from '../features/types';
 import {useT} from '../i18n';
 import {Button, ModalDialog} from '../ui/ui';
 import type {ShortcutView} from './view';
-import {isRoutePath} from './registry';
+import {isRoutePath, type PageProps} from './routes';
 
 export function Shortcuts({
   go,

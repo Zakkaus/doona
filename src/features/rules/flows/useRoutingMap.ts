@@ -2,7 +2,7 @@ import {useCallback, useLayoutEffect, useMemo, useRef} from 'react';
 import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../../store';
 import {useT} from '../../../i18n';
 import {within} from '../../../shell/route';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {flowsThrough, routingTree, type TreeBy} from './map';
 import {routingMapView} from './view';
 import {offered} from '../../../api/capabilities';

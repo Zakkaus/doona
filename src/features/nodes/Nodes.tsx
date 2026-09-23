@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import {Button, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';

@@ -1,8 +1,8 @@
 import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
-import type {PaletteId, Scheme, Settings} from '../features/settings/settings';
-import type {PageProps} from '../features/types';
+import type {PaletteId, Scheme, Settings} from './preferences';
+import type {PageProps} from './routes';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';

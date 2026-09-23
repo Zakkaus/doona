@@ -5,7 +5,7 @@ import {useMainSourceEdit} from '../../store/mainSource';
 import {readGroupEntries} from '../../dae/groups';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 

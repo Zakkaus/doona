@@ -5,7 +5,7 @@ import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/se
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {
   columns,
   readView,

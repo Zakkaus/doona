@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
 import {runAfterTransition} from 'react-aria/private/utils/runAfterTransition';
 import {consumeProfileReadError} from '../api/profiles';
-import {writeSetting} from '../features/settings/settings';
-import type {SettingsContext} from '../features/settings/context';
+import {writeSetting} from './preferences';
+import type {SettingsContext} from './preferences';
 import {LANGS, LOCALE, loadLanguage, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';

@@ -18,7 +18,7 @@ import {
   Empty,
   type TableColumn
 } from '../../ui/ui';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';

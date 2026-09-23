@@ -1,6 +1,6 @@
 import {createContext, useCallback, useContext, useMemo, useRef, useState} from 'react';
 import {refetchAll, useCapabilities, useVersion} from '../store';
-import type {Settings} from '../features/settings/settings';
+import type {Settings} from './preferences';
 import {useT} from '../i18n';
 import {toast} from '../ui/ui';
 import {duckView, shellView, wordmark, type AboutView, type ShellView} from './view';

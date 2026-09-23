@@ -2,7 +2,7 @@ import {useContext, useState} from 'react';
 import {useCapabilities, useVersion} from '../../store';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
-import {SettingsContext} from './context';
+import {SettingsContext} from '../../shell/preferences';
 import {useBackendForm} from './backendForm';
 import {profileView, paletteLabel} from './view';
 import {useInstallOffer} from '../../shell/install';

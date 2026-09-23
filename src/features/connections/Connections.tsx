@@ -19,7 +19,7 @@ import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
 import type {ConnectionView} from './view';

@@ -1,7 +1,8 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
-import {features, navAvailable, type RoutePath} from '../registry';
+import {features, navAvailable} from '../registry';
+import {type RoutePath} from '../routes';
 import {within} from '../route';
 import {dnsTabs} from '../../features/dns/view';
 import {rulesTabs} from '../../features/rules/view';
