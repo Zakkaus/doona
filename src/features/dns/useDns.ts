@@ -130,6 +130,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const key = JSON.stringify(filter);
   const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const paging = useAction<'older'>({scope: key});
   // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.
   useLinked(key, () => setHeld(null));
@@ -174,10 +175,14 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     hasOlder: !!data?.next_cursor,
     loadingOlder: !!paging.busy,
     loadOlder,
+    refreshing,
     refresh: () => {
       paging.cancel();
       setHeld(null);
-      log.refetch();
+      const done = log.refetch();
+      if (!done) return;
+      setRefreshing(true);
+      void done.finally(() => setRefreshing(false));
     },
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')
   };

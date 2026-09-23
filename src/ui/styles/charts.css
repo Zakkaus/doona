@@ -1,11 +1,5 @@
-/* ---- Chart cards: one module per card, titled as the activity cards are. ---- */
-.rp-chartcard {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-.rp-chartcard > .rp-note {
+/* A titled card's note sits closer to its title than the body does. */
+.rp-titled > .rp-note {
   margin: -4px 0 0;
 }
 /* Fact tiles reuse the activity tiles; a definition list keeps label and value paired for assistive technology. */

@@ -193,3 +193,21 @@ test('DNS source filters send IP literals only on head and older requests', asyn
   const logRequests = requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/log');
   expect(logRequests.every(request => !new URL(request.url()).searchParams.get('src')?.includes('53211'))).toBe(true);
 });
+
+test('the resolution log refresh shows its request pending', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  await page.goto('/#/dns?tab=log');
+  await expect(page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader').first()).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  handlers['GET dns/log'] = async () => {
+    await gate;
+    return api.dnsLog({});
+  };
+  // The top bar has a Refresh icon button of its own; this is the one in the log's toolbar.
+  const refresh = page.locator('.rp-toolbar').getByRole('button', {name: 'Refresh', exact: true});
+  await refresh.click();
+  await expect(refresh).toHaveAttribute('data-pending');
+  release();
+  await expect(refresh).not.toHaveAttribute('data-pending');
+});

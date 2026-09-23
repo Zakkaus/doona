@@ -1,9 +1,10 @@
+import {Card} from '../../ui/ui';
 import {memo, useCallback, useMemo} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {Connection} from '../../api/model';
 import {outboundLabel} from '../../api/selectors';
 import {formatBytes} from '../../i18n/format';
-import {usePalette, ChartCard, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
+import {usePalette, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
 import Download from '../../ui/icons/Download';
 import Link from '../../ui/icons/Link';
 import Upload from '../../ui/icons/Upload';
@@ -63,7 +64,7 @@ export const Traffic = memo(function Traffic({
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
-      <ChartCard title={t('conn.chart.title')} note={sample}>
+      <Card title={t('conn.chart.title')} note={sample}>
         {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
         {view.placed > 0 && (
           <>
@@ -78,7 +79,7 @@ export const Traffic = memo(function Traffic({
             <p className="rp-note">{t('conn.chart.hint')}</p>
           </>
         )}
-      </ChartCard>
+      </Card>
     </div>
   );
 });

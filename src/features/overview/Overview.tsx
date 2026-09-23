@@ -1,6 +1,6 @@
 import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {Badge, Card, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {tableLayout} from '../../ui/Table';
 import {LifecycleActions} from './Lifecycle';
@@ -52,10 +52,7 @@ export function Overview() {
         </div>
       </div>
       <div className="rp-g3">
-        <section className="rp-card" aria-labelledby="overview-engine">
-          <h3 className="rp-h3" id="overview-engine">
-            {t('ov.engine')}
-          </h3>
+        <Card title={t('ov.engine')}>
           <ErrorMessage error={vm.errors.version} onRetry={vm.retry.version} />
           {vm.engine.state === 'ready' ? (
             <>
@@ -73,11 +70,8 @@ export function Overview() {
           ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-counters">
-          <h3 className="rp-h3" id="overview-counters">
-            {t('ov.counters')}
-          </h3>
+        </Card>
+        <Card title={t('ov.counters')}>
           <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry.runtime} />
           {vm.counters.state === 'ready' ? (
             <>
@@ -89,11 +83,8 @@ export function Overview() {
           ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-memory">
-          <h3 className="rp-h3" id="overview-memory">
-            {t('ov.memory')}
-          </h3>
+        </Card>
+        <Card title={t('ov.memory')}>
           <ErrorMessage error={vm.errors.memory} onRetry={vm.retry.memory} />
           {vm.memory.state === 'ready' ? (
             <>
@@ -105,13 +96,10 @@ export function Overview() {
           ) : vm.errors.memory ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
+        </Card>
       </div>
       <div className="rp-g21">
-        <section className="rp-card" aria-labelledby="overview-datapath">
-          <h3 className="rp-h3" id="overview-datapath">
-            {t('ov.datapath')}
-          </h3>
+        <Card title={t('ov.datapath')}>
           <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
             <>
@@ -152,11 +140,8 @@ export function Overview() {
           ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-resources">
-          <h3 className="rp-h3" id="overview-resources">
-            {t('ov.resources')}
-          </h3>
+        </Card>
+        <Card title={t('ov.resources')}>
           {vm.resources.state === 'ready' ? (
             <div className="rp-list rp-list-columns">
               {vm.resources.rows.map(row => (
@@ -173,7 +158,7 @@ export function Overview() {
           ) : vm.errors.capabilities ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
+        </Card>
       </div>
     </div>
   );

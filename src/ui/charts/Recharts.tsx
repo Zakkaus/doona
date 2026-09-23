@@ -4,7 +4,7 @@ import {useT} from '../../i18n';
 import {localTimeFormat} from '../../i18n/format';
 import {LoadBoundary} from '../LoadBoundary';
 import {usePalette, type Palette} from './palette';
-import {LegendItem} from './ChartCard';
+import {LegendItem} from './LegendItem';
 // Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
 // Pointer exit hides stale tooltips without disabling Recharts keyboard navigation.

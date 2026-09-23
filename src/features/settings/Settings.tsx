@@ -60,8 +60,8 @@ export function Settings({query}: PageProps) {
 
   return (
     <div className="rp-page">
-      {firstRun && <div className="rp-label">{t('settings.firstRun')}</div>}
-      {paired && <div className="rp-label">{t('settings.paired')}</div>}
+      {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
+      {paired && <p className="rp-note">{t('settings.paired')}</p>}
       <section className="rp-card" aria-labelledby={cards.backend.headingId}>
         <h2 className="rp-h3" id={cards.backend.headingId}>
           {t(cards.backend.titleKey)}
@@ -195,7 +195,7 @@ export function Settings({query}: PageProps) {
         isPending={saving}
         onConfirm={confirmSwitch}
       >
-        <p>{t('settings.switchProfileHelp')}</p>
+        <p className="rp-label">{t('settings.switchProfileHelp')}</p>
       </ConfirmDialog>
       {dialog && (
         <ConfirmDialog
@@ -209,8 +209,8 @@ export function Settings({query}: PageProps) {
           error={profile.result?.error ? {id: 0, text: profile.result.text} : null}
           onConfirm={confirmProfile}
         >
-          {dialog === 'delete' ? <p>{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
-          {dialogDiscards && <p>{t('settings.profileDiscardHelp')}</p>}
+          {dialog === 'delete' ? <p className="rp-label">{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
+          {dialogDiscards && <p className="rp-label">{t('settings.profileDiscardHelp')}</p>}
         </ConfirmDialog>
       )}
     </div>

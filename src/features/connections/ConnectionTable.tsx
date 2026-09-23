@@ -9,6 +9,9 @@ type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading'
   view: ConnectionView;
   collection: ConnectionTableRow[];
 };
+// Plain text truncates with a tooltip, as in DataTable.
+const text = (cell: ReactNode) => (typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell);
+
 export function ConnectionTable({collection, view, loading, selected, onSelect, selectOnFocus, onSort}: Props) {
   const t = useT();
   const [ref, height] = useFillHeight<HTMLDivElement>(442);
@@ -40,7 +43,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
     <Row key={row.id} id={row.id} textValue={row.target}>
       {shown.map(column => (
         <Cell key={column.id} className={column.align}>
-          <span className="cell">{column.render(row)}</span>
+          <span className="cell">{text(column.render(row))}</span>
         </Cell>
       ))}
     </Row>
@@ -77,7 +80,11 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
             <TableBody
               items={collection}
               dependencies={[shown]}
-              renderEmptyState={() => (loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>)}
+              renderEmptyState={() => (
+                <div className="rp-table-empty" style={{width: width ?? '100%'}}>
+                  {loading ? <Loading /> : <div className="rp-empty">{t('conn.empty')}</div>}
+                </div>
+              )}
             >
               {row => {
                 if ('connection' in row) return renderRow(row.connection);
@@ -85,7 +92,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
                   <Row id={row.id} textValue={row.group}>
                     {shown.map((column, index) => (
                       <Cell key={column.id} className={column.align}>
-                        <span className="cell">{index === 0 ? <strong>{row.label}</strong> : row.totals[column.id]}</span>
+                        <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
                       </Cell>
                     ))}
                     {row.children.map(renderRow)}

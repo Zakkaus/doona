@@ -93,7 +93,7 @@ function Dictionary({view}: {view: Model}) {
           </Button>
         )}
       </div>
-      {view.editHelp && <p className="rp-label">{view.editHelp}</p>}
+      {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}

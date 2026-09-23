@@ -526,3 +526,31 @@ test('clearing the filter that opened the table keeps the table open', async ({p
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
   await expect(page.getByRole('grid').first()).toBeVisible();
 });
+
+test('an empty connection list keeps its message in view on a narrow screen', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET connections'] = async () => ({...(await api.connections()), tcp: [], udp: [], truncated: false});
+  await page.setViewportSize({width: 360, height: 800});
+  await page.goto('/#/connections?tab=list');
+  // Inside the same sticky wrapper DataTable uses, so a table wider than the screen cannot carry it out of view.
+  const message = page.locator('.rp-table-empty').getByText('No matching connections', {exact: true});
+  await expect(message).toBeVisible();
+  const box = (await message.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+});
+
+test('plain connection cells truncate with a tooltip like other tables', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'})));
+  await page.setViewportSize({width: 1600, height: 1000});
+  await page.goto('/#/connections?tab=list');
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  await expect(grid.locator('[role="row"][data-key]').first()).toBeVisible();
+  const headers = await grid.getByRole('columnheader').allTextContents();
+  const row = grid.locator('[role="row"][data-key]').first().locator('[role="rowheader"], [role="gridcell"]');
+  for (const column of ['State', 'Download']) {
+    const index = headers.findIndex(text => text.trim() === column);
+    expect(index, column).toBeGreaterThanOrEqual(0);
+    await expect(row.nth(index).locator('.rp-truncate')).toHaveCount(1);
+  }
+});

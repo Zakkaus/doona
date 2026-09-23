@@ -124,7 +124,7 @@ export function Nodes(props: PageProps) {
         error={problem}
         onConfirm={() => void submit(() => setDialog(null))}
       >
-        <p>{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>
+        <p className="rp-label">{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>
       </ConfirmDialog>
     </div>
   );

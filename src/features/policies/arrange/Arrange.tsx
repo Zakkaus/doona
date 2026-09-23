@@ -348,7 +348,7 @@ function NewGroup({m}: {m: Model}) {
   };
   return (
     <>
-      <Button onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
+      <Button small onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
         {t('arrange.newGroup')}
       </Button>
       <ModalDialog
@@ -389,7 +389,7 @@ function NewGroup({m}: {m: Model}) {
             spellCheck={false}
           />
           <PolicyPicker value={policy} onChange={setPolicy} />
-          <p className="rp-note">{t('arrange.newGroupNote')}</p>
+          <p className="rp-label">{t('arrange.newGroupNote')}</p>
         </form>
       </ModalDialog>
     </>
@@ -436,7 +436,7 @@ function Review({m}: {m: Model}) {
           </pre>
         ))}
       </Disclosure>
-      <p className="rp-note">{t('arrange.applyNote')}</p>
+      <p className="rp-label">{t('arrange.applyNote')}</p>
     </ModalDialog>
   );
 }

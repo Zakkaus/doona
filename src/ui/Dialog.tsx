@@ -200,7 +200,7 @@ export function ConfirmButton({
         onCancel={() => change(false)}
         onConfirm={() => void confirm()}
       >
-        <p>{confirmationText}</p>
+        <p className="rp-label">{confirmationText}</p>
       </ConfirmDialog>
     </>
   );

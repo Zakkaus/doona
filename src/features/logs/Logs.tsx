@@ -53,7 +53,7 @@ export function Logs() {
     <div className="rp-page">
       <div className="rp-toolbar">
         <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
-        <TextField search label={t('log.target')} value={vm.target} width={220} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
+        <TextField search label={t('log.target')} value={vm.target} width={240} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
         <Switch isSelected={vm.paused} onChange={vm.setPaused}>
           {t('log.pause')}
         </Switch>
@@ -61,7 +61,7 @@ export function Logs() {
           {vm.status.text}
         </Light>
         <span className="rp-grow" />
-        <Button small isDisabled={!vm.rows.length} onPress={vm.clear}>
+        <Button isDisabled={!vm.rows.length} onPress={vm.clear}>
           {t('log.clear')}
         </Button>
         <Button isDisabled={!vm.rows.length} onPress={vm.export}>

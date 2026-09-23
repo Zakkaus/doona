@@ -54,7 +54,7 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
   const t = useT();
   return (
     <ConfirmDialog title={t('config.discardTitle')} isOpen={isOpen} onCancel={cancel} confirmLabel={t('config.discard')} onConfirm={discard}>
-      <p>{t('config.discardHelp')}</p>
+      <p className="rp-label">{t('config.discardHelp')}</p>
     </ConfirmDialog>
   );
 }

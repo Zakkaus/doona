@@ -1,8 +1,8 @@
 import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT} from '../../i18n';
-import {Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
-import {usePalette, ChartCard, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
+import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
@@ -67,8 +67,10 @@ export function NodeLatency() {
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
-      <ChartCard title={t('nodes.latency.title')} note={t('nodes.latency.sample', {n: nodes.data.length})}>
-        <div className="rp-row">
+      <Card
+        title={t('nodes.latency.title')}
+        note={t('nodes.latency.sample', {n: nodes.data.length})}
+        aside={
           <Segmented
             label={t('nodes.latency.by')}
             value={by}
@@ -78,7 +80,8 @@ export function NodeLatency() {
               ['protocol', t('nodes.latency.byProtocol')]
             ]}
           />
-        </div>
+        }
+      >
         <MarkerPlot
           label={t('nodes.latency.title')}
           max={latencyMax(view)}
@@ -112,7 +115,7 @@ export function NodeLatency() {
             notes: notes(group.missing)
           }))}
         />
-      </ChartCard>
+      </Card>
     </div>
   );
 }

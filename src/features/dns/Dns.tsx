@@ -2,6 +2,7 @@ import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
+import Refresh from '../../ui/icons/Refresh';
 import {
   Badge,
   Button,
@@ -215,7 +216,10 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           <Download />
           {t('dns.exportLog')}
         </Button>
-        <Button onPress={vm.refresh}>{t('refresh')}</Button>
+        <Button isPending={vm.refreshing} onPress={vm.refresh}>
+          <Refresh className="rp-spin-on-press" />
+          {t('refresh')}
+        </Button>
         {vm.hasOlder && (
           <Button isPending={vm.loadingOlder} onPress={vm.loadOlder}>
             {t('dns.loadOlder')}
@@ -223,7 +227,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         )}
       </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.refresh} />}
-      {vm.newerWaiting && <p className="rp-label">{t('dns.newerWaiting')}</p>}
+      {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable
           label={t('dns.log')}

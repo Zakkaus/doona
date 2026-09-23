@@ -106,7 +106,7 @@ export function Shortcuts({
       narrow
       footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}
     >
-      <p className="rp-note">{t('shell.shortcutSequence')}</p>
+      <p className="rp-label">{t('shell.shortcutSequence')}</p>
       <div className="rp-col">
         <div className="rp-row">
           <span>{t('search')}</span>
@@ -131,8 +131,8 @@ export function Shortcuts({
           </div>
         ))}
       </div>
-      <p className="rp-note">{t('shell.shortcutTables')}</p>
-      <p className="rp-note">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
+      <p className="rp-label">{t('shell.shortcutTables')}</p>
+      <p className="rp-label">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
     </ModalDialog>
   );
 }

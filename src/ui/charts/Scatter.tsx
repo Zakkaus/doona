@@ -1,5 +1,5 @@
 import {useChartDescription} from './description';
-import {LegendItem} from './ChartCard';
+import {LegendItem} from './LegendItem';
 import {useContentWidth} from '../hooks';
 import {ChartTip, useChartTip} from './tip';
 import {symlogAxis, symlogPosition} from './layout';
