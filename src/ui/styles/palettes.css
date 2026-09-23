@@ -113,7 +113,8 @@
   --rp-accent-text: var(--rp-accent);
 }
 :root[data-family='nord'] {
-  /* Nord ships no light theme: Snow Storm as surfaces, Polar Night as text; mixed steps are blends of official colours. */
+  /* Nord ships no light theme: Snow Storm as surfaces, Polar Night as text; mixed steps are blends of official
+     colours. */
   --rp-base: #e5e9f0;
   --rp-surface: #eceff4;
   --rp-overlay: #d8dee9;
@@ -169,7 +170,8 @@
   --rp-on-accent: var(--rp-base);
 }
 :root[data-family='kary'] {
-  /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays, and blend its greys for secondary text. */
+  /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays,
+     and blend its greys for secondary text. */
   --rp-base: #e7f0f7;
   --rp-surface: #f0f6fb;
   --rp-overlay: #cff0f9;

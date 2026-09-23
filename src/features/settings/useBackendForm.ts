@@ -122,7 +122,9 @@ export function useBackendForm(query: string) {
     try {
       guard.clear();
       sessionStorage.setItem('doona-saved', '1');
-    } catch {}
+    } catch {
+      /* Storage can be unavailable. */
+    }
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };

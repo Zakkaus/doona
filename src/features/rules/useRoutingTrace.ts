@@ -112,7 +112,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         signal
       )
     );
-    // The previous result stays up while the rerun is pending; a failed rerun clears it rather than leave it looking current.
+    // The previous result stays up while a rerun is pending; a failed rerun clears it so it does not look current.
     setResult(response ? {response, input} : null);
   }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
   const generation = rules.data?.generation_id;

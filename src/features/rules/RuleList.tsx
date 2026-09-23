@@ -28,7 +28,7 @@ export function RuleList(props: PageProps) {
 function Dictionary({view}: {view: Model}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
-  // The row actions are new functions each render; reading them through a ref keeps the columns, and so the rows, stable.
+  // The row actions are new functions each render; a ref keeps the columns, and so the rows, stable.
   const latest = useRef(view);
   useLayoutEffect(() => {
     latest.current = view;

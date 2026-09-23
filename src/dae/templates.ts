@@ -21,7 +21,8 @@ const media = (target: string) => [
 ];
 const gfw = (target: string) => ['# ProxyGFWlist', `domain(geosite:gfw) -> ${target}`];
 
-// Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an unfiltered honk group would select them too.
+// Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an
+// unfiltered honk group would select them too.
 type GroupSpec = {name: string; label: string; lines: string[]};
 const everyNode = "filter: !name('direct', 'block')";
 const selectGroup = (name: string, label: string, nested: string[], fallback = nested[0]): GroupSpec => ({
@@ -58,7 +59,8 @@ const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNo
 const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1]));
 const service = (name: string, label: string, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
-// Preserve ACL4SSR rule order using dae's default geosite/geoip data. honk groups cannot contain direct, so DIRECT services remain direct and {group} names the file's first group.
+// Preserve ACL4SSR rule order using dae's default geosite/geoip data. honk groups cannot contain direct, so DIRECT
+// services remain direct and {group} names the file's first group.
 export const templates: Record<RuleTemplate, {rules: string[]; fallback: string; groups: GroupSpec[]}> = {
   global: {rules: [...preset], fallback: '{group}', groups: []},
   bypass: {rules: [...preset, ...ads, ...chinaVendors, ...china], fallback: '{group}', groups: []},

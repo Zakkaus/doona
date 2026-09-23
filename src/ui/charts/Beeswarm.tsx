@@ -27,7 +27,7 @@ export function Beeswarm({
   marks?: SwarmMark[];
   rows?: SwarmRow[];
   fmt: (value: number) => string;
-  // The band grows with how high the dots stack, up to this; a few samples get a low chart, not empty space.
+  // The band's maximum height.
   maxHeight?: number;
 }) {
   const t = useT();

@@ -48,7 +48,7 @@
   --dot: var(--rp-negative);
 }
 .rp-light.info {
-  /* Foam is the info colour everywhere (toasts too); it shares the dot with ok, which text tells apart. */
+  /* Info shares the positive dot with ok; the text beside it tells them apart. */
   --dot: var(--rp-positive);
 }
 .rp-light.neutral {

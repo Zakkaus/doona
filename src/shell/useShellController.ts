@@ -81,10 +81,9 @@ export function useShellController(initial: Lang) {
     document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
   }, [lang]);
   useEffect(warmAllPages, []);
-  // react-aria records every element with a running CSS transition and forgets it on transitionend or
-  // transitioncancel, neither of which a removed element receives. A page left mid-transition (a tab marker sliding, a
-  // colour fading) therefore stayed in that record with its whole detached tree, 0.3 to 0.7 MiB per round of the
-  // pages. runAfterTransition drops the disconnected entries before it runs its callback.
+  // react-aria tracks elements with a running CSS transition until transitionend or transitioncancel, which a removed
+  // element never receives, so a page left mid-transition would keep its detached tree. runAfterTransition drops
+  // disconnected entries first.
   useEffect(() => {
     runAfterTransition(() => {});
   }, [route]);
@@ -111,6 +110,8 @@ export function useStartupToasts() {
         sessionStorage.removeItem('doona-saved');
         toast('positive', t('ui.saved'));
       }
-    } catch {}
+    } catch {
+      /* Storage can be unavailable. */
+    }
   }, [t]);
 }

@@ -217,7 +217,7 @@ export function ConfirmButton({
   );
 }
 
-// Tabs: the selected key is the caller's (URL-backed), panels render only when selected.
+// Tabs: the selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
 export function Tabs({
   label,
   items,
@@ -233,7 +233,7 @@ export function Tabs({
   // browse data; a panel with drafts or editors unmounts, so nothing of it keeps running out of sight.
   keepMounted?: boolean;
 }) {
-  // The marker lives beside the TabList, not inside it: anything inside is part of the RAC collection and re-renders the tabs.
+  // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
   // table of log rows) mounts in the deferred one, so the click never waits for it.

@@ -1,8 +1,8 @@
 import {useSyncExternalStore} from 'react';
 
 // One ticking store shared by every subscriber. Relative times and freshness advance on it rather than on each poll,
-// since an unchanged poll no longer produces a new object. It stops while the page is hidden and ticks once when the
-// page is shown again.
+// since an unchanged poll keeps its snapshot and triggers no render. It stops while the page is hidden and ticks once
+// when the page is shown again.
 const every = 5000;
 const subscribers = new Set<() => void>();
 let now = Date.now();

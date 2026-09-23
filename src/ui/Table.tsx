@@ -107,7 +107,7 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
   return kept.size === cols.length ? cols : cols.filter(column => kept.has(column.id));
 }
 
-// Heights match tables-forms.css: a row is a fixed 40px; the heading is 8px padding twice, a 20px line and a 1px border.
+// Heights match tables-forms.css: a row is 40px; a heading is 8px padding twice, a 20px line and a 1px border.
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
 // A table's height: its rows' height up to `height`, but a table that has shown its full height while loading keeps
 // it, since growing from two rows to full height, or shrinking back when few rows arrive, moves everything below it.
@@ -156,7 +156,7 @@ export function DataTable<T extends {id: string}>({
   stream?: boolean;
 }) {
   const t = useT();
-  // One set per selected key: a new set on every render would have the table recompute its selection and re-render every row.
+  // One set per selected key, so the table neither recomputes its selection nor re-renders every row.
   const keys: Selection = useMemo(() => (selected ? new Set([selected]) : new Set()), [selected]);
   const [ref, width] = useContentWidth<HTMLElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
@@ -164,7 +164,7 @@ export function DataTable<T extends {id: string}>({
   const [virtual, setVirtual] = useState(stream || rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;
-  // A virtualized grid scrolls itself, a native table its container; the virtual height lands a frame later.
+  // A virtualised grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
   useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref);
   const renderRow = (row: T) => {

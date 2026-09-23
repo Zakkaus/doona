@@ -31,8 +31,8 @@ export const Traffic = memo(function Traffic({
   const bytes = useCallback((value: number) => formatBytes(value, locale), [locale]);
   const view = useMemo(() => trafficSeries(records), [records]);
   const series = useMemo(() => {
-    // As on the activity page, block takes the negative colour; the others take category colours by their place among
-    // all outbounds, in an order that keeps neighbouring hues apart (the first two are both blue-green in some palettes).
+    // As on the activity page, block takes the negative colour; the others take category colours by their place
+    // among all outbounds, ordered so neighbouring hues differ (some palettes start with two blue-greens).
     const others = outbounds.filter(outbound => outbound !== 'block');
     const colour = (outbound: string | null) => (outbound === 'block' ? p.negative : p.cat[order[Math.max(0, others.indexOf(outbound)) % order.length]]);
     return view.series.map(s => ({

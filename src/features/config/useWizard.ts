@@ -20,7 +20,8 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
   full: ['config.wizardFull', 'config.wizardFullHelp']
 };
-// Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
+// Edits subscriptions and optional routing templates, keeping existing groups. Redacted text whose digest does not
+// match is never written back.
 export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   const lang = useLang();

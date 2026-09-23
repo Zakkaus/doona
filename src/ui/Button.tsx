@@ -109,7 +109,8 @@ export function Button({
   // A tip adds what the name cannot say (why the button is disabled), so it wins; the label stays the accessible name.
   const text = tip ?? label;
   if (!text) return btn;
-  // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts focus and pointer events only when the native button cannot.
+  // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts
+  // focus and pointer events only when the native button cannot.
   return (
     <TooltipTrigger delay={400}>
       <Focusable>

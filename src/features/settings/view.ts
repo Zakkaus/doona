@@ -4,7 +4,8 @@ import {formatNumber, type Params, type Translator} from '../../i18n';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
 
-// The page's cards in order; `?card=` scrolls to the section with id `settings-{id}`.
+// The page's cards in order. Search lists the same cards, so the page takes its titles from here; `?card=` scrolls
+// to the card's heading, id `settings-{id}`.
 type SettingsCardId = 'backend' | 'runtime' | 'actions' | 'appearance' | 'about';
 export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> = [
   {id: 'backend', titleKey: 'settings.backend'},
@@ -13,7 +14,6 @@ export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> =
   {id: 'appearance', titleKey: 'settings.appearance'},
   {id: 'about', titleKey: 'settings.about'}
 ];
-// A card's heading, which `?card=` scrolls to; search lists the same cards, so the page takes its titles from here.
 export const cardHeadingId = (id: string) => `settings-${id}`;
 export function settingsCard(id: SettingsCardId) {
   return {headingId: cardHeadingId(id), titleKey: settingsCards.find(card => card.id === id)!.titleKey};

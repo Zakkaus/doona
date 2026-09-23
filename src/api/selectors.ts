@@ -3,7 +3,7 @@ import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
-// Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
+// Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {
   tcp_connect: 0,

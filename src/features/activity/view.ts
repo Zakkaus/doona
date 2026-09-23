@@ -88,7 +88,6 @@ export function trafficState(series: {down: Array<number | null>; up: Array<numb
 }
 
 type NodeOption = {id: string; name: string; label: string; tcp?: number; alive?: boolean; unavailable: boolean; healthError?: string};
-// The picker's menu is built from `options` only while it is open (see NodeMenu), not on every poll.
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const counts = new Map<string, number>();
   for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);

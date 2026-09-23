@@ -56,7 +56,7 @@ export function Nodes(props: PageProps) {
       ) : (
         list
       )}
-      {/* Adding leaves Cancel live while the write is pending: the controller drops a result that lands after it. */}
+      {/* Cancel stays live while the write is pending; a result that lands afterwards arrives as a toast. */}
       <ModalDialog
         title={dialogTitle}
         narrow

@@ -49,7 +49,8 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
   if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as SucceededResult<K>;
   throw new LocalError('ui.operationFailed', operation.error?.message ?? null);
 }
-// Request warm TCP data probes over all reachable IP versions; group targets use direct members, while node targets must omit members.
+// A warm TCP data probe over every reachable IP version; a group target probes its direct members, a node target
+// must not name members.
 export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
   const probes = capabilities?.resources.probes;
   if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))

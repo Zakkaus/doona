@@ -64,7 +64,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     latest.current = query;
   });
   const select = (id: string | null) => go('connections', stay(latest.current, {id}));
-  // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees the new list.
+  // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees it.
   const settledText = useDeferredValue(text);
   const src = ipLiteral(q.get('src') ?? '');
   const resource = useConnections(src);

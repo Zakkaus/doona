@@ -30,7 +30,8 @@ export function useTrafficHistory(windowSeconds: number, capabilities: Capabilit
     }
   );
 }
-// Ten minutes at the recorder cadence; the chart shows what the producer retained, not a local accumulation.
+// The backend's memory ring over ten minutes at the recorder cadence; the chart merges it with the session's own
+// samples (useMemorySamples).
 export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.memory_history;
@@ -49,7 +50,8 @@ export function useDatapath(enabled = true) {
   const api = getApi();
   return useResource({key: ['datapath', {detail: 'full'}], fetch: signal => api.datapath('full', signal)}, {enabled});
 }
-// A write reply replaces the cached settings until a newer poll arrives, preventing a flash of stale values. Replies are scoped to their backend.
+// A write reply stands in for the cached settings until a newer poll, so stale values do not flash; replies are
+// kept per backend.
 const newest = <T extends {observed_at: string}>(written: T | null, polled: T | undefined) =>
   written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {

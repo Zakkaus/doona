@@ -1,7 +1,8 @@
 import {useEffect, useSyncExternalStore} from 'react';
 import {readProfiles} from './profiles';
 
-// Extend the backend's ten-minute history with session polls: one hour at poll cadence, then a week of minute buckets persisted per profile.
+// Session polls extend the backend's ten-minute history: an hour at poll cadence, a week of stored minute buckets
+// per profile.
 export type Timed = {time: number};
 export type Rings<T extends Timed> = {fine: T[]; coarse: T[]};
 // How a bucket summarises its samples: the mean of a rate, the peak of a count.
@@ -145,7 +146,9 @@ export function resetRings() {
   for (const store of stores.values()) {
     try {
       localStorage.removeItem(store.key);
-    } catch {}
+    } catch {
+      /* Storage can be unavailable. */
+    }
   }
   stores.clear();
   resets++;

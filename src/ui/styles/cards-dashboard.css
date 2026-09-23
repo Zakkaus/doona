@@ -240,12 +240,13 @@
   font-weight: 700;
   line-height: 28px;
 }
-/* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
+/* Label icons keep their size when the label truncates. */
 .rp-tile-head > svg,
 .rp-qlabel > svg {
   flex: none;
 }
-/* Role colours on icons, nav groups, rankings, and the wordmark; each palette supplies its own categorical set --rp-c1..c8. */
+/* Role colours on icons, nav groups, rankings, and the wordmark; each palette supplies its own categorical set
+   --rp-c1..c8. */
 .rp-tint-c1 > svg {
   color: var(--rp-c1);
 }

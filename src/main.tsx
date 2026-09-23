@@ -90,6 +90,7 @@ createRoot(document.getElementById('root')!).render(
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.
+  // clients.claim() fires controllerchange on first install too; only a replaced controller is a new build.
   const running = navigator.serviceWorker.controller !== null;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!running) return;
