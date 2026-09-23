@@ -7,8 +7,7 @@ import {
   useProviderRefresh,
   useProviders,
   useRuntime,
-  useRuntimeOperations,
-  useNow
+  useRuntimeOperations
 } from '../../store';
 import {lifecycleActions, operationLabels} from '../overview/view';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
@@ -18,7 +17,6 @@ import {errorText} from '../../api/error';
 export function useBackendActions() {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(!!resources?.runtime.available);
@@ -112,7 +110,7 @@ export function useBackendActions() {
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: !!resources?.geodata.available,
-    rows: geodataRows(geodata.data?.assets ?? [], locale, now),
+    rows: geodataRows(geodata.data?.assets ?? []),
     update: () =>
       void geodata.update().then(result => {
         if (result) toast('positive', t('settings.geodataUpdated'));

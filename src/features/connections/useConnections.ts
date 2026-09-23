@@ -1,5 +1,5 @@
 import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useNow, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
@@ -21,7 +21,6 @@ import {
 export function useConnections({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const [view, setView] = useState(() => {
     try {
       return readView(localStorage.getItem(viewKey));
@@ -87,7 +86,7 @@ export function useConnections({go, query}: PageProps) {
     () => connectionsView(rows, cur, resource.data, src, rule, locale, t, names, rulesListed),
     [rows, cur, resource.data, src, rule, locale, t, names, rulesListed]
   );
-  const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t, now), [shown, view, locale, names, rulesListed, t, now]);
+  const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
     try {

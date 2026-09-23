@@ -1,7 +1,7 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {chainLabel, connectionStates, localTime, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
 import {millis, parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
 import {policyKindLabels} from '../../policies/view';
@@ -260,7 +260,7 @@ type FlowRow = {
   recomputed: boolean;
   network: string;
   state: string;
-  started: string;
+  startedAt: string | null;
 };
 type FlowDetailView = {
   title: string;
@@ -273,15 +273,7 @@ type FlowDetailView = {
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(
-  flows: FlowSummary[],
-  list: FlowList | undefined,
-  names: OutboundNames,
-  t: Translator,
-  lang: Lang,
-  now = Date.now()
-): FlowRecordsView {
-  const locale = LOCALE[lang];
+export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
   return {
     rows: flows.map(flow => ({
       id: flow.id,
@@ -292,7 +284,7 @@ export function flowRecordsView(
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: t(connectionStates[flow.state]),
-      started: relativeStart(flow.started_at, locale, now)
+      startedAt: flow.started_at
     })),
     coverage: list ? coverageView(list, t, lang) : null,
     stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]

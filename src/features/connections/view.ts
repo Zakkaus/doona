@@ -1,16 +1,6 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
-import {
-  chainLabel,
-  chainNames,
-  connectionStates,
-  localTime,
-  outboundLabel,
-  relativeStart,
-  sourceIp,
-  type MessageRef,
-  type OutboundNames
-} from '../../api/selectors';
+import {chainLabel, chainNames, connectionStates, localTime, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../rules/flows/view';
 import type {Key} from '../../i18n';
@@ -130,7 +120,7 @@ export type ConnectionRowView = {
   recomputed: string | null;
   state: string;
   download: string;
-  age: string;
+  startedAt: string | null;
 };
 type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
 export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
@@ -140,8 +130,7 @@ export function connectionTableView(
   locale: string,
   names: OutboundNames,
   rulesListed: boolean,
-  t: LabelFn,
-  now = Date.now()
+  t: LabelFn
 ): ConnectionTableRow[] {
   const project = (c: Connection): ConnectionRowView => ({
     id: c.id,
@@ -152,7 +141,7 @@ export function connectionTableView(
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
     download: formatBytes(c.download_bytes),
-    age: relativeStart(c.started_at, locale, now)
+    startedAt: c.started_at
   });
   return tableRows(rows, view, locale, t).map(row =>
     'connection' in row

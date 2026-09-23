@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource, useNow} from '../../store';
+import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
@@ -73,11 +73,10 @@ export function useDns({go, query}: PageProps) {
 export function useDnsCache(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const dns = useDnsControl();
   const view = useMemo(
-    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, now),
-    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t, now]
+    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
+    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
   );
   const remove = async (id: string) => {
     try {
@@ -109,7 +108,6 @@ export function useDnsCache(domain: string) {
 export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const [name, setName] = useState(initialName);
   useLinked(initialName, setName);
   const [type, setType] = useState('all');
@@ -143,7 +141,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
-  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types, now), [data, enabled, locale, t, types, now]);
+  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types), [data, enabled, locale, t, types]);
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,

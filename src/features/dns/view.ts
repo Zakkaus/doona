@@ -1,5 +1,5 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
-import {localTime, relativeStart} from '../../api/selectors';
+import {localTime} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
@@ -52,8 +52,7 @@ export function dnsCacheView(
   domain: string,
   busy: string | null,
   locale: string,
-  t: LabelFn,
-  now = Date.now()
+  t: LabelFn
 ) {
   const filter = domain.toLowerCase();
   return {
@@ -82,10 +81,8 @@ export function dnsCacheView(
         domain: entry.domain,
         type: entry.type,
         status: entry.status,
-        expires: relativeStart(entry.expires_at, locale, now),
-        expiresTooltip: localTime(entry.expires_at, locale),
-        stale: relativeStart(entry.stale_until, locale, now),
-        staleTooltip: entry.stale_until === null ? undefined : localTime(entry.stale_until, locale),
+        expiresAt: entry.expires_at,
+        staleUntil: entry.stale_until,
         deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
         pending: busy === entry.entry_id,
         disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
@@ -111,7 +108,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     ] as Array<[string, string]>
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = [], now = Date.now()) {
+export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = []) {
   const records = data?.records ?? [];
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
@@ -121,8 +118,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
     empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     rows: records.map(record => ({
       id: record.id,
-      time: relativeStart(record.observed_at, locale, now),
-      timeTooltip: localTime(record.observed_at, locale),
+      observedAt: record.observed_at,
       name: record.question.name,
       type: record.question.type,
       source: record.src ?? '—',

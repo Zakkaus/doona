@@ -9,6 +9,7 @@ import {
   ErrorMessage,
   Light,
   TextTooltip,
+  TimeCell,
   Kv,
   LabeledSelect,
   Tabs,
@@ -135,8 +136,8 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           },
           {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
           {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
-          {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TextTooltip text={entry.expiresTooltip}>{entry.expires}</TextTooltip>},
-          {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TextTooltip text={entry.staleTooltip}>{entry.stale}</TextTooltip>},
+          {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TimeCell at={entry.expiresAt} />},
+          {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TimeCell at={entry.staleUntil} />},
           {
             id: 'a',
             label: t('ui.delete'),
@@ -160,7 +161,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
-      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TextTooltip text={record.timeTooltip}>{record.time}</TextTooltip>},
+      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TimeCell at={record.observedAt} />},
       {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
       {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
       {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},

@@ -1,7 +1,7 @@
 import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {Table, ResizableTableContainer, TableBody, Row, Cell, Virtualizer, TableLayout} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {Badge, DataTable, TextTooltip, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
+import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
 import {TableColumns, fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from '../../ui/Table';
 import {columns, type ConnectionView, type ConnectionRowView, type ConnectionTableRow} from './view';
 
@@ -26,7 +26,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
       ),
       state: c => c.state,
       down: c => c.download,
-      age: c => c.age
+      age: c => <TimeCell at={c.startedAt} />
     };
     return columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));
   }, [view.hidden, t]);

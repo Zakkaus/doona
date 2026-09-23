@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
@@ -112,7 +112,7 @@ export function BackendActionsCard() {
                 label: t('nodes.updated'),
                 minWidth: 140,
                 grow: 0,
-                render: asset => <TextTooltip text={asset.modifiedTitle}>{asset.modified}</TextTooltip>
+                render: asset => <TimeCell at={asset.modifiedAt} />
               },
               {
                 id: 'sha',

@@ -6,7 +6,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, formatBytes, millis} from '../../api/u64';
-import {formatDuration, localTime, relativeStart} from '../../api/selectors';
+import {formatDuration, localTime} from '../../api/selectors';
 import {latencyTone} from '../../ui/ui';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
@@ -137,7 +137,7 @@ export function intervalText(seconds: number, locale: string, t: Translator) {
       ? t('nodes.everyHours', {n: formatNumber(seconds / 3600, locale)})
       : formatDuration(String(seconds), locale);
 }
-export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator, now = Date.now()) {
+export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator) {
   const kinds: Record<ProviderRow['kind'], Key> = {
     subscription: 'nodes.kind.subscription',
     file: 'nodes.kind.file',
@@ -164,8 +164,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
         : item.traffic?.total_bytes
           ? t('nodes.used', {used: formatBytes(used), total: formatBytes(item.traffic.total_bytes)})
           : formatBytes(used),
-    updated: pseudo ? '—' : relativeStart(item.updated_at, locale, now),
-    updatedTitle: item.updated_at ? localTime(item.updated_at, locale) : undefined,
+    updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     interval: interval == null ? '—' : intervalText(interval, locale, t),
     intervalValue: interval == null ? '' : String(interval),

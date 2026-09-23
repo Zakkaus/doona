@@ -2,7 +2,6 @@ import {expect, it} from 'vitest';
 import {capabilities, dnsCache} from '../../api/mock/fixtures';
 import type {DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {localTime} from '../../api/selectors';
 import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const record: DnsLogRecord = {
@@ -47,8 +46,8 @@ it('disables unsupported query types and omits explicitly unavailable tabs', () 
 it('filters cache rows case-insensitively without narrowing the flush scope or coverage', () => {
   const view = dnsCacheView(dnsCache, capabilities.resources, 'TELEGRAM', 'c1', 'en-US', t);
   expect(view.rows.map(row => row.id)).toEqual(['c1']);
-  expect(view.rows[0]).toMatchObject({pending: true, disabled: true, staleTooltip: undefined});
-  expect(view.rows[0].expiresTooltip).toBe(localTime(dnsCache.entries.find(entry => entry.entry_id === 'c1')!.expires_at, 'en-US'));
+  expect(view.rows[0]).toMatchObject({pending: true, disabled: true, staleUntil: null});
+  expect(view.rows[0].expiresAt).toBe(dnsCache.entries.find(entry => entry.entry_id === 'c1')!.expires_at);
   expect(view.coverage.map(badge => badge.id)).toEqual(['persistent']);
   expect(view.confirmationText).toBe(t('dns.flushConfirm', {n: dnsCache.total}));
   expect(dnsCacheView(undefined, undefined, '', null, 'en-US', t).confirmationText).toBe(t('dns.flushConfirmAll'));

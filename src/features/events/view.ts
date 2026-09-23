@@ -2,7 +2,7 @@ import type {ApiEvent, EventKind} from '../../api/model';
 import {eventKindLabels, eventSummary, localTime} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 
-type EventRow = {id: string; timestamp: string; timeTooltip: string; kind: ApiEvent['event']; kindText: string; summary: string};
+type EventRow = {id: string; timestamp: string; kind: ApiEvent['event']; kindText: string; summary: string};
 // An event never changes once received, so its row is built once per locale and the table sees the same object.
 const rows = new WeakMap<ApiEvent, {locale: string; row: EventRow}>();
 function eventRow(event: ApiEvent, locale: string, t: LabelFn): EventRow {
@@ -12,7 +12,6 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn): EventRow {
   const row = {
     id: event.id,
     timestamp: localTime(event.data.observed_at, locale),
-    timeTooltip: event.data.observed_at,
     kind: event.event,
     kindText: t(eventKindLabels[event.event]),
     summary: t(summary.key, summary.params)
