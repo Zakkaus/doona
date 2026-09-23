@@ -84,6 +84,13 @@
   --rp-notice-text: var(--rp-notice);
   --rp-positive-text: var(--rp-positive);
   --rp-info-text: var(--rp-info);
+  /* The same roles on a tile, plain or selected, where a palette sets body text for a tone under 4.5:1 there. Page text
+     is judged on the base and the surface only, so a tone that passes there keeps its colour outside tiles. */
+  --rp-accent-tile-text: var(--rp-accent-text);
+  --rp-negative-tile-text: var(--rp-negative-text);
+  --rp-notice-tile-text: var(--rp-notice-text);
+  --rp-positive-tile-text: var(--rp-positive-text);
+  --rp-info-tile-text: var(--rp-info-text);
   /* Secondary text on a tile, plain or selected. Where a palette's subtle is under 4.5:1 there, the palette sets body
      text; page-level secondary text keeps reading --rp-subtle. */
   --rp-subtle-text: var(--rp-subtle);

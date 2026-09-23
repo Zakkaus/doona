@@ -48,6 +48,11 @@ function useDnsCache(enabled = true) {
     {enabled}
   );
 }
+// The whole cache's usage and coverage, which every page of the listing repeats: one entry is enough to read them.
+export function useDnsCacheUsage(enabled = true, paused = false) {
+  const api = getApi();
+  return useResource({key: ['dnsCache', {usage: true}], every: 60000, fetch: signal => api.dnsCache({limit: 1, detail: 'summary'}, signal)}, {enabled, paused});
+}
 export function useDnsControl() {
   const api = getApi();
   const capabilities = useCapabilities();

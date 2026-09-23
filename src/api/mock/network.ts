@@ -161,7 +161,14 @@ export function createNetwork(
       const name = query?.name ?? query?.domain;
       const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
       const result = cachePage(entries, query);
-      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor};
+      // Usage covers the whole cache, whatever the listing's filters; a demo entry retains about 420 wire bytes.
+      const usage = {
+        entries: String(dnsCache.entries.length),
+        entry_capacity: '8192',
+        wire_bytes: String(dnsCache.entries.length * 420),
+        wire_byte_capacity: '32000000'
+      };
+      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor, usage};
     },
     dnsLog: async (query, signal) => {
       signal?.throwIfAborted();

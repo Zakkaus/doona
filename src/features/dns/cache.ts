@@ -1,18 +1,40 @@
 import type {DnsCacheList} from '../../api/model';
+import {formatNumber, type Translator} from '../../i18n';
+import {formatBytes} from '../../i18n/format';
+import {parseU64, pctU64} from '../../api/u64';
 
-// What the cache holds, from its listing: the backend reports how many entries there are and what kinds it caches,
-// not a capacity, so the state is described by freshness and kind rather than as a share of a limit.
-export function cacheState(list: DnsCacheList | undefined, now = Date.now()) {
+// The cache card from one page of the listing: every page repeats the whole cache's usage and coverage. A backend that
+// reports usage is as full as the nearer of its two limits, entries or retained bytes; one that does not gets no
+// capacity claim, only its entry count.
+export function cacheCard(list: DnsCacheList | undefined, locale: string, t: Translator) {
   if (!list) return null;
-  let fresh = 0;
-  let stale = 0;
-  let negative = 0;
-  for (const entry of list.entries) {
-    const expires = Date.parse(entry.expires_at);
-    // Past its expiry but inside its stale window, an entry is still served while it is refreshed.
-    if (expires > now) fresh++;
-    else stale++;
-    if (entry.status !== 'NOERROR') negative++;
-  }
-  return {total: list.total, loaded: list.entries.length, fresh, stale, negative, positive: list.entries.length - negative, coverage: list.coverage};
+  const {usage, coverage} = list;
+  const count = (value: string) => {
+    const n = parseU64(value);
+    return n === null ? '—' : formatNumber(n, locale);
+  };
+  const shares = usage ? [pctU64(usage.entries, usage.entry_capacity), pctU64(usage.wire_bytes, usage.wire_byte_capacity)] : [];
+  const known = shares.filter(share => share !== null);
+  const pct = Math.max(...known);
+  return {
+    note: usage ? undefined : t('dns.chart.cacheNote', {n: list.total}),
+    usage:
+      usage && known.length
+        ? {
+            pct,
+            // A cache in use never reads as 0%.
+            value: pct > 0 && pct < 0.5 ? '<' + t('ui.percent', {n: 1}) : t('ui.percent', {n: Math.round(pct)}),
+            facts: t('dns.chart.usageFacts', {
+              entries: count(usage.entries),
+              entryCapacity: count(usage.entry_capacity),
+              bytes: formatBytes(usage.wire_bytes, locale),
+              byteCapacity: formatBytes(usage.wire_byte_capacity, locale)
+            })
+          }
+        : null,
+    coverage: t('dns.chart.coverage', {
+      kinds: [coverage.positive && t('dns.chart.positive'), coverage.negative && t('dns.chart.negative')].filter(Boolean).join(t('ui.listSeparator')),
+      persistent: t(coverage.persistent ? 'dns.chart.persistent' : 'dns.chart.memoryOnly')
+    })
+  };
 }

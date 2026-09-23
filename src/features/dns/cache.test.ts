@@ -1,34 +1,33 @@
 import {expect, it} from 'vitest';
 import type {DnsCacheList} from '../../api/model';
-import {cacheState} from './cache';
+import {translate, type Translator} from '../../i18n';
+import {cacheCard} from './cache';
 
-const now = Date.UTC(2026, 8, 23, 12);
-const entry = (minutes: number, status = 'NOERROR') => ({
-  entry_id: String(Math.random()),
-  domain: 'a.org.',
-  type: 'A',
-  class: 'IN',
-  status,
-  expires_at: new Date(now + minutes * 60000).toISOString(),
-  stale_until: new Date(now + (minutes + 10) * 60000).toISOString()
+const t: Translator = (key, params) => translate('en', key, params);
+const list = (usage?: DnsCacheList['usage']) =>
+  ({
+    observed_at: '2026-09-23T12:00:00Z',
+    coverage: {positive: true, negative: false, persistent: false},
+    entries: [],
+    total: 322,
+    next_cursor: null,
+    usage
+  }) as DnsCacheList;
+
+it('fills the bar by whichever limit is nearer, entries or bytes, and states both', () => {
+  const byEntries = cacheCard(list({entries: '4096', entry_capacity: '8192', wire_bytes: '3200000', wire_byte_capacity: '32000000'}), 'en-US', t)!;
+  expect(byEntries.usage?.pct).toBe(50);
+  expect(cacheCard(list({entries: '5', entry_capacity: '8192', wire_bytes: '2100', wire_byte_capacity: '32000000'}), 'en-US', t)!.usage?.value).toBe('<1%');
+  const byBytes = cacheCard(list({entries: '322', entry_capacity: '8192', wire_bytes: '10200000', wire_byte_capacity: '32000000'}), 'en-US', t)!;
+  expect(byBytes.usage?.pct).toBe(31.88);
+  expect(byBytes.usage?.facts).toBe('Entries: 322 / 8,192, size: 10 MB / 32 MB');
+  expect(byBytes.note).toBeUndefined();
+  expect(byBytes.coverage).toBe('Caches Positive answers; held in memory only, cleared on restart');
 });
 
-it('splits the cache into fresh and stale entries and positive and negative answers', () => {
-  const list = {
-    observed_at: new Date(now).toISOString(),
-    coverage: {positive: true, negative: true, persistent: false},
-    entries: [entry(5), entry(1), entry(-2), entry(3, 'NXDOMAIN')],
-    total: 40,
-    next_cursor: null
-  } as DnsCacheList;
-  expect(cacheState(list, now)).toEqual({
-    total: 40,
-    loaded: 4,
-    fresh: 3,
-    stale: 1,
-    negative: 1,
-    positive: 3,
-    coverage: {positive: true, negative: true, persistent: false}
-  });
-  expect(cacheState(undefined, now)).toBeNull();
+it('claims no capacity when the backend does not report usage', () => {
+  const card = cacheCard(list(), 'en-US', t)!;
+  expect(card.usage).toBeNull();
+  expect(card.note).toBe('322 cache entries; this backend does not provide a capacity limit');
+  expect(cacheCard(undefined, 'en-US', t)).toBeNull();
 });

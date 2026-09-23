@@ -28,11 +28,11 @@
 /* Dawn's love, gold and foam are under 4.5:1 as text, and pine is under it on a selected tile. Subtle is under 4.5:1 on
    the tiles of every Rosé Pine flavour. Glass shares the defaults above and keeps its own tones. */
 :root[data-family='rose-pine'] {
-  --rp-accent-text: var(--rp-text);
   --rp-negative-text: var(--rp-text);
   --rp-notice-text: var(--rp-text);
   --rp-positive-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='rose-pine'][data-scheme='dark'],
@@ -64,11 +64,12 @@
   /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
   --rp-on-accent: #191724;
   --rp-accent-text: var(--rp-text);
-  /* Love is under 4.5:1 on Moon's tiles. */
-  --rp-negative-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
   --rp-notice-text: var(--rp-notice);
   --rp-positive-text: var(--rp-positive);
   --rp-info-text: var(--rp-text);
+  /* Love is under 4.5:1 on Moon's tiles. */
+  --rp-negative-tile-text: var(--rp-text);
 }
 :root[data-family='catppuccin'] {
   --rp-base: #e6e9ef;
@@ -131,11 +132,12 @@
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   --rp-on-accent: var(--rp-surface);
   --rp-accent-text: var(--rp-accent);
-  /* Red is under 4.5:1 on a selected tile in every dark flavour. */
-  --rp-negative-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
   --rp-notice-text: var(--rp-notice);
   --rp-positive-text: var(--rp-positive);
   --rp-info-text: var(--rp-info);
+  /* Red is under 4.5:1 on a selected tile in every dark flavour. */
+  --rp-negative-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-subtle);
 }
 :root[data-family='nord'] {
@@ -198,8 +200,10 @@
   --rp-hl-high: #4c566a;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   --rp-on-accent: var(--rp-base);
-  /* Green is under 4.5:1 on a tile, so only yellow keeps its colour. */
   --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  /* Green is under 4.5:1 on a tile, so only yellow keeps its colour there. */
+  --rp-positive-tile-text: var(--rp-text);
 }
 :root[data-family='kary'] {
   /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays,
@@ -259,12 +263,14 @@
   --rp-hl-high: #474747;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   --rp-on-accent: var(--rp-surface);
+  --rp-accent-text: var(--rp-accent);
+  --rp-info-text: var(--rp-info);
   /* Every tone is under 4.5:1 on the grey overlay. */
-  --rp-accent-text: var(--rp-text);
-  --rp-negative-text: var(--rp-text);
-  --rp-notice-text: var(--rp-text);
-  --rp-positive-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-notice-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
 }
 :root[data-flavour='main'][data-scheme='dark'] {
   --rp-base: #191724;
@@ -292,7 +298,7 @@
   --rp-hl-high: #524f67;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   --rp-on-accent: #ffffff;
-  --rp-negative-text: var(--rp-negative);
+  --rp-negative-tile-text: var(--rp-negative);
 }
 :root[data-flavour='frappe'][data-scheme='dark'] {
   --rp-base: #292c3c;
@@ -320,9 +326,9 @@
   --rp-hl-high: #626880;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   /* Blue, green and subtle are under 4.5:1 on Frappé's tiles. */
-  --rp-accent-text: var(--rp-text);
-  --rp-positive-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
 :root[data-flavour='macchiato'][data-scheme='dark'] {
@@ -351,8 +357,8 @@
   --rp-hl-high: #5b6078;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   /* Blue and subtle are under 4.5:1 on Macchiato's selected tile. */
-  --rp-accent-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
 
@@ -452,11 +458,11 @@
   --rp-on-text: #ffffff;
   --rp-line: #e5e6eb;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  --rp-accent-text: var(--rp-text);
   --rp-negative-text: var(--rp-text);
   --rp-notice-text: var(--rp-text);
   --rp-positive-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='arco'][data-scheme='dark'] {
@@ -488,11 +494,12 @@
   --rp-line: #333335;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   --rp-accent-text: var(--rp-text);
-  /* Red is under 4.5:1 on a tile. */
-  --rp-negative-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
   --rp-notice-text: var(--rp-notice);
   --rp-positive-text: var(--rp-positive);
   --rp-info-text: var(--rp-text);
+  /* Red is under 4.5:1 on a tile. */
+  --rp-negative-tile-text: var(--rp-text);
 }
 /* Semi Design (ByteDance): @douyinfe/semi-theme-default palette step 5 and its semantic bg/text/fill/border tokens. */
 :root[data-family='semi'] {
@@ -523,11 +530,11 @@
   --rp-on-text: #ffffff;
   --rp-line: rgba(28, 31, 35, 0.08);
   --rp-shadow: 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.1);
-  --rp-accent-text: var(--rp-text);
   --rp-negative-text: var(--rp-text);
   --rp-notice-text: var(--rp-text);
   --rp-positive-text: var(--rp-text);
-  --rp-info-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='semi'][data-scheme='dark'] {
@@ -559,5 +566,9 @@
   --rp-line: rgba(255, 255, 255, 0.08);
   --rp-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.25);
   /* Red and green are under 4.5:1 on a tile, so only orange keeps its colour. */
+  --rp-negative-text: var(--rp-negative);
   --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
 }

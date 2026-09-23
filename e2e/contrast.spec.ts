@@ -47,13 +47,13 @@ const known = new Map<string, number>([
     [`${look} subtle text on surface`, surface] as const
   ])
 ]);
-test('accent, status and secondary text and accent fills reach 4.5:1 in every palette', async ({page}) => {
+test('accent, status and secondary text and accent fills reach 4.5:1 in every palette, and tones keep their colour where they read', async ({page}) => {
   await page.goto('/#/activity');
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
     if (!checked) continue;
     for (const scheme of ['light', 'dark']) {
-      const ratios = await page.evaluate(
+      const {ratios, faded} = await page.evaluate(
         ([palette, scheme, roles]) => {
           const [family, flavour] = palette.split('/');
           Object.assign(document.documentElement.dataset, {family, flavour, scheme});
@@ -94,8 +94,21 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
             Object.entries(values).map(([ground, value]): [string, number] => [`${name} on ${ground}`, value]);
           // An undefined token falls back to transparent, which measures 1:1 instead of passing as inherited text.
           const subtle = on('var(--rp-subtle-text, transparent)');
-          return {
-            ...Object.fromEntries(roles.flatMap(role => each(`${role} text`, on(`var(--rp-${role}-text, transparent)`)))),
+          // A tone that reads on the base and the surface keeps its colour as page text, whatever tiles need.
+          const faded = roles.filter(
+            role =>
+              Math.min(ratio(`var(--rp-${role})`, 'var(--rp-base)'), ratio(`var(--rp-${role})`, 'var(--rp-surface)')) >= 4.5 &&
+              rgb(`var(--rp-${role}-text)`).join() !== rgb(`var(--rp-${role})`).join()
+          );
+          const ratios = {
+            // Page text reads the role's token, judged on the base and the surface; tiles read the role's tile token.
+            ...Object.fromEntries(
+              roles.flatMap(role => {
+                const page = on(`var(--rp-${role}-text, transparent)`);
+                const tiled = on(`var(--rp-${role}-tile-text, transparent)`);
+                return each(`${role} text`, {base: page.base, surface: page.surface, tile: tiled.tile, 'selected tile': tiled['selected tile']});
+              })
+            ),
             // Page-level secondary text reads the palette's subtle; tiles read --rp-subtle-text.
             'subtle text on base': ratio('var(--rp-subtle)', 'var(--rp-base)'),
             'subtle text on surface': ratio('var(--rp-subtle)', 'var(--rp-surface)'),
@@ -104,9 +117,11 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
             ...Object.fromEntries(each('text', on('var(--rp-text)')))
           };
+          return {ratios, faded};
         },
         [palette, scheme, roles] as const
       );
+      for (const role of faded) failures.push(`${palette} ${scheme} ${role} text lost its colour on the page`);
       for (const [pair, value] of Object.entries(ratios))
         if (value < (known.get(`${palette} ${scheme} ${pair}`) ?? 4.5)) failures.push(`${palette} ${scheme} ${pair}: ${value.toFixed(2)}`);
     }
