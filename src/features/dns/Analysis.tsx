@@ -1,5 +1,5 @@
 import {formatLatency} from '../../i18n/format';
-import {useMemo, useState} from 'react';
+import {useMemo, useState, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
 import {Card, Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
@@ -24,12 +24,13 @@ export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
-  if (log.error && !log.data) return <ErrorMessage error={log.error} onRetry={log.refetch} />;
-  if (!log.data) return <Loading />;
-  return <DnsAnalysis records={log.data.records} cacheListed={cacheListed} />;
+  // A log read that failed or is pending shows inside the charts it feeds; the cache card reads on its own.
+  const pending = log.data ? null : log.error ? <ErrorMessage error={log.error} onRetry={log.refetch} /> : <Loading />;
+  return <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} cacheListed={cacheListed} />;
 }
+const noRecords: DnsLogRecord[] = [];
 
-function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheListed: boolean}) {
+function DnsAnalysis({records, pending, cacheListed}: {records: DnsLogRecord[]; pending: ReactNode; cacheListed: boolean}) {
   const t = useT();
   const p = usePalette();
   const a = useMemo(() => dnsAnalysis(records), [records]);
@@ -47,9 +48,8 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
     color: colors[sample.outcome],
     lines: [sample.name, formatLatency(sample.value, t), t(labels[sample.outcome])]
   });
-  // Too few records to chart are said inside each chart they feed; the cache card does not depend on them.
-  const sparse = a.total < 5;
-  const tooFew = <Empty>{t('dns.chart.tooFew')}</Empty>;
+  // What stands in for each chart the log feeds while it has nothing to draw; the cache card does not depend on it.
+  const standIn = pending ?? (a.total < 5 ? <Empty>{t('dns.chart.tooFew')}</Empty> : null);
   const facts: ChartFact[] = [
     {label: t('dns.chart.median'), value: formatLatency(a.typical, t), icon: <SpeedFast />, tint: 'c1'},
     {label: t('dns.chart.p95'), value: formatLatency(a.slowest, t), icon: <Clock />, tint: 'c4'},
@@ -58,15 +58,13 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
   ];
   return (
     <div className="rp-chart-page">
-      {!sparse && <FactStrip facts={facts} />}
+      {!standIn && <FactStrip facts={facts} />}
       <div className="rp-g21">
         <Card
           title={t('dns.chart.speed', {n: a.samples.length})}
-          note={sparse ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
+          note={standIn ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
         >
-          {sparse ? (
-            tooFew
-          ) : (
+          {standIn ?? (
             <>
               <Beeswarm
                 label={t('dns.chart.speed', {n: a.samples.length})}
@@ -98,9 +96,7 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
           )}
         </Card>
         <Card title={t('dns.chart.outcomes')}>
-          {sparse ? (
-            tooFew
-          ) : (
+          {standIn ?? (
             <Waffle
               label={t('dns.chart.outcomes')}
               shares={dnsOutcomes.map(outcome => ({
@@ -115,7 +111,7 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
         </Card>
       </div>
       <div className="rp-g21">
-        <RankingCard analysis={a} sparse={sparse} />
+        <RankingCard analysis={a} standIn={standIn} />
         <CacheCard listed={cacheListed} />
       </div>
     </div>
@@ -153,7 +149,7 @@ function CacheCard({listed}: {listed: boolean}) {
 }
 
 // Who asks the most, or what is asked the most, as the activity page ranks traffic.
-function RankingCard({analysis, sparse}: {analysis: Analysis; sparse: boolean}) {
+function RankingCard({analysis, standIn}: {analysis: Analysis; standIn: ReactNode}) {
   const t = useT();
   const p = usePalette();
   const [by, setBy] = useState('device');
@@ -163,7 +159,7 @@ function RankingCard({analysis, sparse}: {analysis: Analysis; sparse: boolean}) 
     <Card
       title={t('dns.chart.ranking')}
       aside={
-        !sparse && (
+        !standIn && (
           <Segmented
             label={t('dns.chart.ranking')}
             value={by}
@@ -176,9 +172,7 @@ function RankingCard({analysis, sparse}: {analysis: Analysis; sparse: boolean}) 
         )
       }
     >
-      {sparse ? (
-        <Empty>{t('dns.chart.tooFew')}</Empty>
-      ) : (
+      {standIn ?? (
         <>
           <div className="rp-list">
             {ranking.top.map(item => (

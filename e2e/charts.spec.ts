@@ -113,6 +113,18 @@ for (const count of [0, 4]) {
   });
 }
 
+test('a failed first log read shows in the charts it feeds while the cache card still reports', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET dns/log'] = async () => {
+    throw new ApiError(500, 'internal', 'Log unavailable');
+  };
+  await page.goto('/#/dns');
+  const card = page.getByRole('region', {name: 'Cache', exact: true});
+  await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+  await expect(card.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(3);
+});
+
 test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/dns');

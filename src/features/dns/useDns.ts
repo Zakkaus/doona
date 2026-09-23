@@ -6,7 +6,7 @@ import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
@@ -72,7 +72,8 @@ export function useDns({go, query}: PageProps) {
 export function useDnsCacheTab(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const dns = useDnsControl();
+  // A kept tab stays mounted while hidden; the full listing is walked only while its tab is on screen.
+  const dns = useDnsControl(!useTabShown());
   const view = useMemo(
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
     [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
