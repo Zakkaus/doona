@@ -73,7 +73,10 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
   await expect(card.getByText('Usage', {exact: true})).toBeVisible();
   const listings = backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/dns/cache'));
-  expect(listings.map(request => new URL(request.url()).searchParams.get('limit'))).toEqual(['1']);
+  // Every read asks for one entry: the card never walks the whole cache, however often it refreshes.
+  const limits = listings.map(request => new URL(request.url()).searchParams.get('limit'));
+  expect(limits.length).toBeGreaterThan(0);
+  expect(new Set(limits)).toEqual(new Set(['1']));
   // A backend that predates usage reporting gets no capacity claim.
   backend.handlers['GET dns/cache'] = async () => {
     const {usage: _, ...list} = await backend.api.dnsCache({limit: 1});
