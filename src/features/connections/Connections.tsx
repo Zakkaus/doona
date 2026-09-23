@@ -21,12 +21,12 @@ import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
 import {useT} from '../../i18n';
-import {useConnections} from './useConnections';
+import {useConnectionsPage} from './useConnectionsPage';
 import type {ConnectionView} from './view';
 
 export function Connections(props: PageProps) {
   const t = useT();
-  const vm = useConnections(props);
+  const vm = useConnectionsPage(props);
   const cur = vm.detail;
   const list = (
     <>

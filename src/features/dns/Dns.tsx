@@ -20,12 +20,12 @@ import {
 } from '../../ui/ui';
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
-import {useDns, useDnsCache, useDnsLog} from './useDns';
+import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
 import {errorText} from '../../api/error';
 
-type DnsCacheRow = ReturnType<typeof useDnsCache>['rows'][number];
-type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
+type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
+type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -98,7 +98,7 @@ export function Dns(props: PageProps) {
 
 function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => void}) {
   const t = useT();
-  const vm = useDnsCache(domain);
+  const vm = useDnsCacheTab(domain);
   const {remove} = vm;
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
@@ -157,7 +157,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
 
 function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialName: string}) {
   const t = useT();
-  const vm = useDnsLog(enabled, initialName);
+  const vm = useDnsLogTab(enabled, initialName);
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [

@@ -1,7 +1,5 @@
-import {useMemo, useState} from 'react';
 import {formatList, useLang, useT} from '../../i18n';
 import {millis} from '../../api/u64';
-import {useCapabilities, useGroups, useNodes} from '../../store';
 import {Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
 import {usePalette} from '../../ui/Charts';
@@ -9,8 +7,8 @@ import {ChartCard, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts'
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {latencyGroups, latencyMax, type LatencyBy, type LatencyMissing} from './latency';
-import {offered} from '../../api/capabilities';
+import {latencyMax, type LatencyBy, type LatencyMissing} from './latency';
+import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;
 
@@ -20,11 +18,7 @@ export function NodeLatency() {
   const t = useT();
   const lang = useLang();
   const p = usePalette();
-  const resources = useCapabilities().data?.resources;
-  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
-  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
-  const [by, setBy] = useState<LatencyBy>('group');
-  const view = useMemo(() => latencyGroups(nodes.data ?? [], groups.data, by), [nodes.data, groups.data, by]);
+  const {nodes, by, setBy, view} = useLatencyTab();
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;

@@ -1,6 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useT, type Translator} from '../../i18n';
-import {useDnsControl, useDnsLog, useNow} from '../../store';
+import {useNow} from '../../store';
+import {useDnsStatsTab} from './useDns';
 import {Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import type {DnsCacheList, DnsLogRecord} from '../../api/model';
 import {millis} from '../../api/u64';
@@ -20,18 +21,15 @@ const labels: Record<DnsOutcome, 'dns.outcome.cached' | 'dns.outcome.answered' |
   failed: 'dns.outcome.failed'
 };
 
-// The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
 export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   const t = useT();
-  const log = useDnsLog({}, enabled === true);
-  const {cache, capabilities} = useDnsControl();
+  const {log, cache} = useDnsStatsTab(enabled);
   if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
   if (log.error && !log.data) return <ErrorMessage error={log.error} onRetry={log.refetch} />;
   if (!log.data) return <Loading />;
-  const cacheListed = capabilities.data?.resources.dns_cache.available === true && capabilities.data.resources.dns_cache.read === true;
-  return <DnsAnalysis records={log.data.records} cache={cacheListed ? cache.data : null} />;
+  return <DnsAnalysis records={log.data.records} cache={cache} />;
 }
 
 function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCacheList | undefined | null}) {

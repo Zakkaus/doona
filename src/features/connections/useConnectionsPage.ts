@@ -1,5 +1,5 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
@@ -19,7 +19,7 @@ import {
 } from './view';
 import {offered} from '../../api/capabilities';
 
-export function useConnections({go, query}: PageProps) {
+export function useConnectionsPage({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [view, setView] = useState(() => {
@@ -58,7 +58,7 @@ export function useConnections({go, query}: PageProps) {
   // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees the new list.
   const settledText = useDeferredValue(text);
   const src = ipLiteral(q.get('src') ?? '');
-  const resource = useConnectionResource(src);
+  const resource = useConnections(src);
   const capabilities = useCapabilities();
   const canClose = capabilities.data?.resources.connections.can_close === true;
   const rulesListed = offered(capabilities.data?.resources, 'rules', {whileLoading: false});

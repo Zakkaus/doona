@@ -1,6 +1,7 @@
 import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
+import {useCapabilities, useDnsControl, useDnsLog} from '../../store';
+import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
@@ -68,7 +69,7 @@ export function useDns({go, query}: PageProps) {
   };
 }
 
-export function useDnsCache(domain: string) {
+export function useDnsCacheTab(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const dns = useDnsControl();
@@ -105,7 +106,16 @@ export function useDnsCache(domain: string) {
   };
 }
 
-export function useDnsLog(enabled: boolean | undefined, initialName: string) {
+// The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
+export function useDnsStatsTab(enabled: boolean | undefined) {
+  const log = useDnsLog({}, enabled === true);
+  const {cache, capabilities} = useDnsControl();
+  const resources = capabilities.data?.resources;
+  const cacheListed = offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true;
+  return {log, cache: cacheListed ? cache.data : null};
+}
+
+export function useDnsLogTab(enabled: boolean | undefined, initialName: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
@@ -116,7 +126,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const capabilities = useCapabilities();
   const filter = {name: useDebounced(name, 300), type, src: ipLiteral(useDebounced(src, 300))};
   const key = JSON.stringify(filter);
-  const log = useDnsLogResource(filter, enabled === true);
+  const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
   const paging = useAction<'older'>({scope: key});
   // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.

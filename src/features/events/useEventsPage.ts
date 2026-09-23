@@ -4,7 +4,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useLinked} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';
 
-export function useEvents() {
+export function useEventsPage() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();

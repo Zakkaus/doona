@@ -1,14 +1,14 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import {Button, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn} from '../../ui/ui';
-import {useEvents} from './useEvents';
+import {useEventsPage} from './useEventsPage';
 import Download from '../../ui/icons/Download';
 
-type EventRow = ReturnType<typeof useEvents>['rows'][number];
+type EventRow = ReturnType<typeof useEventsPage>['rows'][number];
 
 export function Events() {
   const t = useT();
-  const vm = useEvents();
+  const vm = useEventsPage();
   // Stable column definitions: a new array on every stream tick would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<EventRow>[] => [
