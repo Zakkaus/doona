@@ -20,6 +20,7 @@ import {
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCache, useDnsLog} from './useDns';
+import {DnsAnalysis} from './Analysis';
 import {errorText} from '../../api/error';
 
 type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
@@ -215,6 +216,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         )}
       </div>
       {vm.error && <ErrorMessage error={vm.error} />}
+      <DnsAnalysis records={vm.records} />
       {vm.newerWaiting && <p className="rp-label">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable

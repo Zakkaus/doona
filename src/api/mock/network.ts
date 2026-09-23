@@ -22,6 +22,9 @@ function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
       const name = flow.input.domain!.replace(/\.$/, '') + '.';
       const cached = i % 3 === 1;
       const failed = !cached && i % 11 === 7;
+      // Enough variety for the analysis card: a cached negative answer, a no-such-name, a third upstream, slow tails.
+      const missing = i % 13 === 5 || i % 13 === 4;
+      const status = failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
       const type = flow.network === 'udp' && i % 2 ? 'AAAA' : 'A';
       const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
       return {
@@ -29,12 +32,13 @@ function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
         observed_at: new Date(Date.parse(flow.started_at ?? new Date().toISOString()) - 40).toISOString(),
         src: flow.input.src ?? null,
         question: {name, type},
-        status: failed ? 'TIMEOUT' : 'NOERROR',
+        status,
         cached,
-        upstream: cached || failed ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : 'tls://1.1.1.1',
+        upstream:
+          cached || (failed && i % 2) ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : i % 4 === 0 ? 'https://dns.google/dns-query' : 'tls://1.1.1.1',
         route: flow.outbound === 'direct' ? {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'} : {source: 'default', rule: null},
-        elapsed_ms: cached ? 0 : failed ? 5000 : 12 + ((i * 7) % 60),
-        answers: failed || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
+        elapsed_ms: cached ? 0 : failed ? (i % 2 ? 5000 : 420) : i % 9 === 2 ? 140 + ((i * 13) % 260) : 6 + ((i * 7) % 48),
+        answers: failed || missing || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
       };
     });
 }

@@ -144,6 +144,8 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,
+    // The records the table is built from, for the analysis card; never the formatted rows.
+    records: data?.records,
     detail,
     detailTitle: detail?.title ?? '',
     name,
