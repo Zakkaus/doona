@@ -1,5 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createFeed} from './feed';
+import {eventFeed} from './logs';
+import type {ApiEvent} from '../api/model';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -105,4 +107,19 @@ it('keeps the record list on a status-only change and schedules nothing without 
   vi.advanceTimersByTime(100);
   expect(notify).toHaveBeenCalledTimes(2);
   stop();
+});
+
+it('keeps the last event when a resumed stream.ready carries its id', () => {
+  const feed = eventFeed();
+  const off = feed.subscribe(() => {});
+  const observed_at = '2026-09-23T00:00:01Z';
+  feed.append({
+    id: 'c2',
+    event: 'flow.updated',
+    data: {instance_id: 'i', observed_at, resource_id: 'f1', revision: '1', href: '/api/v1/flows/f1'}
+  } as unknown as ApiEvent);
+  feed.append({id: 'c2', event: 'stream.ready', data: {instance_id: 'i', observed_at}} as ApiEvent);
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().records.map(event => event.event)).toEqual(['stream.ready', 'flow.updated']);
+  off();
 });

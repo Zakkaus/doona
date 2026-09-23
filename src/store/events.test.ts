@@ -148,3 +148,28 @@ it('leaves history and connection polling on their own cadence under runtime hea
   }
   for (const fetch of fetches) expect(fetch).toHaveBeenCalledTimes(4);
 });
+
+it('clears a capabilities error once a refetch succeeds while the stream stays up', async () => {
+  const api = createMockApi();
+  api.capabilities = vi
+    .fn()
+    .mockResolvedValueOnce(structuredClone(capabilities))
+    .mockRejectedValueOnce(new ApiError(500, 'internal', 'boom'))
+    .mockResolvedValue(structuredClone(capabilities));
+  let emit: EventOptions['onEvent'] = () => {};
+  api.subscribeEvents = vi.fn(async ({onEvent, onConnectionChange, signal}: EventOptions) => {
+    emit = onEvent;
+    onConnectionChange?.(true);
+    onEvent({id: 'c1', event: 'stream.ready', data: {instance_id: 'i', observed_at: '2026-09-23T00:00:00Z'}} as never);
+    await new Promise(resolve => signal?.addEventListener('abort', resolve));
+  });
+  disposers.push(subscribeEvents(api, () => {}));
+  await vi.advanceTimersByTimeAsync(10);
+  const data = {instance_id: 'i', observed_at: '2026-09-23T00:00:01Z', previous_generation_id: 'g1', generation_id: 'g2'};
+  emit({id: 'c2', event: 'generation.changed', data} as never);
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(eventStatus(api).error).toMatchObject({status: 500});
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  expect(eventStatus(api)).toMatchObject({connected: true, error: null});
+});

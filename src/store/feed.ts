@@ -1,4 +1,9 @@
-export function createFeed<T extends {id: string}, S extends object>(limit: number, status: S, replay: 'replace' | 'ignore') {
+export function createFeed<T extends {id: string}, S extends object>(
+  limit: number,
+  status: S,
+  replay: 'replace' | 'ignore',
+  key: (record: T) => string = record => record.id
+) {
   const records = new Map<string, T>();
   const listeners = new Set<() => void>();
   let snapshot = {records: [] as T[], ...status};
@@ -49,11 +54,12 @@ export function createFeed<T extends {id: string}, S extends object>(limit: numb
       };
     },
     append(record: T) {
-      if (records.has(record.id)) {
+      const id = key(record);
+      if (records.has(id)) {
         if (replay === 'ignore') return;
-        records.delete(record.id);
+        records.delete(id);
       }
-      records.set(record.id, record);
+      records.set(id, record);
       if (records.size > limit) records.delete(records.keys().next().value!);
       recordsDirty = true;
       schedule();

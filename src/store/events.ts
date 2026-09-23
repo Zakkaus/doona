@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, Capabilities} from '../api/model';
-import {watchResource} from './resource';
+import {refuseCredentials, watchResource} from './resource';
 import {shouldRefetch} from '../api/invalidation';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -24,13 +24,19 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
       shared.statuses.forEach(fn => fn());
     };
     let failed = false;
+    let capabilityError = false;
     let current: Capabilities | undefined;
     let connection: AbortController | undefined;
     const changed = () => {
       const state = capabilities.getSnapshot();
       if (state.error) {
         failed = true;
+        capabilityError = true;
         update({error: state.error});
+      } else if (capabilityError && connection) {
+        // A refetch that returns what was already held keeps the same object, so it is cleared here.
+        capabilityError = false;
+        update({error: null});
       }
       if (!state.data || state.data === current) return;
       const unchanged = state.data.resources.events.available === current?.resources.events.available;
@@ -62,6 +68,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
         .catch(reason => {
           if (!controller.signal.aborted) {
             connection = undefined;
+            refuseCredentials(api, reason);
             update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
           }
         });

@@ -4,7 +4,7 @@ import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
 import {createMockApi} from '../api/mock';
 import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
-import {refetchAll, retainInactive, watchResource} from './resource';
+import {credentialRefusal, refetchAll, retainInactive, watchResource} from './resource';
 import {ApiError} from '../api/error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
@@ -355,4 +355,17 @@ it('keeps a paused consumer’s snapshot past the minute and starts the minute a
   expect(recall(api, ['flow', {id: 1}])).toBe(1);
   await vi.advanceTimersByTimeAsync(61000);
   expect(recall(api, ['flow', {id: 1}])).toBeUndefined();
+});
+
+it("records a 401 on any read as the backend refusing this tab's credentials", async () => {
+  const api = createMockApi();
+  const refused = new ApiError(401, 'authentication_required', 'session expired');
+  const denied = watchResource(api, {key: ['groups'], fetch: () => Promise.reject(new ApiError(403, 'permission_denied', 'no'))}, () => {});
+  disposers.push(denied.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(credentialRefusal(api)).toBeNull();
+  const runtime = watchResource(api, {key: ['runtime'], fetch: () => Promise.reject(refused)}, () => {});
+  disposers.push(runtime.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(credentialRefusal(api)).toBe(refused);
 });

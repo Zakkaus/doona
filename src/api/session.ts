@@ -55,7 +55,9 @@ export function clearSession() {
 // load, however often the sign-in screen mounts in between.
 let ended = false;
 export function endSession(profileId: string, api: string): boolean {
-  if (sessionToken(profileId, api) !== null) {
+  const stored = read();
+  // An expired session counts too: it was open when the backend refused it.
+  if (stored && stored.profileId === profileId && stored.api === same(api)) {
     clearSession();
     ended = true;
   }
