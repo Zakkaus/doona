@@ -12,6 +12,7 @@ export function useRulesPage({go, query}: PageProps) {
     ...view,
     loading: capabilities.loading && !capabilities.data,
     error: capabilities.error,
+    retry: capabilities.refetch,
     changeTab: (tab: string) => go('rules', tabQuery(query, tab, view.fallback))
   };
 }

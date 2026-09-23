@@ -45,7 +45,7 @@ function PolicyDetail(props: PolicyGroupInput) {
   const g = m.card;
   return (
     <>
-      <ErrorMessage error={m.error} />
+      <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && <PolicyWait heading={<h3 className="rp-h3">{props.name}</h3>} members={props.members} label={m.loadingText} />}
       {g && (
         <>

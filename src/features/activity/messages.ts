@@ -3,6 +3,7 @@ import {defineMessages} from '../../i18n/defineMessages';
 export const messages = defineMessages({
   'zh-TW': {
     'act.noOutbounds': '此後端不提供出站統計',
+    'act.noConnections': '此後端不提供連線',
     'act.emptyHistory': '尚無歷史樣本',
     'act.historyRange': '歷史範圍',
     'act.noHistory': '此後端不提供歷史',
@@ -58,6 +59,7 @@ export const messages = defineMessages({
   },
   'zh-CN': {
     'act.noOutbounds': '此后端不提供出站统计',
+    'act.noConnections': '此后端不提供连接',
     'act.emptyHistory': '尚无历史样本',
     'act.historyRange': '历史范围',
     'act.noHistory': '此后端不提供历史',
@@ -113,6 +115,7 @@ export const messages = defineMessages({
   },
   en: {
     'act.noOutbounds': 'This backend does not provide outbound counters',
+    'act.noConnections': 'This backend does not provide connections',
     'act.emptyHistory': 'No history samples yet',
     'act.historyRange': 'History range',
     'act.noHistory': 'This backend does not provide history',

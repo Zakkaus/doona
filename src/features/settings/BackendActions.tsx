@@ -9,6 +9,7 @@ export function BackendActionsCard() {
   const t = useT();
   const {
     runtimeError,
+    retryRuntime,
     lifecycle,
     flush,
     closeAll,
@@ -16,6 +17,7 @@ export function BackendActionsCard() {
     geodataBlocked,
     geodataLoading,
     geodataError,
+    retryGeodata,
     providersError,
     providersLoading,
     retryProviders,
@@ -41,7 +43,7 @@ export function BackendActionsCard() {
         {t(card.titleKey)}
       </h2>
       <span className="rp-label">{waiting ? '\u00a0' : note}</span>
-      <ErrorMessage error={runtimeError} />
+      <ErrorMessage error={runtimeError} onRetry={retryRuntime} />
       <div className="rp-ops">
         {waiting && (
           <div className="rp-chart-wait ops">
@@ -99,7 +101,7 @@ export function BackendActionsCard() {
             </div>
           </div>
           <span className="rp-label">{t('settings.geodataNote')}</span>
-          <ErrorMessage error={geodataError} />
+          <ErrorMessage error={geodataError} onRetry={retryGeodata} />
           <DataTable
             label={t('settings.geodata')}
             loading={geodataLoading}

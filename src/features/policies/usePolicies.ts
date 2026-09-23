@@ -20,8 +20,8 @@ export function usePolicies({go, query}: PageProps) {
     setHealth({from: nodes.data, map: sameHealth(health.map, map) ? health.map : map});
   }
   const sourceState = useMainSourceEdit();
-  const {main, writable, busy, apply, error} = sourceState;
-  const source = useMemo(() => ({main, writable, busy, apply, error}), [main, writable, busy, apply, error]);
+  const {main, writable, busy, apply, error, retry} = sourceState;
+  const source = useMemo(() => ({main, writable, busy, apply, error, retry}), [main, writable, busy, apply, error, retry]);
   const entries = useMemo(() => new Map(readGroupEntries(source.main?.content ?? '').map(entry => [entry.name, entry])), [source.main?.content]);
   const cards = useMemo(
     () =>

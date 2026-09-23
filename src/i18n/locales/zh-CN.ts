@@ -4,6 +4,7 @@ import type {Key} from './zh-TW';
 
 export const messages = {
   'act.noOutbounds': '此后端不提供出站统计',
+  'act.noConnections': '此后端不提供连接',
   'act.emptyHistory': '尚无历史样本',
   'act.historyRange': '历史范围',
   'act.noHistory': '此后端不提供历史',
@@ -257,7 +258,6 @@ export const messages = {
   'dns.flushFailed': '清除失败：{error}',
   'dns.allTypes': '所有支持类型',
   'dns.query': '查询',
-  'dns.unavailable': '不支持 DNS 查询',
   'dns.hit': '缓存命中',
   'dns.miss': '缓存未命中',
   'dns.routeSource': '路由来源',
@@ -335,7 +335,6 @@ export const messages = {
   'log.chart.peak': '记录最多的时段',
   'log.chart.count': '{n} 条',
   'log.chart.span': '{time}（{n} 条）',
-  'log.unavailable': '此后端不提供日志流。',
   'log.level': '级别',
   'log.level.trace': '跟踪',
   'log.level.debug': '调试',
@@ -823,7 +822,6 @@ export const messages = {
   'rule.invalidPort': '端口须为 1 至 65535 的整数。',
   'rule.invalidIp': '须为 IPv4 或 IPv6 地址。',
   'rule.invalidLive': '解析模式须提供域名，且目标 IP 必须留空。',
-  'rule.unavailable': '不支持路由追踪',
   'rule.advanced': '高级条件',
   'rule.result.matched': '匹配',
   'rule.result.not_matched': '不匹配',

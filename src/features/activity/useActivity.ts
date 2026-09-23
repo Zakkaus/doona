@@ -77,10 +77,12 @@ export function useActivity() {
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
+      retry: history.refetch,
       state: trafficState(series, resources?.traffic_history.available, !!history.data, offered(resources, 'runtime', {whileLoading: false}))
     },
     memoryState: {
       error: memory.error ?? memoryHistory.error,
+      retry: memory.error ? memory.refetch : memoryHistory.retry,
       state: memoryHistory.samples.length > 1 ? 'ready' : resources?.runtime_memory.available === false ? 'unavailable' : 'loading'
     }
   };

@@ -72,7 +72,7 @@ function Startup() {
                 </button>
               </div>
             ) : lang && error ? (
-              <ErrorMessage error={error} />
+              <ErrorMessage error={error} onRetry={() => location.reload()} />
             ) : lang ? (
               <Loading />
             ) : null}

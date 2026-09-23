@@ -45,7 +45,6 @@ export function Dns(props: PageProps) {
           <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
             {t('dns.query')}
           </Button>
-          {vm.unavailable && <span className="rp-label">{t('dns.unavailable')}</span>}
         </div>
       </form>
       {vm.cards.length > 0 && (
@@ -89,8 +88,8 @@ export function Dns(props: PageProps) {
   };
   return (
     <div className="rp-page">
-      {vm.error && <ErrorMessage error={vm.error} />}
-      {vm.queryError && <ErrorMessage error={vm.queryError} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
+      {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
       <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
     </div>
   );
@@ -134,7 +133,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
   );
   return (
     <>
-      {vm.error && <ErrorMessage error={vm.error} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
         <Kv row items={vm.fields} />
         {vm.coverage.map(badge => (
@@ -223,7 +222,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           </Button>
         )}
       </div>
-      {vm.error && <ErrorMessage error={vm.error} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.refresh} />}
       {vm.newerWaiting && <p className="rp-label">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable

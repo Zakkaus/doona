@@ -2,6 +2,7 @@ type NoticesModel = {
   rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string}>;
   total: number;
   error: Error | null;
+  retry: () => void;
   loading: boolean;
   empty: string;
 };
@@ -9,7 +10,7 @@ import {useT} from '../../i18n';
 import {href} from '../../shell/route';
 import {Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 
-export function Notices({rows, total, error, loading, empty}: NoticesModel) {
+export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
   const t = useT();
   return (
     <section className="rp-card" aria-label={t('act.issues')}>
@@ -25,7 +26,7 @@ export function Notices({rows, total, error, loading, empty}: NoticesModel) {
           {t('act.viewAll')}
         </Link>
       </div>
-      {error && <ErrorMessage error={error} />}
+      {error && <ErrorMessage error={error} onRetry={retry} />}
       {loading ? (
         <div className="rp-chart-wait">
           <Loading />

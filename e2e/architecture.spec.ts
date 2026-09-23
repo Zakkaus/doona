@@ -1,4 +1,4 @@
-import {test as httpTest, type Page} from '@playwright/test';
+import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
@@ -636,6 +636,30 @@ httpTest('backend inventory failures expose independent retries without claiming
   failConnections = false;
   await connections.getByRole('button', {name: 'Retry', exact: true}).click();
   await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+});
+
+httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
+  const api = await backend(page);
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  let fail = true;
+  const failure = (message: string) => ({status: 503, json: {request_id: 'retry', error: {code: 'service_unavailable', message, details: null}}});
+  await page.route('**/api/v1/runtime/outbounds', async route => route.fulfill(fail ? failure('Outbounds unavailable') : {json: await api.runtimeOutbounds()}));
+  await page.route('**/api/v1/dns/cache{,?*}', async route => route.fulfill(fail ? failure('Cache unavailable') : {json: await api.dnsCache()}));
+  await page.route('**/api/v1/geodata', async route => route.fulfill(fail ? failure('Geodata unavailable') : {json: await api.geodata()}));
+  const retried = async (alert: Locator) => {
+    await expect(alert).toBeVisible();
+    fail = false;
+    await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+    await expect(alert).toHaveCount(0);
+    fail = true;
+  };
+  await page.goto('/#/activity');
+  await retried(page.getByRole('alert').filter({hasText: 'Outbounds unavailable'}));
+  await page.goto('/#/dns?tab=cache');
+  await retried(page.getByRole('alert').filter({hasText: 'Cache unavailable'}));
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader').first()).toBeVisible();
+  await page.goto('/#/settings');
+  await retried(page.getByRole('alert').filter({hasText: 'Geodata unavailable'}));
 });
 
 test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {

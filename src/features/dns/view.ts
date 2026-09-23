@@ -35,7 +35,6 @@ export function dnsQueryView(
     types,
     choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
     disabled: busy || !resources?.dns_query.available || !(type === 'all' ? types.length > 0 : types.includes(type)) || !domain.trim(),
-    unavailable: !!resources && !resources.dns_query.available,
     showCache: !!resources?.dns_cache.available,
     cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
     tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))

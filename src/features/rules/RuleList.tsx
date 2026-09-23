@@ -229,7 +229,7 @@ function Distribution({view}: {view: Model}) {
           </Light>
         )}
       </div>
-      <ErrorMessage error={view.error} />
+      <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} empty={t('rule.distributionEmpty')} cols={columns} />
     </div>
   );

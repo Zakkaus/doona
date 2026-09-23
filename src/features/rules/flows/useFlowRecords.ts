@@ -46,6 +46,7 @@ export function useFlowRecords({go, query}: PageProps) {
     id,
     rulesListed,
     error: resource.error,
+    retry: resource.refetch,
     loading: resource.loading && !resource.data,
     panelOpen: !!id && (!!detail.data || detail.loading || !!detail.error),
     panelTitle: detailView?.title ?? id ?? '',

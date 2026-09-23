@@ -42,6 +42,7 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
     },
     empty: view.byId.size === 0,
     error: sources.find(source => source.error)?.error,
+    retry: () => sources.forEach(source => source.error && source.refetch()),
     loading: sources.some(source => source.loading && !source.data),
     select: (id: Key) => {
       const item = view.byId.get(String(id));

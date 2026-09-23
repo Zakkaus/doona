@@ -14,6 +14,7 @@ export type MainSourceEdit = {
   writable: boolean;
   busy: boolean;
   error: Error | null;
+  retry: () => void;
   // Never rejects: a dialog shows the outcome inline, a background edit as a toast.
   apply: (transform: (text: string) => string, origin?: ConfigSource) => Promise<EditResult>;
 };
@@ -40,6 +41,7 @@ export function useMainSourceEdit(): MainSourceEdit {
     writable,
     busy: editor.busy !== null,
     error,
+    retry: config.refetch,
     apply: useCallback<MainSourceEdit['apply']>(
       async (transform, origin = main ?? undefined): Promise<EditResult> => {
         if (!origin) return {kind: 'failed', error: error ?? new LocalError('config.incomplete')};

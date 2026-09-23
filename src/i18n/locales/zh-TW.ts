@@ -3,6 +3,7 @@ import type {Message} from '../index';
 
 export const messages = {
   'act.noOutbounds': '此後端不提供出站統計',
+  'act.noConnections': '此後端不提供連線',
   'act.emptyHistory': '尚無歷史樣本',
   'act.historyRange': '歷史範圍',
   'act.noHistory': '此後端不提供歷史',
@@ -256,7 +257,6 @@ export const messages = {
   'dns.flushFailed': '清除失敗：{error}',
   'dns.allTypes': '所有支援類型',
   'dns.query': '查詢',
-  'dns.unavailable': '不支援 DNS 查詢',
   'dns.hit': '快取命中',
   'dns.miss': '未命中快取',
   'dns.routeSource': '路由來源',
@@ -334,7 +334,6 @@ export const messages = {
   'log.chart.peak': '記錄最多的時段',
   'log.chart.count': '{n} 筆',
   'log.chart.span': '{time}（{n} 筆）',
-  'log.unavailable': '此後端不提供日誌串流。',
   'log.level': '等級',
   'log.level.trace': '追蹤',
   'log.level.debug': '除錯',
@@ -822,7 +821,6 @@ export const messages = {
   'rule.invalidPort': '連接埠須為 1 至 65535 的整數。',
   'rule.invalidIp': '須為 IPv4 或 IPv6 位址。',
   'rule.invalidLive': '解析模式須提供網域，且目的 IP 必須留空。',
-  'rule.unavailable': '不支援路由追蹤',
   'rule.advanced': '進階條件',
   'rule.result.matched': '相符',
   'rule.result.not_matched': '不符',

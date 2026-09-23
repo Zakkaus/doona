@@ -7,7 +7,7 @@ import {useSearch} from './useSearch';
 
 export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps['go']}) {
   const t = useT();
-  const {q, setQ, sections, partial, openConnections, empty, error, loading, select} = useSearch(go, onClose);
+  const {q, setQ, sections, partial, openConnections, empty, error, retry, loading, select} = useSearch(go, onClose);
   return (
     <ModalDialog
       title={t('search')}
@@ -26,7 +26,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
             <Close />
           </Button>
         </div>
-        {error && <ErrorMessage error={error} />}
+        {error && <ErrorMessage error={error} onRetry={retry} />}
         {partial && (
           <div className="rp-note" role="status">
             {partial}

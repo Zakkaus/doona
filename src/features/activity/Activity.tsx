@@ -119,10 +119,10 @@ export function Activity() {
             />
           </div>
           {vm.history.error && vm.history.state !== 'ready' ? (
-            <ErrorMessage error={vm.history.error} />
+            <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
           ) : vm.history.state === 'unavailable' ? (
             <div className="rp-chart-wait tall">
-              <span className="rp-label">{t('act.noHistory')}</span>
+              <Empty>{t('act.noHistory')}</Empty>
             </div>
           ) : vm.history.state === 'loading' ? (
             <div className="rp-chart-wait tall">
@@ -163,7 +163,7 @@ export function Activity() {
             </Link>
           </div>
           {vm.memoryState.error ? (
-            <ErrorMessage error={vm.memoryState.error} />
+            <ErrorMessage error={vm.memoryState.error} onRetry={vm.memoryState.retry} />
           ) : vm.memoryState.state === 'ready' ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />

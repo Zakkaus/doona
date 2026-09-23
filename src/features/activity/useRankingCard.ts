@@ -23,5 +23,14 @@ export function useRankingCard() {
   if (connections.data && !loaded) setLoaded(true);
   const rows = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
   const state = connections.data ? (rows.length ? 'ready' : 'empty') : connections.error ? 'error' : available === true ? 'loading' : 'unavailable';
-  return {ref, by, setBy, rows, state, error: connections.data ? undefined : connections.error, truncated: !!connections.data?.truncated};
+  return {
+    ref,
+    by,
+    setBy,
+    rows,
+    state,
+    error: connections.data ? undefined : connections.error,
+    retry: connections.refetch,
+    truncated: !!connections.data?.truncated
+  };
 }

@@ -94,7 +94,7 @@ export function FlowRecords(props: PageProps) {
   );
   return (
     <>
-      <ErrorMessage error={view.error} />
+      <ErrorMessage error={view.error} onRetry={view.retry} />
       <div className="rp-toolbar">
         <Segmented
           label={t('ui.network')}

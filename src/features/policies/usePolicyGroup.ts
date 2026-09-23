@@ -80,6 +80,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     edit,
     members,
     error: control.error,
+    retry: control.refetch,
     loading: !g && !control.error,
     loadingText: t('policy.loading', {id}),
     busy: !!control.busy,

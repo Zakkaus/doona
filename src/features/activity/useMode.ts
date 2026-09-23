@@ -12,7 +12,7 @@ export function useMode() {
   const t = useT();
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
-  const {main, writable, busy, error, apply: write} = useMainSourceEdit();
+  const {main, writable, busy, error, retry, apply: write} = useMainSourceEdit();
   const content = main?.content;
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
@@ -33,6 +33,7 @@ export function useMode() {
   return {
     ...view,
     error,
+    retry,
     busy,
     pick: (mode: string) => {
       if (mode === 'global') setStaged({mode, target: view.target});

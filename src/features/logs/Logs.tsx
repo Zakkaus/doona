@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, Empty, type TableColumn} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
 
@@ -49,12 +49,6 @@ export function Logs() {
     ],
     [t]
   );
-  if (vm.unavailable)
-    return (
-      <div className="rp-page">
-        <Empty>{t('log.unavailable')}</Empty>
-      </div>
-    );
   return (
     <div className="rp-page">
       <div className="rp-toolbar">

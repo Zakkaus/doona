@@ -14,7 +14,7 @@ export function Rules(props: PageProps) {
   const traceForm = useTraceForm();
   const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace form={traceForm} />};
   if (view.loading) return <Loading />;
-  if (view.error) return <ErrorMessage error={view.error} />;
+  if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
       <Tabs label={t('nav.rules')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
@@ -108,7 +108,6 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
           </div>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
-        {!trace.available && <span className="rp-label">{t('rule.unavailable')}</span>}
       </form>
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>

@@ -79,6 +79,7 @@ export function useBackendActions() {
     );
   return {
     runtimeError: runtime.error,
+    retryRuntime: runtime.refetch,
     lifecycle: lifecycleActions(operations.canRun, operations.busy, runOperation, t),
     flush: {
       confirmationText: t('dns.flushConfirmAll'),
@@ -102,6 +103,7 @@ export function useBackendActions() {
     geodataBlocked: geodata.busy || !geodata.data,
     geodataLoading: geodata.loading && !geodata.data,
     geodataError: geodata.error,
+    retryGeodata: geodata.refetch,
     providersError: providers.error,
     providersLoading: providers.loading && !providers.data,
     retryProviders: providers.refetch,

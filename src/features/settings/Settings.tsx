@@ -20,6 +20,7 @@ export function Settings({query}: PageProps) {
     hasActive,
     firstRun,
     error,
+    retry,
     api,
     changeApi,
     token,
@@ -66,7 +67,7 @@ export function Settings({query}: PageProps) {
         <h2 className="rp-h3" id={cards.backend.headingId}>
           {t(cards.backend.titleKey)}
         </h2>
-        <ErrorMessage error={error} />
+        <ErrorMessage error={error} onRetry={retry} />
         <div className="rp-toolbar">
           <LabeledSelect
             label={t('settings.profile')}

@@ -4,6 +4,7 @@ import type {Key} from './zh-TW';
 
 export const messages = {
   'act.noOutbounds': 'This backend does not provide outbound counters',
+  'act.noConnections': 'This backend does not provide connections',
   'act.emptyHistory': 'No history samples yet',
   'act.historyRange': 'History range',
   'act.noHistory': 'This backend does not provide history',
@@ -275,7 +276,6 @@ export const messages = {
   'dns.flushFailed': 'Clear failed: {error}',
   'dns.allTypes': 'All supported types',
   'dns.query': 'Query',
-  'dns.unavailable': 'DNS queries unavailable',
   'dns.hit': 'Cache hit',
   'dns.miss': 'Cache miss',
   'dns.routeSource': 'Route source',
@@ -353,7 +353,6 @@ export const messages = {
   'log.chart.peak': 'Busiest period',
   'log.chart.count': {one: '{n} record', other: '{n} records'},
   'log.chart.span': '{time} ({n})',
-  'log.unavailable': 'This backend does not stream logs.',
   'log.level': 'Level',
   'log.level.trace': 'Trace',
   'log.level.debug': 'Debug',
@@ -846,7 +845,6 @@ export const messages = {
   'rule.invalidPort': 'Ports must be integers from 1 to 65535.',
   'rule.invalidIp': 'Enter an IPv4 or IPv6 address.',
   'rule.invalidLive': 'Resolving requires a domain and an empty destination IP.',
-  'rule.unavailable': 'Routing trace unavailable',
   'rule.advanced': 'Advanced',
   'rule.result.matched': 'Matched',
   'rule.result.not_matched': 'Not matched',
