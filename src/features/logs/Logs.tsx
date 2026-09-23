@@ -1,4 +1,5 @@
 import {useMemo} from 'react';
+import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
 import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, Empty, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
@@ -64,6 +65,7 @@ export function Logs() {
         </Button>
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
+      <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
       <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={t('log.empty')} cols={columns} />
     </div>
   );

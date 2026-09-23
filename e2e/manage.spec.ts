@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 
 test('close all closes what the backend owns and skips the rest', async ({page}) => {
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await page.getByRole('button', {name: 'Close all', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
   await expect(page.locator('.rp-toast')).toContainText(/Closed \d+, skipped \d+/);

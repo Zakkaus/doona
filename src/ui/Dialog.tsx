@@ -1,4 +1,4 @@
-import {useDeferredValue, useEffect, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {Fragment, useDeferredValue, useEffect, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -107,8 +107,8 @@ export function Tabs({
   // The selected tab and its marker answer the click in the urgent render; a heavy panel (a table of
   // log rows) mounts in the deferred one, so the click never waits for it.
   const shown = useDeferredValue(value);
-  // Until the deferred render lands, the newly selected panel keeps showing the previous content: an empty panel
-  // for one frame would collapse the page and spring back.
+  // Until the deferred render lands, the panel keeps showing the previous content: an empty panel for one frame would
+  // collapse the page and spring back.
   const content = (items.find(item => item.id === shown) ?? items.find(item => item.id === value))?.content;
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
@@ -122,11 +122,12 @@ export function Tabs({
           ))}
         </TabList>
       </div>
-      {items.map(item => (
-        <TabPanel key={item.id} id={item.id} className="rp-tabpanel">
-          {item.id === value ? content : null}
-        </TabPanel>
-      ))}
+      {/* One panel, whose content is keyed by the tab it belongs to: while the deferred render catches up, the
+          previous tab's content stays mounted where it is instead of remounting under the new panel (a remount
+          redraws its placeholders for a frame, which reads as the page jumping). */}
+      <TabPanel id={value} className="rp-tabpanel">
+        <Fragment key={items.some(item => item.id === shown) ? shown : value}>{content}</Fragment>
+      </TabPanel>
     </RTabs>
   );
 }

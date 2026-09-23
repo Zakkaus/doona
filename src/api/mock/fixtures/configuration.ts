@@ -84,10 +84,10 @@ mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct
 domain(geosite: discord) -> proxy
 sip(10.0.0.0/24) && dport(25) -> block
 `;
-const configSubscription = `'香港 01 · IPLC': 'vless://<redacted>'
-'香港 02 · BGP': 'vless://<redacted>'
-'新加坡 01 · 2x': 'trojan://<redacted>'
-'日本 01 · 2x': 'vless://<redacted>'
+const configSubscription = `'香港 01 IPLC': 'vless://<redacted>'
+'香港 02 BGP': 'vless://<redacted>'
+'新加坡 01 2x': 'trojan://<redacted>'
+'日本 01 2x': 'vless://<redacted>'
 `;
 const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
 skylink { filter: subtag(sub-c) }

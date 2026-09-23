@@ -89,8 +89,8 @@ routing {
   expect(cards.map(card => card.kind)).toEqual(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'routing']);
   expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstream, 1 request rule, 1 response rule');
   expect(cards.filter(card => card.kind === 'routing').map(card => [card.range, card.summary])).toEqual([
-    ['config.dae:8-12', '1 rule · fallback: proxy'],
-    ['rules.dae:1-1', '0 rules · fallback: direct']
+    ['config.dae:8-12', '1 rule, fallback: proxy'],
+    ['rules.dae:1-1', '0 rules, fallback: direct']
   ]);
   expect(cards[0].block).toBeNull();
   expect(cards[0].summary).toContain('config.dae');
@@ -144,7 +144,7 @@ routing {
   const cards = sectionSummaries([main], 'en', t);
   expect(cards.find(card => card.kind === 'subscription')?.summary).toBe('2 subscriptions');
   expect(cards.find(card => card.kind === 'node')?.summary).toBe('1 node');
-  expect(cards.find(card => card.kind === 'routing')?.summary).toBe('2 rules · fallback: proxy');
+  expect(cards.find(card => card.kind === 'routing')?.summary).toBe('2 rules, fallback: proxy');
 });
 
 it('keeps a card id when text before the section changes', () => {

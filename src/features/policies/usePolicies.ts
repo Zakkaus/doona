@@ -89,6 +89,13 @@ export function usePolicyVisibility(focused: boolean) {
     (element: HTMLElement | null) => {
       card.current = element;
       if (!element) return;
+      // A card that mounts on screen (returning to the tab, say) shows its details in the first frame; waiting for
+      // the observer's first report would paint the placeholder for a frame and make the page jump.
+      const box = element.getBoundingClientRect();
+      if (box.top < innerHeight + 400 && box.bottom > -400) {
+        setVisible(true);
+        open();
+      }
       const observer = new IntersectionObserver(
         entries => {
           const near = entries.at(-1)!.isIntersecting;

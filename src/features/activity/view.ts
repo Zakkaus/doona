@@ -64,14 +64,14 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
       id: event.id,
       tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
       kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
-      summaryText: `${t(eventKindLabels[event.event])} · ${t(summary.key, params)}`,
+      summaryText: t('ui.valuePair', {label: t(eventKindLabels[event.event]), value: t(summary.key, params)}),
       key,
       count: 1
     });
   }
   return rows.map(({key: _key, count, summaryText, ...row}) => ({
     ...row,
-    summaryText: count > 1 ? `${summaryText} · ${t('act.noticeRepeat', {n: count})}` : summaryText
+    summaryText: count > 1 ? t('ui.aside', {text: summaryText, note: t('act.noticeRepeat', {n: count})}) : summaryText
   }));
 }
 export type ActivityNodeMenu = {
@@ -97,7 +97,10 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     return {
       id: node.id,
       name: node.name,
-      label: counts.get(node.name)! > 1 ? `${node.name} · ${node.subscription_tag ?? node.provider_id ?? node.id} · ${node.id}` : node.name,
+      label:
+        counts.get(node.name)! > 1
+          ? t('ui.aside', {text: node.name, note: [node.subscription_tag ?? node.provider_id ?? node.id, node.id].join(t('ui.separator'))})
+          : node.name,
       tcp: healthMillis(health),
       alive: health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined,
       unavailable: health?.state === 'unavailable',

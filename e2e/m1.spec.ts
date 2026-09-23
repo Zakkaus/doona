@@ -18,7 +18,7 @@ test.describe('first-release backend', () => {
       await page.goto(`/#/${route}`);
       await expect(page.locator('.rp-content')).toBeVisible();
     }
-    await page.goto('/#/connections');
+    await page.goto('/#/connections?tab=list');
     await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
     await expect(page.getByRole('button', {name: 'Close all', exact: true})).toHaveCount(0);
     await expect(page.getByText('Partial connection visibility', {exact: true})).toBeVisible();

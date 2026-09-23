@@ -1,0 +1,498 @@
+/* ---- Chart cards: a title, the facts as label and value, then the chart. ---- */
+.rp-chartcard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rp-chartcard > .rp-h3 {
+  margin: 0;
+}
+.rp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0;
+}
+.rp-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-facts dt {
+  font-size: 12px;
+  color: var(--rp-subtle);
+}
+.rp-facts dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--rp-text);
+  overflow-wrap: anywhere;
+}
+.rp-facts .negative dd {
+  color: var(--rp-negative);
+}
+.rp-facts .notice dd {
+  color: var(--rp-notice);
+}
+.rp-chartcard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+}
+.rp-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+@media (min-width: 1024px) {
+  .rp-chart-grid.split {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .rp-chart-grid.halves {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.rp-chart-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rp-subtle);
+}
+/* ---- Beeswarm and strips ---- */
+.rp-swarm,
+.rp-scatter {
+  width: 100%;
+  min-width: 0;
+}
+.rp-swarm svg,
+.rp-scatter svg {
+  display: block;
+  overflow: visible;
+}
+.rp-swarm .grid,
+.rp-scatter .grid {
+  stroke: var(--rp-hl-med);
+  stroke-dasharray: 2 4;
+}
+.rp-swarm .tick,
+.rp-scatter .tick {
+  fill: var(--rp-subtle);
+  font-size: 11px;
+}
+.rp-scatter circle {
+  fill-opacity: 0.85;
+}
+.rp-scatter .diagonal line {
+  stroke: var(--rp-subtle);
+  stroke-dasharray: 5 4;
+}
+.rp-scatter .diagonal text {
+  fill: var(--rp-subtle);
+  font-size: 11px;
+}
+.rp-scatter circle.pick {
+  cursor: pointer;
+}
+.rp-scatter circle.pick:hover {
+  fill-opacity: 1;
+  stroke: var(--rp-text);
+  stroke-width: 1.5;
+}
+/* Every median and percentile mark is the same dashed line, in the chart and in the upstream rows alike. */
+.rp-swarm .mark line,
+.rp-swarm .median {
+  stroke: var(--rp-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.rp-swarm .more {
+  fill: var(--rp-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+.rp-swarm .mark text {
+  fill: var(--rp-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+.rp-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rp-strip-row .name {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Waffle ---- */
+.rp-waffle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+.rp-waffle .grid {
+  display: grid;
+  grid-template-columns: repeat(10, 14px);
+  gap: 3px;
+}
+.rp-waffle .grid > span {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+.rp-waffle .legend,
+.rp-markerplot .legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.rp-waffle .legend li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.rp-waffle .legend .sw {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.rp-waffle .legend b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Marker plot ---- */
+.rp-markerplot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rp-markerplot .legend {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--rp-subtle);
+}
+.rp-markerplot .legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rp-markerplot .axis,
+.rp-markerplot .row {
+  display: grid;
+  grid-template-columns: minmax(96px, 180px) minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 12px;
+}
+.rp-markerplot .scale {
+  position: relative;
+  height: 16px;
+  font-size: 11px;
+  color: var(--rp-subtle);
+}
+.rp-markerplot .scale > span {
+  position: absolute;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+/* The end labels stay inside the axis. */
+.rp-markerplot .scale > span:first-child {
+  translate: 0 0;
+}
+.rp-markerplot .scale > span:last-child {
+  translate: -100% 0;
+}
+.rp-markerplot .row {
+  min-height: 28px;
+}
+.rp-markerplot .row .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.rp-markerplot .row .value {
+  text-align: end;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.rp-markerplot .track .span {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  translate: 0 -50%;
+  border-radius: 3px;
+  background: var(--rp-hl-med);
+}
+.rp-markerplot .track .at.dot {
+  z-index: 1;
+}
+.rp-markerplot .track .at.over .rp-marker.dot {
+  border-radius: 2px 50% 50% 2px;
+}
+.rp-markerplot .row.more {
+  min-height: 0;
+}
+.rp-markerplot .row.more > .rp-btn {
+  justify-self: start;
+  margin-inline-start: -8px;
+}
+.rp-markerplot .note {
+  margin: 4px 0 0;
+}
+.rp-markerplot .track {
+  position: relative;
+  height: 20px;
+}
+.rp-markerplot .track .grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rp-hl-med);
+}
+.rp-markerplot .track .at {
+  position: absolute;
+  top: 50%;
+  translate: -50% -50%;
+  display: flex;
+}
+.rp-markerplot h4 {
+  margin: 8px 0 2px;
+}
+.rp-marker {
+  display: inline-block;
+  color: var(--rp-subtle);
+}
+.rp-marker.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  color: var(--rp-accent);
+}
+.rp-marker.diamond {
+  width: 8px;
+  height: 8px;
+  rotate: 45deg;
+  border: 2px solid currentColor;
+}
+.rp-marker.tick {
+  width: 3px;
+  height: 16px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* ---- Heatmap ---- */
+.rp-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rp-heatmap .row {
+  display: grid;
+  grid-template-columns: minmax(96px, 180px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.rp-heatmap .cells {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 3px;
+}
+.rp-heatmap .cell {
+  height: 22px;
+  border-radius: 3px;
+  background: var(--rp-hl-low);
+}
+.rp-heatmap .cell.t1 {
+  background: color-mix(in srgb, var(--tone) 20%, transparent);
+}
+.rp-heatmap .cell.t2 {
+  background: color-mix(in srgb, var(--tone) 38%, transparent);
+}
+.rp-heatmap .cell.t3 {
+  background: color-mix(in srgb, var(--tone) 56%, transparent);
+}
+.rp-heatmap .cell.t4 {
+  background: color-mix(in srgb, var(--tone) 76%, transparent);
+}
+.rp-heatmap .cell.t5 {
+  background: var(--tone);
+}
+.rp-heatmap .times .ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--rp-subtle);
+  white-space: nowrap;
+}
+.rp-heatmap .head .rp-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+.rp-heatmap .head .rp-btn.current {
+  font-weight: 600;
+}
+
+/* A phone gives the track the whole width: name and value above it, three axis marks. */
+@media (max-width: 640px) {
+  .rp-markerplot .axis,
+  .rp-markerplot .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+  }
+  .rp-markerplot .row .track,
+  .rp-markerplot .axis .scale {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .rp-markerplot .axis > span:empty {
+    display: none;
+  }
+  .rp-markerplot .scale > span:nth-child(2n) {
+    display: none;
+  }
+  .rp-heatmap .row {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+.rp-median-key {
+  display: inline-block;
+  width: 0;
+  height: 14px;
+  border-inline-start: 1.5px dashed var(--rp-text);
+}
+/* The hover tip of the SVG and HTML charts, in the look of the activity charts' tooltips. */
+.rp-chart-hover {
+  position: relative;
+}
+.rp-charttip {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--rp-text);
+  color: var(--rp-on-text);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% calc(-100% - 12px);
+}
+.rp-charttip.start {
+  translate: -12px calc(-100% - 12px);
+}
+.rp-charttip.end {
+  translate: calc(-100% + 12px) calc(-100% - 12px);
+}
+
+/* ---- Bar list ---- */
+.rp-barlist ol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-barlist li {
+  display: grid;
+  grid-template-columns: minmax(80px, 2fr) minmax(0, 3fr) auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.rp-barlist .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-barlist .bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--rp-hl-low);
+  overflow: hidden;
+}
+.rp-barlist .bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+}
+.rp-barlist .value {
+  font-variant-numeric: tabular-nums;
+  color: var(--rp-subtle);
+}
+.rp-barlist .rp-note {
+  margin: 6px 0 0;
+}
+
+/* ---- Share bar ---- */
+.rp-sharebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-sharebar .bar {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.rp-sharebar .bar > i {
+  flex-basis: 0;
+  min-width: 4px;
+}
+.rp-sharebar .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.rp-sharebar .legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rp-sharebar .legend .sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.rp-sharebar .legend b {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .rp-barlist li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rp-barlist .bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

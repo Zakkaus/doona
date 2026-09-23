@@ -48,9 +48,9 @@ test('all supported DNS types are queried in bounded batches and shown together'
   });
   await page.goto('/#/dns?domain=example.com&type=all');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
-  await expect(page.getByRole('heading', {name: 'example.com. · TXT', exact: true})).toBeVisible();
-  await expect(page.getByRole('heading', {name: 'example.com. · A', exact: true})).toBeVisible();
-  await expect(page.getByRole('heading', {name: 'example.com. · AAAA', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'example.com. TXT', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'example.com. A', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'example.com. AAAA', exact: true})).toBeVisible();
   expect(requested).toEqual([['A'], ['AAAA'], ['TXT']]);
 });
 
@@ -61,7 +61,7 @@ test('DNS tabs preserve linked query drafts', async ({page}) => {
   await page.getByRole('tab', {name: 'Query', exact: true}).click();
   await expect(page.getByRole('textbox', {name: 'Domain', exact: true})).toHaveValue('example.com');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
-  await expect(page.getByRole('heading', {name: 'example.com. · AAAA', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'example.com. AAAA', exact: true})).toBeVisible();
 });
 
 test('DNS logs load older pages and export only loaded records', async ({page}) => {
@@ -122,7 +122,7 @@ browserTest('a transient DNS refusal stays pending until the advertised retry su
   });
   await page.goto('/#/dns?domain=example.com');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
-  await expect(page.getByRole('heading', {name: 'example.com. · A', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'example.com. A', exact: true})).toBeVisible();
   expect(times).toHaveLength(2);
   expect(times[1] - times[0]).toBeGreaterThanOrEqual(1000);
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);

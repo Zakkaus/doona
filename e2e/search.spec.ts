@@ -84,7 +84,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
   };
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/**', route => route.fulfill({json: responses[new URL(route.request().url()).pathname.replace('/api/v1', '')]}));
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   await expect(page.getByLabel('Search nodes')).toBeVisible();
   let dialog = await open(page, 'query');
   await expect(dialog.getByRole('option', {name: /Query/})).toHaveCount(0);
@@ -101,7 +101,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
   await expect(dialog.getByRole('status')).toContainText('truncated');
   await dialog.getByRole('button', {name: 'Connections', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections$/);
-  await expect(page.getByRole('searchbox', {name: 'Filter'})).toBeVisible();
+  await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('search results are reached with arrow keys while the field keeps focus', async ({page}) => {

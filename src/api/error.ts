@@ -61,5 +61,5 @@ export function errorText(error: unknown, t: Translator): string {
   }
   if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);
-  return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
+  return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
 }

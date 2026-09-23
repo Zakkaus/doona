@@ -133,8 +133,8 @@ export const messages = defineMessages({
     'policy.purpose.data': '資料',
     'policy.purpose.dns': 'DNS',
     'policy.purpose.shared': '共用',
-    'policy.observedVia': '{transport} · {purpose}',
-    'policy.sectionCount': ' · {n}',
+    'policy.observedVia': '{transport}（{purpose}）',
+    'policy.sectionCount': '（{n}）',
     'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
     'policy.editNoMain': '尚未取得主組態，無法編輯',
     'policy.editNoEntry': '主組態 group 區段中沒有此群組，無法編輯'
@@ -271,8 +271,8 @@ export const messages = defineMessages({
     'policy.purpose.data': '数据',
     'policy.purpose.dns': 'DNS',
     'policy.purpose.shared': '共用',
-    'policy.observedVia': '{transport} · {purpose}',
-    'policy.sectionCount': ' · {n}',
+    'policy.observedVia': '{transport}（{purpose}）',
+    'policy.sectionCount': '（{n}）',
     'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
     'policy.editNoMain': '尚未取得主配置，无法编辑',
     'policy.editNoEntry': '主配置 group 区段中没有此组，无法编辑'
@@ -415,8 +415,8 @@ export const messages = defineMessages({
     'policy.purpose.data': 'data',
     'policy.purpose.dns': 'DNS',
     'policy.purpose.shared': 'shared',
-    'policy.observedVia': '{transport} · {purpose}',
-    'policy.sectionCount': ' · {n}',
+    'policy.observedVia': '{transport} ({purpose})',
+    'policy.sectionCount': ' ({n})',
     'policy.memberPerNetwork': 'TCP {tcp}, UDP {udp}',
     'policy.editNoMain': 'The main configuration is not available yet',
     'policy.editNoEntry': 'This group is not defined in the group section of the main configuration'

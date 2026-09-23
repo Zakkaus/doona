@@ -44,7 +44,13 @@ const VARS = [
   'iris',
   'hl-low',
   'hl-med',
-  'hl-high'
+  'hl-high',
+  'accent',
+  'positive',
+  'negative',
+  'notice',
+  'info',
+  'line'
 ] as const;
 type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
 function read(): Palette {

@@ -166,7 +166,7 @@ test('the tree can be seen by device, with the toggle in the address and pins ca
   await expect(topology.locator('.rp-tree-captions').getByText('Device', {exact: true})).toBeVisible();
   await expect(topology.locator('[data-stage="rule"]')).toHaveCount(0);
   const device = topology.locator('[data-stage="client"]').filter({hasText: '10.0.0.12'});
-  await expect(device).toHaveAttribute('aria-label', /^10\.0\.0\.12 · \d+ flows · → /);
+  await expect(device).toHaveAttribute('aria-label', /^10\.0\.0\.12, \d+ flows, → /);
   await device.click();
   await expect(page).toHaveURL(/path=client%3A10\.0\.0\.12/);
   await page.getByRole('button', {name: /^Show the \d+ flows on this path$/}).click();

@@ -11,8 +11,9 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     sample_source: 'probe',
     state: latency === null ? 'unavailable' : 'healthy',
     latency_ms: latency,
-    moving_avg_ms: latency,
-    avg10_ms: latency,
+    // The averages differ from the latest sample, as they do on a live backend.
+    moving_avg_ms: latency === null ? null : Math.round(latency * (0.8 + (latency % 7) / 15)),
+    avg10_ms: latency === null ? null : Math.round(latency * (0.85 + (latency % 5) / 10)),
     observed_at: observedAt,
     error: latency === null ? 'timeout' : null
   };
@@ -116,7 +117,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     const alive = rnd() > 0.06;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    airport.push(node(region + ' ' + n + (tag ? ' · ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
+    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
   }
   if (airport.length) {
     nodes.push(...airport);

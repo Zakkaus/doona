@@ -558,7 +558,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
   await page.route('**/api/v1/operations/*', async route =>
     route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').at(-1)!)})
   );
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const provider = page.getByRole('dialog');
   await provider.getByLabel('Name', {exact: true}).fill('slow-provider');
@@ -598,7 +598,7 @@ test('provider host labels cannot enable interval writes without node tag metada
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
   await expect(page.getByRole('button', {name: /^Auto-refresh of/})).toHaveCount(0);
 });

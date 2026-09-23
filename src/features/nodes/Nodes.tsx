@@ -1,5 +1,7 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
+import {pickTab, within} from '../../shell/route';
+import {NodeLatency} from './Latency';
 import type {PageProps} from '../types';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
@@ -31,9 +33,25 @@ export function Nodes(props: PageProps) {
   return (
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
-      <ErrorMessage error={error} onRetry={reload} />
-      <ProviderTable model={providerTable} />
-      <NodeTable model={nodeTable} />
+      <Tabs
+        label={t('nav.nodes')}
+        value={pickTab(props.query, ['list', 'latency'], 'list')}
+        onChange={next => props.go('nodes', within(props.query, {tab: next === 'list' ? null : next}))}
+        items={[
+          {
+            id: 'list',
+            label: t('nodes.tab.list'),
+            content: (
+              <>
+                <ErrorMessage error={error} onRetry={reload} />
+                <ProviderTable model={providerTable} />
+                <NodeTable model={nodeTable} />
+              </>
+            )
+          },
+          {id: 'latency', label: t('nodes.tab.latency'), content: <NodeLatency />}
+        ]}
+      />
       <ModalDialog
         title={dialogTitle}
         narrow

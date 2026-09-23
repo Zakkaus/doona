@@ -108,7 +108,7 @@ it('prepares DNS diagnostics with missing addresses and errors', async () => {
   const result = await createMockApi().routingTrace({input: {network: 'tcp', domain: 'example.com', dst_port: 443}, resolve: 'live'});
   const dns = {...result.dns[0], addresses: [], error: 'lookup failed'};
   const view = dnsView(dns, t, 'en');
-  expect(view.heading).toBe('DNS · ' + dns.name);
+  expect(view.heading).toBe('DNS: ' + dns.name);
   expect(view.fields).toContainEqual([t('rule.address'), '—']);
   expect(view.fields).toContainEqual([t('ui.error'), 'lookup failed']);
 });

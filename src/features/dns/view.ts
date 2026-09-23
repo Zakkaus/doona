@@ -36,10 +36,12 @@ export function dnsQueryView(
     disabled: busy || !resources?.dns_query.available || !(type === 'all' ? types.length > 0 : types.includes(type)) || !domain.trim(),
     unavailable: !!resources && !resources.dns_query.available,
     showCache: !!resources?.dns_cache.available,
-    cards: result?.results.map(item => ({id: item.type, title: `${result.domain} · ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
+    cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
+    // What the log says comes first and is the default, then the log itself; a query is an occasional action.
     tabs: [
-      ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query')}] : []),
+      ...(resources?.dns_log.available !== false ? [{id: 'stats', label: t('dns.tab.stats')}] : []),
       ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log')}] : []),
+      ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query')}] : []),
       ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache')}] : [])
     ]
   };

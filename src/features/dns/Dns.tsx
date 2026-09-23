@@ -20,6 +20,7 @@ import {
 import type {PageProps} from '../types';
 import {FlushCacheButton} from './FlushCache';
 import {useDns, useDnsCache, useDnsLog} from './useDns';
+import {DnsStats} from './Analysis';
 import {errorText} from '../../api/error';
 
 type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
@@ -79,6 +80,7 @@ export function Dns(props: PageProps) {
     </>
   );
   const content: Record<string, React.ReactNode> = {
+    stats: <DnsStats enabled={vm.logEnabled} />,
     query: queryTab,
     cache: <DnsCache domain={vm.filterDomain} clearFilter={vm.clearCacheFilter} />,
     log: <DnsLog enabled={vm.logEnabled} initialName={vm.filterDomain} />

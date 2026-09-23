@@ -1,4 +1,6 @@
-import {lazy, memo, Suspense, type ReactNode} from 'react';
+import {memo, Suspense, type ComponentProps, type ReactNode} from 'react';
+import type {Arrange as ArrangeTab} from './arrange/Arrange';
+import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
@@ -9,8 +11,11 @@ import type {PageProps} from '../types';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
 
-// The arrange tab and its drag and drop load when the tab is first opened.
-const Arrange = lazy(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
+// The arrange tab and its drag and drop are a chunk of their own, fetched as soon as this page's module loads (in idle
+// time, like the page itself), so opening the tab later does not wait.
+const arrange = preloadable<ComponentProps<typeof ArrangeTab>>(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
+const Arrange = arrange.Component;
+void arrange.preload().catch(() => undefined);
 
 // Holds roughly the loaded card's height, so cards below do not move when the details arrive.
 function PolicyWait({heading, members, label}: {heading: ReactNode; members: number; label?: string}) {
