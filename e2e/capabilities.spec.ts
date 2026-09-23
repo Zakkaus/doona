@@ -100,6 +100,19 @@ test('without discovery, the nodes page reads its nodes but not the groups it on
   expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
 });
 
+test('a failed discovery is reported once, by the shell, on the activity and DNS pages', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(500, 'internal_error', 'Discovery failed');
+  };
+  for (const route of ['activity', 'dns']) {
+    await page.goto('/#/' + route);
+    await expect(page.locator('.rp-content > .rp-alert').first()).toContainText('Discovery failed');
+    await expect(page.locator('.rp-alert', {hasText: 'Discovery failed'})).toHaveCount(1);
+    await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
+  }
+});
+
 // The first honk-native profile exposes only runtime and userspace-observed connections.
 test.describe('first-release backend', () => {
   test.use({storage: {'doona-mock-profile': 'm1'}});

@@ -142,7 +142,7 @@ export function TextField({
           {description}
         </Text>
       )}
-      {error && <FieldError>{error}</FieldError>}
+      {error && <FieldError className="rp-field-error">{error}</FieldError>}
     </RTextField>
   );
 }

@@ -52,8 +52,6 @@ export function useDns({go, query}: PageProps) {
     type,
     setType,
     pending: busy === 'query',
-    error: capabilities.error,
-    retry: capabilities.refetch,
     queryError: error,
     submit: () => void submit(),
     setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !params.has('domain') ? fallback : null)),
@@ -98,7 +96,7 @@ export function useDnsCacheTab(domain: string) {
   };
   return {
     ...view,
-    // Delete failures arrive as toasts, flush failures in its dialog, and the page above reports the capabilities.
+    // Delete failures arrive as toasts, flush failures in its dialog, and the shell reports the capabilities.
     error: dns.cache.error,
     retry: dns.cache.refetch,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,

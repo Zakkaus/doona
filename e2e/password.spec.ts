@@ -56,7 +56,20 @@ test('a first visit creates the administrator and continues with its session', a
   // A field's own problem is reported on that field and costs no attempt against the backend.
   const confirm = form.getByLabel('Confirm password', {exact: true});
   await expect(confirm).toHaveAttribute('aria-invalid', 'true');
-  await expect(form.locator('.rp-field', {hasText: 'Confirm password'})).toContainText('The passwords do not match.');
+  const field = form.locator('.rp-field', {hasText: 'Confirm password'});
+  await expect(field).toContainText('The passwords do not match.');
+  // The error reads in the negative tone and the field it names takes a negative edge.
+  const tones = await field.getByText('The passwords do not match.').evaluate(error => {
+    const probe = document.createElement('i');
+    probe.style.color = 'var(--rp-negative-text)';
+    probe.style.borderColor = 'var(--rp-negative)';
+    error.append(probe);
+    const want = {text: getComputedStyle(probe).color, edge: getComputedStyle(probe).borderTopColor};
+    probe.remove();
+    const input = error.closest('.rp-field')!.querySelector('.rp-input')!;
+    return {want, text: getComputedStyle(error).color, edge: getComputedStyle(input).borderTopColor};
+  });
+  expect({text: tones.text, edge: tones.edge}).toEqual(tones.want);
   expect(state.attempts).toHaveLength(0);
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Create and sign in'}).click()]);
@@ -112,4 +125,24 @@ test('settings offers no token field for a password backend', async ({page}) => 
   // Another address is not known to use passwords until it is tested, so its token field returns.
   await page.locator('[name=api]').fill('http://other.test');
   await expect(page.locator('[name=token]')).toBeVisible();
+});
+
+test('a failed discovery asks to retry instead of guessing the sign-in', async ({page}) => {
+  const backend = await mockBackend(page);
+  let up = false;
+  backend.handlers['GET /api'] = async () => {
+    if (!up) throw new ApiError(502, '', 'Bad Gateway');
+    return {...(await backend.api.discovery()), auth: {mode: 'password', setup_required: false, anonymous_loopback: false}};
+  };
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(401, 'authentication_required', 'Authentication required');
+  };
+  await page.goto('/#/activity');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('alert')).toContainText('Bad Gateway');
+  await expect(dialog.getByLabel('Token', {exact: true})).toHaveCount(0);
+  up = true;
+  await dialog.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(dialog.getByRole('heading')).toHaveText('Sign in');
+  await expect(dialog.getByLabel('Username', {exact: true})).toBeVisible();
 });

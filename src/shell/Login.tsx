@@ -1,6 +1,6 @@
 import {useT} from '../i18n';
 import {useLogin} from './useLogin';
-import {Button, InlineAlert, Link, Loading, ModalDialog, TextField} from '../ui/ui';
+import {Button, ErrorMessage, InlineAlert, Link, Loading, ModalDialog, TextField} from '../ui/ui';
 import logo from '../logo.svg';
 import {href} from './route';
 
@@ -30,7 +30,18 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
         }}
       >
         {view.kind === null ? (
-          <Loading />
+          view.discoveryError ? (
+            <>
+              <ErrorMessage error={view.discoveryError} onRetry={view.retryDiscovery} />
+              <div className="rp-toolbar">
+                <Link appearance="link" href={href('settings')}>
+                  {t('login.settings')}
+                </Link>
+              </div>
+            </>
+          ) : (
+            <Loading />
+          )
         ) : (
           <>
             {view.note && <span className="rp-label">{view.note}</span>}

@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
 import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
-import {ApiError, clientError, responseError} from './error';
+import {ApiError, clientError, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -34,10 +34,10 @@ export function createApi(base: string, token?: string): Api {
     cache: 'no-store',
     fetch: async request => {
       const retryable = request.method !== 'GET' || new URL(request.url).pathname.endsWith('/dns/query');
-      if (!retryable) return fetch(request);
+      if (!retryable) return send(request);
       // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
       for (let refused = 0; ; refused++) {
-        const response = await fetch(request.clone());
+        const response = await send(request.clone());
         if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
         const error = await responseError(response.clone());
         if (!error.transient) return response;
@@ -69,7 +69,7 @@ export function createApi(base: string, token?: string): Api {
       await wait(delay, signal);
       let response: Response;
       try {
-        response = await fetch(url, {headers, cache: 'no-store', signal});
+        response = await send(url, {headers, cache: 'no-store', signal});
         dropped = 0;
       } catch (error) {
         // A dropped connection says nothing about the accepted operation; ask again a few times before giving up.

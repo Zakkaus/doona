@@ -50,6 +50,18 @@
 .rp-toolbar.top > .rp-field-row {
   margin-top: 20px;
 }
+/* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge. */
+.rp-field-error {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rp-negative-text);
+}
+:is(.rp-field, .rp-cluster)[data-invalid] .rp-input {
+  border-color: var(--rp-negative);
+}
+:is(.rp-field, .rp-cluster)[data-invalid] .rp-input:focus-within {
+  box-shadow: 0 0 0 1px var(--rp-negative);
+}
 .rp-field > label,
 .rp-field .lbl {
   font-size: 12px;

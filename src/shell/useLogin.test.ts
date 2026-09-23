@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {credentialProblems, loginProfiles, signInRefusal} from './useLogin';
+import {credentialProblems, loginProfiles, predatesAuth, signInRefusal} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
 
@@ -21,10 +21,11 @@ it('updates only the challenged endpoint, preserving concurrent profile changes'
 
 it('checks credentials against the backend limits before any attempt, per field', () => {
   expect(credentialProblems('login', 'admin', 'correct horse battery', '')).toEqual({});
-  expect(credentialProblems('login', 'ad min', 'short', '')).toEqual({username: 'login.badUsername', password: 'login.badPassword'});
+  expect(credentialProblems('login', 'ad min', 'short', '')).toEqual({username: 'login.badUsername', password: 'login.passwordShort'});
   // Eight scalar values, not eight UTF-16 units: an emoji counts once.
   expect(credentialProblems('login', 'admin', '😀'.repeat(8), '')).toEqual({});
-  expect(credentialProblems('login', 'admin', '😀'.repeat(7), '')).toEqual({password: 'login.badPassword'});
+  expect(credentialProblems('login', 'admin', '😀'.repeat(7), '')).toEqual({password: 'login.passwordShort'});
+  expect(credentialProblems('login', 'admin', 'x'.repeat(129), '')).toEqual({password: 'login.passwordLong'});
   expect(credentialProblems('setup', 'admin', 'correct horse battery', 'correct horse batterx')).toEqual({confirm: 'login.mismatch'});
 });
 
@@ -37,4 +38,14 @@ it('maps refusals by code and follows a moved account state', () => {
   expect(signInKind(null)).toBe('token');
   expect(signInKind({mode: 'password', setup_required: true, anonymous_loopback: false})).toBe('setup');
   expect(signInKind({mode: 'password', setup_required: false, anonymous_loopback: false})).toBe('login');
+});
+
+it('takes only a missing or protected discovery for a backend that predates password login', () => {
+  expect(predatesAuth(new ApiError(404, 'not_found', 'Not found'))).toBe(true);
+  expect(predatesAuth(new ApiError(401, 'authentication_required', 'Token required'))).toBe(true);
+  expect(predatesAuth(new SyntaxError('Unexpected token <'))).toBe(true);
+  // A backend that cannot be reached or fails says nothing about its sign-in; the page asks to retry instead.
+  expect(predatesAuth(new ApiError(0, 'network_error', 'Failed to fetch'))).toBe(false);
+  expect(predatesAuth(new ApiError(502, '', 'Bad Gateway'))).toBe(false);
+  expect(predatesAuth(new TypeError('Failed to fetch'))).toBe(false);
 });
