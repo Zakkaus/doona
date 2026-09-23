@@ -51,7 +51,7 @@ button.rp-node[data-focus-visible] {
   text-overflow: ellipsis;
 }
 .rp-node .cur {
-  color: var(--rp-accent);
+  color: var(--rp-accent-text);
   font-weight: 600;
 }
 .rp-nodegrid {

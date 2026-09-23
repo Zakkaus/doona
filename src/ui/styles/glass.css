@@ -315,9 +315,6 @@
 :root[data-family='glass'] .rp-seg .rp-btn[data-hovered] {
   background: transparent;
 }
-:root[data-family='glass'] .rp-tab[data-selected] {
-  color: var(--rp-text);
-}
 :root[data-family='glass'] .rp-slider {
   background: var(--rp-knob);
   border-color: transparent;

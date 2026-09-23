@@ -51,6 +51,9 @@
   --rp-hl-med: #44415a;
   --rp-hl-high: #56526e;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
+  --rp-on-accent: #191724;
+  --rp-accent-text: var(--rp-text);
 }
 :root[data-family='catppuccin'] {
   --rp-base: #e6e9ef;
@@ -77,6 +80,8 @@
   --rp-hl-med: #ccd0da;
   --rp-hl-high: #bcc0cc;
   --rp-shadow: 0 1px 2px rgba(76, 79, 105, 0.1);
+  --rp-on-accent: #ffffff;
+  --rp-accent-text: var(--rp-text);
 }
 :root[data-family='catppuccin'][data-scheme='dark'],
 :root[data-flavour='mocha'][data-scheme='dark'] {
@@ -104,6 +109,8 @@
   --rp-hl-med: #45475a;
   --rp-hl-high: #585b70;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --rp-on-accent: var(--rp-surface);
+  --rp-accent-text: var(--rp-accent);
 }
 :root[data-family='nord'] {
   /* Nord ships no light theme: Snow Storm as surfaces, Polar Night as text; mixed steps are blends of official colours. */
@@ -131,6 +138,8 @@
   --rp-hl-med: #d8dee9;
   --rp-hl-high: color-mix(in srgb, #4c566a 25%, #e5e9f0);
   --rp-shadow: 0 1px 2px rgba(46, 52, 64, 0.1);
+  --rp-on-accent: #000000;
+  --rp-accent-text: var(--rp-text);
 }
 :root[data-family='nord'][data-scheme='dark'] {
   --rp-base: #2e3440;
@@ -157,6 +166,7 @@
   --rp-hl-med: #434c5e;
   --rp-hl-high: #4c566a;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-on-accent: var(--rp-base);
 }
 :root[data-family='kary'] {
   /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays, and blend its greys for secondary text. */
@@ -184,6 +194,8 @@
   --rp-hl-med: #cff0f9;
   --rp-hl-high: color-mix(in srgb, #65758d 25%, #f0f6fb);
   --rp-shadow: 0 1px 2px rgba(101, 117, 141, 0.1);
+  --rp-on-accent: #ffffff;
+  --rp-accent-text: var(--rp-text);
 }
 :root[data-family='kary'][data-scheme='dark'] {
   --rp-base: #1a1a1a;
@@ -210,6 +222,8 @@
   --rp-hl-med: #133853;
   --rp-hl-high: #474747;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-on-accent: var(--rp-surface);
+  --rp-accent-text: var(--rp-accent);
 }
 :root[data-flavour='main'][data-scheme='dark'] {
   --rp-base: #191724;
@@ -236,6 +250,7 @@
   --rp-hl-med: #403d52;
   --rp-hl-high: #524f67;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --rp-on-accent: #ffffff;
 }
 :root[data-flavour='frappe'][data-scheme='dark'] {
   --rp-base: #292c3c;
@@ -315,10 +330,11 @@
   --rp-hl-low: #f0f0f0;
   --rp-hl-med: #d9d9d9;
   --rp-hl-high: rgba(0, 0, 0, 0.15);
-  --rp-on-accent: #ffffff;
+  --rp-on-accent: var(--rp-text);
   --rp-on-text: #ffffff;
   --rp-line: #f0f0f0;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --rp-accent-text: var(--rp-text);
 }
 :root[data-family='antd'][data-scheme='dark'] {
   --rp-base: #000000;
@@ -403,10 +419,11 @@
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: #333335;
   --rp-hl-high: rgba(255, 255, 255, 0.16);
-  --rp-on-accent: rgba(255, 255, 255, 0.9);
+  --rp-on-accent: var(--rp-base);
   --rp-on-text: #17171a;
   --rp-line: #333335;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --rp-accent-text: var(--rp-text);
 }
 /* Semi Design (ByteDance): @douyinfe/semi-theme-default palette step 5 and its semantic bg/text/fill/border tokens. */
 :root[data-family='semi'] {
@@ -462,7 +479,7 @@
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: rgba(255, 255, 255, 0.16);
   --rp-hl-high: rgba(255, 255, 255, 0.2);
-  --rp-on-accent: #e4e7f5;
+  --rp-on-accent: var(--rp-base);
   --rp-on-text: #16161a;
   --rp-line: rgba(255, 255, 255, 0.08);
   --rp-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.25);
