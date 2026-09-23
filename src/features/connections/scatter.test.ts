@@ -27,3 +27,8 @@ it('places connections by outbound, keeps zeros and counts those without totals'
 it('has no heaviest connection when nothing can be placed', () => {
   expect(trafficSeries([row('a', 'proxy', null, null)]).heaviest).toBeUndefined();
 });
+
+it('picks the heaviest connection exactly beyond the safe integer range', () => {
+  const view = trafficSeries([row('a', 'proxy', '9007199254740992', '0'), row('b', 'proxy', '9007199254740993', '0')]);
+  expect(view.heaviest?.id).toBe('b');
+});

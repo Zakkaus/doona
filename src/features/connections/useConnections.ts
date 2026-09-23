@@ -123,8 +123,10 @@ export function useConnections({go, query}: PageProps) {
     sel,
     select,
     collection,
-    // The filtered connections the table shows, for the traffic chart.
-    records: shown,
+    // Every connection in the snapshot for the traffic chart, which has no filters of its own, and every outbound for
+    // its colours.
+    rows,
+    outboundKeys: [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')),
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {

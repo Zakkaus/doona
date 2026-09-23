@@ -19,6 +19,16 @@ export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | '
   const series: TrafficSeries[] = [...byOutbound]
     .map(([outbound, points]) => ({outbound, points}))
     .sort((a, b) => (a.outbound ?? '').localeCompare(b.outbound ?? ''));
-  const heaviest = series.flatMap(s => s.points.map(point => ({...point, outbound: s.outbound}))).sort((a, b) => b.down + b.up - (a.down + a.up))[0];
+  // Totals are compared exactly: past 2^53 bytes two different totals can be the same Number.
+  let heaviest: (TrafficPoint & {outbound: string | null}) | undefined;
+  let most = -1n;
+  for (const row of rows) {
+    if (row.upload_bytes === null || row.download_bytes === null) continue;
+    const total = BigInt(row.upload_bytes) + BigInt(row.download_bytes);
+    if (total > most) {
+      most = total;
+      heaviest = {id: row.id, up: Number(row.upload_bytes), down: Number(row.download_bytes), name: row.domain || row.dst || row.id, outbound: row.outbound};
+    }
+  }
   return {series, unknown, heaviest, placed: rows.length - unknown};
 }

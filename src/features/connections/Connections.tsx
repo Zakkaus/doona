@@ -12,10 +12,12 @@ import {
   Segmented,
   TextField,
   ErrorMessage,
+  Tabs,
   TextTooltip
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
+import {pickTab, within} from '../../shell/route';
 import {ConnectionTable} from './ConnectionTable';
 import {CloseAllButton} from './CloseAll';
 import type {PageProps} from '../types';
@@ -27,8 +29,11 @@ export function Connections(props: PageProps) {
   const t = useT();
   const vm = useConnections(props);
   const cur = vm.detail;
-  return (
-    <div className="rp-page">
+  // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
+  const listLink = ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(props.query).has(key));
+  const tab = pickTab(props.query, ['traffic', 'list'], listLink ? 'list' : 'traffic');
+  const list = (
+    <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
         <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} width={260} />
@@ -99,7 +104,6 @@ export function Connections(props: PageProps) {
           {t('conn.export')}
         </Button>
       </div>
-      <Traffic records={vm.records} truncated={vm.truncated} onSelect={vm.select} />
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
           collection={vm.collection}
@@ -148,6 +152,30 @@ export function Connections(props: PageProps) {
         </DetailPanel>
       </div>
       {vm.notInSnapshot && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
+    </>
+  );
+  return (
+    <div className="rp-page">
+      <Tabs
+        label={t('nav.connections')}
+        value={tab}
+        onChange={next => props.go('connections', within(props.query, {tab: next === 'traffic' ? null : next}))}
+        items={[
+          {
+            id: 'traffic',
+            label: t('conn.tab.traffic'),
+            content: (
+              <Traffic
+                records={vm.rows}
+                outbounds={vm.outboundKeys}
+                truncated={vm.truncated}
+                onSelect={id => props.go('connections', within(props.query, {tab: 'list', id}))}
+              />
+            )
+          },
+          {id: 'list', label: t('conn.tab.list'), content: list}
+        ]}
+      />
     </div>
   );
 }
