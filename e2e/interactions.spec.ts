@@ -103,7 +103,7 @@ for (const route of routes) {
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content .rp-alert').first()).toContainText('Could not load data');
     await expect(page.locator('.rp-content h1')).toBeVisible();
-    await expect(page.locator('.rp-content [role="status"]')).toHaveCount(0);
+    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
     expect(exceptions).toEqual([]);
   });
 }

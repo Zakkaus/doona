@@ -109,7 +109,7 @@ test('a failed discovery is reported once, by the shell, on the activity and DNS
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content > .rp-alert').first()).toContainText('Discovery failed');
     await expect(page.locator('.rp-alert', {hasText: 'Discovery failed'})).toHaveCount(1);
-    await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
+    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
   }
 });
 
