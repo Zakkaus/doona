@@ -5,6 +5,7 @@ import type {ConfigSource} from '../api/model';
 import {LocalError, errorText} from '../api/error';
 import type {Translator} from '../i18n';
 import type {Key} from '../i18n';
+import {offered} from '../api/capabilities';
 
 // Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
 export type MainSourceEdit = {
@@ -24,8 +25,8 @@ export const editProblem = (result: EditResult, invalid: Key, t: Translator): st
 
 export function useMainSourceEdit(): MainSourceEdit {
   const resources = useCapabilities().data?.resources;
-  const writable = resources?.config.available === true && resources.config.writable === true && resources.config.content === true;
-  const config = useConfig(resources?.config.available === true);
+  const writable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true && resources?.config.content === true;
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const editor = useConfigEditor(config.refetch, {rethrow: true});
   const source = config.data?.sources.find(source => source.kind === 'main' && source.writable) ?? null;
   const complete = useSourceComplete(source);

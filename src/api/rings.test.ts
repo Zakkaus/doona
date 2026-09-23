@@ -39,7 +39,39 @@ it('does not persist a coarse-history wipe after an out-of-order poll', () => {
     record<Sample>('clock', undefined, fold);
     vi.advanceTimersByTime(60000);
     record('clock', {time: 3500000, value: null}, fold);
+    vi.advanceTimersByTime(0);
     expect(JSON.parse(storage.get(key)!)).toEqual({fine: [{time: 3500000, value: null}], coarse});
+  } finally {
+    resetRings();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('writes the rings when the page is idle, and not after a reset', () => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  const idle: Array<() => void> = [];
+  vi.stubGlobal('requestIdleCallback', (run: () => void) => idle.push(run));
+  const key = 'doona-rings-idle-["","mock"]';
+  vi.useFakeTimers();
+  try {
+    record<Sample>('idle', undefined, fold);
+    vi.advanceTimersByTime(60000);
+    record('idle', {time: 1, value: 1}, fold);
+    record('idle', {time: 2, value: 2}, fold);
+    expect(storage.has(key)).toBe(false);
+    idle.shift()!();
+    expect(JSON.parse(storage.get(key)!).fine).toHaveLength(2);
+    vi.advanceTimersByTime(60000);
+    record('idle', {time: 3, value: 3}, fold);
+    resetRings();
+    idle.shift()!();
+    expect(storage.has(key)).toBe(false);
   } finally {
     resetRings();
     vi.useRealTimers();
@@ -105,6 +137,7 @@ it('separates an edited backend while retaining history across credential change
     record('backend', {time: 1, value: 10}, fold);
     vi.advanceTimersByTime(60000);
     record('backend', {time: 2, value: 20}, fold);
+    vi.advanceTimersByTime(0);
     profile('https://two.example');
     expect(record<Sample>('backend', undefined, fold)).toEqual({fine: [], coarse: []});
     record('backend', {time: 3, value: 30}, fold);

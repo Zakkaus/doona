@@ -4,7 +4,7 @@ import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrac
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from './flows/Flows';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
 import type {EvaluationView} from './view';
 

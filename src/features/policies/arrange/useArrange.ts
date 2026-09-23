@@ -4,12 +4,13 @@ import {useT} from '../../../i18n';
 import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
-import {toast, useLinked} from '../../../ui/ui';
+import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupNameError} from '../policies';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
+import {offered} from '../../../api/capabilities';
 
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
@@ -18,13 +19,12 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const nodeList = useNodes(resources?.nodes.available === true);
-  const providers = useProviders(resources?.providers.available === true);
+  const nodeList = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const nodes = nodeList.data;
   const [changes, setChanges] = useState<GroupChange[]>([]);
-  const guard = useDraftGuard(changes.length > 0);
   // Leaving the page after confirming the draft guard drops what was staged.
-  useLinked(guard.revision, () => setChanges([]));
+  const guard = useDraftGuard(changes.length > 0, () => setChanges([]));
   const text = source.main?.content ?? '';
   const subscriptions = useMemo(() => traySubscriptions(providers.data?.providers ?? [], nodes ?? []), [providers.data, nodes]);
   const view = useMemo(() => arrangeView(text, changes, subscriptions, nodes ?? [], t), [text, changes, subscriptions, nodes, t]);

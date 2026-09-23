@@ -554,6 +554,28 @@ test('first-run setup writes the chosen listener and DNS endpoints', async ({pag
   expect(accepted).toContain("alidns: 'tls://resolver.example:853'");
 });
 
+test('a chosen setup tab stays open when a refresh fills the main source', async ({page}) => {
+  const {api} = await configBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const original = main.content!;
+  const content = async () => (await api.config()).sources.find(source => source.id === main.id)!.content;
+  await api.replaceConfigSource(main.id, '', `"${main.content_sha256}"`);
+  await expect.poll(content).toBe('');
+  await page.goto('/#/config');
+  await expect(page.getByRole('tab', {name: 'Quick setup'})).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', {name: 'Modules'}).click();
+  await page.getByRole('tab', {name: 'Quick setup'}).click();
+  await page.getByLabel('Transparent proxy port', {exact: true}).fill('23456');
+  const emptied = (await api.config()).sources.find(source => source.id === main.id)!;
+  await api.replaceConfigSource(main.id, original, `"${emptied.content_sha256}"`);
+  await expect.poll(content).toBe(original);
+  const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/config');
+  await page.locator('.rp-top').getByRole('button', {name: 'Refresh', exact: true}).click();
+  await refreshed;
+  await expect(page.getByRole('tab', {name: 'Quick setup'})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Transparent proxy port', {exact: true})).toHaveValue('23456');
+});
+
 test('choosing a template removes all previous traffic routing but retains DNS routing', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();

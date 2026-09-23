@@ -1,6 +1,6 @@
 import type {Key} from '../i18n';
 import {formatNumber, LOCALE, readLang} from '../i18n';
-import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
+import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
 // Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
@@ -81,18 +81,6 @@ export const connectionStates: Record<Connection['state'], Key> = {
   failed: 'conn.state.failed',
   unknown: 'conn.state.unknown'
 };
-const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
-export function relativeStart(startedAt: string | null, locale: string, now = Date.now()): string {
-  if (!startedAt) return '—';
-  const seconds = Math.floor((Date.parse(startedAt) - now) / 1000);
-  if (!Number.isFinite(seconds)) return '—';
-  let formatter = relativeTimes.get(locale);
-  if (!formatter) relativeTimes.set(locale, (formatter = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'})));
-  if (Math.abs(seconds) < 60) return formatter.format(seconds, 'second');
-  if (Math.abs(seconds) < 3600) return formatter.format(Math.trunc(seconds / 60), 'minute');
-  if (Math.abs(seconds) < 86400) return formatter.format(Math.trunc(seconds / 3600), 'hour');
-  return formatter.format(Math.trunc(seconds / 86400), 'day');
-}
 
 export function connectionRows(snapshot: ConnectionList | undefined) {
   return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
@@ -101,38 +89,6 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
 export type LabelFn = (key: Key) => string;
-/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
-const durationUnits = new Map<string, Intl.NumberFormat>();
-export function formatDuration(seconds: string | null, locale: string): string {
-  if (seconds === null) return '—';
-  const total = parseU64(seconds);
-  if (total === null) return '—';
-  const d = total / 86400n,
-    h = (total % 86400n) / 3600n,
-    m = (total % 3600n) / 60n;
-  const unit = (value: bigint, name: string) => {
-    const key = locale + '/' + name;
-    let formatter = durationUnits.get(key);
-    if (!formatter) durationUnits.set(key, (formatter = new Intl.NumberFormat(locale, {style: 'unit', unit: name, unitDisplay: 'short'})));
-    return formatter.format(value);
-  };
-  if (d > 0n) return `${unit(d, 'day')} ${unit(h, 'hour')}`;
-  if (h > 0n) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
-  if (m > 0n) return unit(m, 'minute');
-  return unit(total, 'second');
-}
-const localTimes = new Map<string, Intl.DateTimeFormat>();
-export function localTimeFormat(locale: string) {
-  let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
-  return formatter;
-}
-export function localTime(iso: string | null, locale: string): string {
-  if (!iso) return '—';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return iso;
-  return localTimeFormat(locale).format(t);
-}
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 export const eventKindLabels: Record<EventKind, Key> = {
   'stream.ready': 'event.k.streamReady',
@@ -211,3 +167,21 @@ export function resolveSelectedLeaf(
   }
   return {groups, member: null, node: null};
 }
+
+// Labels that more than one page shows.
+export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
+export const logLevelLabels: Record<LogLevel, Key> = {
+  trace: 'log.level.trace',
+  debug: 'log.level.debug',
+  info: 'log.level.info',
+  warn: 'log.level.warn',
+  error: 'log.level.error'
+};
+export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;

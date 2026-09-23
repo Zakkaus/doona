@@ -13,7 +13,18 @@ export function Logs() {
   // Stable column definitions: a new array on every stream tick would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<LogRow>[] => [
-      {id: 'ts', label: t('ui.time'), minWidth: 180, grow: 0, drop: 2, render: record => <span className="rp-code">{record.timestamp}</span>},
+      {
+        id: 'ts',
+        label: t('ui.time'),
+        minWidth: 180,
+        grow: 0,
+        drop: 2,
+        render: record => (
+          <TextTooltip className="rp-code" text={record.iso}>
+            {record.timestamp}
+          </TextTooltip>
+        )
+      },
       {
         id: 'level',
         label: t('log.level'),

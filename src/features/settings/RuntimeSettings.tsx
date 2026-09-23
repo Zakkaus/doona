@@ -1,15 +1,18 @@
 import {useT} from '../../i18n';
 import {Button, ErrorMessage, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
+import {settingsCard} from './view';
+
+const card = settingsCard('runtime');
 
 export function RuntimeSettingsCard() {
   const t = useT();
   const m = useRuntimeSettingsForm();
   return (
-    <section className="rp-card" aria-labelledby="settings-runtime">
+    <section className="rp-card" aria-labelledby={card.headingId}>
       <div className="rp-row">
-        <h2 className="rp-h3" id="settings-runtime">
-          {t('settings.runtime')}
+        <h2 className="rp-h3" id={card.headingId}>
+          {t(card.titleKey)}
         </h2>
         {m.source && <Light tone={m.sourceTone}>{m.source}</Light>}
       </div>

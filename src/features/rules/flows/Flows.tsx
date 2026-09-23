@@ -8,6 +8,7 @@ import {
   ErrorMessage,
   Loading,
   TextTooltip,
+  TimeCell,
   Kv,
   LabeledSelect,
   Segmented,
@@ -17,7 +18,7 @@ import {
   type TableColumn
 } from '../../../ui/ui';
 import {Coverage} from './Coverage';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {useT} from '../../../i18n';
 import Close from '../../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
@@ -87,7 +88,7 @@ export function FlowRecords(props: PageProps) {
       },
       {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: row => row.network},
       {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: row => row.state},
-      {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: row => row.started}
+      {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: row => <TimeCell at={row.startedAt} />}
     ],
     [t, view.rulesListed]
   );

@@ -40,12 +40,11 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   useLinked(rebased ?? null, next => {
     if (next?.source && next.block) setDraft(current => current && {...current, section: {...next, source: next.source!, block: next.block!}});
   });
-  const guard = useDraftGuard(dirty);
-  const {clear} = guard;
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(dirty, () => {
     setDraft(null);
     setFound(null);
   });
+  const {clear} = guard;
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   const fullText = useMemo(() => (draft ? splice(draft.section.source.content!, draft.section.block, draft.text) : null), [draft]);
   const sourceId = draft?.section.source.id;

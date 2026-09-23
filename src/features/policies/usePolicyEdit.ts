@@ -4,7 +4,7 @@ import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
-import {toast, useLinked} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {errorText} from '../../api/error';
 export type PolicyEditView = {
@@ -30,8 +30,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
   const session = useRef(0);
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
   const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
-  const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)));
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)), () => {
     session.current++;
     setDraft(null);
     setProblem(null);

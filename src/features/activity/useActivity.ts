@@ -2,12 +2,14 @@ import {useCallback, useMemo, useState} from 'react';
 import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory} from '../../store';
 import {formatBytes} from '../../api/u64';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {fmtRate, usePalette} from '../../ui/Charts';
+import {fmtRate} from '../../i18n/format';
+import {usePalette} from '../../ui/charts';
 import {useMemorySeries} from './useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
 import {activityView, trafficState} from './view';
+import {offered} from '../../api/capabilities';
 
 export function useActivity() {
   const t = useT();
@@ -15,8 +17,8 @@ export function useActivity() {
   const p = usePalette();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(resources?.runtime.available === true);
-  const memory = useRuntimeMemory(resources?.runtime_memory.available === true);
+  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
+  const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const [range, setRange] = useState('live');
   const windowSeconds = trafficWindows[range] ?? 120;
   const memoryHistory = useMemorySeries(capabilities.data, memory.data);
@@ -75,7 +77,7 @@ export function useActivity() {
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
-      state: trafficState(series, resources?.traffic_history.available, !!history.data, resources?.runtime.available === true)
+      state: trafficState(series, resources?.traffic_history.available, !!history.data, offered(resources, 'runtime', {whileLoading: false}))
     },
     memoryState: {
       error: memory.error ?? memoryHistory.error,

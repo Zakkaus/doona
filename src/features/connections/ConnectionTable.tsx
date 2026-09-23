@@ -1,7 +1,7 @@
 import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {Table, ResizableTableContainer, TableBody, Row, Cell, Virtualizer, TableLayout} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {Badge, DataTable, TextTooltip, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
+import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, useContentWidth, RuleRef, Loading, type TableColumn} from '../../ui/ui';
 import {TableColumns, fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from '../../ui/Table';
 import {columns, type ConnectionView, type ConnectionRowView, type ConnectionTableRow} from './view';
 
@@ -26,13 +26,14 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
       ),
       state: c => c.state,
       down: c => c.download,
-      age: c => c.age
+      age: c => <TimeCell at={c.startedAt} />
     };
     return columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));
   }, [view.hidden, t]);
   const shown: TableColumn<ConnectionRowView>[] = useMemo(() => fitColumns(definitions, width), [definitions, width]);
   const flatRows = useMemo(() => collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children])), [collection]);
   const fitted = useTableHeight(height, flatRows.length, loading);
+  const selectedKeys = useMemo(() => (selected ? [selected] : []), [selected]);
   const groupKeys = useMemo(() => collection.filter(row => !('connection' in row)).map(row => row.id), [collection]);
   useTableReveal(selected ?? null, selected ? flatRows.findIndex(row => row?.id === selected) : -1, gridRef);
   const renderRow = (row: ConnectionRowView) => (
@@ -66,7 +67,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
             treeColumn={view.group === 'none' ? undefined : shown[0]?.id}
             selectionMode={onSelect ? 'single' : 'none'}
             selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-            selectedKeys={selected ? [selected] : []}
+            selectedKeys={selectedKeys}
             onSelectionChange={keys => onSelect?.(selectedRow(keys))}
             disallowEmptySelection={!!onSelect}
             sortDescriptor={view.sort ?? undefined}

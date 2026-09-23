@@ -1,8 +1,9 @@
-import {lazy, memo, Suspense, useId, useMemo, useState, useSyncExternalStore} from 'react';
+import {lazy, memo, Suspense, useId, useMemo, useState} from 'react';
 import type {ComponentProps, FocusEvent} from 'react';
-import {formatNumber, useT, type Translator} from '../i18n';
-import {localTimeFormat} from '../api/selectors';
-import {LoadBoundary} from './LoadBoundary';
+import {useT} from '../../i18n';
+import {localTimeFormat} from '../../i18n/format';
+import {LoadBoundary} from '../LoadBoundary';
+import {usePalette, type Palette} from './palette';
 // Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
 // Pointer exit hides stale tooltips without disabling Recharts keyboard navigation.
@@ -28,59 +29,6 @@ const activeDot = {r: 4, strokeWidth: 2};
 const dataDomain = ['dataMin', 'dataMax'];
 
 type Series = {label: string; color: string; values: Array<number | null>};
-const VARS = [
-  'base',
-  'surface',
-  'overlay',
-  'muted',
-  'subtle',
-  'text',
-  'on-text',
-  'love',
-  'gold',
-  'rose',
-  'pine',
-  'foam',
-  'iris',
-  'hl-low',
-  'hl-med',
-  'hl-high',
-  'accent',
-  'positive',
-  'negative',
-  'notice',
-  'info',
-  'line'
-] as const;
-type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
-function read(): Palette {
-  const cs = getComputedStyle(document.documentElement);
-  return {
-    ...Object.fromEntries(VARS.map(v => [v, cs.getPropertyValue('--rp-' + v).trim()])),
-    cat: [1, 2, 3, 4, 5, 6, 7, 8].map(i => cs.getPropertyValue('--rp-c' + i).trim())
-  } as Palette;
-}
-let palette: {key: string; value: Palette} | undefined;
-function getPalette() {
-  const {family, flavour, scheme} = document.documentElement.dataset;
-  const key = `${family}/${flavour}/${scheme}`;
-  if (palette?.key !== key) palette = {key, value: read()};
-  return palette.value;
-}
-function subscribePalette(onChange: () => void) {
-  const mo = new MutationObserver(onChange);
-  mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-family', 'data-flavour', 'data-scheme']});
-  return () => mo.disconnect();
-}
-export function usePalette() {
-  return useSyncExternalStore(subscribePalette, getPalette);
-}
-export const fmtRate = (kb: number | null | undefined, locale: string, t: Translator) =>
-  kb == null
-    ? '—'
-    : kb >= 1000
-      ? t('unit.mbPerSecond', {n: formatNumber(kb / 1000, locale, kb >= 10000 || kb % 1000 === 0 ? 0 : 1)})
-      : t('unit.kbPerSecond', {n: formatNumber(kb, locale, kb < 10 && !Number.isInteger(kb) ? 1 : 0)});
 const niceMax = (v: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;

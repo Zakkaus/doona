@@ -108,6 +108,17 @@ function prune(keep: string) {
   }
   return freed;
 }
+// A week of minute buckets takes a while to serialise, so the write waits for an idle moment rather than landing in
+// the poll that produced it; a reset in between drops it, since the rings it would write are gone.
+let resets = 0;
+function saveWhenIdle(store: {key: string; rings: Rings<Timed>}) {
+  const at = resets;
+  const run = () => {
+    if (at === resets) save(store.key, JSON.stringify(store.rings));
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(run, {timeout: 5000});
+  else setTimeout(run, 0);
+}
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
@@ -125,7 +136,7 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
     const now = Date.now();
     if (now - store.saved >= minute) {
       store.saved = now;
-      save(store.key, JSON.stringify(next));
+      saveWhenIdle(store);
     }
   }
   return store.rings;
@@ -137,6 +148,7 @@ export function resetRings() {
     } catch {}
   }
   stores.clear();
+  resets++;
   for (const listener of listeners) listener();
 }
 

@@ -1,9 +1,10 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
-import {localTime, relativeStart} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
 import type {Key} from '../../i18n';
+import {offered} from '../../api/capabilities';
 
 const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
@@ -37,14 +38,17 @@ export function dnsQueryView(
     unavailable: !!resources && !resources.dns_query.available,
     showCache: !!resources?.dns_cache.available,
     cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
-    // What the log says comes first and is the default, then the log itself; a query is an occasional action.
-    tabs: [
-      ...(resources?.dns_log.available !== false ? [{id: 'stats', label: t('dns.tab.stats')}] : []),
-      ...(resources?.dns_log.available !== false ? [{id: 'log', label: t('dns.log')}] : []),
-      ...(resources?.dns_query.available !== false ? [{id: 'query', label: t('dns.query')}] : []),
-      ...(resources?.dns_cache.available !== false ? [{id: 'cache', label: t('ui.cache')}] : [])
-    ]
+    tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))
   };
+}
+// What the log says comes first and is the default, then the log itself; a query is an occasional action.
+export function dnsTabs(resources: Capabilities['resources'] | undefined): Array<{id: 'stats' | 'log' | 'query' | 'cache'; titleKey: Key}> {
+  return [
+    ...(offered(resources, 'dns_log', {whileLoading: true}) ? [{id: 'stats' as const, titleKey: 'dns.tab.stats' as const}] : []),
+    ...(offered(resources, 'dns_log', {whileLoading: true}) ? [{id: 'log' as const, titleKey: 'dns.log' as const}] : []),
+    ...(offered(resources, 'dns_query', {whileLoading: true}) ? [{id: 'query' as const, titleKey: 'dns.query' as const}] : []),
+    ...(offered(resources, 'dns_cache', {whileLoading: true}) ? [{id: 'cache' as const, titleKey: 'ui.cache' as const}] : [])
+  ];
 }
 export function dnsCacheView(
   data: DnsCacheList | undefined,
@@ -52,8 +56,7 @@ export function dnsCacheView(
   domain: string,
   busy: string | null,
   locale: string,
-  t: LabelFn,
-  now = Date.now()
+  t: LabelFn
 ) {
   const filter = domain.toLowerCase();
   return {
@@ -82,10 +85,8 @@ export function dnsCacheView(
         domain: entry.domain,
         type: entry.type,
         status: entry.status,
-        expires: relativeStart(entry.expires_at, locale, now),
-        expiresTooltip: localTime(entry.expires_at, locale),
-        stale: relativeStart(entry.stale_until, locale, now),
-        staleTooltip: entry.stale_until === null ? undefined : localTime(entry.stale_until, locale),
+        expiresAt: entry.expires_at,
+        staleUntil: entry.stale_until,
         deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
         pending: busy === entry.entry_id,
         disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
@@ -111,7 +112,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     ] as Array<[string, string]>
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = [], now = Date.now()) {
+export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = []) {
   const records = data?.records ?? [];
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
@@ -121,8 +122,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
     empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     rows: records.map(record => ({
       id: record.id,
-      time: relativeStart(record.observed_at, locale, now),
-      timeTooltip: localTime(record.observed_at, locale),
+      observedAt: record.observed_at,
       name: record.question.name,
       type: record.question.type,
       source: record.src ?? '—',

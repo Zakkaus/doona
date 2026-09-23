@@ -185,7 +185,7 @@ it('separates built-in outbounds from unattributed nodes and avoids provider id 
     name: t('nodes.kind.builtin'),
     kind: t('nodes.kind.builtin'),
     usage: '—',
-    updated: '—',
+    updatedAt: null,
     status: null
   });
 });

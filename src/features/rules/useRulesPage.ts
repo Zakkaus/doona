@@ -1,16 +1,17 @@
 import {useCapabilities} from '../../store';
 import {useT} from '../../i18n';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {rulesView} from './view';
-import {within} from '../../shell/route';
+import {tabQuery} from '../../shell/route';
 
 export function useRulesPage({go, query}: PageProps) {
   const t = useT();
   const capabilities = useCapabilities();
+  const view = rulesView(capabilities.data?.resources, query, t);
   return {
-    ...rulesView(capabilities.data?.resources, query, t),
+    ...view,
     loading: capabilities.loading && !capabilities.data,
     error: capabilities.error,
-    changeTab: (tab: string) => go('rules', within(query, {tab}))
+    changeTab: (tab: string) => go('rules', tabQuery(query, tab, view.fallback))
   };
 }

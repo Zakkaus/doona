@@ -2,7 +2,8 @@ import type {Key} from '../i18n';
 import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';
-import type {PageProps} from '../features/types';
+import type {PageProps, RoutePath} from './routes';
+import {preloadSearch} from './search/load';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
@@ -43,14 +44,19 @@ const Settings = pages.settings.Component;
 export function warmPage(id: string) {
   void pages[id as keyof typeof pages]?.preload().catch(() => undefined);
 }
-// Preload other pages one per idle slice (the callback may still run on its timeout while the page is busy); the
-// config page carries the editor and loads on intent (hover, focus, click) only.
+// Preload the search dialog, then the other pages, one per idle slice (the callback may still run on its timeout while
+// the page is busy); the config page carries the editor and loads on intent (hover, focus, click) only.
 export function warmAllPages() {
-  const queue = Object.keys(pages).filter(id => id !== 'config');
+  const queue = [
+    preloadSearch,
+    ...Object.keys(pages)
+      .filter(id => id !== 'config')
+      .map(id => () => warmPage(id))
+  ];
   const next = () => {
-    const id = queue.shift();
-    if (!id) return;
-    warmPage(id);
+    const warm = queue.shift();
+    if (!warm) return;
+    warm();
     if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
     else setTimeout(next, 250);
   };
@@ -60,7 +66,7 @@ export function warmAllPages() {
 
 type Feature = {
   id: string;
-  path: string;
+  path: RoutePath;
   // The question shown beneath a page title to distinguish similar pages.
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
@@ -144,35 +150,10 @@ const definitions = [
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ] as const satisfies ReadonlyArray<Feature>;
 
-export type RoutePath = (typeof definitions)[number]['path'];
-export const features: ReadonlyArray<Feature & {path: RoutePath}> = definitions;
-
-export function isRoutePath(path: string): path is RoutePath {
-  return features.some(feature => feature.path === path);
-}
+export const features: ReadonlyArray<Feature> = definitions;
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
   const requires = features.find(feature => feature.path === path)?.requires;
   const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
-
-// Search applies the destination's tab availability before offering these links.
-export const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
-  {path: 'rules', params: {tab: 'map'}, titleKey: 'rule.map'},
-  {path: 'rules', params: {tab: 'list'}, titleKey: 'rule.listTitle'},
-  {path: 'rules', params: {tab: 'flows'}, titleKey: 'rule.flows'},
-  {path: 'rules', params: {tab: 'trace'}, titleKey: 'rule.trace'},
-  {path: 'dns', params: {tab: 'stats'}, titleKey: 'dns.tab.stats'},
-  {path: 'dns', params: {tab: 'log'}, titleKey: 'dns.log'},
-  {path: 'dns', params: {tab: 'query'}, titleKey: 'dns.query'},
-  {path: 'dns', params: {tab: 'cache'}, titleKey: 'ui.cache'},
-  {path: 'config', params: {tab: 'setup'}, titleKey: 'config.wizard'},
-  {path: 'config', params: {tab: 'source'}, titleKey: 'config.tabSource'},
-  {path: 'config', params: {tab: 'validate'}, titleKey: 'config.tabValidate'},
-  {path: 'settings', params: {card: 'backend'}, titleKey: 'settings.backend'},
-  {path: 'settings', params: {card: 'runtime'}, titleKey: 'settings.runtime'},
-  {path: 'settings', params: {card: 'actions'}, titleKey: 'settings.actions'},
-  {path: 'settings', params: {card: 'appearance'}, titleKey: 'settings.appearance'},
-  {path: 'settings', params: {card: 'about'}, titleKey: 'settings.about'}
-];

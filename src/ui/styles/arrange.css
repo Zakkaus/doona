@@ -37,7 +37,7 @@
   display: grid;
   place-items: center;
   border-radius: inherit;
-  color: var(--rp-accent);
+  color: var(--rp-accent-text);
   font-weight: 600;
   background: color-mix(in srgb, var(--rp-surface) 70%, transparent);
   pointer-events: none;

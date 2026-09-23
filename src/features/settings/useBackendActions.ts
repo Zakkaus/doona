@@ -7,32 +7,32 @@ import {
   useProviderRefresh,
   useProviders,
   useRuntime,
-  useRuntimeOperations,
-  useNow
+  useRuntimeOperations
 } from '../../store';
-import {lifecycleActions, operationLabels} from '../overview/view';
+import {lifecycleActions} from '../overview/view';
+import {operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
 import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 export function useBackendActions() {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(!!resources?.runtime.available);
-  const providers = useProviders(resources?.providers.available === true);
+  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const refresh = useProviderRefresh(providers.refetch);
   // Only the close-all action needs the live count, so the poll runs only where that action exists.
-  const connections = useConnectionTotals(resources?.connections.available === true && resources.connections.can_close === true);
+  const connections = useConnectionTotals(offered(resources, 'connections', {whileLoading: false}) && resources?.connections.can_close === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
-  const geodata = useGeodata(resources?.geodata.available ?? false);
+  const geodata = useGeodata(offered(resources, 'geodata', {whileLoading: false}));
   const fail = (error: unknown) => toast('negative', errorText(error, t));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
-  const offered =
+  const anyAction =
     lifecycle ||
     !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
     !!resources?.providers.can_refresh ||
@@ -102,7 +102,7 @@ export function useBackendActions() {
     retryConnections: connections.refetch,
     // Only while capabilities are on their way; a failed load is reported by the page banner, not a spinner.
     waiting: !resources && !capabilities.error,
-    note: t(offered ? 'settings.actionsNote' : 'settings.actionsNone'),
+    note: t(anyAction ? 'settings.actionsNote' : 'settings.actionsNone'),
     refreshingAll,
     refreshAll,
     refreshDisabled: !providersReady || !!refresh.busy || !subscriptions.length,
@@ -112,7 +112,7 @@ export function useBackendActions() {
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: !!resources?.geodata.available,
-    rows: geodataRows(geodata.data?.assets ?? [], locale, now),
+    rows: geodataRows(geodata.data?.assets ?? []),
     update: () =>
       void geodata.update().then(result => {
         if (result) toast('positive', t('settings.geodataUpdated'));

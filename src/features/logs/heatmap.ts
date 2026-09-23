@@ -1,6 +1,14 @@
 import type {LogLevel, LogRecord} from '../../api/model';
 import {timeBuckets} from '../../ui/charts/layout';
 
+// A record never changes once received, so its time is parsed once rather than on every publication.
+const parsed = new WeakMap<object, number>();
+function timeOf(record: Pick<LogRecord, 'ts'>) {
+  let time = parsed.get(record);
+  if (time === undefined) parsed.set(record, (time = Date.parse(record.ts)));
+  return time;
+}
+
 // Most severe first, so the rows read top-down from what matters.
 const severity: LogLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
 
@@ -9,7 +17,7 @@ const severity: LogLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
 export function levelHeatmap(records: Array<Pick<LogRecord, 'ts' | 'level'>>, levels: LogLevel[], minimum: LogLevel | '', room = 24) {
   const floor = minimum ? severity.indexOf(minimum) : severity.length - 1;
   const rows = severity.filter((level, i) => levels.includes(level) && i <= floor);
-  const times = records.map(record => Date.parse(record.ts)).filter(Number.isFinite);
+  const times = records.map(timeOf).filter(Number.isFinite);
   if (!times.length) return {rows: rows.map(level => ({level, counts: [] as number[]})), buckets: [] as number[], width: 0, busiest: null};
   const since = Math.min(...times);
   const until = Math.max(...times);
@@ -19,7 +27,7 @@ export function levelHeatmap(records: Array<Pick<LogRecord, 'ts' | 'level'>>, le
   const totals = new Array<number>(buckets.length).fill(0);
   const errors = new Array<number>(buckets.length).fill(0);
   for (const record of records) {
-    const time = Date.parse(record.ts);
+    const time = timeOf(record);
     const row = counts.get(record.level);
     if (!row || !Number.isFinite(time)) continue;
     const column = Math.min(buckets.length - 1, Math.floor((time - buckets[0]) / width));

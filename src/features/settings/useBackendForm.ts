@@ -6,10 +6,11 @@ import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
-import {toast, useLinked} from '../../ui/ui';
-import {readSettings} from './settings';
+import {toast} from '../../ui/ui';
+import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
+import {cardHeadingId, probeFailure} from './view';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
 
@@ -29,8 +30,7 @@ export function useBackendForm(query: string) {
   const [pending, setPending] = useState(false);
   // Pairing links also fill an already-open form without saving the credentials.
   const dirty = api !== (saved.api ?? '') || token !== saved.token;
-  const guard = useDraftGuard(dirty);
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(dirty, () => {
     setApi(saved.api ?? '');
     setToken(saved.token);
     setPaired(false);
@@ -55,7 +55,7 @@ export function useBackendForm(query: string) {
       history.replaceState(history.state, '', location.pathname + location.search + buildHash('settings', params.toString()));
     }
     const card = params.get('card');
-    if (card) document.getElementById('settings-' + card)?.scrollIntoView({block: 'start'});
+    if (card) document.getElementById(cardHeadingId(card))?.scrollIntoView({block: 'start'});
   }, [query]);
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [invalid, setInvalid] = useState(false);
@@ -169,18 +169,8 @@ export function useBackendForm(query: string) {
       }
     } catch (error) {
       if (request.current !== controller) return;
-      let failure: Result;
-      if (controller.signal.aborted && controller.signal.reason?.name === 'TimeoutError') failure = {key: 'settings.timeout'};
-      else if (controller.signal.aborted) return;
-      else if (error instanceof ApiError) {
-        if (error.status === 401) failure = {key: 'settings.unauthorized'};
-        else if (error.code === 'empty_response') failure = {key: 'settings.nonJson'};
-        else if (error.code === 'invalid_discovery') failure = {key: 'settings.invalidResponse'};
-        else failure = {key: 'settings.httpError', params: {status: error.status}};
-      } else if (error instanceof SyntaxError) failure = {key: 'settings.nonJson'};
-      // Fetch does not distinguish cross-origin network failures from CORS rejection.
-      else if (error instanceof TypeError && new URL(base).origin !== location.origin) failure = {key: 'settings.cors'};
-      else failure = {key: 'settings.network'};
+      const failure = probeFailure(error, controller.signal, base, location.origin);
+      if (!failure) return;
       setResult({...failure, error: true, requestId: error instanceof ApiError ? error.requestId : null});
       // The failure is already named in the page language; the raw message (a DOMException, "Failed to fetch") is not.
       toast('negative', t(failure.key, failure.params));

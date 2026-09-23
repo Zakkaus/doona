@@ -1,9 +1,7 @@
 import {useT} from '../../i18n';
-import {useCapabilities} from '../../store';
 import {Button, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
-import {pickTab, within} from '../../shell/route';
 import {NodeLatency} from './Latency';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
@@ -11,6 +9,9 @@ import {PolicyPicker} from '../policies/PolicyPicker';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {
+    measured,
+    tab,
+    setTab,
     providerTable,
     nodeTable,
     error,
@@ -31,8 +32,6 @@ export function Nodes(props: PageProps) {
     policy,
     setPolicy
   } = useNodesPage(props);
-  // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone.
-  const measured = useCapabilities().data?.resources.nodes.available !== false;
   const list = (
     <>
       <ErrorMessage error={error} onRetry={reload} />
@@ -47,8 +46,8 @@ export function Nodes(props: PageProps) {
         <Tabs
           keepMounted
           label={t('nav.nodes')}
-          value={pickTab(props.query, ['list', 'latency'], 'list')}
-          onChange={next => props.go('nodes', within(props.query, {tab: next === 'list' ? null : next}))}
+          value={tab}
+          onChange={setTab}
           items={[
             {id: 'list', label: t('nodes.tab.list'), content: list},
             {id: 'latency', label: t('nodes.tab.latency'), content: <NodeLatency />}

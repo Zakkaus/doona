@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, routes, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 
@@ -83,4 +83,47 @@ test('a login draft cannot be saved after another tab changes the challenged end
   await expect(token).toHaveValue('challenge-secret');
   expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe(saved);
   expect(backend.requests.some(request => request.headers().authorization === 'Bearer challenge-secret')).toBe(false);
+});
+
+test('without discovery, the nodes page reads its nodes but not the groups it only sorts by', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(503, 'temporarily_unavailable', 'Discovery unavailable');
+  };
+  const nodesRead = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/v1/nodes'));
+  await page.goto('/#/nodes?tab=latency');
+  await expect(page.locator('.rp-content > .rp-alert')).toContainText('Discovery unavailable');
+  await nodesRead;
+  await expect(page.getByRole('tab', {name: 'Latency'})).toHaveAttribute('aria-selected', 'true');
+  await page.waitForTimeout(300);
+  expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
+});
+
+// The first honk-native profile exposes only runtime and userspace-observed connections.
+test.describe('first-release backend', () => {
+  test.use({storage: {'doona-mock-profile': 'm1'}});
+
+  test('the shell marks what the backend lacks and every offered page loads clean', async ({page}) => {
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-strip')).toBeVisible();
+    await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
+    await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Activity', 'Overview', 'Connections', 'Settings']);
+    for (const route of ['overview', 'connections', 'settings'] as const) {
+      await page.goto(`/#/${route}`);
+      await expect(page.locator('.rp-nav[href="#/' + route + '"]')).toHaveAttribute('aria-current', 'page');
+      await expect(page.locator('.rp-content')).toBeVisible();
+    }
+    for (const route of routes.filter(r => !['activity', 'overview', 'connections', 'settings'].includes(r))) {
+      await page.goto(`/#/${route}`);
+      await expect(page.locator('.rp-content')).toBeVisible();
+    }
+    await page.goto('/#/connections?tab=list');
+    await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
+    await expect(page.getByRole('button', {name: 'Close all', exact: true})).toHaveCount(0);
+    await expect(page.getByText('Partial connection visibility', {exact: true})).toBeVisible();
+    await page.keyboard.press('Control+K');
+    await page.locator('.rp-dialog input').fill('telegram');
+    await expect(page.getByRole('option', {name: /api\.telegram\.org/})).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
 });

@@ -1,32 +1,12 @@
-import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useConnections} from '../../store';
 import {useT} from '../../i18n';
-import {usePalette} from '../../ui/Charts';
 import {Badge, Bar, Empty, ErrorMessage, Loading, Segmented, TextTooltip} from '../../ui/ui';
-import {activityRanking} from './view';
+import {useRankingCard} from './useRankingCard';
 
 // Top clients owns its own connections subscription: a five-second tick over up to 1,000 connections
-// re-renders this card alone, not the traffic charts or the tiles beside it. The poll runs only while the card is
-// near the viewport; off screen it is paused and keeps its last list.
+// re-renders this card alone, not the traffic charts or the tiles beside it.
 export function RankingCard() {
   const t = useT();
-  const p = usePalette();
-  const [by, setBy] = useState('dev');
-  const capabilities = useCapabilities();
-  const available = capabilities.data?.resources.connections.available;
-  const [near, setNear] = useState(false);
-  const ref = useCallback((element: HTMLElement | null) => {
-    if (!element) return;
-    const observer = new IntersectionObserver(entries => setNear(entries.at(-1)!.isIntersecting), {rootMargin: '400px'});
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  // Paused only once it has a list to keep showing; before that it loads wherever it is.
-  const [loaded, setLoaded] = useState(false);
-  const connections = useConnections(undefined, available === true, !near && loaded);
-  if (connections.data && !loaded) setLoaded(true);
-  const rows = useMemo(() => activityRanking(connections.data, by, p, t), [connections.data, by, p, t]);
-  const state = connections.data ? (rows.length ? 'ready' : 'empty') : connections.error ? 'error' : available === true ? 'loading' : 'unavailable';
+  const {ref, by, setBy, rows, state, error, truncated} = useRankingCard();
   return (
     <div className="rp-card" ref={ref}>
       <div className="rp-row">
@@ -43,8 +23,8 @@ export function RankingCard() {
           ]}
         />
       </div>
-      {connections.error && !connections.data && <ErrorMessage error={connections.error} />}
-      {connections.data?.truncated && (
+      {error && <ErrorMessage error={error} />}
+      {truncated && (
         <TextTooltip text={t('act.rankingTruncated')}>
           <Badge tone="warn">{t('act.truncated')}</Badge>
         </TextTooltip>

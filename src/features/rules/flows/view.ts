@@ -1,57 +1,16 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {chainLabel, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {word} from '../../../api/labels';
+import {localTime} from '../../../i18n/format';
 import {millis, parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
-import {policyKindLabels} from '../../policies/view';
+import {policyKindLabels} from '../../../api/selectors';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
 import {href} from '../../../shell/route';
-import {ruleSeedHref} from '../seed';
-const flowWords: Record<string, Key> = {
-  kernel: 'flow.v.kernel',
-  userspace: 'flow.v.userspace',
-  matched: 'flow.v.matched',
-  other_family_trusted: 'flow.v.otherFamilyTrusted',
-  failed: 'flow.v.failed',
-  not_required: 'flow.v.notRequired',
-  unavailable: 'flow.v.unavailable',
-  pass: 'flow.v.pass',
-  redirect: 'flow.v.redirect',
-  hold: 'flow.v.hold',
-  arm_direct: 'flow.v.armDirect',
-  activate_direct: 'flow.v.activateDirect',
-  activate_proxy: 'flow.v.activateProxy',
-  drop: 'flow.v.drop',
-  started: 'flow.v.started',
-  succeeded: 'flow.v.succeeded',
-  cancelled: 'flow.v.cancelled',
-  transport_ready: 'flow.v.transportReady',
-  target_request_sent: 'flow.v.targetRequestSent',
-  target_confirmed: 'flow.v.targetConfirmed',
-  first_reply: 'flow.v.firstReply',
-  terminal: 'flow.v.terminal',
-  unknown: 'ui.unknown',
-  route_selected: 'flow.v.routeSelected',
-  no_new_routing_input: 'flow.v.noNewRoutingInput',
-  reply_received: 'flow.v.replyReceived',
-  hit: 'flow.v.hit',
-  miss: 'flow.v.miss',
-  stale: 'flow.v.stale',
-  bypass: 'flow.v.bypass',
-  hosts: 'flow.v.hosts',
-  coalesced: 'flow.v.coalesced',
-  cache: 'flow.v.cache',
-  upstream: 'ui.upstream',
-  lan: 'flow.v.lan',
-  wan: 'flow.v.wan',
-  tls_sni: 'flow.v.tlsSni',
-  http_host: 'flow.v.httpHost',
-  quic_sni: 'flow.v.quicSni',
-  dns_mapping: 'flow.v.dnsMapping',
-  explicit: 'flow.v.explicit'
-};
+import {ruleSeedHref} from '../link';
 const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',
@@ -74,7 +33,6 @@ const inputLabels: Record<string, Key | string> = {
   uid: 'UID',
   pid: 'PID'
 };
-export const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
 
 function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
@@ -260,7 +218,7 @@ type FlowRow = {
   recomputed: boolean;
   network: string;
   state: string;
-  started: string;
+  startedAt: string | null;
 };
 type FlowDetailView = {
   title: string;
@@ -273,15 +231,7 @@ type FlowDetailView = {
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(
-  flows: FlowSummary[],
-  list: FlowList | undefined,
-  names: OutboundNames,
-  t: Translator,
-  lang: Lang,
-  now = Date.now()
-): FlowRecordsView {
-  const locale = LOCALE[lang];
+export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
   return {
     rows: flows.map(flow => ({
       id: flow.id,
@@ -292,7 +242,7 @@ export function flowRecordsView(
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: t(connectionStates[flow.state]),
-      started: relativeStart(flow.started_at, locale, now)
+      startedAt: flow.started_at
     })),
     coverage: list ? coverageView(list, t, lang) : null,
     stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]

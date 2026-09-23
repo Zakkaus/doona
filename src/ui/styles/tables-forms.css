@@ -25,7 +25,7 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 700;
-  color: var(--rp-accent);
+  color: var(--rp-text);
   padding: 8px var(--rp-cell-padding, 16px);
   background: var(--rp-base);
   border-bottom: 1px solid var(--rp-hl-med);
@@ -78,7 +78,7 @@
   border-inline-end-color: var(--rp-accent);
 }
 .rp-table [role='columnheader'][data-resizing] {
-  color: var(--rp-accent);
+  color: var(--rp-text);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);

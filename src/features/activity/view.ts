@@ -5,13 +5,13 @@ import {
   healthMillis,
   lifecycleStates,
   lifecycleTone,
-  localTime,
   outboundLabel,
   outboundUsage,
   preferredHealth,
   routineGap,
   shortId
 } from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';

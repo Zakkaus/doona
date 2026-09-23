@@ -1,17 +1,17 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useNow, useRules, type FlowFilter} from '../../../store';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../../store';
 import {connectionStates, outboundLabel} from '../../../api/selectors';
 import {useLang, useT} from '../../../i18n';
 import {within} from '../../../shell/route';
 import {panelQuery, useMediaQuery} from '../../../ui/ui';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
+import {offered} from '../../../api/capabilities';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
-  const now = useNow();
   const wide = useMediaQuery(panelQuery);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   // Filters live in the address, so they survive a tab switch like the other pages' filters.
@@ -20,11 +20,11 @@ export function useFlowRecords({go, query}: PageProps) {
   const requestedState = params.get('state') ?? '';
   const state = (Object.hasOwn(connectionStates, requestedState) ? requestedState : 'all') as NonNullable<FlowFilter['state']>;
   const connectionId = params.get('connection_id') ?? undefined;
-  const resource = useFlows({connection_id: connectionId, network, state});
   const resources = useCapabilities().data?.resources;
-  const rulesListed = resources?.rules.available === true;
+  const resource = useFlows({connection_id: connectionId, network, state}, offered(resources, 'flows', {whileLoading: true}));
+  const rulesListed = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(rulesListed);
-  const canAdd = rulesListed && resources?.config.available === true && resources.config.writable === true;
+  const canAdd = rulesListed && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -33,7 +33,7 @@ export function useFlowRecords({go, query}: PageProps) {
     const all = resource.data?.flows ?? [];
     return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
   }, [resource.data, pinned, rules.data]);
-  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang, now), [shown, resource.data, names, t, lang, now]);
+  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
   const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang), [detail.data, canAdd, t, lang]);
   return {
     ...view,

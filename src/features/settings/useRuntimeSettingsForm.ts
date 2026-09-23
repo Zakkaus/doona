@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {toast, useLinked} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {
   numericFields,
   numericAccess,
@@ -17,7 +17,7 @@ import {
   type RecorderChoice
 } from './view';
 import {useDraftGuard} from '../../shell/draft';
-import {logLevelLabels} from '../logs/view';
+import {logLevelLabels} from '../../api/selectors';
 import {errorText} from '../../api/error';
 
 export function useRuntimeSettingsForm() {
@@ -40,8 +40,7 @@ export function useRuntimeSettingsForm() {
   const edits = draft ?? {at: stamp, values: {}, modes: {}};
   const level = edits.level ?? baseline?.log.level ?? '';
   const dirty = !!draft && (draft.level !== undefined || Object.keys(draft.values).length > 0 || Object.keys(draft.modes).length > 0);
-  const guard = useDraftGuard(dirty);
-  useLinked(guard.revision, () => setDraft(null));
+  const guard = useDraftGuard(dirty, () => setDraft(null));
   const ceilings: Record<Numeric, number | undefined> = {
     'log.buffered_records': capabilities?.logs.max_buffered_records,
     'dns_log.max_records': capabilities?.dns_log.max_records,

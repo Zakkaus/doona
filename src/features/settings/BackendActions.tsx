@@ -1,9 +1,12 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip} from '../../ui/ui';
+import {Button, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {CloseAllButton} from '../connections/CloseAll';
 import {FlushCacheButton} from '../dns/FlushCache';
 import {useBackendActions} from './useBackendActions';
+import {settingsCard} from './view';
+
+const card = settingsCard('actions');
 export function BackendActionsCard() {
   const t = useT();
   const {
@@ -35,9 +38,9 @@ export function BackendActionsCard() {
     waiting
   } = useBackendActions();
   return (
-    <section className="rp-card" aria-labelledby="settings-actions">
-      <h2 className="rp-h3" id="settings-actions">
-        {t('settings.actions')}
+    <section className="rp-card" aria-labelledby={card.headingId}>
+      <h2 className="rp-h3" id={card.headingId}>
+        {t(card.titleKey)}
       </h2>
       <span className="rp-label">{waiting ? '\u00a0' : note}</span>
       <ErrorMessage error={runtimeError} />
@@ -112,7 +115,7 @@ export function BackendActionsCard() {
                 label: t('nodes.updated'),
                 minWidth: 140,
                 grow: 0,
-                render: asset => <TextTooltip text={asset.modifiedTitle}>{asset.modified}</TextTooltip>
+                render: asset => <TimeCell at={asset.modifiedAt} />
               },
               {
                 id: 'sha',

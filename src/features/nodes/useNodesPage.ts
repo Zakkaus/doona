@@ -7,15 +7,16 @@ import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
 import {groupNameError, newGroupPolicies} from '../policies/policies';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
 import {ownedNodes, providerRows} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
-import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
+import {pickTab, tabQuery} from '../../shell/route';
+import {offered} from '../../api/capabilities';
 
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
@@ -30,8 +31,7 @@ export function useNodesPage({go, query}: PageProps) {
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
-  const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(!!dialog && !!(form.name || form.value), () => {
     session.current++;
     setDialog(null);
   });
@@ -44,8 +44,8 @@ export function useNodesPage({go, query}: PageProps) {
   }, []);
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
-  const providers = useProviders(resources?.providers.available !== false);
-  const nodes = useNodes(resources?.nodes.available !== false);
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const names = useOutboundNames();
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
@@ -204,7 +204,12 @@ export function useNodesPage({go, query}: PageProps) {
     onNewGroup: newGroup,
     onRemove: removeNode
   });
+  // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone.
+  const measured = offered(resources, 'nodes', {whileLoading: true});
   return {
+    measured,
+    tab: pickTab(query, ['list', 'latency'], 'list'),
+    setTab: (next: string) => go('nodes', tabQuery(query, next, 'list')),
     providerTable,
     nodeTable,
     error: providers.error ?? nodes.error,

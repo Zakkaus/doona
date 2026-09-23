@@ -1,9 +1,12 @@
-import {useCallback, useContext, useEffect, useState} from 'react';
-import {DraftContext} from './route';
+import {createContext, useCallback, useContext, useEffect, useState} from 'react';
+import {useLinked} from '../ui/hooks';
+
+export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
 
 const drafts = new WeakMap<(dirty: boolean) => void, Set<symbol>>();
 
-export function useDraftGuard(dirty: boolean) {
+// `onDiscard` runs when the user confirms leaving with unsaved changes; the caller drops its draft there.
+export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
   const {setDirty, revision} = useContext(DraftContext);
   const [id] = useState(() => Symbol());
   const clear = useCallback(() => {
@@ -26,5 +29,6 @@ export function useDraftGuard(dirty: boolean) {
       clear();
     };
   }, [dirty, id, setDirty, clear, revision]);
+  useLinked(revision, onDiscard);
   return {clear, revision};
 }

@@ -299,7 +299,7 @@ test('closing a connection removes it from the list and clears the selection', a
   await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Closed api.telegram.org');
-  await expect(page).toHaveURL(/#\/connections$/);
+  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
   await expect(page.locator('.rp-table [data-key="c-0001"]')).toHaveCount(0);
   // A kernel-observed connection is refused by the backend, and the row stays.
   await page.goto('/#/connections?id=c-0002');
@@ -481,4 +481,12 @@ test('a hidden tab keeps its detail drawer closed when the window narrows', asyn
   await expect(page.locator('.rp-drawer')).toHaveCount(0);
   await page.getByRole('tab', {name: 'Connections', exact: true}).click();
   await expect(page.locator('.rp-drawer .rp-h3')).toHaveText('cdn.bilibili.com');
+});
+
+test('clearing the filter that opened the table keeps the table open', async ({page}) => {
+  await page.goto('/#/connections?q=no-such-connection');
+  await expect(page.getByRole('grid').first()).toBeVisible();
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).first().click();
+  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
+  await expect(page.getByRole('grid').first()).toBeVisible();
 });

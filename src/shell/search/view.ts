@@ -1,12 +1,14 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
-import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
+import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows} from '../../api/selectors';
-import {features, navAvailable, subpages, type RoutePath} from '../registry';
+import {features, navAvailable} from '../registry';
+import {type RoutePath} from '../routes';
 import {within} from '../route';
-import {dnsQueryView} from '../../features/dns/view';
-import {rulesView} from '../../features/rules/view';
+import {dnsTabs} from '../../features/dns/view';
+import {rulesTabs} from '../../features/rules/view';
+import {settingsCards} from '../../features/settings/view';
 import {ownedNodes, providerRows} from '../../features/nodes/view';
-import {sourceKinds} from '../../features/config/view';
+import {configTabs, setupAvailable, sourceKinds} from '../../features/config/view';
 
 type SearchHit = {id: string; label: string; description: string | undefined; route: RoutePath; query: string};
 // A hit with its lower-cased match text, projected once per dataset so a keystroke only filters.
@@ -37,29 +39,26 @@ const entry = (
 export function pageEntries(capabilities: Capabilities | undefined, config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
   const available = (path: string) => navAvailable(path, capabilities);
   const resources = capabilities?.resources;
-  const tabs = {
-    dns: dnsQueryView(null, resources, '', '', false, t).tabs,
-    rules: rulesView(resources, '', t).tabs
-  };
   const main = config?.sources.find(source => source.kind === 'main');
-  const destinationAvailable = (item: (typeof subpages)[number]) => {
-    if (!available(item.path)) return false;
-    const tab = item.params.tab;
-    if (item.path === 'dns' || item.path === 'rules') return tabs[item.path].some(item => item.id === tab);
-    if (item.path === 'config' && tab === 'setup') return !!main?.writable && main.content !== undefined && resources?.config.writable === true;
-    if (item.path === 'config' && tab === 'validate') return resources?.config_validate.available === true;
-    return true;
-  };
+  // Each page's own tab list, so search offers exactly the tabs the page shows.
+  const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
+    ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    ...configTabs(setupAvailable(resources, main)).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    ...settingsCards.map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey}))
+  ];
   const places = [
     ...features
       .filter(feature => feature.nav && available(feature.path))
       .map(feature => ({route: feature.path, query: '', title: t(feature.nav!.titleKey), parent: ''})),
-    ...subpages.filter(destinationAvailable).map(item => ({
-      route: item.path,
-      query: within('', item.params),
-      title: t(item.titleKey),
-      parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)
-    }))
+    ...subpages
+      .filter(item => available(item.path))
+      .map(item => ({
+        route: item.path,
+        query: within('', item.params),
+        title: t(item.titleKey),
+        parent: t(features.find(f => f.path === item.path)!.nav!.titleKey)
+      }))
   ];
   return places.map(place =>
     entry(

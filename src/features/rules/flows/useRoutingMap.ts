@@ -2,18 +2,19 @@ import {useCallback, useLayoutEffect, useMemo, useRef} from 'react';
 import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../../store';
 import {useT} from '../../../i18n';
 import {within} from '../../../shell/route';
-import type {PageProps} from '../../types';
+import type {PageProps} from '../../../shell/routes';
 import {flowsThrough, routingTree, type TreeBy} from './map';
 import {routingMapView} from './view';
+import {offered} from '../../../api/capabilities';
 
 export function useRoutingMap({go, query}: PageProps) {
   const t = useT();
   const params = new URLSearchParams(query);
-  const resource = useFlows();
   const resources = useCapabilities().data?.resources;
-  const groups = useGroups(resources?.groups.available === true);
-  const nodes = useNodes(resources?.nodes.available === true);
-  const rules = useRules(resources?.rules.available === true);
+  const resource = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const by: TreeBy = params.get('by') === 'client' ? 'client' : 'rule';
   const tree = useMemo(
     () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? [], by),

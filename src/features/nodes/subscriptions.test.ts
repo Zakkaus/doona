@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {parseInterval, readSubscriptions, writeInterval} from './subscriptions';
+import {LocalError} from '../../api/error';
 
 const text = `global {
   log_level: info
@@ -77,6 +78,12 @@ describe('writeInterval', () => {
     expect(writeInterval(text, 'detailed', 43200)).toContain(`    ua: 'honk/1.0'\n    interval: '43200s'\n  }`);
     expect(writeInterval(text, 'detailed', 86400)).toContain(`    ua: 'honk/1.0'\n    interval: '86400s'\n  }`);
     expect(writeInterval(text, 'manual', 3600)).toContain(`    url: "https://example.org/manual"\n    interval: '3600s'\n  }`);
+  });
+
+  it('keeps a URL with braces and backslashes as written and refuses one with an apostrophe', () => {
+    const url = 'https://example.org/{#}?token=a\\b';
+    expect(writeInterval(`subscription {\n  paid: '${url}'\n}\ngroup { proxy {} }\n`, 'paid', 3600)).toContain(`url: '${url}'`);
+    expect(() => writeInterval(`subscription {\n  paid: "https://example.org/o'brien"\n}`, 'paid', 3600)).toThrowError(LocalError);
   });
 
   it('leaves the text alone when nothing changes', () => {

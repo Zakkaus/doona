@@ -1,48 +1,41 @@
-import {useCallback, useSyncExternalStore} from 'react';
+import {useSyncExternalStore} from 'react';
 
-// One ticking store per interval, shared by every subscriber. Relative times and freshness advance on it rather than
-// on each poll, since an unchanged poll no longer produces a new object. It stops while the page is hidden and
-// ticks once when the page is shown again.
-type Clock = {now: number; subscribers: Set<() => void>; timer?: ReturnType<typeof setInterval>};
-const clocks = new Map<number, Clock>();
+// One ticking store shared by every subscriber. Relative times and freshness advance on it rather than on each poll,
+// since an unchanged poll no longer produces a new object. It stops while the page is hidden and ticks once when the
+// page is shown again.
+const every = 5000;
+const subscribers = new Set<() => void>();
+let now = Date.now();
+let timer: ReturnType<typeof setInterval> | undefined;
+let watching = false;
 
-function tick(clock: Clock) {
-  clock.now = Date.now();
-  clock.subscribers.forEach(fn => fn());
+function tick() {
+  now = Date.now();
+  subscribers.forEach(fn => fn());
 }
 
-function run(clock: Clock, ms: number) {
-  clearInterval(clock.timer);
-  clock.timer = document.hidden || !clock.subscribers.size ? undefined : setInterval(() => tick(clock), ms);
+function run() {
+  clearInterval(timer);
+  timer = document.hidden || !subscribers.size ? undefined : setInterval(tick, every);
 }
 
-function clockFor(ms: number) {
-  let clock = clocks.get(ms);
-  if (!clock) {
-    const created: Clock = {now: Date.now(), subscribers: new Set()};
-    clocks.set(ms, (clock = created));
+function subscribe(notify: () => void) {
+  if (!watching) {
+    watching = true;
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && created.subscribers.size) tick(created);
-      run(created, ms);
+      if (!document.hidden && subscribers.size) tick();
+      run();
     });
   }
-  return clock;
-}
-
-function subscribe(ms: number, notify: () => void) {
-  const clock = clockFor(ms);
-  if (!clock.subscribers.size) clock.now = Date.now();
-  clock.subscribers.add(notify);
-  if (clock.subscribers.size === 1) run(clock, ms);
+  if (!subscribers.size) now = Date.now();
+  subscribers.add(notify);
+  if (subscribers.size === 1) run();
   return () => {
-    clock.subscribers.delete(notify);
-    if (!clock.subscribers.size) run(clock, ms);
+    subscribers.delete(notify);
+    if (!subscribers.size) run();
   };
 }
 
-export function useNow(ms = 5000) {
-  return useSyncExternalStore(
-    useCallback((notify: () => void) => subscribe(ms, notify), [ms]),
-    () => clockFor(ms).now
-  );
+export function useNow() {
+  return useSyncExternalStore(subscribe, () => now);
 }

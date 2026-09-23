@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
-import type {ResourceKey} from '../api/inflight';
+import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
 import {createMockApi} from '../api/mock';
 import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
-import {refetchAll, watchResource} from './resource';
+import {refetchAll, retainInactive, watchResource} from './resource';
 import {ApiError} from '../api/error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
@@ -39,6 +39,20 @@ it('evicts the oldest of 33 parameterised entries without evicting an unparamete
   expect(recall(api, ['flow', {id: 0}])).toBeUndefined();
   for (let id = 1; id < 33; id++) expect(recall(api, ['flow', {id}])).toBe(id);
   expect(recall(api, ['version'])).toBe('version');
+});
+
+it('drops an inactive snapshot a minute after its last subscriber leaves', async () => {
+  const api = createMockApi();
+  await remember(api, ['version'], 'version');
+  await remember(api, ['flow', {id: 1}], 1);
+  await vi.advanceTimersByTimeAsync(30000);
+  // A visit in between starts the minute again.
+  expect(recall(api, ['version'])).toBe('version');
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(recall(api, ['flow', {id: 1}])).toBeUndefined();
+  expect(recall(api, ['version'])).toBe('version');
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(recall(api, ['version'])).toBeUndefined();
 });
 
 it('refreshes recency on reads and writes without counting an overwrite twice', async () => {
@@ -327,4 +341,18 @@ it('cancels the hold and settles a waiting refresh on disposal', async () => {
   expect(vi.getTimerCount()).toBe(0);
   await vi.advanceTimersByTimeAsync(5000);
   expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it('keeps a paused consumer’s snapshot past the minute and starts the minute again on release', async () => {
+  const api = createMockApi();
+  await remember(api, ['flow', {id: 1}], 1);
+  const release = retainInactive(api, normalizeResourceKey(['flow', {id: 1}]));
+  for (let id = 2; id < 40; id++) await remember(api, ['flow', {id}], id);
+  await vi.advanceTimersByTimeAsync(61000);
+  expect(recall(api, ['flow', {id: 1}])).toBe(1);
+  release();
+  await vi.advanceTimersByTimeAsync(59000);
+  expect(recall(api, ['flow', {id: 1}])).toBe(1);
+  await vi.advanceTimersByTimeAsync(61000);
+  expect(recall(api, ['flow', {id: 1}])).toBeUndefined();
 });

@@ -1,4 +1,6 @@
-// Chart kinds for the pages beyond activity; pages take charts from src/ui and never import a chart library.
+// The one chart entry point: pages take charts and the palette from here and never import a chart library.
+export {usePalette, type Palette} from './palette';
+export {AreaChart, Spark, Donut, Legend} from './Recharts';
 export {ChartCard, FactStrip, type ChartFact} from './ChartCard';
 export {Beeswarm, type SwarmPoint, type SwarmMark, type SwarmRow} from './Beeswarm';
 export {Waffle, type WaffleShare} from './Waffle';

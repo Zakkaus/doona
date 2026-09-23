@@ -141,7 +141,7 @@ it('does not carry data across keys or flash loading when remounting a remembere
   expect(before).toEqual({data: version, loading: false, error: null});
 });
 
-it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an event at %i ms', async eventAt => {
+it.each([1000, 4000])('keeps the poll deadline for an event at %i ms, within one interval of the last fetch', async eventAt => {
   const resource = consumer();
   resource.response.resolve(version);
   await vi.advanceTimersByTimeAsync(0);
@@ -152,7 +152,7 @@ it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an e
   resource.invalidate(false);
   await vi.advanceTimersByTimeAsync(500);
   resource.invalidate(false);
-  const due = Math.min(5000, eventAt + 2000);
+  const due = 5000;
   await vi.advanceTimersByTimeAsync(due - eventAt - 501);
   expect(resource.fetch).toHaveBeenCalledTimes(1);
   await vi.advanceTimersByTimeAsync(1);
@@ -164,6 +164,33 @@ it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an e
   expect(resource.fetch).toHaveBeenCalledTimes(2);
   await vi.advanceTimersByTimeAsync(1);
   expect(resource.fetch).toHaveBeenCalledTimes(3);
+});
+
+it('answers a burst of events with one fetch per poll interval', async () => {
+  const resource = consumer();
+  resource.response.resolve(version);
+  await vi.advanceTimersByTimeAsync(0);
+  for (let at = 0; at < 10000; at += 250) {
+    resource.invalidate(false);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(resource.fetch).toHaveBeenCalledTimes(1 + Math.floor((at + 250) / 5000));
+  }
+});
+
+it('brings a slow poll forward within five seconds of an event, and no more often during a burst', async () => {
+  const resource = consumer(30000);
+  resource.response.resolve(version);
+  await vi.advanceTimersByTimeAsync(0);
+  resource.invalidate(false);
+  await vi.advanceTimersByTimeAsync(4999);
+  expect(resource.fetch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(resource.fetch).toHaveBeenCalledTimes(2);
+  for (let at = 0; at < 20000; at += 250) {
+    resource.invalidate(false);
+    await vi.advanceTimersByTimeAsync(250);
+  }
+  expect(resource.fetch).toHaveBeenCalledTimes(6);
 });
 
 it.each(['manual', 'reconnect'] as const)('%s refresh clears an armed invalidation and resets polling', async trigger => {

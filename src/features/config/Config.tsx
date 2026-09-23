@@ -4,7 +4,7 @@ import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
 import {useModules, type ModulesProps} from './useModules';
 export function Config(props: PageProps) {
@@ -16,6 +16,7 @@ export function Config(props: PageProps) {
     ready,
     metadata,
     redacted,
+    tabs,
     tab,
     setTab,
     selectedId,
@@ -30,6 +31,38 @@ export function Config(props: PageProps) {
     summaryTone,
     summaryText
   } = useConfigPage(props);
+  const content = {
+    modules: modulesProps && <Modules {...modulesProps} />,
+    setup: wizardProps && <Wizard {...wizardProps} />,
+    source: (
+      <>
+        <div className="rp-toolbar">
+          <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
+          {sourceModel && (
+            <>
+              <Badge>{sourceModel.kind}</Badge>
+              <Light small tone={sourceModel.tone}>
+                {sourceModel.editable}
+              </Light>
+              <span className="rp-label">{sourceModel.facts}</span>
+            </>
+          )}
+          {sourceModel?.hasContent && (
+            <>
+              <span className="rp-grow" />
+              <Button onPress={exportSource}>
+                <Download />
+                {t('config.export')}
+              </Button>
+            </>
+          )}
+        </div>
+        {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
+        {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
+      </>
+    ),
+    validate: validateProps && <ValidateTab {...validateProps} />
+  };
   return (
     <div className="rp-page">
       <ErrorMessage error={error} onRetry={reload} />
@@ -47,65 +80,7 @@ export function Config(props: PageProps) {
           )}
         </div>
       )}
-      {ready && (
-        <Tabs
-          label={t('nav.config')}
-          value={tab}
-          onChange={setTab}
-          items={[
-            {
-              id: 'modules',
-              label: t('config.tabModules'),
-              content: modulesProps && <Modules {...modulesProps} />
-            },
-            ...(wizardProps
-              ? [
-                  {
-                    id: 'setup',
-                    label: t('config.wizard'),
-                    content: <Wizard {...wizardProps} />
-                  }
-                ]
-              : []),
-            {
-              id: 'source',
-              label: t('config.tabSource'),
-              content: (
-                <>
-                  <div className="rp-toolbar">
-                    <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
-                    {sourceModel && (
-                      <>
-                        <Badge>{sourceModel.kind}</Badge>
-                        <Light small tone={sourceModel.tone}>
-                          {sourceModel.editable}
-                        </Light>
-                        <span className="rp-label">{sourceModel.facts}</span>
-                      </>
-                    )}
-                    {sourceModel?.hasContent && (
-                      <>
-                        <span className="rp-grow" />
-                        <Button onPress={exportSource}>
-                          <Download />
-                          {t('config.export')}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
-                  {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
-                </>
-              )
-            },
-            {
-              id: 'validate',
-              label: t('config.tabValidate'),
-              content: validateProps && <ValidateTab {...validateProps} />
-            }
-          ]}
-        />
-      )}
+      {ready && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
     </div>
   );
 }

@@ -1,17 +1,10 @@
+import {logLevelLabels} from '../../api/selectors';
 import type {LogLevel, LogRecord} from '../../api/model';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import type {Translator as LabelFn} from '../../i18n';
-import type {Key} from '../../i18n';
 
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
-export const logLevelLabels: Record<LogLevel, Key> = {
-  trace: 'log.level.trace',
-  debug: 'log.level.debug',
-  info: 'log.level.info',
-  warn: 'log.level.warn',
-  error: 'log.level.error'
-};
-type LogRow = {id: string; timestamp: string; levelText: string; tone: (typeof tones)[LogLevel]; target: string; message: string};
+type LogRow = {id: string; timestamp: string; iso: string; levelText: string; tone: (typeof tones)[LogLevel]; target: string; message: string};
 // A record never changes once appended, so its row is computed once per locale and reused across publications.
 const rows = new WeakMap<LogRecord, {locale: string; row: LogRow}>();
 function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): LogRow {
@@ -20,6 +13,7 @@ function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): L
   const row: LogRow = {
     id: record.id,
     timestamp: localTime(record.ts, locale),
+    iso: record.ts,
     levelText: t(logLevelLabels[record.level]),
     tone: tones[record.level],
     target: record.target,

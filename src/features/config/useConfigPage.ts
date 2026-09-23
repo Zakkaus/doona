@@ -3,16 +3,17 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError, errorText} from '../../api/error';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
-import type {PageProps} from '../types';
-import {pickTab, within} from '../../shell/route';
-import {sourceView, diagnosticRows, sourceMarks} from './view';
+import type {PageProps} from '../../shell/routes';
+import {pickTab, tabQuery, within} from '../../shell/route';
+import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs} from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
+import {offered} from '../../api/capabilities';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
   error: unknown;
@@ -45,16 +46,11 @@ export function useConfigPage({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
-  const config = useConfig(resources?.config.available !== false);
+  const config = useConfig(offered(resources, 'config', {whileLoading: true}));
   const editor = useConfigEditorController(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const mainSource = sources.find(item => item.kind === 'main') ?? null;
-  // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
-  const setupAvailable = !!mainSource && resources?.config.writable === true && mainSource.writable && mainSource.content !== undefined;
-  const canValidate = resources?.config_validate.available === true && (resources.config_validate.modes ?? []).includes('full');
-  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setupAvailable ? 'setup' : 'modules';
-  const tab = pickTab(query, ['modules', 'source', 'validate', ...(setupAvailable ? ['setup'] : [])], fallback);
   // A stale link to a source that no longer exists opens the first one rather than an empty card.
   const source = sources.find(item => item.id === params.get('source')) ?? sources[0] ?? null;
   const selectedId = source?.id ?? null;
@@ -69,6 +65,15 @@ export function useConfigPage({go, query}: PageProps) {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
   }, [config.data]);
+  const setup = setupAvailable(resources, mainSource);
+  const tabs = configTabs(setup);
+  const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
+  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setup ? 'setup' : 'modules';
+  const tab = pickTab(
+    query,
+    tabs.map(item => item.id),
+    fallback
+  );
   const sourceProps: SourceCardProps | null = source
     ? {
         source,
@@ -84,7 +89,7 @@ export function useConfigPage({go, query}: PageProps) {
       }
     : null;
   const wizardProps =
-    setupAvailable && mainSource ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id}))} : null;
+    setup && mainSource ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id}))} : null;
   const validateProps: ValidateTabProps | null = config.data
     ? {
         config: config.data,
@@ -105,8 +110,9 @@ export function useConfigPage({go, query}: PageProps) {
         ] as Array<[string, string]>)
       : [],
     redacted: !!config.data?.secrets_redacted,
+    tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
     tab,
-    setTab: (tab: string) => go('config', within(query, {tab})),
+    setTab: (tab: string) => go('config', tabQuery(query, tab, null)),
     selectedId: selectedId ?? '',
     select,
     sourceProps,
@@ -168,8 +174,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
   const dirty = editing && draft.text !== source.content;
-  const guard = useDraftGuard(dirty);
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(dirty, () => {
     setDraft(null);
     setFound(null);
   });

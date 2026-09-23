@@ -1,6 +1,6 @@
-import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
+import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {formatBytes} from '../../api/u64';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';
@@ -9,6 +9,19 @@ import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
+
+// Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
+export function setupAvailable(resources: Capabilities['resources'] | undefined, main: ConfigSource | null | undefined): boolean {
+  return !!main && resources?.config.writable === true && main.writable && main.content !== undefined;
+}
+export function configTabs(setup: boolean): Array<{id: 'modules' | 'setup' | 'source' | 'validate'; titleKey: Key}> {
+  return [
+    {id: 'modules', titleKey: 'config.tabModules'},
+    ...(setup ? [{id: 'setup' as const, titleKey: 'config.wizard' as const}] : []),
+    {id: 'source', titleKey: 'config.tabSource'},
+    {id: 'validate', titleKey: 'config.tabValidate'}
+  ];
+}
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
 type SectionKind = (typeof sectionKinds)[number];

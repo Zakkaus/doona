@@ -23,10 +23,21 @@ type Entry = {
   subscribers: Set<() => void>;
   watcher: {refetch: () => Promise<RefreshOutcome>; invalidate: (reconnected: boolean) => void; dispose: () => void};
 };
-type Store = {active: Map<string, Entry>; inactive: Map<string, ResourceState<unknown>>; parameterised: Set<string>};
+type Store = {
+  active: Map<string, Entry>;
+  inactive: Map<string, ResourceState<unknown>>;
+  expiry: Map<string, ReturnType<typeof setTimeout>>;
+  parameterised: Set<string>;
+  // Paused consumers per name; their inactive snapshot does not expire.
+  retained: Map<string, number>;
+};
 const stores = new WeakMap<Api, Store>();
 const initialState: ResourceState<never> = {data: undefined, loading: true, error: null};
 const disabledState: ResourceState<never> = {data: undefined, loading: false, error: null};
+// A page left and soon revisited shows what it had at once; after this long nobody is coming back, and a large list
+// is not worth holding.
+const keepInactive = 60000;
+const eventGap = 5000;
 
 export async function refetchAll(): Promise<RefreshOutcome[]> {
   return Promise.all([...(stores.get(getApi())?.active.values() ?? [])].map(entry => entry.watcher.refetch()));
@@ -37,14 +48,53 @@ function snapshot<T>(api: Api, name: string): ResourceState<T> {
   return (store?.active.get(name)?.snapshot ?? store?.inactive.get(name) ?? initialState) as ResourceState<T>;
 }
 
-export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
+function ensureStore(api: Api) {
   let store = stores.get(api);
-  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), parameterised: new Set()}));
+  if (!store) stores.set(api, (store = {active: new Map(), inactive: new Map(), expiry: new Map(), parameterised: new Set(), retained: new Map()}));
+  return store;
+}
+
+function expire(store: Store, name: string) {
+  if (!store.inactive.has(name) || store.retained.has(name)) return;
+  clearTimeout(store.expiry.get(name));
+  store.expiry.set(
+    name,
+    setTimeout(() => forget(store, name), keepInactive)
+  );
+}
+
+// Holds a snapshot for a paused consumer, which shows it without subscribing; the minute starts again on release.
+export function retainInactive(api: Api, name: string) {
+  const store = ensureStore(api);
+  store.retained.set(name, (store.retained.get(name) ?? 0) + 1);
+  clearTimeout(store.expiry.get(name));
+  store.expiry.delete(name);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const count = store.retained.get(name)! - 1;
+    if (count) store.retained.set(name, count);
+    else {
+      store.retained.delete(name);
+      expire(store, name);
+    }
+  };
+}
+
+function forget(store: Store, name: string) {
+  clearTimeout(store.expiry.get(name));
+  store.expiry.delete(name);
+  store.inactive.delete(name);
+  store.parameterised.delete(name);
+}
+
+export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
+  const store = ensureStore(api);
   let entry = store.active.get(name);
   if (!entry) {
     const state = snapshot<T>(api, name);
-    store.inactive.delete(name);
-    store.parameterised.delete(name);
+    forget(store, name);
     const subscribers = new Set<() => void>();
     const shared: Entry = {
       snapshot: state,
@@ -75,13 +125,11 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
       store.active.delete(name);
       if (shared.snapshot.data === undefined) return;
       store.inactive.set(name, {...shared.snapshot, error: null});
+      expire(store, name);
       if (resource.key.length > 1) {
         store.parameterised.add(name);
-        if (store.parameterised.size > 32) {
-          const oldest = store.parameterised.values().next().value!;
-          store.parameterised.delete(oldest);
-          store.inactive.delete(oldest);
-        }
+        const oldest = store.parameterised.size > 32 && [...store.parameterised].find(key => !store.retained.has(key));
+        if (oldest) forget(store, oldest);
       }
     }
   };
@@ -107,6 +155,7 @@ function createWatcher<T>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = Infinity;
   let retryAt = 0;
+  let startedAt = -Infinity;
   let refused = 0;
   let failure: Error | null = null;
   let recoveryDelay = 5000;
@@ -115,6 +164,9 @@ function createWatcher<T>(
     timer = undefined;
     deadline = Infinity;
   };
+  // An event brings a fetch forward, at most once per five seconds (or per interval, if shorter): a burst of flow
+  // events costs a few requests, and a configuration change still shows within seconds on a 30-second poll.
+  const eventDue = () => Math.max(Date.now() + 2000, startedAt + Math.min(every, eventGap));
   const schedule = (at: number) => {
     at = Math.max(at, retryAt);
     if (document.hidden) {
@@ -141,11 +193,12 @@ function createWatcher<T>(
     resolve = undefined;
     complete?.(outcome);
     if (disposed) return;
-    if (stale) schedule(Date.now() + 2000);
+    if (stale) schedule(eventDue());
     else if (every > 0) schedule(Date.now() + every);
   };
   const attempt = () => {
     phase = 'fetching';
+    startedAt = Date.now();
     dirty = false;
     stale = false;
     const lease = inflight.acquire(api, name, fetch);
@@ -221,7 +274,7 @@ function createWatcher<T>(
       dirty = true;
       clear();
     } else if (reconnected) load();
-    else schedule(Date.now() + 2000);
+    else schedule(eventDue());
   };
   const visibility = () => {
     if (document.hidden) {
@@ -268,7 +321,8 @@ export function useResource<T>(
   });
   const subscribe = useCallback(
     (notify: () => void) => {
-      if (!enabled || paused) return () => {};
+      if (!enabled) return () => {};
+      if (paused) return retainInactive(api, name);
       return watchResource(api, current.current, notify, name).dispose;
     },
     [api, name, enabled, paused]

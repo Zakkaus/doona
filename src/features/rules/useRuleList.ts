@@ -4,14 +4,14 @@ import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {addRule, removeRule, ruleAnchor} from './source';
-import {parseRuleSeed, type RuleSeed} from './seed';
+import {parseRuleSeed, type RuleSeed} from './link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
-import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
 const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
@@ -57,11 +57,11 @@ export function useRuleList({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
-  const dictionary = resources?.rules.available === true;
+  const dictionary = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(dictionary);
-  const flows = useFlows({}, dictionary ? resources?.flows.available === true : true);
-  const groups = useGroups(dictionary && resources?.groups.available === true);
-  const canWrite = dictionary && resources?.config.available === true && resources.config.writable === true;
+  const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
+  const groups = useGroups(dictionary && offered(resources, 'groups', {whileLoading: false}));
+  const canWrite = dictionary && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(canWrite);
   const retry = () => {
     config.refetch();
@@ -77,8 +77,7 @@ export function useRuleList({go, query}: PageProps) {
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
-  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()));
-  useLinked(guard.revision, () => setDialog(null));
+  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()), () => setDialog(null));
   const list: RoutingRule[] = rules.data?.rules ?? [];
   const sources = config.data?.sources ?? [];
   const params = new URLSearchParams(query);

@@ -9,6 +9,7 @@ import {
   ErrorMessage,
   Light,
   TextTooltip,
+  TimeCell,
   Kv,
   LabeledSelect,
   Tabs,
@@ -17,13 +18,14 @@ import {
   Empty,
   type TableColumn
 } from '../../ui/ui';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {FlushCacheButton} from './FlushCache';
-import {useDns, useDnsCache, useDnsLog} from './useDns';
+import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
 import {errorText} from '../../api/error';
 
-type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
+type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
+type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -96,7 +98,40 @@ export function Dns(props: PageProps) {
 
 function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => void}) {
   const t = useT();
-  const vm = useDnsCache(domain);
+  const vm = useDnsCacheTab(domain);
+  const {remove} = vm;
+  // Stable column definitions: a new array on every poll would re-render every visible row.
+  const columns = useMemo(
+    (): TableColumn<DnsCacheRow>[] => [
+      {
+        id: 'q',
+        label: t('ui.domain'),
+        minWidth: 192,
+        isRowHeader: true,
+        render: entry => (
+          <TextTooltip className="rp-code" text={entry.id}>
+            {entry.domain}
+          </TextTooltip>
+        )
+      },
+      {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
+      {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
+      {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TimeCell at={entry.expiresAt} />},
+      {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TimeCell at={entry.staleUntil} />},
+      {
+        id: 'a',
+        label: t('ui.delete'),
+        minWidth: 80,
+        grow: 0,
+        render: entry => (
+          <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => remove(entry.id)}>
+            <Delete />
+          </Button>
+        )
+      }
+    ],
+    [t, remove]
+  );
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} />}
@@ -115,52 +150,18 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
         <span className="rp-grow" />
         <FlushCacheButton confirmationText={vm.confirmationText} busy={vm.flushPending} isDisabled={vm.flushDisabled} onFlush={vm.flush} />
       </div>
-      <DataTable
-        label={t('ui.cache')}
-        height={442}
-        rows={vm.rows}
-        loading={vm.loading}
-        empty={vm.empty}
-        cols={[
-          {
-            id: 'q',
-            label: t('ui.domain'),
-            minWidth: 192,
-            isRowHeader: true,
-            render: entry => (
-              <TextTooltip className="rp-code" text={entry.id}>
-                {entry.domain}
-              </TextTooltip>
-            )
-          },
-          {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
-          {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
-          {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TextTooltip text={entry.expiresTooltip}>{entry.expires}</TextTooltip>},
-          {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TextTooltip text={entry.staleTooltip}>{entry.stale}</TextTooltip>},
-          {
-            id: 'a',
-            label: t('ui.delete'),
-            minWidth: 80,
-            grow: 0,
-            render: entry => (
-              <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => vm.remove(entry.id)}>
-                <Delete />
-              </Button>
-            )
-          }
-        ]}
-      />
+      <DataTable label={t('ui.cache')} height={442} rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
     </>
   );
 }
 
 function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialName: string}) {
   const t = useT();
-  const vm = useDnsLog(enabled, initialName);
+  const vm = useDnsLogTab(enabled, initialName);
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
-      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TextTooltip text={record.timeTooltip}>{record.time}</TextTooltip>},
+      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TimeCell at={record.observedAt} />},
       {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
       {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
       {id: 's', label: t('ui.source'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},

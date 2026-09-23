@@ -1,17 +1,15 @@
-import {createContext, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {Go} from '../features/types';
-import {shouldOpenSettings} from '../features/settings/settings';
-import {features, type RoutePath} from './registry';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {shouldOpenSettings} from './preferences';
+import {isRoutePath, type Go, type RoutePath} from './routes';
 
 type Route = {route: RoutePath; query: string};
-export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
   if (route.route === 'flows') return legacyFlows(route.query);
-  return {route: features.find(feature => feature.path === route.route)?.path ?? 'activity', query: route.query};
+  return {route: isRoutePath(route.route) ? route.route : 'activity', query: route.query};
 }
 // The flow map and records moved under rules; old links keep working.
 function legacyFlows(query: string): Route {
@@ -27,6 +25,13 @@ export function within(query: string, patch: Record<string, string | null>): str
     else next.set(key, value);
   }
   return next.toString();
+}
+
+// A fixed default tab stays out of the address, so a link without one keeps following the page's default. A default
+// that depends on data or on the link (null) is always written: otherwise a poll or a cleared filter that changes the
+// default would move the page to another tab.
+export function tabQuery(query: string, next: string, fallback: string | null): string {
+  return within(query, {tab: next === fallback ? null : next});
 }
 
 export function href(route: RoutePath, params: Record<string, string | null> = {}): string {

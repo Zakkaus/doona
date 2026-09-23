@@ -72,6 +72,8 @@
   --rp-on-accent: var(--rp-surface);
   --rp-on-text: var(--rp-surface);
   --rp-accent: var(--rp-pine);
+  /* The accent as text. Where a palette's accent is under 4.5:1 on its base or surface, the palette sets body text. */
+  --rp-accent-text: var(--rp-accent);
   --rp-negative: var(--rp-love);
   --rp-positive: var(--rp-foam);
   --rp-notice: var(--rp-gold);

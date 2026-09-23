@@ -950,6 +950,7 @@ export const messages = {
   'settings.installed': '已安装',
   'settings.apiMajor': '后端 API 主版本为 {major}，本面板按 API 主版本 1 的契约实现；字段可能不兼容。',
   'shell.langUnavailable': '无法切换至{name}：界面文字加载失败。',
+  'shell.searchUnavailable': '无法打开搜索：搜索功能加载失败。',
   'shell.shortcuts': '键盘快捷键',
   'shell.notOffered': '后端未提供此页面。',
   'shell.notOfferedShort': '后端未提供',

@@ -1,13 +1,16 @@
 import {Menu, MenuSection, Header} from 'react-aria-components';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField} from '../../ui/ui';
-import type {PaletteId, Scheme, Wordmark} from './settings';
+import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {About} from '../../shell/About';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
+import {settingsCard} from './view';
+
+const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
 export function Settings({query}: PageProps) {
   const t = useT();
@@ -59,9 +62,9 @@ export function Settings({query}: PageProps) {
     <div className="rp-page">
       {firstRun && <div className="rp-label">{t('settings.firstRun')}</div>}
       {paired && <div className="rp-label">{t('settings.paired')}</div>}
-      <section className="rp-card" aria-labelledby="settings-backend">
-        <h2 className="rp-h3" id="settings-backend">
-          {t('settings.backend')}
+      <section className="rp-card" aria-labelledby={cards.backend.headingId}>
+        <h2 className="rp-h3" id={cards.backend.headingId}>
+          {t(cards.backend.titleKey)}
         </h2>
         <ErrorMessage error={error} />
         <div className="rp-toolbar">
@@ -134,9 +137,9 @@ export function Settings({query}: PageProps) {
       </section>
       <RuntimeSettingsCard />
       <BackendActionsCard />
-      <section className="rp-card" aria-labelledby="settings-appearance">
-        <h2 className="rp-h3" id="settings-appearance">
-          {t('settings.appearance')}
+      <section className="rp-card" aria-labelledby={cards.appearance.headingId}>
+        <h2 className="rp-h3" id={cards.appearance.headingId}>
+          {t(cards.appearance.titleKey)}
         </h2>
         <div className="rp-toolbar">
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
@@ -187,9 +190,9 @@ export function Settings({query}: PageProps) {
           />
         </div>
       </section>
-      <section className="rp-card" aria-labelledby="settings-about">
-        <h2 className="rp-h3" id="settings-about">
-          {t('settings.about')}
+      <section className="rp-card" aria-labelledby={cards.about.headingId}>
+        <h2 className="rp-h3" id={cards.about.headingId}>
+          {t(cards.about.titleKey)}
         </h2>
         {versionWarning && (
           <Light small tone="warn">

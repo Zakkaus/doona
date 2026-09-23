@@ -1,20 +1,12 @@
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
-import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
+import {policyKindLabels, compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
 import {formatNumber, type Translator} from '../../i18n';
 import {millis} from '../../api/u64';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
-export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
-  selector: 'policy.kind.selector',
-  urltest: 'policy.kind.urltest',
-  loadbalance: 'policy.kind.loadbalance',
-  fallback: 'policy.kind.fallback',
-  random: 'policy.kind.random',
-  score: 'policy.kind.score'
-};
 const groupConfigLabels: Record<string, Key> = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',

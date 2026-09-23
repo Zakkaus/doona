@@ -45,8 +45,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   // a draft to guard.
   const pending = dirty || (complete === true && !current.trim());
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
-  const guard = useDraftGuard(dirty);
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(dirty, () => {
     setOrigin(main);
     setState(wizardInitial(main.content ?? ''));
     setFound(null);

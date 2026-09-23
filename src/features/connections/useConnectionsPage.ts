@@ -1,11 +1,11 @@
-import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections as useConnectionResource, useNow, useOutboundNames} from '../../store';
+import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
+import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
-import {within} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {
   columns,
   readView,
@@ -17,11 +17,20 @@ import {
   type CloseSelection,
   type ConnectionView
 } from './view';
+import {offered} from '../../api/capabilities';
 
-export function useConnections({go, query}: PageProps) {
+const connectionTabs = ['traffic', 'list'] as const;
+// The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
+const connectionsFallback = (query: string) =>
+  ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(query).has(key)) ? 'list' : 'traffic';
+// While the link decides the tab, a change within the page writes it, so clearing the filter or selection that opened
+// the table keeps the table.
+const stay = (query: string, patch: Record<string, string | null>) =>
+  within(query, connectionsFallback(query) === 'list' ? {tab: pickTab(query, connectionTabs, 'list'), ...patch} : patch);
+
+export function useConnectionsPage({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const [view, setView] = useState(() => {
     try {
       return readView(localStorage.getItem(viewKey));
@@ -44,7 +53,7 @@ export function useConnections({go, query}: PageProps) {
   const network = q.get('network') ?? 'all';
   const out = q.get('out') ?? 'all';
   const rule = q.get('rule') ?? 'all';
-  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
+  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', stay(query, {[key]: value === 'all' ? null : value}));
   const sel = q.get('id');
   const [confirmed, setConfirmed] = useState<CloseSelection | null>(null);
   useLinked(q.get('q'), value => setText(value ?? ''));
@@ -54,18 +63,19 @@ export function useConnections({go, query}: PageProps) {
   useEffect(() => {
     latest.current = query;
   });
-  const select = (id: string | null) => go('connections', within(latest.current, {id}));
+  const select = (id: string | null) => go('connections', stay(latest.current, {id}));
   // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees the new list.
   const settledText = useDeferredValue(text);
   const src = ipLiteral(q.get('src') ?? '');
-  const resource = useConnectionResource(src);
+  const resource = useConnections(src);
   const capabilities = useCapabilities();
   const canClose = capabilities.data?.resources.connections.can_close === true;
-  const rulesListed = capabilities.data?.resources.rules.available === true;
-  const canViewFlow = capabilities.data?.resources.flows.available === true;
+  const rulesListed = offered(capabilities.data?.resources, 'rules', {whileLoading: false});
+  const canViewFlow = offered(capabilities.data?.resources, 'flows', {whileLoading: false});
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
+  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')), [rows]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>
@@ -87,7 +97,7 @@ export function useConnections({go, query}: PageProps) {
     () => connectionsView(rows, cur, resource.data, src, rule, locale, t, names, rulesListed),
     [rows, cur, resource.data, src, rule, locale, t, names, rulesListed]
   );
-  const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t, now), [shown, view, locale, names, rulesListed, t, now]);
+  const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
     try {
@@ -112,8 +122,13 @@ export function useConnections({go, query}: PageProps) {
       toast('negative', t('conn.closeFailed', {error: errorText(error, t)}));
     }
   };
+  const fallback = connectionsFallback(query);
+  const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   return {
     ...model,
+    tab: pickTab(query, connectionTabs, fallback),
+    setTab: (next: string) => go('connections', tabQuery(query, next, fallback === 'traffic' ? fallback : null)),
+    openInList,
     view,
     updateView,
     wide,
@@ -127,14 +142,14 @@ export function useConnections({go, query}: PageProps) {
     // Every connection in the snapshot for the traffic chart, which has no filters of its own, and every outbound for
     // its colours.
     rows,
-    outboundKeys: [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')),
+    outboundKeys,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {
       const id = String(key);
       if (id.startsWith('src:')) {
         setText('');
-        go('connections', within(query, {src: src === id.slice(4) ? null : id.slice(4), q: null}));
+        go('connections', stay(query, {src: src === id.slice(4) ? null : id.slice(4), q: null}));
       } else if (id.startsWith('rule:')) setFilter('rule', rule === id.slice(5) ? 'all' : id.slice(5));
     },
     columns: columns.map(column => ({id: column.id, label: t(column.label)})),
@@ -147,7 +162,7 @@ export function useConnections({go, query}: PageProps) {
     filtered: network !== 'all' || out !== 'all' || rule !== 'all' || !!src || text.trim() !== '',
     clear: () => {
       setText('');
-      go('connections', within(query, {network: null, out: null, rule: null, q: null, src: null}));
+      go('connections', stay(query, {network: null, out: null, rule: null, q: null, src: null}));
     },
     error: resource.error,
     retry: resource.refetch,
@@ -186,7 +201,7 @@ export function useConnections({go, query}: PageProps) {
     onlyClient: () => {
       if (model.detail?.source) {
         setText('');
-        go('connections', within(query, {src: model.detail.source, q: null}));
+        go('connections', stay(query, {src: model.detail.source, q: null}));
       }
     },
     canExport: shown.length > 0,

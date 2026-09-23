@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'node_modules/**', 'test-results/**']
+    ignores: ['dist/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'src/fonts-sc.css', 'node_modules/**', 'test-results/**']
   },
   ...tseslint.configs.recommended,
   {

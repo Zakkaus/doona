@@ -1,5 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
-import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from '../features/settings/settings';
+import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from './preferences';
 import type {Translator} from '../i18n';
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import {palettes} from './view';

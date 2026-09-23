@@ -5,11 +5,14 @@ import {useMainSourceEdit} from '../../store/mainSource';
 import {readGroupEntries} from '../../dae/groups';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
+import type {PageProps} from '../../shell/routes';
+import {pickTab, tabQuery} from '../../shell/route';
+import {offered} from '../../api/capabilities';
 
-export function usePolicies(query: string) {
+export function usePolicies({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
-  const groups = useGroups();
-  const nodes = useNodes(resources?.nodes.available === true);
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: true}));
+  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const focus = new URLSearchParams(query).get('group');
   const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
   if (health.from !== nodes.data) {
@@ -61,6 +64,8 @@ export function usePolicies(query: string) {
     refreshNodes();
   }, [refreshGroups, refreshNodes]);
   return {
+    tab: pickTab(query, ['groups', 'arrange'], 'groups'),
+    setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),
     cards,
     focus,
     health: health.map,

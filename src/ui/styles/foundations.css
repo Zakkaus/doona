@@ -76,12 +76,12 @@ body {
 body {
   font:
     14px/20px 'Noto Sans TC',
-    'Noto Sans SC',
     system-ui,
     sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. */
+/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. The other languages
+   leave SC out, so after zh-CN they render as they do after a reload, when the SC faces are not declared. */
 :lang(zh-CN) body,
 body:lang(zh-CN) {
   font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;

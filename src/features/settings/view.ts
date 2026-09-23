@@ -1,9 +1,23 @@
 import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
 import {formatBytes} from '../../api/u64';
-import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Params, type Translator} from '../../i18n';
+import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
 
+// The page's cards in order; `?card=` scrolls to the section with id `settings-{id}`.
+type SettingsCardId = 'backend' | 'runtime' | 'actions' | 'appearance' | 'about';
+export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> = [
+  {id: 'backend', titleKey: 'settings.backend'},
+  {id: 'runtime', titleKey: 'settings.runtime'},
+  {id: 'actions', titleKey: 'settings.actions'},
+  {id: 'appearance', titleKey: 'settings.appearance'},
+  {id: 'about', titleKey: 'settings.about'}
+];
+// A card's heading, which `?card=` scrolls to; search lists the same cards, so the page takes its titles from here.
+export const cardHeadingId = (id: string) => `settings-${id}`;
+export function settingsCard(id: SettingsCardId) {
+  return {headingId: cardHeadingId(id), titleKey: settingsCards.find(card => card.id === id)!.titleKey};
+}
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
@@ -84,13 +98,12 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
         : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
-export function geodataRows(assets: GeoData['assets'], locale: string, now = Date.now()) {
+export function geodataRows(assets: GeoData['assets']) {
   return assets.map(asset => ({
     id: asset.kind,
     kind: asset.kind,
     size: formatBytes(asset.size_bytes),
-    modified: relativeStart(asset.modified_at, locale, now),
-    modifiedTitle: asset.modified_at ? localTime(asset.modified_at, locale) : undefined,
+    modifiedAt: asset.modified_at,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,
     source: asset.source_redacted ?? '—'
@@ -115,4 +128,24 @@ export function profileView(
 }
 export function paletteLabel(sections: Array<{items: Array<{id: string; label: string}>}>, id: string) {
   return sections.flatMap(section => section.items).find(item => item.id === id)?.label ?? id;
+}
+// Why a connection test failed, in the page language; null when the test was cancelled rather than timed out.
+export function probeFailure(
+  error: unknown,
+  signal: Pick<AbortSignal, 'aborted' | 'reason'>,
+  base: string,
+  origin: string
+): {key: Key; params?: Params} | null {
+  if (signal.aborted && (signal.reason as {name?: string} | undefined)?.name === 'TimeoutError') return {key: 'settings.timeout'};
+  if (signal.aborted) return null;
+  if (error instanceof ApiError) {
+    if (error.status === 401) return {key: 'settings.unauthorized'};
+    if (error.code === 'empty_response') return {key: 'settings.nonJson'};
+    if (error.code === 'invalid_discovery') return {key: 'settings.invalidResponse'};
+    return {key: 'settings.httpError', params: {status: error.status}};
+  }
+  if (error instanceof SyntaxError) return {key: 'settings.nonJson'};
+  // Fetch does not distinguish cross-origin network failures from CORS rejection.
+  if (error instanceof TypeError && new URL(base).origin !== origin) return {key: 'settings.cors'};
+  return {key: 'settings.network'};
 }

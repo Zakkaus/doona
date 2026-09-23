@@ -4,6 +4,7 @@ import type {Capabilities, DnsCacheList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
+import {offered} from '../api/capabilities';
 export function dnsLogLimit(capabilities: Capabilities | undefined) {
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
   return advertised === undefined ? undefined : Math.min(200, advertised);
@@ -51,7 +52,7 @@ export function useDnsControl() {
   const api = getApi();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const cache = useDnsCache(!!resources?.dns_cache.available && !!resources.dns_cache.read);
+  const cache = useDnsCache(offered(resources, 'dns_cache', {whileLoading: false}) && !!resources?.dns_cache.read);
   const {refetch} = cache;
   const {busy, error, run} = useAction<string>({rethrow: true});
   return {

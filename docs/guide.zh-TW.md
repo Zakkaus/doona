@@ -75,7 +75,7 @@ doona 沒有供自身介面設定使用的伺服器端儲存空間。組態與�
 | 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                                                                                       |
 | 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                                                                                        |
 | 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                                                                                     |
-| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [settings.ts](../src/features/settings/settings.ts) 的 `PaletteId`                                                                                                 |
+| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [preferences.ts](../src/shell/preferences.ts) 的 `PaletteId`                                                                                                       |
 | 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                                                                           |
 
 儲存的主題與語言在第一幀之前就套用，重新載入不會閃出預設外觀。

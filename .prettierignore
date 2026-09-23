@@ -6,3 +6,4 @@ contract
 node_modules
 pnpm-lock.yaml
 *.html
+src/fonts-sc.css

@@ -1,14 +1,15 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource, useNow} from '../../store';
+import {useCapabilities, useDnsControl, useDnsLog} from '../../store';
+import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery} from '../../ui/ui';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
-import {pickTab, within} from '../../shell/route';
+import {pickTab, within, tabQuery} from '../../shell/route';
 import {queryTypes} from './query';
 import {errorText} from '../../api/error';
 
@@ -25,9 +26,8 @@ export function useDns({go, query}: PageProps) {
   const {busy, error, run} = useAction<'query'>({rethrow: true});
   const resources = capabilities.data?.resources;
   const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
-  const setTab = (tab: string, extra?: Record<string, string>) => {
-    go('dns', within(query, {tab, ...extra}));
-  };
+  // A link that filters the log by domain opens the log, not the statistics.
+  const fallback = params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query');
   const submit = async () => {
     try {
       await run('query', async signal => {
@@ -55,38 +55,38 @@ export function useDns({go, query}: PageProps) {
     error: capabilities.error,
     queryError: error,
     submit: () => void submit(),
-    setTab,
-    // A link that filters the log by domain opens the log, not the statistics.
+    setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !params.has('domain') ? fallback : null)),
     tab: pickTab(
       query,
       view.tabs.map(item => item.id),
-      params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query')
+      fallback
     ),
     filterDomain: params.get('domain') ?? '',
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
     logEnabled: resources?.dns_log.available,
-    viewCache: () => setTab('cache', {domain: result?.domain ?? ''}),
+    viewCache: () => go('dns', within(query, {tab: 'cache', domain: result?.domain ?? ''})),
     clearCacheFilter: () => go('dns', within(query, {tab: 'cache', domain: null}))
   };
 }
 
-export function useDnsCache(domain: string) {
+export function useDnsCacheTab(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const dns = useDnsControl();
   const view = useMemo(
-    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, now),
-    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t, now]
+    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
+    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
   );
-  const remove = async (id: string) => {
-    try {
-      const result = await dns.remove(id);
-      if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
-    } catch (error) {
-      toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}));
-    }
-  };
+  const {remove: removeEntry} = dns;
+  // Stable, so the cache table's columns, which call it, stay the same across polls.
+  const remove = useCallback(
+    (id: string) =>
+      void removeEntry(id).then(
+        result => result && toast('positive', t('dns.deleted', {n: result.deleted})),
+        error => toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}))
+      ),
+    [removeEntry, t]
+  );
   const flush = async () => {
     try {
       const result = await dns.flush();
@@ -101,15 +101,23 @@ export function useDnsCache(domain: string) {
     error: dns.cache.error,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
-    remove: (id: string) => void remove(id),
+    remove,
     flush: () => void flush()
   };
 }
 
-export function useDnsLog(enabled: boolean | undefined, initialName: string) {
+// The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
+export function useDnsStatsTab(enabled: boolean | undefined) {
+  const log = useDnsLog({}, enabled === true);
+  const {cache, capabilities} = useDnsControl();
+  const resources = capabilities.data?.resources;
+  const cacheListed = offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true;
+  return {log, cache: cacheListed ? cache.data : null};
+}
+
+export function useDnsLogTab(enabled: boolean | undefined, initialName: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const now = useNow();
   const [name, setName] = useState(initialName);
   useLinked(initialName, setName);
   const [type, setType] = useState('all');
@@ -118,7 +126,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const capabilities = useCapabilities();
   const filter = {name: useDebounced(name, 300), type, src: ipLiteral(useDebounced(src, 300))};
   const key = JSON.stringify(filter);
-  const log = useDnsLogResource(filter, enabled === true);
+  const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
   const paging = useAction<'older'>({scope: key});
   // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.
@@ -143,7 +151,7 @@ export function useDnsLog(enabled: boolean | undefined, initialName: string) {
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
-  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types, now), [data, enabled, locale, t, types, now]);
+  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types), [data, enabled, locale, t, types]);
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,

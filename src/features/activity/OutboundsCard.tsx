@@ -1,20 +1,12 @@
-import {useMemo} from 'react';
-import {useCapabilities, useRuntimeOutbounds} from '../../store';
-import {LOCALE, useLang, useT} from '../../i18n';
-import {Donut, usePalette} from '../../ui/Charts';
+import {useT} from '../../i18n';
+import {Donut} from '../../ui/charts';
 import {Empty, ErrorMessage, Loading} from '../../ui/ui';
-import {activityOutbounds} from './view';
+import {useOutboundsCard} from './useOutboundsCard';
 
 // Outbound usage polls on its own, so its tick does not re-render the charts beside it.
 export function OutboundsCard() {
   const t = useT();
-  const locale = LOCALE[useLang()];
-  const p = usePalette();
-  const capabilities = useCapabilities();
-  const available = capabilities.data?.resources.runtime_outbounds.available;
-  const outbounds = useRuntimeOutbounds(available === true);
-  const view = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
-  const state = available === false ? 'unavailable' : !outbounds.data ? 'loading' : !view.rows.length ? 'empty' : 'ready';
+  const {view, state, error} = useOutboundsCard();
   return (
     <div className="rp-card">
       <div className="rp-row">
@@ -23,8 +15,8 @@ export function OutboundsCard() {
           {view.since && <span className="rp-label">{view.since}</span>}
         </div>
       </div>
-      {outbounds.error && state !== 'ready' ? (
-        <ErrorMessage error={outbounds.error} />
+      {error && state !== 'ready' ? (
+        <ErrorMessage error={error} />
       ) : state === 'unavailable' ? (
         <div className="rp-chart-wait tall">
           <span className="rp-label">{t('act.noOutbounds')}</span>

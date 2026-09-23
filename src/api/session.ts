@@ -1,4 +1,4 @@
-import {normalizeApi} from './profiles';
+import {normalizeApi, touchStorage} from './profiles';
 
 // A password session belongs to one tab: sessionStorage keeps it across a reload and drops it with the tab.
 // It is bound to the profile and endpoint it was opened for, so switching either never sends it elsewhere.
@@ -23,6 +23,12 @@ export function sessionToken(profileId: string, api: string, now = Date.now()): 
   if (!stored || stored.profileId !== profileId || stored.api !== same(api)) return null;
   return Date.parse(stored.expiresAt) > now ? stored.token : null;
 }
+// When the session serving this profile and endpoint lapses; Infinity when none is still open.
+export function sessionExpiry(profileId: string, api: string, now = Date.now()): number {
+  const stored = read();
+  const expiry = stored && stored.profileId === profileId && stored.api === same(api) ? Date.parse(stored.expiresAt) : NaN;
+  return expiry > now ? expiry : Infinity;
+}
 const same = (api: string) => {
   try {
     return normalizeApi(api);
@@ -33,11 +39,13 @@ const same = (api: string) => {
 
 export function saveSession(profileId: string, api: string, token: string, expiresAt: string) {
   sessionStorage.setItem(KEY, JSON.stringify({profileId, api: normalizeApi(api), token, expiresAt} satisfies Stored));
+  touchStorage();
 }
 
 export function clearSession() {
   try {
     sessionStorage.removeItem(KEY);
+    touchStorage();
   } catch {
     // Unavailable storage holds no session to clear.
   }
