@@ -1,6 +1,6 @@
 import {useEffect, useLayoutEffect, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Transaction} from '@codemirror/state';
 import {
   EditorView,

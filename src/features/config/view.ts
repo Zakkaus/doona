@@ -2,7 +2,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {localTime} from '../../api/selectors';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';

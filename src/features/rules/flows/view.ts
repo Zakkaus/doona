@@ -1,5 +1,5 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
-import type {Key} from '../../../i18n/messages';
+import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
 import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
 import {millis, parseU64} from '../../../api/u64';

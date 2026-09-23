@@ -1,7 +1,7 @@
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect, it} from 'vitest';
 import {LangContext, useT, type Lang, type Params} from './index';
-import type {Key} from './messages';
+import type {Key} from './index';
 
 function Message({messageKey, params}: {messageKey: Key; params: Params}) {
   return useT()(messageKey, params);

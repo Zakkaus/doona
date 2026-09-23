@@ -4,7 +4,7 @@ import {useConfig, useConfigEditor, useSourceComplete} from './config';
 import type {ConfigSource} from '../api/model';
 import {LocalError, errorText} from '../api/error';
 import type {Translator} from '../i18n';
-import type {Key} from '../i18n/messages';
+import type {Key} from '../i18n';
 
 // Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
 export type MainSourceEdit = {

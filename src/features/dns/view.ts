@@ -3,7 +3,7 @@ import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;

@@ -1,6 +1,5 @@
 import ts from 'typescript';
 import {readFileSync, readdirSync} from 'node:fs';
-import {dirname, resolve, relative} from 'node:path';
 
 const languages = ['zh-TW', 'zh-CN', 'en'];
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
@@ -15,12 +14,14 @@ function visit(node, callback) {
   callback(node);
   ts.forEachChild(node, child => visit(child, callback));
 }
+// The generated per-language modules hold every key as a literal, so they are neither sources nor usages.
+const generated = /^src\/i18n\/locales\//;
 const sources = files('src').filter(path => /\.(?:ts|tsx)$/.test(path));
 const references = new Set();
 const literal = new Set(['doona', 'must']);
 let cjkCount = 0;
 const failures = [];
-for (const path of sources.filter(path => !path.endsWith('/messages.ts'))) {
+for (const path of sources.filter(path => !path.endsWith('/messages.ts') && !generated.test(path))) {
   const ast = parse(path);
   const test = /\.test\.tsx?$/.test(path);
   visit(ast, node => {
@@ -51,28 +52,22 @@ for (const path of sources.filter(path => !path.endsWith('/messages.ts'))) {
   });
 }
 
-const merger = parse('src/i18n/messages.ts');
-const imports = new Map();
-let mergedNames = [];
-visit(merger, node => {
-  if (ts.isImportDeclaration(node) && node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
-    for (const specifier of node.importClause.namedBindings.elements) {
-      if ((specifier.propertyName ?? specifier.name).text === 'messages') {
-        imports.set(specifier.name.text, relative(process.cwd(), resolve(dirname(merger.fileName), node.moduleSpecifier.text + '.ts')));
-      }
+const authored = /^src\/(?:shell|ui|features\/[^/]+|features\/[^/]+\/[^/]+)\/messages\.ts$/;
+function generatedKeys(lang) {
+  const path = `src/i18n/locales/${lang}.ts`;
+  let found;
+  visit(parse(path), node => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'messages') {
+      const value = ts.isSatisfiesExpression(node.initializer) ? node.initializer.expression : node.initializer;
+      if (ts.isObjectLiteralExpression(value)) found = value.properties.map(entry => entry.name.text).sort();
     }
-  }
-  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'modules') {
-    const value = ts.isAsExpression(node.initializer) ? node.initializer.expression : node.initializer;
-    if (!ts.isArrayLiteralExpression(value)) throw new Error('The merged modules must be a literal array.');
-    mergedNames = value.elements.map(element => element.getText(merger));
-  }
-});
-const mergedFiles = new Set(mergedNames.map(name => imports.get(name)));
-if (!mergedFiles.size || mergedFiles.has(undefined)) failures.push('src/i18n/messages.ts: cannot resolve the merged message modules');
+  });
+  if (!found) throw new Error(`${path}: expected an exported messages object`);
+  return found;
+}
 const keys = new Set();
 let mismatches = 0;
-for (const path of sources.filter(path => path.endsWith('/messages.ts') && path !== merger.fileName)) {
+for (const path of sources.filter(path => path.endsWith('/messages.ts'))) {
   let catalog;
   const ast = parse(path);
   visit(ast, node => {
@@ -97,10 +92,13 @@ for (const path of sources.filter(path => path.endsWith('/messages.ts') && path 
     failures.push(`${path}: language key sets differ`);
     mismatches++;
   }
-  if (!mergedFiles.has(path)) failures.push(`${path}: message module is not merged`);
+  if (!authored.test(path)) failures.push(`${path}: not read by tools/gen-locales.mjs`);
   else for (const key of expected ?? []) keys.add(key);
   console.log(`${path}: ${expected?.length ?? 0} keys`);
 }
+const all = JSON.stringify([...keys].sort());
+for (const lang of languages)
+  if (JSON.stringify(generatedKeys(lang)) !== all) failures.push(`src/i18n/locales/${lang}.ts: keys differ from the messages.ts sources; run pnpm gen:locales`);
 const unused = [...keys].filter(key => !references.has(key));
 for (const key of unused) failures.push(`Unused message key: ${key}`);
 console.log(`i18n: ${cjkCount} CJK literals, ${unused.length} unused keys, ${mismatches} language key-set mismatches`);

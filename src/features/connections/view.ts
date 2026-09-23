@@ -13,7 +13,7 @@ import {
 } from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../rules/flows/view';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
 import {ruleHref} from '../rules/link';

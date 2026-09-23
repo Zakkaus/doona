@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import {useT, type Params} from '../i18n';
-import type {Key} from '../i18n/messages';
+import type {Key} from '../i18n';
 import {ApiError, errorText} from '../api/error';
 import {discoverAuth, openSession, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';

@@ -10,3 +10,5 @@ if ! diff -u src/api/types.ts "$tmp"; then
   echo 'API types differ from the contract; run pnpm gen:api.' >&2
   exit 1
 fi
+
+node tools/gen-locales.mjs --check

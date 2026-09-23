@@ -26,9 +26,9 @@ export function stampAppearance() {
   applyAppearance(dark, palette, wordmark);
 }
 
-export function Shell() {
+export function Shell({lang: initial}: {lang: Lang}) {
   const {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac} =
-    useShellController();
+    useShellController(initial);
   return (
     <LangContext.Provider value={lang}>
       <I18nProvider locale={LOCALE[lang]}>

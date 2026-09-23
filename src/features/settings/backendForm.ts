@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useT, type Params} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';

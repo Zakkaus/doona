@@ -1,5 +1,5 @@
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
 import {formatNumber, type Translator} from '../../i18n';
 import {millis} from '../../api/u64';

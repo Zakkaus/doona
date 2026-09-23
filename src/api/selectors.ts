@@ -1,4 +1,4 @@
-import type {Key} from '../i18n/messages';
+import type {Key} from '../i18n';
 import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';

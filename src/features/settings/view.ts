@@ -2,7 +2,7 @@ import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, 
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Params, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;

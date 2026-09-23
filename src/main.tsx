@@ -8,16 +8,37 @@ import {initializeApi} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {LangContext, readLang, translate} from './i18n';
+import {LangContext, isLoaded, loadLanguage, readLang, translate, type Lang} from './i18n';
+import {unloaded} from './i18n/unloaded';
 
 stampAppearance();
+// The saved language, or zh-TW when its catalogue cannot be fetched; rejects only when neither loads.
+function startLanguage(): Promise<Lang> {
+  const saved = readLang();
+  return loadLanguage(saved).then(
+    () => saved,
+    error => (saved === 'zh-TW' ? Promise.reject(error) : loadLanguage('zh-TW').then(() => 'zh-TW' as const))
+  );
+}
 let startup: Promise<unknown> | undefined;
+let language: Promise<Lang> | undefined;
 function Startup() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [lang, setLang] = useState<Lang | null>(null);
+  const [unreadable, setUnreadable] = useState(false);
   useEffect(() => {
     let mounted = true;
     startup ??= detectHostedBackend().then(() => initializeApi());
+    language ??= startLanguage();
+    void language.then(
+      loaded => {
+        if (mounted) setLang(loaded);
+      },
+      () => {
+        if (mounted) setUnreadable(true);
+      }
+    );
     void startup.then(
       () => {
         if (mounted) setReady(true);
@@ -30,9 +51,10 @@ function Startup() {
       mounted = false;
     };
   }, []);
-  if (ready) return <Shell />;
+  if (ready && lang) return <Shell lang={lang} />;
+  const [problem, retry] = unloaded[readLang()];
   return (
-    <LangContext.Provider value={readLang()}>
+    <LangContext.Provider value={lang ?? 'zh-TW'}>
       <div className="rp-shell">
         <header className="rp-top">
           <div className="rp-brand">
@@ -41,7 +63,20 @@ function Startup() {
           </div>
         </header>
         <main className="rp-main">
-          <div className="rp-content">{error ? <ErrorMessage error={error} /> : <Loading />}</div>
+          <div className="rp-content">
+            {unreadable ? (
+              <div className="rp-empty" role="alert">
+                <p>{problem}</p>
+                <button type="button" className="rp-btn" onClick={() => location.reload()}>
+                  {retry}
+                </button>
+              </div>
+            ) : lang && error ? (
+              <ErrorMessage error={error} />
+            ) : lang ? (
+              <Loading />
+            ) : null}
+          </div>
         </main>
       </div>
     </LangContext.Provider>
@@ -57,7 +92,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.
   const running = navigator.serviceWorker.controller !== null;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (running) toast('info', translate(readLang(), 'ui.newBuild'));
+    if (!running) return;
+    const lang = readLang();
+    toast('info', translate(isLoaded(lang) ? lang : 'zh-TW', 'ui.newBuild'));
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);

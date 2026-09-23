@@ -1,7 +1,7 @@
 import {useCallback, useDeferredValue, useMemo, useState} from 'react';
 import {useFilter} from 'react-aria-components';
 import {useT} from '../../../i18n';
-import type {Key} from '../../../i18n/messages';
+import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
 import {toast, useLinked} from '../../../ui/ui';

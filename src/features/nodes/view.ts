@@ -3,7 +3,7 @@ import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors
 import type {TableSort} from '../../ui/ui';
 import {urlHost, type SubscriptionEntry} from './subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, formatBytes, millis} from '../../api/u64';
 import {formatDuration, localTime, relativeStart} from '../../api/selectors';

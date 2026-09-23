@@ -1,7 +1,7 @@
 import {ApiError, errorText} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../store/config';

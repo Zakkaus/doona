@@ -3,6 +3,7 @@ import {defineMessages} from '../i18n/defineMessages';
 export const messages = defineMessages({
   'zh-TW': {
     'shell.shortcuts': '鍵盤快捷鍵',
+    'shell.langUnavailable': '無法切換至{name}：介面文字載入失敗。',
     'shell.notOffered': '後端未提供此頁面。',
     'shell.notOfferedShort': '後端未提供',
     'shell.toActivity': '回到活動',
@@ -121,6 +122,7 @@ export const messages = defineMessages({
     'palette.glassName': '玻璃'
   },
   'zh-CN': {
+    'shell.langUnavailable': '无法切换至{name}：界面文字加载失败。',
     'shell.shortcuts': '键盘快捷键',
     'shell.notOffered': '后端未提供此页面。',
     'shell.notOfferedShort': '后端未提供',
@@ -240,6 +242,7 @@ export const messages = defineMessages({
     'palette.glassName': '玻璃'
   },
   en: {
+    'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',
     'shell.shortcuts': 'Keyboard shortcuts',
     'shell.notOffered': 'The backend does not offer this page.',
     'shell.notOfferedShort': 'Not offered by the backend',

@@ -56,6 +56,9 @@ export default defineConfig({
         const files = Object.keys(bundle)
           .filter(name => name === 'index.html' || name.startsWith('assets/'))
           .sort();
+        // A reader needs one language, so the others are not installed up front; the worker caches whichever loads,
+        // as it does fonts and icons. Every file still counts towards the build hash.
+        const precache = files.filter(name => !name.startsWith('assets/locale-'));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
@@ -65,7 +68,7 @@ export default defineConfig({
         this.emitFile({
           type: 'asset',
           fileName: 'sw.js',
-          source: template.replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16)).replace("'__PRECACHE__'", JSON.stringify(files))
+          source: template.replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16)).replace("'__PRECACHE__'", JSON.stringify(precache))
         });
       }
     }
@@ -80,7 +83,9 @@ export default defineConfig({
         index: fileURLToPath(new URL('index.html', import.meta.url))
       },
       output: {
-        chunkFileNames: 'assets/[name]-[hash].js',
+        // Locale catalogues are named apart, so the service worker can leave them out of its precache.
+        chunkFileNames: chunk =>
+          chunk.facadeModuleId && /\/src\/i18n\/locales\//.test(chunk.facadeModuleId) ? 'assets/locale-[name]-[hash].js' : 'assets/[name]-[hash].js',
         manualChunks(id) {
           // clsx and use-sync-external-store are shared by react-aria and recharts; pinned here so the startup code does
           // not pull them from the charts chunk, and with it the whole of recharts.
