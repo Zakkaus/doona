@@ -83,9 +83,11 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',
     status: memberStatus(member, t),
-    description: member.health
-      ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
-      : ' ',
+    // Only an observation other than the usual TCP on the data path says how it was made.
+    description:
+      member.health && (member.health.transport !== 'tcp' || member.health.purpose !== 'data')
+        ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
+        : ' ',
     region: regionOf(member.name) ?? '?'
   }));
 }

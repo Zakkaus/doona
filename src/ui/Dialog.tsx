@@ -289,6 +289,9 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   const t = useT();
   const wide = useMediaQuery(panelQuery);
   const showing = useContext(TabShown) && open;
+  // Shown before in this opening: a kept tab coming back brings its drawer back as it was, without the entrance.
+  const [was, setWas] = useState({showing, open, seen: false});
+  if (was.showing !== showing || was.open !== open) setWas({showing, open, seen: open && (was.seen || was.showing)});
   useEffect(() => {
     if (!showing || !wide) return;
     const on = (e: KeyboardEvent) => {
@@ -315,7 +318,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
       </aside>
     );
   return (
-    <ModalOverlay className="rp-underlay rp-drawer-underlay" isDismissable isOpen onOpenChange={o => !o && onClose()}>
+    <ModalOverlay className={cx('rp-underlay rp-drawer-underlay', was.seen && 'still')} isDismissable isOpen onOpenChange={o => !o && onClose()}>
       <Modal className="rp-modal rp-drawer">
         <Dialog className="rp-dialog" aria-label={title}>
           {head}

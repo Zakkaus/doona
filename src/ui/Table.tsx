@@ -111,9 +111,10 @@ export function fitColumns<C extends {id: string; minWidth: number; drop?: numbe
 export const tableLayout = {rowHeight: 40, headingHeight: 37};
 // A table's height: its rows' height up to `height`, but a table that has shown its full height while loading keeps
 // it, since growing from two rows to full height, or shrinking back when few rows arrive, moves everything below it.
-export function useTableHeight(height: number, count: number, loading?: boolean) {
-  const [reserved, setReserved] = useState(!!loading && !count);
-  if (!reserved && loading && !count) setReserved(true);
+// A short list (`fit`) holds two rows while loading instead and then fits what arrives.
+export function useTableHeight(height: number, count: number, loading?: boolean, fit?: boolean) {
+  const [reserved, setReserved] = useState(!fit && !!loading && !count);
+  if (!fit && !reserved && loading && !count) setReserved(true);
   // Include the border-box frame to avoid a two-pixel scroll on short tables.
   const content = 2 + tableLayout.headingHeight + Math.max(count, 2) * tableLayout.rowHeight;
   return reserved ? height : Math.min(height, content);
@@ -134,7 +135,8 @@ export function DataTable<T extends {id: string}>({
   sort,
   onSort,
   getTextValue,
-  stream
+  stream,
+  fit
 }: {
   label: string;
   cols: TableColumn<T>[];
@@ -154,13 +156,15 @@ export function DataTable<T extends {id: string}>({
   getTextValue?: (row: T) => string;
   // Rows arrive continuously (logs, events): virtualised from the start rather than on crossing a threshold.
   stream?: boolean;
+  // A list of a few rows (sources, data files): no full-height placeholder while it loads.
+  fit?: boolean;
 }) {
   const t = useT();
   // One set per selected key, so the table neither recomputes its selection nor re-renders every row.
   const keys: Selection = useMemo(() => (selected ? new Set([selected]) : new Set()), [selected]);
   const [ref, width] = useContentWidth<HTMLElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
-  const fitted = useTableHeight(height, rows.length, loading);
+  const fitted = useTableHeight(height, rows.length, loading, fit);
   const [virtual, setVirtual] = useState(stream || rows.length >= virtualiseFrom);
   if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
   const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;

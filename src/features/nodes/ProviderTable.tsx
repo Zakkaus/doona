@@ -21,6 +21,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
         loading={m.loading}
         rows={m.rows}
         height={280}
+        fit
         selected={m.selected}
         onSelect={m.onSelect}
         selectOnFocus

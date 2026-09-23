@@ -59,6 +59,10 @@ button.rp-node[data-focus-visible] {
   overflow: auto;
   outline: none;
   border-radius: var(--rp-r-md);
+  /* The last visible row fades out, so a cut tile reads as more to scroll; the padding lets the final row scroll clear
+     of the fade. */
+  padding-bottom: 24px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 .rp-nodegrid .rp-node {
   cursor: default;

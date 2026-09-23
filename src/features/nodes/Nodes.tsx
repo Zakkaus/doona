@@ -35,6 +35,7 @@ export function Nodes(props: PageProps) {
   } = useNodesPage(props);
   const list = (
     <>
+      <p className="rp-note">{t('nodes.note')}</p>
       <ErrorMessage error={error} onRetry={reload} />
       <ProviderTable model={providerTable} />
       <NodeTable model={nodeTable} />
@@ -42,7 +43,6 @@ export function Nodes(props: PageProps) {
   );
   return (
     <div className="rp-page">
-      <p className="rp-note">{t('nodes.note')}</p>
       {measured ? (
         <Tabs
           keepMounted

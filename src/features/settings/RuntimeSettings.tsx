@@ -42,7 +42,7 @@ export function RuntimeSettingsCard() {
           )}
           {m.hasBaseline && (
             <>
-              <div className="rp-toolbar top">
+              <div className="rp-toolbar top rp-fieldgrid">
                 {m.hasLevel && <LabeledSelect label={t('settings.logLevel')} value={m.level} onChange={m.setLevel} items={m.levels} isDisabled={m.busy} />}
                 {m.numeric.map(field => (
                   <TextField
@@ -59,7 +59,7 @@ export function RuntimeSettingsCard() {
                 ))}
               </div>
               {m.recorders.length > 0 && (
-                <div className="rp-toolbar" role="group" aria-label={t('settings.recording')}>
+                <div className="rp-toolbar rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
                   {m.recorders.map(recorder => (
                     <div key={recorder.id} className="rp-field">
                       <LabeledSelect

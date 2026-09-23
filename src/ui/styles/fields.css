@@ -89,3 +89,21 @@
   opacity: 0.4;
   cursor: default;
 }
+/* On a phone a row of settings fields sits in two even columns instead of wrapping to ragged widths. */
+@media (max-width: 599.98px) {
+  .rp-toolbar.rp-fieldgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .rp-fieldgrid > * {
+    width: auto !important;
+    min-width: 0;
+  }
+  .rp-fieldgrid :is(.rp-input, .rp-selectbtn) {
+    width: 100%;
+  }
+  .rp-fieldgrid > .rp-label {
+    grid-column: 1 / -1;
+  }
+}

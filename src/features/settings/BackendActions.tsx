@@ -107,6 +107,7 @@ export function BackendActionsCard() {
             loading={geodataLoading}
             rows={rows}
             height={160}
+            fit
             cols={[
               {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
               {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => asset.size},
@@ -131,14 +132,10 @@ export function BackendActionsCard() {
               {
                 id: 'source',
                 label: t('settings.geodataSource'),
-                // Wide enough for a release URL: the table scrolls sideways rather than cutting the address.
-                minWidth: 640,
+                // A release URL is cut at the column's end; the tooltip gives it whole.
+                minWidth: 240,
                 grow: 2,
-                render: asset => (
-                  <TextTooltip text={asset.source}>
-                    <span className="rp-code">{asset.source}</span>
-                  </TextTooltip>
-                )
+                render: asset => <TextTooltip className="rp-code">{asset.source}</TextTooltip>
               }
             ]}
           />
