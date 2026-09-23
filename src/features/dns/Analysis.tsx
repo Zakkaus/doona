@@ -6,7 +6,7 @@ import {useDnsStatsTab} from './useDns';
 import {Card, Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import type {DnsCacheList, DnsLogRecord} from '../../api/model';
 import {usePalette, Beeswarm, FactStrip, LegendItem, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
-import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './analysis';
+import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
 import {cacheState} from './cache';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';

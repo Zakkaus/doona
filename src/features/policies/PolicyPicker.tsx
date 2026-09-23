@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {LabeledSelect} from '../../ui/ui';
-import {policyChoices} from './policies';
+import {policyChoices} from './policyText';
 
 // How a group chooses among its members; every group editor offers the same choices.
 export function PolicyPicker({value, onChange, isDisabled}: {value: string | null; onChange: (policy: string) => void; isDisabled?: boolean}) {

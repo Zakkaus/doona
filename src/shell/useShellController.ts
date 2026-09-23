@@ -83,7 +83,7 @@ export function useShellController(initial: Lang) {
   useEffect(warmAllPages, []);
   // react-aria tracks elements with a running CSS transition until transitionend or transitioncancel, which a removed
   // element never receives, so a page left mid-transition would keep its detached tree. runAfterTransition drops
-  // disconnected entries first.
+  // disconnected entries first. It is a private export: react-aria is pinned, so recheck this path on upgrade.
   useEffect(() => {
     runAfterTransition(() => {});
   }, [route]);

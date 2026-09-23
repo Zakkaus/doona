@@ -6,7 +6,7 @@ import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {latencyMax, type LatencyBy, type LatencyMissing} from './latency';
+import {latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
 import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;

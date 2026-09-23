@@ -6,7 +6,7 @@ import {word} from '../../../api/labels';
 import {localTime, formatLatency} from '../../../i18n/format';
 import {parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
-import {groupPolicyText} from '../../policies/policies';
+import {groupPolicyText} from '../../policies/policyText';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
 import {href} from '../../../shell/route';

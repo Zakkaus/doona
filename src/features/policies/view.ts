@@ -2,7 +2,7 @@ import {formatLatency} from '../../i18n/format';
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
-import {groupPolicyText} from './policies';
+import {groupPolicyText} from './policyText';
 import {formatNumber, type Translator} from '../../i18n';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';

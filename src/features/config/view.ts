@@ -7,7 +7,7 @@ import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../.
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
-import {policyLabel} from '../policies/policies';
+import {policyLabel} from '../policies/policyText';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 
 // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.

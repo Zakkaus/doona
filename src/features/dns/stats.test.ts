@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {DnsLogRecord} from '../../api/model';
-import {clientAddress, dnsAnalysis, ranked} from './analysis';
+import {clientAddress, dnsAnalysis, ranked} from './stats';
 
 let n = 0;
 const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): DnsLogRecord => {
