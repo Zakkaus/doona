@@ -113,7 +113,7 @@ export function useNodeTable(input: NodeTableInput) {
     setSort,
     groups: [{id: '', label: t('nodes.anyGroup')}, ...groups],
     protocols: [{id: '', label: t('nodes.anyProtocol')}, ...protocols],
-    shown: t('nodes.shown', {n: formatNumber(rows.length, locale), total: formatNumber(nodes.length, locale)}),
+    shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
     label: input.label,
     canManage,

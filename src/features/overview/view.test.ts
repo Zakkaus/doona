@@ -39,6 +39,10 @@ it('shows the version without the runtime and formats counts for the locale', ()
   expect(fields).toContainEqual([t('ov.f.oom'), '12,345']);
   const maps = {state: 'ready' as const, conn_state: {occupancy: 1234, capacity: 65536, occupancy_known: true}};
   expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', t, 'en-US')).toContainEqual([t('ov.f.connState'), '1,234 / 65,536']);
+  // A fraction follows the locale: a full-width slash in Chinese.
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', zh, 'zh-TW')).toContainEqual([zh('ov.f.connState'), '1,234／65,536']);
+  expect(overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.bar?.value).toMatch(/^\S+ \S+／\S+ \S+$/);
 });
 
 it('retains a pending operation even when lifecycle state stops offering it', () => {

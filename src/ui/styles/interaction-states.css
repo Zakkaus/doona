@@ -137,10 +137,15 @@
   cursor: default;
 }
 /* Tiles, tags, the action bar and selected or group rows paint the overlay or the selected tint, where a palette's
-   subtle can fall under 4.5:1: secondary text inside them reads --rp-subtle-text. Names stay bold and secondary lines
+   subtle or a tone can fall under 4.5:1: text inside them reads the tile tokens. Names stay bold and secondary lines
    smaller, so the order holds where that is body text. */
 :is(.rp-node, .rp-tree-tile, .rp-tag, .rp-actionbar, .rp-table [role='row']:is([data-selected], [data-disabled])) {
   --rp-subtle: var(--rp-subtle-text);
+  --rp-accent-text: var(--rp-accent-tile-text);
+  --rp-negative-text: var(--rp-negative-tile-text);
+  --rp-notice-text: var(--rp-notice-tile-text);
+  --rp-positive-text: var(--rp-positive-tile-text);
+  --rp-info-text: var(--rp-info-tile-text);
 }
 /* Group rows are headings, not disabled data: full-strength text on the overlay, the count muted. */
 .rp-table [role='row'][data-disabled] {

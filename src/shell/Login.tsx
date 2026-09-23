@@ -7,11 +7,7 @@ import {href} from './route';
 export function Login({profileId, api, backend, rejected}: {profileId: string; api: string; backend: string; rejected: boolean}) {
   const t = useT();
   const view = useLogin(profileId, api, backend, rejected);
-  const reveal = (
-    <Button quiet onPress={view.toggle}>
-      {view.toggleText}
-    </Button>
-  );
+  const reveal = {shown: view.secretType === 'text', label: view.toggleText, onToggle: view.toggle};
   // A dialog over the shell, as About is: nothing behind it works until the backend accepts the credentials.
   return (
     <ModalDialog isOpen locked narrow hideTitle title={view.title}>
@@ -58,7 +54,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 value={view.token}
                 autoComplete="off"
                 onChange={view.setToken}
-                action={reveal}
+                reveal={reveal}
               />
             ) : (
               <>
@@ -80,7 +76,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                   description={view.kind === 'setup' ? t('login.passwordRule') : undefined}
                   error={view.passwordError}
                   onChange={view.setPassword}
-                  action={reveal}
+                  reveal={reveal}
                 />
                 {view.kind === 'setup' && (
                   <TextField

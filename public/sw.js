@@ -6,11 +6,12 @@ const ROOT = new URL(self.registration.scope);
 // A new build takes over on the next online load, including open dashboard tabs.
 // Each build records when it was installed, so activation can tell the build it replaces from older ones.
 const STAMP = new URL('__installed__', ROOT);
+// Fetched past the HTTP cache, so a caching proxy cannot hand the new build an old shell.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then(cache => Promise.all([cache.addAll(PRECACHE), cache.put(STAMP, new Response(String(Date.now())))]))
+      .then(cache => Promise.all([cache.addAll(PRECACHE.map(url => new Request(url, {cache: 'reload'}))), cache.put(STAMP, new Response(String(Date.now())))]))
       .then(() => self.skipWaiting())
   );
 });

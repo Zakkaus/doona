@@ -120,3 +120,13 @@ test('Cancel on a pending flush reads the cache again, since the flush may alrea
   // The cache polls every 15 s; the empty table must come from the read that Cancel starts.
   await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
 });
+
+test('the cache table fits its entries instead of holding a page of empty space', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries.length;
+  await page.goto('/#/dns?tab=cache');
+  const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Cache', exact: true})});
+  await expect(table.getByRole('rowheader')).toHaveCount(entries);
+  // Border, header and one row per entry; a fill-height table would stay at 442.
+  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries * 40 + 1);
+});

@@ -156,7 +156,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           onAbort={vm.abortFlush}
         />
       </div>
-      <DataTable label={t('ui.cache')} height={442} rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
+      <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
     </>
   );
 }

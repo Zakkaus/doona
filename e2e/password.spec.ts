@@ -70,6 +70,8 @@ test('a first visit creates the administrator and continues with its session', a
     return {want, text: getComputedStyle(error).color, edge: getComputedStyle(input).borderTopColor};
   });
   expect({text: tones.text, edge: tones.edge}).toEqual(tones.want);
+  // An icon carries the error where a palette's negative text is the body colour.
+  await expect(field.locator('.rp-field-error > svg.rp-icon')).toBeVisible();
   expect(state.attempts).toHaveLength(0);
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Create and sign in'}).click()]);
@@ -145,4 +147,27 @@ test('a failed discovery asks to retry instead of guessing the sign-in', async (
   await dialog.getByRole('button', {name: 'Retry', exact: true}).click();
   await expect(dialog.getByRole('heading')).toHaveText('Sign in');
   await expect(dialog.getByLabel('Username', {exact: true})).toBeVisible();
+});
+
+test('the password reveal toggle sits inside the field, answers the keyboard and names its action', async ({page}) => {
+  await passwordBackend(page, true);
+  await page.goto('/#/activity');
+  const form = page.getByRole('dialog');
+  const username = form.getByLabel('Username', {exact: true});
+  const password = form.getByLabel('Password', {exact: true});
+  await password.fill('correct horse battery');
+  // Inside the field, so the password field is as wide as the username field.
+  const [user, pass] = await Promise.all([username.locator('..').boundingBox(), password.locator('..').boundingBox()]);
+  expect(pass!.width).toBe(user!.width);
+  const toggle = password.locator('..').getByRole('button', {name: 'Show password', exact: true});
+  await expect(toggle).toBeVisible();
+  await password.focus();
+  await page.keyboard.press('Tab');
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(form.getByRole('button', {name: 'Hide password', exact: true})).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(form.getByRole('button', {name: 'Show password', exact: true})).toBeVisible();
 });

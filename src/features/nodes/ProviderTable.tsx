@@ -39,7 +39,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
               </span>
             )
           },
-          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 110, grow: 0, drop: 5, render: row => <Badge>{row.kind}</Badge>},
+          {id: 'kind', label: t('nodes.kindLabel'), minWidth: 150, grow: 0, drop: 5, render: row => <Badge>{row.kind}</Badge>},
           {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6, render: row => row.count},
           {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2, render: row => row.usage},
           {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3, render: row => <TimeCell at={row.updatedAt} />},

@@ -59,14 +59,18 @@ export function Beeswarm({
       <div className="rp-chart-hover" ref={tipRef} onPointerLeave={hideTip}>
         {width !== null && (
           <svg width={width} height={height} role="img" aria-label={label} aria-describedby={describedBy}>
-            {ticks.map(tick => (
-              <g key={tick}>
-                <line className="grid" x1={x(tick)} x2={x(tick)} y1={16} y2={height - 18} />
-                <text className="tick" x={x(tick)} y={height - 4} textAnchor="middle">
-                  {fmt(tick)}
-                </text>
-              </g>
-            ))}
+            {ticks.map(tick => {
+              // A label on the track's last stop ends at the chart's edge instead of running past it.
+              const last = x(tick) >= width - inset - 1;
+              return (
+                <g key={tick}>
+                  <line className="grid" x1={x(tick)} x2={x(tick)} y1={16} y2={height - 18} />
+                  <text className="tick" x={last ? width : x(tick)} y={height - 4} textAnchor={last ? 'end' : 'middle'}>
+                    {fmt(tick)}
+                  </text>
+                </g>
+              );
+            })}
             {points.map((point, i) =>
               ys[i] === null || ys[i] === undefined ? null : (
                 <circle

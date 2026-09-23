@@ -1,4 +1,4 @@
-import {test as httpTest, type Page} from '@playwright/test';
+import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {downloadText, expect, test} from './fixtures';
@@ -366,7 +366,12 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   await configBackend(page);
   await page.goto('/#/config');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
-  await modules.getByRole('region', {name: 'routing', exact: true}).getByRole('button', {name: 'Edit by hand', exact: true}).click();
+  const routing = modules.getByRole('region', {name: 'routing', exact: true});
+  // The card's actions share one size; editing by hand differs only in being quiet.
+  const manual = routing.getByRole('button', {name: 'Edit by hand', exact: true});
+  const size = (button: Locator) => button.evaluate(element => getComputedStyle(element).fontSize);
+  expect(await size(manual)).toBe(await size(routing.locator('.rp-cluster > .rp-btn:not(.quiet)').first()));
+  await manual.click();
   await expect(page.getByRole('tab', {name: 'Sources', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/tab=source&source=src-main&line=\d+$/);
   await expect(page.locator('.cm-activeLine')).toContainText('routing {');

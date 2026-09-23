@@ -17,7 +17,7 @@ const source = {id: 'source', content: text} as ConfigSource;
 it('anchors redacted display rules and bare fallbacks by source identity and location', () => {
   const anchor = ruleAnchor(source, rule)!;
   expect(removeRule(text, anchor)).toBe('routing {\n  fallback: direct\n}\n');
-  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback', source: {...rule.source!, line: 3}})!;
+  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback', outbound: 'direct', source: {...rule.source!, line: 3}})!;
   expect(addRule(text, fallback, 'dip(2001:db8::1)', 'direct', false)).toBe(
     'routing {\n  l4proto(tcp, udp) -> mix # keep\n  dip(2001:db8::1) -> direct\n  fallback: direct\n}\n'
   );
@@ -47,4 +47,21 @@ it('links basename-only sources only when the match is unique', () => {
   expect(sourceFor(sources.slice(1), source)?.id).toBe('b');
   expect(sourceFor(sources, {...source, source_id: 'a'})?.id).toBe('a');
   expect(sourceFor(sources, {...source, source_id: 'missing'})).toBeUndefined();
+});
+
+it('removes a rule continued over several lines as a whole and leaves the rest byte-identical', () => {
+  const head = 'routing {\n  pname(a) -> direct\n';
+  const multi = '  domain(suffix: a.com,\n    # mirror\n    suffix: b.com) -> proxy # tail\n';
+  const tail = '  fallback: direct\n}\n';
+  const content = head + multi + tail;
+  const anchor = ruleAnchor({id: 'source', content} as ConfigSource, {...rule, outbound: 'proxy', source: {...rule.source!, line: 3}})!;
+  expect(removeRule(content, anchor)).toBe(head + tail);
+  expect(addRule(content, anchor, 'dip(a)', 'direct', false)).toBe(head + '  dip(a) -> direct\n' + multi + tail);
+});
+
+it('refuses a line that no longer holds the listed rule', () => {
+  const content = 'routing {\n  pname(a) -> direct\n  fallback: direct\n}\n';
+  const listed: RoutingRule = {...rule, expression: 'pname(b)', outbound: 'direct', source: {...rule.source!, line: 2}};
+  expect(ruleAnchor({id: 'source', content} as ConfigSource, listed)).toBeNull();
+  expect(ruleAnchor({id: 'source', content} as ConfigSource, {...listed, expression: 'pname(a)', outbound: 'block'})).toBeNull();
 });

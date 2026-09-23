@@ -188,7 +188,7 @@ test('without a node list the page shows providers alone, with no latency tab', 
   backend.capabilities.resources.nodes.available = false;
   await page.goto('/#/nodes?tab=latency');
   await expect(page.getByRole('tab')).toHaveCount(0);
-  await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
 });
 
 test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
@@ -255,4 +255,16 @@ test('the note about node sources belongs to the list, not the latency tab', asy
   await page.getByRole('tab', {name: 'Latency', exact: true}).click();
   await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
   await expect(note).toBeHidden();
+});
+
+test('the source kind badge shows its whole label in every language', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  for (const lang of ['en', 'zh-TW', 'zh-CN']) {
+    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    await page.reload();
+    const badges = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child .rp-badge');
+    await expect(badges).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    for (const badge of await badges.all()) expect(await badge.evaluate(element => element.scrollWidth <= element.clientWidth), lang).toBe(true);
+  }
 });

@@ -56,7 +56,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   });
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
   await expect.poll(() => Object.keys(counts).sort()).toEqual(Object.keys(responses).sort());
   // Resources gated on capabilities start a moment after it lands; wait until the counts stop moving.
   await expect

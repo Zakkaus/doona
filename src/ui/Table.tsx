@@ -115,8 +115,8 @@ export const tableLayout = {rowHeight: 40, headingHeight: 37};
 export function useTableHeight(height: number, count: number, loading?: boolean, fit?: boolean) {
   const [reserved, setReserved] = useState(!fit && !!loading && !count);
   if (!fit && !reserved && loading && !count) setReserved(true);
-  // Include the border-box frame to avoid a two-pixel scroll on short tables.
-  const content = 2 + tableLayout.headingHeight + Math.max(count, 2) * tableLayout.rowHeight;
+  // Include the border-box frame to avoid a two-pixel scroll on short tables. Two rows hold the empty or loading message.
+  const content = 2 + tableLayout.headingHeight + (count || 2) * tableLayout.rowHeight;
   return reserved ? height : Math.min(height, content);
 }
 const virtualiseFrom = 40;
@@ -156,7 +156,7 @@ export function DataTable<T extends {id: string}>({
   getTextValue?: (row: T) => string;
   // Rows arrive continuously (logs, events): virtualised from the start rather than on crossing a threshold.
   stream?: boolean;
-  // A list of a few rows (sources, data files): no full-height placeholder while it loads.
+  // A list that is often short (sources, data files, the DNS cache, events): no full-height placeholder while it loads.
   fit?: boolean;
 }) {
   const t = useT();

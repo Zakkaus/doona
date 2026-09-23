@@ -107,7 +107,7 @@ function PolicyDetail(props: PolicyGroupInput) {
               </Switch>
             )}
           </div>
-          <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} isDisabled={m.busy} onSelect={m.select} />
+          <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />
         </>
       )}
     </>

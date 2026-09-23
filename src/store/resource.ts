@@ -89,6 +89,25 @@ function forget(store: Store, name: string) {
   store.parameterised.delete(name);
 }
 
+// A 401 on any read means the backend no longer accepts this tab's credentials, such as a session it revoked
+// before its expiry; the shell asks for them again. Signing in reloads the page, which forgets the refusal.
+const refusals = new WeakMap<Api, ApiError>();
+const refusalListeners = new Set<() => void>();
+export function refuseCredentials(api: Api, error: unknown) {
+  if (!(error instanceof ApiError) || error.status !== 401 || refusals.has(api)) return;
+  refusals.set(api, error);
+  refusalListeners.forEach(notify => notify());
+}
+export const credentialRefusal = (api: Api): ApiError | null => refusals.get(api) ?? null;
+export function useCredentialRefusal(): ApiError | null {
+  const api = getApi();
+  const subscribe = useCallback((notify: () => void) => {
+    refusalListeners.add(notify);
+    return () => void refusalListeners.delete(notify);
+  }, []);
+  return useSyncExternalStore(subscribe, () => credentialRefusal(api));
+}
+
 export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => void, name = normalizeResourceKey(resource.key)) {
   const store = ensureStore(api);
   let entry = store.active.get(name);
@@ -229,6 +248,7 @@ function createWatcher<T>(
           }
         }
         failure = error;
+        refuseCredentials(api, error);
         publish({data, loading: false, error});
         finish({key: name, ok: false, error});
         if (retryErrors && !(error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429)) {

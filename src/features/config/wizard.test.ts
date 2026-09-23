@@ -237,3 +237,15 @@ it('names a new subscription after the first free sub-N', () => {
     ])
   ).toBe('sub-4');
 });
+
+it('reads the option after a quoted subscription URL apart from the URL', () => {
+  const [sub] = readState("subscription {\n  a: 'https://x.example/sub'(clash)\n}\n").subscriptions;
+  expect([sub.url, sub.suffix]).toEqual(['https://x.example/sub', '(clash)']);
+});
+
+it('keeps the option after a subscription URL when the URL is edited', () => {
+  const text = "subscription {\n  a: 'https://x.example/sub'(clash)\n}\n";
+  const [sub] = readState(text).subscriptions;
+  const out = writeState(text, {...readState(text), subscriptions: [{...sub, url: 'https://y.example/sub', raw: undefined}]});
+  expect(out).toBe("subscription {\n  a: 'https://y.example/sub'(clash)\n}\n");
+});

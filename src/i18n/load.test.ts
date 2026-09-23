@@ -28,3 +28,9 @@ it('can ask again after a failed load', async () => {
   await i18n.loadLanguage('en');
   expect(i18n.isLoaded('en')).toBe(true);
 });
+
+it('falls back to a loaded language when the saved one has not loaded', async () => {
+  const i18n = await import('./index');
+  await i18n.loadLanguage('en');
+  expect(i18n.loadedLang('zh-CN')).toBe('en');
+});

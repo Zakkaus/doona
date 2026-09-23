@@ -1,5 +1,5 @@
 import {createContext, useCallback, useContext, useMemo, useRef, useState} from 'react';
-import {refetchAll, useCapabilities, useVersion} from '../store';
+import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useT} from '../i18n';
 import {toast} from '../ui/ui';
@@ -12,12 +12,14 @@ export function useShell(settings: Settings, route: string): ShellModel {
   const t = useT();
   const capabilities = useCapabilities();
   const version = useVersion();
+  const refusal = useCredentialRefusal();
+  const capabilityError = capabilities.error ?? refusal;
   const [spinning, setSpinning] = useState(false);
   const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
   const view = useMemo(
-    () => shellView(settings, route, capabilities.data, capabilities.error, version.data, version.error, t),
-    [settings, route, capabilities.data, capabilities.error, version.data, version.error, t]
+    () => shellView(settings, route, capabilities.data, capabilityError, version.data, version.error, t),
+    [settings, route, capabilities.data, capabilityError, version.data, version.error, t]
   );
   const refresh = useCallback(async () => {
     if (refreshLock.current) return;

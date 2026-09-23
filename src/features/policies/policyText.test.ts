@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {translate, type Translator} from '../../i18n';
-import {groupPolicyText, policyChoices, policyLabel} from './policyText';
+import {groupEditSafe, groupPolicyText, policyChoices, policyLabel} from './policyText';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('names offered policies in words and keeps any other as written', () => {
@@ -22,4 +22,10 @@ it('names a live policy the picker does not offer by its kind, with the engine s
   expect(groupPolicyText({kind: 'selector', native: 'fixed(0)'}, t)).toEqual({label: t('policy.kind.selector'), id: 'fixed(0)'});
   expect(groupPolicyText({kind: 'urltest', native: 'min_moving_avg'}, t)).toEqual({label: t('arrange.policy.fastest'), id: 'min_moving_avg'});
   expect(groupPolicyText({kind: 'fallback', native: ''}, t)).toEqual({label: t('policy.kind.fallback'), id: 'fallback'});
+});
+
+it('accepts an unchanged multi-line filter and checks only edited values', () => {
+  const entry = {filters: ['name(a,\n  b)'], policy: 'select'};
+  expect(groupEditSafe(['name(a,\n  b)'], 'select', entry)).toBe(true);
+  expect(groupEditSafe(['name(a) # x'], 'select', entry)).toBe(false);
 });

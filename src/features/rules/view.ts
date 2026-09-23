@@ -1,14 +1,14 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
-import {isFragment} from '../../dae/text';
+import {isFragment, scanConfig} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
 import {coverageView, type CoverageView} from './flows/view';
 import {word} from '../../api/labels';
-import {sourceFor} from './source';
+import {ruleAnchor, sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
@@ -78,8 +78,15 @@ export function dictionaryView(
     if (!byFile.has(source.file)) byFile.set(source.file, sourceFor(config, source));
     return byFile.get(source.file);
   };
-  const rows = rules.map(rule => {
+  // Only a rule doona can locate in its source is offered for removal or as an insertion point.
+  const scans = new Map<string, ReturnType<typeof scanConfig>>();
+  const anchored = (rule: RoutingRule) => {
     const source = byId.get(rule.source?.source_id ?? '');
+    if (!source?.writable || source.content === undefined) return false;
+    if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
+    return ruleAnchor(source, rule, scans.get(source.id)) !== null;
+  };
+  const rows = rules.map(rule => {
     const linked = resolve(rule.source);
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
     return {
@@ -90,22 +97,18 @@ export function dictionaryView(
       must: rule.must,
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
-      removable: rule.kind === 'rule' && !!source?.writable && source.content !== undefined,
+      removable: rule.kind === 'rule' && anchored(rule),
       sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
   });
-  const writable = (rule: RoutingRule) => {
-    const source = byId.get(rule.source?.source_id ?? '');
-    return !!source?.writable && source.content !== undefined;
-  };
   const fallback = rules.find(rule => rule.kind === 'fallback');
   return {
     rows,
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: formatNumber(rules.length, locale), generation}) : null,
     positions: [
-      ...(fallback && writable(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+      ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
       ...rules
-        .filter(rule => rule.kind === 'rule' && writable(rule))
+        .filter((_, i) => rows[i].removable)
         .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
     ],
     outbounds: [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}))
@@ -157,15 +160,25 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
 }
 // A typed condition: a call like `domain(...)`, no outbound of its own, and nothing that escapes its line.
 const rawCondition = (raw: string) => /\w\(/.test(raw) && !raw.includes('->') && isFragment(raw);
-export type RuleDraftView = {choices: Choice[]; hint: string; preview: string | null; mode: string; valid: boolean; rawInvalid: boolean};
-export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string, raw: string, t: Translator) {
+export type RuleDraftView = {
+  choices: Choice[];
+  hint: string;
+  preview: string | null;
+  mode: string;
+  valid: boolean;
+  rawInvalid: boolean;
+  pickError: string | undefined;
+};
+export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string | null, raw: string, t: Translator) {
+  const picked = value.trim() !== '';
   return {
     choices: conditionKinds.map(id => ({id, label: t(kindLabels[id])})),
     hint: kindHints[kind],
-    preview: on && value.trim() ? condition : null,
+    preview: on && picked ? condition : null,
     mode: on ? 'pick' : 'text',
-    valid: on ? value.trim() !== '' : rawCondition(raw),
-    rawInvalid: raw !== '' && !rawCondition(raw)
+    valid: on ? picked && condition !== null : rawCondition(raw),
+    rawInvalid: raw !== '' && !rawCondition(raw),
+    pickError: picked && condition === null ? t('rule.valuesInvalid') : undefined
   };
 }
 export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Translator) {

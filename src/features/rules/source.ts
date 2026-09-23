@@ -1,5 +1,5 @@
 import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
-import {scanConfig} from '../../dae/text';
+import {scanConfig, uncomment} from '../../dae/text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -10,18 +10,29 @@ export function sourceFor(list: ConfigSource[], source: RuleSource | null | unde
 
 export type RuleAnchor = {from: number; to: number; indent: string; text: string};
 
-export function ruleAnchor(source: ConfigSource, rule: RoutingRule): RuleAnchor | null {
+export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
   if (!rule.source?.source_id || rule.source.source_id !== source.id || source.content === undefined) return null;
   const text = source.content;
-  const line = rule.source.line - 1;
-  const {blocks, tokens} = scanConfig(text);
-  const actual = tokens.filter(token => token.line === line && token.kind !== 'comment');
-  if (!actual.length) return null;
+  let line = rule.source.line - 1;
+  const {blocks, tokens} = scan ?? scanConfig(text);
+  const start = tokens.findIndex(token => token.line === line && token.kind !== 'comment');
+  if (start === -1 || tokens[start].parens !== 0) return null;
+  // A rule continues onto later lines while its parentheses stay open.
+  const actual = [];
+  for (let i = start; i < tokens.length && (tokens[i].line === line || tokens[i].parens > 0); i++) {
+    if (tokens[i].kind !== 'comment') actual.push(tokens[i]);
+    if (tokens[i].line !== line) line = tokens[i].line;
+  }
   const first = actual[0];
   const last = actual.at(-1)!;
   if (!blocks.some(block => block.name === 'routing' && first.from > block.open && last.to <= block.close && first.depth === 1)) return null;
   const fallback = actual.length >= 3 && text.slice(first.from, first.to) === 'fallback' && text.slice(actual[1].from, actual[1].to) === ':';
   if ((rule.kind === 'fallback') !== fallback) return null;
+  // The line must still hold this rule: a source shifted since the list was read would otherwise edit its neighbour.
+  const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
+  const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
+  if (!arrow || bare(arrow.to, last.to) !== (rule.outbound + (rule.must ? '(must)' : '')).replace(/\s+/g, '')) return null;
+  if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== rule.expression.replace(/\s+/g, '')) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
   const to = newline === -1 ? text.length : newline + 1;

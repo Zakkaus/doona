@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText} from './view';
+import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText, selectedProvider} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';
@@ -202,4 +202,10 @@ it('does not authorize writes from shared-host guesses or conflicting node tags'
   const unspecified = providerRowView(provider('a'), null, 'en-US', t);
   expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
   expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+});
+
+it('falls back to the first real source when the linked provider is no longer listed', () => {
+  const {list} = providerRows([provider('a'), provider('b')], [], [], t);
+  expect(selectedProvider(list, 'b')).toBe('b');
+  expect(selectedProvider(list, 'gone')).toBe('a');
 });

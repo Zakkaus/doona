@@ -1,4 +1,5 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
+import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
 
@@ -12,7 +13,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^\d+ cache entries; this backend does not provide a capacity limit$/)).toBeVisible();
+  await expect(page.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
@@ -63,4 +64,43 @@ test('the log heatmap sits above the list and sets the minimum level from a row'
   await page.getByRole('button', {name: 'Show Warning and above'}).click();
   await expect(page.getByRole('group', {name: 'Log activity over time'}).getByText('Info', {exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: /Level$/})).toContainText('Warning');
+});
+
+test('the DNS cache card reads usage from one entry and says only what the backend reports', async ({page}) => {
+  const backend = await mockBackend(page);
+  const card = page.getByRole('region', {name: 'Cache', exact: true});
+  await page.goto('/#/dns');
+  await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+  await expect(card.getByText('Usage', {exact: true})).toBeVisible();
+  const listings = backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/dns/cache'));
+  // Every read asks for one entry: the card never walks the whole cache, however often it refreshes.
+  const limits = listings.map(request => new URL(request.url()).searchParams.get('limit'));
+  expect(limits.length).toBeGreaterThan(0);
+  expect(new Set(limits)).toEqual(new Set(['1']));
+  // A backend that predates usage reporting gets no capacity claim.
+  backend.handlers['GET dns/cache'] = async () => {
+    const {usage: _, ...list} = await backend.api.dnsCache({limit: 1});
+    return list;
+  };
+  await page.reload();
+  await expect(card.getByText(/^\d+ cache entries; this backend does not provide a capacity limit$/)).toBeVisible();
+  await expect(card.getByText('Usage', {exact: true})).toHaveCount(0);
+  // A refused listing leaves the card unavailable rather than failed.
+  backend.handlers['GET dns/cache'] = async () => {
+    throw new ApiError(503, 'unavailable', 'DNS cache unavailable');
+  };
+  await page.reload();
+  await expect(card.getByText('This backend does not provide a cache listing', {exact: true})).toBeVisible();
+});
+
+test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/dns');
+  const chart = page.getByRole('img', {name: /^Upstream latency \(\d+ lookups\)$/});
+  await expect(chart).toBeVisible();
+  const overflow = await chart.evaluate(svg => {
+    const edge = svg.getBoundingClientRect().right;
+    return Math.max(...[...svg.querySelectorAll('text.tick')].map(tick => tick.getBoundingClientRect().right - edge));
+  });
+  expect(overflow).toBeLessThanOrEqual(0);
 });

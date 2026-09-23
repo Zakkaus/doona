@@ -2691,6 +2691,18 @@ export interface components {
             entries: components["schemas"]["DnsCacheEntry"][];
             total: components["schemas"]["SafeUInt"];
             next_cursor: string | null;
+            /** @description Absent from servers that predate cache usage reporting. */
+            usage?: components["schemas"]["DnsCacheUsage"];
+        };
+        /** @description Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. */
+        DnsCacheUsage: {
+            entries: components["schemas"]["UInt64"];
+            /** @description Effective entry limit after the engine applies its bounds. */
+            entry_capacity: components["schemas"]["UInt64"];
+            /** @description Retained query and response wire bytes. */
+            wire_bytes: components["schemas"]["UInt64"];
+            /** @description Effective wire-byte budget after the engine applies its bounds. */
+            wire_byte_capacity: components["schemas"]["UInt64"];
         };
         DnsLogRecord: {
             /** @description Opaque, unique within the running instance; the cursor is derived from it. */

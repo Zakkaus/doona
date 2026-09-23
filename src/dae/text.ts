@@ -134,7 +134,7 @@ export function blockFields(text: string, block: TextBlock, tokens: TextToken[])
     const token = tokens[i];
     if (token.from <= block.open || token.from >= block.close) continue;
     const raw = text.slice(token.from, token.to);
-    if (token.kind === 'comment' || (field && token.parens === 0 && text.slice(field.valueTo, token.from).includes('\n'))) field = undefined;
+    if (token.parens === 0 && (token.kind === 'comment' || (field && text.slice(field.valueTo, token.from).includes('\n')))) field = undefined;
     if (token.depth !== block.depth + 1 || token.kind === 'comment') continue;
     const next = tokens[i + 1];
     if (token.parens === 0 && (token.kind === 'text' || token.kind === 'quoted') && next && text.slice(next.from, next.to) === ':') {

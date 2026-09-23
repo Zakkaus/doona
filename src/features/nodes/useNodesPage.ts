@@ -9,7 +9,7 @@ import {isBareName} from '../../dae/text';
 import {groupNameError, newGroupPolicies} from '../policies/policyText';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
-import {ownedNodes, providerRows} from './view';
+import {ownedNodes, providerRows, selectedProvider} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
@@ -60,8 +60,7 @@ export function useNodesPage({go, query}: PageProps) {
   const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
-  // Default to the first real source: the built-in and unattributed rows only lead when nothing else exists.
-  const selectedId = params.get('provider') ?? (list.find(item => item.kind !== 'builtin' && item.kind !== 'unattributed') ?? list[0])?.id ?? null;
+  const selectedId = selectedProvider(list, params.get('provider'));
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
     const owner = list.find(item => item.id === selectedId);

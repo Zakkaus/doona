@@ -1,4 +1,4 @@
-import {blockFields, isBareName, quote, scanConfig, unquote} from './text';
+import {blockFields, isBareName, isFragment, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextField} from './text';
 
 export type GroupEntry = {
   name: string;
@@ -27,6 +27,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
 }
 
 export const quoteName = (value: string) => (isBareName(value) ? value : quote(value));
+export const isWritableName = (value: string) => isBareName(value) || isQuotable(value);
 
 // doona creates groups only under bare names, so a new name never needs quoting where filters or rules cite it.
 export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'invalid' | 'taken' | null {
@@ -45,19 +46,12 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
     const bodyStart = entry.open + 1;
     const old = text.slice(bodyStart, entry.close);
     const inner = old.match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent || '    ');
+    if (entry.line !== entry.endLine) return rewriteFields(text, entry, fields, inner, next);
+    // A one-line entry is spread over lines, other fields after filters and policy.
     let kept = old;
-    for (const field of fields.filter(field => field.name === 'filter' || field.name === 'policy').reverse()) {
-      let from = field.from - bodyStart;
-      let to = field.to - bodyStart;
-      const start = old.lastIndexOf('\n', from - 1) + 1;
-      const end = old.indexOf('\n', to);
-      if (/^[ \t\r]*$/.test(old.slice(start, from)) && end !== -1 && /^[ \t\r]*$/.test(old.slice(to, end))) {
-        from = start;
-        to = end + 1;
-      }
-      kept = kept.slice(0, from) + kept.slice(to);
-    }
-    const rest = entry.line === entry.endLine ? (kept.trim() ? `${inner}${kept.trim()}\n` : '') : kept.replace(/^[ \t\r]*\n/, '').replace(/[ \t\r]*$/, '');
+    for (const field of fields.filter(field => field.name === 'filter' || field.name === 'policy').reverse())
+      kept = kept.slice(0, field.from - bodyStart) + kept.slice(field.to - bodyStart);
+    const rest = kept.trim() ? `${inner}${kept.trim()}\n` : '';
     const body = [...next.filters.map(filter => `${inner}filter: ${filter}`), ...(next.policy ? [`${inner}policy: ${next.policy}`] : [])];
     const replacement = '\n' + (body.length ? body.join('\n') + '\n' : '') + rest + indent;
     return text.slice(0, bodyStart) + replacement + text.slice(entry.close);
@@ -76,6 +70,40 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
     return text.slice(0, at) + (text[at - 1] === '\n' ? '' : '\n') + body + '\n' + text.slice(at);
   }
   return `${text.replace(/\n+$/, '')}\n\ngroup {\n${body}\n}\n`;
+}
+
+// Changes the filter and policy fields where they stand, so comments and other fields keep their place.
+function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inner: string, next: {filters: string[]; policy: string | null}): string {
+  const filters = fields.filter(field => field.name === 'filter');
+  const policies = fields.filter(field => field.name === 'policy');
+  const edits: Array<{from: number; to: number; text: string}> = [];
+  const lineEnd = (at: number) => text.indexOf('\n', at) + 1;
+  const remove = (field: TextField) => {
+    const start = text.lastIndexOf('\n', field.from - 1) + 1;
+    const end = lineEnd(field.to);
+    const whole = /^[ \t\r]*$/.test(text.slice(start, field.from)) && end > 0 && /^[ \t\r]*$/.test(text.slice(field.to, end - 1));
+    edits.push(whole ? {from: start, to: end, text: ''} : {from: field.from, to: field.to, text: ''});
+  };
+  const replace = (field: TextField, value: string) => {
+    if (field.value === value) return;
+    const lead = /^\s*/.exec(text.slice(field.valueFrom, field.valueTo))![0];
+    edits.push({from: field.valueFrom + lead.length, to: field.valueTo, text: (lead ? '' : ' ') + value});
+  };
+  filters.forEach((field, i) => (i < next.filters.length ? replace(field, next.filters[i]) : remove(field)));
+  policies.slice(0, -1).forEach(remove);
+  if (policies.length) {
+    if (next.policy) replace(policies.at(-1)!, next.policy);
+    else remove(policies.at(-1)!);
+  }
+  const added = [
+    ...next.filters.slice(filters.length).map(filter => `${inner}filter: ${filter}\n`),
+    ...(next.policy && !policies.length ? [`${inner}policy: ${next.policy}\n`] : [])
+  ].join('');
+  if (added) {
+    const at = filters.length ? lineEnd(filters.at(-1)!.to) : policies.length ? text.lastIndexOf('\n', policies[0].from - 1) + 1 : lineEnd(entry.open);
+    edits.push({from: at, to: at, text: added});
+  }
+  return edits.sort((a, b) => b.from - a.from || b.to - a.to).reduce((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), text);
 }
 
 // Only a filter line that is exactly one plain call can be extended without changing filter semantics: filter
@@ -258,11 +286,17 @@ export const applyChanges = (text: string, changes: GroupChange[]) => changes.re
 
 export type ConditionKind = 'domain' | 'domainSuffix' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
 export const conditionKinds: ConditionKind[] = ['domainSuffix', 'domain', 'geosite', 'dip', 'geoip', 'sip', 'dport', 'sport', 'pname', 'l4proto'];
-export function ruleCondition(kind: ConditionKind, value: string): string {
+// Null when the values cannot be written as one condition, such as `a) # x` or an apostrophe that needs quoting.
+export function ruleCondition(kind: ConditionKind, value: string): string | null {
   const values = value
     .split(/[,\s]+/)
     .map(v => v.trim())
     .filter(Boolean);
+  if (values.some(v => v.includes(':') && !isQuotable(v))) return null;
+  const condition = conditionText(kind, values);
+  return isFragment(condition) && !condition.includes('->') ? condition : null;
+}
+function conditionText(kind: ConditionKind, values: string[]): string {
   // A value with a colon (an IPv6 range) is quoted, as the presets write 'ff00::/8'; bare, dae reads it as a key.
   const list = values.map(v => (v.includes(':') ? quote(v) : v)).join(', ');
   const qualified = (prefix: string) => values.map(value => `${prefix}: ${value}`).join(', ');

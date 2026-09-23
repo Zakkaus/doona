@@ -50,11 +50,21 @@
 .rp-toolbar.top > .rp-field-row {
   margin-top: 20px;
 }
-/* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge. */
+/* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge.
+   The icon and weight carry it where a palette's negative text is the body colour. */
 .rp-field-error {
+  display: flex;
+  gap: 4px;
   font-size: 12px;
   line-height: 16px;
+  font-weight: 500;
   color: var(--rp-negative-text);
+}
+.rp-field-error > .rp-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
 }
 :is(.rp-field, .rp-cluster)[data-invalid] .rp-input {
   border-color: var(--rp-negative);

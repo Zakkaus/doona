@@ -124,6 +124,8 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     name: g.name,
     policy: groupPolicyText(g.policy, t),
     selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
+    // Both networks on different members: neither is the selection, so each is marked with the network it carries.
+    marks: network === 'both' && tcp && udp && tcp !== udp ? {[tcp]: t('ui.tcp'), [udp]: t('ui.udp')} : ({} as Record<string, string>),
     selectable,
     overridable,
     pinned,

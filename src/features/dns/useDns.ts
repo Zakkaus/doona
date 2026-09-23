@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsControl, useDnsLog} from '../../store';
+import {useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
@@ -11,7 +11,8 @@ import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
 import {queryTypes} from './query';
-import {errorText} from '../../api/error';
+import {ApiError, errorText} from '../../api/error';
+import {cacheCard} from './cache';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -114,10 +115,35 @@ export function useDnsCacheTab(domain: string) {
 // The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
 export function useDnsStatsTab(enabled: boolean | undefined) {
   const log = useDnsLog({}, enabled === true);
-  const {cache, capabilities} = useDnsControl();
-  const resources = capabilities.data?.resources;
-  const cacheListed = offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true;
-  return {log, cache: cacheListed ? cache.data : null};
+  const resources = useCapabilities().data?.resources;
+  return {log, cacheListed: offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true};
+}
+
+// The cache card reads usage once a minute while it is near the viewport; off screen or in a hidden tab it keeps its
+// last reading. A 503 means the backend has no cache to list right now, which the card shows as unavailable.
+export function useDnsCacheCard(listed: boolean) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const [near, setNear] = useState(false);
+  const ref = useCallback((element: HTMLElement | null) => {
+    if (!element) return;
+    const observer = new IntersectionObserver(entries => setNear(entries.at(-1)!.isIntersecting), {rootMargin: '400px'});
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  // Paused only once it has a reading to keep showing; before that it loads wherever it is.
+  const [loaded, setLoaded] = useState(false);
+  const usage = useDnsCacheUsage(listed, !near && loaded);
+  if (usage.data && !loaded) setLoaded(true);
+  const card = useMemo(() => cacheCard(usage.data, locale, t), [usage.data, locale, t]);
+  const refused = usage.error instanceof ApiError && usage.error.status === 503;
+  return {
+    ref,
+    card,
+    state: !listed || (refused && !usage.data) ? ('unavailable' as const) : card ? ('ready' as const) : usage.error ? ('error' as const) : ('loading' as const),
+    error: usage.error,
+    retry: usage.refetch
+  };
 }
 
 export function useDnsLogTab(enabled: boolean | undefined, initialName: string) {
