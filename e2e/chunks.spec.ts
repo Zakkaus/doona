@@ -177,3 +177,38 @@ test('a search dialog that fails to load leaves nothing open and says so', async
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.rp-alert')).toHaveCount(0);
 });
+
+test('pressing Control inside a field loads the search dialog', async ({page}) => {
+  await page.addInitScript(() => {
+    window.requestIdleCallback = () => 0;
+  });
+  await page.goto('/#/settings');
+  await page.locator('[name=api]').focus();
+  const requested = page.waitForRequest(/\/SearchDialog-[^/]+\.js$/);
+  await page.keyboard.down('Control');
+  await requested;
+  await page.keyboard.up('Control');
+});
+
+test('Escape while the search dialog loads keeps it from opening late', async ({page}) => {
+  await page.addInitScript(() => {
+    window.requestIdleCallback = () => 0;
+  });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/assets/SearchDialog-*.js', async route => {
+    await gate;
+    await route.fallback();
+  });
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-strip')).toBeVisible();
+  const loaded = page.waitForResponse(/\/SearchDialog-[^/]+\.js$/);
+  await page.keyboard.press('Control+K');
+  await page.keyboard.press('Escape');
+  release();
+  await loaded;
+  await page.waitForTimeout(300);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('Control+K');
+  await expect(page.getByRole('dialog')).toBeVisible();
+});

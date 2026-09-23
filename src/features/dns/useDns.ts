@@ -104,7 +104,8 @@ export function useDnsCacheTab(domain: string) {
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
     remove,
-    flush
+    flush,
+    abortFlush: dns.cancel
   };
 }
 
@@ -151,6 +152,14 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
       );
       if (!signal.aborted) setHeld(appendDnsLog(data, page));
     });
+  const refresh = () => {
+    paging.cancel();
+    setHeld(null);
+    const done = log.refetch();
+    if (!done) return;
+    setRefreshing(true);
+    void done.finally(() => setRefreshing(false));
+  };
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
@@ -176,14 +185,9 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     loadingOlder: !!paging.busy,
     loadOlder,
     refreshing,
-    refresh: () => {
-      paging.cancel();
-      setHeld(null);
-      const done = log.refetch();
-      if (!done) return;
-      setRefreshing(true);
-      void done.finally(() => setRefreshing(false));
-    },
+    refresh,
+    // A failed page of older records retries that page; refreshing would drop the pages already loaded.
+    retry: paging.error ? loadOlder : refresh,
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')
   };
 }

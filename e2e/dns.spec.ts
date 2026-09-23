@@ -1,5 +1,6 @@
 import {downloadText, expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
 import {test as browserTest} from '@playwright/test';
 
 test('a resolution record opens beside the log with its answers', async ({page}) => {
@@ -210,4 +211,34 @@ test('the resolution log refresh shows its request pending', async ({page}) => {
   await expect(refresh).toHaveAttribute('data-pending');
   release();
   await expect(refresh).not.toHaveAttribute('data-pending');
+});
+
+test('Retry after a failed older page asks for that page again and keeps the loaded records', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 2;
+  const seed = await api.dnsLog();
+  const record = seed.records[0];
+  let fail = true;
+  const cursors: string[] = [];
+  handlers['GET dns/log'] = async request => {
+    const cursor = new URL(request.url()).searchParams.get('cursor');
+    if (cursor) {
+      cursors.push(cursor);
+      if (fail) throw new ApiError(500, 'internal', 'Older records unavailable');
+    }
+    const ids = cursor ? ['d2', 'd1'] : ['d4', 'd3'];
+    return {...seed, records: ids.map(id => ({...record, id, question: {...record.question, name: id + '.test'}})), next_cursor: cursor ? null : 'older'};
+  };
+  await page.clock.install();
+  await page.goto('/#/dns?tab=log');
+  const rows = page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader');
+  await expect(rows).toHaveText(['d4.test', 'd3.test']);
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  const alert = page.getByRole('alert').filter({hasText: 'Older records unavailable'});
+  await expect(alert).toBeVisible();
+  fail = false;
+  await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(rows).toHaveText(['d4.test', 'd3.test', 'd2.test', 'd1.test']);
+  await expect(alert).toHaveCount(0);
+  expect(cursors).toEqual(['older', 'older']);
 });

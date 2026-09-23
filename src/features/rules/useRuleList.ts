@@ -130,8 +130,12 @@ export function useRuleList({go, query}: PageProps) {
     setConsumption({seed, consumed: true});
     initialize({kind: 'add'}, parsedSeed);
   }
+  // Cancel while a write is pending abandons it.
   const close = () => {
-    if (pending.current) return;
+    if (pending.current) {
+      editor.cancel();
+      pending.current = false;
+    }
     guard.clear();
     setDialog(null);
     if (seed) go('rules', within(query, {add: null}));
@@ -194,7 +198,7 @@ export function useRuleList({go, query}: PageProps) {
     editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
-    retry,
+    retry: dictionary ? retry : flows.refetch,
     dialog: dialogView,
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : 'rule.add'),
     submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : 'rule.add'),

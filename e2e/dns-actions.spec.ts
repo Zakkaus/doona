@@ -65,10 +65,34 @@ test('a confirmation stays open while its action is pending', async ({page}) => 
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await expect(dialog.getByRole('button', {name: 'Cancel', exact: true})).toBeDisabled();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.rp-spinner')).toBeVisible();
   release();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText('Cache cleared, matched: ');
 });
+
+for (const way of ['Cancel', 'Escape'] as const) {
+  test(`${way} leaves a confirmation whose action never answers and drops its late result`, async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => (release = resolve));
+    handlers['POST dns/cache/flush'] = async () => {
+      await gate;
+      return api.flushDnsCache();
+    };
+    await page.goto('/#/dns?tab=cache');
+    const trigger = page.getByRole('button', {name: 'Clear all cache', exact: true});
+    await trigger.click();
+    const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
+    const flushing = page.waitForRequest(request => request.method() === 'POST');
+    await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+    await flushing;
+    if (way === 'Cancel') await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+    else await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeEnabled();
+    release();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(page.locator('.rp-toast')).toHaveCount(0);
+  });
+}

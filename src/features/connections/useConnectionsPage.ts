@@ -192,7 +192,8 @@ export function useConnectionsPage({go, query}: PageProps) {
         ),
       isDisabled: !shown.length || !!closing.busy || text !== settledText,
       isPending: closing.busy === 'all',
-      onConfirm: closeAll
+      onConfirm: closeAll,
+      onAbort: closing.cancel
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
     showFlow: () => {

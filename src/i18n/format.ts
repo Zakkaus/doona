@@ -47,14 +47,14 @@ export function localTime(iso: string | null, locale: string): string {
 }
 const byteUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
 // Decimal units, scaled in bigint so counters above 2^53 stay exact: one decimal below ten of a unit, whole numbers
-// above. A number (a chart value) is rounded to whole bytes.
+// above. A number (a chart value) is rounded to whole bytes. A value that rounds up to 1000 of a unit takes the next.
 export function formatBytes(input: string | bigint | number | null, locale: string): string {
   const value =
     typeof input === 'number' ? (Number.isFinite(input) && input >= 0 ? BigInt(Math.round(input)) : null) : typeof input === 'bigint' ? input : parseU64(input);
   if (value === null || value < 0n) return '—';
   let unit = 0,
     scale = 1n;
-  while (unit < byteUnits.length - 1 && value >= scale * 1000n) {
+  while (unit < byteUnits.length - 1 && value + scale / 2n >= scale * 1000n) {
     unit++;
     scale *= 1000n;
   }

@@ -206,7 +206,7 @@ export function Settings({query}: PageProps) {
           confirmLabel={t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
           isDisabled={dialogBlocked}
           isPending={saving}
-          error={profile.result?.error ? {id: 0, text: profile.result.text} : null}
+          error={profile.result?.error ? {id: profile.result.id, text: profile.result.text} : null}
           onConfirm={confirmProfile}
         >
           {dialog === 'delete' ? <p className="rp-label">{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}

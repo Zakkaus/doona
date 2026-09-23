@@ -42,14 +42,31 @@ export function useShellController(initial: Lang) {
       }
     );
   }, []);
-  // The dialog opens once its chunk is here; a chunk that fails leaves nothing open.
+  // The dialog opens once its chunk is here; a chunk that fails leaves nothing open. Escape, a close or a newer
+  // request while the chunk loads drops the request, so the dialog never opens after the user has moved on.
+  const searchRequest = useRef(0);
   const openSearch = useCallback(() => {
+    const request = ++searchRequest.current;
     searchDialog.preload().then(
-      () => setSearchOpen(true),
-      () => toast('negative', translate(shown.current, 'shell.searchUnavailable'))
+      () => {
+        if (searchRequest.current === request) setSearchOpen(true);
+      },
+      () => {
+        if (searchRequest.current === request) toast('negative', translate(shown.current, 'shell.searchUnavailable'));
+      }
     );
   }, []);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
+  const closeSearch = useCallback(() => {
+    searchRequest.current++;
+    setSearchOpen(false);
+  }, []);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') searchRequest.current++;
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
   const navigate = useCallback(
     (href: string) => {
       const next = parseHash(href);

@@ -154,6 +154,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           isPending={vm.flushPending}
           isDisabled={vm.flushPending || vm.flushDisabled}
           onConfirm={vm.flush}
+          onAbort={vm.abortFlush}
         />
       </div>
       <DataTable label={t('ui.cache')} height={442} rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
@@ -226,7 +227,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           </Button>
         )}
       </div>
-      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.refresh} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable

@@ -87,6 +87,7 @@ export function useBackendActions() {
       confirmationText: t('dns.flushConfirmAll'),
       isPending: flushing.busy,
       isDisabled: flushing.busy,
+      onAbort: flushing.cancel,
       onConfirm: () =>
         flushing.flush().then(
           result => {
@@ -99,7 +100,8 @@ export function useBackendActions() {
       confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
       isDisabled: !connectionsReady || !liveCount || !!closing.busy,
       isPending: closing.busy === 'all' || (connections.loading && !connections.data),
-      onConfirm: closeAll
+      onConfirm: closeAll,
+      onAbort: closing.cancel
     },
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,

@@ -1,5 +1,6 @@
 import {createMockApi} from '../src/api/mock';
-import {expect, test} from './fixtures';
+import {ApiError} from '../src/api/error';
+import {expect, mockBackend, test} from './fixtures';
 
 // Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
@@ -133,4 +134,24 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   await expect(page.getByRole('grid', {name: 'Rule evaluation 1', exact: true})).toBeVisible();
   await expect(page.getByRole('grid', {name: 'Rule evaluation 2', exact: true})).toBeVisible();
   expect(requested).toEqual([['A'], ['AAAA']]);
+});
+
+test('without a rule dictionary, Retry refetches the flows the distribution is built from', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.rules.available = false;
+  let fail = true;
+  handlers['GET flows'] = async () => {
+    if (fail) throw new ApiError(500, 'internal', 'Flows unavailable');
+    return api.flows();
+  };
+  // Frozen timers: only the retry, not the next poll, can bring the flows back.
+  await page.clock.install();
+  await page.goto('/#/rules?tab=list');
+  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  const alert = panel.getByRole('alert').filter({hasText: 'Flows unavailable'});
+  await expect(alert).toBeVisible();
+  fail = false;
+  await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(alert).toHaveCount(0);
+  await expect(panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first()).toBeVisible();
 });

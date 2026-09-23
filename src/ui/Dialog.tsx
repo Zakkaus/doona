@@ -1,4 +1,4 @@
-import {createContext, useContext, useDeferredValue, useEffect, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {createContext, useContext, useDeferredValue, useEffect, useRef, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -17,6 +17,7 @@ import {
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
 import {useT} from '../i18n';
+import {errorText} from '../api/error';
 import {cx} from './cx';
 import {Button} from './Button';
 import {InlineAlert} from './Feedback';
@@ -92,8 +93,9 @@ export function ModalDialog({
   );
 }
 
-// A dialog with Cancel and one action. While the action is pending it stays open and Cancel, Escape and the
-// underlay do nothing; a failure shows inside it, and a new `error.id` moves focus to it again.
+// A dialog with Cancel and one action. While the action is pending the dialog stays open and the action button
+// waits; Cancel and Escape still work, and `onCancel` must then abandon the action, so a request that never answers
+// cannot hold the page. A failure shows inside the dialog, and a new `error.id` moves focus to it again.
 export function ConfirmDialog({
   title,
   isOpen,
@@ -125,13 +127,11 @@ export function ConfirmDialog({
       alert={tone === 'negative'}
       isOpen={isOpen}
       onOpenChange={open => {
-        if (!open && !isPending) onCancel();
+        if (!open) onCancel();
       }}
       footer={() => (
         <>
-          <Button isDisabled={isPending} onPress={onCancel}>
-            {t('ui.cancel')}
-          </Button>
+          <Button onPress={onCancel}>{t('ui.cancel')}</Button>
           <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
             {confirmLabel}
           </Button>
@@ -149,13 +149,15 @@ export function ConfirmDialog({
 }
 
 // A negative trigger button and its ConfirmDialog. `onConfirm` resolves to the failure to show, if any; the dialog
-// closes once it resolves without one. `open`/`setOpen` let a caller act when the dialog opens.
+// closes once it resolves without one. Cancel while it is pending calls `onAbort` and ignores the late result.
+// `open`/`setOpen` let a caller act when the dialog opens.
 export function ConfirmButton({
   label,
   confirmationText,
   isDisabled,
   isPending,
   onConfirm,
+  onAbort,
   open,
   setOpen
 }: {
@@ -164,42 +166,51 @@ export function ConfirmButton({
   isDisabled?: boolean;
   isPending?: boolean;
   onConfirm: () => Promise<string | null | undefined | void>;
+  onAbort?: () => void;
   open?: boolean;
   setOpen?: (open: boolean) => void;
 }) {
+  const t = useT();
   const [local, setLocal] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<{id: number; text: string} | null>(null);
+  // Counts failures so a repeated one still moves focus; `attempt` tells the current run from an abandoned one.
+  const failures = useRef(0);
+  const attempt = useRef(0);
   const isOpen = open ?? local;
   const change = (next: boolean) => {
     setError(null);
     (setOpen ?? setLocal)(next);
   };
+  const cancel = () => {
+    if (running) {
+      attempt.current++;
+      setRunning(false);
+      onAbort?.();
+    }
+    change(false);
+  };
   const confirm = async () => {
+    const current = ++attempt.current;
     setRunning(true);
     setError(null);
+    let failure: string | null | undefined | void;
     try {
-      const failure = await onConfirm();
-      if (failure) setError(prev => ({id: (prev?.id ?? 0) + 1, text: failure}));
-      else change(false);
-    } finally {
-      setRunning(false);
+      failure = await onConfirm();
+    } catch (reason) {
+      failure = errorText(reason, t);
     }
+    if (current !== attempt.current) return;
+    setRunning(false);
+    if (failure) setError({id: ++failures.current, text: failure});
+    else change(false);
   };
   return (
     <>
       <Button negative quiet isDisabled={isDisabled} isPending={isPending || running} onPress={() => change(true)}>
         {label}
       </Button>
-      <ConfirmDialog
-        title={label}
-        confirmLabel={label}
-        isOpen={isOpen}
-        isPending={running}
-        error={error}
-        onCancel={() => change(false)}
-        onConfirm={() => void confirm()}
-      >
+      <ConfirmDialog title={label} confirmLabel={label} isOpen={isOpen} isPending={running} error={error} onCancel={cancel} onConfirm={() => void confirm()}>
         <p className="rp-label">{confirmationText}</p>
       </ConfirmDialog>
     </>

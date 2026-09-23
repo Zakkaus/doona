@@ -111,7 +111,7 @@ export function geodataRows(assets: GeoData['assets'], locale: string) {
 }
 export function profileView(
   profiles: Array<{id: string; name: string}>,
-  result: {key: Key; params?: Params; error?: boolean; requestId?: string | null} | null,
+  result: {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number} | null,
   t: Translator
 ) {
   return {
@@ -121,7 +121,8 @@ export function profileView(
           text: t(result.key, result.params),
           role: result.error ? ('alert' as const) : ('status' as const),
           request: result.requestId ? t('ui.requestNote', {id: result.requestId}) : '',
-          error: !!result.error
+          error: !!result.error,
+          id: result.id ?? 0
         }
       : null
   };

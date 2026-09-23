@@ -29,6 +29,8 @@ export function Shortcuts({
     };
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
+      // A held Ctrl or ⌘ preloads search wherever focus is, a field included.
+      if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
       if (
         event.defaultPrevented ||
         event.repeat ||
@@ -47,7 +49,6 @@ export function Shortcuts({
         return;
       }
       if (event.ctrlKey || event.metaKey || event.altKey) {
-        if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
         reset();
         return;
       }

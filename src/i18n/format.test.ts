@@ -14,3 +14,11 @@ it('scales chart numbers like counters and formats them for the locale', () => {
   expect(formatBytes('18446744073709551615', 'zh-TW')).toBe('18 EB');
   expect(formatBytes(1100, 'de')).toBe('1,1 KB');
 });
+
+it('takes the next unit when rounding reaches a thousand', () => {
+  expect(formatBytes(999_499, 'en')).toBe('999 KB');
+  expect(formatBytes(999_500, 'en')).toBe('1 MB');
+  expect(formatBytes(999_999, 'en')).toBe('1 MB');
+  expect(formatBytes(999, 'en')).toBe('999 B');
+  expect(formatRate(999_999_999, 'en')).toBe('1 GB/s');
+});

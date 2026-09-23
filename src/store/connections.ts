@@ -18,7 +18,7 @@ export function useConnectionTotals(enabled = true) {
 }
 export function useConnectionClose(refetch: () => void) {
   const api = getApi();
-  const {busy, run} = useAction<string>({rethrow: true});
+  const {busy, run, cancel} = useAction<string>({rethrow: true});
   // Bulk close for a selection the contract can express (network and source IP); anything narrower (a text
   // or outbound filter) closes one by one, where a 409 or 404 is a connection the backend no longer owns.
   const closeAll = useCallback(
@@ -52,6 +52,7 @@ export function useConnectionClose(refetch: () => void) {
   );
   return {
     busy,
+    cancel,
     close: useCallback(
       (id: string) =>
         run(id, async signal => {

@@ -12,7 +12,8 @@ import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
 import {cardHeadingId, probeFailure} from './view';
 
-type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};
+// `id` changes with each failed save, so the dialog's alert takes focus again on a repeat.
+type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number};
 
 function readPairing(query: string): {api: string; token: string} | null {
   const params = new URLSearchParams(query);
@@ -61,6 +62,7 @@ export function useBackendForm(query: string) {
   const [invalid, setInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveLock = useRef(false);
+  const saveFailures = useRef(0);
   const request = useRef<AbortController | null>(null);
   useEffect(
     () => () => {
@@ -110,10 +112,11 @@ export function useBackendForm(query: string) {
     try {
       writeProfiles({profiles, activeId});
     } catch {
-      setResult({key: 'settings.saveError', error: true});
+      setResult({key: 'settings.saveError', error: true, id: ++saveFailures.current});
       saveLock.current = false;
       setSaving(false);
-      toast('negative', t('settings.saveError'));
+      // An open profile dialog shows the failure itself.
+      if (!dialog) toast('negative', t('settings.saveError'));
       return;
     }
     try {
