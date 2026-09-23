@@ -156,7 +156,7 @@ export function DataTable<T extends {id: string}>({
   stream?: boolean;
 }) {
   const t = useT();
-  // A new set on every render would have the table treat each render as a selection change.
+  // One set per selected key: a new set on every render would have the table recompute its selection and re-render every row.
   const keys: Selection = useMemo(() => (selected ? new Set([selected]) : new Set()), [selected]);
   const [ref, width] = useContentWidth<HTMLElement>();
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);

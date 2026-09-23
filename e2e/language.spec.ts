@@ -82,12 +82,37 @@ test.describe('language loading', () => {
     await page.goto('/#/activity');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     expect(await scFaces()).toBe(0);
+    // Counted in the same task that switches the language, before the browser paints it.
+    await page.evaluate(() => {
+      const html = document.documentElement;
+      new MutationObserver((_, observer) => {
+        if (html.lang !== 'zh-CN') return;
+        html.dataset.scFaces = String([...document.fonts].filter(face => face.family.replace(/["']/g, '') === 'Noto Sans SC').length);
+        observer.disconnect();
+      }).observe(html, {attributes: true, attributeFilter: ['lang']});
+    });
     await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    expect(await scFaces()).toBeGreaterThan(0);
+    expect(Number(await page.locator('html').getAttribute('data-sc-faces'))).toBeGreaterThan(0);
     await page.reload();
     await expect(page.locator('.rp-nav').first()).toBeVisible();
     expect(await scFaces()).toBeGreaterThan(0);
+  });
+
+  test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {
+    const family = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    await page.goto('/#/activity');
+    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '简体中文'}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+    await page.getByRole('button', {name: translate('zh-CN', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+    const switched = await family();
+    await page.reload();
+    await expect(page.locator('.rp-nav').first()).toBeVisible();
+    expect(switched).toBe(await family());
+    expect(switched).not.toContain('Noto Sans SC');
   });
 });

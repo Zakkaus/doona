@@ -5,6 +5,9 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useDebounced} from '../../ui/ui';
 import {logLevel, logsExport, logView} from './view';
 
+// One array while no levels are advertised, so the heatmap's memo holds between renders.
+const noLevels: LogLevel[] = [];
+
 export function useLogs() {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -26,7 +29,7 @@ export function useLogs() {
     ...view,
     // The records the list shows, and the levels the backend offers, for the activity heatmap.
     records: feed.records,
-    offered: resource?.levels ?? [],
+    offered: resource?.levels ?? noLevels,
     level: level ?? '',
     setLevel,
     target,

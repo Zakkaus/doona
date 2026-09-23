@@ -19,7 +19,7 @@ export function Events() {
         grow: 0,
         drop: 1,
         render: event => (
-          <TextTooltip className="rp-code" text={event.timestamp}>
+          <TextTooltip className="rp-code" text={event.iso}>
             {event.timestamp}
           </TextTooltip>
         )

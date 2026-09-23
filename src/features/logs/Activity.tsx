@@ -28,7 +28,7 @@ export function LogActivity({
   const map = useMemo(() => levelHeatmap(records, offered, minimum as LogLevel | ''), [records, offered, minimum]);
   const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}), [locale]);
   const span = useCallback((start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`, [clock, map.width]);
-  // Rebuilt only when the buckets change, and each bucket's span is formatted once for every level's row.
+  // Rebuilt with the map, which is on every published batch; each bucket's span is formatted once for all the rows.
   const heat = useMemo(() => {
     const tones: Record<LogLevel, string> = {error: p.negative, warn: p.notice, info: p.info, debug: p.subtle, trace: p.muted};
     const spans = map.buckets.map(span);

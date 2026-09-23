@@ -173,15 +173,17 @@ test('editor completion preserves policy keys and quoted-brace context', async (
   await expect(editor).toContainText('log_level:');
 });
 
-// Relative or absolute, a time cell names the local time on hover.
-for (const [route, column] of [
-  ['connections?tab=list', 'Started'],
-  ['rules?tab=flows', 'Started'],
-  ['dns?tab=log', 'Time'],
-  ['events', 'Time'],
-  ['logs', 'Time']
+// A relative time cell names the local time on hover; a cell that already shows the local time gives the exact timestamp.
+const localTime = /\d{1,2}\/\d{1,2}\/\d{2}, \d{1,2}:\d{2}:\d{2}\s?[AP]M$/;
+const isoTime = /^\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+for (const [route, column, tip] of [
+  ['connections?tab=list', 'Started', localTime],
+  ['rules?tab=flows', 'Started', localTime],
+  ['dns?tab=log', 'Time', localTime],
+  ['events', 'Time', isoTime],
+  ['logs', 'Time', isoTime]
 ] as const)
-  test(`the ${column.toLowerCase()} cells on ${route} show the local time as a tooltip`, async ({page}) => {
+  test(`the ${column.toLowerCase()} cells on ${route} show ${tip === localTime ? 'the local time' : 'the exact timestamp'} as a tooltip`, async ({page}) => {
     await page.setViewportSize({width: 1600, height: 1000});
     // Ungrouped, so the first row is a connection rather than a source.
     await page.addInitScript(() => localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'})));
@@ -195,6 +197,6 @@ for (const [route, column] of [
     await expect(async () => {
       await page.mouse.move(0, 0);
       await cell.hover();
-      await expect(page.getByRole('tooltip')).toHaveText(/\d{1,2}\/\d{1,2}\/\d{2}, \d{1,2}:\d{2}:\d{2}\s?[AP]M$/, {timeout: 1500});
+      await expect(page.getByRole('tooltip')).toHaveText(tip, {timeout: 1500});
     }).toPass();
   });

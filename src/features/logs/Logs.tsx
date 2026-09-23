@@ -20,7 +20,7 @@ export function Logs() {
         grow: 0,
         drop: 2,
         render: record => (
-          <TextTooltip className="rp-code" text={record.timestamp}>
+          <TextTooltip className="rp-code" text={record.iso}>
             {record.timestamp}
           </TextTooltip>
         )
