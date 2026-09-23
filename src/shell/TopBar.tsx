@@ -14,6 +14,7 @@ import type {SettingsContext} from '../features/settings/context';
 import type {PaletteId, Wordmark} from '../features/settings/settings';
 import type {AppearanceMenu, PaletteSection} from './view';
 import {languageItems} from './view';
+import {preloadSearch} from './search/load';
 
 type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
 
@@ -74,7 +75,7 @@ export const TopBar = memo(function TopBar({
           </Button>
         }
       />
-      <div className="rp-search-wrap">
+      <div className="rp-search-wrap" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
         <Button appearance="plain" className="rp-search" onPress={openSearch}>
           <Search />
           <span className="grow">{t('search')}</span>
@@ -82,7 +83,7 @@ export const TopBar = memo(function TopBar({
         </Button>
       </div>
       <div className="rp-actions">
-        <span className="rp-search-compact">
+        <span className="rp-search-compact" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
           <Button quiet icon label={t('search')} onPress={openSearch}>
             <Search />
           </Button>

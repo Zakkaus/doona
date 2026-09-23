@@ -5,7 +5,7 @@ import {LangContext, LOCALE, useT, type Lang} from '../i18n';
 import {Button, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
 import type {PageProps} from '../features/types';
 import {DraftContext} from './route';
-import {SearchDialog} from './search/SearchDialog';
+import {searchDialog} from './search/load';
 import {SettingsContext} from '../features/settings/context';
 import type {Settings} from '../features/settings/settings';
 import {Shortcuts} from './Shortcuts';
@@ -37,7 +37,13 @@ export function Shell({lang: initial}: {lang: Lang}) {
             <ShellFrame settings={settings} lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={openSearch} mac={mac} />
           </DraftContext.Provider>
           <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
-          {searchOpen && <SearchDialog onClose={closeSearch} go={go} />}
+          {searchOpen && (
+            <LoadBoundary>
+              <Suspense fallback={null}>
+                <searchDialog.Component onClose={closeSearch} go={go} />
+              </Suspense>
+            </LoadBoundary>
+          )}
           <ToastHost />
         </RouterProvider>
       </I18nProvider>

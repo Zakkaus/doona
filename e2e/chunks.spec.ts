@@ -133,3 +133,20 @@ for (const chunk of ['Policies', 'vendor-charts']) {
     }
   });
 }
+
+test('the search dialog loads on demand, starting when the search button is hovered', async ({page}) => {
+  const scripts: string[] = [];
+  page.on('request', request => {
+    if (/\/assets\/[^/]+\.js$/.test(new URL(request.url()).pathname)) scripts.push(request.url());
+  });
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-strip')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const search = /\/SearchDialog-[^/]+\.js$/;
+  expect(scripts.some(url => search.test(url))).toBe(false);
+  const requested = page.waitForRequest(search);
+  await page.locator('.rp-search').hover();
+  await requested;
+  await page.locator('.rp-search').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});

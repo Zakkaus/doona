@@ -76,4 +76,18 @@ test.describe('language loading', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     expect(await page.evaluate(() => localStorage.getItem('doona-lang'))).toBe('en');
   });
+
+  test('declares the SC font faces only once zh-CN is chosen, before the page renders in it', async ({page}) => {
+    const scFaces = () => page.evaluate(() => [...document.fonts].filter(face => face.family.replace(/["']/g, '') === 'Noto Sans SC').length);
+    await page.goto('/#/activity');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    expect(await scFaces()).toBe(0);
+    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '简体中文'}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+    expect(await scFaces()).toBeGreaterThan(0);
+    await page.reload();
+    await expect(page.locator('.rp-nav').first()).toBeVisible();
+    expect(await scFaces()).toBeGreaterThan(0);
+  });
 });
