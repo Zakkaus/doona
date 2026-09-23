@@ -1,4 +1,4 @@
-import {blockFields, isBareName, quote, scanConfig, unquote, type TextBlock, type TextField} from './text';
+import {blockFields, isBareName, isFragment, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextField} from './text';
 
 export type GroupEntry = {
   name: string;
@@ -27,6 +27,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
 }
 
 export const quoteName = (value: string) => (isBareName(value) ? value : quote(value));
+export const isWritableName = (value: string) => isBareName(value) || isQuotable(value);
 
 // doona creates groups only under bare names, so a new name never needs quoting where filters or rules cite it.
 export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'invalid' | 'taken' | null {
@@ -285,11 +286,17 @@ export const applyChanges = (text: string, changes: GroupChange[]) => changes.re
 
 export type ConditionKind = 'domain' | 'domainSuffix' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
 export const conditionKinds: ConditionKind[] = ['domainSuffix', 'domain', 'geosite', 'dip', 'geoip', 'sip', 'dport', 'sport', 'pname', 'l4proto'];
-export function ruleCondition(kind: ConditionKind, value: string): string {
+// Null when the values cannot be written as one condition, such as `a) # x` or an apostrophe that needs quoting.
+export function ruleCondition(kind: ConditionKind, value: string): string | null {
   const values = value
     .split(/[,\s]+/)
     .map(v => v.trim())
     .filter(Boolean);
+  if (values.some(v => v.includes(':') && !isQuotable(v))) return null;
+  const condition = conditionText(kind, values);
+  return isFragment(condition) && !condition.includes('->') ? condition : null;
+}
+function conditionText(kind: ConditionKind, values: string[]): string {
   // A value with a colon (an IPv6 range) is quoted, as the presets write 'ff00::/8'; bare, dae reads it as a key.
   const list = values.map(v => (v.includes(':') ? quote(v) : v)).join(', ');
   const qualified = (prefix: string) => values.map(value => `${prefix}: ${value}`).join(', ');

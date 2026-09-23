@@ -1,4 +1,4 @@
-import {applyChanges, classifyFilters, compileFilters, readGroupEntries, removalWidens, type GroupChange} from '../../../dae/groups';
+import {applyChanges, classifyFilters, compileFilters, isWritableName, readGroupEntries, removalWidens, type GroupChange} from '../../../dae/groups';
 import type {Node, Provider} from '../../../api/model';
 import type {Translator} from '../../../i18n';
 
@@ -139,6 +139,7 @@ export function stage(changes: GroupChange[], next: GroupChange): GroupChange[] 
     removeSubscription: 'addSubscription'
   };
   if (next.kind === 'createGroup') return changes.some(change => change.kind === 'createGroup' && change.group === next.group) ? changes : [...changes, next];
+  if ((next.kind === 'addNode' || next.kind === 'addSubscription') && !isWritableName(next.value)) return changes;
   const undo = changes.findIndex(
     change => change.kind === opposite[next.kind] && change.group === next.group && 'value' in change && change.value === next.value
   );

@@ -29,6 +29,10 @@ it('checks credentials against the backend limits before any attempt, per field'
   expect(credentialProblems('setup', 'admin', 'correct horse battery', 'correct horse batterx')).toEqual({confirm: 'login.mismatch'});
 });
 
+it('asks for an empty username or password instead of stating the format rule', () => {
+  expect(credentialProblems('login', '', '', '')).toEqual({username: 'login.usernameRequired', password: 'login.passwordRequired'});
+});
+
 it('maps refusals by code and follows a moved account state', () => {
   expect(signInRefusal(new ApiError(401, 'invalid_credentials', 'x'))).toEqual({key: 'login.invalidCredentials'});
   expect(signInRefusal(new ApiError(409, 'setup_required', 'x'))?.switchTo).toBe('setup');

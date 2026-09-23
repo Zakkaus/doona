@@ -1,4 +1,5 @@
-import {groupNameProblem} from '../../dae/groups';
+import {groupNameProblem, type GroupEntry} from '../../dae/groups';
+import {isFragment} from '../../dae/text';
 import type {Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {policyKindLabels} from '../../api/selectors';
@@ -43,4 +44,9 @@ const nameProblems = {invalid: 'arrange.badName', taken: 'arrange.takenName'} as
 export function groupNameError(name: string, taken: ReadonlySet<string>, t: Translator): string | null {
   const problem = groupNameProblem(name, taken);
   return problem ? t(nameProblems[problem]) : null;
+}
+
+// Values read from the file are written back as they were; only edited ones must fit on one line.
+export function groupEditSafe(filters: string[], policy: string | null, entry: Pick<GroupEntry, 'filters' | 'policy'> | undefined): boolean {
+  return filters.every(filter => entry?.filters.includes(filter) || isFragment(filter)) && (policy === (entry?.policy ?? null) || isFragment(policy ?? ''));
 }

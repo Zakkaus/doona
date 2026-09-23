@@ -3,7 +3,7 @@ import {useFilter} from 'react-aria-components';
 import {useT} from '../../../i18n';
 import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
-import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
+import {applyChanges, isWritableName, readGroupEntries, type GroupChange} from '../../../dae/groups';
 import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
@@ -48,12 +48,14 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     setChanges(next);
   };
   // Items the group already holds exactly are skipped: adding them again would stage an edit that writes nothing.
-  const place = (group: string, items: Placeable[]) =>
+  const place = (group: string, items: Placeable[]) => {
+    if (items.some(item => !isWritableName(item.value))) toast('negative', t('config.unquotable'));
     edit(current =>
       items
         .filter(item => !holds(byGroup.get(group), item))
         .reduce((staged, item) => stage(staged, {kind: item.kind === 'node' ? 'addNode' : 'addSubscription', group, value: item.value}), current)
     );
+  };
   const unplace = (group: string, item: Placeable) =>
     edit(current => stage(current, {kind: item.kind === 'node' ? 'removeNode' : 'removeSubscription', group, value: item.value}));
   const existing = new Set(view.groups.map(group => group.name));

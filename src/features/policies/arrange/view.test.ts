@@ -25,6 +25,10 @@ it('stages an edit and its reverse as nothing, and drops a created group with wh
   expect(unstage(filled, 0)).toEqual([]);
 });
 
+it('refuses to stage a node whose name cannot be written into a filter', () => {
+  expect(stage([], {kind: 'addNode', group: 'pair', value: "Bob's"})).toEqual([]);
+});
+
 it('blocks the removal that would widen a group, and warns when a rule keeps a removed node', () => {
   const view = arrangeView(text, [{kind: 'removeNode', group: 'pair', value: 'hk-02'}], [], nodes, t);
   const [solo, pair] = view.groups;

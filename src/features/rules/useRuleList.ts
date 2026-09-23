@@ -165,6 +165,7 @@ export function useRuleList({go, query}: PageProps) {
       dialog.kind === 'remove' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
     const source = dialog.sources.find(source => source.id === rule?.source?.source_id);
     const anchor = source && rule ? ruleAnchor(source, rule) : null;
+    if (condition === null) return;
     if (!source || !anchor) {
       stale();
       return;
@@ -225,7 +226,7 @@ export function useRuleList({go, query}: PageProps) {
     submitDisabled: dialog?.kind !== 'remove' && (!draft.valid || !form.outbound),
     changeMode: (mode: string) => {
       if (pending.current) return;
-      if (mode === 'text' && pick.on && pick.value.trim()) setForm({...form, condition});
+      if (mode === 'text' && pick.on && pick.value.trim() && condition) setForm({...form, condition});
       setPick({...pick, on: mode === 'pick'});
     }
   };

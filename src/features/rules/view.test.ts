@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
+import type {ConfigSource, RoutingRule} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {dictionaryView, distributionView, dnsView, evaluationView, removalView, ruleDraftView, rulesView, traceStatusView} from './view';
 
@@ -42,6 +43,22 @@ it('offers edits only at writable sources and preserves source locations when pa
   expect(removalView(redacted, [], t).help).toBe(t('rule.removeHelp', {file: '', line: '40'}));
 });
 
+it('does not offer rules it cannot locate in their source for removal or insertion', () => {
+  const rule: RoutingRule = {
+    rule_id: 'r1',
+    index: 0,
+    kind: 'rule',
+    expression: 'pname(a)',
+    outbound: 'direct',
+    must: false,
+    source: {file: 'bare.dae', source_id: 'bare', line: 1}
+  };
+  const bare = {id: 'bare', path: 'bare.dae', writable: true, content: 'pname(a) -> direct\n'} as ConfigSource;
+  const view = dictionaryView([rule], '1', undefined, [bare], [], t, 'en');
+  expect(view.rows[0].removable).toBe(false);
+  expect(view.positions).toEqual([]);
+});
+
 it('sorts distribution rows numerically and retains snapshot denominators when filtering', async () => {
   const list = await createMockApi().flows();
   const flow = list.flows[0];
@@ -64,6 +81,10 @@ it('validates picked and raw conditions separately and prepares their preview', 
   expect(ruleDraftView('dip', ' ', true, '', '', t).valid).toBe(false);
   expect(ruleDraftView('dip', '', false, '', 'dip(a) -> direct', t)).toMatchObject({valid: false, rawInvalid: true, preview: null});
   expect(ruleDraftView('dip', '', false, '', 'dip(a)', t).valid).toBe(true);
+});
+
+it('marks a picked value that cannot be written as a condition invalid with a field error', () => {
+  expect(ruleDraftView('dip', "a'b", true, null, '', t)).toMatchObject({valid: false, preview: null, pickError: t('rule.valuesInvalid')});
 });
 
 it('rejects unavailable tab requests and keeps trace-only navigation usable', async () => {

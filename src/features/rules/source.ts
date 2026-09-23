@@ -10,11 +10,11 @@ export function sourceFor(list: ConfigSource[], source: RuleSource | null | unde
 
 export type RuleAnchor = {from: number; to: number; indent: string; text: string};
 
-export function ruleAnchor(source: ConfigSource, rule: RoutingRule): RuleAnchor | null {
+export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
   if (!rule.source?.source_id || rule.source.source_id !== source.id || source.content === undefined) return null;
   const text = source.content;
   let line = rule.source.line - 1;
-  const {blocks, tokens} = scanConfig(text);
+  const {blocks, tokens} = scan ?? scanConfig(text);
   const start = tokens.findIndex(token => token.line === line && token.kind !== 'comment');
   if (start === -1 || tokens[start].parens !== 0) return null;
   // A rule continues onto later lines while its parentheses stay open.

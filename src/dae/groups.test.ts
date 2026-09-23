@@ -163,6 +163,15 @@ it('quotes IPv6 ranges in address rules and leaves IPv4 bare', () => {
   expect(ruleCondition('sip', '2001:db8::1')).toBe("sip('2001:db8::1')");
 });
 
+it('returns no condition for a value that cannot be quoted instead of throwing', () => {
+  expect(ruleCondition('dip', "2001:db8::'1")).toBeNull();
+});
+
+it('returns no condition for a picked value that would escape the rule line', () => {
+  expect(ruleCondition('domainSuffix', 'a) # x')).toBeNull();
+  expect(ruleCondition('pname', 'a->b')).toBeNull();
+});
+
 describe('arranging groups edits only exact lists', () => {
   it('classifies each filter line', () => {
     const [hk, proxy] = readGroupEntries(text);

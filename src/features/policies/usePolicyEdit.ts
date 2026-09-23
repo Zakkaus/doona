@@ -1,4 +1,3 @@
-import {isFragment} from '../../dae/text';
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
@@ -7,6 +6,7 @@ import type {ConfigSource} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {errorText} from '../../api/error';
+import {groupEditSafe} from './policyText';
 export type PolicyEditView = {
   title: string;
   open: boolean;
@@ -38,7 +38,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
   const save = (close: () => void) => {
     if (!draft) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
-    if (![...filters, draft.policy ?? ''].every(isFragment)) {
+    if (!groupEditSafe(filters, draft.policy, entry)) {
       refuse(t('policy.editUnsafe'));
       return;
     }

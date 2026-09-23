@@ -16,9 +16,11 @@ const USERNAME = /^[A-Za-z0-9_.-]{1,64}$/;
 type Field = 'username' | 'password' | 'confirm';
 export function credentialProblems(kind: 'setup' | 'login', username: string, password: string, confirm: string): Partial<Record<Field, Key>> {
   const problems: Partial<Record<Field, Key>> = {};
-  if (!USERNAME.test(username)) problems.username = 'login.badUsername';
+  if (!username) problems.username = 'login.usernameRequired';
+  else if (!USERNAME.test(username)) problems.username = 'login.badUsername';
   const length = [...password].length;
-  if (length < 8) problems.password = 'login.passwordShort';
+  if (!length) problems.password = 'login.passwordRequired';
+  else if (length < 8) problems.password = 'login.passwordShort';
   else if (length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.passwordLong';
   else if (kind === 'setup' && password !== confirm) problems.confirm = 'login.mismatch';
   return problems;

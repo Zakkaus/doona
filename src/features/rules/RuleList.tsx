@@ -151,6 +151,7 @@ function Dictionary({view}: {view: Model}) {
                     value={pick.value}
                     placeholder={draft.hint}
                     description={t('rule.valuesHelp')}
+                    error={draft.pickError}
                     spellCheck={false}
                     onChange={value => setPick({...pick, value})}
                   />

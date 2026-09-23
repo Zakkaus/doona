@@ -103,6 +103,11 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
 }
 
 // Null selects loose nodes; built-in outbounds have their own provenance.
+// The provider the link names while it is listed; a stale one falls back to the first real source, not every node.
+export function selectedProvider(list: ProviderRow[], requested: string | null): string | null {
+  if (requested !== null && list.some(item => item.id === requested)) return requested;
+  return (list.find(item => item.kind !== 'builtin' && item.kind !== 'unattributed') ?? list[0])?.id ?? null;
+}
 export function ownedNodes(nodes: Node[], ownerId: string | null | undefined, kind?: ProviderRow['kind']) {
   return nodes.filter(
     node =>
