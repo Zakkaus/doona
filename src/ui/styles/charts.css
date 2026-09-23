@@ -1,47 +1,30 @@
-/* ---- Chart cards: a title, the facts as label and value, then the chart. ---- */
+/* ---- Chart cards: one module per card, titled as the activity cards are. ---- */
 .rp-chartcard {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-.rp-chartcard > .rp-h3 {
-  margin: 0;
-}
-.rp-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 32px;
-  margin: 0;
-}
-.rp-facts > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 12px;
   min-width: 0;
 }
-.rp-facts dt {
-  font-size: 12px;
-  color: var(--rp-subtle);
+.rp-chartcard > .rp-note {
+  margin: -4px 0 0;
+}
+/* Fact tiles reuse the activity tiles; a definition list keeps label and value paired for assistive technology. */
+.rp-facts {
+  margin: 0;
 }
 .rp-facts dd {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--rp-text);
-  overflow-wrap: anywhere;
 }
-.rp-facts .negative dd {
+.rp-facts .negative .rp-big {
   color: var(--rp-negative);
 }
-.rp-facts .notice dd {
+.rp-facts .notice .rp-big {
   color: var(--rp-notice);
 }
-.rp-chartcard-body {
+.rp-chart-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-top: 8px;
 }
 .rp-chart-grid {
   display: grid;
@@ -407,47 +390,6 @@
   translate: calc(-100% + 12px) calc(-100% - 12px);
 }
 
-/* ---- Bar list ---- */
-.rp-barlist ol {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.rp-barlist li {
-  display: grid;
-  grid-template-columns: minmax(80px, 2fr) minmax(0, 3fr) auto;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-}
-.rp-barlist .name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rp-barlist .bar {
-  height: 10px;
-  border-radius: 5px;
-  background: var(--rp-hl-low);
-  overflow: hidden;
-}
-.rp-barlist .bar > i {
-  display: block;
-  height: 100%;
-  border-radius: 5px;
-}
-.rp-barlist .value {
-  font-variant-numeric: tabular-nums;
-  color: var(--rp-subtle);
-}
-.rp-barlist .rp-note {
-  margin: 6px 0 0;
-}
-
 /* ---- Share bar ---- */
 .rp-sharebar {
   display: flex;
@@ -487,12 +429,9 @@
 .rp-sharebar .legend b {
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 640px) {
-  .rp-barlist li {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .rp-barlist .bar {
-    grid-column: 1 / -1;
-    grid-row: 2;
+/* However many facts a page has, they share the row evenly, edge to edge with the cards below. */
+@media (min-width: 600px) {
+  .rp-strip.rp-facts {
+    grid-template-columns: repeat(var(--facts), minmax(0, 1fr));
   }
 }
