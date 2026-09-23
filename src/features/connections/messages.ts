@@ -4,7 +4,7 @@ export const messages = defineMessages({
   'zh-TW': {
     'conn.tab.traffic': '流量',
     'conn.tab.list': '連線',
-    'conn.chart.busiest': '流量最大',
+    'conn.chart.busiest': '最高流量連線',
     'conn.chart.named': '{name}（{outbound}）',
     'conn.chart.down': '下載',
     'conn.chart.up': '上傳',
@@ -69,7 +69,7 @@ export const messages = defineMessages({
   'zh-CN': {
     'conn.tab.traffic': '流量',
     'conn.tab.list': '连接',
-    'conn.chart.busiest': '流量最大',
+    'conn.chart.busiest': '最高流量连接',
     'conn.chart.named': '{name}（{outbound}）',
     'conn.chart.down': '下载',
     'conn.chart.up': '上传',
@@ -134,7 +134,7 @@ export const messages = defineMessages({
   en: {
     'conn.tab.traffic': 'Traffic',
     'conn.tab.list': 'Connections',
-    'conn.chart.busiest': 'Most traffic',
+    'conn.chart.busiest': 'Heaviest connection',
     'conn.chart.named': '{name} ({outbound})',
     'conn.chart.down': 'Download',
     'conn.chart.up': 'Upload',

@@ -48,7 +48,7 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
 test('traffic is the first connections tab, and a point opens its connection in the list', async ({page}) => {
   await page.goto('/#/connections');
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');
-  await expect(fact(page, 'Most traffic')).toHaveText('cdn.bilibili.com (direct)');
+  await expect(fact(page, 'Heaviest connection')).toHaveText('cdn.bilibili.com (direct)');
   await expect(fact(page, 'Download')).toHaveText('1.1 GB');
   await page.locator('.rp-scatter circle').first().click();
   await expect(page).toHaveURL(/[?&]tab=list/);
