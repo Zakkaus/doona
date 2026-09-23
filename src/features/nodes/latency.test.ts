@@ -47,3 +47,9 @@ it('groups by protocol and rounds the axis end up', () => {
   expect(latencyGroups(nodes, [], 'protocol').map(group => group.label)).toEqual(['trojan', 'vless']);
   expect(latencyMax(latencyGroups(nodes, [], 'protocol'))).toBe(200);
 });
+
+it('keeps the axis clear of a lone outlier', () => {
+  const nodes = [...Array(10)].map((_, i) => node('n' + i, [], [observation({latency_ms: 30 + i, moving_avg_ms: 30 + i, avg10_ms: 30 + i})], 'vless'));
+  nodes.push(node('far', [], [observation({latency_ms: 2000, moving_avg_ms: 1900, avg10_ms: 1800})], 'vless'));
+  expect(latencyMax(latencyGroups(nodes, [], 'protocol'))).toBe(60);
+});

@@ -1,5 +1,6 @@
 import type {GroupSummary, Node} from '../../api/model';
 import {preferredHealth} from '../../api/selectors';
+import {percentile} from '../../ui/charts/layout';
 
 export type LatencyBy = 'group' | 'protocol';
 export type LatencyRow = {id: string; name: string; latest: number; moving: number | null; avg10: number | null};
@@ -40,10 +41,11 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || (a.label ?? '').localeCompare(b.label ?? ''));
 }
 
-// The axis end: the greatest value drawn, rounded up to a readable step.
+// The axis end: past most of the values rather than the single slowest, so one outlier does not push every other
+// node to the left edge; values beyond it are drawn on the edge with their number.
 export function latencyMax(groups: LatencyGroup[]): number {
-  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? 0, row.avg10 ?? 0]));
-  const top = Math.max(10, ...values);
+  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? row.latest])).sort((a, b) => a - b);
+  const top = Math.max(10, (percentile(values, 90) ?? 0) * 1.25);
   const step = top <= 100 ? 20 : top <= 500 ? 100 : top <= 2000 ? 500 : 1000;
   return Math.ceil(top / step) * step;
 }
