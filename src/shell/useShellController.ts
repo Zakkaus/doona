@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
+import {runAfterTransition} from 'react-aria/private/utils/runAfterTransition';
 import {consumeProfileReadError} from '../api/profiles';
 import {writeSetting} from '../features/settings/settings';
 import type {SettingsContext} from '../features/settings/context';
@@ -56,6 +57,13 @@ export function useShellController(initial: Lang) {
     document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
   }, [lang]);
   useEffect(warmAllPages, []);
+  // react-aria records every element with a running CSS transition and forgets it on transitionend or
+  // transitioncancel, neither of which a removed element receives. A page left mid-transition (a tab marker sliding, a
+  // colour fading) therefore stayed in that record with its whole detached tree, 0.3 to 0.7 MiB per round of the
+  // pages. runAfterTransition drops the disconnected entries before it runs its callback.
+  useEffect(() => {
+    runAfterTransition(() => {});
+  }, [route]);
   return {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac: isMac};
 }
 
