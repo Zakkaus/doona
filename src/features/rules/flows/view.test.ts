@@ -74,14 +74,17 @@ it('preserves input identifiers that collide with translated enum values in ever
   }
 });
 
-it('keeps native policy names distinct and falls back only when the native name is empty', async () => {
+// honk treats these spellings alike (urltest, min_moving_avg, min_avg10, min_last_delay), so the map names the
+// behaviour as the policy cards do.
+it('names a policy by what it does, whatever the native spelling', async () => {
   const api = createMockApi();
   const groups = await api.groups();
   const group = {...groups[0], policy: {...groups[0].policy, kind: 'urltest' as const, native: 'min_avg10'}};
   const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], []), t, 'en')[0].notes;
-  expect(notes('min_avg10')).toContainEqual({text: 'min_avg10'});
-  expect(notes('min_last_delay')).toContainEqual({text: 'min_last_delay'});
-  expect(notes('')).toContainEqual({text: 'urltest'});
+  expect(notes('min_avg10')).toContainEqual({text: t('policy.kind.urltest')});
+  expect(notes('min_last_delay')).toContainEqual({text: t('policy.kind.urltest')});
+  expect(notes('min_moving_avg')).toContainEqual({text: t('arrange.policy.fastest')});
+  expect(notes('')).toContainEqual({text: t('policy.kind.urltest')});
 });
 
 it('bounds each tree reveal while keeping layout, connector endpoints and branch reachability', async () => {

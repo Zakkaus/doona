@@ -20,9 +20,11 @@ export function policyLabel(value: string | null, t: Translator): string {
   return known ? t(known.label) : value!;
 }
 
-// A live group's policy in the picker's words; `id` is the engine's spelling, set only when the label differs from it.
+// A live group's policy in words: the picker's when it offers the policy, otherwise its kind's. `id` is the engine's
+// spelling, set only when the label differs from it.
 export function groupPolicyText(policy: Pick<Group['policy'], 'kind' | 'native'>, t: Translator): {label: string; id?: string} {
-  const label = policy.native ? policyLabel(policy.native, t) : t(policyKindLabels[policy.kind]);
+  const offered = newGroupPolicies.some(item => item.id === (policy.native ?? IMPLIED));
+  const label = policy.native && offered ? policyLabel(policy.native, t) : t(policyKindLabels[policy.kind]);
   const id = policy.native || policy.kind;
   return label === id ? {label} : {label, id};
 }

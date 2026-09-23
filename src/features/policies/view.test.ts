@@ -56,8 +56,8 @@ it('names the policy as the picker does and keeps the engine spelling for the to
   const group = nodeFixtures(0).groups[0];
   const card = (native: string) => policyCardView({...group, policy: {kind: 'urltest', native}}, [], 'both', t).policy;
   expect(card('min_moving_avg')).toEqual({label: t('arrange.policy.fastest'), id: 'min_moving_avg'});
-  expect(card('min_avg10')).toEqual({label: 'min_avg10'});
-  expect(card('')).toEqual({label: 'urltest'});
+  expect(card('min_avg10')).toEqual({label: t('policy.kind.urltest'), id: 'min_avg10'});
+  expect(card('')).toEqual({label: t('policy.kind.urltest'), id: 'urltest'});
 });
 
 it('filters large grids by region and observed health without mutating member order', () => {

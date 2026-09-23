@@ -788,7 +788,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
   await page.goto('/#/rules?tab=map');
   const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
   await expect(leaves).toHaveCount(30);
-  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('min_avg10');
+  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('Fastest on average');
   const first = await leaves.first().boundingBox();
   await page.getByRole('button', {name: 'Show 30 more items', exact: true}).click();
   await expect(leaves).toHaveCount(60);
