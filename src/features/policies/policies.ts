@@ -1,6 +1,6 @@
 import {groupNameProblem} from '../../dae/groups';
 import type {Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [

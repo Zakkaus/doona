@@ -1,7 +1,7 @@
 import {ApiError, errorText} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../store/config';
@@ -10,7 +10,7 @@ import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type
 import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
 import {diagnosticRows, sourceView, wizardInitial, wizardRows} from './view';
-import {useDraftGuard} from './useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],

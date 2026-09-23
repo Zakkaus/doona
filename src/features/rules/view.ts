@@ -1,12 +1,12 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {isFragment} from '../../dae/text';
 import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
-import {coverageView, word, type CoverageView} from '../flows/view';
+import {coverageView, word, type CoverageView} from './flows/view';
 import {sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';

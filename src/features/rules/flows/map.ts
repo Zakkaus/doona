@@ -1,5 +1,5 @@
-import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
-import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../api/selectors';
+import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../../api/model';
+import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../../api/selectors';
 
 export type TreeBy = 'rule' | 'client';
 export type TreeItem = {id: string; label: string; count: number; unknown?: boolean};

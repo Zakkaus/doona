@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {getApi} from '../../api';
 import type {RoutingTraceRequest, RoutingTraceResponse} from '../../api/model';
 import {useAction} from '../../store/action';

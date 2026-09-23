@@ -25,6 +25,7 @@
     "test:coverage": "vitest run --coverage",
     "conformance": "node tools/conformance.mjs",
     "e2e:live": "pnpm build && DOONA_LIVE_OBSERVE=1 playwright test e2e/a11y.spec.ts e2e/mobile.spec.ts e2e/keyboard.spec.ts",
+    "gen:locales": "node tools/gen-locales.mjs",
     "gen:api": "openapi-typescript contract/api-standardize/openapi.yaml -o \"${OPENAPI_OUTPUT:-src/api/types.ts}\"",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -53,6 +54,7 @@
     "@codemirror/view": "^6.43.12",
     "@lezer/highlight": "^1.2.3",
     "react": "^19.2.0",
+    "react-aria": "3.52.1",
     "react-aria-components": "1.21.1",
     "react-dom": "^19.2.0",
     "recharts": "^3.10.1"

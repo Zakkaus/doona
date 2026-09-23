@@ -1,4 +1,4 @@
-import type {Key} from '../i18n/messages';
+import type {Key} from '../i18n';
 import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';

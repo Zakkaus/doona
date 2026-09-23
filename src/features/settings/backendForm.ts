@@ -1,14 +1,14 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useT, type Params} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {toast, useLinked} from '../../ui/ui';
 import {readSettings} from './settings';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};

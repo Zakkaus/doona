@@ -38,6 +38,19 @@ export function Scatter({
   const plotHeight = height - top - bottom;
   const x = (value: number) => left + symlogPosition(value, end) * plotWidth;
   const y = (value: number) => top + (1 - symlogPosition(value, end)) * plotHeight;
+  // Each point's place, and its rank among the points at the same spot, counted in one pass.
+  const spots = new Map<string, number>();
+  const placed = series.flatMap(s =>
+    s.points.map(point => {
+      const cx = x(point.x);
+      const cy = y(point.y);
+      const spot = cx + ',' + cy;
+      const nth = spots.get(spot) ?? 0;
+      spots.set(spot, nth + 1);
+      return {point, color: s.color, cx, cy, nth, spot};
+    })
+  );
+  const ranked = placed.map(entry => ({...entry, twins: spots.get(entry.spot)!}));
   return (
     <div className="rp-scatter" ref={ref}>
       <div className="rp-chart-hover" ref={tipRef} onPointerLeave={hideTip}>
@@ -66,29 +79,23 @@ export function Scatter({
                 </text>
               </g>
             )}
-            {series
-              .flatMap(s => s.points.map(point => ({point, color: s.color})))
-              .map(({point, color}, i, all) => {
-                // Points at the same spot are set around it in a small ring, so each can still be clicked.
-                const cx = x(point.x);
-                const cy = y(point.y);
-                const twins = all.filter(other => x(other.point.x) === cx && y(other.point.y) === cy);
-                const nth = twins.findIndex(other => other.point.id === point.id);
-                const angle = (2 * Math.PI * nth) / twins.length;
-                const spread = twins.length > 1 ? 6 : 0;
-                return (
-                  <circle
-                    key={point.id}
-                    className={onSelect ? 'pick' : undefined}
-                    cx={cx + spread * Math.cos(angle)}
-                    cy={cy + spread * Math.sin(angle)}
-                    r={5}
-                    fill={color}
-                    onClick={onSelect ? () => onSelect(point.id) : undefined}
-                    onPointerMove={event => showTip(event, [point.name, point.detail])}
-                  />
-                );
-              })}
+            {ranked.map(({point, color, cx, cy, nth, twins}) => {
+              // Points at the same spot are set around it in a small ring, so each can still be clicked.
+              const angle = (2 * Math.PI * nth) / twins;
+              const spread = twins > 1 ? 6 : 0;
+              return (
+                <circle
+                  key={point.id}
+                  className={onSelect ? 'pick' : undefined}
+                  cx={cx + spread * Math.cos(angle)}
+                  cy={cy + spread * Math.sin(angle)}
+                  r={5}
+                  fill={color}
+                  onClick={onSelect ? () => onSelect(point.id) : undefined}
+                  onPointerMove={event => showTip(event, [point.name, point.detail])}
+                />
+              );
+            })}
           </svg>
         )}
         <ChartTip tip={tipState} />

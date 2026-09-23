@@ -15,14 +15,14 @@ import {
   Empty,
   Link,
   type TableColumn
-} from '../../ui/ui';
+} from '../../../ui/ui';
 import {Coverage} from './Coverage';
-import type {PageProps} from '../types';
-import {useT} from '../../i18n';
-import Close from '../../ui/icons/Close';
+import type {PageProps} from '../../types';
+import {useT} from '../../../i18n';
+import Close from '../../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
-import {ruleHref} from '../rules/link';
+import {ruleHref} from '../link';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 

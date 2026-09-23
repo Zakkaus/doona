@@ -1,6 +1,6 @@
 import type {ErrorResponse} from './model';
 
-import type {Key} from '../i18n/messages';
+import type {Key} from '../i18n';
 import type {Params, Translator} from '../i18n/index';
 
 export class ApiError extends Error {

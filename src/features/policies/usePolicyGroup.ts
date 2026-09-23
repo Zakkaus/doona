@@ -2,7 +2,7 @@ import {useEffect, useEffectEvent, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useGroupControl} from '../../store';
 import type {HealthObservation} from '../../api/model';
-import type {MainSourceEdit} from '../config/mainSource';
+import type {MainSourceEdit} from '../../store/mainSource';
 import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
 import {actionErrorText, memberViews, policyCardView, probeSummary} from './view';

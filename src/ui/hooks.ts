@@ -9,18 +9,21 @@ export function withCrossfade(fn: () => void) {
 
 export function useSlider(value: string, selector = '[data-selected]') {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{x: number; y: number; w: number; h: number} | null>(null);
+  const [pos, setPos] = useState<{x: number; y: number; w: number; h: number; still: boolean} | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => {
+    // The marker slides only when the selection changes. A resize, or a hidden panel shown again, puts it in place
+    // without motion; while hidden (a kept tab panel) nothing is measured, so it does not collapse to the start.
+    const measure = (still: boolean) => {
+      if (!el.offsetWidth) return;
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight};
+      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight, still};
       setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
-    measure();
-    const ro = new ResizeObserver(measure);
+    measure(false);
+    const ro = new ResizeObserver(() => measure(true));
     ro.observe(el);
     return () => ro.disconnect();
   }, [value, selector]);

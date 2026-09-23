@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
 import {RuleList} from './RuleList';
-import {FlowRecords, RoutingMap} from '../flows/Flows';
+import {FlowRecords, RoutingMap} from './flows/Flows';
 import type {PageProps} from '../types';
 import {useRulesPage} from './useRulesPage';
 import type {EvaluationView} from './view';
@@ -96,7 +96,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
             onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
             items={trace.modes}
           />
-          <Button accent className="rp-btn rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
+          <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
             {t('rule.run')}
           </Button>
         </div>

@@ -31,7 +31,8 @@ export function Connections(props: PageProps) {
   const cur = vm.detail;
   // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
   const listLink = ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(props.query).has(key));
-  const tab = pickTab(props.query, ['traffic', 'list'], listLink ? 'list' : 'traffic');
+  const fallback = listLink ? 'list' : 'traffic';
+  const tab = pickTab(props.query, ['traffic', 'list'], fallback);
   const list = (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
@@ -157,9 +158,11 @@ export function Connections(props: PageProps) {
   return (
     <div className="rp-page">
       <Tabs
+        keepMounted
         label={t('nav.connections')}
         value={tab}
-        onChange={next => props.go('connections', within(props.query, {tab: next === 'traffic' ? null : next}))}
+        // The tab is written only when it differs from the default, which a link into the table turns to the list.
+        onChange={next => props.go('connections', within(props.query, {tab: next === fallback ? null : next}))}
         items={[
           {
             id: 'traffic',

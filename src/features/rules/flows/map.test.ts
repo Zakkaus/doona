@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
-import type {GroupSummary} from '../../api/model';
+import {createMockApi} from '../../../api/mock';
+import type {GroupSummary} from '../../../api/model';
 import {flowsThrough, nodeNames, pinnedLabel, routingTree, treeIndex, treeRows} from './map';
 
 it('lays the config out as a tree and weights it with retained flows', async () => {

@@ -9,7 +9,7 @@ import {fileName, groupNames} from './names';
 import type {PageProps} from '../types';
 import {pickTab, within} from '../../shell/route';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
-import {useDraftGuard} from './useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';

@@ -11,7 +11,8 @@ const fact = (page: import('@playwright/test').Page, label: string) =>
 test('DNS opens on its statistics, with each figure labelled and its sample counted', async ({page}) => {
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', {name: 'Lookup speed and outcomes'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
+  await expect(page.getByText(/^\d+ cache entries; the backend reports no capacity$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
@@ -47,7 +48,7 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
 test('traffic is the first connections tab, and a point opens its connection in the list', async ({page}) => {
   await page.goto('/#/connections');
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');
-  await expect(fact(page, 'Most traffic')).toHaveText('cdn.bilibili.com (direct)');
+  await expect(fact(page, 'Heaviest connection')).toHaveText('cdn.bilibili.com (direct)');
   await expect(fact(page, 'Download')).toHaveText('1.1 GB');
   await page.locator('.rp-scatter circle').first().click();
   await expect(page).toHaveURL(/[?&]tab=list/);

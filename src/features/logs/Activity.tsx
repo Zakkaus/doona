@@ -3,8 +3,10 @@ import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette} from '../../ui/Charts';
 import {Button} from '../../ui/ui';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';
-import {ChartCard, Heatmap, type ChartFact} from '../../ui/charts';
+import {ChartCard, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {levelHeatmap} from './heatmap';
 import {logLevelLabels} from './view';
 
@@ -34,41 +36,44 @@ export function LogActivity({
     ? []
     : busiest.errors
       ? [
-          {label: t('log.chart.errors'), value: t('log.chart.count', {n: busiest.errors}), tone: 'negative'},
-          {label: t('log.chart.peakErrors'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: busiest.errors}), icon: <AlertTriangle />, tone: 'negative'},
+          {label: t('log.chart.peakErrors'), icon: <History />, tint: 'c1', value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
         ]
       : [
-          {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0})},
-          {label: t('log.chart.peak'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0}), icon: <AlertTriangle />, tint: 'c5'},
+          {label: t('log.chart.peak'), icon: <History />, tint: 'c1', value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
         ];
   return (
-    <ChartCard title={t('log.chart.title')} facts={facts} sample={t('log.chart.sample', {n: records.length})}>
-      <Heatmap
-        label={t('log.chart.title')}
-        columns={map.buckets.map(start => clock.format(start))}
-        rows={map.rows.map(row => {
-          const level = t(logLevelLabels[row.level]);
-          return {
-            id: row.level,
-            color: tones[row.level],
-            // Every row header is the same button; the current minimum carries a check mark and changes nothing.
-            label: (
-              <Button
-                quiet
-                small
-                className={row.level === minimum ? 'rp-btn current' : undefined}
-                label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
-                onPress={() => setMinimum(row.level)}
-              >
-                {row.level === minimum && <Checkmark />}
-                {level}
-              </Button>
-            ),
-            counts: row.counts,
-            titles: row.counts.map((n, i) => t('log.chart.cell', {time: span(map.buckets[i]), level, n}))
-          };
-        })}
-      />
-    </ChartCard>
+    <div className="rp-chart-page">
+      <FactStrip facts={facts} />
+      <ChartCard title={t('log.chart.title')} note={t('log.chart.sample', {n: records.length})}>
+        <Heatmap
+          label={t('log.chart.title')}
+          columns={map.buckets.map(start => clock.format(start))}
+          rows={map.rows.map(row => {
+            const level = t(logLevelLabels[row.level]);
+            return {
+              id: row.level,
+              color: tones[row.level],
+              // Every row header is the same button; the current minimum carries a check mark and changes nothing.
+              label: (
+                <Button
+                  quiet
+                  small
+                  className={row.level === minimum ? 'current' : undefined}
+                  label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
+                  onPress={() => setMinimum(row.level)}
+                >
+                  {row.level === minimum && <Checkmark />}
+                  {level}
+                </Button>
+              ),
+              counts: row.counts,
+              titles: row.counts.map((n, i) => t('log.chart.cell', {time: span(map.buckets[i]), level, n}))
+            };
+          })}
+        />
+      </ChartCard>
+    </div>
   );
 }

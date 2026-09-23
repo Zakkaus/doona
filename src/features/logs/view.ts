@@ -1,7 +1,7 @@
 import type {LogLevel, LogRecord} from '../../api/model';
 import {localTime} from '../../api/selectors';
 import type {Translator as LabelFn} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
 export const logLevelLabels: Record<LogLevel, Key> = {

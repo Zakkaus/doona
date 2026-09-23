@@ -1,4 +1,4 @@
-import {defineMessages} from '../../i18n/defineMessages';
+import {defineMessages} from '../../../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {

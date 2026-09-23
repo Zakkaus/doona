@@ -4,7 +4,10 @@ import type {Connection} from '../../api/model';
 import {outboundLabel} from '../../api/selectors';
 import {formatBytes} from '../../api/u64';
 import {usePalette} from '../../ui/Charts';
-import {ChartCard, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
+import {ChartCard, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
+import Download from '../../ui/icons/Download';
+import Link from '../../ui/icons/Link';
+import Upload from '../../ui/icons/Upload';
 import {trafficSeries} from './scatter';
 
 // Upload against download for the connections the table shows; the heavy ones stand apart from the crowd.
@@ -43,28 +46,36 @@ export function Traffic({
   }));
   const facts: ChartFact[] = view.heaviest
     ? [
-        {label: t('conn.chart.busiest'), value: t('conn.chart.named', {name: view.heaviest.name, outbound: outboundLabel(view.heaviest.outbound, t)})},
-        {label: t('conn.chart.down'), value: bytes(view.heaviest.down)},
-        {label: t('conn.chart.up'), value: bytes(view.heaviest.up)}
+        {
+          label: t('conn.chart.busiest'),
+          icon: <Link />,
+          tint: 'c3',
+          value: t('conn.chart.named', {name: view.heaviest.name, outbound: outboundLabel(view.heaviest.outbound, t)})
+        },
+        {label: t('conn.chart.down'), value: bytes(view.heaviest.down), icon: <Download />, tint: 'c1'},
+        {label: t('conn.chart.up'), value: bytes(view.heaviest.up), icon: <Upload />, tint: 'c4'}
       ]
     : [];
   const sample = view.unknown ? t('conn.chart.sampleUnknown', {n: records.length, unknown: view.unknown}) : t('conn.chart.sample', {n: records.length});
   return (
-    <ChartCard title={t('conn.chart.title')} facts={facts} sample={sample}>
-      {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
-      {view.placed > 0 && (
-        <>
-          <Scatter
-            label={t('conn.chart.title')}
-            series={series}
-            fmt={bytes}
-            onSelect={onSelect}
-            regions={{above: t('conn.chart.moreDown'), below: t('conn.chart.moreUp')}}
-          />
-          <ScatterLegend series={series} />
-          <p className="rp-note">{t('conn.chart.hint')}</p>
-        </>
-      )}
-    </ChartCard>
+    <div className="rp-chart-page">
+      <FactStrip facts={facts} />
+      <ChartCard title={t('conn.chart.title')} note={sample}>
+        {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
+        {view.placed > 0 && (
+          <>
+            <Scatter
+              label={t('conn.chart.title')}
+              series={series}
+              fmt={bytes}
+              onSelect={onSelect}
+              regions={{above: t('conn.chart.moreDown'), below: t('conn.chart.moreUp')}}
+            />
+            <ScatterLegend series={series} />
+            <p className="rp-note">{t('conn.chart.hint')}</p>
+          </>
+        )}
+      </ChartCard>
+    </div>
   );
 }

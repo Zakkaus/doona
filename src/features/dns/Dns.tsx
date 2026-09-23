@@ -89,7 +89,7 @@ export function Dns(props: PageProps) {
     <div className="rp-page">
       {vm.error && <ErrorMessage error={vm.error} />}
       {vm.queryError && <ErrorMessage error={vm.queryError} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
-      <Tabs label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
+      <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
     </div>
   );
 }

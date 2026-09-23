@@ -12,8 +12,8 @@ import {
   type OutboundNames
 } from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {word} from '../flows/view';
-import type {Key} from '../../i18n/messages';
+import {word} from '../rules/flows/view';
+import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
 import {ruleHref} from '../rules/link';
@@ -140,7 +140,8 @@ export function connectionTableView(
   locale: string,
   names: OutboundNames,
   rulesListed: boolean,
-  t: LabelFn
+  t: LabelFn,
+  now = Date.now()
 ): ConnectionTableRow[] {
   const project = (c: Connection): ConnectionRowView => ({
     id: c.id,
@@ -151,7 +152,7 @@ export function connectionTableView(
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
     download: formatBytes(c.download_bytes),
-    age: relativeStart(c.started_at, locale)
+    age: relativeStart(c.started_at, locale, now)
   });
   return tableRows(rows, view, locale, t).map(row =>
     'connection' in row

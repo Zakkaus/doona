@@ -1,16 +1,17 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
-import {connectionStates, outboundLabel} from '../../api/selectors';
-import {useLang, useT} from '../../i18n';
-import {within} from '../../shell/route';
-import {panelQuery, useMediaQuery} from '../../ui/ui';
-import type {PageProps} from '../types';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useNow, useRules, type FlowFilter} from '../../../store';
+import {connectionStates, outboundLabel} from '../../../api/selectors';
+import {useLang, useT} from '../../../i18n';
+import {within} from '../../../shell/route';
+import {panelQuery, useMediaQuery} from '../../../ui/ui';
+import type {PageProps} from '../../types';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
+  const now = useNow();
   const wide = useMediaQuery(panelQuery);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   // Filters live in the address, so they survive a tab switch like the other pages' filters.
@@ -32,7 +33,7 @@ export function useFlowRecords({go, query}: PageProps) {
     const all = resource.data?.flows ?? [];
     return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
   }, [resource.data, pinned, rules.data]);
-  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
+  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang, now), [shown, resource.data, names, t, lang, now]);
   const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang), [detail.data, canAdd, t, lang]);
   return {
     ...view,

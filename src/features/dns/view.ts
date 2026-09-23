@@ -3,7 +3,7 @@ import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
@@ -52,7 +52,8 @@ export function dnsCacheView(
   domain: string,
   busy: string | null,
   locale: string,
-  t: LabelFn
+  t: LabelFn,
+  now = Date.now()
 ) {
   const filter = domain.toLowerCase();
   return {
@@ -81,9 +82,9 @@ export function dnsCacheView(
         domain: entry.domain,
         type: entry.type,
         status: entry.status,
-        expires: relativeStart(entry.expires_at, locale),
+        expires: relativeStart(entry.expires_at, locale, now),
         expiresTooltip: localTime(entry.expires_at, locale),
-        stale: relativeStart(entry.stale_until, locale),
+        stale: relativeStart(entry.stale_until, locale, now),
         staleTooltip: entry.stale_until === null ? undefined : localTime(entry.stale_until, locale),
         deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
         pending: busy === entry.entry_id,
@@ -110,7 +111,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     ] as Array<[string, string]>
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = []) {
+export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = [], now = Date.now()) {
   const records = data?.records ?? [];
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
@@ -120,7 +121,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
     empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),
     rows: records.map(record => ({
       id: record.id,
-      time: relativeStart(record.observed_at, locale),
+      time: relativeStart(record.observed_at, locale, now),
       timeTooltip: localTime(record.observed_at, locale),
       name: record.question.name,
       type: record.question.type,

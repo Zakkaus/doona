@@ -5,7 +5,10 @@ import {useCapabilities, useGroups, useNodes} from '../../store';
 import {Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
 import {usePalette} from '../../ui/Charts';
-import {ChartCard, MarkerPlot, type ChartFact} from '../../ui/charts';
+import {ChartCard, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import Clock from '../../ui/icons/Clock';
+import SpeedFast from '../../ui/icons/SpeedFast';
 import {latencyGroups, latencyMax, type LatencyBy, type LatencyMissing} from './latency';
 
 const named = 6;
@@ -31,12 +34,25 @@ export function NodeLatency() {
   const down = new Set(view.flatMap(group => group.missing.filter(row => row.state === 'unavailable').map(row => row.id))).size;
   const facts: ChartFact[] = measured.length
     ? [
-        {label: t('nodes.latency.lowest'), value: t('nodes.latency.named', {name: measured[0].name, ms: ms(measured[0].latest)})},
+        {
+          label: t('nodes.latency.lowest'),
+          icon: <SpeedFast />,
+          tint: 'c2',
+          value: t('nodes.latency.named', {name: measured[0].name, ms: ms(measured[0].latest)})
+        },
         {
           label: t('nodes.latency.highest'),
+          icon: <Clock />,
+          tint: 'c4',
           value: t('nodes.latency.named', {name: measured[measured.length - 1].name, ms: ms(measured[measured.length - 1].latest)})
         },
-        {label: t('nodes.latency.unavailable'), value: t('nodes.latency.count', {n: down}), tone: down ? 'negative' : undefined}
+        {
+          label: t('nodes.latency.unavailable'),
+          value: t('nodes.latency.count', {n: down}),
+          icon: <AlertTriangle />,
+          tint: 'c5',
+          tone: down ? 'negative' : undefined
+        }
       ]
     : [];
   const dash = (value: number | null) => (value === null ? '—' : ms(value));
@@ -57,47 +73,50 @@ export function NodeLatency() {
     ];
   };
   return (
-    <ChartCard title={t('nodes.latency.title')} facts={facts} sample={t('nodes.latency.sample', {n: nodes.data.length})}>
-      <div className="rp-row">
-        <Segmented
-          label={t('nodes.latency.by')}
-          value={by}
-          onChange={value => setBy(value as LatencyBy)}
-          items={[
-            ['group', t('nodes.latency.byGroup')],
-            ['protocol', t('nodes.latency.byProtocol')]
+    <div className="rp-chart-page">
+      <FactStrip facts={facts} />
+      <ChartCard title={t('nodes.latency.title')} note={t('nodes.latency.sample', {n: nodes.data.length})}>
+        <div className="rp-row">
+          <Segmented
+            label={t('nodes.latency.by')}
+            value={by}
+            onChange={value => setBy(value as LatencyBy)}
+            items={[
+              ['group', t('nodes.latency.byGroup')],
+              ['protocol', t('nodes.latency.byProtocol')]
+            ]}
+          />
+        </div>
+        <MarkerPlot
+          label={t('nodes.latency.title')}
+          max={latencyMax(view)}
+          fmt={ms}
+          showAll={n => t('nodes.latency.showAll', {n})}
+          legend={[
+            {kind: 'dot', label: t('nodes.latency.latest')},
+            {kind: 'diamond', label: t('nodes.latency.moving')},
+            {kind: 'tick', label: t('nodes.latency.avg10')}
           ]}
+          groups={view.map(group => ({
+            id: group.id,
+            label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
+            rows: group.rows.map(row => ({
+              id: row.id,
+              label: row.name,
+              values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
+              text: ms(row.latest),
+              tone: tone[latencyTone(row.latest)],
+              description: t('nodes.latency.row', {latest: ms(row.latest), moving: dash(row.moving), avg10: dash(row.avg10)}),
+              details: [
+                t('ui.valuePair', {label: t('nodes.latency.latest'), value: ms(row.latest)}),
+                t('ui.valuePair', {label: t('nodes.latency.moving'), value: dash(row.moving)}),
+                t('ui.valuePair', {label: t('nodes.latency.avg10'), value: dash(row.avg10)})
+              ]
+            })),
+            notes: notes(group.missing)
+          }))}
         />
-      </div>
-      <MarkerPlot
-        label={t('nodes.latency.title')}
-        max={latencyMax(view)}
-        fmt={ms}
-        showAll={n => t('nodes.latency.showAll', {n})}
-        legend={[
-          {kind: 'dot', label: t('nodes.latency.latest')},
-          {kind: 'diamond', label: t('nodes.latency.moving')},
-          {kind: 'tick', label: t('nodes.latency.avg10')}
-        ]}
-        groups={view.map(group => ({
-          id: group.id,
-          label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
-          rows: group.rows.map(row => ({
-            id: row.id,
-            label: row.name,
-            values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
-            text: ms(row.latest),
-            tone: tone[latencyTone(row.latest)],
-            description: t('nodes.latency.row', {latest: ms(row.latest), moving: dash(row.moving), avg10: dash(row.avg10)}),
-            details: [
-              t('ui.valuePair', {label: t('nodes.latency.latest'), value: ms(row.latest)}),
-              t('ui.valuePair', {label: t('nodes.latency.moving'), value: dash(row.moving)}),
-              t('ui.valuePair', {label: t('nodes.latency.avg10'), value: dash(row.avg10)})
-            ]
-          })),
-          notes: notes(group.missing)
-        }))}
-      />
-    </ChartCard>
+      </ChartCard>
+    </div>
   );
 }

@@ -132,9 +132,13 @@ it('does not carry data across keys or flash loading when remounting a remembere
   disposers.push(remembered.dispose);
   await vi.advanceTimersByTimeAsync(0);
   expect(publish).not.toHaveBeenCalled();
-  next.resolve(version);
+  const before = remembered.getSnapshot();
+  next.resolve(structuredClone(version));
   await vi.advanceTimersByTimeAsync(0);
-  expect(publish).toHaveBeenLastCalledWith({data: version, loading: false, error: null});
+  // An equal response keeps the remembered snapshot rather than publishing a copy.
+  expect(publish).not.toHaveBeenCalled();
+  expect(remembered.getSnapshot()).toBe(before);
+  expect(before).toEqual({data: version, loading: false, error: null});
 });
 
 it.each([1000, 4000])('uses the earlier poll or invalidation deadline after an event at %i ms', async eventAt => {
@@ -285,4 +289,35 @@ it('disposal cancels a queued explicit refresh', async () => {
   resource.response.resolve(version);
   await refresh;
   expect(resource.fetch).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the snapshot across equal polls and publishes a change or a recovery', async () => {
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const replies: Array<() => Promise<Version>> = [
+    () => Promise.resolve(structuredClone(version)),
+    () => Promise.resolve(structuredClone(version)),
+    () => Promise.reject(new Error('down')),
+    () => Promise.resolve(structuredClone(version)),
+    () => Promise.resolve({...structuredClone(version), engine: {...version.engine, version: '0.9.4'}})
+  ];
+  const publish = vi.fn();
+  const watcher = watchResource({api, key: ['version', {id: 'share'}], every: 5000}, () => replies.shift()!(), publish);
+  disposers.push(watcher.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  const first = watcher.getSnapshot();
+  publish.mockClear();
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(publish).not.toHaveBeenCalled();
+  expect(watcher.getSnapshot()).toBe(first);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(watcher.getSnapshot()).toMatchObject({data: first.data, error: {message: 'down'}});
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(watcher.getSnapshot()).toEqual({data: first.data, loading: false, error: null});
+  expect(watcher.getSnapshot().data).toBe(first.data);
+  await vi.advanceTimersByTimeAsync(5000);
+  const changed = watcher.getSnapshot().data!;
+  expect(changed.engine.version).toBe('0.9.4');
+  expect(changed.api).toBe(first.data!.api);
+  expect(publish).toHaveBeenCalledTimes(3);
 });

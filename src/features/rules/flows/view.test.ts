@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
-import {translate, type Translator} from '../../i18n';
+import {createMockApi} from '../../../api/mock';
+import {translate, type Translator} from '../../../i18n';
 import {coverageView, flowDetailView, flowRecordsView, routingMapView, tileViews, treeGeometry, treeWindow} from './view';
 import {routingTree, treeIndex, treeReach} from './map';
 

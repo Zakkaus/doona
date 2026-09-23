@@ -161,6 +161,7 @@ export function Policies({go, query}: PageProps) {
   return (
     <div className="rp-page">
       <Tabs
+        keepMounted
         label={t('nav.policies')}
         value={tab}
         onChange={next => go('policies', within(query, {tab: next === 'groups' ? null : next}))}

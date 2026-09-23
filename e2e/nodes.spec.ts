@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
@@ -181,4 +181,12 @@ test('an unspecified subscription interval claims neither manual-only nor an eng
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
   await expect(subscription.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true})).toHaveText('—');
+});
+
+test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.nodes.available = false;
+  await page.goto('/#/nodes?tab=latency');
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
 });

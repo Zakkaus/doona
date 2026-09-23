@@ -1,12 +1,12 @@
 import {useCallback, useDeferredValue, useMemo, useState} from 'react';
 import {useFilter} from 'react-aria-components';
 import {useT} from '../../../i18n';
-import type {Key} from '../../../i18n/messages';
+import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
 import {toast, useLinked} from '../../../ui/ui';
-import {useDraftGuard} from '../../config/useDraftGuard';
-import type {MainSourceEdit} from '../../config/mainSource';
+import {useDraftGuard} from '../../../shell/draft';
+import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupNameError} from '../policies';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';

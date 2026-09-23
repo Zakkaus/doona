@@ -149,6 +149,9 @@
     width var(--rp-duration-panel) var(--rp-ease-out);
   pointer-events: none;
 }
+.rp-slider[data-still] {
+  transition: none;
+}
 .rp-seg .rp-btn {
   flex: 0 1 auto;
   min-width: 0;

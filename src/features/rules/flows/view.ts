@@ -1,14 +1,14 @@
-import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
-import type {Key} from '../../i18n/messages';
-import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
-import {millis, parseU64} from '../../api/u64';
-import {latencyTone} from '../../ui/ui';
-import {policyKindLabels} from '../policies/view';
+import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
+import type {Key} from '../../../i18n';
+import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {millis, parseU64} from '../../../api/u64';
+import {latencyTone} from '../../../ui/ui';
+import {policyKindLabels} from '../../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
-import {href} from '../../shell/route';
-import {ruleSeedHref} from '../rules/seed';
+import {href} from '../../../shell/route';
+import {ruleSeedHref} from '../seed';
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
   userspace: 'flow.v.userspace',
@@ -273,7 +273,14 @@ type FlowDetailView = {
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
+export function flowRecordsView(
+  flows: FlowSummary[],
+  list: FlowList | undefined,
+  names: OutboundNames,
+  t: Translator,
+  lang: Lang,
+  now = Date.now()
+): FlowRecordsView {
   const locale = LOCALE[lang];
   return {
     rows: flows.map(flow => ({
@@ -285,7 +292,7 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: t(connectionStates[flow.state]),
-      started: relativeStart(flow.started_at, locale)
+      started: relativeStart(flow.started_at, locale, now)
     })),
     coverage: list ? coverageView(list, t, lang) : null,
     stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]

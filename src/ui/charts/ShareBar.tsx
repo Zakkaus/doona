@@ -16,13 +16,16 @@ export function ShareBar({label, segments}: {label: string; segments: ShareSegme
         aria-label={`${label}: ${segments.map(segment => `${segment.label} ${segment.text}`).join(', ')}`}
         aria-describedby={describedBy}
       >
-        {segments.map(segment => (
-          <i
-            key={segment.id}
-            style={{flexGrow: total ? segment.count : 1, background: segment.color}}
-            onPointerMove={event => showTip(event, [segment.label, segment.text])}
-          />
-        ))}
+        {/* An empty share has no part of the bar; the legend still lists it with its zero. */}
+        {segments
+          .filter(segment => segment.count > 0 || !total)
+          .map(segment => (
+            <i
+              key={segment.id}
+              style={{flexGrow: total ? segment.count : 1, background: segment.color}}
+              onPointerMove={event => showTip(event, [segment.label, segment.text])}
+            />
+          ))}
       </div>
       <ul className="legend">
         {segments.map(segment => (

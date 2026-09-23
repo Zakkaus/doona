@@ -4,6 +4,11 @@ import {ApiError} from '../src/api/error';
 import type {OperationAccepted} from '../src/api/model';
 
 const expectedHttpErrors = new WeakMap<Page, Set<string>>();
+const expectedLoadFailures = new WeakMap<Page, RegExp>();
+// A spec that blocks a resource on purpose names it, so the refused load is not reported as a browser error.
+export function expectLoadFailures(page: Page, url: RegExp) {
+  expectedLoadFailures.set(page, url);
+}
 
 // Route IDs from src/shell/registry.ts; importing it would load page components.
 export const routes = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules', 'nodes', 'config', 'events', 'logs', 'settings'] as const;
@@ -43,7 +48,9 @@ export const test = base.extend<{storage: Record<string, string>}>({
     page.on('console', message => {
       // The first-visit discovery request is expected to 404 on a static host.
       const discovery = /\/api$/.test(message.location().url) && message.text().includes('404');
-      const expectedHttp = expectedHttpErrors.get(page)?.has(message.location().url) && /^Failed to load resource:/.test(message.text());
+      const failedLoad = /^Failed to load resource:/.test(message.text());
+      const expectedHttp =
+        failedLoad && (expectedHttpErrors.get(page)?.has(message.location().url) || expectedLoadFailures.get(page)?.test(message.location().url));
       if (message.type() === 'error' && !discovery && !expectedHttp) errors.push(`console: ${message.text()}`);
     });
     page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));

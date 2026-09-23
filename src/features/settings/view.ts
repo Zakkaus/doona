@@ -2,7 +2,7 @@ import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, 
 import {formatBytes} from '../../api/u64';
 import {localTime, relativeStart} from '../../api/selectors';
 import {formatNumber, type Params, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
+import type {Key} from '../../i18n';
 
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;
@@ -84,12 +84,12 @@ export function numericFieldView(id: Numeric, value: string, ceiling: number | u
         : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
-export function geodataRows(assets: GeoData['assets'], locale: string) {
+export function geodataRows(assets: GeoData['assets'], locale: string, now = Date.now()) {
   return assets.map(asset => ({
     id: asset.kind,
     kind: asset.kind,
     size: formatBytes(asset.size_bytes),
-    modified: relativeStart(asset.modified_at, locale),
+    modified: relativeStart(asset.modified_at, locale, now),
     modifiedTitle: asset.modified_at ? localTime(asset.modified_at, locale) : undefined,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,

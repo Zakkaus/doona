@@ -16,7 +16,7 @@ import {
   type Recorder,
   type RecorderChoice
 } from './view';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {logLevelLabels} from '../logs/view';
 import {errorText} from '../../api/error';
 

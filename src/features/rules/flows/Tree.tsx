@@ -1,6 +1,6 @@
 import {memo} from 'react';
 import {ToggleButton} from 'react-aria-components';
-import {Badge, Button, cx} from '../../ui/ui';
+import {Badge, Button, cx} from '../../../ui/ui';
 import type {RoutingTree} from './map';
 import type {TreePlacement, TileView} from './view';
 import {useTree} from './useTree';

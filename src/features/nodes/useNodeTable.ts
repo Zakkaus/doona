@@ -7,7 +7,7 @@ import type {OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {toast, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
-import type {MainSourceEdit} from '../config/mainSource';
+import type {MainSourceEdit} from '../../store/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
 import {policyLabel} from '../policies/policies';
 import {errorText} from '../../api/error';

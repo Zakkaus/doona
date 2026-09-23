@@ -1,12 +1,17 @@
-import {useMemo} from 'react';
-import {LOCALE, useLang, useT} from '../../i18n';
-import {useDnsLog} from '../../store';
-import {Empty, ErrorMessage, Loading} from '../../ui/ui';
-import type {DnsLogRecord} from '../../api/model';
+import {useMemo, useState} from 'react';
+import {useT, type Translator} from '../../i18n';
+import {useDnsControl, useDnsLog, useNow} from '../../store';
+import {Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
+import type {DnsCacheList, DnsLogRecord} from '../../api/model';
 import {millis} from '../../api/u64';
 import {usePalette} from '../../ui/Charts';
-import {BarList, Beeswarm, ChartCard, Heatmap, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
-import {dnsAnalysis, dnsOutcomes, type DnsOutcome} from './analysis';
+import {Beeswarm, ChartCard, FactStrip, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
+import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './analysis';
+import {cacheState} from './cache';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import Clock from '../../ui/icons/Clock';
+import Data from '../../ui/icons/Data';
+import SpeedFast from '../../ui/icons/SpeedFast';
 
 const labels: Record<DnsOutcome, 'dns.outcome.cached' | 'dns.outcome.answered' | 'dns.outcome.nxdomain' | 'dns.outcome.failed'> = {
   cached: 'dns.outcome.cached',
@@ -15,20 +20,32 @@ const labels: Record<DnsOutcome, 'dns.outcome.cached' | 'dns.outcome.answered' |
   failed: 'dns.outcome.failed'
 };
 
-// How fast the loaded lookups were and how they ended, above the log table they come from.
-export function DnsAnalysis({records}: {records: DnsLogRecord[] | undefined}) {
+// The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
+export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const log = useDnsLog({}, enabled === true);
+  const {cache, capabilities} = useDnsControl();
+  if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
+  // Not known yet, or capabilities failed: the page says why above the tabs.
+  if (enabled === undefined) return null;
+  if (log.error && !log.data) return <ErrorMessage error={log.error} onRetry={log.refetch} />;
+  if (!log.data) return <Loading />;
+  const cacheListed = capabilities.data?.resources.dns_cache.available === true && capabilities.data.resources.dns_cache.read === true;
+  return <DnsAnalysis records={log.data.records} cache={cacheListed ? cache.data : null} />;
+}
+
+function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCacheList | undefined | null}) {
+  const t = useT();
   const p = usePalette();
-  const a = useMemo(() => dnsAnalysis(records ?? []), [records]);
+  const a = useMemo(() => dnsAnalysis(records), [records]);
   // Answered takes a category colour, since info and positive are both blue-green in some palettes.
   const colors: Record<DnsOutcome, string> = {cached: p.positive, answered: p.cat[2], nxdomain: p.notice, failed: p.negative};
   const ms = (value: number) => t('ui.latency', {n: millis(value)});
   const percent = (share: number | null) => t('ui.percent', {n: share === null ? 0 : Math.round(share * 100)});
   // A share is never rounded to 0% or 100% when that would contradict a cell the waffle draws or leaves out.
-  const shareText = (count: number) => {
-    const share = a.total ? count / a.total : 0;
-    return count > 0 && share < 0.005 ? '<' + t('ui.percent', {n: 1}) : count < a.total && share > 0.995 ? '>' + t('ui.percent', {n: 99}) : percent(share);
+  const shareText = (count: number, total: number) => {
+    const share = total ? count / total : 0;
+    return count > 0 && share < 0.005 ? '<' + t('ui.percent', {n: 1}) : count < total && share > 0.995 ? '>' + t('ui.percent', {n: 99}) : percent(share);
   };
   const point = (sample: (typeof a.samples)[number]): SwarmPoint => ({
     id: sample.id,
@@ -36,172 +53,174 @@ export function DnsAnalysis({records}: {records: DnsLogRecord[] | undefined}) {
     color: colors[sample.outcome],
     lines: [sample.name, ms(sample.value), t(labels[sample.outcome])]
   });
-  if (!records) return null;
-  const dash = (value: number | null, format: (value: number) => string) => (value === null ? '—' : format(value));
-  const clock = new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
-  const span = (start: number) => `${clock.format(start)}–${clock.format(start + a.timeline.width)}`;
-  const facts: ChartFact[] =
-    a.total < 5
-      ? []
-      : [
-          {label: t('dns.chart.median'), value: dash(a.typical, ms)},
-          {label: t('dns.chart.p95'), value: dash(a.slowest, ms)},
-          {label: t('dns.chart.cacheRate'), value: percent(a.cacheRate)},
-          {label: t('dns.chart.failureRate'), value: percent(a.failureRate), tone: a.counts.failed ? 'negative' : undefined}
-        ];
-  const sample = a.total < 5 ? t('dns.chart.tooFew') : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length});
+  const dash = (value: number | null) => (value === null ? '—' : ms(value));
+  if (a.total < 5) return <Empty>{t('dns.chart.tooFew')}</Empty>;
+  const facts: ChartFact[] = [
+    {label: t('dns.chart.median'), value: dash(a.typical), icon: <SpeedFast />, tint: 'c1'},
+    {label: t('dns.chart.p95'), value: dash(a.slowest), icon: <Clock />, tint: 'c4'},
+    {label: t('dns.chart.cacheRate'), value: percent(a.cacheRate), icon: <Data />, tint: 'c2'},
+    {label: t('dns.chart.failureRate'), value: percent(a.failureRate), icon: <AlertTriangle />, tint: 'c5', tone: a.counts.failed ? 'negative' : undefined}
+  ];
   return (
-    <ChartCard title={t('dns.chart.title')} facts={facts} sample={sample}>
-      {a.total >= 5 && (
-        <div className="rp-chart-grid split">
-          <section aria-labelledby="dns-speed">
-            <h4 className="rp-chart-title" id="dns-speed">
-              {t('dns.chart.speed', {n: a.samples.length})}
-            </h4>
-            <Beeswarm
-              label={t('dns.chart.speed', {n: a.samples.length})}
-              points={a.samples.map(point)}
-              marks={
-                a.typical !== null && a.slowest !== null
-                  ? [
-                      {value: a.typical, label: t('dns.chart.typical', {value: ms(a.typical)})},
-                      {value: a.slowest, label: t('dns.chart.slowest', {value: ms(a.slowest)})}
-                    ]
-                  : []
-              }
-              rows={a.upstreams.map(row => ({
-                id: row.upstream,
-                label: row.upstream,
-                detail: t('dns.chart.upstream', {n: row.samples.length, median: ms(row.median)}),
-                points: row.samples.map(point),
-                mark: row.median
-              }))}
-              fmt={ms}
-            />
-            <div className="rp-legend">
-              {(['answered', 'nxdomain', 'failed'] as const).map(outcome => (
-                <span key={outcome} className="it">
-                  <i className="sw" style={{background: colors[outcome]}} />
-                  {t(labels[outcome])}
-                </span>
-              ))}
-              <span className="it">
-                <i className="rp-median-key" aria-hidden="true" />
-                {t('dns.chart.medianKey')}
+    <div className="rp-chart-page">
+      <FactStrip facts={facts} />
+      <p className="rp-note">{t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}</p>
+      <div className="rp-g21">
+        <ChartCard title={t('dns.chart.speed', {n: a.samples.length})}>
+          <Beeswarm
+            label={t('dns.chart.speed', {n: a.samples.length})}
+            points={a.samples.map(point)}
+            marks={
+              a.typical !== null && a.slowest !== null
+                ? [
+                    {value: a.typical, label: t('dns.chart.typical', {value: ms(a.typical)})},
+                    {value: a.slowest, label: t('dns.chart.slowest', {value: ms(a.slowest)})}
+                  ]
+                : []
+            }
+            rows={a.upstreams.map(row => ({
+              id: row.upstream,
+              label: row.upstream,
+              detail: t('dns.chart.upstream', {n: row.samples.length, median: ms(row.median)}),
+              points: row.samples.map(point),
+              mark: row.median
+            }))}
+            fmt={ms}
+          />
+          <div className="rp-legend">
+            {(['answered', 'nxdomain', 'failed'] as const).map(outcome => (
+              <span key={outcome} className="it">
+                <i className="sw" style={{background: colors[outcome]}} />
+                {t(labels[outcome])}
               </span>
-            </div>
-          </section>
-          <section aria-labelledby="dns-outcomes">
-            <h4 className="rp-chart-title" id="dns-outcomes">
-              {t('dns.chart.outcomes')}
-            </h4>
-            <Waffle
-              label={t('dns.chart.outcomes')}
-              shares={dnsOutcomes.map(outcome => ({
-                id: outcome,
-                label: t(labels[outcome]),
-                count: a.counts[outcome],
-                color: colors[outcome],
-                text: t('dns.chart.share', {n: a.counts[outcome], share: shareText(a.counts[outcome])})
-              }))}
-            />
-          </section>
-        </div>
-      )}
-      {a.total >= 5 && (
+            ))}
+            <span className="it">
+              <i className="rp-median-key" aria-hidden="true" />
+              {t('dns.chart.medianKey')}
+            </span>
+          </div>
+        </ChartCard>
+        <ChartCard title={t('dns.chart.outcomes')}>
+          <Waffle
+            label={t('dns.chart.outcomes')}
+            shares={dnsOutcomes.map(outcome => ({
+              id: outcome,
+              label: t(labels[outcome]),
+              count: a.counts[outcome],
+              color: colors[outcome],
+              text: t('dns.chart.share', {n: a.counts[outcome], share: shareText(a.counts[outcome], a.total)})
+            }))}
+          />
+        </ChartCard>
+      </div>
+      <div className="rp-g21">
+        <RankingCard analysis={a} />
+        <CacheCard cache={cache} t={t} shareText={shareText} />
+      </div>
+    </div>
+  );
+}
+
+// What the cache holds now. The backend lists its entries and what kinds it caches, not a capacity, so the card says
+// how many there are and how fresh, rather than how full.
+function CacheCard({cache, t, shareText}: {cache: DnsCacheList | undefined | null; t: Translator; shareText: (count: number, total: number) => string}) {
+  const p = usePalette();
+  const now = useNow();
+  const state = useMemo(() => cacheState(cache ?? undefined, now), [cache, now]);
+  return (
+    <ChartCard title={t('dns.chart.cache')} note={state ? t('dns.chart.cacheNote', {n: state.total}) : undefined}>
+      {cache === null ? (
+        <Empty>{t('dns.cacheUnavailable')}</Empty>
+      ) : !state ? (
+        <Loading />
+      ) : (
         <>
-          <div className="rp-chart-grid halves">
-            <section aria-labelledby="dns-domains">
-              <h4 className="rp-chart-title" id="dns-domains">
-                {t('dns.chart.domains')}
-              </h4>
-              <BarList
-                label={t('dns.chart.domains')}
-                color={p.accent}
-                items={a.domains.top.map(item => ({id: item.key, label: item.key, count: item.count, text: t('dns.chart.count', {n: item.count})}))}
-                rest={a.domains.rest ? t('dns.chart.rest', {n: a.domains.rest}) : undefined}
-              />
-            </section>
-            <section aria-labelledby="dns-clients">
-              <h4 className="rp-chart-title" id="dns-clients">
-                {t('dns.chart.clients')}
-              </h4>
-              <BarList
-                label={t('dns.chart.clients')}
-                color={p.cat[3]}
-                items={a.clients.top.map(item => ({
-                  id: item.key ?? '',
-                  label: item.key ?? t('dns.chart.resolver'),
-                  count: item.count,
-                  text: t('dns.chart.count', {n: item.count})
-                }))}
-                rest={a.clients.rest ? t('dns.chart.rest', {n: a.clients.rest}) : undefined}
-              />
-            </section>
-          </div>
-          <div className="rp-chart-grid halves">
-            <section aria-labelledby="dns-types">
-              <h4 className="rp-chart-title" id="dns-types">
-                {t('dns.chart.types')}
-              </h4>
-              <ShareBar
-                label={t('dns.chart.types')}
-                segments={a.types.top.map((item, i) => ({
-                  id: item.key,
-                  label: item.key,
-                  count: item.count,
-                  color: p.cat[i % p.cat.length],
-                  text: t('dns.chart.share', {n: item.count, share: shareText(item.count)})
-                }))}
-              />
-            </section>
-            <section aria-labelledby="dns-routes">
-              <h4 className="rp-chart-title" id="dns-routes">
-                {t('dns.chart.routes')}
-              </h4>
-              <BarList
-                label={t('dns.chart.routes')}
-                color={p.cat[2]}
-                items={a.routes.top.map(item => ({
-                  id: item.key,
-                  label: item.key === 'default' ? t('dns.chart.routeDefault') : item.key === 'forced' ? t('dns.chart.routeForced') : item.key,
-                  count: item.count,
-                  text: t('dns.chart.count', {n: item.count})
-                }))}
-                rest={a.routes.rest ? t('dns.chart.rest', {n: a.routes.rest}) : undefined}
-              />
-            </section>
-          </div>
-          <section aria-labelledby="dns-time">
-            <h4 className="rp-chart-title" id="dns-time">
-              {t('dns.chart.overTime')}
-            </h4>
-            <Heatmap
-              label={t('dns.chart.overTime')}
-              columns={a.timeline.buckets.map(start => clock.format(start))}
-              rows={dnsOutcomes.map(outcome => ({
-                id: outcome,
-                label: t(labels[outcome]),
-                color: colors[outcome],
-                counts: a.timeline.counts[outcome],
-                titles: a.timeline.counts[outcome].map((n, i) => t('dns.chart.cell', {time: span(a.timeline.buckets[i]), outcome: t(labels[outcome]), n}))
-              }))}
-            />
-          </section>
+          <ShareBar
+            label={t('dns.chart.freshness')}
+            segments={[
+              {
+                id: 'fresh',
+                label: t('dns.chart.fresh'),
+                count: state.fresh,
+                color: p.positive,
+                text: t('dns.chart.share', {n: state.fresh, share: shareText(state.fresh, state.loaded)})
+              },
+              {
+                id: 'stale',
+                label: t('dns.chart.stale'),
+                count: state.stale,
+                color: p.notice,
+                text: t('dns.chart.share', {n: state.stale, share: shareText(state.stale, state.loaded)})
+              }
+            ]}
+          />
+          <ShareBar
+            label={t('dns.chart.kinds')}
+            segments={[
+              {
+                id: 'positive',
+                label: t('dns.chart.positive'),
+                count: state.positive,
+                color: p.accent,
+                text: t('dns.chart.share', {n: state.positive, share: shareText(state.positive, state.loaded)})
+              },
+              {
+                id: 'negative',
+                label: t('dns.chart.negative'),
+                count: state.negative,
+                color: p.cat[2],
+                text: t('dns.chart.share', {n: state.negative, share: shareText(state.negative, state.loaded)})
+              }
+            ]}
+          />
+          <p className="rp-note">
+            {t('dns.chart.coverage', {
+              kinds: [state.coverage.positive && t('dns.chart.positive'), state.coverage.negative && t('dns.chart.negative')]
+                .filter(Boolean)
+                .join(t('ui.separator')),
+              persistent: t(state.coverage.persistent ? 'dns.chart.persistent' : 'dns.chart.memoryOnly')
+            })}
+          </p>
         </>
       )}
     </ChartCard>
   );
 }
 
-// The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with.
-export function DnsStats({enabled}: {enabled: boolean | undefined}) {
+// Who asks the most, or what is asked the most, as the activity page ranks traffic.
+function RankingCard({analysis}: {analysis: Analysis}) {
   const t = useT();
-  const log = useDnsLog({}, enabled === true);
-  if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
-  // Not known yet, or capabilities failed: the page says why above the tabs.
-  if (enabled === undefined) return null;
-  if (log.error && !log.data) return <ErrorMessage error={log.error} onRetry={log.refetch} />;
-  if (!log.data) return <Loading />;
-  return <DnsAnalysis records={log.data.records} />;
+  const p = usePalette();
+  const [by, setBy] = useState('device');
+  const ranking = by === 'device' ? analysis.devices : analysis.domains;
+  const top = ranking.top[0]?.count ?? 1;
+  return (
+    <ChartCard
+      title={t('dns.chart.ranking')}
+      aside={
+        <Segmented
+          label={t('dns.chart.ranking')}
+          value={by}
+          onChange={setBy}
+          items={[
+            ['device', t('dns.chart.byDevice')],
+            ['domain', t('dns.chart.byDomain')]
+          ]}
+        />
+      }
+    >
+      <div className="rp-list">
+        {ranking.top.map(item => (
+          <Bar
+            key={item.key ?? ''}
+            label={item.key ?? t('dns.chart.resolver')}
+            value={t('dns.chart.count', {n: item.count})}
+            pct={(item.count / top) * 100}
+            color={by === 'device' ? p.cat[0] : p.cat[3]}
+          />
+        ))}
+      </div>
+      {ranking.rest > 0 && <p className="rp-note">{t('dns.chart.rest', {n: ranking.rest})}</p>}
+    </ChartCard>
+  );
 }
