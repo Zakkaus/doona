@@ -52,7 +52,7 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
           [
             label('ov.f.connState'),
             occupancy?.occupancy_known && occupancy.occupancy !== null
-              ? formatNumber(occupancy.occupancy, locale) + ' / ' + formatNumber(occupancy.capacity, locale)
+              ? label('ui.fraction', {part: formatNumber(occupancy.occupancy, locale), whole: formatNumber(occupancy.capacity, locale)})
               : unknown
           ]
         ] as Array<[string, string]>)
@@ -181,7 +181,10 @@ export function overviewView(
           ? null
           : {
               label: t('ov.f.cgroupPercent'),
-              value: formatBytes(memory?.cgroup?.current_bytes ?? null, locale) + ' / ' + formatBytes(memory?.cgroup?.limit_bytes ?? null, locale),
+              value: t('ui.fraction', {
+                part: formatBytes(memory?.cgroup?.current_bytes ?? null, locale),
+                whole: formatBytes(memory?.cgroup?.limit_bytes ?? null, locale)
+              }),
               pct: percent,
               tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const)
             }

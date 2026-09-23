@@ -167,7 +167,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
       used === null
         ? '—'
         : item.traffic?.total_bytes
-          ? t('nodes.used', {used: formatBytes(used, locale), total: formatBytes(item.traffic.total_bytes, locale)})
+          ? t('ui.fraction', {part: formatBytes(used, locale), whole: formatBytes(item.traffic.total_bytes, locale)})
           : formatBytes(used, locale),
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',

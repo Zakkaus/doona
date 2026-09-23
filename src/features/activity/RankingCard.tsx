@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {Badge, Bar, Empty, ErrorMessage, Loading, Segmented, TextTooltip} from '../../ui/ui';
 import {useRankingCard} from './useRankingCard';
 
-// Top clients owns its own connections subscription: a five-second tick over up to 1,000 connections
+// Top clients owns its own connections subscription: a 20-second poll over up to 1,000 connections
 // re-renders this card alone, not the traffic charts or the tiles beside it.
 export function RankingCard() {
   const t = useT();
