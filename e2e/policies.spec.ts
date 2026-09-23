@@ -34,3 +34,17 @@ test('policies select a member, pin one network, release and test the group', as
   expect(controls[1].postDataJSON()).toEqual({member_id: 'us-01', network: 'tcp'});
   expect(controls[3].postDataJSON()).toMatchObject({target: {type: 'group', group_id: 'resilient'}, transport: ['tcp']});
 });
+
+test('a group card mounted on screen shows its members in the first frame', async ({page}) => {
+  // Checked in the frame callback, which sees what is about to be painted.
+  await page.addInitScript(() => {
+    const check = () => {
+      for (const wait of document.querySelectorAll('.rp-content section.rp-card .rp-wait-line'))
+        if (wait.closest('section')!.getBoundingClientRect().top < innerHeight) document.documentElement.dataset.waited = '';
+    };
+    new MutationObserver(() => requestAnimationFrame(check)).observe(document, {childList: true, subtree: true});
+  });
+  await page.goto('/#/policies');
+  await expect(page.locator('.rp-content .rp-node').first()).toBeVisible();
+  await expect(page.locator('html')).not.toHaveAttribute('data-waited');
+});

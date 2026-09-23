@@ -206,8 +206,9 @@ test('Escape while the search dialog loads keeps it from opening late', async ({
   await page.keyboard.press('Control+K');
   await page.keyboard.press('Escape');
   release();
-  await loaded;
-  await page.waitForTimeout(300);
+  // Once the chunk has run here too, the page has had its chance to open the dialog.
+  const chunk = (await loaded).url();
+  await page.evaluate(url => import(url).then(() => new Promise(requestAnimationFrame)), chunk);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.keyboard.press('Control+K');
   await expect(page.getByRole('dialog')).toBeVisible();

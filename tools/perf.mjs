@@ -27,7 +27,7 @@ async function ready(page) {
   const content = {
     activity: '.rp-donut .recharts-sector',
     overview: '.rp-kv',
-    connections: '[role=rowheader]',
+    connections: '.rp-scatter circle',
     dns: '[role=tabpanel]',
     policies: '.rp-node',
     rules: '.rp-tree-tile',

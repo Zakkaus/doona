@@ -200,3 +200,30 @@ for (const [route, column, tip] of [
       await expect(page.getByRole('tooltip')).toHaveText(tip, {timeout: 1500});
     }).toPass();
   });
+
+test('a kept tab panel is the same element after switching away and back', async ({page}) => {
+  await page.goto('/#/dns');
+  const cache = page.getByRole('tab', {name: 'Cache', exact: true});
+  await cache.click();
+  const panel = page.getByRole('tabpanel', {name: 'Cache'});
+  await expect(panel.getByRole('grid')).toBeVisible();
+  await panel.getByRole('grid').evaluate(grid => ((grid as HTMLElement & {kept?: boolean}).kept = true));
+  await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
+  await expect(panel).toBeHidden();
+  await cache.click();
+  expect(await panel.getByRole('grid').evaluate(grid => (grid as HTMLElement & {kept?: boolean}).kept)).toBe(true);
+});
+
+test('a segmented marker inside a hidden tab panel keeps its place', async ({page}) => {
+  await page.goto('/#/nodes?tab=latency');
+  const by = page.getByRole('radiogroup', {name: 'Group by'});
+  await by.getByRole('radio', {name: 'Protocol'}).click();
+  await expect(by.locator('.rp-slider')).not.toHaveCSS('left', '0px');
+  const slider = (await by.locator('.rp-slider').elementHandle())!;
+  const left = await slider.evaluate(el => (el as HTMLElement).style.left);
+  await page.getByRole('tab').first().click();
+  await expect(by).toBeHidden();
+  // The resize observer reports the hidden size before the next frame; the frame after it shows what it did.
+  await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+  expect(await slider.evaluate(el => (el as HTMLElement).style.left)).toBe(left);
+});

@@ -95,7 +95,8 @@ test('without discovery, the nodes page reads its nodes but not the groups it on
   await expect(page.locator('.rp-content > .rp-alert')).toContainText('Discovery unavailable');
   await nodesRead;
   await expect(page.getByRole('tab', {name: 'Latency'})).toHaveAttribute('aria-selected', 'true');
-  await page.waitForTimeout(300);
+  // The chart has drawn from the nodes, long after the page asked for everything it reads.
+  await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
   expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
 });
 

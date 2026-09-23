@@ -14,7 +14,7 @@ for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
         await expect(nav).toBeVisible();
       }
       await expect(page.locator('.rp-nav').first()).toBeVisible();
-      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+      await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
     });
     test('editor completion suggestions have a localized accessible name', async ({page}) => {
       await page.goto('/#/config?tab=source');
