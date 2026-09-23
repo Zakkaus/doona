@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {heatTone, logDomain, logPosition, logTicks, percentile, swarm, symlogPosition, thousandTicks, timeBuckets, waffleCells} from './layout';
+import {heatTone, logDomain, logPosition, logTicks, percentile, swarm, symlogAxis, symlogPosition, timeBuckets, waffleCells} from './layout';
 
 describe('chart layout', () => {
   it('takes nearest-rank percentiles on odd and even counts', () => {
@@ -25,16 +25,18 @@ describe('chart layout', () => {
     expect(logPosition(1000, [1, 100])).toBe(1);
   });
 
-  it('packs a swarm so no two dots overlap and all stay inside the band', () => {
+  it('packs a swarm so no two drawn dots overlap, and counts the dots with no room instead of piling them', () => {
     const xs = [...Array(60)].map((_, i) => 100 + (i % 7));
-    const ys = swarm(xs, 3, 40);
-    for (const y of ys) expect(Math.abs(y)).toBeLessThanOrEqual(37);
-    const inside = ys.filter(y => Math.abs(y) < 37);
-    for (let a = 0; a < xs.length; a++)
-      for (let b = a + 1; b < xs.length; b++)
-        if (Math.abs(ys[a]) < 37 && Math.abs(ys[b]) < 37) expect(Math.hypot(xs[a] - xs[b], ys[a] - ys[b])).toBeGreaterThanOrEqual(6 - 1e-6);
-    expect(inside.length).toBeGreaterThan(20);
-    expect(swarm([10, 50, 90], 3, 20)).toEqual([0, 0, 0]);
+    const {ys, hidden} = swarm(xs, 3, 40);
+    const drawn = xs.map((x, i) => ({x, y: ys[i]})).filter((dot): dot is {x: number; y: number} => dot.y !== null);
+    for (const dot of drawn) expect(Math.abs(dot.y)).toBeLessThanOrEqual(37);
+    for (let a = 0; a < drawn.length; a++)
+      for (let b = a + 1; b < drawn.length; b++) expect(Math.hypot(drawn[a].x - drawn[b].x, drawn[a].y - drawn[b].y)).toBeGreaterThanOrEqual(6 - 1e-6);
+    expect(drawn.length + hidden.reduce((sum, group) => sum + group.count, 0)).toBe(60);
+    const same = swarm(Array(20).fill(100), 4, 20);
+    expect(same.ys.filter(y => y !== null)).toHaveLength(5);
+    expect(same.hidden).toEqual([{x: 100, count: 15}]);
+    expect(swarm([10, 50, 90], 3, 20)).toEqual({ys: [0, 0, 0], hidden: []});
   });
 
   it('fills a waffle with cells that add up and never hides a non-zero share', () => {
@@ -57,11 +59,14 @@ describe('chart layout', () => {
     expect(buckets.length).toBeLessThanOrEqual(25);
     expect(buckets[1] - buckets[0]).toBe(300000);
     expect(buckets[0] % 300000).toBe(0);
+    // A year of records still fits the columns asked for.
+    expect(timeBuckets(Date.UTC(2026, 0, 1), Date.UTC(2027, 0, 1), 24).length).toBeLessThanOrEqual(24);
+    expect(timeBuckets(Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 8), 24).length).toBeLessThanOrEqual(24);
   });
 
   it('places zero at the origin of a symmetric log axis ending on a thousandfold', () => {
-    expect(thousandTicks(0)).toEqual([0, 1000]);
-    expect(thousandTicks(1.1e9)).toEqual([0, 1e3, 1e6, 1e9, 1e12]);
+    expect(symlogAxis(0)).toEqual({end: 1000, ticks: [0, 1000]});
+    expect(symlogAxis(1.1e9)).toEqual({end: 2.2e9, ticks: [0, 1e3, 1e6, 1e9]});
     expect(symlogPosition(0, 1e12)).toBe(0);
     expect(symlogPosition(1e12, 1e12)).toBe(1);
     expect(symlogPosition(1e6, 1e12)).toBeCloseTo(0.5, 2);
