@@ -68,11 +68,13 @@ browserTest('a token draft survives persistence failure and can be retried', asy
   await page.goto('/#/activity');
   const token = page.getByLabel('Token', {exact: true});
   await token.fill('retain-this-token');
+  // Full even after the stored chart history is given up, which is the one retry the save makes.
   await page.evaluate(() => {
     const setItem = Storage.prototype.setItem;
+    let refusals = 2;
     Storage.prototype.setItem = function (key, value) {
-      if (key === 'doona-profiles') {
-        Storage.prototype.setItem = setItem;
+      if (key === 'doona-profiles' && refusals) {
+        if (!--refusals) Storage.prototype.setItem = setItem;
         throw new DOMException('Storage denied', 'QuotaExceededError');
       }
       return setItem.call(this, key, value);

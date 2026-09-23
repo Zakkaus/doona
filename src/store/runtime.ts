@@ -17,28 +17,29 @@ export function useRuntimeOutbounds(enabled: boolean) {
   return useResource({key: ['runtimeOutbounds'], fetch: signal => api.runtimeOutbounds(signal)}, {enabled});
 }
 // The backend's ring, asked for the chart's window (or as much of it as the backend keeps) at its full
-// resolution: the live window wants every second the backend has.
+// resolution: the live window wants every second the backend has. The runtime poll extends it between the
+// once-a-minute refreshes, and a range change or reconnect fetches it again.
 export function useTrafficHistory(windowSeconds: number, capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.traffic_history;
   const window_seconds = Math.min(windowSeconds, limits?.max_window_seconds ?? 600);
   const max_points = Math.min(600, limits?.max_points ?? 600);
   return useResource(
-    {key: ['trafficHistory', {window_seconds, max_points}], fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
+    {key: ['trafficHistory', {window_seconds, max_points}], every: 60000, fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
     {
       enabled: limits?.available === true
     }
   );
 }
-// The backend's memory ring over ten minutes at the recorder cadence; the chart merges it with the session's own
-// samples (useMemorySamples).
+// The backend's memory ring over ten minutes at the recorder cadence, refreshed once a minute; the chart merges it
+// with the session's own samples (useMemorySamples).
 export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.memory_history;
   const window_seconds = Math.min(600, limits?.max_window_seconds ?? 600);
   const max_points = Math.min(120, limits?.max_points ?? 120);
   return useResource(
-    {key: ['memoryHistory', {window_seconds, max_points}], fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
+    {key: ['memoryHistory', {window_seconds, max_points}], every: 60000, fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
     {enabled: limits?.available === true}
   );
 }

@@ -54,3 +54,26 @@ it('keeps the profile this page loaded with when another tab chooses a different
     else Reflect.deleteProperty(globalThis, 'localStorage');
   }
 });
+
+it('gives up stored chart history to save the profiles when storage is full', async () => {
+  const storage: Record<string, string> = {'doona-rings-traffic-["a","mock"]': 'x'.repeat(40)};
+  Object.defineProperties(storage, {
+    getItem: {value: (key: string) => storage[key] ?? null},
+    setItem: {
+      value: (key: string, value: string) => {
+        if (Object.values(storage).join('').length + value.length > 60) throw new DOMException('Full', 'QuotaExceededError');
+        storage[key] = value;
+      }
+    },
+    removeItem: {value: (key: string) => void delete storage[key]}
+  });
+  vi.stubGlobal('localStorage', storage);
+  vi.resetModules();
+  const {writeProfiles} = await import('./profiles');
+  try {
+    writeProfiles({profiles: [{id: 'a', name: 'A', api: 'mock', token: ''}], activeId: 'a'});
+    expect(Object.keys(storage)).toEqual(['doona-profiles', 'doona-profile']);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

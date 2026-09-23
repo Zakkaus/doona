@@ -4,10 +4,14 @@ import type {BulkCloseQuery, BulkCloseResult} from '../api/model';
 import {ApiError} from '../api/error';
 import {useResource} from './resource';
 import {useAction} from './action';
-export function useConnections(src?: string, enabled = true, paused = false) {
+export function useConnections(src?: string, enabled = true, paused = false, every?: number) {
   const api = getApi();
   return useResource(
-    {key: ['connections', {src}], fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)},
+    {
+      key: ['connections', {src}],
+      every,
+      fetch: signal => api.connections({type: 'all', detail: 'full', limit: 1000, src}, signal)
+    },
     {enabled, paused}
   );
 }

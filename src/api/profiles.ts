@@ -91,10 +91,27 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
   const store = storage ?? localStorage;
   const normalized = profiles.map(profile => ({...profile, name: profile.name.trim() || profile.id, api: normalizeApi(profile.api)}));
   const id = normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '';
-  store.setItem('doona-profiles', JSON.stringify(normalized));
-  store.setItem('doona-profile', id);
+  const write = () => {
+    store.setItem('doona-profiles', JSON.stringify(normalized));
+    store.setItem('doona-profile', id);
+  };
+  try {
+    write();
+  } catch {
+    // Stored chart history is the first thing to give up when storage is full; a second failure is the caller's.
+    dropRings();
+    write();
+  }
   if (!storage) pinnedId = id;
   touchStorage();
+}
+
+function dropRings() {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith('doona-rings-')) localStorage.removeItem(key);
+  } catch {
+    /* Storage can be unavailable. */
+  }
 }
 
 // Strip the hosted /ui/ suffix while preserving any reverse-proxy prefix.

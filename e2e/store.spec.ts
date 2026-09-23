@@ -79,3 +79,22 @@ test('query simulation refuses DNS fan-out above the advertised address limit', 
   await expect(page.getByText(/DNS returned more than 1 distinct addresses/)).toBeVisible();
   expect(requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))).toHaveLength(0);
 });
+
+// Five-second polls are for what changes by the second; these lists and rings refresh far less often.
+for (const [route, path, most] of [
+  ['activity', 'runtime/traffic/history', 2],
+  ['activity', 'connections', 4],
+  ['settings', 'providers', 3]
+] as const)
+  test(`${route} fetches ${path} at most ${most} times a minute`, async ({page}) => {
+    const {requests} = await mockBackend(page);
+    const count = () => requests.filter(request => new URL(request.url()).pathname === `/api/v1/${path}`).length;
+    await page.clock.install();
+    await page.goto(`/#/${route}`);
+    await expect.poll(count).toBe(1);
+    for (let i = 0; i < 12; i++) {
+      await page.clock.fastForward(5000);
+      await page.waitForTimeout(50);
+    }
+    expect(count()).toBeLessThanOrEqual(most);
+  });

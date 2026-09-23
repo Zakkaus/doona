@@ -4,6 +4,7 @@ import './fonts.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
+import {pruneRings} from './api/rings';
 import {initializeApi} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
@@ -29,7 +30,10 @@ function Startup() {
   const [unreadable, setUnreadable] = useState(false);
   useEffect(() => {
     let mounted = true;
-    startup ??= detectHostedBackend().then(() => initializeApi());
+    startup ??= detectHostedBackend().then(() => {
+      pruneRings();
+      return initializeApi();
+    });
     language ??= startLanguage();
     void language.then(
       loaded => {
