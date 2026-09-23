@@ -45,6 +45,9 @@ export type ShellView = {
   shortcuts: ShortcutView[];
   shortcutPaths: Record<string, string>;
 };
+// A 401 on any read means the credential no longer works, whatever discovery last reported; sign-in comes first.
+export const accessError = (discovery: Error | null, refusal: Error | null) => refusal ?? discovery;
+
 export function shellView(
   settings: Settings,
   route: string,

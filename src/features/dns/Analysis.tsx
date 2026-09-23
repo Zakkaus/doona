@@ -1,5 +1,5 @@
 import {formatLatency} from '../../i18n/format';
-import {useMemo, useState} from 'react';
+import {useMemo, useState, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
 import {Card, Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
@@ -24,12 +24,13 @@ export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
-  if (log.error && !log.data) return <ErrorMessage error={log.error} onRetry={log.refetch} />;
-  if (!log.data) return <Loading />;
-  return <DnsAnalysis records={log.data.records} cacheListed={cacheListed} />;
+  // A log read that failed or is pending shows inside the charts it feeds; the cache card reads on its own.
+  const pending = log.data ? null : log.error ? <ErrorMessage error={log.error} onRetry={log.refetch} /> : <Loading />;
+  return <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} cacheListed={cacheListed} />;
 }
+const noRecords: DnsLogRecord[] = [];
 
-function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheListed: boolean}) {
+function DnsAnalysis({records, pending, cacheListed}: {records: DnsLogRecord[]; pending: ReactNode; cacheListed: boolean}) {
   const t = useT();
   const p = usePalette();
   const a = useMemo(() => dnsAnalysis(records), [records]);
@@ -47,7 +48,8 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
     color: colors[sample.outcome],
     lines: [sample.name, formatLatency(sample.value, t), t(labels[sample.outcome])]
   });
-  if (a.total < 5) return <Empty>{t('dns.chart.tooFew')}</Empty>;
+  // What stands in for each chart the log feeds while it has nothing to draw; the cache card does not depend on it.
+  const standIn = pending ?? (a.total < 5 ? <Empty>{t('dns.chart.tooFew')}</Empty> : null);
   const facts: ChartFact[] = [
     {label: t('dns.chart.median'), value: formatLatency(a.typical, t), icon: <SpeedFast />, tint: 'c1'},
     {label: t('dns.chart.p95'), value: formatLatency(a.slowest, t), icon: <Clock />, tint: 'c4'},
@@ -56,51 +58,60 @@ function DnsAnalysis({records, cacheListed}: {records: DnsLogRecord[]; cacheList
   ];
   return (
     <div className="rp-chart-page">
-      <FactStrip facts={facts} />
+      {!standIn && <FactStrip facts={facts} />}
       <div className="rp-g21">
-        <Card title={t('dns.chart.speed', {n: a.samples.length})} note={t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}>
-          <Beeswarm
-            label={t('dns.chart.speed', {n: a.samples.length})}
-            points={a.samples.map(point)}
-            marks={
-              a.typical !== null && a.slowest !== null
-                ? [
-                    {value: a.typical, label: t('dns.chart.typical', {value: formatLatency(a.typical, t)})},
-                    {value: a.slowest, label: t('dns.chart.slowest', {value: formatLatency(a.slowest, t)})}
-                  ]
-                : []
-            }
-            rows={a.upstreams.map(row => ({
-              id: row.upstream,
-              label: row.upstream,
-              detail: t('dns.chart.upstream', {n: row.samples.length, median: formatLatency(row.median, t)}),
-              points: row.samples.map(point),
-              mark: row.median
-            }))}
-            fmt={value => formatLatency(value, t)}
-          />
-          <div className="rp-legend">
-            {(['answered', 'nxdomain', 'failed'] as const).map(outcome => (
-              <LegendItem key={outcome} swatch={colors[outcome]} label={t(labels[outcome])} />
-            ))}
-            <LegendItem swatch={<i className="rp-median-key" aria-hidden="true" />} label={t('dns.chart.medianKey')} />
-          </div>
+        <Card
+          title={t('dns.chart.speed', {n: a.samples.length})}
+          note={standIn ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
+        >
+          {standIn ?? (
+            <>
+              <Beeswarm
+                label={t('dns.chart.speed', {n: a.samples.length})}
+                points={a.samples.map(point)}
+                marks={
+                  a.typical !== null && a.slowest !== null
+                    ? [
+                        {value: a.typical, label: t('dns.chart.typical', {value: formatLatency(a.typical, t)})},
+                        {value: a.slowest, label: t('dns.chart.slowest', {value: formatLatency(a.slowest, t)})}
+                      ]
+                    : []
+                }
+                rows={a.upstreams.map(row => ({
+                  id: row.upstream,
+                  label: row.upstream,
+                  detail: t('dns.chart.upstream', {n: row.samples.length, median: formatLatency(row.median, t)}),
+                  points: row.samples.map(point),
+                  mark: row.median
+                }))}
+                fmt={value => formatLatency(value, t)}
+              />
+              <div className="rp-legend">
+                {(['answered', 'nxdomain', 'failed'] as const).map(outcome => (
+                  <LegendItem key={outcome} swatch={colors[outcome]} label={t(labels[outcome])} />
+                ))}
+                <LegendItem swatch={<i className="rp-median-key" aria-hidden="true" />} label={t('dns.chart.medianKey')} />
+              </div>
+            </>
+          )}
         </Card>
         <Card title={t('dns.chart.outcomes')}>
-          <Waffle
-            label={t('dns.chart.outcomes')}
-            shares={dnsOutcomes.map(outcome => ({
-              id: outcome,
-              label: t(labels[outcome]),
-              count: a.counts[outcome],
-              color: colors[outcome],
-              text: t('dns.chart.share', {n: a.counts[outcome], share: shareText(a.counts[outcome], a.total)})
-            }))}
-          />
+          {standIn ?? (
+            <Waffle
+              label={t('dns.chart.outcomes')}
+              shares={dnsOutcomes.map(outcome => ({
+                id: outcome,
+                label: t(labels[outcome]),
+                count: a.counts[outcome],
+                color: colors[outcome],
+                text: t('dns.chart.share', {n: a.counts[outcome], share: shareText(a.counts[outcome], a.total)})
+              }))}
+            />
+          )}
         </Card>
       </div>
       <div className="rp-g21">
-        <RankingCard analysis={a} />
+        <RankingCard analysis={a} standIn={standIn} />
         <CacheCard listed={cacheListed} />
       </div>
     </div>
@@ -113,9 +124,11 @@ function CacheCard({listed}: {listed: boolean}) {
   const p = usePalette();
   const {ref, ...vm} = useDnsCacheCard(listed);
   return (
-    <Card ref={ref} title={t('dns.chart.cache')} note={vm.card?.note}>
-      {vm.state === 'unavailable' ? (
+    <Card ref={ref} title={t('dns.chart.cache')} note={vm.state === 'ready' ? vm.card?.note : undefined}>
+      {vm.state === 'unlisted' ? (
         <Empty>{t('dns.cacheUnavailable')}</Empty>
+      ) : vm.state === 'unavailable' ? (
+        <Empty>{t('dns.cacheBusy')}</Empty>
       ) : vm.state === 'error' ? (
         <ErrorMessage error={vm.error} onRetry={vm.retry} />
       ) : !vm.card ? (
@@ -136,7 +149,7 @@ function CacheCard({listed}: {listed: boolean}) {
 }
 
 // Who asks the most, or what is asked the most, as the activity page ranks traffic.
-function RankingCard({analysis}: {analysis: Analysis}) {
+function RankingCard({analysis, standIn}: {analysis: Analysis; standIn: ReactNode}) {
   const t = useT();
   const p = usePalette();
   const [by, setBy] = useState('device');
@@ -146,29 +159,35 @@ function RankingCard({analysis}: {analysis: Analysis}) {
     <Card
       title={t('dns.chart.ranking')}
       aside={
-        <Segmented
-          label={t('dns.chart.ranking')}
-          value={by}
-          onChange={setBy}
-          items={[
-            ['device', t('dns.chart.byDevice')],
-            ['domain', t('dns.chart.byDomain')]
-          ]}
-        />
+        !standIn && (
+          <Segmented
+            label={t('dns.chart.ranking')}
+            value={by}
+            onChange={setBy}
+            items={[
+              ['device', t('dns.chart.byDevice')],
+              ['domain', t('dns.chart.byDomain')]
+            ]}
+          />
+        )
       }
     >
-      <div className="rp-list">
-        {ranking.top.map(item => (
-          <Bar
-            key={item.key ?? ''}
-            label={item.key ?? t('dns.chart.resolver')}
-            value={t('dns.chart.count', {n: item.count})}
-            pct={(item.count / top) * 100}
-            color={by === 'device' ? p.cat[0] : p.cat[3]}
-          />
-        ))}
-      </div>
-      {ranking.rest > 0 && <p className="rp-note">{t('dns.chart.rest', {n: ranking.rest})}</p>}
+      {standIn ?? (
+        <>
+          <div className="rp-list">
+            {ranking.top.map(item => (
+              <Bar
+                key={item.key ?? ''}
+                label={item.key ?? t('dns.chart.resolver')}
+                value={t('dns.chart.count', {n: item.count})}
+                pct={(item.count / top) * 100}
+                color={by === 'device' ? p.cat[0] : p.cat[3]}
+              />
+            ))}
+          </div>
+          {ranking.rest > 0 && <p className="rp-note">{t('dns.chart.rest', {n: ranking.rest})}</p>}
+        </>
+      )}
     </Card>
   );
 }

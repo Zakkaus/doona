@@ -33,6 +33,7 @@ export function Dns(props: PageProps) {
   const vm = useDns(props);
   const queryTab = (
     <>
+      {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
       <form
         className="rp-card"
         onSubmit={event => {
@@ -89,7 +90,6 @@ export function Dns(props: PageProps) {
   };
   return (
     <div className="rp-page">
-      {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
       <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
     </div>
   );

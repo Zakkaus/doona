@@ -3,7 +3,7 @@ import {ApiError} from '../api/error';
 import {capabilitiesBase, version} from '../api/mock/fixtures';
 import {readSettings} from './preferences';
 import {translate} from '../i18n';
-import {shellView} from './view';
+import {accessError, shellView} from './view';
 
 const settings = readSettings({getItem: () => null, setItem: () => {}, removeItem: () => {}});
 const t = translate.bind(null, 'en');
@@ -45,4 +45,14 @@ it('surfaces discovery failures and suppresses authentication only on the login 
   expect(shellView(settings, 'settings', undefined, auth, undefined, null, t).error).toBe(auth);
   // Before sign-in the version read is refused too; the login surface shows no error banner for it.
   expect(shellView(settings, 'config', undefined, auth, undefined, auth, t).error).toBeNull();
+});
+
+it('asks for sign-in when a read is refused, even while discovery reports a failure of its own', () => {
+  const configured = {...settings, profiles: [{id: 'router', name: 'Router', api: 'https://router.test', token: ''}], activeId: 'router'};
+  const unavailable = new ApiError(503, 'unavailable', 'Discovery unavailable');
+  const refused = new ApiError(401, 'authentication_required', 'session expired');
+  const view = shellView(configured, 'connections', capabilitiesBase, accessError(unavailable, refused), version, null, t);
+  expect(view.content.kind).toBe('login');
+  expect(view.error).toBeNull();
+  expect(shellView(configured, 'connections', capabilitiesBase, accessError(unavailable, null), version, null, t).error).toBe(unavailable);
 });

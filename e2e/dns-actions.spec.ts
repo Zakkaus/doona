@@ -128,5 +128,24 @@ test('the cache table fits its entries instead of holding a page of empty space'
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Cache', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(entries);
   // Border, header and one row per entry; a fill-height table would stay at 442.
-  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries * 40 + 1);
+  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries * 40 + 1);
+});
+
+test('a hidden cache tab stops walking the cache until it is shown again', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  const walks = () => requests.filter(request => new URL(request.url()).searchParams.get('limit') === '1000').length;
+  await page.clock.install();
+  await page.goto('/#/dns?tab=cache');
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader').first()).toBeVisible();
+  const shown = walks();
+  await page.clock.fastForward(16000);
+  await expect.poll(walks).toBeGreaterThan(shown);
+  await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
+  const hidden = walks();
+  await page.clock.fastForward(46000);
+  // A walk the timers started would reach the route within this real-time pause.
+  await page.waitForTimeout(500);
+  expect(walks()).toBe(hidden);
+  await page.getByRole('tab', {name: 'Cache', exact: true}).click();
+  await expect.poll(walks).toBeGreaterThan(hidden);
 });

@@ -1,14 +1,21 @@
-import {expect, test} from './fixtures';
+import {expect, expectLoadFailures, test} from './fixtures';
 import {test as browserTest} from '@playwright/test';
 
 // Tokens are saved explicitly; switching profiles never writes a draft into the profile being left.
 test('profiles add, rename, switch, and delete without losing the route', async ({page}) => {
+  // The built-in demo takes no token, so each profile points at an address of its own that refuses every read.
+  expectLoadFailures(page, /\/(home|office)\/api/);
+  await page.route(/\/(home|office)\/api/, route =>
+    route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'profiles'}})
+  );
   await page.goto('/#/settings?from=connections');
+  const origin = new URL(page.url()).origin;
   await page.getByRole('button', {name: 'Add profile', exact: true}).click();
   let dialog = page.getByRole('dialog', {name: 'Add profile'});
   await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
   await expect(page.locator('[name=api]')).toHaveValue('mock');
+  await page.locator('[name=api]').fill(origin + '/home');
   await page.locator('[name=token]').fill('home-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
   await page.getByRole('button', {name: 'Add profile', exact: true}).click();
@@ -16,6 +23,7 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Office');
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/settings\?from=connections$/);
+  await page.locator('[name=api]').fill(origin + '/office');
   await expect(page.locator('[name=token]')).toHaveValue('');
   await page.locator('[name=token]').fill('office-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);

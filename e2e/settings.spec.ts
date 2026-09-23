@@ -27,7 +27,7 @@ test('a pairing link fills the backend draft and removes credentials from the ad
   await expect(page).toHaveURL(/#\/settings$/);
   await page.reload();
   await expect(page.locator('[name=api]')).toHaveValue('');
-  await expect(page.locator('[name=token]')).toHaveValue('');
+  await expect(page.locator('[name=token]')).toHaveCount(0);
 });
 
 browserTest('paints a frame during discovery, then selects the hosted backend and asks for its token', async ({page}) => {
@@ -61,20 +61,24 @@ browserTest('paints a frame during discovery, then selects the hosted backend an
   ]);
 });
 
-test('saving mock and a token reloads and restores the default activity route', async ({page}) => {
+test('saving mock reloads and restores the default activity route', async ({page}) => {
   await page.goto('/#/settings');
-  await page.locator('[name=api]').fill(' mock ');
-  await page.locator('[name=token]').fill('test-secret');
-  await expect(page.locator('[name=token]')).toHaveAttribute('type', 'password');
+  const token = page.locator('[name=token]');
+  // A real address takes a token, revealed on request.
+  await page.locator('[name=api]').fill('https://router.example');
+  await token.fill('test-secret');
+  await expect(token).toHaveAttribute('type', 'password');
   await page.getByRole('button', {name: t('settings.showToken'), exact: true}).click();
-  await expect(page.locator('[name=token]')).toHaveAttribute('type', 'text');
+  await expect(token).toHaveAttribute('type', 'text');
   await page.getByRole('button', {name: t('settings.hideToken'), exact: true}).click();
   await expect(page.locator('.rp-content')).not.toContainText('test-secret');
+  // The built-in demo ignores any token, so the field goes.
+  await page.locator('[name=api]').fill(' mock ');
+  await expect(token).toHaveCount(0);
   await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
   await expect(page.locator('.rp-toast.positive')).toContainText('Settings saved.');
   await expect(page.locator('[name=api]')).toHaveValue('mock');
-  await expect(page.locator('[name=token]')).toHaveValue('test-secret');
-  await expect(page.locator('[name=token]')).toHaveAttribute('type', 'password');
+  await expect(token).toHaveCount(0);
   await page.goto('/#/');
   await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
 });
@@ -207,9 +211,11 @@ test('an unknown stored palette falls back to the supported moon palette', async
 });
 
 test('profile switching confirms draft loss without saving edits to the profile being left', async ({page}) => {
+  await mockBackend(page);
+  const origin = new URL(test.info().project.use.baseURL!).origin;
   const profiles = [
-    {id: 'a', name: 'Backend A', api: 'mock', token: 'saved-a'},
-    {id: 'b', name: 'Backend B', api: 'mock', token: 'saved-b'}
+    {id: 'a', name: 'Backend A', api: origin, token: 'saved-a'},
+    {id: 'b', name: 'Backend B', api: origin, token: 'saved-b'}
   ];
   await page.addInitScript(profiles => {
     if (localStorage.getItem('doona-profiles') !== null) return;

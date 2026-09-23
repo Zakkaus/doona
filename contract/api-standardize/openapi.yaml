@@ -4783,9 +4783,7 @@ paths:
                     next_cursor: eyJvZmZzZXQiOjEwMH0
                     usage:
                       entries: '1024'
-                      entry_capacity: '10000'
-                      wire_bytes: '1843200'
-                      wire_byte_capacity: '40960000'
+                      entry_capacity: '100000'
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -10723,24 +10721,16 @@ components:
           description: Absent from servers that predate cache usage reporting.
     DnsCacheUsage:
       type: object
-      description: Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values.
+      description: Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. The entry count is the cache's only limit; the size of an entry is not bounded.
       required:
         - entries
         - entry_capacity
-        - wire_bytes
-        - wire_byte_capacity
       properties:
         entries:
           $ref: '#/components/schemas/UInt64'
         entry_capacity:
           $ref: '#/components/schemas/UInt64'
-          description: Effective entry limit after the engine applies its bounds.
-        wire_bytes:
-          $ref: '#/components/schemas/UInt64'
-          description: Retained query and response wire bytes.
-        wire_byte_capacity:
-          $ref: '#/components/schemas/UInt64'
-          description: Effective wire-byte budget after the engine applies its bounds.
+          description: Effective entry limit after the engine applies its bounds, at most 100,000.
     DnsLogRecord:
       type: object
       required:

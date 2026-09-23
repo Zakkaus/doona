@@ -47,14 +47,13 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
     const old = text.slice(bodyStart, entry.close);
     const inner = old.match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent || '    ');
     if (entry.line !== entry.endLine) return rewriteFields(text, entry, fields, inner, next);
-    // A one-line entry is spread over lines, other fields after filters and policy.
-    let kept = old;
-    for (const field of fields.filter(field => field.name === 'filter' || field.name === 'policy').reverse())
-      kept = kept.slice(0, field.from - bodyStart) + kept.slice(field.to - bodyStart);
-    const rest = kept.trim() ? `${inner}${kept.trim()}\n` : '';
-    const body = [...next.filters.map(filter => `${inner}filter: ${filter}`), ...(next.policy ? [`${inner}policy: ${next.policy}`] : [])];
-    const replacement = '\n' + (body.length ? body.join('\n') + '\n' : '') + rest + indent;
-    return text.slice(0, bodyStart) + replacement + text.slice(entry.close);
+    // A one-line entry is spread over lines, one field per line in its own order, and then edited like any other.
+    const starts = [bodyStart, ...fields.map(field => field.from), entry.close];
+    const lines = starts.slice(0, -1).flatMap((from, i) => {
+      const line = text.slice(from, starts[i + 1]).trim();
+      return line ? [inner + line] : [];
+    });
+    return writeGroupEntry(text.slice(0, bodyStart) + '\n' + lines.map(line => line + '\n').join('') + indent + text.slice(entry.close), name, next);
   }
   const block = sections.at(-1);
   const indent = block ? (text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? '    ') : '    ';

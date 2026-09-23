@@ -242,3 +242,18 @@ test('Retry after a failed older page asks for that page again and keeps the loa
   await expect(alert).toHaveCount(0);
   expect(cursors).toEqual(['older', 'older']);
 });
+
+test('a failed query stays on the query tab', async ({page}) => {
+  const {handlers} = await mockBackend(page);
+  handlers['GET dns/query'] = async () => {
+    throw new ApiError(500, 'internal', 'Resolver offline');
+  };
+  await page.goto('/#/dns?tab=query&domain=example.com');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  const alert = page.getByRole('alert').filter({hasText: 'Resolver offline'});
+  await expect(page.getByRole('tabpanel', {name: 'Query'}).getByRole('alert').filter({hasText: 'Resolver offline'})).toBeVisible();
+  await page.getByRole('tab', {name: 'Cache', exact: true}).click();
+  await expect(alert).toBeHidden();
+  await page.getByRole('tab', {name: 'Query', exact: true}).click();
+  await expect(alert).toBeVisible();
+});

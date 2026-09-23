@@ -174,11 +174,8 @@ export const messages = {
   'conn.chart.named': '{name} ({outbound})',
   'conn.chart.down': 'Download',
   'conn.chart.up': 'Upload',
-  'conn.chart.sample': {one: '{n} current connection', other: '{n} current connections'},
-  'conn.chart.sampleUnknown': {
-    one: '{n} current connection, {unknown} of them without byte totals',
-    other: '{n} current connections, {unknown} of them without byte totals'
-  },
+  'conn.chart.sample': 'Connections: {n}',
+  'conn.chart.sampleUnknown': 'Connections: {n}, without byte totals: {unknown}',
   'conn.chart.moreDown': 'More download',
   'conn.chart.moreUp': 'More upload',
   'conn.chart.hint': 'Horizontal: upload, vertical: download, dashed line: equal traffic. Select a point to open its connection.',
@@ -245,14 +242,11 @@ export const messages = {
   'dns.chart.byDomain': 'Domains',
   'dns.chart.resolver': 'The resolver itself',
   'dns.chart.cache': 'Cache',
-  'dns.chart.cacheNote': {
-    one: '{n} cache entry; this backend does not provide a capacity limit',
-    other: '{n} cache entries; this backend does not provide a capacity limit'
-  },
+  'dns.chart.cacheNote': 'Entries: {n}, capacity limit: not reported',
   'dns.chart.positive': 'Positive answers',
   'dns.chart.negative': 'Negative answers',
   'dns.chart.usage': 'Usage',
-  'dns.chart.usageFacts': 'Entries: {entries} / {entryCapacity}, size: {bytes} / {byteCapacity}',
+  'dns.chart.usageFacts': 'Entries: {entries}',
   'dns.chart.coverage': 'Caches {kinds}; {persistent}',
   'dns.chart.persistent': 'kept across restarts',
   'dns.chart.memoryOnly': 'held in memory only, cleared on restart',
@@ -286,6 +280,7 @@ export const messages = {
   'dns.notCovered': 'Not covered',
   'dns.empty': 'No cache entries',
   'dns.cacheUnavailable': 'This backend does not provide a cache listing',
+  'dns.cacheBusy': 'The cache listing is temporarily unavailable',
   'dns.expires': 'Expires',
   'dns.staleUntil': 'Stale until',
   'dns.deleteEntry': 'Delete the {type} cache entry for {domain}',

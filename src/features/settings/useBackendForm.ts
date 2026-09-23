@@ -105,6 +105,8 @@ export function useBackendForm(query: string) {
     );
     return () => controller.abort();
   }, [saved.api]);
+  // The built-in demo ignores any token.
+  const demo = ['', 'mock'].includes(api.trim());
   const passwordMode = (() => {
     try {
       return auth !== null && auth.password && auth.base === normalizeApi(api);
@@ -253,6 +255,7 @@ export function useBackendForm(query: string) {
     changeApi,
     token,
     changeToken,
+    demo,
     passwordMode,
     paired,
     dirty,

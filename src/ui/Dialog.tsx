@@ -283,6 +283,7 @@ export function Tabs({
 // Whether the tab panel around a component is the one on screen. A kept panel stays mounted while hidden, so what
 // it renders outside itself (a drawer, a document-wide key handler) must follow this rather than its own state.
 const TabShown = createContext(true);
+export const useTabShown = () => useContext(TabShown);
 
 // The last child of rp-with-panel is a side panel on wide screens and a drawer below the breakpoint.
 export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {

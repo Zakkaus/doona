@@ -41,9 +41,9 @@ export const storageRevision = () => revision;
 export const touchStorage = () => void revision++;
 
 let cachedProfiles: {raw: string; profiles: Profile[]} | undefined;
-// The profile this page load talks to. Another tab choosing a profile changes the saved choice, not this tab's
-// backend; this tab moves when it saves a choice itself (which reloads) or is reloaded.
-let pinnedId: string | null | undefined;
+// The profile this page load talks to, endpoint and token included. Another tab choosing or editing a profile changes
+// what is saved, not this tab's backend; this tab moves when it saves itself (which reloads) or is reloaded.
+let pinned: Profile | undefined;
 let profileReadError = false;
 
 export function consumeProfileReadError(): boolean {
@@ -80,11 +80,19 @@ export function readProfiles(storage?: StoragePort): Profiles {
       cachedProfiles = {raw, profiles};
     }
     const profiles = cachedProfiles.profiles;
-    const id = storage ? store.getItem('doona-profile') : (pinnedId ??= store.getItem('doona-profile'));
-    return {profiles, activeId: profiles.find(profile => profile.id === id)?.id ?? profiles[0]?.id ?? ''};
+    const saved = () => profiles.find(profile => profile.id === store.getItem('doona-profile'));
+    if (storage) return {profiles, activeId: saved()?.id ?? profiles[0]?.id ?? ''};
+    const own = (pinned ??= saved() ?? profiles[0]);
+    return {profiles, activeId: profiles.find(profile => profile.id === own?.id)?.id ?? profiles[0]?.id ?? ''};
   } catch {
     return {profiles: [], activeId: ''};
   }
+}
+
+// The active profile as this page load first read it, or as this tab last saved it.
+export function pinnedProfile(): Profile | undefined {
+  readProfiles();
+  return pinned;
 }
 
 export function writeProfiles({profiles, activeId}: Profiles, storage?: StoragePort): void {
@@ -102,7 +110,7 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
     dropRings();
     write();
   }
-  if (!storage) pinnedId = id;
+  if (!storage) pinned = normalized.find(profile => profile.id === id);
   touchStorage();
 }
 

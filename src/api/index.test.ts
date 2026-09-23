@@ -94,3 +94,28 @@ it('keeps its backend when another tab deletes every profile', async () => {
   window.dispatchEvent(new Event('storage'));
   expect(getApi()).toBe(home);
 });
+
+it("keeps its backend when another tab edits the address or token of this tab's profile", async () => {
+  const values = new Map([
+    ['doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://home.example', token: 'a'}])],
+    ['doona-profile', 'home']
+  ]);
+  const window = new EventTarget();
+  vi.stubGlobal('localStorage', storage(values));
+  vi.stubGlobal('sessionStorage', storage(new Map()));
+  vi.stubGlobal('window', window);
+  const fetches: Array<[string, string | null]> = [];
+  vi.stubGlobal('fetch', async (input: RequestInfo, init?: RequestInit) => {
+    const request = new Request(input, init);
+    fetches.push([request.url, request.headers.get('Authorization')]);
+    return Response.json({});
+  });
+  vi.resetModules();
+  const {getApi} = await import('./index');
+  const home = getApi();
+  values.set('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://other.example', token: 'b'}]));
+  window.dispatchEvent(new Event('storage'));
+  expect(getApi()).toBe(home);
+  await getApi().version();
+  expect(fetches).toEqual([[expect.stringMatching(/^https:\/\/home\.example\//), 'Bearer a']]);
+});
