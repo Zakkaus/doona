@@ -1,5 +1,6 @@
 import type {Key} from '../i18n/messages';
-import {lazy, type ComponentType} from 'react';
+import type {ComponentType} from 'react';
+import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';
 import type {PageProps} from '../features/types';
 import Home from '../ui/icons/Home';
@@ -16,36 +17,36 @@ import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 
 // Rendering and preloading share page loaders; the default page stays eager.
-const loaders = {
-  overview: () => import('../features/overview/Overview').then(m => ({default: m.Overview})),
-  connections: () => import('../features/connections/Connections').then(m => ({default: m.Connections})),
-  policies: () => import('../features/policies/Policies').then(m => ({default: m.Policies})),
-  nodes: () => import('../features/nodes/Nodes').then(m => ({default: m.Nodes})),
-  rules: () => import('../features/rules/Rules').then(m => ({default: m.Rules})),
-  config: () => import('../features/config/Config').then(m => ({default: m.Config})),
-  dns: () => import('../features/dns/Dns').then(m => ({default: m.Dns})),
-  logs: () => import('../features/logs/Logs').then(m => ({default: m.Logs})),
-  events: () => import('../features/events/Events').then(m => ({default: m.Events})),
-  settings: () => import('../features/settings/Settings').then(m => ({default: m.Settings}))
+const pages = {
+  overview: preloadable<PageProps>(() => import('../features/overview/Overview').then(m => ({default: m.Overview}))),
+  connections: preloadable<PageProps>(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
+  policies: preloadable<PageProps>(() => import('../features/policies/Policies').then(m => ({default: m.Policies}))),
+  nodes: preloadable<PageProps>(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes}))),
+  rules: preloadable<PageProps>(() => import('../features/rules/Rules').then(m => ({default: m.Rules}))),
+  config: preloadable<PageProps>(() => import('../features/config/Config').then(m => ({default: m.Config}))),
+  dns: preloadable<PageProps>(() => import('../features/dns/Dns').then(m => ({default: m.Dns}))),
+  logs: preloadable<PageProps>(() => import('../features/logs/Logs').then(m => ({default: m.Logs}))),
+  events: preloadable<PageProps>(() => import('../features/events/Events').then(m => ({default: m.Events}))),
+  settings: preloadable<PageProps>(() => import('../features/settings/Settings').then(m => ({default: m.Settings})))
 };
-const Overview = lazy(loaders.overview);
-const Connections = lazy(loaders.connections);
-const Policies = lazy(loaders.policies);
-const NodesPage = lazy(loaders.nodes);
-const Rules = lazy(loaders.rules);
-const Config = lazy(loaders.config);
-const Dns = lazy(loaders.dns);
-const Logs = lazy(loaders.logs);
-const Events = lazy(loaders.events);
-const Settings = lazy(loaders.settings);
-// Loading a chunk twice costs nothing; a failed warm-up is not an error, the click loads it again.
+const Overview = pages.overview.Component;
+const Connections = pages.connections.Component;
+const Policies = pages.policies.Component;
+const NodesPage = pages.nodes.Component;
+const Rules = pages.rules.Component;
+const Config = pages.config.Component;
+const Dns = pages.dns.Component;
+const Logs = pages.logs.Component;
+const Events = pages.events.Component;
+const Settings = pages.settings.Component;
+// A failed warm-up is not an error; the click loads it again.
 export function warmPage(id: string) {
-  void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
+  void pages[id as keyof typeof pages]?.preload().catch(() => undefined);
 }
 // Preload other pages one per idle slice (the callback may still run on its timeout while the page is busy); the
 // config page carries the editor and loads on intent (hover, focus, click) only.
 export function warmAllPages() {
-  const queue = Object.keys(loaders).filter(id => id !== 'config');
+  const queue = Object.keys(pages).filter(id => id !== 'config');
   const next = () => {
     const id = queue.shift();
     if (!id) return;
@@ -162,8 +163,9 @@ export const subpages: Array<{path: RoutePath; params: Record<string, string>; t
   {path: 'rules', params: {tab: 'list'}, titleKey: 'rule.listTitle'},
   {path: 'rules', params: {tab: 'flows'}, titleKey: 'rule.flows'},
   {path: 'rules', params: {tab: 'trace'}, titleKey: 'rule.trace'},
-  {path: 'dns', params: {tab: 'query'}, titleKey: 'dns.query'},
+  {path: 'dns', params: {tab: 'stats'}, titleKey: 'dns.tab.stats'},
   {path: 'dns', params: {tab: 'log'}, titleKey: 'dns.log'},
+  {path: 'dns', params: {tab: 'query'}, titleKey: 'dns.query'},
   {path: 'dns', params: {tab: 'cache'}, titleKey: 'ui.cache'},
   {path: 'config', params: {tab: 'setup'}, titleKey: 'config.wizard'},
   {path: 'config', params: {tab: 'source'}, titleKey: 'config.tabSource'},
