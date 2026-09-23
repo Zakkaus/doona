@@ -8,6 +8,10 @@ import {usePalette} from '../../ui/Charts';
 import {Beeswarm, ChartCard, FactStrip, ShareBar, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
 import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './analysis';
 import {cacheState} from './cache';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import Clock from '../../ui/icons/Clock';
+import Data from '../../ui/icons/Data';
+import SpeedFast from '../../ui/icons/SpeedFast';
 
 const labels: Record<DnsOutcome, 'dns.outcome.cached' | 'dns.outcome.answered' | 'dns.outcome.nxdomain' | 'dns.outcome.failed'> = {
   cached: 'dns.outcome.cached',
@@ -52,10 +56,10 @@ function DnsAnalysis({records, cache}: {records: DnsLogRecord[]; cache: DnsCache
   const dash = (value: number | null) => (value === null ? '—' : ms(value));
   if (a.total < 5) return <Empty>{t('dns.chart.tooFew')}</Empty>;
   const facts: ChartFact[] = [
-    {label: t('dns.chart.median'), value: dash(a.typical)},
-    {label: t('dns.chart.p95'), value: dash(a.slowest)},
-    {label: t('dns.chart.cacheRate'), value: percent(a.cacheRate)},
-    {label: t('dns.chart.failureRate'), value: percent(a.failureRate), tone: a.counts.failed ? 'negative' : undefined}
+    {label: t('dns.chart.median'), value: dash(a.typical), icon: <SpeedFast />, tint: 'c1'},
+    {label: t('dns.chart.p95'), value: dash(a.slowest), icon: <Clock />, tint: 'c4'},
+    {label: t('dns.chart.cacheRate'), value: percent(a.cacheRate), icon: <Data />, tint: 'c2'},
+    {label: t('dns.chart.failureRate'), value: percent(a.failureRate), icon: <AlertTriangle />, tint: 'c5', tone: a.counts.failed ? 'negative' : undefined}
   ];
   return (
     <div className="rp-chart-page">

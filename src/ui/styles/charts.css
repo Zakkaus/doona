@@ -21,6 +21,12 @@
 .rp-facts .notice .rp-big {
   color: var(--rp-notice);
 }
+.rp-facts .negative .rp-tile-head > svg {
+  color: var(--rp-negative);
+}
+.rp-facts .notice .rp-tile-head > svg {
+  color: var(--rp-notice);
+}
 .rp-chart-page {
   display: flex;
   flex-direction: column;

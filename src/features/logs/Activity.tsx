@@ -3,6 +3,8 @@ import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette} from '../../ui/Charts';
 import {Button} from '../../ui/ui';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';
 import {ChartCard, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {levelHeatmap} from './heatmap';
@@ -34,12 +36,12 @@ export function LogActivity({
     ? []
     : busiest.errors
       ? [
-          {label: t('log.chart.errors'), value: t('log.chart.count', {n: busiest.errors}), tone: 'negative'},
-          {label: t('log.chart.peakErrors'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: busiest.errors}), icon: <AlertTriangle />, tone: 'negative'},
+          {label: t('log.chart.peakErrors'), icon: <History />, tint: 'c1', value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
         ]
       : [
-          {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0})},
-          {label: t('log.chart.peak'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0}), icon: <AlertTriangle />, tint: 'c5'},
+          {label: t('log.chart.peak'), icon: <History />, tint: 'c1', value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
         ];
   return (
     <div className="rp-chart-page">

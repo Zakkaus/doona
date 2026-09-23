@@ -6,6 +6,9 @@ import {Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
 import {usePalette} from '../../ui/Charts';
 import {ChartCard, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
+import Clock from '../../ui/icons/Clock';
+import SpeedFast from '../../ui/icons/SpeedFast';
 import {latencyGroups, latencyMax, type LatencyBy, type LatencyMissing} from './latency';
 
 const named = 6;
@@ -31,12 +34,25 @@ export function NodeLatency() {
   const down = new Set(view.flatMap(group => group.missing.filter(row => row.state === 'unavailable').map(row => row.id))).size;
   const facts: ChartFact[] = measured.length
     ? [
-        {label: t('nodes.latency.lowest'), value: t('nodes.latency.named', {name: measured[0].name, ms: ms(measured[0].latest)})},
+        {
+          label: t('nodes.latency.lowest'),
+          icon: <SpeedFast />,
+          tint: 'c2',
+          value: t('nodes.latency.named', {name: measured[0].name, ms: ms(measured[0].latest)})
+        },
         {
           label: t('nodes.latency.highest'),
+          icon: <Clock />,
+          tint: 'c4',
           value: t('nodes.latency.named', {name: measured[measured.length - 1].name, ms: ms(measured[measured.length - 1].latest)})
         },
-        {label: t('nodes.latency.unavailable'), value: t('nodes.latency.count', {n: down}), tone: down ? 'negative' : undefined}
+        {
+          label: t('nodes.latency.unavailable'),
+          value: t('nodes.latency.count', {n: down}),
+          icon: <AlertTriangle />,
+          tint: 'c5',
+          tone: down ? 'negative' : undefined
+        }
       ]
     : [];
   const dash = (value: number | null) => (value === null ? '—' : ms(value));
