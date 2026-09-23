@@ -60,8 +60,7 @@ export default defineConfig({
           .filter(name => name === 'index.html' || name.startsWith('assets/'))
           .sort();
         // A reader needs one language, so no catalogue or its stylesheet is installed up front. The worker caches the
-        // language a page reports and any it loads later, and a new build installs the languages the one it replaces
-        // had cached. Every file still counts towards the build hash.
+        // language a page it controls reports, and any it loads later. Every file still counts towards the build hash.
         const languages: Record<string, string[]> = {};
         for (const name of files) {
           const entry = bundle[name];

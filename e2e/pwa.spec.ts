@@ -108,30 +108,44 @@ test('an English visit caches only English and starts offline in it', async ({co
   await expect(page.locator('.rp-nav[href="#/settings"]')).toContainText('Settings');
 });
 
-test('a new build installs the languages the build it replaces had cached', async ({context, browserName}) => {
-  test.skip(browserName === 'webkit', "holding the worker script back relies on Chromium's context routing");
+test('after an update the new build caches only the language in use and starts offline in it', async ({context, browserName}) => {
+  test.skip(browserName === 'webkit', "serving a changed worker script relies on Chromium's context routing");
   const page = await context.newPage();
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-TW'));
-  // The worker script waits until an older build's cache, holding an English catalogue, is in place.
-  let seed!: () => void;
-  const seeded = new Promise<void>(resolve => (seed = resolve));
-  await context.route('**/sw.js', async route => {
-    await seeded;
-    await route.continue();
-  });
+  await page.addInitScript(() => localStorage.getItem('doona-lang') ?? localStorage.setItem('doona-lang', 'en'));
+  const paths = (name: string) => page.evaluate(async name => (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname), name);
+  const holds = async (name: string, lang: string) => (await paths(name)).some(path => path.includes(`/assets/locale-${lang}-`));
   await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  const [first] = await page.evaluate(() => caches.keys());
+  await expect.poll(() => holds(first, 'en')).toBe(true);
+  // The reader switches to zh-TW, so the build being replaced holds both catalogues.
+  await page.evaluate(() => localStorage.setItem('doona-lang', 'zh-TW'));
+  await page.reload();
+  await expect.poll(() => holds(first, 'zh-TW')).toBe(true);
+  const unused = /\/assets\/(?:locale-(?:en|zh-CN)-|fonts-sc-)/;
+  const fetched: string[] = [];
+  context.on('request', request => fetched.push(new URL(request.url()).pathname));
+  // The same build under another hash, from another script address the route can serve, stands in for a deployment.
+  await context.route('**/sw.js?update', async route => {
+    const response = await route.fetch();
+    await route.fulfill({response, body: (await response.text()).replace(/(const CACHE = PREFIX \+ ')[^']+'/, "$1update'")});
+  });
   await page.evaluate(async () => {
-    const older = await caches.open(`doona-shell:${location.origin}/:older`);
-    await older.put(new URL('assets/locale-en-older.js', location.href).href, new Response(''));
+    const taken = new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
+    await navigator.serviceWorker.register('./sw.js?update');
+    await taken;
   });
-  seed();
-  const installed = await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-    const name = (await caches.keys()).find(key => !key.endsWith(':older'))!;
-    return (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname);
-  });
-  expect(installed.some(path => path.startsWith('/assets/locale-en-'))).toBe(true);
-  expect(installed.some(path => /^\/assets\/(?:locale-zh-CN-|fonts-sc-)/.test(path))).toBe(false);
+  const update = first.replace(/[^:]+$/, 'update');
+  await expect.poll(() => holds(update, 'zh-TW')).toBe(true);
+  expect((await paths(update)).filter(path => unused.test(path))).toEqual([]);
+  // Only the new build's cache is left to answer the offline start.
+  await page.evaluate(first => caches.delete(first), first);
+  await context.setOffline(true);
+  const offline = await page.reload();
+  expect(offline?.headers()['x-doona-sw']).toBe('hit');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  expect(fetched.filter(path => unused.test(path))).toEqual([]);
 });
 
 test('an early install offer is consumed on dismissal and failures are reported', async ({page}) => {

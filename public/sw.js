@@ -8,30 +8,16 @@ const ROOT = new URL(self.registration.scope);
 // A new build takes over on the next online load, including open dashboard tabs.
 // Each build records when it was installed, so activation can tell the build it replaces from older ones.
 const STAMP = new URL('__installed__', ROOT);
-// Fetched past the HTTP cache, so a caching proxy cannot hand the new build an old shell. The languages an older build
-// cached come along, so a page read in one of them still starts offline once this build has taken over.
+// Fetched past the HTTP cache, so a caching proxy cannot hand the new build an old shell.
 self.addEventListener('install', event => {
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE);
-      const urls = [...PRECACHE, ...(await languagesInUse()).flatMap(lang => LANGUAGES[lang])];
-      await Promise.all([cache.addAll(urls.map(url => new Request(url, {cache: 'reload'}))), cache.put(STAMP, new Response(String(Date.now())))]);
-      await self.skipWaiting();
-    })()
+    caches
+      .open(CACHE)
+      .then(cache => Promise.all([cache.addAll(PRECACHE.map(url => new Request(url, {cache: 'reload'}))), cache.put(STAMP, new Response(String(Date.now())))]))
+      .then(() => self.skipWaiting())
   );
 });
-async function languagesInUse() {
-  const found = new Set();
-  for (const key of await caches.keys()) {
-    if (!key.startsWith(PREFIX) || key === CACHE) continue;
-    for (const request of await (await caches.open(key)).keys()) {
-      const path = new URL(request.url).pathname.slice(ROOT.pathname.length);
-      for (const lang of Object.keys(LANGUAGES)) if (path.startsWith(`assets/locale-${lang}-`)) found.add(lang);
-    }
-  }
-  return [...found];
-}
-// A page loads its first catalogue before this worker controls it, so it reports that language to have it cached.
+// A page loads its catalogue before this worker controls it, so it reports the language it shows to have it cached.
 self.addEventListener('message', event => {
   const lang = event.data?.language;
   if (typeof lang !== 'string' || !Object.hasOwn(LANGUAGES, lang)) return;

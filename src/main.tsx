@@ -96,16 +96,19 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.
   // clients.claim() fires controllerchange on first install too; only a replaced controller is a new build.
   const running = navigator.serviceWorker.controller !== null;
+  // The worker installs no language up front, so the page tells whichever worker controls it, on load and whenever
+  // a new one takes over, the language it shows. That worker caches it, and the page starts offline in it.
+  const report = async () => {
+    if (!(await (language ??= startLanguage()).catch(() => null))) return;
+    navigator.serviceWorker.controller?.postMessage({language: loadedLang(readLang())});
+  };
+  if (running) void report();
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    void report();
     if (!running) return;
     toast('info', translate(loadedLang(readLang()), 'ui.newBuild'));
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);
-  });
-  // The worker installs no language up front; the one this page starts in is cached so the page also starts offline.
-  void navigator.serviceWorker.ready.then(async registration => {
-    const lang = await (language ??= startLanguage()).catch(() => null);
-    if (lang) registration.active?.postMessage({language: lang});
   });
 }
