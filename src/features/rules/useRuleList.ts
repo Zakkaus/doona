@@ -10,7 +10,6 @@ import {addRule, removeRule, ruleAnchor} from './source';
 import {parseRuleSeed, type RuleSeed} from './link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
-import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 
@@ -78,8 +77,7 @@ export function useRuleList({go, query}: PageProps) {
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
-  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()));
-  useLinked(guard.revision, () => setDialog(null));
+  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()), () => setDialog(null));
   const list: RoutingRule[] = rules.data?.rules ?? [];
   const sources = config.data?.sources ?? [];
   const params = new URLSearchParams(query);

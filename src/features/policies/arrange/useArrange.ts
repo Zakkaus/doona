@@ -4,7 +4,7 @@ import {useT} from '../../../i18n';
 import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
 import {applyChanges, readGroupEntries, type GroupChange} from '../../../dae/groups';
-import {toast, useLinked} from '../../../ui/ui';
+import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupNameError} from '../policies';
@@ -23,9 +23,8 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const nodes = nodeList.data;
   const [changes, setChanges] = useState<GroupChange[]>([]);
-  const guard = useDraftGuard(changes.length > 0);
   // Leaving the page after confirming the draft guard drops what was staged.
-  useLinked(guard.revision, () => setChanges([]));
+  const guard = useDraftGuard(changes.length > 0, () => setChanges([]));
   const text = source.main?.content ?? '';
   const subscriptions = useMemo(() => traySubscriptions(providers.data?.providers ?? [], nodes ?? []), [providers.data, nodes]);
   const view = useMemo(() => arrangeView(text, changes, subscriptions, nodes ?? [], t), [text, changes, subscriptions, nodes, t]);

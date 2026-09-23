@@ -14,7 +14,6 @@ import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
-import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
 import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
@@ -32,8 +31,7 @@ export function useNodesPage({go, query}: PageProps) {
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
-  const guard = useDraftGuard(!!dialog && !!(form.name || form.value));
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(!!dialog && !!(form.name || form.value), () => {
     session.current++;
     setDialog(null);
   });

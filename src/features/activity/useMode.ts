@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../store';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
-import {toast, useLinked} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
@@ -17,8 +17,7 @@ export function useMode() {
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
   const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t);
-  const guard = useDraftGuard(view.dirty);
-  useLinked(guard.revision, () => setStaged(null));
+  const guard = useDraftGuard(view.dirty, () => setStaged(null));
   const apply = async () => {
     if (!staged || view.incomplete) return;
     const submitted = staged;

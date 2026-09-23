@@ -1,6 +1,7 @@
 import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
 import {formatBytes} from '../../api/u64';
 import {formatNumber, type Params, type Translator} from '../../i18n';
+import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
 
 // The page's cards in order; `?card=` scrolls to the section with id `settings-{id}`.
@@ -121,4 +122,24 @@ export function profileView(
 }
 export function paletteLabel(sections: Array<{items: Array<{id: string; label: string}>}>, id: string) {
   return sections.flatMap(section => section.items).find(item => item.id === id)?.label ?? id;
+}
+// Why a connection test failed, in the page language; null when the test was cancelled rather than timed out.
+export function probeFailure(
+  error: unknown,
+  signal: Pick<AbortSignal, 'aborted' | 'reason'>,
+  base: string,
+  origin: string
+): {key: Key; params?: Params} | null {
+  if (signal.aborted && (signal.reason as {name?: string} | undefined)?.name === 'TimeoutError') return {key: 'settings.timeout'};
+  if (signal.aborted) return null;
+  if (error instanceof ApiError) {
+    if (error.status === 401) return {key: 'settings.unauthorized'};
+    if (error.code === 'empty_response') return {key: 'settings.nonJson'};
+    if (error.code === 'invalid_discovery') return {key: 'settings.invalidResponse'};
+    return {key: 'settings.httpError', params: {status: error.status}};
+  }
+  if (error instanceof SyntaxError) return {key: 'settings.nonJson'};
+  // Fetch does not distinguish cross-origin network failures from CORS rejection.
+  if (error instanceof TypeError && new URL(base).origin !== origin) return {key: 'settings.cors'};
+  return {key: 'settings.network'};
 }

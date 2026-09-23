@@ -174,8 +174,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
   const dirty = editing && draft.text !== source.content;
-  const guard = useDraftGuard(dirty);
-  useLinked(guard.revision, () => {
+  const guard = useDraftGuard(dirty, () => {
     setDraft(null);
     setFound(null);
   });
