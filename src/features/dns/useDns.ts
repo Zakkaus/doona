@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
 import {useCapabilities, useDnsControl, useDnsLog as useDnsLogResource} from '../../store';
 import {useAction} from '../../store/action';
@@ -78,14 +78,16 @@ export function useDnsCache(domain: string) {
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
     [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
   );
-  const remove = async (id: string) => {
-    try {
-      const result = await dns.remove(id);
-      if (result) toast('positive', t('dns.deleted', {n: result.deleted}));
-    } catch (error) {
-      toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}));
-    }
-  };
+  const {remove: removeEntry} = dns;
+  // Stable, so the cache table's columns, which call it, stay the same across polls.
+  const remove = useCallback(
+    (id: string) =>
+      void removeEntry(id).then(
+        result => result && toast('positive', t('dns.deleted', {n: result.deleted})),
+        error => toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}))
+      ),
+    [removeEntry, t]
+  );
   const flush = async () => {
     try {
       const result = await dns.flush();
@@ -100,7 +102,7 @@ export function useDnsCache(domain: string) {
     error: dns.cache.error,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
-    remove: (id: string) => void remove(id),
+    remove,
     flush: () => void flush()
   };
 }

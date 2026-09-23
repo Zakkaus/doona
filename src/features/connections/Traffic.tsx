@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {memo, useMemo} from 'react';
 import {useT} from '../../i18n';
 import type {Connection} from '../../api/model';
 import {outboundLabel} from '../../api/selectors';
@@ -10,8 +10,11 @@ import Link from '../../ui/icons/Link';
 import Upload from '../../ui/icons/Upload';
 import {trafficSeries} from './scatter';
 
+const order = [0, 2, 3, 1, 4, 5, 6, 7];
+const bytes = (value: number) => formatBytes(String(Math.round(value)));
+
 // Upload against download for the connections the table shows; the heavy ones stand apart from the crowd.
-export function Traffic({
+export const Traffic = memo(function Traffic({
   records,
   outbounds,
   truncated,
@@ -26,24 +29,24 @@ export function Traffic({
   const t = useT();
   const p = usePalette();
   const view = useMemo(() => trafficSeries(records), [records]);
-  const bytes = (value: number) => formatBytes(String(Math.round(value)));
-  // As on the activity page, block takes the negative colour; the others take category colours by their place among
-  // all outbounds, in an order that keeps neighbouring hues apart (the first two are both blue-green in some palettes).
-  const order = [0, 2, 3, 1, 4, 5, 6, 7];
-  const others = outbounds.filter(outbound => outbound !== 'block');
-  const colour = (outbound: string | null) => (outbound === 'block' ? p.negative : p.cat[order[Math.max(0, others.indexOf(outbound)) % order.length]]);
-  const series = view.series.map(s => ({
-    id: s.outbound ?? '',
-    label: outboundLabel(s.outbound, t),
-    color: colour(s.outbound),
-    points: s.points.map(point => ({
-      id: point.id,
-      x: point.up,
-      y: point.down,
-      name: point.name,
-      detail: t('conn.chart.point', {down: bytes(point.down), up: bytes(point.up)})
-    }))
-  }));
+  const series = useMemo(() => {
+    // As on the activity page, block takes the negative colour; the others take category colours by their place among
+    // all outbounds, in an order that keeps neighbouring hues apart (the first two are both blue-green in some palettes).
+    const others = outbounds.filter(outbound => outbound !== 'block');
+    const colour = (outbound: string | null) => (outbound === 'block' ? p.negative : p.cat[order[Math.max(0, others.indexOf(outbound)) % order.length]]);
+    return view.series.map(s => ({
+      id: s.outbound ?? '',
+      label: outboundLabel(s.outbound, t),
+      color: colour(s.outbound),
+      points: s.points.map(point => ({
+        id: point.id,
+        x: point.up,
+        y: point.down,
+        name: point.name,
+        detail: t('conn.chart.point', {down: bytes(point.down), up: bytes(point.up)})
+      }))
+    }));
+  }, [view, outbounds, p, t]);
   const facts: ChartFact[] = view.heaviest
     ? [
         {
@@ -78,4 +81,4 @@ export function Traffic({
       </ChartCard>
     </div>
   );
-}
+});

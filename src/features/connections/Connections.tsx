@@ -1,3 +1,4 @@
+import {useCallback} from 'react';
 import {Menu, MenuSection, Header} from 'react-aria-components';
 import {
   Badge,
@@ -33,6 +34,8 @@ export function Connections(props: PageProps) {
   const listLink = ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(props.query).has(key));
   const fallback = listLink ? 'list' : 'traffic';
   const tab = pickTab(props.query, ['traffic', 'list'], fallback);
+  const {go, query} = props;
+  const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   const list = (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
@@ -167,14 +170,7 @@ export function Connections(props: PageProps) {
           {
             id: 'traffic',
             label: t('conn.tab.traffic'),
-            content: (
-              <Traffic
-                records={vm.rows}
-                outbounds={vm.outboundKeys}
-                truncated={vm.truncated}
-                onSelect={id => props.go('connections', within(props.query, {tab: 'list', id}))}
-              />
-            )
+            content: <Traffic records={vm.rows} outbounds={vm.outboundKeys} truncated={vm.truncated} onSelect={openInList} />
           },
           {id: 'list', label: t('conn.tab.list'), content: list}
         ]}

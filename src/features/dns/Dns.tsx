@@ -24,6 +24,7 @@ import {useDns, useDnsCache, useDnsLog} from './useDns';
 import {DnsStats} from './Analysis';
 import {errorText} from '../../api/error';
 
+type DnsCacheRow = ReturnType<typeof useDnsCache>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLog>['rows'][number];
 
 export function Dns(props: PageProps) {
@@ -98,6 +99,39 @@ export function Dns(props: PageProps) {
 function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => void}) {
   const t = useT();
   const vm = useDnsCache(domain);
+  const {remove} = vm;
+  // Stable column definitions: a new array on every poll would re-render every visible row.
+  const columns = useMemo(
+    (): TableColumn<DnsCacheRow>[] => [
+      {
+        id: 'q',
+        label: t('ui.domain'),
+        minWidth: 192,
+        isRowHeader: true,
+        render: entry => (
+          <TextTooltip className="rp-code" text={entry.id}>
+            {entry.domain}
+          </TextTooltip>
+        )
+      },
+      {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
+      {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
+      {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TimeCell at={entry.expiresAt} />},
+      {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TimeCell at={entry.staleUntil} />},
+      {
+        id: 'a',
+        label: t('ui.delete'),
+        minWidth: 80,
+        grow: 0,
+        render: entry => (
+          <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => remove(entry.id)}>
+            <Delete />
+          </Button>
+        )
+      }
+    ],
+    [t, remove]
+  );
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} />}
@@ -116,41 +150,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
         <span className="rp-grow" />
         <FlushCacheButton confirmationText={vm.confirmationText} busy={vm.flushPending} isDisabled={vm.flushDisabled} onFlush={vm.flush} />
       </div>
-      <DataTable
-        label={t('ui.cache')}
-        height={442}
-        rows={vm.rows}
-        loading={vm.loading}
-        empty={vm.empty}
-        cols={[
-          {
-            id: 'q',
-            label: t('ui.domain'),
-            minWidth: 192,
-            isRowHeader: true,
-            render: entry => (
-              <TextTooltip className="rp-code" text={entry.id}>
-                {entry.domain}
-              </TextTooltip>
-            )
-          },
-          {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
-          {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
-          {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TimeCell at={entry.expiresAt} />},
-          {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TimeCell at={entry.staleUntil} />},
-          {
-            id: 'a',
-            label: t('ui.delete'),
-            minWidth: 80,
-            grow: 0,
-            render: entry => (
-              <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => vm.remove(entry.id)}>
-                <Delete />
-              </Button>
-            )
-          }
-        ]}
-      />
+      <DataTable label={t('ui.cache')} height={442} rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
     </>
   );
 }

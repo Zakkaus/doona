@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette} from '../../ui/Charts';
@@ -28,9 +28,38 @@ export function LogActivity({
   const p = usePalette();
   const map = useMemo(() => levelHeatmap(records, offered, minimum as LogLevel | ''), [records, offered, minimum]);
   const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}), [locale]);
+  const span = useCallback((start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`, [clock, map.width]);
+  // Rebuilt only when the buckets change, and each bucket's span is formatted once for every level's row.
+  const heat = useMemo(() => {
+    const tones: Record<LogLevel, string> = {error: p.negative, warn: p.notice, info: p.info, debug: p.subtle, trace: p.muted};
+    const spans = map.buckets.map(span);
+    return {
+      columns: map.buckets.map(start => clock.format(start)),
+      rows: map.rows.map(row => {
+        const level = t(logLevelLabels[row.level]);
+        return {
+          id: row.level,
+          color: tones[row.level],
+          // Every row header is the same button; the current minimum carries a check mark and changes nothing.
+          label: (
+            <Button
+              quiet
+              small
+              className={row.level === minimum ? 'current' : undefined}
+              label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
+              onPress={() => setMinimum(row.level)}
+            >
+              {row.level === minimum && <Checkmark />}
+              {level}
+            </Button>
+          ),
+          counts: row.counts,
+          titles: row.counts.map((n, i) => t('log.chart.cell', {time: spans[i], level, n}))
+        };
+      })
+    };
+  }, [map, span, clock, minimum, setMinimum, p, t]);
   if (!records.length) return null;
-  const tones: Record<LogLevel, string> = {error: p.negative, warn: p.notice, info: p.info, debug: p.subtle, trace: p.muted};
-  const span = (start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`;
   const busiest = map.busiest;
   const facts: ChartFact[] = !busiest
     ? []
@@ -47,32 +76,7 @@ export function LogActivity({
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
       <ChartCard title={t('log.chart.title')} note={t('log.chart.sample', {n: records.length})}>
-        <Heatmap
-          label={t('log.chart.title')}
-          columns={map.buckets.map(start => clock.format(start))}
-          rows={map.rows.map(row => {
-            const level = t(logLevelLabels[row.level]);
-            return {
-              id: row.level,
-              color: tones[row.level],
-              // Every row header is the same button; the current minimum carries a check mark and changes nothing.
-              label: (
-                <Button
-                  quiet
-                  small
-                  className={row.level === minimum ? 'current' : undefined}
-                  label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
-                  onPress={() => setMinimum(row.level)}
-                >
-                  {row.level === minimum && <Checkmark />}
-                  {level}
-                </Button>
-              ),
-              counts: row.counts,
-              titles: row.counts.map((n, i) => t('log.chart.cell', {time: span(map.buckets[i]), level, n}))
-            };
-          })}
-        />
+        <Heatmap label={t('log.chart.title')} columns={heat.columns} rows={heat.rows} />
       </ChartCard>
     </div>
   );

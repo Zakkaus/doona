@@ -65,6 +65,7 @@ export function useConnections({go, query}: PageProps) {
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
+  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')), [rows]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>
@@ -126,7 +127,7 @@ export function useConnections({go, query}: PageProps) {
     // Every connection in the snapshot for the traffic chart, which has no filters of its own, and every outbound for
     // its colours.
     rows,
-    outboundKeys: [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')),
+    outboundKeys,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {

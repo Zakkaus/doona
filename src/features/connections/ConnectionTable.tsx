@@ -33,6 +33,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
   const shown: TableColumn<ConnectionRowView>[] = useMemo(() => fitColumns(definitions, width), [definitions, width]);
   const flatRows = useMemo(() => collection.flatMap(row => ('connection' in row ? [row.connection] : [null, ...row.children])), [collection]);
   const fitted = useTableHeight(height, flatRows.length, loading);
+  const selectedKeys = useMemo(() => (selected ? [selected] : []), [selected]);
   const groupKeys = useMemo(() => collection.filter(row => !('connection' in row)).map(row => row.id), [collection]);
   useTableReveal(selected ?? null, selected ? flatRows.findIndex(row => row?.id === selected) : -1, gridRef);
   const renderRow = (row: ConnectionRowView) => (
@@ -66,7 +67,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
             treeColumn={view.group === 'none' ? undefined : shown[0]?.id}
             selectionMode={onSelect ? 'single' : 'none'}
             selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-            selectedKeys={selected ? [selected] : []}
+            selectedKeys={selectedKeys}
             onSelectionChange={keys => onSelect?.(selectedRow(keys))}
             disallowEmptySelection={!!onSelect}
             sortDescriptor={view.sort ?? undefined}
