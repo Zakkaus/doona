@@ -13,6 +13,7 @@ import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
+// The default page stays eager so first paint has no second round trip.
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';

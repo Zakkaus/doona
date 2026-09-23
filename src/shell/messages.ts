@@ -24,7 +24,7 @@ export const messages = defineMessages({
     'login.submit': '連線',
     'login.settings': '變更後端網址',
     'login.rejected': '後端拒絕了已儲存的 token；請輸入新的 token。',
-    'login.stale': '後端設定檔已變更，token 未儲存。請重新載入頁面，確認後端網址後再連線。',
+    'login.stale': '設定檔已變更，token 未儲存。請重新載入頁面，確認後端網址後再連線。',
     'login.setupTitle': '建立管理員',
     'login.passwordTitle': '登入',
     'login.setupNote': '{backend} 尚未設定管理員。建立帳號後即登入；後端只接受來自本機、私有網路或鏈路本地位址的建立請求。',

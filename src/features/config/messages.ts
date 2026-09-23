@@ -102,7 +102,7 @@ export const messages = defineMessages({
     'config.source': '來源',
     'config.sourceFacts': '行數：{lines}，大小：{size}，載入時間：{time}',
     'config.unsaved': '未儲存',
-    'config.unsavedHint': '重新整理或關閉頁面會遺失修改',
+    'config.unsavedHint': '重新載入或關閉頁面會遺失修改',
     'config.editNote':
       '後端可能隱藏來源文字、路徑或診斷；顯示與匯出的文字仍可能含有憑證。僅在內容完整且雜湊值符合 content_sha256 時允許編輯。儲存請求包含 If-Match；若磁碟上的檔案已變更，後端會回傳 HTTP 412，且不會覆寫檔案。',
     'config.readNote': '此來源由引擎寫入或後端未開放編輯，只能檢視。',
@@ -212,7 +212,7 @@ export const messages = defineMessages({
     'config.source': '来源',
     'config.sourceFacts': '行数：{lines}，大小：{size}，加载时间：{time}',
     'config.unsaved': '未保存',
-    'config.unsavedHint': '刷新或关闭页面会丢失修改',
+    'config.unsavedHint': '重新加载或关闭页面会丢失修改',
     'config.editNote':
       '后端可能隐藏来源文本、路径或诊断；显示与导出的文本仍可能包含凭据。仅在内容完整且哈希值与 content_sha256 一致时允许编辑。保存请求包含 If-Match；若磁盘上的文件已更改，后端会返回 HTTP 412，且不会覆盖文件。',
     'config.readNote': '此来源由引擎写入或后端未开放编辑，只能查看。',
