@@ -108,13 +108,13 @@
   color: var(--rp-subtle);
 }
 .rp-tree-tile .s.ok {
-  color: var(--rp-positive);
+  color: var(--rp-positive-text);
 }
 .rp-tree-tile .s.warn {
-  color: var(--rp-notice);
+  color: var(--rp-notice-text);
 }
 .rp-tree-tile .s.err {
-  color: var(--rp-negative);
+  color: var(--rp-negative-text);
 }
 .rp-tree-tile .c {
   flex: none;

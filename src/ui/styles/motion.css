@@ -79,6 +79,11 @@
   --rp-positive: var(--rp-foam);
   --rp-notice: var(--rp-gold);
   --rp-info: var(--rp-pine);
+  /* The status tones as text, set by a palette to body text where the tone is under 4.5:1 in the same way. */
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-info);
   --rp-line: var(--rp-hl-low);
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);

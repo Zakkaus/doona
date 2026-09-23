@@ -9,11 +9,12 @@
 .rp-facts dd {
   margin: 0;
 }
+/* A value is large text, but notice is under 3:1 in most light palettes; the icon beside it keeps the tone. */
 .rp-facts .negative .rp-big {
-  color: var(--rp-negative);
+  color: var(--rp-negative-text);
 }
 .rp-facts .notice .rp-big {
-  color: var(--rp-notice);
+  color: var(--rp-notice-text);
 }
 .rp-facts .negative .rp-tile-head > svg {
   color: var(--rp-negative);
