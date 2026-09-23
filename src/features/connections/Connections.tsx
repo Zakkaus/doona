@@ -157,6 +157,7 @@ export function Connections(props: PageProps) {
   return (
     <div className="rp-page">
       <Tabs
+        keepMounted
         label={t('nav.connections')}
         value={tab}
         onChange={next => props.go('connections', within(props.query, {tab: next === 'traffic' ? null : next}))}

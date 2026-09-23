@@ -1,4 +1,4 @@
-import {Fragment, useDeferredValue, useEffect, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {useDeferredValue, useEffect, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -95,21 +95,29 @@ export function Tabs({
   label,
   items,
   value,
-  onChange
+  onChange,
+  keepMounted
 }: {
   label: string;
   items: Array<{id: string; label: string; content: ReactNode}>;
   value: string;
   onChange: (id: string) => void;
+  // Keep a panel mounted once opened, hidden while another is chosen, so coming back is instant. For panels that
+  // browse data; a panel with drafts or editors unmounts, so nothing of it keeps running out of sight.
+  keepMounted?: boolean;
 }) {
   // The marker lives beside the TabList, not inside it: anything inside is part of the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
-  // The selected tab and its marker answer the click in the urgent render; a heavy panel (a table of
-  // log rows) mounts in the deferred one, so the click never waits for it.
+  // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
+  // table of log rows) mounts in the deferred one, so the click never waits for it.
   const shown = useDeferredValue(value);
-  // Until the deferred render lands, the panel keeps showing the previous content: an empty panel for one frame would
-  // collapse the page and spring back.
-  const content = (items.find(item => item.id === shown) ?? items.find(item => item.id === value))?.content;
+  // Until a new panel has mounted, the one before it stays on screen in its own panel, neither moved nor remounted:
+  // an empty panel for a frame would collapse the page, and a remount would redraw its placeholders. With
+  // `keepMounted`, opened panels also stay mounted, hidden, while another is chosen.
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set([value]));
+  const kept = keepMounted ? opened : new Set([shown]);
+  if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
+  const visible = kept.has(value) ? value : shown;
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
       <div className="rp-tabbar" ref={ref}>
@@ -122,12 +130,13 @@ export function Tabs({
           ))}
         </TabList>
       </div>
-      {/* One panel, whose content is keyed by the tab it belongs to: while the deferred render catches up, the
-          previous tab's content stays mounted where it is instead of remounting under the new panel (a remount
-          redraws its placeholders for a frame, which reads as the page jumping). */}
-      <TabPanel id={value} className="rp-tabpanel">
-        <Fragment key={items.some(item => item.id === shown) ? shown : value}>{content}</Fragment>
-      </TabPanel>
+      {items
+        .filter(item => kept.has(item.id) || item.id === shown)
+        .map(item => (
+          <TabPanel key={item.id} id={item.id} shouldForceMount className="rp-tabpanel" data-shown={item.id === visible || undefined}>
+            {item.content}
+          </TabPanel>
+        ))}
     </RTabs>
   );
 }

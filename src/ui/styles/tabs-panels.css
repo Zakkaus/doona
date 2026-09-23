@@ -53,6 +53,9 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
+.rp-tabpanel:not([data-shown]) {
+  display: none;
+}
 .rp-tabpanel {
   display: flex;
   flex-direction: column;

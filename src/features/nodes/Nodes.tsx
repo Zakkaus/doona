@@ -34,6 +34,7 @@ export function Nodes(props: PageProps) {
     <div className="rp-page">
       <p className="rp-note">{t('nodes.note')}</p>
       <Tabs
+        keepMounted
         label={t('nav.nodes')}
         value={pickTab(props.query, ['list', 'latency'], 'list')}
         onChange={next => props.go('nodes', within(props.query, {tab: next === 'list' ? null : next}))}
