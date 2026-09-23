@@ -155,7 +155,7 @@
   padding: 0 8px;
   height: var(--rp-control);
   background: transparent;
-  color: var(--rp-subtle);
+  color: var(--rp-text);
   border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   position: relative;
