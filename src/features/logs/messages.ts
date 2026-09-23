@@ -2,6 +2,11 @@ import {defineMessages} from '../../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'log.chart.errors': '錯誤',
+    'log.chart.peakErrors': '錯誤最多的時段',
+    'log.chart.peak': '記錄最多的時段',
+    'log.chart.count': '{n} 筆',
+    'log.chart.span': '{time}（{n} 筆）',
     'log.unavailable': '此後端不提供日誌串流。',
     'log.level': '等級',
     'log.level.trace': '追蹤',
@@ -19,8 +24,6 @@ export const messages = defineMessages({
     'log.export': '匯出',
     'log.message': '訊息',
     'log.chart.title': '日誌時間分布',
-    'log.chart.answerErrors': '共 {errors} 筆錯誤，最集中在 {time}（{n} 筆）。',
-    'log.chart.answerQuiet': '沒有錯誤；記錄最多的時段是 {time}（{n} 筆）。',
     'log.chart.sample': '根據最近的 {n} 筆記錄',
     'log.chart.cell': '{time}，{level} {n} 筆',
     'log.chart.minimum': '顯示{level}及以上',
@@ -28,6 +31,11 @@ export const messages = defineMessages({
     'log.empty': '尚無日誌。'
   },
   'zh-CN': {
+    'log.chart.errors': '错误',
+    'log.chart.peakErrors': '错误最多的时段',
+    'log.chart.peak': '记录最多的时段',
+    'log.chart.count': '{n} 条',
+    'log.chart.span': '{time}（{n} 条）',
     'log.unavailable': '此后端不提供日志流。',
     'log.level': '级别',
     'log.level.trace': '跟踪',
@@ -45,8 +53,6 @@ export const messages = defineMessages({
     'log.export': '导出',
     'log.message': '消息',
     'log.chart.title': '日志时间分布',
-    'log.chart.answerErrors': '共 {errors} 条错误，最集中在 {time}（{n} 条）。',
-    'log.chart.answerQuiet': '没有错误；记录最多的时段是 {time}（{n} 条）。',
     'log.chart.sample': '根据最近的 {n} 条记录',
     'log.chart.cell': '{time}，{level} {n} 条',
     'log.chart.minimum': '显示{level}及以上',
@@ -54,6 +60,11 @@ export const messages = defineMessages({
     'log.empty': '暂无日志。'
   },
   en: {
+    'log.chart.errors': 'Errors',
+    'log.chart.peakErrors': 'Most errors',
+    'log.chart.peak': 'Busiest period',
+    'log.chart.count': {one: '{n} record', other: '{n} records'},
+    'log.chart.span': '{time} ({n})',
     'log.unavailable': 'This backend does not stream logs.',
     'log.level': 'Level',
     'log.level.trace': 'Trace',
@@ -71,8 +82,6 @@ export const messages = defineMessages({
     'log.export': 'Export',
     'log.message': 'Message',
     'log.chart.title': 'Log activity over time',
-    'log.chart.answerErrors': {one: '{errors} error, most of them around {time} ({n}).', other: '{errors} errors, most of them around {time} ({n}).'},
-    'log.chart.answerQuiet': {one: 'No errors; the busiest stretch is {time} ({n} record).', other: 'No errors; the busiest stretch is {time} ({n} records).'},
     'log.chart.sample': {one: 'From the latest {n} record', other: 'From the latest {n} records'},
     'log.chart.cell': {one: '{time}: {n} {level} record', other: '{time}: {n} {level} records'},
     'log.chart.minimum': 'Show {level} and above',

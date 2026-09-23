@@ -3,7 +3,8 @@ import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette} from '../../ui/Charts';
 import {Button} from '../../ui/ui';
-import {ChartCard, Heatmap} from '../../ui/charts';
+import Checkmark from '../../ui/icons/Checkmark';
+import {ChartCard, Heatmap, type ChartFact} from '../../ui/charts';
 import {levelHeatmap} from './heatmap';
 import {logLevelLabels} from './view';
 
@@ -29,13 +30,19 @@ export function LogActivity({
   const tones: Record<LogLevel, string> = {error: p.negative, warn: p.notice, info: p.info, debug: p.subtle, trace: p.muted};
   const span = (start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`;
   const busiest = map.busiest;
-  const answer = !busiest
-    ? ''
+  const facts: ChartFact[] = !busiest
+    ? []
     : busiest.errors
-      ? t('log.chart.answerErrors', {errors: busiest.errors, time: span(busiest.start), n: busiest.count})
-      : t('log.chart.answerQuiet', {time: span(busiest.start), n: busiest.count});
+      ? [
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: busiest.errors}), tone: 'negative'},
+          {label: t('log.chart.peakErrors'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+        ]
+      : [
+          {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0})},
+          {label: t('log.chart.peak'), value: t('log.chart.span', {time: span(busiest.start), n: busiest.count})}
+        ];
   return (
-    <ChartCard id="logs" question={t('log.chart.title')} answer={answer} sample={t('log.chart.sample', {n: records.length})}>
+    <ChartCard title={t('log.chart.title')} facts={facts} sample={t('log.chart.sample', {n: records.length})}>
       <Heatmap
         label={t('log.chart.title')}
         columns={map.buckets.map(start => clock.format(start))}
@@ -44,16 +51,19 @@ export function LogActivity({
           return {
             id: row.level,
             color: tones[row.level],
-            label:
-              row.level === minimum ? (
-                <span className="rp-label" title={t('log.chart.current', {level})}>
-                  {level}
-                </span>
-              ) : (
-                <Button quiet small label={t('log.chart.minimum', {level})} onPress={() => setMinimum(row.level)}>
-                  {level}
-                </Button>
-              ),
+            // Every row header is the same button; the current minimum carries a check mark and changes nothing.
+            label: (
+              <Button
+                quiet
+                small
+                className={row.level === minimum ? 'rp-btn current' : undefined}
+                label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
+                onPress={() => setMinimum(row.level)}
+              >
+                {row.level === minimum && <Checkmark />}
+                {level}
+              </Button>
+            ),
             counts: row.counts,
             titles: row.counts.map((n, i) => t('log.chart.cell', {time: span(map.buckets[i]), level, n}))
           };
