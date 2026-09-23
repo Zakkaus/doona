@@ -55,8 +55,7 @@
   --dot: var(--rp-subtle);
 }
 .rp-light.muted {
-  color: var(--rp-muted);
-  opacity: 0.6;
+  color: var(--rp-subtle);
 }
 .rp-bar {
   display: flex;

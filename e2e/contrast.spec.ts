@@ -19,11 +19,12 @@ const palettes = {
   'semi/semi': 1
 } satisfies Record<PaletteId, 0 | 1>;
 const roles = ['accent', 'negative', 'notice', 'positive', 'info'];
-// Kary's light tones sit at that same 4.1:1, and its accent and info text fall back to the body text. Known pairs still
-// reach 4:1.
-const known = new Set([
-  'kary/kary light text on base',
-  ...roles.flatMap(role => [`kary/kary light ${role} text on base`, `kary/kary light ${role} text on surface`])
+// Kary's light tones sit at that same 4.1:1, and its accent and info text fall back to the body text; its body text on
+// its own overlay is 3.9:1. Each known pair keeps a floor of its own.
+const known = new Map<string, number>([
+  ['kary/kary light text on base', 4],
+  ['kary/kary light text on overlay', 3.8],
+  ...roles.flatMap(role => [[`kary/kary light ${role} text on base`, 4] as const, [`kary/kary light ${role} text on surface`, 4] as const])
 ]);
 
 test('accent and status text and accent fills reach 4.5:1 in every palette', async ({page}) => {
@@ -70,13 +71,15 @@ test('accent and status text and accent fills reach 4.5:1 in every palette', asy
               ])
             ),
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
-            'text on base': ratio('var(--rp-text)', 'var(--rp-base)')
+            'text on base': ratio('var(--rp-text)', 'var(--rp-base)'),
+            // Tab and segmented labels sit on the overlay track.
+            'text on overlay': ratio('var(--rp-text)', 'var(--rp-overlay)')
           };
         },
         [palette, scheme, roles] as const
       );
       for (const [pair, value] of Object.entries(ratios))
-        if (value < (known.has(`${palette} ${scheme} ${pair}`) ? 4 : 4.5)) failures.push(`${palette} ${scheme} ${pair}: ${value.toFixed(2)}`);
+        if (value < (known.get(`${palette} ${scheme} ${pair}`) ?? 4.5)) failures.push(`${palette} ${scheme} ${pair}: ${value.toFixed(2)}`);
     }
   }
   expect(failures).toEqual([]);
