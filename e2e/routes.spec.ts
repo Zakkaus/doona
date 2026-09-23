@@ -8,7 +8,7 @@ for (const width of [1024, 1280, 1440]) {
       await page.goto(`/#/${route}${route === 'connections' ? '?tab=list' : ''}`);
       if (!(await offered(page, route))) continue;
       await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
-      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+      await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
       // A live backend may offer the rules page without the trace simulation.

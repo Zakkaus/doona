@@ -39,7 +39,7 @@ import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {groupPolicyText, newGroupPolicies} from '../policies';
+import {groupPolicyText, newGroupPolicies} from '../policyText';
 import {PolicyPicker} from '../PolicyPicker';
 import {holds, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';

@@ -1,5 +1,5 @@
 import type {components} from './types';
-import {responseError} from './error';
+import {responseError, send} from './error';
 
 export type AuthDiscovery = components['schemas']['AuthDiscovery'];
 export type AuthCredentials = components['schemas']['AuthCredentials'];
@@ -11,7 +11,7 @@ const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + p
 
 // Discovery is public, so it is read without a token; a backend that predates password login has no `auth`.
 export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery | null> {
-  const response = await fetch(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
+  const response = await send(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
   if (!response.ok) throw await responseError(response);
   const body: {auth?: AuthDiscovery} = await response.json();
   return body.auth ?? null;

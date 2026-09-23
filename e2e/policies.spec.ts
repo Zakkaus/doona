@@ -21,7 +21,7 @@ test('policies select a member, pin one network, release and test the group', as
   await expect(automatic.getByRole('button', {name: 'Back to automatic', exact: true})).toHaveCount(0);
   await expect(automatic.getByRole('button', {name: /^sg-01\b/})).toHaveAttribute('aria-pressed', 'true');
   await automatic.getByRole('button', {name: 'Test all', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive').filter({hasText: /resilient.*available.*selection (changed|unchanged)/})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive').filter({hasText: /resilient.*Available.*selection: (changed|unchanged)/})).toBeVisible();
   await expect(automatic.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
   const controls = requests.filter(request => request.method() !== 'GET');
   expect(controls.map(request => [request.method(), new URL(request.url()).pathname + new URL(request.url()).search])).toEqual([
@@ -33,4 +33,18 @@ test('policies select a member, pin one network, release and test the group', as
   expect(controls[0].postDataJSON()).toEqual({member_id: 'sg-01', network: 'both'});
   expect(controls[1].postDataJSON()).toEqual({member_id: 'us-01', network: 'tcp'});
   expect(controls[3].postDataJSON()).toMatchObject({target: {type: 'group', group_id: 'resilient'}, transport: ['tcp']});
+});
+
+test('a group card mounted on screen shows its members in the first frame', async ({page}) => {
+  // Checked in the frame callback, which sees what is about to be painted.
+  await page.addInitScript(() => {
+    const check = () => {
+      for (const wait of document.querySelectorAll('.rp-content section.rp-card .rp-wait-line'))
+        if (wait.closest('section')!.getBoundingClientRect().top < innerHeight) document.documentElement.dataset.waited = '';
+    };
+    new MutationObserver(() => requestAnimationFrame(check)).observe(document, {childList: true, subtree: true});
+  });
+  await page.goto('/#/policies');
+  await expect(page.locator('.rp-content .rp-node').first()).toBeVisible();
+  await expect(page.locator('html')).not.toHaveAttribute('data-waited');
 });

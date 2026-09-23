@@ -1,5 +1,5 @@
 import {expect, it, vi} from 'vitest';
-import {append, bucket, fineLimit, mean, record, resetRings, window, type Fold} from './rings';
+import {append, bucket, fineLimit, mean, pruneRings, record, resetRings, window, type Fold} from './rings';
 
 type Sample = {time: number; value: number | null};
 const fold: Fold<Sample> = (group, time) => ({time, value: mean(group.map(s => s.value))});
@@ -40,7 +40,8 @@ it('does not persist a coarse-history wipe after an out-of-order poll', () => {
     vi.advanceTimersByTime(60000);
     record('clock', {time: 3500000, value: null}, fold);
     vi.advanceTimersByTime(0);
-    expect(JSON.parse(storage.get(key)!)).toEqual({fine: [{time: 3500000, value: null}], coarse});
+    expect(JSON.parse(storage.get(key)!)).toEqual({fine: [{time: 3500000, value: null}]});
+    expect(JSON.parse(storage.get(`${key}-coarse`)!)).toEqual(coarse);
   } finally {
     resetRings();
     vi.useRealTimers();
@@ -149,6 +150,59 @@ it('separates an edited backend while retaining history across credential change
   } finally {
     resetRings();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
+
+// A storage whose items are its enumerable keys, as Object.keys sees them on the browser's Storage.
+function enumerableStorage(entries: Record<string, string>) {
+  const storage = {...entries};
+  Object.defineProperties(storage, {
+    getItem: {value: (key: string) => storage[key] ?? null},
+    setItem: {value: (key: string, value: string) => void (storage[key] = value)},
+    removeItem: {value: (key: string) => void delete storage[key]}
+  });
+  return storage;
+}
+
+it('writes the coarse ring at most every ten minutes', () => {
+  const storage = enumerableStorage({});
+  vi.stubGlobal('localStorage', storage);
+  vi.stubGlobal('requestIdleCallback', (run: () => void) => run());
+  const key = 'doona-rings-coarse-["","mock"]-coarse';
+  vi.useFakeTimers();
+  const writes: string[] = [];
+  try {
+    record<Sample>('coarse', undefined, fold);
+    for (let i = 0; i < fineLimit + 25 * 12; i++) {
+      vi.advanceTimersByTime(5000);
+      record('coarse', {time: i * 5000, value: i}, fold);
+      if (storage[key] !== writes.at(-1)) writes.push(storage[key]);
+    }
+    // The first save, then one per ten minutes from the hour the fine ring overflows: 1, 61, 71 and 81 minutes.
+    expect(writes).toHaveLength(4);
+  } finally {
+    resetRings();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('prunes the rings of a deleted or moved profile at startup', () => {
+  const kept = 'doona-rings-traffic-["home","https://one.example"]';
+  const storage = enumerableStorage({
+    'doona-profiles': JSON.stringify([{id: 'home', name: 'Home', api: 'https://one.example', token: ''}]),
+    'doona-profile': 'home',
+    [kept]: '{}',
+    [`${kept}-coarse`]: '[]',
+    'doona-rings-traffic-["home","https://old.example"]': '{}',
+    'doona-rings-memory-["gone","https://one.example"]-coarse': '[]'
+  });
+  vi.stubGlobal('localStorage', storage);
+  try {
+    pruneRings();
+    expect(Object.keys(storage).filter(key => key.startsWith('doona-rings-'))).toEqual([kept, `${kept}-coarse`]);
+  } finally {
     vi.unstubAllGlobals();
   }
 });

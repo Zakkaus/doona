@@ -30,6 +30,7 @@ export function useProviders(enabled = true) {
   return useResource(
     {
       key: ['providers', {limit}],
+      every: 30000,
       fetch: signal =>
         walk(
           cursor => api.providers({cursor, limit}, signal),

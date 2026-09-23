@@ -1,10 +1,10 @@
 import {expect, test} from './fixtures';
 import type {PaletteId} from '../src/shell/preferences';
 
-// Every palette, both schemes: the accent and the status tones as text on the base and surface, text on an accent fill,
-// and body text.
+// Every palette, both schemes: the accent, the status tones and secondary text as text on the base, the surface, a
+// tile (the overlay) and a selected tile, text on an accent fill, and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.
-// Glass is left out: its surfaces are translucent over a gradient. Kary's own light text on its light base is 4.1:1.
+// Glass is left out: its surfaces are translucent over a gradient.
 const palettes = {
   'rose-pine/main': 1,
   'rose-pine/moon': 1,
@@ -19,15 +19,35 @@ const palettes = {
   'semi/semi': 1
 } satisfies Record<PaletteId, 0 | 1>;
 const roles = ['accent', 'negative', 'notice', 'positive', 'info'];
-// Kary's light tones sit at that same 4.1:1, and its accent and info text fall back to the body text; its body text on
-// its own overlay is 3.9:1. Each known pair keeps a floor of its own.
+// Page-level secondary text reads the palette's own subtle, a known exception on the base and surface as in the a11y
+// spec: [base, surface] floors for each look under 4.5:1 on either, 4.5 on a side that passes. Tiles read
+// --rp-subtle-text and get no exception.
+const subtleFloors: Record<string, [number, number]> = {
+  'rose-pine/main light': [4, 4.2],
+  'rose-pine/moon light': [4, 4.2],
+  'rose-pine/moon dark': [4.5, 4.4],
+  'catppuccin/frappe light': [4, 4.3],
+  'catppuccin/macchiato light': [4, 4.3],
+  'catppuccin/mocha light': [4, 4.3],
+  'kary/kary light': [3.4, 3.6],
+  'antd/antd light': [3.3, 3.3],
+  'antd/antd dark': [4.4, 4.5],
+  'arco/arco light': [3.2, 3.2]
+};
+// Kary's light body text is 4.1:1 on its base, 4.3:1 on its surface, 3.9:1 on a tile and 3.4:1 on a selected tile;
+// its tones sit at the same level and its accent, info and tile secondary text fall back to that body text. Its
+// page-level subtle keeps the lower floors above.
+const karyFloors: Record<string, number> = {base: 4, surface: 4.2, tile: 3.8, 'selected tile': 3.4};
 const known = new Map<string, number>([
-  ['kary/kary light text on base', 4],
-  ['kary/kary light text on overlay', 3.8],
-  ...roles.flatMap(role => [[`kary/kary light ${role} text on base`, 4] as const, [`kary/kary light ${role} text on surface`, 4] as const])
+  ...Object.entries(karyFloors).flatMap(([ground, floor]) =>
+    ['text', 'subtle text', ...roles.map(role => `${role} text`)].map(name => [`kary/kary light ${name} on ${ground}`, floor] as const)
+  ),
+  ...Object.entries(subtleFloors).flatMap(([look, [base, surface]]) => [
+    [`${look} subtle text on base`, base] as const,
+    [`${look} subtle text on surface`, surface] as const
+  ])
 ]);
-
-test('accent and status text and accent fills reach 4.5:1 in every palette', async ({page}) => {
+test('accent, status and secondary text and accent fills reach 4.5:1 in every palette', async ({page}) => {
   await page.goto('/#/activity');
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
@@ -41,11 +61,11 @@ test('accent and status text and accent fills reach 4.5:1 in every palette', asy
             const probe = document.createElement('i');
             probe.style.color = value;
             document.body.append(probe);
-            const channels = getComputedStyle(probe)
-              .color.match(/[\d.]+/g)!
-              .map(Number);
+            const color = getComputedStyle(probe).color;
             probe.remove();
-            return channels;
+            const channels = color.match(/[\d.]+/g)!.map(Number);
+            // A mixed colour computes to color(srgb r g b / a) with channels from 0 to 1.
+            return color.startsWith('color(') ? channels.map((channel, i) => (i < 3 ? channel * 255 : channel)) : channels;
           };
           // A translucent colour is drawn over what lies beneath it: the background over the base, the text over that.
           const over = (value: number[], below: number[]) => {
@@ -56,24 +76,33 @@ test('accent and status text and accent fills reach 4.5:1 in every palette', asy
             const [r, g, b] = channels.map(c => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;
           };
-          const base = rgb('var(--rp-base)');
-          const ratio = (fg: string, bg: string) => {
-            const below = over(rgb(bg), base);
+          const pair = (fg: string, bg: string, page: string) => {
+            const below = over(rgb(bg), rgb(page));
             const [hi, lo] = [luminance(over(rgb(fg), below)), luminance(below)].sort((x, y) => y - x);
             return (hi + 0.05) / (lo + 0.05);
           };
+          const ratio = (fg: string, bg: string) => pair(fg, bg, 'var(--rp-base)');
+          // Tiles sit in cards on the base and in panels on the surface; a translucent tile takes the lower of the two.
+          const tile = (fg: string, bg: string) => Math.min(pair(fg, bg, 'var(--rp-base)'), pair(fg, bg, 'var(--rp-surface)'));
+          const on = (fg: string) => ({
+            base: ratio(fg, 'var(--rp-base)'),
+            surface: ratio(fg, 'var(--rp-surface)'),
+            tile: tile(fg, 'var(--rp-overlay)'),
+            'selected tile': tile(fg, 'var(--rp-selected)')
+          });
+          const each = (name: string, values: Record<string, number>) =>
+            Object.entries(values).map(([ground, value]): [string, number] => [`${name} on ${ground}`, value]);
+          // An undefined token falls back to transparent, which measures 1:1 instead of passing as inherited text.
+          const subtle = on('var(--rp-subtle-text, transparent)');
           return {
-            // An undefined token falls back to transparent, which measures 1:1 instead of passing as inherited text.
-            ...Object.fromEntries(
-              roles.flatMap(role => [
-                [`${role} text on base`, ratio(`var(--rp-${role}-text, transparent)`, 'var(--rp-base)')],
-                [`${role} text on surface`, ratio(`var(--rp-${role}-text, transparent)`, 'var(--rp-surface)')]
-              ])
-            ),
+            ...Object.fromEntries(roles.flatMap(role => each(`${role} text`, on(`var(--rp-${role}-text, transparent)`)))),
+            // Page-level secondary text reads the palette's subtle; tiles read --rp-subtle-text.
+            'subtle text on base': ratio('var(--rp-subtle)', 'var(--rp-base)'),
+            'subtle text on surface': ratio('var(--rp-subtle)', 'var(--rp-surface)'),
+            'subtle text on tile': subtle.tile,
+            'subtle text on selected tile': subtle['selected tile'],
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
-            'text on base': ratio('var(--rp-text)', 'var(--rp-base)'),
-            // Tab and segmented labels sit on the overlay track.
-            'text on overlay': ratio('var(--rp-text)', 'var(--rp-overlay)')
+            ...Object.fromEntries(each('text', on('var(--rp-text)')))
           };
         },
         [palette, scheme, roles] as const

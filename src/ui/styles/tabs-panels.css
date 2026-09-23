@@ -89,6 +89,10 @@
 .rp-underlay[data-entering] .rp-modal.rp-drawer {
   animation: rp-drawer-in var(--rp-duration-modal-in) var(--rp-ease) both;
 }
+.rp-underlay.still[data-entering],
+.rp-underlay.still[data-entering] .rp-modal.rp-drawer {
+  animation: none;
+}
 @keyframes rp-drawer-in {
   from {
     translate: 24px 0;

@@ -188,7 +188,7 @@ test('without a node list the page shows providers alone, with no latency tab', 
   backend.capabilities.resources.nodes.available = false;
   await page.goto('/#/nodes?tab=latency');
   await expect(page.getByRole('tab')).toHaveCount(0);
-  await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+  await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
 });
 
 test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
@@ -217,4 +217,42 @@ test('while a cancelled removal is still pending, no other node dialog can submi
   release();
   await expect(page.locator('.rp-toast.positive', {hasText: `${node.name} removed`})).toBeVisible();
   await expect(add).toBeEnabled();
+});
+
+test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  const backend = await mockBackend(page);
+  // Slow reads, so each table is drawn while it loads.
+  const slow = (read: () => Promise<unknown>) => async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return read();
+  };
+  backend.handlers['GET providers'] = slow(() => backend.api.providers());
+  backend.handlers['GET geodata'] = slow(() => backend.api.geodata());
+  const whole = (cell: Locator) => cell.evaluate(element => element.scrollWidth <= element.clientWidth);
+  await page.goto('/#/nodes');
+  const sources = page.getByRole('grid', {name: 'Sources', exact: true});
+  await expect(sources.getByRole('row')).toHaveCount(3);
+  // A heading, two rows and the frame: no placeholder height left over from loading.
+  expect((await page.locator('.rp-table', {has: sources}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  const protocol = page.locator('.rp-table .rp-truncate', {hasText: /^shadowsocks$/}).first();
+  expect(await whole(protocol)).toBe(true);
+  await page.goto('/#/settings');
+  const geodata = page.getByRole('grid', {name: 'Geodata', exact: true});
+  await expect(geodata.getByRole('row')).toHaveCount(3);
+  expect((await page.locator('.rp-table', {has: geodata}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  // The release address is cut inside its column, not past the table's edge.
+  const table = (await page.locator('.rp-table', {has: geodata}).boundingBox())!;
+  const source = (await geodata.getByRole('row').nth(1).getByRole('gridcell').last().boundingBox())!;
+  expect(source.x + source.width).toBeLessThanOrEqual(table.x + table.width + 1);
+});
+
+test('the note about node sources belongs to the list, not the latency tab', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/nodes');
+  const note = page.getByText(/^Sources are subscriptions, files/);
+  await expect(note).toBeVisible();
+  await page.getByRole('tab', {name: 'Latency', exact: true}).click();
+  await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
+  await expect(note).toBeHidden();
 });

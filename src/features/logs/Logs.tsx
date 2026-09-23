@@ -16,7 +16,7 @@ export function Logs() {
       {
         id: 'ts',
         label: t('ui.time'),
-        minWidth: 180,
+        minWidth: 200,
         grow: 0,
         drop: 2,
         render: record => (

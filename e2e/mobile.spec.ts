@@ -17,7 +17,7 @@ test('mobile page select exposes and opens every page without horizontal overflo
     await expect(options).toHaveCount(shown.length);
     await options.nth(index).click();
     await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-    await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+    await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
   }
   await page.goto('/#/activity');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -108,7 +108,7 @@ test.describe('320px', () => {
       await expect(page.locator('.rp-content > *').first()).toBeVisible();
       // WebKit's per-page load check: the page is the current one and has finished loading.
       if (route !== 'flows') await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
-      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+      await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }

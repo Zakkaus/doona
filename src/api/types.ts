@@ -1178,7 +1178,7 @@ export interface components {
         };
         AuthCredentials: {
             username: string;
-            /** @description 12 to 128 Unicode scalar values, at most 512 UTF-8 bytes; not normalised or trimmed. */
+            /** @description 8 to 128 Unicode scalar values, at most 512 UTF-8 bytes; not normalised or trimmed. */
             password: string;
         };
         AuthSession: {

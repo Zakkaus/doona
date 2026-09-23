@@ -554,3 +554,18 @@ test('plain connection cells truncate with a tooltip like other tables', async (
     await expect(row.nth(index).locator('.rp-truncate')).toHaveCount(1);
   }
 });
+
+test.describe('with motion', () => {
+  test.use({reducedMotion: 'no-preference'});
+  test('a kept tab brings its open detail back without the entrance', async ({page}) => {
+    await page.goto('/#/connections?tab=list');
+    await page.locator('.rp-table [data-key="c-0002"]').click();
+    await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
+    await page.getByRole('tab', {name: 'Traffic', exact: true}).click();
+    await page.setViewportSize({width: 600, height: 900});
+    await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+    await expect(page.locator('.rp-drawer .rp-h3')).toHaveText('cdn.bilibili.com');
+    const running = await page.evaluate(() => document.getAnimations().filter(a => (a.effect as KeyframeEffect).target?.closest?.('.rp-underlay')).length);
+    expect(running).toBe(0);
+  });
+});

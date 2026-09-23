@@ -57,6 +57,10 @@ describe('native transport', () => {
     await expect(createApi('https://honk.test').startReload()).rejects.toThrow('network down');
     expect(request).toHaveBeenCalledTimes(1);
   });
+  it('reports a request that got no response as a network failure with a translated text', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    await expect(createApi('https://honk.test').dnsCache()).rejects.toMatchObject({status: 0, code: 'network_error', text: {key: 'ui.errNetwork'}});
+  });
   it.each(['events', 'logs'] as const)('skips malformed id-less %s frames without reconnecting', async kind => {
     vi.useFakeTimers();
     const controller = new AbortController();

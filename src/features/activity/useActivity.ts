@@ -69,11 +69,10 @@ export function useActivity() {
     trafficTimestamps: series.timestamps,
     memoryTimestamps: memoryHistory.timestamps,
     ready: !!capabilities.data,
-    error: runtime.error ?? capabilities.error,
-    retry: () => {
-      capabilities.refetch();
-      if (resources?.runtime.available) runtime.refetch();
-    },
+    // The shell reports a failed discovery above every page; this page reports only its own reads.
+    discoveryFailed: !!capabilities.error,
+    error: runtime.error,
+    retry: runtime.refetch,
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,

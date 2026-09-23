@@ -72,7 +72,21 @@
   overflow: hidden;
 }
 .rp-login {
-  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.rp-login-brand img {
+  width: 56px;
+  height: 56px;
 }
 .rp-row {
   display: flex;
@@ -114,6 +128,19 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+/* A phone fits two tiles side by side; an odd last tile fills its row. */
+@media (min-width: 360px) and (max-width: 599.98px) {
+  .rp-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-strip > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  /* A wide value keeps its room; the sparkline beside it narrows, down to nothing. */
+  .rp-strip .rp-spark {
+    min-width: 0;
+  }
 }
 /* An odd fifth tile fills its row until all five fit at 1280px. */
 @media (min-width: 600px) {

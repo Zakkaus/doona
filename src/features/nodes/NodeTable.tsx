@@ -34,7 +34,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           </span>
         )
       },
-      {id: 'protocol', label: t('nodes.protocol'), minWidth: 120, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
+      {id: 'protocol', label: t('nodes.protocol'), minWidth: 144, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
       {
         id: 'latency',
         label: t('nodes.latency'),

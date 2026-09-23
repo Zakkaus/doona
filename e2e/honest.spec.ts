@@ -6,7 +6,7 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  const notifications = page.getByRole('region', {name: 'Notifications and issues'});
+  const notifications = page.getByRole('region', {name: 'Notifications', exact: true});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');
@@ -56,7 +56,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   });
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+  await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
   await expect.poll(() => Object.keys(counts).sort()).toEqual(Object.keys(responses).sort());
   // Resources gated on capabilities start a moment after it lands; wait until the counts stop moving.
   await expect

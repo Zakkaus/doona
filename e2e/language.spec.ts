@@ -14,7 +14,7 @@ for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
         await expect(nav).toBeVisible();
       }
       await expect(page.locator('.rp-nav').first()).toBeVisible();
-      await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+      await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
     });
     test('editor completion suggestions have a localized accessible name', async ({page}) => {
       await page.goto('/#/config?tab=source');
@@ -98,6 +98,26 @@ test.describe('language loading', () => {
     await page.reload();
     await expect(page.locator('.rp-nav').first()).toBeVisible();
     expect(await scFaces()).toBeGreaterThan(0);
+  });
+
+  test('declares the TC ideograph faces only once zh-TW is chosen, before the page renders in it', async ({page}) => {
+    await page.goto('/#/activity');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    // Counted in the same task that switches the language, before the browser paints it.
+    const latin = await page.evaluate(() => {
+      const html = document.documentElement;
+      const count = () => [...document.fonts].filter(face => face.family.replace(/["']/g, '') === 'Noto Sans TC').length;
+      new MutationObserver((_, observer) => {
+        if (html.lang !== 'zh-TW') return;
+        html.dataset.tcFaces = String(count());
+        observer.disconnect();
+      }).observe(html, {attributes: true, attributeFilter: ['lang']});
+      return count();
+    });
+    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+    expect(Number(await page.locator('html').getAttribute('data-tc-faces'))).toBeGreaterThan(latin + 50);
   });
 
   test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {

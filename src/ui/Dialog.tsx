@@ -56,7 +56,8 @@ export function ModalDialog({
   alert,
   isOpen,
   onOpenChange,
-  hideTitle
+  hideTitle,
+  locked
 }: {
   trigger?: ReactElement;
   title: string;
@@ -67,9 +68,11 @@ export function ModalDialog({
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTitle?: boolean;
+  // Neither the underlay nor Escape closes it: the app behind cannot be used until the dialog is done.
+  locked?: boolean;
 }) {
   const modal = (
-    <ModalOverlay className="rp-underlay" isDismissable={!alert} isOpen={isOpen} onOpenChange={onOpenChange}>
+    <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
         <Dialog className="rp-dialog" role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
           {({close}) => (
@@ -286,6 +289,9 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   const t = useT();
   const wide = useMediaQuery(panelQuery);
   const showing = useContext(TabShown) && open;
+  // Shown before in this opening: a kept tab coming back brings its drawer back as it was, without the entrance.
+  const [was, setWas] = useState({showing, open, seen: false});
+  if (was.showing !== showing || was.open !== open) setWas({showing, open, seen: open && (was.seen || was.showing)});
   useEffect(() => {
     if (!showing || !wide) return;
     const on = (e: KeyboardEvent) => {
@@ -312,7 +318,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
       </aside>
     );
   return (
-    <ModalOverlay className="rp-underlay rp-drawer-underlay" isDismissable isOpen onOpenChange={o => !o && onClose()}>
+    <ModalOverlay className={cx('rp-underlay rp-drawer-underlay', was.seen && 'still')} isDismissable isOpen onOpenChange={o => !o && onClose()}>
       <Modal className="rp-modal rp-drawer">
         <Dialog className="rp-dialog" aria-label={title}>
           {head}

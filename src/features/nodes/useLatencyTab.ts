@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups, useNodes} from '../../store';
 import {offered} from '../../api/capabilities';
-import {latencyGroups, type LatencyBy} from './latency';
+import {latencyGroups, type LatencyBy} from './latencyGroups';
 
 export function useLatencyTab() {
   const resources = useCapabilities().data?.resources;

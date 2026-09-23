@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
-import {latencyGroups, latencyMax} from './latency';
+import {latencyGroups, latencyMax} from './latencyGroups';
 
 const observation = (patch: Partial<HealthObservation>): HealthObservation =>
   ({

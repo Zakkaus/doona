@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {translate, type Translator} from '../../i18n';
-import {groupPolicyText, policyChoices, policyLabel} from './policies';
+import {groupPolicyText, policyChoices, policyLabel} from './policyText';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('names offered policies in words and keeps any other as written', () => {

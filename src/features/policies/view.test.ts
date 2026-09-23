@@ -88,6 +88,9 @@ it('names the default member and describes an observation in words', () => {
   expect(fields).toContainEqual(['policy.cfg.defaultMember', member.name]);
   const [view] = memberViews([{...member, kind: 'node', health: {...g.runtime.health[0], transport: 'udp', purpose: 'dns'}}], t);
   expect(view.description).toBe(t('policy.observedVia', {transport: 'UDP', purpose: 'DNS'}));
+  // The usual observation, over TCP on the data path, goes without saying on every tile.
+  const [usual] = memberViews([{...member, kind: 'node', health: {...g.runtime.health[0], transport: 'tcp', purpose: 'data'}}], t);
+  expect(usual.description).toBe(' ');
 });
 
 it('reports a partial probe with translated counts and the stopping error', () => {

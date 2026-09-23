@@ -18,7 +18,8 @@ export function credentialProblems(kind: 'setup' | 'login', username: string, pa
   const problems: Partial<Record<Field, Key>> = {};
   if (!USERNAME.test(username)) problems.username = 'login.badUsername';
   const length = [...password].length;
-  if (length < 12 || length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.badPassword';
+  if (length < 8) problems.password = 'login.passwordShort';
+  else if (length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.passwordLong';
   else if (kind === 'setup' && password !== confirm) problems.confirm = 'login.mismatch';
   return problems;
 }
@@ -35,23 +36,32 @@ export function signInRefusal(error: unknown): Refusal | null {
   return null;
 }
 
+// A backend without discovery (404), one that guards it (401, 403) or a host answering with something other than JSON
+// predates password login and takes a token. A network or server failure says nothing about the backend's sign-in.
+export function predatesAuth(error: unknown): boolean {
+  if (error instanceof SyntaxError) return true;
+  return error instanceof ApiError && (error.status === 404 || error.status === 401 || error.status === 403);
+}
+
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
   const t = useT();
   // A session this tab held and the backend no longer accepts has ended; it is dropped before asking again.
   // endSession is idempotent for the page load, so running it in the initializer is safe under StrictMode.
   const [ended] = useState(() => endSession(profileId, api));
   const [kind, setKind] = useState<SignIn | null>(null);
+  const [discovery, setDiscovery] = useState<{attempt: number; error: Error | null}>({attempt: 0, error: null});
   useEffect(() => {
     const controller = new AbortController();
     discoverAuth(api, controller.signal).then(
       auth => setKind(signInKind(auth)),
-      () => {
-        // Without discovery the backend is treated as one that predates password login.
-        if (!controller.signal.aborted) setKind('token');
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (predatesAuth(error)) setKind('token');
+        else setDiscovery(state => ({...state, error: error instanceof Error ? error : new Error(String(error))}));
       }
     );
     return () => controller.abort();
-  }, [api]);
+  }, [api, discovery.attempt]);
   const [token, setToken] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -114,8 +124,10 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const fieldError = (field: Field) => (problems[field] ? t(problems[field]) : undefined);
   return {
     kind,
-    title: t(kind === 'setup' ? 'login.setupTitle' : kind === 'login' ? 'login.passwordTitle' : 'login.title'),
-    note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? t('login.passwordNote', {backend}) : t('login.note', {backend}),
+    discoveryError: discovery.error,
+    retryDiscovery: () => setDiscovery(state => ({attempt: state.attempt + 1, error: null})),
+    title: t(kind === 'setup' ? 'login.setupTitle' : kind === 'token' ? 'login.title' : 'login.passwordTitle'),
+    note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? null : t('login.note', {backend}),
     alert,
     busy,
     token,

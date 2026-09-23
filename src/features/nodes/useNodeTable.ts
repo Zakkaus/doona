@@ -9,7 +9,7 @@ import {toast, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
-import {policyLabel} from '../policies/policies';
+import {policyLabel} from '../policies/policyText';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {

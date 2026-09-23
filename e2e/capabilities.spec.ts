@@ -95,8 +95,22 @@ test('without discovery, the nodes page reads its nodes but not the groups it on
   await expect(page.locator('.rp-content > .rp-alert')).toContainText('Discovery unavailable');
   await nodesRead;
   await expect(page.getByRole('tab', {name: 'Latency'})).toHaveAttribute('aria-selected', 'true');
-  await page.waitForTimeout(300);
+  // The chart has drawn from the nodes, long after the page asked for everything it reads.
+  await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
   expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
+});
+
+test('a failed discovery is reported once, by the shell, on the activity and DNS pages', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET capabilities'] = async () => {
+    throw new ApiError(500, 'internal_error', 'Discovery failed');
+  };
+  for (const route of ['activity', 'dns']) {
+    await page.goto('/#/' + route);
+    await expect(page.locator('.rp-content > .rp-alert').first()).toContainText('Discovery failed');
+    await expect(page.locator('.rp-alert', {hasText: 'Discovery failed'})).toHaveCount(1);
+    await expect(page.locator('.rp-content [role=status]')).toHaveCount(0);
+  }
 });
 
 // The first honk-native profile exposes only runtime and userspace-observed connections.

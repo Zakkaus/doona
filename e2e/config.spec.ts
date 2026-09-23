@@ -338,7 +338,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
   await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
   await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
-    '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: Fastest on average'
+    '4 groups: proxy: Manual, resilient: Fastest on average, gaming: Fastest on average, skylink: Fastest on average'
   );
   await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rule, 0 response rules');
   const routing = modules.getByRole('region', {name: 'routing', exact: true});

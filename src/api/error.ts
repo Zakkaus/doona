@@ -42,6 +42,18 @@ export async function responseError(response: Response): Promise<ApiError> {
 export const clientError = (status: number, code: string, message: string, key: Key, params?: Params) =>
   new ApiError(status, code, message, null, null, null, {key, params});
 
+// A request that gets no response at all fails with the browser's own words ("Failed to fetch", "Load failed"); it is
+// reported as a network failure in the page language instead. A cancelled request keeps its AbortError.
+export async function send(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
+    if (error instanceof TypeError && !signal?.aborted) throw clientError(0, 'network_error', error.message, 'ui.errNetwork');
+    throw error;
+  }
+}
+
 // Local failures carry a message key; detail preserves backend text.
 export class LocalError extends Error {
   constructor(

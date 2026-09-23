@@ -32,6 +32,21 @@ Create one folder for each feature under `src/features`. Keep a feature's pages,
 
 Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
 
+## UI components
+
+React Spectrum S2 is the design reference: behaviour, spacing, states and wording follow it. Components are built on `react-aria-components` with doona's own CSS in `src/ui`; a new component starts from the S2 design and only then from React Aria.
+
+doona does not depend on `@react-spectrum/s2`. Version 1.7.1 unpacks to about 54 MB against about 6.6 MB for `react-aria-components`, and its styles come from `@parcel/macros`, a build-time macro that needs a bundler plugin. doona is served by routers and keeps gzip budgets of 275 KB for the startup shell and 655 KB for all JavaScript.
+
+What this leaves out, on purpose:
+
+- No S2 package, style macro or S2 theme tokens. Colours come from the official palettes in `src/ui/styles/palettes.css`.
+- No S2 icon package. The icons doona uses are copied one at a time from Adobe Spectrum under Apache-2.0 (see NOTICE).
+- No automatic S2 updates. When S2 changes a component's behaviour or look, doona follows by hand.
+- No second component library beside React Aria.
+
+Revisit this if S2 stops requiring the macro or the size budgets stop applying.
+
 ## Commit and pull request flow
 
 Use commit subjects in this form:
