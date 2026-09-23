@@ -103,4 +103,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);
   });
+  // The worker installs no language up front; the one this page starts in is cached so the page also starts offline.
+  void navigator.serviceWorker.ready.then(async registration => {
+    const lang = await (language ??= startLanguage()).catch(() => null);
+    if (lang) registration.active?.postMessage({language: lang});
+  });
 }

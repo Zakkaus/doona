@@ -83,6 +83,57 @@ test('shell reloads offline and fonts and icons are cached on first use', async 
   }
 });
 
+test('an English visit caches only English and starts offline in it', async ({context, browserName}) => {
+  const page = await context.newPage();
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  const other = /\/assets\/(?:locale-zh-|fonts-[st]c-)/;
+  const fetched: string[] = [];
+  context.on('request', request => fetched.push(new URL(request.url()).pathname));
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  const cached = () =>
+    page.evaluate(async () => {
+      const cache = await caches.open((await caches.keys())[0]);
+      return (await cache.keys()).map(request => new URL(request.url).pathname);
+    });
+  // The catalogue loaded before the worker took over, so the page reports it and the worker caches it.
+  await expect.poll(async () => (await cached()).some(path => path.includes('/assets/locale-en-'))).toBe(true);
+  expect((await cached()).filter(path => other.test(path))).toEqual([]);
+  expect(fetched.filter(path => other.test(path))).toEqual([]);
+  // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
+  if (browserName === 'webkit') return;
+  await context.setOffline(true);
+  const offline = await page.reload();
+  expect(offline?.headers()['x-doona-sw']).toBe('hit');
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toContainText('Settings');
+});
+
+test('a new build installs the languages the build it replaces had cached', async ({context, browserName}) => {
+  test.skip(browserName === 'webkit', "holding the worker script back relies on Chromium's context routing");
+  const page = await context.newPage();
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-TW'));
+  // The worker script waits until an older build's cache, holding an English catalogue, is in place.
+  let seed!: () => void;
+  const seeded = new Promise<void>(resolve => (seed = resolve));
+  await context.route('**/sw.js', async route => {
+    await seeded;
+    await route.continue();
+  });
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const older = await caches.open(`doona-shell:${location.origin}/:older`);
+    await older.put(new URL('assets/locale-en-older.js', location.href).href, new Response(''));
+  });
+  seed();
+  const installed = await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    const name = (await caches.keys()).find(key => !key.endsWith(':older'))!;
+    return (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname);
+  });
+  expect(installed.some(path => path.startsWith('/assets/locale-en-'))).toBe(true);
+  expect(installed.some(path => /^\/assets\/(?:locale-zh-CN-|fonts-sc-)/.test(path))).toBe(false);
+});
+
 test('an early install offer is consumed on dismissal and failures are reported', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();

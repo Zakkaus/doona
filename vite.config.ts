@@ -18,6 +18,9 @@ const cssMinify = (() => {
   }
 })();
 
+// The stylesheets each language's loader in src/i18n imports with its catalogue.
+const languageStyles: Record<string, string> = {'src/fonts-tc.css': 'zh-TW', 'src/fonts-sc.css': 'zh-CN'};
+
 export default defineConfig({
   base: './',
   define: {
@@ -56,11 +59,19 @@ export default defineConfig({
         const files = Object.keys(bundle)
           .filter(name => name === 'index.html' || name.startsWith('assets/'))
           .sort();
-        // A reader needs one language, so only zh-TW, the fallback startup uses when the saved one does not load, is
-        // installed up front; the worker caches any other on first use, as it does fonts and icons. Offline after a new
-        // deployment, a page whose language is not yet cached therefore still starts, in zh-TW. Every file still
-        // counts towards the build hash.
-        const precache = files.filter(name => !name.startsWith('assets/locale-') || name.startsWith('assets/locale-zh-TW-'));
+        // A reader needs one language, so no catalogue or its stylesheet is installed up front. The worker caches the
+        // language a page reports and any it loads later, and a new build installs the languages the one it replaces
+        // had cached. Every file still counts towards the build hash.
+        const languages: Record<string, string[]> = {};
+        for (const name of files) {
+          const entry = bundle[name];
+          const lang =
+            entry.type === 'chunk'
+              ? entry.facadeModuleId && /\/src\/i18n\/locales\//.test(entry.facadeModuleId) && entry.name
+              : entry.originalFileNames.map(file => languageStyles[file]).find(Boolean);
+          if (lang) (languages[lang] ??= []).push(name);
+        }
+        const precache = files.filter(name => !Object.values(languages).flat().includes(name));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
@@ -70,7 +81,10 @@ export default defineConfig({
         this.emitFile({
           type: 'asset',
           fileName: 'sw.js',
-          source: template.replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16)).replace("'__PRECACHE__'", JSON.stringify(precache))
+          source: template
+            .replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16))
+            .replace("'__PRECACHE__'", JSON.stringify(precache))
+            .replace("'__LANGUAGES__'", JSON.stringify(languages))
         });
       }
     }
