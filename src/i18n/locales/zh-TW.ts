@@ -234,7 +234,7 @@ export const messages = {
   'dns.chart.positive': '正面答案',
   'dns.chart.negative': '負面答案',
   'dns.chart.usage': '使用量',
-  'dns.chart.usageFacts': '條目：{entries}／{entryCapacity}，容量：{bytes}／{byteCapacity}',
+  'dns.chart.usageFacts': '條目：{entries}',
   'dns.chart.coverage': '快取範圍：{kinds}；{persistent}',
   'dns.chart.persistent': '重啟後保留',
   'dns.chart.memoryOnly': '僅存於記憶體，重啟後清空',

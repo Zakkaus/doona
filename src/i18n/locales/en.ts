@@ -246,7 +246,7 @@ export const messages = {
   'dns.chart.positive': 'Positive answers',
   'dns.chart.negative': 'Negative answers',
   'dns.chart.usage': 'Usage',
-  'dns.chart.usageFacts': 'Entries: {entries} / {entryCapacity}, size: {bytes} / {byteCapacity}',
+  'dns.chart.usageFacts': 'Entries: {entries}',
   'dns.chart.coverage': 'Caches {kinds}; {persistent}',
   'dns.chart.persistent': 'kept across restarts',
   'dns.chart.memoryOnly': 'held in memory only, cleared on restart',

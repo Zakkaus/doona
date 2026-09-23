@@ -13,7 +13,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+  await expect(page.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
@@ -71,8 +71,10 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   const backend = await mockBackend(page);
   const card = page.getByRole('region', {name: 'Cache', exact: true});
   await page.goto('/#/dns');
-  await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+  await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
   await expect(card.getByText('Usage', {exact: true})).toBeVisible();
+  // The entry count is the cache's only limit, so no size is stated.
+  await expect(card.getByText(/\bsize\b|\bMB\b|\bKB\b/)).toHaveCount(0);
   const listings = backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/dns/cache'));
   // Every read asks for one entry: the card never walks the whole cache, however often it refreshes.
   const limits = listings.map(request => new URL(request.url()).searchParams.get('limit'));
@@ -108,7 +110,7 @@ for (const count of [0, 4]) {
     backend.handlers['GET dns/log'] = async () => ({...seed, records: seed.records.slice(0, count), next_cursor: null});
     await page.goto('/#/dns');
     const card = page.getByRole('region', {name: 'Cache', exact: true});
-    await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+    await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
     await expect(page.getByText('Too few records to chart yet', {exact: true})).toHaveCount(3);
     await expect(page.locator('.rp-facts')).toHaveCount(0);
   });
@@ -121,7 +123,7 @@ test('a failed first log read shows in the charts it feeds while the cache card 
   };
   await page.goto('/#/dns');
   const card = page.getByRole('region', {name: 'Cache', exact: true});
-  await expect(card.getByText(/^Entries: \d+ \/ 8,192, size: [\d.]+ KB \/ 32 MB$/)).toBeVisible();
+  await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
   await expect(card.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(3);
 });

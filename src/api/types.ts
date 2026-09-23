@@ -2694,15 +2694,11 @@ export interface components {
             /** @description Absent from servers that predate cache usage reporting. */
             usage?: components["schemas"]["DnsCacheUsage"];
         };
-        /** @description Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. */
+        /** @description Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. The entry count is the cache's only limit; the size of an entry is not bounded. */
         DnsCacheUsage: {
             entries: components["schemas"]["UInt64"];
-            /** @description Effective entry limit after the engine applies its bounds. */
+            /** @description Effective entry limit after the engine applies its bounds, at most 100,000. */
             entry_capacity: components["schemas"]["UInt64"];
-            /** @description Retained query and response wire bytes. */
-            wire_bytes: components["schemas"]["UInt64"];
-            /** @description Effective wire-byte budget after the engine applies its bounds. */
-            wire_byte_capacity: components["schemas"]["UInt64"];
         };
         DnsLogRecord: {
             /** @description Opaque, unique within the running instance; the cursor is derived from it. */

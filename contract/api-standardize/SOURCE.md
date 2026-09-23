@@ -1,6 +1,6 @@
-Pin: 01a6575 + 952e2e0 (PR #12) + 4cc28f4 and 62cfa46 (password login) + 50f2a8c (DNS cache usage)
+Pin: 01a6575 + 952e2e0 (PR #12) + 4cc28f4 and 62cfa46 (password login) + 50f2a8c and 8fb317a (DNS cache usage)
 
-openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch honk, commit 01a6575 plus PR #12 (`952e2e0`, recorder modes and the unredacted administrative surface, open as of 2026-09-22) plus `4cc28f4` and `62cfa46` on branch `auth-password-login` (password setup, login and logout with auth discovery, matching honk's password mode; passwords of 8 to 128 characters; not yet proposed upstream as of 2026-09-23) plus `50f2a8c` on the same branch (DNS cache usage beside the entry listing, matching honk PR Glassyiris/honk#12).
+openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch honk, commit 01a6575 plus PR #12 (`952e2e0`, recorder modes and the unredacted administrative surface, open as of 2026-09-22) plus `4cc28f4` and `62cfa46` on branch `auth-password-login` (password setup, login and logout with auth discovery, matching honk's password mode; passwords of 8 to 128 characters; not yet proposed upstream as of 2026-09-23) plus `50f2a8c` and `8fb317a` on the same branch (DNS cache usage beside the entry listing, matching honk PR Glassyiris/honk#12; the entry count is the only limit, so usage reports entries and entry capacity only).
 
 That commit includes, all merged: PR #4 client fixes, #5 config, #6 observability with provider, node and geodata management, #7 connection close, #8 GroupOverrideCleared with the native outbound mode dropped.
 
