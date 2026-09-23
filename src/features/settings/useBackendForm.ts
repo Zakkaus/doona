@@ -2,6 +2,7 @@ import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useT, type Params} from '../../i18n';
 import type {Key} from '../../i18n';
+import {discoverAuth} from '../../api/auth';
 import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
@@ -86,6 +87,31 @@ export function useBackendForm(query: string) {
     request.current = null;
     controller?.abort();
   }, [query]);
+  // How the backend in the address field signs in, as its public discovery says: read for the saved backend when the
+  // page opens and again by each connection test. A password backend has no bearer to paste, so its field is hidden.
+  const [auth, setAuth] = useState<{base: string; password: boolean} | null>(null);
+  useEffect(() => {
+    let base: string;
+    try {
+      base = normalizeApi(saved.api ?? '');
+    } catch {
+      return;
+    }
+    if (!base || base === 'mock') return;
+    const controller = new AbortController();
+    discoverAuth(base, controller.signal).then(
+      found => setAuth({base, password: found?.mode === 'password'}),
+      () => {}
+    );
+    return () => controller.abort();
+  }, [saved.api]);
+  const passwordMode = (() => {
+    try {
+      return auth !== null && auth.password && auth.base === normalizeApi(api);
+    } catch {
+      return false;
+    }
+  })();
   const validate = (value: string) => {
     try {
       const base = normalizeApi(value);
@@ -168,6 +194,7 @@ export function useBackendForm(query: string) {
         throw new ApiError(200, 'invalid_discovery', 'Missing API version');
       }
       if (request.current === controller) {
+        setAuth({base, password: discovery.auth?.mode === 'password'});
         const version = String(discovery.api_major);
         setResult({key: 'settings.reachable', params: {version}});
         toast('positive', t('settings.reachable', {version}));
@@ -226,6 +253,7 @@ export function useBackendForm(query: string) {
     changeApi,
     token,
     changeToken,
+    passwordMode,
     paired,
     dirty,
     invalid,

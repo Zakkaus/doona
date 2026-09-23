@@ -100,3 +100,13 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   // Signing out is not an ended session: no warning greets the next sign-in.
   await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);
 });
+
+test('settings offers no token field for a password backend', async ({page}) => {
+  await passwordBackend(page, false);
+  await page.goto('/#/settings');
+  await expect(page.getByText('This backend signs in with a username and password', {exact: false})).toBeVisible();
+  await expect(page.locator('[name=token]')).toHaveCount(0);
+  // Another address is not known to use passwords until it is tested, so its token field returns.
+  await page.locator('[name=api]').fill('http://other.test');
+  await expect(page.locator('[name=token]')).toBeVisible();
+});

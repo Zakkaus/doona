@@ -24,6 +24,7 @@ export function Settings({query}: PageProps) {
     changeApi,
     token,
     changeToken,
+    passwordMode,
     paired,
     invalidText,
     pending,
@@ -107,16 +108,20 @@ export function Settings({query}: PageProps) {
             value={api}
             onChange={changeApi}
           />
-          <TextField
-            label={t('settings.token')}
-            autoComplete="off"
-            spellCheck={false}
-            action={<Button onPress={toggleToken}>{tokenToggleText}</Button>}
-            name="token"
-            type={tokenType}
-            value={token}
-            onChange={changeToken}
-          />
+          {passwordMode ? (
+            <p className="rp-label">{t('settings.passwordMode')}</p>
+          ) : (
+            <TextField
+              label={t('settings.token')}
+              autoComplete="off"
+              spellCheck={false}
+              action={<Button onPress={toggleToken}>{tokenToggleText}</Button>}
+              name="token"
+              type={tokenType}
+              value={token}
+              onChange={changeToken}
+            />
+          )}
           <div className="rp-toolbar">
             <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
               {t('settings.test')}
