@@ -51,6 +51,7 @@ test('traffic is the first connections tab, and a point opens its connection in 
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');
   await expect(fact(page, 'Heaviest connection')).toHaveText('cdn.bilibili.com (direct)');
   await expect(fact(page, 'Download')).toHaveText('1.1 GB');
+  await expect(page.getByText(/^Connections: \d+(?:, without byte totals: \d+)?$/)).toBeVisible();
   await page.locator('.rp-scatter circle').first().click();
   await expect(page).toHaveURL(/[?&]tab=list/);
   await expect(page).toHaveURL(/[?&]id=/);

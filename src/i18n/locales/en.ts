@@ -174,11 +174,8 @@ export const messages = {
   'conn.chart.named': '{name} ({outbound})',
   'conn.chart.down': 'Download',
   'conn.chart.up': 'Upload',
-  'conn.chart.sample': {one: '{n} current connection', other: '{n} current connections'},
-  'conn.chart.sampleUnknown': {
-    one: '{n} current connection, {unknown} of them without byte totals',
-    other: '{n} current connections, {unknown} of them without byte totals'
-  },
+  'conn.chart.sample': 'Connections: {n}',
+  'conn.chart.sampleUnknown': 'Connections: {n}, without byte totals: {unknown}',
   'conn.chart.moreDown': 'More download',
   'conn.chart.moreUp': 'More upload',
   'conn.chart.hint': 'Horizontal: upload, vertical: download, dashed line: equal traffic. Select a point to open its connection.',
