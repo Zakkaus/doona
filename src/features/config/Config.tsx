@@ -110,7 +110,7 @@ function Modules(props: ModulesProps) {
                 </Button>
               )}
               {card.manual && !card.editing && (
-                <Button small quiet tip={t('config.moduleManualTip')} onPress={card.manual}>
+                <Button quiet tip={t('config.moduleManualTip')} onPress={card.manual}>
                   {t('config.moduleManual')}
                 </Button>
               )}

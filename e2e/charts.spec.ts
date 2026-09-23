@@ -92,3 +92,15 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   await page.reload();
   await expect(card.getByText('This backend does not provide a cache listing', {exact: true})).toBeVisible();
 });
+
+test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/dns');
+  const chart = page.getByRole('img', {name: /^Upstream latency \(\d+ lookups\)$/});
+  await expect(chart).toBeVisible();
+  const overflow = await chart.evaluate(svg => {
+    const edge = svg.getBoundingClientRect().right;
+    return Math.max(...[...svg.querySelectorAll('text.tick')].map(tick => tick.getBoundingClientRect().right - edge));
+  });
+  expect(overflow).toBeLessThanOrEqual(0);
+});

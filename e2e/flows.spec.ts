@@ -198,3 +198,9 @@ test.describe('narrow screens', () => {
     expect(overlaps).toBe(false);
   });
 });
+
+test('the connection topology card is titled like the other chart cards', async ({page}) => {
+  await page.goto('/#/rules?tab=map');
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  await expect(topology.getByRole('heading', {level: 3, name: 'Connection topology', exact: true})).toHaveClass(/\brp-h3\b/);
+});

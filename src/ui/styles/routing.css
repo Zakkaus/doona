@@ -2,9 +2,6 @@
   min-width: 0;
   overflow: hidden;
 }
-.rp-topology h2 {
-  margin: 0;
-}
 /* The routing tree: tiles placed on computed rows, the connectors drawn from the same numbers. */
 .rp-tree {
   display: flex;

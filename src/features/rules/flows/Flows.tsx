@@ -33,9 +33,9 @@ export function RoutingMap(props: PageProps) {
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
       <ErrorMessage error={view.error} onRetry={view.retry} />
-      <section className="rp-card rp-topology" aria-label={t('flow.topology')}>
+      <section className="rp-card rp-titled rp-topology" aria-label={t('flow.topology')}>
         <div className="rp-row">
-          <h2 className="rp-label">{t('flow.topology')}</h2>
+          <h3 className="rp-h3">{t('flow.topology')}</h3>
           <Segmented
             label={t('flow.topology')}
             value={view.by}

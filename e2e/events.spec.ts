@@ -54,3 +54,16 @@ test('runtime heartbeats cannot evict other events from the default feed or expo
   await page.getByRole('button', {name: 'Export JSON', exact: true}).click();
   expect(JSON.parse(await downloadText(await downloading))).toEqual([ready]);
 });
+
+test('a single event takes one row, not a blank one beneath it', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  const runtime = await api.runtime();
+  await page.route('**/api/v1/events', route =>
+    fulfillStream(route, [{id: 'events:1', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
+  );
+  await page.goto('/#/events');
+  const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Events', exact: true})});
+  await expect(table.getByRole('rowheader')).toHaveCount(1);
+  expect((await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
+});

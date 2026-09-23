@@ -256,3 +256,15 @@ test('the note about node sources belongs to the list, not the latency tab', asy
   await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
   await expect(note).toBeHidden();
 });
+
+test('the source kind badge shows its whole label in every language', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  for (const lang of ['en', 'zh-TW', 'zh-CN']) {
+    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    await page.reload();
+    const badges = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child .rp-badge');
+    await expect(badges).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    for (const badge of await badges.all()) expect(await badge.evaluate(element => element.scrollWidth <= element.clientWidth), lang).toBe(true);
+  }
+});
