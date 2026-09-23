@@ -1,18 +1,22 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
-import {policyKindLabels} from './view';
-import {canonicalPolicy, policyNames, writeGroupEntry, type GroupEntry} from '../config/groups';
-import type {MainSourceEdit} from '../config/mainSource';
+import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
+import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
+import {useDraftGuard} from '../../shell/draft';
+import {errorText} from '../../api/error';
+import {groupEditSafe} from './policyText';
 export type PolicyEditView = {
   title: string;
   open: boolean;
   available: boolean;
   disabled: boolean;
+  tip?: string;
   busy: boolean;
-  policy: string;
-  choices: Array<{id: string; label: string; desc: string}>;
+  // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
+  problem: {id: number; text: string} | null;
+  policy: string | null;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
   show: () => void;
   close: () => void;
@@ -23,46 +27,75 @@ export type PolicyEditView = {
 export function usePolicyEdit(name: string, source: MainSourceEdit, entry: GroupEntry | undefined): PolicyEditView {
   const t = useT();
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
+  const session = useRef(0);
+  const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
+  const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
+  const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)), () => {
+    session.current++;
+    setDraft(null);
+    setProblem(null);
+  });
   const save = (close: () => void) => {
     if (!draft) return;
+    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
+    if (!groupEditSafe(filters, draft.policy, entry)) {
+      refuse(t('policy.editUnsafe'));
+      return;
+    }
+    const submitted = session.current;
     void source
-      .apply(
-        text => writeGroupEntry(text, draft.name, {filters: draft.filters.map(f => f.trim()).filter(Boolean), policy: draft.policy}),
-        errors => toast('negative', t('policy.editInvalid', {n: errors})),
-        draft.origin
-      )
-      .then(
-        written => {
-          if (written) {
-            toast('positive', t('policy.updated', {name: draft.name}));
+      .apply(text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}), draft.origin)
+      .then(result => {
+        const open = session.current === submitted;
+        if (result.kind === 'ok') {
+          if (open) {
+            guard.clear();
             close();
           }
-        },
-        error => toast('negative', errorText(error))
-      );
+          toast('positive', t('policy.updated', {name: draft.name}));
+        }
+        const text = editProblem(result, t);
+        // A refusal after the dialog closed has nowhere inline to go.
+        if (text) {
+          if (open) refuse(text);
+          else toast('negative', text);
+        }
+      });
+  };
+  // Edits wait while a save is in flight; what was submitted is what the outcome describes.
+  const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
+    if (!source.busy) setDraft(prev => (prev ? update(prev) : prev));
   };
   return {
     title: t('policy.editTitle', {name}),
     open: !!draft,
-    available: !!draft || !!(source.writable && entry && source.main),
+    available: !!draft || source.writable,
     disabled: source.busy || !entry || !source.main,
+    tip: source.error ? errorText(source.error, t) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
     busy: source.busy,
-    policy: canonicalPolicy(draft?.policy ?? null),
-    choices: policyNames.map(id => ({id, label: t(policyKindLabels[id]), desc: id})),
+    problem,
+    policy: draft?.policy ?? null,
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,
       label: t('policy.filterN', {n: id + 1}),
       removeLabel: t('policy.removeFilter', {n: id + 1}),
-      change: (value: string) => setDraft(prev => (prev ? {...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))} : prev)),
-      remove: () => setDraft(prev => (prev ? {...prev, filters: prev.filters.filter((_, i) => i !== id)} : prev))
+      change: (value: string) => edit(prev => ({...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))})),
+      remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
     })),
     show: () => {
+      session.current++;
+      setProblem(null);
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
     },
-    close: () => setDraft(null),
-    setPolicy: policy => setDraft(prev => (prev ? {...prev, policy} : prev)),
-    add: () => setDraft(prev => (prev ? {...prev, filters: [...prev.filters, '']} : prev)),
+    close: () => {
+      session.current++;
+      setProblem(null);
+      guard.clear();
+      setDraft(null);
+    },
+    setPolicy: policy => edit(prev => ({...prev, policy})),
+    add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
     save
   };
 }

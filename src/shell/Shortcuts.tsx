@@ -1,18 +1,21 @@
 import {useEffect, useState} from 'react';
-import type {PageProps} from '../features/types';
 import {useT} from '../i18n';
 import {Button, ModalDialog} from '../ui/ui';
 import type {ShortcutView} from './view';
+import {isRoutePath, type PageProps} from './routes';
+import {preloadSearch} from './search/load';
 
 export function Shortcuts({
   go,
   openSearch,
+  refresh,
   mac,
   entries,
   paths
 }: {
   go: PageProps['go'];
   openSearch: () => void;
+  refresh: () => void;
   mac: boolean;
   entries: ShortcutView[];
   paths: Record<string, string>;
@@ -26,6 +29,8 @@ export function Shortcuts({
     };
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
+      // A held Ctrl or ⌘ preloads search wherever focus is, a field included.
+      if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
       if (
         event.defaultPrevented ||
         event.repeat ||
@@ -53,15 +58,32 @@ export function Shortcuts({
         setOpen(true);
         return;
       }
+      // The page's own filter field, where it has one.
+      if (event.key === '/') {
+        const field = document.querySelector<HTMLInputElement>('.rp-content input[type="search"]');
+        if (field) {
+          event.preventDefault();
+          reset();
+          field.focus();
+          field.select();
+        }
+        return;
+      }
       const pending = prefixAt;
       reset();
       if (pending !== null && performance.now() - pending <= 800) {
         const path = paths[event.key];
-        if (path) {
+        if (path && isRoutePath(path)) {
           event.preventDefault();
           go(path);
           return;
         }
+      }
+      if (event.key === 'r') {
+        event.preventDefault();
+        reset();
+        refresh();
+        return;
       }
       if (event.key === 'g') {
         event.preventDefault();
@@ -76,7 +98,7 @@ export function Shortcuts({
       removeEventListener('blur', reset);
       removeEventListener('focusin', reset);
     };
-  }, [go, openSearch, paths]);
+  }, [go, openSearch, refresh, paths]);
   return (
     <ModalDialog
       title={t('shell.shortcuts')}
@@ -85,7 +107,7 @@ export function Shortcuts({
       narrow
       footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}
     >
-      <p className="rp-note">{t('shell.shortcutSequence')}</p>
+      <p className="rp-label">{t('shell.shortcutSequence')}</p>
       <div className="rp-col">
         <div className="rp-row">
           <span>{t('search')}</span>
@@ -95,6 +117,14 @@ export function Shortcuts({
           <span>{t('shell.shortcutHelp')}</span>
           <kbd className="rp-kbd">?</kbd>
         </div>
+        <div className="rp-row">
+          <span>{t('shell.shortcutFilter')}</span>
+          <kbd className="rp-kbd">/</kbd>
+        </div>
+        <div className="rp-row">
+          <span>{t('refresh')}</span>
+          <kbd className="rp-kbd">r</kbd>
+        </div>
         {entries.map(entry => (
           <div className="rp-row" key={entry.id}>
             <span>{entry.label}</span>
@@ -102,6 +132,8 @@ export function Shortcuts({
           </div>
         ))}
       </div>
+      <p className="rp-label">{t('shell.shortcutTables')}</p>
+      <p className="rp-label">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
     </ModalDialog>
   );
 }

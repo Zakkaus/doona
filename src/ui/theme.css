@@ -12,7 +12,10 @@
 @import './styles/tables-forms.css';
 @import './styles/motion.css';
 @import './styles/toasts.css';
+@import './styles/tags-bars.css';
 @import './styles/feature-details.css';
 @import './styles/interaction-states.css';
 @import './styles/tabs-panels.css';
 @import './styles/routing.css';
+@import './styles/arrange.css';
+@import './styles/charts.css';

@@ -1,10 +1,11 @@
 import {describe, expect, it} from 'vitest';
 import type {Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText} from './view';
+import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText, selectedProvider} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
-import {formatBytes} from '../../api/u64';
+import {formatBytes} from '../../i18n/format';
+const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
 const t: Translator = (key, params) => translate('en', key, params);
 
 const provider = (id: string, overrides: Partial<Provider> = {}): Provider => ({
@@ -46,7 +47,9 @@ describe('providerRows', () => {
       provider('file', {kind: 'file', url_redacted: 'https://primary.example/redacted'})
     ];
     const nodes = [node('tagged', {provider_id: 'a', subscription_tag: 'primary'})];
-    expect(providerRows(providers, nodes, entries, t).list.map(item => item.name)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
+    const rows = providerRows(providers, nodes, entries, t).list;
+    expect(rows.map(item => item.displayName)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
+    expect(rows.map(item => item.configTag)).toEqual(['primary', undefined, undefined, undefined]);
     expect(providers.map(item => item.name)).toEqual(['opaque-a', 'opaque-b', 'opaque-c', 'opaque-file']);
   });
 
@@ -94,9 +97,15 @@ describe('node rows', () => {
       node('hk-3', {group_ids: ['gaming'], protocol: 'trojan'}),
       node('sg-1', {group_ids: ['gaming']})
     ];
-    expect(nodeRows(nodes, ' HK- ', 'gaming', 'vless', {column: 'name', direction: 'ascending'}).map(item => item.id)).toEqual(['hk-2', 'HK-10']);
+    expect(nodeRows(nodes, ' HK- ', 'gaming', 'vless', {column: 'name', direction: 'ascending'}, contains).map(item => item.id)).toEqual(['hk-2', 'HK-10']);
     expect(nodes.map(item => item.id)).toEqual(['HK-10', 'hk-2', 'hk-1', 'hk-3', 'sg-1']);
-    expect(nodeRows(nodes, '', '', '', {column: 'protocol', direction: 'ascending'}).map(item => item.id)).toEqual(['hk-3', 'HK-10', 'hk-2', 'hk-1', 'sg-1']);
+    expect(nodeRows(nodes, '', '', '', {column: 'protocol', direction: 'ascending'}, contains).map(item => item.id)).toEqual([
+      'hk-3',
+      'HK-10',
+      'hk-2',
+      'hk-1',
+      'sg-1'
+    ]);
   });
 
   it('sorts measured latency before missing health and breaks ties by name in either direction', () => {
@@ -122,8 +131,8 @@ describe('node rows', () => {
       node('unavailable', {health: [{...sample, state: 'unavailable', latency_ms: 1}]})
     ];
     const ascending = ['zero', 'slow-2', 'slow-10', 'missing', 'unavailable'];
-    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}).map(item => item.id)).toEqual(ascending);
-    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}).map(item => item.id)).toEqual([...ascending].reverse());
+    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}, contains).map(item => item.id)).toEqual(ascending);
+    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}, contains).map(item => item.id)).toEqual([...ascending].reverse());
   });
 });
 
@@ -144,7 +153,7 @@ it('projects node protocol, membership, measured zero and unavailable health', (
 
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {
   const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
-  expect(row.usage).toBe(formatBytes(1024n));
+  expect(row.usage).toBe(formatBytes(1024n, 'en'));
   expect(row.intervals.at(-1)).toEqual({id: '90', label: intervalText(90, 'en-US', t)});
   expect(intervalText(0, 'en-US', t)).toBe(t('nodes.manualOnly'));
   expect(intervalText(3600, 'en-US', t)).toBe(t('nodes.everyHours', {n: '1'}));
@@ -176,7 +185,27 @@ it('separates built-in outbounds from unattributed nodes and avoids provider id 
     name: t('nodes.kind.builtin'),
     kind: t('nodes.kind.builtin'),
     usage: '—',
-    updated: '—',
+    updatedAt: null,
     status: null
   });
+});
+
+it('does not authorize writes from shared-host guesses or conflicting node tags', () => {
+  const providers = [
+    provider('main', {url_redacted: 'https://primary.example/redacted'}),
+    provider('include', {url_redacted: 'https://primary.example/redacted'})
+  ];
+  expect(providerRows(providers, [], entries, t).list.every(row => row.configTag === undefined)).toBe(true);
+  const nodes = [node('one', {provider_id: 'main', subscription_tag: 'primary'}), node('two', {provider_id: 'main', subscription_tag: 'secondary'})];
+  expect(providerRows(providers, nodes, entries, t).list.every(row => row.configTag === undefined)).toBe(true);
+  expect(providerRowView(provider('a'), undefined, 'en-US', t)).toMatchObject({interval: '—', hasInterval: false, intervals: []});
+  const unspecified = providerRowView(provider('a'), null, 'en-US', t);
+  expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
+  expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+});
+
+it('falls back to the first real source when the linked provider is no longer listed', () => {
+  const {list} = providerRows([provider('a'), provider('b')], [], [], t);
+  expect(selectedProvider(list, 'b')).toBe('b');
+  expect(selectedProvider(list, 'gone')).toBe('a');
 });

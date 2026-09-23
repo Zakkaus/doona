@@ -1,7 +1,8 @@
 import {useEffect, useSyncExternalStore} from 'react';
 import {readProfiles} from './profiles';
 
-// Extend the backend's ten-minute history with session polls: one hour at poll cadence, then a week of minute buckets persisted per profile.
+// Session polls extend the backend's ten-minute history: an hour at poll cadence, a week of stored minute buckets
+// per profile.
 export type Timed = {time: number};
 export type Rings<T extends Timed> = {fine: T[]; coarse: T[]};
 // How a bucket summarises its samples: the mean of a rate, the peak of a count.
@@ -57,29 +58,95 @@ export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSec
   return {samples, since, until: now};
 }
 
-// One store per chart, keyed by the profile so another backend's curve is never mixed in. Writes are paced
-// to once a minute; a storage that throws (private mode, quota) only costs the persistence.
-const stores = new Map<string, {key: string; rings: Rings<Timed>; saved: number}>();
+// Persist each backend's history separately; storage failures only cost persistence. The fine ring is written every
+// minute; the coarse ring, up to a week of buckets, only every ten.
+type Stored = {key: string; rings: Rings<Timed>; saved: number; coarseSaved: number; writtenCoarse: Timed[] | null};
+const stores = new Map<string, Stored>();
+const coarseEvery = 10 * minute;
+const owner = (id: string, api: string) => JSON.stringify([id, api || 'mock']);
 function storageKey(name: string) {
-  const {activeId} = readProfiles();
-  return `doona-rings-${name}-${activeId || 'mock'}`;
+  const {activeId, profiles} = readProfiles();
+  return `doona-rings-${name}-${owner(activeId, profiles.find(profile => profile.id === activeId)?.api ?? '')}`;
 }
-function load<T extends Timed>(name: string): {key: string; rings: Rings<T>; saved: number} {
-  const key = storageKey(name);
-  const cached = stores.get(name);
-  if (cached && cached.key === key) return cached as {key: string; rings: Rings<T>; saved: number};
-  let rings: Rings<T> = {fine: [], coarse: []};
+function read(key: string): unknown {
   try {
     const raw = localStorage.getItem(key);
-    const parsed: unknown = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as Rings<T>).fine) && Array.isArray((parsed as Rings<T>).coarse))
-      rings = parsed as Rings<T>;
+    return raw ? JSON.parse(raw) : null;
   } catch {
     // Unreadable storage: the curve starts from this session.
+    return null;
   }
-  const store = {key, rings, saved: Date.now()};
+}
+// A stored ring someone else wrote or an older build left malformed is dropped, not charted.
+function ring<T extends Timed>(value: unknown): T[] | null {
+  return Array.isArray(value) && value.every(sample => typeof sample === 'object' && sample !== null && Number.isFinite((sample as Timed).time))
+    ? (value as T[])
+    : null;
+}
+function load<T extends Timed>(name: string): Stored & {rings: Rings<T>} {
+  const key = storageKey(name);
+  const cached = stores.get(name);
+  if (cached && cached.key === key) return cached as Stored & {rings: Rings<T>};
+  const stored = read(key) as {fine?: unknown; coarse?: unknown} | null;
+  const coarse = read(`${key}-coarse`);
+  // An older build kept both rings under one key.
+  const rings = {fine: ring<T>(stored?.fine) ?? [], coarse: ring<T>(coarse) ?? ring<T>(stored?.coarse) ?? []};
+  const store = {key, rings, saved: Date.now(), coarseSaved: 0, writtenCoarse: ring(coarse) ? rings.coarse : null};
   stores.set(name, store);
   return store;
+}
+// Rings of other backends are the first thing to give up when storage is full: the profiles and settings
+// share the same quota and matter more than a curve's past.
+function save(key: string, value: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      localStorage.setItem(key, value);
+      return;
+    } catch {
+      if (attempt || !prune(key)) return;
+    }
+  }
+}
+function prune(keep: string) {
+  const current = new Set([...stores.values()].flatMap(store => [store.key, `${store.key}-coarse`]).concat(keep));
+  let freed = false;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('doona-rings-') && !current.has(key)) {
+        localStorage.removeItem(key);
+        freed = true;
+      }
+    }
+  } catch {
+    // Unavailable storage: nothing to free.
+  }
+  return freed;
+}
+// A week of minute buckets takes a while to serialise, so the write waits for an idle moment rather than landing in
+// the poll that produced it; a reset in between drops it, since the rings it would write are gone.
+let resets = 0;
+function saveWhenIdle(store: Stored, coarse: boolean) {
+  const at = resets;
+  const run = () => {
+    if (at !== resets) return;
+    save(store.key, JSON.stringify({fine: store.rings.fine}));
+    if (coarse) save(`${store.key}-coarse`, JSON.stringify(store.rings.coarse));
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(run, {timeout: 5000});
+  else setTimeout(run, 0);
+}
+// Rings whose profile is gone or points elsewhere: every profile change reloads the page, so this runs after each.
+export function pruneRings() {
+  const {profiles} = readProfiles();
+  const owners = new Set(profiles.length ? profiles.map(profile => owner(profile.id, profile.api)) : [owner('', '')]);
+  try {
+    for (const key of Object.keys(localStorage)) {
+      const found = /^doona-rings-.+?-(\[.*\])(?:-coarse)?$/.exec(key);
+      if (key.startsWith('doona-rings-') && !(found && owners.has(found[1]))) localStorage.removeItem(key);
+    }
+  } catch {
+    // Unavailable storage: nothing to prune.
+  }
 }
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
@@ -98,22 +165,28 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
     const now = Date.now();
     if (now - store.saved >= minute) {
       store.saved = now;
-      try {
-        localStorage.setItem(store.key, JSON.stringify(next));
-      } catch {
-        // Full or unavailable storage: the rings live on in memory.
+      const coarse = store.rings.coarse !== store.writtenCoarse && now - store.coarseSaved >= coarseEvery;
+      if (coarse) {
+        store.coarseSaved = now;
+        store.writtenCoarse = store.rings.coarse;
       }
+      saveWhenIdle(store, coarse);
     }
   }
   return store.rings;
 }
+// For tests.
 export function resetRings() {
   for (const store of stores.values()) {
     try {
       localStorage.removeItem(store.key);
-    } catch {}
+      localStorage.removeItem(`${store.key}-coarse`);
+    } catch {
+      /* Storage can be unavailable. */
+    }
   }
   stores.clear();
+  resets++;
   for (const listener of listeners) listener();
 }
 
@@ -123,5 +196,6 @@ export function useRings<S, T extends Timed>(name: string, source: S | undefined
   useEffect(() => {
     record(name, source && sample(source), fold);
   }, [name, source, sample, fold]);
-  return useSyncExternalStore(subscribe, () => load<T>(name).rings);
+  // A render reads the ring already loaded; the next record re-checks the profile, so storage is not read per render.
+  return useSyncExternalStore(subscribe, () => ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings);
 }

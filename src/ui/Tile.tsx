@@ -1,8 +1,7 @@
 import type {ReactNode} from 'react';
-import {Link as RLink, ToggleButton} from 'react-aria-components';
+import {Link as RLink} from 'react-aria-components';
 import ListBulleted from './icons/ListBulleted';
 import {useT} from '../i18n';
-import {millis} from '../api/u64';
 import {cx} from './cx';
 import {TextTooltip} from './Button';
 import {Badge} from './Feedback';
@@ -14,18 +13,15 @@ export function CardLink({href, label, children}: {href: string; label: string; 
     </RLink>
   );
 }
-export function RuleRef({expression, ruleId, linked}: {expression: string | null; ruleId: string | null; linked: boolean}) {
+// `href` is the rule's place in the rule list, built by the feature; without it the expression stands alone.
+export function RuleRef({expression, href}: {expression: string | null; href?: string}) {
   const t = useT();
   if (!expression) return <>—</>;
   return (
     <>
       <TextTooltip text={expression}>{expression}</TextTooltip>
-      {linked && ruleId && (
-        <RLink
-          href={'#/rules?tab=list&rule=' + encodeURIComponent(ruleId)}
-          className="rp-btn quiet icon rp-rule-link"
-          aria-label={t('ui.openRule', {rule: expression})}
-        >
+      {href && (
+        <RLink href={href} className="rp-btn quiet icon rp-rule-link" aria-label={t('ui.openRule', {rule: expression})}>
           <ListBulleted />
         </RLink>
       )}
@@ -33,60 +29,27 @@ export function RuleRef({expression, ruleId, linked}: {expression: string | null
   );
 }
 
-export type NodeTileProps = {
-  name: string;
-  tcp?: number;
-  alive?: boolean;
-  unavailable?: boolean;
-  description?: string;
-  nested?: boolean;
-  selected?: boolean;
-  cur?: boolean;
-  onPress?: () => void;
-  isDisabled?: boolean;
-  bodyOnly?: boolean;
-};
+// A node's tile body: the name, one prepared status (a latency, a state or a badge) and a description line.
+// The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
+export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean; group?: string};
+// `mark` tags a member in place that is not the one selection, such as the member one network uses.
+type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean; mark?: string};
 export const latencyTone = (ms: number) => (ms < 100 ? 'ok' : ms < 180 ? 'warn' : 'err');
-export function NodeTile({
-  name,
-  tcp,
-  alive = true,
-  unavailable = !alive || tcp == null,
-  description,
-  nested,
-  selected,
-  cur,
-  onPress,
-  isDisabled,
-  bodyOnly
-}: NodeTileProps) {
+export function NodeTile({name, status, description, current, mark}: NodeTileProps) {
   const t = useT();
-  const body = (
+  return (
     <>
       <span className="top">
         <span className="n">
           <TextTooltip>{name}</TextTooltip>
         </span>
-        {nested && <Badge>{t('ui.group')}</Badge>}
-        {alive && tcp != null ? (
-          <span className={'ms ' + latencyTone(tcp)}>{t('ui.latency', {n: millis(tcp)})}</span>
-        ) : (
-          <span className={cx('ms', unavailable && 'err')}>{unavailable ? t('ui.unavailable') : '—'}</span>
-        )}
+        {status.group && <Badge>{status.group}</Badge>}
+        {status.badge ? <Badge>{status.text}</Badge> : <span className={cx('ms', status.tone)}>{status.text}</span>}
       </span>
       <span className="s">
-        {description ?? ' '}
-        {cur && !onPress && <span className="cur">{t('ui.current')}</span>}
+        {description}
+        {(mark || current) && <span className="cur">{mark ?? t('ui.current')}</span>}
       </span>
     </>
   );
-  if (bodyOnly) return body;
-  if (onPress) {
-    return (
-      <ToggleButton className="rp-node" isSelected={selected} isDisabled={isDisabled} onChange={onPress}>
-        {body}
-      </ToggleButton>
-    );
-  }
-  return <div className={cx('rp-node', cur && 'cur')}>{body}</div>;
 }

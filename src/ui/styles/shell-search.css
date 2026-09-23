@@ -50,10 +50,10 @@
   cursor: pointer;
 }
 .rp-brand[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
-/* The about box. The duck hops on a tap; after five it honks and the name cycles its colours for a while. */
+/* The about box. The duck hops on a tap; after five it honks, and from then on the name cycles its colours. */
 .rp-about {
   display: flex;
   flex-direction: column;
@@ -70,7 +70,7 @@
   cursor: pointer;
 }
 .rp-about-duck:focus-visible {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
 }
 .rp-about-duck img {
   display: block;
@@ -88,8 +88,8 @@
   opacity: 0;
   scale: 0.9;
   transition:
-    opacity 400ms var(--rp-ease),
-    scale 400ms var(--rp-ease-out);
+    opacity var(--rp-duration-slow) var(--rp-ease),
+    scale var(--rp-duration-slow) var(--rp-ease-out);
   pointer-events: none;
 }
 .rp-about-duck.painted .night {
@@ -97,7 +97,7 @@
   scale: 1;
 }
 .rp-about-duck img.hop {
-  animation: rp-hop 360ms var(--rp-ease-out);
+  animation: rp-hop var(--rp-duration-hop) var(--rp-ease-out);
 }
 @keyframes rp-hop {
   30% {
@@ -115,10 +115,10 @@
   right: -28px;
   padding: 4px 10px;
   border-radius: var(--rp-r-pill);
-  background: var(--rp-pine);
+  background: var(--rp-accent);
   color: var(--rp-on-accent);
   font-weight: 700;
-  animation: rp-pop 240ms var(--rp-ease-out);
+  animation: rp-pop var(--rp-duration-pop) var(--rp-ease-out);
 }
 @keyframes rp-pop {
   from {
@@ -246,6 +246,34 @@
   background: var(--rp-hl-med);
   border-radius: 1px;
 }
+/* Below 400px the brand, the compact search and the five actions no longer fit with the wide gutter: the bar
+   would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the brand. */
+@media (max-width: 399px) {
+  .rp-top {
+    padding: 0 12px;
+    column-gap: 8px;
+  }
+  .rp-brand {
+    gap: 8px;
+  }
+  .rp-brand-version {
+    display: none;
+  }
+  .rp-main {
+    padding-inline: 16px;
+  }
+}
+/* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. */
+@media (max-width: 339px) {
+  .rp-brand-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 .rp-side {
   display: none;
   flex-direction: column;
@@ -301,13 +329,33 @@
   top: 0;
   width: 2px;
   border-radius: 1px;
-  background: var(--rp-group, var(--rp-pine));
+  background: var(--rp-group, var(--rp-accent));
   transition:
-    translate 200ms var(--rp-ease-out),
-    height 200ms var(--rp-ease-out),
-    background-color 200ms var(--rp-ease);
+    translate var(--rp-duration-panel) var(--rp-ease-out),
+    height var(--rp-duration-panel) var(--rp-ease-out),
+    background-color var(--rp-duration-panel) var(--rp-ease);
   pointer-events: none;
   clip-path: inset(8px 0);
+}
+.rp-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--rp-r-md);
+  color: var(--rp-subtle);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: none;
+}
+.rp-version[data-hovered] {
+  background: var(--rp-hl-low);
 }
 .rp-main {
   margin-inline-end: 0;
@@ -321,6 +369,8 @@
 }
 @media (min-width: 1024px) {
   .rp-main {
+    /* Pinned to the content column, so the startup screen without a side nav lands where the page will. */
+    grid-column: 2;
     margin-inline-end: 16px;
   }
 }
@@ -332,6 +382,9 @@
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  /* Fill the column even while a page's chunk is still loading: without this the content collapses to the
+     heading and springs back to full height a tenth of a second later. */
+  flex: 1;
 }
 .rp-head {
   display: flex;

@@ -15,7 +15,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-light > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rp-light::before {
   content: '';
@@ -34,24 +39,23 @@
   height: 8px;
 }
 .rp-light.ok {
-  --dot: var(--rp-foam);
+  --dot: var(--rp-positive);
 }
 .rp-light.warn {
-  --dot: var(--rp-gold);
+  --dot: var(--rp-notice);
 }
 .rp-light.err {
-  --dot: var(--rp-love);
+  --dot: var(--rp-negative);
 }
 .rp-light.info {
-  /* Foam is the info colour everywhere (toasts too); it shares the dot with ok, which text tells apart. */
-  --dot: var(--rp-foam);
+  /* Info shares the positive dot with ok; the text beside it tells them apart. */
+  --dot: var(--rp-positive);
 }
 .rp-light.neutral {
   --dot: var(--rp-subtle);
 }
 .rp-light.muted {
-  color: var(--rp-muted);
-  opacity: 0.6;
+  color: var(--rp-subtle);
 }
 .rp-bar {
   display: flex;

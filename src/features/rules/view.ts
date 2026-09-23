@@ -1,13 +1,17 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
-import {millis} from '../../api/u64';
-import {conditionKinds, type ConditionKind} from '../config/groups';
+import type {Key} from '../../i18n';
+import {isFragment, scanConfig} from '../../dae/text';
+import {localTime, formatLatency} from '../../i18n/format';
+import {outboundLabel, preferredHealth} from '../../api/selectors';
+import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
-import {coverageView, word, type CoverageView} from '../flows/view';
-import {sourceFor} from './source';
+import {coverageView, type CoverageView} from './flows/view';
+import {word} from '../../api/labels';
+import {ruleAnchor, sourceFor} from './source';
 import {ruleDistribution} from './distribution';
+import {pickTab, within} from '../../shell/route';
+import {offered} from '../../api/capabilities';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -34,8 +38,8 @@ const kindHints: Record<ConditionKind, string> = {
   l4proto: 'udp'
 };
 const sources: Record<string, Key> = {kernel: 'rule.sourceKernel', recomputed: 'rule.sourceRecomputed', unknown: 'rule.sourceUnknown'};
-export type Choice = {id: string; label: string; desc?: string};
-export type DictionaryRow = {
+type Choice = {id: string; label: string; desc?: string};
+type DictionaryRow = {
   id: string;
   number: string;
   expression: string;
@@ -47,9 +51,9 @@ export type DictionaryRow = {
   sourceQuery: string | null;
 };
 export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; positions: Choice[]; outbounds: Choice[]};
-function sourceLabel(source: RuleSource, config: ConfigSource[]): string {
-  const matched = sourceFor(config, source);
-  return matched ? fileName(matched) : source.file === '<redacted>' ? '' : source.file;
+// The file a rule came from, by the name the configuration page uses; a redacted path shows nothing.
+function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): string {
+  return linked ? fileName(linked) : source.file === '<redacted>' ? '' : source.file;
 }
 export function dictionaryView(
   rules: RoutingRule[],
@@ -61,41 +65,56 @@ export function dictionaryView(
   lang: Lang
 ): DictionaryView {
   const locale = LOCALE[lang];
-  const hits = new Map(ruleDistribution(flows?.flows ?? []).map(row => [row.id, row.count]));
+  const current = new Map(rules.map(rule => [rule.rule_id, rule.expression]));
+  const hits = new Map<string, number>();
+  for (const row of ruleDistribution(flows?.flows ?? [])) {
+    if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
+  }
+  const byId = new Map(config.map(source => [source.id, source]));
+  const byFile = new Map<string, ConfigSource | undefined>();
+  const resolve = (source: RuleSource | null | undefined) => {
+    if (!source) return undefined;
+    if (source.source_id) return byId.get(source.source_id);
+    if (!byFile.has(source.file)) byFile.set(source.file, sourceFor(config, source));
+    return byFile.get(source.file);
+  };
+  // Only a rule doona can locate in its source is offered for removal or as an insertion point.
+  const scans = new Map<string, ReturnType<typeof scanConfig>>();
+  const anchored = (rule: RoutingRule) => {
+    const source = byId.get(rule.source?.source_id ?? '');
+    if (!source?.writable || source.content === undefined) return false;
+    if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
+    return ruleAnchor(source, rule, scans.get(source.id)) !== null;
+  };
   const rows = rules.map(rule => {
-    const source = config.find(source => source.id === rule.source?.source_id);
-    const linked = sourceFor(config, rule.source);
-    const label = rule.source ? sourceLabel(rule.source, config) : '';
+    const linked = resolve(rule.source);
+    const label = rule.source ? sourceLabel(rule.source, linked) : '';
     return {
       id: rule.rule_id,
-      number: rule.kind === 'fallback' ? '—' : String(rule.index + 1),
+      number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
       expression: rule.expression,
       outbound: rule.outbound ?? '',
       must: rule.must,
-      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: String(rule.source.line)})) : '—',
+      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
-      removable: rule.kind === 'rule' && !!source?.writable && source.content !== undefined,
-      sourceQuery: linked && rule.source ? `tab=source&source=${encodeURIComponent(linked.id)}&line=${rule.source.line}` : null
+      removable: rule.kind === 'rule' && anchored(rule),
+      sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
   });
-  const writable = (rule: RoutingRule) => {
-    const source = config.find(source => source.id === rule.source?.source_id);
-    return !!source?.writable && source.content !== undefined;
-  };
   const fallback = rules.find(rule => rule.kind === 'fallback');
   return {
     rows,
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: formatNumber(rules.length, locale), generation}) : null,
     positions: [
-      ...(fallback && writable(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+      ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
       ...rules
-        .filter(rule => rule.kind === 'rule' && writable(rule))
-        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: String(rule.index + 1)}), desc: rule.expression}))
+        .filter((_, i) => rows[i].removable)
+        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
     ],
     outbounds: [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}))
   };
 }
-export type DistributionRow = {
+type DistributionRow = {
   id: string;
   ruleId: string;
   expression: string;
@@ -113,8 +132,9 @@ export type DistributionView = {
 };
 export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang): DistributionView {
   const locale = LOCALE[lang];
+  // Keyed by what the row counts, so a row keeps its identity when a poll reorders the counts.
   const rows = ruleDistribution(list?.flows ?? [])
-    .map((row, i) => ({...row, key: String(i)}))
+    .map(row => ({...row, key: JSON.stringify([row.id, row.expression, row.source])}))
     .sort(
       (a, b) =>
         (a.id === null || b.id === null ? Number(a.id === null) - Number(b.id === null) : a.id.localeCompare(b.id, undefined, {numeric: true})) ||
@@ -130,7 +150,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         expressionClass: row.expression ? 'rp-code' : undefined,
         source: t(sources[row.source]),
         hits: formatNumber(row.count, locale),
-        share: formatNumber(row.share * 100, locale, 1) + '%'
+        share: t('ui.percent', {n: formatNumber(row.share * 100, locale, 1)})
       })),
     choices: [['all', t('ui.all')], ...Object.entries(sources).map(([id, key]): [string, string] => [id, t(key)])],
     caption: list ? t('rule.distributionCaption', {n: formatNumber(list.flows.length, locale)}) : null,
@@ -138,35 +158,61 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
     droppedUnknown: list?.dropped_records === null
   };
 }
-export type RuleDraftView = {choices: Choice[]; hint: string; preview: string | null; mode: string; valid: boolean; rawInvalid: boolean};
-export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string, raw: string, t: Translator) {
+// A typed condition: a call like `domain(...)`, no outbound of its own, and nothing that escapes its line.
+const rawCondition = (raw: string) => /\w\(/.test(raw) && !raw.includes('->') && isFragment(raw);
+export type RuleDraftView = {
+  choices: Choice[];
+  hint: string;
+  preview: string | null;
+  mode: string;
+  valid: boolean;
+  rawInvalid: boolean;
+  pickError: string | undefined;
+};
+export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string | null, raw: string, t: Translator) {
+  const picked = value.trim() !== '';
   return {
     choices: conditionKinds.map(id => ({id, label: t(kindLabels[id])})),
     hint: kindHints[kind],
-    preview: on && value.trim() ? condition : null,
+    preview: on && picked ? condition : null,
     mode: on ? 'pick' : 'text',
-    valid: on ? value.trim() !== '' : /\w\(/.test(raw) && !raw.includes('->'),
-    rawInvalid: raw !== '' && !(/\w\(/.test(raw) && !raw.includes('->'))
+    valid: on ? picked && condition !== null : rawCondition(raw),
+    rawInvalid: raw !== '' && !rawCondition(raw),
+    pickError: picked && condition === null ? t('rule.valuesInvalid') : undefined
   };
 }
 export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Translator) {
   return {
     expression: rule.expression,
-    help: t('rule.removeHelp', {file: rule.source ? sourceLabel(rule.source, sources) : '', line: String(rule.source?.line ?? '')})
+    help: t('rule.removeHelp', {file: rule.source ? sourceLabel(rule.source, sourceFor(sources, rule.source)) : '', line: rule.source?.line ?? ''})
   };
 }
 
-export type RulesView = {tabs: {id: 'map' | 'list' | 'flows' | 'trace'; label: string}[]; tab: string};
-export function rulesView(resources: Capabilities['resources'] | undefined, requested: string | null, t: Translator): RulesView {
-  const flows = resources?.flows.available !== false;
-  const rules = resources?.rules.available === true;
-  const tabs: RulesView['tabs'] = [
-    ...(flows ? [{id: 'map' as const, label: t('rule.map')}] : []),
-    ...(flows || rules ? [{id: 'list' as const, label: t('rule.listTitle')}] : []),
-    ...(flows ? [{id: 'flows' as const, label: t('rule.flows')}] : []),
-    ...(resources?.routing_trace.available !== false ? [{id: 'trace' as const, label: t('rule.trace')}] : [])
+type RuleTab = 'map' | 'list' | 'flows' | 'trace';
+export function rulesTabs(resources: Capabilities['resources'] | undefined): Array<{id: RuleTab; titleKey: Key}> {
+  const flows = offered(resources, 'flows', {whileLoading: true});
+  const rules = offered(resources, 'rules', {whileLoading: false});
+  return [
+    ...(flows ? [{id: 'map' as const, titleKey: 'rule.map' as const}] : []),
+    ...(flows || rules ? [{id: 'list' as const, titleKey: 'rule.listTitle' as const}] : []),
+    ...(flows ? [{id: 'flows' as const, titleKey: 'rule.flows' as const}] : []),
+    ...(offered(resources, 'routing_trace', {whileLoading: true}) ? [{id: 'trace' as const, titleKey: 'rule.trace' as const}] : [])
   ];
-  return {tabs, tab: tabs.some(tab => tab.id === requested) ? requested! : (tabs[0]?.id ?? 'map')};
+}
+type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string; fallback: string | null};
+// The default tab is the first one the backend offers; until the capabilities are known it is not fixed (null).
+export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
+  const tabs = rulesTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
+  const first = tabs[0]?.id ?? 'map';
+  return {
+    tabs,
+    tab: pickTab(
+      query,
+      tabs.map(tab => tab.id),
+      first
+    ),
+    fallback: resources ? first : null
+  };
 }
 
 const outcomes: Record<string, Key> = {
@@ -199,7 +245,7 @@ export function evaluationView(
   const reach = !node
     ? t('rule.noMember')
     : health?.state === 'healthy' && health.latency_ms != null
-      ? t('ui.latency', {n: millis(health.latency_ms)})
+      ? formatLatency(health.latency_ms, t)
       : health?.state === 'unavailable'
         ? t('ui.unavailable')
         : t('rule.untested');
@@ -231,7 +277,7 @@ export function evaluationView(
     }))
   };
 }
-export type DnsView = {id: string; heading: string; fields: [string, string][]};
+type DnsView = {id: string; heading: string; fields: [string, string][]};
 export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator, lang: Lang): DnsView {
   const phrase = (value: string | null) => {
     const result = word(value);
@@ -239,7 +285,7 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
   };
   return {
     id: dns.lookup_id,
-    heading: 'DNS · ' + dns.name,
+    heading: t('rule.dnsHeading', {name: dns.name}),
     fields: [
       [t('ui.type'), dns.qtype],
       [t('ui.state'), dns.status],
@@ -253,7 +299,7 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
 export function traceStatusView(result: RoutingTraceResponse, t: Translator, lang: Lang): string {
   return (
     t('ui.valuePair', {label: t('rule.observed'), value: localTime(result.observed_at, LOCALE[lang])}) +
-    ' · ' +
+    t('ui.separator') +
     t('ui.valuePair', {label: t('ui.generation'), value: result.generation_id})
   );
 }

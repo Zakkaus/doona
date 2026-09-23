@@ -1,4 +1,5 @@
 import type {SVGProps} from 'react';
+import {cx} from '../cx';
 
 export default function Settings({className, ...props}: SVGProps<SVGSVGElement>) {
   return (
@@ -9,7 +10,7 @@ export default function Settings({className, ...props}: SVGProps<SVGSVGElement>)
       viewBox="0 0 20 20"
       aria-hidden="true"
       focusable="false"
-      className={className ? 'rp-icon ' + className : 'rp-icon'}
+      className={cx('rp-icon', className)}
       {...props}
     >
       <path

@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
@@ -35,7 +35,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await dialog.getByLabel('Name').fill('hk-03');
   await dialog.getByLabel('Node link').fill('foo://nope');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Unsupported share link scheme');
+  await expect(dialog.getByRole('alert')).toContainText('Unsupported share link scheme');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 added'})).toBeVisible();
@@ -50,8 +50,9 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await expect(page.locator('.rp-toolbar').first()).toContainText('42');
 });
 
-test('a subscription is added unfetched and removed with its nodes', async ({page}) => {
-  await page.goto('/#/nodes');
+// The contract creates a provider unfetched; the page refreshes it right away so the person sees nodes, not "stale".
+test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources).toHaveCount(2);
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
@@ -59,9 +60,9 @@ test('a subscription is added unfetched and removed with its nodes', async ({pag
   await dialog.getByLabel('Name').fill('sub-d');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'})).toBeVisible();
   await expect(sources).toHaveCount(3);
-  await expect(sources.filter({hasText: 'sub-d'})).toContainText('Stale');
+  await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
   await page.getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-c removed'})).toBeVisible();
@@ -87,7 +88,7 @@ test.describe('long lists', () => {
 });
 
 test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources).toHaveCount(2);
   await expect(sources.first()).toContainText('sub-c');
@@ -102,19 +103,31 @@ test('node sources list their nodes and a subscription can be refreshed', async 
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
-  await page.goto('/#/nodes');
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const original = (await createMockApi().config()).sources.find(source => source.kind === 'main')!.content!;
+  await editor.fill(
+    original.replace(
+      "sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'",
+      "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '86400s'\n  }"
+    )
+  );
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c auto-refresh written to the configuration and reloaded: Every 6 hours');
+  await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
   await expect(sources.first()).toContainText('Every 6 hours');
-  await page.goto('/#/config');
+  await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
     "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
   );
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
@@ -143,10 +156,12 @@ test('built-in and unattributed provenance stay separate without granting inline
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: snapshot}));
-  await page.goto('/#/nodes');
+  await page.goto('/#/nodes?tab=list');
   const list = rows(page.locator('.rp-table').nth(1));
   const sources = rows(page.locator('.rp-table').first());
   await expect(sources.first()).toContainText('Built-in');
+  // The first real source is the default; the built-in row is chosen explicitly.
+  await sources.first().click();
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['block', 'direct']);
   await expect(sources.first().getByRole('button', {name: /Refresh|Remove/})).toHaveCount(0);
@@ -157,4 +172,99 @@ test('built-in and unattributed provenance stay separate without granting inline
   await rows(page.locator('.rp-table').first()).filter({hasText: inline.name}).click();
   await expect(list).toHaveCount(1);
   await expect(page.getByRole('button', {name: 'Remove Inline owner', exact: true})).toBeVisible();
+});
+
+test('an unspecified subscription interval claims neither manual-only nor an engine default but can be set', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
+  await expect(subscription).toBeVisible();
+  await expect(subscription).not.toContainText('Every 24 hours');
+  await expect(subscription).not.toContainText('Manual only');
+  await expect(subscription.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true})).toHaveText('—');
+});
+
+test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.nodes.available = false;
+  await page.goto('/#/nodes?tab=latency');
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+});
+
+test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const node = (await api.nodes()).nodes.find(item => item.provider_id === 'inline')!;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
+    await gate;
+    return api.deleteNode(node.id);
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  const confirmation = page.getByRole('alertdialog');
+  const removing = page.waitForRequest(request => request.method() === 'DELETE');
+  await confirmation.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  await removing;
+  await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(confirmation).toHaveCount(0);
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('hk-03');
+  await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
+  const add = dialog.getByRole('button', {name: 'Add', exact: true});
+  await expect(add).toBeDisabled();
+  release();
+  await expect(page.locator('.rp-toast.positive', {hasText: `${node.name} removed`})).toBeVisible();
+  await expect(add).toBeEnabled();
+});
+
+test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  const backend = await mockBackend(page);
+  // Slow reads, so each table is drawn while it loads.
+  const slow = (read: () => Promise<unknown>) => async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return read();
+  };
+  backend.handlers['GET providers'] = slow(() => backend.api.providers());
+  backend.handlers['GET geodata'] = slow(() => backend.api.geodata());
+  const whole = (cell: Locator) => cell.evaluate(element => element.scrollWidth <= element.clientWidth);
+  await page.goto('/#/nodes');
+  const sources = page.getByRole('grid', {name: 'Sources', exact: true});
+  await expect(sources.getByRole('row')).toHaveCount(3);
+  // A heading, two rows and the frame: no placeholder height left over from loading.
+  await expect.poll(async () => (await page.locator('.rp-table', {has: sources}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  const protocol = page.locator('.rp-table .rp-truncate', {hasText: /^shadowsocks$/}).first();
+  expect(await whole(protocol)).toBe(true);
+  await page.goto('/#/settings');
+  const geodata = page.getByRole('grid', {name: 'Geodata', exact: true});
+  await expect(geodata.getByRole('row')).toHaveCount(3);
+  await expect.poll(async () => (await page.locator('.rp-table', {has: geodata}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  // The release address is cut inside its column, not past the table's edge.
+  const table = (await page.locator('.rp-table', {has: geodata}).boundingBox())!;
+  const source = (await geodata.getByRole('row').nth(1).getByRole('gridcell').last().boundingBox())!;
+  expect(source.x + source.width).toBeLessThanOrEqual(table.x + table.width + 1);
+});
+
+test('the note about node sources belongs to the list, not the latency tab', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/nodes');
+  const note = page.getByText(/^Sources are subscriptions, files/);
+  await expect(note).toBeVisible();
+  await page.getByRole('tab', {name: 'Latency', exact: true}).click();
+  await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
+  await expect(note).toBeHidden();
+});
+
+test('the source kind badge shows its whole label in every language', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  for (const lang of ['en', 'zh-TW', 'zh-CN']) {
+    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    await page.reload();
+    const badges = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child .rp-badge');
+    await expect(badges).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    for (const badge of await badges.all()) expect(await badge.evaluate(element => element.scrollWidth <= element.clientWidth), lang).toBe(true);
+  }
 });

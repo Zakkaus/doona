@@ -1,12 +1,12 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useEffectEvent, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {useGroupControl} from '../../api/store';
-import type {MainSourceEdit} from '../config/mainSource';
-import type {GroupEntry} from '../config/groups';
+import {useGroupControl} from '../../store';
+import type {MainSourceEdit} from '../../store/mainSource';
+import type {GroupEntry} from '../../dae/groups';
 import {memberHealth, type MemberHealth} from './health';
-import {memberViews, policyCardView, probeSummary} from './view';
+import {actionErrorText, memberViews, policyCardView, probeSummary} from './view';
 import {usePolicyEdit} from './usePolicyEdit';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 export type PolicyGroupInput = {
   id: string;
   name: string;
@@ -15,13 +15,20 @@ export type PolicyGroupInput = {
   refreshNodes: () => void;
   source: MainSourceEdit;
   entry: GroupEntry | undefined;
+  members: number;
+  // An off-screen card keeps what it shows and stops polling until it scrolls back.
+  paused: boolean;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
-  const {id, health, refreshGroups, refreshNodes, source, entry} = input;
+  const {id, health, refreshGroups, refreshNodes, source, entry, paused} = input;
   const t = useT();
-  const control = useGroupControl(id, refreshGroups, refreshNodes);
+  const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
+  // A language switch does not repeat the toast.
+  const report = useEffectEvent((error: Error) =>
+    toast('negative', t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t)}))
+  );
   useEffect(() => {
-    if (control.actionError) toast('negative', errorText(control.actionError));
+    if (control.actionError) report(control.actionError);
   }, [control.actionError]);
   const g = control.data;
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
@@ -41,7 +48,11 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       const tcp = result.selection.tcp?.member_id,
         udp = result.selection.udp?.member_id;
       const member =
-        tcp && udp && tcp !== udp ? `TCP ${memberName(tcp)} · UDP ${memberName(udp)}` : tcp || udp ? memberName((tcp ?? udp)!) : t('policy.noneSelected');
+        tcp && udp && tcp !== udp
+          ? t('policy.memberPerNetwork', {tcp: memberName(tcp), udp: memberName(udp)})
+          : tcp || udp
+            ? memberName((tcp ?? udp)!)
+            : t('policy.noneSelected');
       toast('positive', t('policy.backToAutomatic', {name: g.name, member}));
     });
   const interrupt = (value: boolean) =>
@@ -50,7 +61,9 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     });
   const select =
     card && (card.selectable || card.overridable)
-      ? (memberId: string) =>
+      ? (memberId: string) => {
+          // Pressing the member already in place would only repeat the request.
+          if (memberId === card.selected) return;
           void control.select(memberId).then(result => {
             if (result && g)
               toast(
@@ -60,13 +73,15 @@ export function usePolicyGroup(input: PolicyGroupInput) {
                   member: memberName(result.member_id)
                 })
               );
-          })
+          });
+        }
       : undefined;
   return {
     card,
     edit,
     members,
     error: control.error,
+    retry: control.refetch,
     loading: !g && !control.error,
     loadingText: t('policy.loading', {id}),
     busy: !!control.busy,

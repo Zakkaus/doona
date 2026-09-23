@@ -21,6 +21,7 @@ test('discard resets a source draft even when the destination selects the same e
   await page.locator('.rp-nav[href="#/config"]').click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/config$/);
+  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
   await expect(page.locator('.cm-content')).not.toContainText('discard this draft');
   await page.getByRole('button', {name: 'Edit', exact: true}).click();
   await page.locator('.cm-content').fill('guard this new draft');
@@ -33,8 +34,8 @@ test('cancelled Back and Forward restore the cursor without replacing history en
   await page.locator('.rp-nav[href="#/config"]').click();
   await page.locator('.rp-nav[href="#/connections"]').click();
   await page.goBack();
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
-  await page.locator('.cm-content').fill('keep until discarded');
+  await page.getByRole('region', {name: 'routing', exact: true}).getByRole('button', {name: 'Edit', exact: true}).click();
+  await page.locator('.cm-content').fill('routing {\n  keep until discarded\n}');
   const dialog = page.getByRole('alertdialog');
   await page.goBack();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
@@ -48,7 +49,24 @@ test('cancelled Back and Forward restore the cursor without replacing history en
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goForward();
   await expect(page).toHaveURL(/#\/config$/);
-  await expect(page.locator('.cm-content')).not.toContainText('keep until discarded');
+  await expect(page.locator('.cm-content')).toHaveCount(0);
   await page.goForward();
   await expect(page).toHaveURL(/#\/connections$/);
+});
+
+test('Back to an unindexed entry keeps a guarded draft until discard', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.evaluate(() => history.replaceState(null, '', location.href));
+  await page.locator('.rp-nav[href="#/config"]').click();
+  await page.getByRole('region', {name: 'routing', exact: true}).getByRole('button', {name: 'Edit', exact: true}).click();
+  await page.locator('.cm-content').fill('routing {\n  unindexed history draft\n}');
+  await page.goBack();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(/#\/config$/);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page.locator('.cm-content')).toContainText('unindexed history draft');
+  await page.locator('.rp-nav[href="#/settings"]').click();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings$/);
 });

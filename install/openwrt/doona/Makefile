@@ -5,27 +5,30 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_VERSION:=0.3.0-beta.1
+# apk (OpenWrt 25 and later) accepts only _beta1-style pre-release versions; opkg sorts it after 0.3.0, as it does for netdiscover.
+PKG_VERSION:=0.3.0_beta1
 PKG_RELEASE:=1
+# The release tag keeps honk's dotted shape.
+PKG_REAL_VERSION:=v0.3.0.beta.1
 
-PKG_SOURCE:=$(PKG_NAME)-v$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
+PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
 # Placeholder: replace with the program archive's SHA256SUMS entry after publication.
-PKG_HASH:=skip
+PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
 
 PKG_LICENSE:=GPL-3.0-only
-PKG_LICENSE_FILES:=LICENSE
+PKG_LICENSE_FILES:=web/LICENSE
 PKG_MAINTAINER:=Zakkaus <zakk@gentoozh.org>
 
 include $(INCLUDE_DIR)/package.mk
 
-FONTS_FILE:=$(PKG_NAME)-fonts-v$(PKG_VERSION).tar.gz
+FONTS_FILE:=$(PKG_NAME)-fonts-$(PKG_REAL_VERSION).tar.gz
 define Download/doona-fonts
-	URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_VERSION)/
+	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
 	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
-	HASH:=skip
+	HASH:=0000000000000000000000000000000000000000000000000000000000000000
 endef
 
 define Package/doona/template
@@ -76,7 +79,9 @@ endef
 define Package/doona/install
 	$(INSTALL_DIR) $(1)/usr/share/doona
 	$(CP) $(PKG_BUILD_DIR)/web/* $(1)/usr/share/doona/
-	rm -f $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
+	$(INSTALL_DIR) $(1)/usr/share/doc/doona
+	$(CP) $(PKG_BUILD_DIR)/web/LICENSE $(PKG_BUILD_DIR)/web/LICENSES $(PKG_BUILD_DIR)/web/NOTICE $(1)/usr/share/doc/doona/
+	rm -rf $(1)/usr/share/doona/LICENSE $(1)/usr/share/doona/LICENSES $(1)/usr/share/doona/NOTICE $(1)/usr/share/doona/*.md
 endef
 
 define Package/doona-fonts/install

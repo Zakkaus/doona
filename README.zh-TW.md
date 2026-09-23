@@ -7,17 +7,17 @@
 
 # doona
 
-**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 介面：在瀏覽器裡管節點、群組、規則與配置。**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 介面：在瀏覽器中管理節點、群組、規則與組態。**
 
 [English](README.md) · [简体中文](README.zh-CN.md) · 繁體中文
 
-[執行環境](#執行環境) • [安裝](#安裝) • [第一次使用](#第一次使用) • [頁面](#頁面) • [資料與設定](#資料與設定) • [開發](#開發) • [支援](#支援)
+[安裝](#安裝) • [第一次使用](#第一次使用) • [頁面](#頁面) • [開發](#開發) • [使用指南](docs/guide.zh-TW.md)
 
 </div>
 
-doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 honk，dae 實作同一份契約後亦可。它由引擎自己或任一 Web 伺服器提供，顯示引擎當下的狀態，並管理節點、群組、路由規則與配置檔。
+doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 honk，dae 實作同一份契約後亦可。它由引擎自己或任一 Web 伺服器提供，顯示引擎當下的狀態，並管理節點、群組、路由規則與組態檔。
 
-![活動頁](docs/screenshots/zh-TW/activity-light.png)
+![活動頁](docs/screenshots/zh-TW/activity-light.webp)
 
 <details>
 <summary><strong>全部配色</strong></summary>
@@ -30,22 +30,14 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 ho
 
 ## 狀態
 
-doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚未發行。契約是 `daeuniverse/api-standardize` 提交 `01a6575`（doona 提的契約修改已全部合併），記錄見 [SOURCE.md](contract/api-standardize/SOURCE.md)。後端缺少較新的資源鍵時，doona 會把這些鍵視為不可用。所有頁面仍保留在導覽列中；只有列出的資源全部不可用時，頁面才會標為不可用。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
-
-## 執行環境
-
-| 元件   | 要求                                                                                                                          |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| 後端   | 實作上述固定版本原生 API 契約並啟用 API 監聽的引擎（見[安裝](#安裝)）                                                         |
-| 瀏覽器 | Chrome 或 Edge 120、Firefox 120、Safari 17 及以後。這些是 CSS 建置目標；JavaScript 建置目標是 ES2022。自動化測試只用 Chromium |
-| 建置   | Node 22 及以後、pnpm 11.15.1；打包需要 GNU tar、gzip 與 sha256sum                                                             |
+doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚未發行。契約的釘點記錄在 [SOURCE.md](contract/api-standardize/SOURCE.md)。後端缺少較新的資源鍵時，doona 會把這些鍵視為不可用。未設定後端時，內建模擬後端提供示範資料；本文截圖全部來自模擬資料。
 
 ## 安裝
 
-發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個標籤打出來之前，請照[開發](#開發)一節自行建置。把 `VERSION` 設為下載檔名中的發行標籤，包括標籤開頭的 `v`。然後驗證檔案並解壓到引擎或 Web 伺服器要提供的目錄：
+發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個發行標籤發布之前，請依[開發](#開發)一節自行建置。驗證檔案並解壓至引擎或 Web 伺服器提供檔案的目錄：
 
 ```sh
-VERSION=v0.3.0-beta.1  # 替換為下載檔案對應的發行標籤
+VERSION=v0.3.0.beta.1  # 替換為下載檔案對應的發行標籤
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
@@ -54,12 +46,7 @@ if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
 fi
 ```
 
-不裝字型檔時，瀏覽器改用本機字型。
-
-<details>
-<summary><strong>由 honk 提供</strong></summary>
-
-honk 的原生 API 需要明確開啟。把 `ui` 指向解壓後的目錄，honk 就在 `/ui/` 提供這些檔案，與 API 同源，不需要 CORS 設定：
+honk 的原生 API 需要明確開啟。把 `ui` 指向解壓後的目錄，honk 就在 `/ui/` 提供這些檔案，與 API 同源：
 
 ```dae
 experimental {
@@ -72,83 +59,38 @@ experimental {
 }
 ```
 
-這個區塊請放在獨立的 include（`include { api.dae }`）：主檔若含 `native_api.secret`，API 不會回傳它的內容，也不允許寫入，配置頁就無法編輯主檔。
-
-</details>
-
-<details>
-<summary><strong>任一靜態伺服器或反向代理</strong></summary>
-
-把解壓後的檔案放在網站根目錄或 `/ui/` 這類前綴下即可；頁面用 hash 路由（`/ui/#/activity`），不需要改寫規則。UI 與引擎不同源時，需要在引擎中允許 UI 的來源。原生 API 監聽、CORS 與身分驗證的設定請參閱引擎文件。
-
-前面放一個反向代理可讓兩者同源：把 `/api/` 轉給引擎的監聽位址，檔案放在 `/ui/` 下。
-
-</details>
-
-<details>
-<summary><strong>發行版套件</strong></summary>
-
-尚未發布。每個發行版本附 [nfpm](install/nfpm) 從 `make install` 打出的 `deb`、`rpm`、`ipk` 與 Arch 套件，全部與架構無關，`doona-fonts` 是獨立的選用套件。各套件倉庫的寫法在 [install/](install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、nixpkgs 式表達式；AUR 的 `doona-bin` 另有倉庫。發行版本另附 `doona-<tag>-deps.tar.xz`（裝好的 `node_modules`），給必須離線建置的套件用。原生模組涵蓋工具鏈有出的每種 Linux 架構與 libc，清單見 `pnpm-workspace.yaml`；lightningcss 沒有二進位的架構改用 esbuild 壓 CSS。其他打包方式從 `make install DESTDIR=… PREFIX=/usr` 與 `make install-fonts` 入手。
-
-</details>
+這個區塊請放在獨立的 include（`include { api.dae }`），主檔才能在組態頁編輯。執行環境、由其他 Web 伺服器或反向代理提供、發行版套件，見[使用指南](docs/guide.zh-TW.md#安裝)。
 
 ## 第一次使用
 
-在引擎主機上開 `/ui/`。第一次造訪時，doona 向提供頁面的來源請求 `/api`；引擎回應後就成為已儲存的後端，接著提示輸入 token。若頁面來自別處，或要連另一台引擎，開設定頁填伺服器根位址（`http://router:9527`，不含 `/api/v1`）與 token；「測試連線」在儲存前先檢查探索端點，儲存後重新載入頁面。配對連結可以代填表單：`/ui/#/settings?api=http://router:9527&token=…`，載入後 token 會從網址列移除。
+在引擎主機上開 `/ui/`。第一次造訪時，doona 向提供頁面的來源請求 `/api`；引擎回應後就成為已儲存的後端，接著提示輸入 token。若頁面來自別處，或要連另一台引擎，開設定頁填伺服器根位址與 token；配對連結（`/ui/#/settings?api=http://router:9527&token=…`）可以代填表單，載入後 token 會從網址列移除。
 
-接著活動頁顯示執行中的引擎。其餘頁面的常見順序：
-
-1. **節點**：新增訂閱（名稱與網址）或貼入分享連結；節點列出協定、延遲與所屬群組。可設定訂閱多久更新一次、測試單一節點，或從該列把節點加入群組。
-2. **策略**：每個群組一張卡，列出成員與延遲。selector 群組可直接選成員；自動群組可釘住一個成員、之後再放開；可全部測試，也可編輯群組的策略與篩選。
-3. **規則**：依評估順序列出路由字典，附每條規則決定過的流程數。新增規則可以挑選依據與值（網域後綴、geosite 分類、埠、程序名稱），也可以直接寫表達式，插在任一條之前或最後。
-4. **配置**：已接受的來源與其診斷。就地編輯檔案，校驗、儲存、重載；快速設定涵蓋主檔的常用項目。
-
-每一次寫入都經過引擎：全文校驗，帶著讀取時的雜湊儲存（磁碟上已變動的檔案會回 412，不會被覆蓋），再重載。來源裡的密鑰在回傳時已遮蔽，也不會被寫回。
+接著活動頁顯示執行中的引擎。在節點頁新增訂閱或貼入分享連結，在策略頁選擇或固定群組成員，在規則頁加規則，在組態頁編輯、校驗並重載來源。每次寫入都帶著讀取時的雜湊經過引擎；重載失敗時仍沿用先前的世代。各頁面的用法見[使用指南](docs/guide.zh-TW.md#第一次使用)。
 
 ## 頁面
 
-<img src="docs/screenshots/zh-TW/policies-light.png" alt="策略頁" width="100%">
+<img src="docs/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
 
-| 頁面 | 內容                                                                                                       | 需要的資源                          |
-| ---- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| 活動 | 出站模式、流量與記憶體、活動連線、節點延遲、出站用量、流量最高的客戶端、通知                               | —                                   |
-| 概覽 | 引擎與 eBPF 狀態、流量計數、後端能力、狀態 JSON 匯出                                                       | `runtime`                           |
-| 連線 | 即時連線的來源、目的、規則、鏈路與流量；關閉單條或全部；篩選條件可寫在網址                                 | `connections`                       |
-| DNS  | 查詢與解析結果、快取、日誌；清空快取                                                                       | `dns_query`、`dns_log`、`dns_cache` |
-| 策略 | 群組、成員與健康；選擇、釘住、測試、編輯                                                                   | `groups`                            |
-| 規則 | 從規則或設備經出站到所選節點的分流樹、規則列表與命中數、可直接為目標加規則的流程記錄、對指定目標的追蹤模擬 | `rules`、`flows`、`routing_trace`   |
-| 節點 | 訂閱與更新間隔、配置內節點、新增與移除、測試、加入群組                                                     | `nodes`、`providers`                |
-| 配置 | 來源與診斷、附校驗的編輯器、快速設定、匯出                                                                 | `config`                            |
-| 事件 | 後端事件串流                                                                                               | `events`                            |
-| 日誌 | 日誌串流，可按等級與模組篩選、暫停、匯出                                                                   | `logs`                              |
-| 設定 | 後端、執行期設定與後端操作、語言、外觀與配色                                                               | —                                   |
+| 頁面       | 內容                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------- |
+| 活動       | 出站模式、流量與記憶體、活動連線、節點延遲、出站用量、流量最高的客戶端、通知           |
+| 概覽       | 引擎與 eBPF 狀態、流量計數、後端能力、狀態 JSON 匯出                                   |
+| 連線       | 即時連線的來源、目的、規則、鏈路與流量；關閉單條或全部                                 |
+| DNS        | 查詢與解析結果、快取、日誌；清空快取                                                   |
+| 策略       | 群組、成員與健康；選擇、手動固定、恢復自動選擇、測試、編輯                             |
+| 規則       | 從規則或設備經出站到所選節點的分流樹、規則列表與命中數、流程記錄、對指定目標的追蹤模擬 |
+| 節點       | 訂閱與更新間隔、組態內節點、新增與移除、測試、加入群組                                 |
+| 組態       | 來源與診斷、附校驗的編輯器、快速設定、匯出                                             |
+| 事件、日誌 | 後端事件串流；日誌串流，可篩選、暫停、匯出                                             |
+| 設定       | 後端、執行期設定與後端操作、語言、外觀與配色                                           |
 
-所有頁面都保留在導覽列中。只有 [registry.ts](src/shell/registry.ts) 為頁面列出的資源全部不可用時，頁面才會標為不可用；開啟後會顯示不可用提示。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。
+只有頁面需要的資源全部不可用時，頁面才會標為不可用。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[使用指南](docs/guide.zh-TW.md#頁面)。
 
 DNS 快取列表使用有界摘要分頁，並由後端篩選網域；「清除全部快取」仍作用於整個快取。巢狀群組卡片同時保留群組標籤與實測延遲；沒有群組 TCP 觀測時，可顯示另行標示的所選 TCP 節點延遲，但不將其計入群組健康測量，未知或無法解析的路徑仍保持未測量。
 
 流程詳情保留後端提供的完整性與證據缺失原因。每個保留步驟都有可用鍵盤展開的「步驟證據」，顯示原始 JSON，包括巢狀規則求值、DNS/attempt 因果 ID 與來源擴充欄位；僅展開時才格式化 JSON。單條流程完整，不代表轉發成功或全域流量已被完整觀測。
 
-<img src="docs/screenshots/zh-TW/rules-light.png" alt="規則頁" width="100%">
-
-## 資料與設定
-
-doona 沒有供自身介面設定使用的伺服器端儲存空間。配置與執行期變更透過引擎寫入；doona 的介面設定儲存在瀏覽器中，範圍限於該網站來源的 `localStorage`：
-
-| 設定     | 鍵               | 值                                                                                                                                                                                                    |
-| -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 後端     | `doona-profiles` | `{id, name, api, token}` 的 JSON 陣列；`api` 是伺服器根位址或代理前綴，留空或 `mock` 使用示範資料；API 請求透過 `Authorization` 標頭傳送 token。配對連結可能把 token 放在網址片段中，並在載入後移除。 |
-| 使用中的 | `doona-profile`  | 所選後端的 `id`                                                                                                                                                                                       |
-| 語言     | `doona-lang`     | `zh-TW`（預設）、`zh-CN`、`en`                                                                                                                                                                        |
-| 配色方案 | `doona-scheme`   | `system`（預設）、`light`、`dark`                                                                                                                                                                     |
-| 配色     | `doona-palette`  | `rose-pine/moon`（預設）；其他值見 [settings.ts](src/features/settings/settings.ts) 的 `PaletteId`                                                                                                    |
-| 字標     | `doona-wordmark` | `gradient`（預設）、`plain`                                                                                                                                                                           |
-
-儲存的主題與語言在第一幀之前就套用，重新載入不會閃出預設外觀。
-
-在 HTTPS 或 localhost 下，service worker 預先快取應用外殼，並快取字型與圖示，離線也能開頁面，網站可安裝成應用程式。API 回應一律不快取。安全問題的回報方式見 [SECURITY.md](SECURITY.md)。
-
-![深色模式的活動頁](docs/screenshots/zh-TW/activity-dark.png)
+<img src="docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
 
 ## 開發
 
@@ -157,30 +99,12 @@ pnpm install --frozen-lockfile
 pnpm build                       # 輸出 dist/
 pnpm check                       # 型別、lint、翻譯、格式、單元測試、產生的 API 型別
 pnpm check:size                  # dist/ 建置的 gzip 大小限制
-pnpm perf <url>                  # 量測已提供的建置：首屏、腳本、輪詢與捲動成本，CPU 降速四倍
 pnpm e2e:install --with-deps     # 瀏覽器測試只需安裝一次
-pnpm e2e                         # 對模擬後端的瀏覽器測試，根目錄與 /ui/ 各一輪
+pnpm e2e                         # 重新建置，再對模擬後端執行瀏覽器測試，涵蓋根目錄與 /ui/
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 開發伺服器提供模擬後端。版本號本機取自 `package.json`，標籤上取自 Git 描述；時間戳用 `SOURCE_DATE_EPOCH`，未設定時用 HEAD 提交時間。`node tools/screenshots.mjs <url> docs/screenshots` 從執行中的建置擷取頁面截圖與配色總覽，透過 `cwebp` 輸出無失真的 WebP；未安裝時保留 PNG 並顯示警告。另見 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CHANGELOG.md](CHANGELOG.md)。
-
-| 路徑            | 用途                                                 |
-| --------------- | ---------------------------------------------------- |
-| `src/features/` | 各頁面及其 hook 與文案，一頁一個資料夾               |
-| `src/shell/`    | 應用外殼、導覽與搜尋                                 |
-| `src/ui/`       | 共用元件、主題與圖示                                 |
-| `src/api/`      | 客戶端、後端設定檔、資源 store、模擬後端與產生的型別 |
-| `src/i18n/`     | 翻譯與地區設定輔助                                   |
-| `contract/`     | 內嵌的 OpenAPI 契約與釘點                            |
-| `public/`       | 靜態資源、字型與 service worker                      |
-| `e2e/`          | 瀏覽器測試                                           |
-| `tools/`        | 建置、打包、一致性檢查與截圖工具                     |
-| `install/`      | nfpm 設定與 OpenWrt、Alpine、Nix 寫法                |
-
-### 契約
-
-[SOURCE.md](contract/api-standardize/SOURCE.md) 記錄 [openapi.yaml](contract/api-standardize/openapi.yaml) 的釘點。移動釘點後執行 `pnpm gen:api` 重新產生 [src/api/types.ts](src/api/types.ts)。`node tools/conformance.mjs http://router:9527 --token …` 按契約檢查線上後端的探索端點、能力與唯讀回應，不送出任何修改。
+`pnpm dev` 以 Vite 開發伺服器提供模擬後端。對實際後端的測試、效能與截圖工具、原始碼配置與契約釘點，見[使用指南](docs/guide.zh-TW.md#開發)；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 支援
 

@@ -1,8 +1,8 @@
 import {useT} from '../../i18n';
-import {ErrorMessage, Light, Loading} from '../../ui/ui';
+import {ErrorMessage, Light, Loading, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
-import {NodeMenu} from '../policies/Nodes';
 import {useActivityNode} from './useActivityNode';
+import {NodeMenu} from './NodeMenu';
 
 export function NodeCard() {
   const t = useT();
@@ -12,7 +12,7 @@ export function NodeCard() {
       <span className="rp-tile-head rp-tint-c5">
         <Clock />
         {t('act.latency')}
-        <NodeMenu label={t('act.node')} value={vm.name} onChange={vm.setChosen} nodes={vm.options} />
+        <NodeMenu label={t('act.node')} model={vm} />
       </span>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-tile-body">
@@ -23,9 +23,11 @@ export function NodeCard() {
             <span className="rp-tile-val">
               <span className="rp-big">{vm.latency}</span>
             </span>
-            <Light small tone={vm.tone}>
-              {vm.status}
-            </Light>
+            <TextTooltip text={vm.healthError}>
+              <Light small tone={vm.tone}>
+                {vm.status}
+              </Light>
+            </TextTooltip>
           </>
         )}
       </div>

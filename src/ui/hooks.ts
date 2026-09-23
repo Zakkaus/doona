@@ -9,18 +9,21 @@ export function withCrossfade(fn: () => void) {
 
 export function useSlider(value: string, selector = '[data-selected]') {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{x: number; y: number; w: number; h: number} | null>(null);
+  const [pos, setPos] = useState<{x: number; y: number; w: number; h: number; still: boolean} | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => {
+    // The marker slides only when the selection changes. A resize, or a hidden panel shown again, puts it in place
+    // without motion; while hidden (a kept tab panel) nothing is measured, so it does not collapse to the start.
+    const measure = (still: boolean) => {
+      if (!el.offsetWidth) return;
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight};
+      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight, still};
       setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
-    measure();
-    const ro = new ResizeObserver(measure);
+    measure(false);
+    const ro = new ResizeObserver(() => measure(true));
     ro.observe(el);
     return () => ro.disconnect();
   }, [value, selector]);
@@ -34,40 +37,51 @@ export function useContentWidth<E extends HTMLElement>() {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Measured before the first paint, so a table never shows its minimum widths for one frame.
+    setWidth(Math.floor(el.clientWidth));
     const observer = new ResizeObserver(entries => setWidth(Math.floor(entries[0].contentRect.width)));
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
   return [ref, width] as const;
 }
-// The height that takes an element to the bottom of the viewport, never below `min`: a page whose table is
-// its last content shows as many rows as the screen holds instead of a fixed box over empty page.
+// Fill the remaining viewport without shrinking below min.
 export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
   const ref = useRef<E>(null);
   const [height, setHeight] = useState(min);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setHeight(Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap)));
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const next = Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap));
+      setHeight(previous => (previous === next ? previous : next));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(document.body);
-    window.addEventListener('resize', measure);
+    window.addEventListener('resize', schedule);
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', measure);
+      window.removeEventListener('resize', schedule);
+      cancelAnimationFrame(frame);
     };
   }, [min, gap]);
   return [ref, height] as const;
 }
 
-// From this width the selected item's detail sits beside the list; below it, the detail is a drawer and
-// selection must not follow keyboard focus, or arrowing through the list would keep opening the drawer.
+// Whether shortcuts should read as ⌘ rather than Ctrl; userAgentData is the standard, platform the fallback.
+export const isMac =
+  (navigator as Navigator & {userAgentData?: {platform: string}}).userAgentData?.platform === 'macOS' || navigator.platform.startsWith('Mac');
+
+// Below this breakpoint, detail drawers must not follow keyboard focus.
 export const panelQuery = '(min-width: 1200px)';
 
-// A draft seeded from the URL: a new linked value (a search-dialog jump) replaces the draft, while a
-// navigation that keeps the same value leaves what was typed since. The rewrite runs during render, so the
-// draft never shows the stale value for a frame.
+// Reset linked drafts during render so navigation cannot paint the previous value.
 export function useLinked<T>(linked: T, apply: (value: T) => void) {
   const [last, setLast] = useState(linked);
   if (last !== linked) {

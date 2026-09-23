@@ -18,12 +18,16 @@ for (const kind of ['js', 'css']) {
   const chunks = files.filter(file => file.endsWith(`.${kind}`));
   if (!chunks.length) throw new Error(`No ${kind} assets; run pnpm build first.`);
   let bytes = 0;
+  let language = 0;
   for (const file of chunks) {
     const size = gzipSync(await readFile(new URL(file, assets))).length;
     sizes.set(`assets/${file}`, size);
-    bytes += size;
+    // A reader loads one language catalogue, so only the largest counts towards the total.
+    if (file.startsWith('locale-')) language = Math.max(language, size);
+    else bytes += size;
     console.log(`  assets/${file}: ${size} bytes gzip`);
   }
+  bytes += language;
   console.log(`${kind} chunks: ${chunks.length}`);
   check(kind, bytes);
 }
@@ -53,4 +57,7 @@ for (const file of [...shell].sort()) {
   shellBytes += size;
   console.log(`  ${file}: ${size} bytes gzip`);
 }
-check('shell', shellBytes);
+// Startup loads one language catalogue before the first render, so the largest counts towards the shell.
+const locale = Math.max(0, ...[...sizes].filter(([file]) => file.startsWith('assets/locale-')).map(([, size]) => size));
+console.log(`  largest locale catalogue: ${locale} bytes gzip`);
+check('shell', shellBytes + locale);

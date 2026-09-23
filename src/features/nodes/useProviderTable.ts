@@ -1,12 +1,13 @@
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
-import {useProviderRefresh} from '../../api/store';
-import {errorText, toast} from '../../ui/ui';
-import type {MainSourceEdit} from '../config/mainSource';
+import {useProviderRefresh} from '../../store';
+import {toast} from '../../ui/ui';
+import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
+import {errorText} from '../../api/error';
 
-export type ProviderTableInput = {
+type ProviderTableInput = {
   rows: ProviderRow[];
   loading: boolean;
   selected: string | null;
@@ -17,38 +18,41 @@ export type ProviderTableInput = {
   source: MainSourceEdit;
   entries: SubscriptionEntry[];
   reload: () => void;
+  refresh: ReturnType<typeof useProviderRefresh>;
   onAdd: () => void;
   onRemove: (item: Provider) => void;
 };
 export function useProviderTable(input: ProviderTableInput) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const refresh = useProviderRefresh(input.reload);
+  const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
-  const fail = (error: unknown) => toast('negative', errorText(error));
   const rows = input.rows.map(item => ({
-    ...providerRowView(item, intervals.get(item.name), locale, t),
+    ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
     refreshable: item.kind === 'subscription' && input.canRefresh,
     refreshing: refresh.busy === item.id,
     refreshDisabled: !!refresh.busy,
     refresh: () =>
-      void refresh.refresh(item.id).then(result => {
-        if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
-      }, fail),
+      void refresh.refresh(item.id).then(
+        result => {
+          if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
+        },
+        error => toast('negative', t('nodes.refreshFailed', {name: item.name, error: errorText(error, t)}))
+      ),
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
     remove: () => {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
     },
     setInterval: (key: string) => {
+      if (!item.configTag) return;
       const seconds = Number(key);
       void input.source
-        .apply(
-          text => writeInterval(text, item.name, seconds),
-          errors => toast('negative', t('nodes.writeInvalid', {n: formatNumber(errors, locale)}))
-        )
-        .then(written => {
-          if (written) toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
-        }, fail);
+        .apply(text => writeInterval(text, item.configTag!, seconds))
+        .then(result => {
+          if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
+          const problem = editProblem(result, t);
+          if (problem) toast('negative', problem);
+        });
     }
   }));
   return {
@@ -59,7 +63,8 @@ export function useProviderTable(input: ProviderTableInput) {
     canManage: input.canManage,
     busy: input.busy,
     writable: input.source.writable,
-    sourceBusy: input.source.busy,
+    sourceBusy: input.source.busy || !input.source.main,
+    sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
     onAdd: input.onAdd
   };
 }
@@ -72,8 +77,7 @@ export type ProviderTableView = {
     kind: string;
     count: string;
     usage: string;
-    updated: string;
-    updatedTitle?: string;
+    updatedAt: string | null;
     expires: string;
     interval: string;
     intervalValue: string;
@@ -100,5 +104,6 @@ export type ProviderTableView = {
   busy: boolean;
   writable: boolean;
   sourceBusy: boolean;
+  sourceTip?: string;
   onAdd: () => void;
 };

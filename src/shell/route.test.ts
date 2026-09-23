@@ -1,7 +1,36 @@
-import {describe, expect, it} from 'vitest';
-import {buildHash, parseHash, updateRoute} from './route';
+import {afterEach, describe, expect, it, vi} from 'vitest';
+import {buildHash, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
+import type {RoutePath} from './routes';
 
+afterEach(() => vi.unstubAllGlobals());
+
+describe('draft history restoration', () => {
+  it('restores an unindexed Back destination without traversing away from the draft', () => {
+    const history = {state: null, go: vi.fn(), replaceState: vi.fn()};
+    vi.stubGlobal('history', history);
+    expect(restoreDraftRoute({route: 'config', query: 'source=main'}, 2)).toBeUndefined();
+    expect(history.go).not.toHaveBeenCalled();
+    expect(history.replaceState).toHaveBeenCalledWith({doonaPosition: 2}, '', '#/config?source=main');
+  });
+
+  it('restores an indexed Back destination and returns its discard traversal', () => {
+    const history = {state: {doonaPosition: 1}, go: vi.fn(), replaceState: vi.fn()};
+    vi.stubGlobal('history', history);
+    expect(restoreDraftRoute({route: 'config', query: ''}, 3)).toBe(-2);
+    expect(history.go).toHaveBeenCalledWith(2);
+    expect(history.replaceState).not.toHaveBeenCalled();
+  });
+});
 describe('hash routing', () => {
+  it('builds a link with encoded and omitted parameters', () => {
+    expect(href('rules', {tab: 'list', rule: 'a & b', unused: null})).toBe('#/rules?tab=list&rule=a+%26+b');
+  });
+
+  it('picks an available tab and falls back from stale links', () => {
+    expect(pickTab('tab=cache', ['query', 'cache'], 'query')).toBe('cache');
+    expect(pickTab('tab=log', ['query', 'cache'], 'query')).toBe('query');
+  });
+
   it.each([
     ['', 'activity', ''],
     ['#', 'activity', ''],
@@ -13,13 +42,16 @@ describe('hash routing', () => {
     ['#/flows', 'rules', 'tab=map'],
     ['#/flows?id=flow-1', 'rules', 'id=flow-1&tab=flows'],
     ['#/flows?connection_id=1', 'rules', 'connection_id=1&tab=flows'],
-    ['#/?id=a', 'activity', 'id=a'],
-    ['#/unknown?id=a', 'unknown', 'id=a']
+    ['#/?id=a', 'activity', 'id=a']
   ])('parses %s', (hash, route, query) => {
     expect(parseHash(hash)).toEqual({route, query});
   });
 
-  it.each<[string, string?]>([
+  it('maps an unknown destination to Activity without retaining the invalid route', () => {
+    expect(parseHash('#/unknown?id=a')).toEqual({route: 'activity', query: 'id=a'});
+  });
+
+  it.each<[RoutePath, string?]>([
     ['activity', undefined],
     ['rules', ''],
     ['rules', 'id=a&x=1'],
@@ -38,4 +70,10 @@ describe('hash routing', () => {
     state = updateRoute(state, '#/rules?id=a');
     expect(state).toEqual({route: 'rules', query: 'id=a'});
   });
+});
+
+it('keeps the default tab out of the address', () => {
+  expect(tabQuery('tab=latency&q=a', 'list', 'list')).toBe('q=a');
+  expect(tabQuery('q=a', 'latency', 'list')).toBe('q=a&tab=latency');
+  expect(tabQuery('q=a', 'list', null)).toBe('q=a&tab=list');
 });

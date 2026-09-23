@@ -3,7 +3,7 @@
 // page, scrolling a 3,000-row node table, and hovering the routing tree. Numbers are medians of three runs.
 import {chromium} from '@playwright/test';
 
-const base = process.argv[2] ?? 'http://127.0.0.1:4184';
+const base = process.argv[2] ?? 'http://127.0.0.1:4177';
 const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules?tab=map', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const ms = value => `${value.toFixed(0)} ms`;
@@ -23,18 +23,36 @@ const delta = (a, b) => ({script: b.script - a.script, layout: b.layout - a.layo
 // A page counts as ready when its heading is on screen and nothing in it is still loading.
 async function ready(page) {
   await page.locator('.rp-content').getByRole('heading').first().waitFor();
-  await page.waitForFunction(() => !document.querySelector('.rp-content [role=status]'), null, {timeout: 60_000});
+  const route = new URL(page.url()).hash.slice(2).split('?')[0];
+  const content = {
+    activity: '.rp-donut .recharts-sector',
+    overview: '.rp-kv',
+    connections: '.rp-scatter circle',
+    dns: '[role=tabpanel]',
+    policies: '.rp-node',
+    rules: '.rp-tree-tile',
+    nodes: '[role=rowheader]',
+    config: '[role=tabpanel]',
+    events: '[role=rowheader]',
+    logs: '[role=rowheader]',
+    settings: '.rp-form'
+  };
+  await page.locator('.rp-content').locator(content[route]).first().waitFor();
+  await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'), null, {timeout: 60_000});
 }
 
-async function run(scenario) {
+// `big` loads the long-list fixture (3,000 nodes and their connections and flows). Ordinary page
+// measurements use the default fixture, so they report what an ordinary backend costs.
+async function run(scenario, {big = false} = {}) {
   const samples = [];
   for (let i = 0; i < 3; i++) {
     const browser = await chromium.launch();
     const context = await browser.newContext({viewport: {width: 1280, height: 800}, reducedMotion: 'reduce', serviceWorkers: 'block'});
-    await context.addInitScript(() => {
+    await context.addInitScript(big => {
+      localStorage.setItem('doona-api', 'mock');
       localStorage.setItem('doona-lang', 'en');
-      localStorage.setItem('doona-mock-big', '3000');
-    });
+      if (big) localStorage.setItem('doona-mock-big', '3000');
+    }, big);
     const page = await context.newPage();
     const session = await context.newCDPSession(page);
     await session.send('Performance.enable');
@@ -71,20 +89,23 @@ rows.push({
 });
 rows.push({
   scenario: 'nodes: scroll 3,000 rows',
-  ...(await run(async (page, session) => {
-    await page.goto(`${base}/#/nodes?provider=sub-c`);
-    const table = page.locator('.rp-table').nth(1);
-    await table.locator('[role=row][data-key]').first().waitFor();
-    const before = await metrics(session);
-    for (let i = 0; i < 20; i++) {
-      await table.evaluate(el => {
-        const scroller = el.querySelector('[role=grid], [role=treegrid]') ?? el;
-        scroller.scrollTop += 2000;
-      });
-      await page.waitForTimeout(50);
-    }
-    return delta(before, await metrics(session));
-  }))
+  ...(await run(
+    async (page, session) => {
+      await page.goto(`${base}/#/nodes?provider=sub-c`);
+      const table = page.locator('.rp-table').nth(1);
+      await table.locator('[role=row][data-key]').first().waitFor();
+      const before = await metrics(session);
+      for (let i = 0; i < 20; i++) {
+        await table.evaluate(el => {
+          const scroller = el.querySelector('[role=grid], [role=treegrid]') ?? el;
+          scroller.scrollTop += 2000;
+        });
+        await page.waitForTimeout(50);
+      }
+      return delta(before, await metrics(session));
+    },
+    {big: true}
+  ))
 });
 rows.push({
   scenario: 'rules: hover 20 tree tiles',

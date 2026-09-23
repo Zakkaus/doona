@@ -74,3 +74,10 @@ it('places mode before ordinary conditions named must but after outbound must mo
   expect(next.indexOf('doona: outbound mode')).toBeLessThan(next.indexOf('domain(example.org)'));
   expect(next.indexOf('doona: outbound mode')).toBeLessThan(next.indexOf('domain(must)'));
 });
+
+it('refuses an override when ordinary rules precede mandatory exceptions', () => {
+  const source = 'routing {\n  domain(example.com) -> proxy\n  pname(system) -> direct(must)\n  fallback: proxy\n}\n';
+  expect(() => writeMode(source, {mode: 'direct'})).toThrow('act.modeInterleaved');
+  expect(() => writeMode(source, {mode: 'global', target: 'proxy'})).toThrow('act.modeInterleaved');
+  expect(writeMode(source, {mode: 'rule'})).toBe(source);
+});

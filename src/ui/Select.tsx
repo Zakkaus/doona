@@ -2,14 +2,17 @@ import type {ReactNode} from 'react';
 import {
   type PopoverProps,
   Button as RButton,
+  Header,
   Menu,
   MenuItem,
+  MenuSection,
   MenuTrigger,
   Popover,
   Select,
   SelectValue,
   ListBox,
   ListBoxItem,
+  Label,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
@@ -31,16 +34,27 @@ const ItemBody = ({i}: {i: Item}) => (
     {i.desc && <span className="desc">{i.desc}</span>}
   </>
 );
-function SelectBody({items, value, onChange, label, isDisabled, className}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string}) {
+// With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
+function SelectBody({
+  items,
+  value,
+  onChange,
+  label,
+  isDisabled,
+  className,
+  layout
+}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'}) {
   return (
     <Select
-      aria-label={label}
+      aria-label={layout ? undefined : label}
+      className={layout === 'field' ? 'rp-field' : layout === 'side' ? 'rp-cluster' : undefined}
       selectedKey={value}
       onSelectionChange={(k: Key | null) => {
         if (k != null) onChange(String(k));
       }}
       isDisabled={isDisabled}
     >
+      {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
       <RButton className={className}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
         <ChevronDown />
@@ -104,25 +118,57 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
   );
 }
 
+export type ChoiceSection = {title: string; items: Item[]; value: string; onChange?: (key: string) => void};
+// A menu of choices, flat or in titled sections, each with its own selection. `onAction` hears every pick,
+// including one of the already chosen item, for menus where picking it again clears it.
 export function ChoiceMenu({
   items,
   value,
   onChange,
+  sections,
+  onAction,
   ...props
-}: Omit<MenuButtonProps, 'content'> & {
-  items: Item[];
-  value: string;
-  onChange: (key: string) => void;
-}) {
+}: Omit<MenuButtonProps, 'content'> &
+  (
+    | {items: Item[]; value: string; onChange: (key: string) => void; sections?: never}
+    | {sections: ChoiceSection[]; items?: never; value?: never; onChange?: never}
+  ) & {
+    onAction?: (key: string) => void;
+  }) {
   return (
     <MenuButton
       {...props}
       content={
-        <Menu aria-label={props.label} selectionMode="single" selectedKeys={[value]} onSelectionChange={pickMenuKey(onChange)}>
-          {items.map(item => (
-            <MenuChoice key={item.id} item={item} />
-          ))}
-        </Menu>
+        sections ? (
+          <Menu aria-label={props.label} onAction={onAction && (key => onAction(String(key)))}>
+            {sections.map(section => (
+              <MenuSection
+                key={section.title}
+                id={section.title}
+                selectionMode="single"
+                selectedKeys={[section.value]}
+                onSelectionChange={section.onChange && pickMenuKey(section.onChange)}
+              >
+                <Header className="rp-sec-h">{section.title}</Header>
+                {section.items.map(item => (
+                  <MenuChoice key={item.id} item={item} />
+                ))}
+              </MenuSection>
+            ))}
+          </Menu>
+        ) : (
+          <Menu
+            aria-label={props.label}
+            selectionMode="single"
+            selectedKeys={[value]}
+            onSelectionChange={pickMenuKey(onChange)}
+            onAction={onAction && (key => onAction(String(key)))}
+          >
+            {items.map(item => (
+              <MenuChoice key={item.id} item={item} />
+            ))}
+          </Menu>
+        )
       }
     />
   );
@@ -148,19 +194,15 @@ export function LabeledSelect({
   side?: boolean;
   bare?: boolean;
 }) {
-  const sel = <SelectBody items={items} value={value} onChange={onChange} label={label} isDisabled={isDisabled} className="rp-selectbtn" />;
-  if (bare) return sel;
-  if (side)
-    return (
-      <span className="rp-cluster">
-        <span className="rp-label">{label}</span>
-        {sel}
-      </span>
-    );
   return (
-    <div className="rp-field">
-      <span className="lbl">{label}</span>
-      {sel}
-    </div>
+    <SelectBody
+      items={items}
+      value={value}
+      onChange={onChange}
+      label={label}
+      isDisabled={isDisabled}
+      className="rp-selectbtn"
+      layout={bare ? undefined : side ? 'side' : 'field'}
+    />
   );
 }

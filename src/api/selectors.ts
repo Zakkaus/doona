@@ -1,8 +1,9 @@
-import type {Key} from '../i18n/messages';
-import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
+import type {Key} from '../i18n';
+import {formatNumber, LOCALE, readLang} from '../i18n';
+import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
-// Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
+// Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {
   tcp_connect: 0,
@@ -70,6 +71,8 @@ export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   failed: 'lifecycle.failed'
 };
 export const lifecycleTone = (state: Runtime['lifecycle']['state'] | undefined) => (state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn');
+// Nothing closed is a failure; some skipped (already gone or not closable) is worth a look.
+export const closedAllTone = (tally: {closed: number; skipped: number}) => (!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive');
 export const connectionStates: Record<Connection['state'], Key> = {
   observed: 'conn.state.observed',
   routing: 'conn.state.routing',
@@ -80,18 +83,6 @@ export const connectionStates: Record<Connection['state'], Key> = {
   failed: 'conn.state.failed',
   unknown: 'conn.state.unknown'
 };
-const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
-export function relativeStart(startedAt: string | null, locale: string, now = Date.now()): string {
-  if (!startedAt) return '—';
-  const seconds = Math.floor((Date.parse(startedAt) - now) / 1000);
-  if (!Number.isFinite(seconds)) return '—';
-  let formatter = relativeTimes.get(locale);
-  if (!formatter) relativeTimes.set(locale, (formatter = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'})));
-  if (Math.abs(seconds) < 60) return formatter.format(seconds, 'second');
-  if (Math.abs(seconds) < 3600) return formatter.format(Math.trunc(seconds / 60), 'minute');
-  if (Math.abs(seconds) < 86400) return formatter.format(Math.trunc(seconds / 3600), 'hour');
-  return formatter.format(Math.trunc(seconds / 86400), 'day');
-}
 
 export function connectionRows(snapshot: ConnectionList | undefined) {
   return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
@@ -100,35 +91,6 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
 export type LabelFn = (key: Key) => string;
-/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
-const durationUnits = new Map<string, Intl.NumberFormat>();
-export function formatDuration(seconds: string | null, locale: string): string {
-  if (seconds === null) return '—';
-  const total = parseU64(seconds);
-  if (total === null) return '—';
-  const d = total / 86400n,
-    h = (total % 86400n) / 3600n,
-    m = (total % 3600n) / 60n;
-  const unit = (value: bigint, name: string) => {
-    const key = locale + '/' + name;
-    let formatter = durationUnits.get(key);
-    if (!formatter) durationUnits.set(key, (formatter = new Intl.NumberFormat(locale, {style: 'unit', unit: name, unitDisplay: 'short'})));
-    return formatter.format(value);
-  };
-  if (d > 0n) return `${unit(d, 'day')} ${unit(h, 'hour')}`;
-  if (h > 0n) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
-  if (m > 0n) return unit(m, 'minute');
-  return unit(total, 'second');
-}
-const localTimes = new Map<string, Intl.DateTimeFormat>();
-export function localTime(iso: string | null, locale: string): string {
-  if (!iso) return '—';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return iso;
-  let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
-  return formatter.format(t);
-}
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 export const eventKindLabels: Record<EventKind, Key> = {
   'stream.ready': 'event.k.streamReady',
@@ -150,6 +112,13 @@ const gapReasons: Record<string, Key> = {
   evicted: 'event.gap.evicted',
   recording_changed: 'event.gap.recording'
 };
+// A safe integer goes to the translator, which groups it in the caller's language; a larger UInt64 is grouped
+// here as a bigint, since a JS number would round it.
+function droppedCount(value: string | null): string | number {
+  const count = parseU64(value);
+  if (count === null) return value ?? '—';
+  return count <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(count) : formatNumber(count, LOCALE[readLang()]);
+}
 export function eventSummary(event: ApiEvent, t?: (key: Key) => string): MessageRef {
   switch (event.event) {
     case 'stream.ready':
@@ -157,9 +126,12 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
     case 'runtime.updated':
       return {key: 'event.resource', params: {resource: event.data.href}};
     case 'flow.updated':
-      return {key: 'event.flow', params: {id: event.data.resource_id, revision: event.data.revision}};
-    case 'operation.updated':
-      return {key: 'event.operation', params: {id: event.data.resource_id, status: event.data.status}};
+      return {key: 'event.flow', params: {id: event.data.resource_id, revision: String(event.data.revision)}};
+    case 'operation.updated': {
+      const status = event.data.status;
+      const label = status === 'running' || status === 'succeeded' || status === 'failed' ? (`ov.${status}` as Key) : null;
+      return {key: 'event.operation', params: {id: event.data.resource_id, status: t && label ? t(label) : status}};
+    }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
     case 'flow.gap':
@@ -168,7 +140,7 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
         params: {
           id: event.data.resource_id ?? '—',
           reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
-          n: event.data.dropped_records ?? '—'
+          n: droppedCount(event.data.dropped_records)
         }
       };
   }
@@ -198,3 +170,21 @@ export function resolveSelectedLeaf(
   }
   return {groups, member: null, node: null};
 }
+
+// Labels that more than one page shows.
+export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
+export const logLevelLabels: Record<LogLevel, Key> = {
+  trace: 'log.level.trace',
+  debug: 'log.level.debug',
+  info: 'log.level.info',
+  warn: 'log.level.warn',
+  error: 'log.level.error'
+};
+export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;

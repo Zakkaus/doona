@@ -1,10 +1,11 @@
 import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
-import type {Settings} from '../features/settings/settings';
-import type {PageProps} from '../features/types';
-import type {Translator} from '../i18n';
+import type {PaletteId, Scheme, Settings} from './preferences';
+import type {PageProps} from './routes';
+import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
+import {href} from './route';
 
 export type ShortcutView = {id: string; path: string; key: string; sequence: string; label: string};
 export type AboutView = {
@@ -14,9 +15,6 @@ export type AboutView = {
   quack: string;
   tagline: string;
   credits: string;
-  engineText: string;
-  apiText: string;
-  contractText: string;
   versionText: string;
   items: Array<[string, string]>;
   repositories: Array<{href: string; label: string}>;
@@ -32,11 +30,14 @@ type NavItem = {
   description: string | undefined;
   desc: string | undefined;
 };
+export type NavGroup = {id: string; label: string; items: NavItem[]};
+export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
+export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
-  groups: Array<{id: string; label: string; items: NavItem[]}>;
+  groups: NavGroup[];
   choices: Array<{id: string; label: string; desc: string | undefined}>;
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
-  content: {kind: 'login'; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
+  content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
   error: Error | null;
   engine: {text: string; href: string};
@@ -44,6 +45,9 @@ export type ShellView = {
   shortcuts: ShortcutView[];
   shortcutPaths: Record<string, string>;
 };
+// A 401 on any read means the credential no longer works, whatever discovery last reported; sign-in comes first.
+export const accessError = (discovery: Error | null, refusal: Error | null) => refusal ?? discovery;
+
 export function shellView(
   settings: Settings,
   route: string,
@@ -65,7 +69,7 @@ export function shellView(
             {
               id: item.id,
               path: item.path,
-              href: '#/' + item.path,
+              href: href(item.path),
               label: t(item.nav.titleKey),
               Icon: item.nav.Icon,
               current: item.path === route,
@@ -77,10 +81,11 @@ export function shellView(
         : []
     )
   }));
-  const needsToken = capabilityError instanceof ApiError && (capabilityError.status === 401 || capabilityError.status === 403);
+  const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
+  const needsToken = refused(capabilityError);
   const content: ShellView['content'] =
     needsToken && feature.id !== 'settings'
-      ? {kind: 'login', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
+      ? {kind: 'login', profileId: profile?.id ?? '', api: profile?.api ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
       : !capabilities && !capabilityError && feature.id !== 'settings'
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)
@@ -89,7 +94,7 @@ export function shellView(
   const org = import.meta.env.VITE_ENGINE_ORG;
   const engineText = version ? `${version.engine.name} ${version.engine.version}` : '—';
   const build = version?.build?.revision ? ` (${version.build.revision.slice(0, 12)})` : '';
-  const apiText = version ? `${version.api.name} v${version.api.major} · ${version.api.status}` : '—';
+  const apiText = version ? t('ui.apiVersion', {name: version.api.name, major: version.api.major, status: version.api.status}) : '—';
   const contractText = import.meta.env.VITE_DOONA_CONTRACT_COMMIT;
   const shortcuts = features.flatMap(item =>
     item.shortcut && item.nav && offered(item.path)
@@ -108,7 +113,8 @@ export function shellView(
     },
     content,
     busy: !capabilities && !capabilityError,
-    error: capabilityError ? null : versionError,
+    // The login surface explains a refused credential itself; the version read is refused the same way before sign-in.
+    error: content.kind === 'login' ? (refused(versionError) ? null : versionError) : (capabilityError ?? versionError),
     engine: {text: engineText, href: version ? `${org}/${version.engine.name}` : org},
     shortcuts,
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),
@@ -119,9 +125,6 @@ export function shellView(
       quack: t('about.quack'),
       tagline: t('about.tagline', {engine: org.split('/').pop()!}),
       credits: t('about.credits'),
-      engineText: engineText + build,
-      apiText,
-      contractText,
       versionText: `v${import.meta.env.VITE_DOONA_VERSION}`,
       items: [
         [t('about.engine'), engineText + build],
@@ -143,4 +146,44 @@ export function duckView(taps: number) {
   const honked = taps >= 5;
   const painted = honked && (taps - 5) % 2 === 1;
   return {honked, painted, hop: taps > 0 && !painted, wordmark: wordmark(honked)};
+}
+// Each entry pairs the light variant with a dark one; the description names both with their official variant names.
+export const palettes = (t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> => [
+  {
+    title: t('palette.rosePine'),
+    items: [
+      {id: 'rose-pine/main', label: t('palette.rosePine'), desc: t('palette.dawnMain')},
+      {id: 'rose-pine/moon', label: t('palette.moon'), desc: t('palette.dawnMoon')}
+    ]
+  },
+  {
+    title: t('palette.catppuccin'),
+    items: [
+      {id: 'catppuccin/frappe', label: t('palette.frappe'), desc: t('palette.latteFrappe')},
+      {id: 'catppuccin/macchiato', label: t('palette.macchiato'), desc: t('palette.latteMacchiato')},
+      {id: 'catppuccin/mocha', label: t('palette.mocha'), desc: t('palette.latteMocha')}
+    ]
+  },
+  {title: t('palette.nord'), items: [{id: 'nord/nord', label: t('palette.nord'), desc: t('palette.nordVariants')}]},
+  {title: t('palette.kary'), items: [{id: 'kary/kary', label: t('palette.kary'), desc: t('palette.lightDark')}]},
+  {title: t('palette.antd'), items: [{id: 'antd/antd', label: t('palette.antd'), desc: t('palette.defaultDark')}]},
+  {
+    title: t('palette.bytedance'),
+    items: [
+      {id: 'arco/arco', label: t('palette.arco'), desc: t('palette.lightDark')},
+      {id: 'semi/semi', label: t('palette.semi'), desc: t('palette.lightDark')}
+    ]
+  },
+  {title: t('palette.glassName'), items: [{id: 'glass/glass', label: t('palette.glassName'), desc: t('palette.glass')}]}
+];
+
+export const languageItems = LANGS.map(([id, label]) => ({id, label}));
+export function appearanceMenu(t: Translator, scheme: Scheme, dark: boolean) {
+  return {
+    wordmarks: [
+      {id: 'gradient', label: t('wordmark.gradient')},
+      {id: 'plain', label: t('wordmark.plain')}
+    ],
+    themeLabel: t('shell.theme', {theme: t(scheme === 'system' ? 'theme.system' : dark ? 'theme.dark' : 'theme.light')})
+  };
 }

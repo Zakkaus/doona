@@ -1,9 +1,9 @@
 import {useContext, useState} from 'react';
-import {useCapabilities, useVersion} from '../../api/store';
+import {useCapabilities, useVersion} from '../../store';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
-import {SettingsContext} from './context';
-import {useBackendForm} from './backendForm';
+import {SettingsContext} from '../../shell/preferences';
+import {useBackendForm} from './useBackendForm';
 import {profileView, paletteLabel} from './view';
 import {useInstallOffer} from '../../shell/install';
 export function useSettingsPage(query: string) {
@@ -33,6 +33,7 @@ export function useSettingsPage(query: string) {
     profile,
     palette: paletteLabel(paletteSections, ap.palette),
     error: capabilities.error,
+    retry: capabilities.refetch,
     firstRun: form.saved.api === null,
     activeId: form.saved.activeId,
     hasActive: !!form.active,
@@ -46,6 +47,8 @@ export function useSettingsPage(query: string) {
       form.setName('');
       form.setDialog('add');
     },
+    // Add, rename and delete write the saved profiles and reload, so edits in the form are lost rather than saved.
+    dialogDiscards: form.dirty,
     renameProfile: () => {
       form.setName(form.active?.name ?? '');
       form.setDialog('rename');

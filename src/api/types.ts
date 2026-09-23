@@ -55,6 +55,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the administrator account and open a session
+         * @description Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent.
+         */
+        post: operations["setupAdministrator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange the administrator credentials for a session
+         * @description Available only in password mode after setup. A wrong username or password is `invalid_credentials`; before setup the answer is `setup_required`. Authorization must be absent.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the session that authenticates this request
+         * @description Requires a password-session bearer; a configured bearer cannot log out.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config": {
         parameters: {
             query?: never;
@@ -1039,7 +1099,7 @@ export interface components {
          * @description Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
          * @enum {string}
          */
-        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable";
+        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable" | "setup_required" | "setup_already_completed" | "invalid_credentials";
         /** @description Safe structured error; never raw engine output. */
         SafeError: {
             code: string;
@@ -1090,7 +1150,40 @@ export interface components {
                 geodata: "/api/v1/geodata";
                 /** @constant */
                 operations: "/api/v1/operations/{id}";
+                /**
+                 * @description Present in password mode, null otherwise.
+                 * @enum {string|null}
+                 */
+                auth_setup?: "/api/v1/auth/setup" | null;
+                /**
+                 * @description Present in password mode, null otherwise.
+                 * @enum {string|null}
+                 */
+                auth_login?: "/api/v1/auth/login" | null;
+                /**
+                 * @description Present in password mode, null otherwise.
+                 * @enum {string|null}
+                 */
+                auth_logout?: "/api/v1/auth/logout" | null;
             };
+            /** @description Absent from servers that predate password login; clients then assume a configured bearer. */
+            auth?: components["schemas"]["AuthDiscovery"];
+        };
+        /** @description How a client authenticates. `password` mode offers setup until an administrator exists and login afterwards; `token` mode takes a configured bearer, or none when `anonymous_loopback` admits loopback peers. */
+        AuthDiscovery: {
+            /** @enum {string} */
+            mode: "token" | "password";
+            setup_required: boolean;
+            anonymous_loopback: boolean;
+        };
+        AuthCredentials: {
+            username: string;
+            /** @description 8 to 128 Unicode scalar values, at most 512 UTF-8 bytes; not normalised or trimmed. */
+            password: string;
+        };
+        AuthSession: {
+            token: string;
+            expires_at: components["schemas"]["Timestamp"];
         };
         Version: {
             api: {
@@ -1297,14 +1390,16 @@ export interface components {
             revision: string;
             sources: components["schemas"]["ConfigSource"][];
             diagnostics: components["schemas"]["ConfigDiagnostic"][];
-            /** @description True when content is withheld or paths, text, or diagnostic messages are redacted under visibility policy. */
+            /** @description True when a listener-secret value (native_api.secret, clash_api.secret) was masked somewhere in this response. Content, paths and diagnostics are otherwise returned in the clear to an admitted request. */
             secrets_redacted: boolean;
         };
         ConfigSource: {
             /** @description Unique opaque source ID within this configuration snapshot; never a credential-bearing path or URL. */
             id: string;
-            /** @description Display path only, replaced with <redacted> when hidden by visibility policy; not a file-access capability. */
+            /** @description The path relative to the entry directory, as the configuration references it; not a file-access capability. */
             path: string;
+            /** @description The file's absolute path on the engine host. */
+            absolute_path?: string;
             /** @enum {string} */
             kind: "main" | "include" | "subscription" | "generated";
             /** @description Lowercase SHA-256 of the accepted source bytes before redaction; not necessarily the digest of displayed content. */
@@ -1655,7 +1750,7 @@ export interface components {
             name: string;
             /** @enum {string} */
             kind: "subscription" | "file" | "inline";
-            /** @description Display-only source URL with userinfo, query, fragment and secret-bearing path segments removed or redacted. Null for file/inline sources or when safe display is impossible. Never a fetchable credential source. */
+            /** @description The configured source URL as written, with only listener-secret values (native_api.secret, clash_api.secret) masked. Null for file/inline sources. The wire name is kept for compatibility. */
             url_redacted: string | null;
             node_count: components["schemas"]["SafeUInt"];
             /** @description Last successful load or refresh, or null if unknown or never loaded. */
@@ -2596,6 +2691,14 @@ export interface components {
             entries: components["schemas"]["DnsCacheEntry"][];
             total: components["schemas"]["SafeUInt"];
             next_cursor: string | null;
+            /** @description Absent from servers that predate cache usage reporting. */
+            usage?: components["schemas"]["DnsCacheUsage"];
+        };
+        /** @description Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. The entry count is the cache's only limit; the size of an entry is not bounded. */
+        DnsCacheUsage: {
+            entries: components["schemas"]["UInt64"];
+            /** @description Effective entry limit after the engine applies its bounds, at most 100,000. */
+            entry_capacity: components["schemas"]["UInt64"];
         };
         DnsLogRecord: {
             /** @description Opaque, unique within the running instance; the cursor is derived from it. */
@@ -2735,7 +2838,7 @@ export interface components {
             } | null;
         };
         /** @enum {string} */
-        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds";
+        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds" | "record_flows" | "record_logs" | "record_dns_log";
         RuntimeSettings: {
             observed_at: components["schemas"]["Timestamp"];
             /**
@@ -2759,8 +2862,29 @@ export interface components {
                 /** @description How long a terminal flow stays, at most flows.retention_seconds. */
                 retention_seconds: components["schemas"]["SafeUInt"];
             };
+            /**
+             * @description Read-only recorder state. A client is attached while an admitted GET SSE stream on
+             *     /events or /logs is open, or for 60 seconds after the last stream closed or a successful
+             *     GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
+             *     renew attachment. Recording starts on attachment, so the first history a client reads may
+             *     be empty.
+             */
+            recording?: {
+                flows: components["schemas"]["RecorderState"];
+                logs: components["schemas"]["RecorderState"];
+                dns_log: components["schemas"]["RecorderState"];
+                events: {
+                    /** @description Event capture runs while a client is attached or any permitted recorder is pinned on. */
+                    active: boolean;
+                };
+                /** @description Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached. */
+                grace_remaining_seconds: components["schemas"]["SafeUInt"];
+            };
         };
         RuntimeSettingsPatch: {
+            record_flows?: components["schemas"]["RecorderMode"];
+            record_logs?: components["schemas"]["RecorderMode"];
+            record_dns_log?: components["schemas"]["RecorderMode"];
             log?: {
                 level?: components["schemas"]["LogLevel"];
                 buffered_records?: components["schemas"]["SafeUInt"];
@@ -2772,6 +2896,16 @@ export interface components {
                 max_flows?: components["schemas"]["SafeUInt"];
                 retention_seconds?: components["schemas"]["SafeUInt"];
             };
+        };
+        /** @description true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment. */
+        RecorderMode: boolean | "auto";
+        RecorderState: {
+            /** @description The configuration permits this recorder; false means never, whatever the mode. */
+            allowed: boolean;
+            /** @enum {string} */
+            mode: "auto" | "on" | "off";
+            /** @description The recorder is capturing right now. */
+            active: boolean;
         };
         StreamReadyEvent: {
             instance_id: string;
@@ -3121,6 +3255,98 @@ export interface operations {
                     "application/json": components["schemas"]["Capabilities"];
                 };
             };
+        };
+    };
+    setupAdministrator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthCredentials"];
+            };
+        };
+        responses: {
+            /** @description Administrator created; the session token authenticates later requests */
+            201: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthCredentials"];
+            };
+        };
+        responses: {
+            /** @description Session opened */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session ended */
+            204: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
         };
     };
     getConfig: {

@@ -1,16 +1,25 @@
-import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../api/store';
+import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
+import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../store';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
-import {errorText, toast} from '../../ui/ui';
-import {ruleCondition, type ConditionKind} from '../config/groups';
-import type {PageProps} from '../types';
+import {toast} from '../../ui/ui';
+import {ruleCondition, type ConditionKind} from '../../dae/groups';
+import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
-import {addRule, removeRule} from './source';
-import {parseRuleSeed, type RuleSeed} from './seed';
+import {addRule, removeRule, ruleAnchor} from './source';
+import {parseRuleSeed, type RuleSeed} from './link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
+import {useDraftGuard} from '../../shell/draft';
+import {errorText} from '../../api/error';
+import {offered} from '../../api/capabilities';
 
-type Dialog = {kind: 'add'} | {kind: 'remove'; rule: RoutingRule; source: ConfigSource};
+const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
+const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
+type Dialog = ({kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) & {
+  generation: string;
+  sources: ConfigSource[];
+  rules: RoutingRule[];
+};
 type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
 type RulePick = {on: boolean; kind: ConditionKind; value: string};
 export type RuleListModel = {
@@ -24,6 +33,7 @@ export type RuleListModel = {
   canWrite: boolean;
   busy: boolean;
   addDisabled: boolean;
+  editHelp: string | null;
   loading: boolean;
   error: Error | null;
   retry: () => void;
@@ -47,24 +57,27 @@ export function useRuleList({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
-  const dictionary = resources?.rules.available === true;
+  const dictionary = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(dictionary);
-  const flows = useFlows(undefined, dictionary ? resources?.flows.available === true : true);
-  const groups = useGroups(dictionary && resources?.groups.available === true);
-  const canWrite = dictionary && resources?.config.available === true && resources.config.writable === true;
+  const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
+  const groups = useGroups(dictionary && offered(resources, 'groups', {whileLoading: false}));
+  const canWrite = dictionary && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(canWrite);
   const retry = () => {
     config.refetch();
     rules.refetch();
   };
   const editor = useConfigEditor(retry);
+  const report = useEffectEvent((error: Error) => toast('negative', t('ui.writeFailed', {error: errorText(error, t)})));
   useEffect(() => {
-    if (editor.error) toast('negative', errorText(editor.error));
+    if (editor.error) report(editor.error);
   }, [editor.error]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  const pending = useRef(false);
   const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
+  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()), () => setDialog(null));
   const list: RoutingRule[] = rules.data?.rules ?? [];
   const sources = config.data?.sources ?? [];
   const params = new URLSearchParams(query);
@@ -72,21 +85,27 @@ export function useRuleList({go, query}: PageProps) {
   const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
   const selected = picked.landed === landed ? picked.row : landed;
   const [source, setSource] = useState('all');
+  // Only one of the two views renders, so only that one is projected.
   const table = useMemo(
-    () => dictionaryView(rules.data?.rules ?? [], rules.data?.generation_id, flows.data, config.data?.sources ?? [], groups.data ?? [], t, lang),
-    [rules.data, flows.data, config.data, groups.data, t, lang]
+    () =>
+      dictionary
+        ? dictionaryView(rules.data?.rules ?? [], rules.data?.generation_id, flows.data, config.data?.sources ?? [], groups.data ?? [], t, lang)
+        : noDictionary,
+    [dictionary, rules.data, flows.data, config.data, groups.data, t, lang]
   );
-  const distribution = useMemo(() => distributionView(flows.data, source, t, lang), [flows.data, source, t, lang]);
+  const distribution = useMemo(() => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang)), [dictionary, flows.data, source, t, lang]);
   const stale = () => {
     toast('negative', t('rule.stale'));
     retry();
   };
-  const initialize = (next: Dialog, preset?: RuleSeed) => {
+  const initialize = (next: {kind: 'add'} | {kind: 'remove'; rule: RoutingRule}, preset?: RuleSeed) => {
+    if (editor.busy || !rules.data) return;
     setForm({condition: '', outbound: groups.data?.[0]?.name ?? 'direct', must: false, before: table.positions[0]?.id ?? 'end'});
     setPick({on: true, kind: 'domainSuffix', value: '', ...preset});
-    setDialog(next);
+    setDialog({...next, generation: rules.data.generation_id, sources, rules: list});
   };
-  const open = (next: Dialog) => {
+  const open = (next: {kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) => {
+    if (pending.current) return;
     if (rules.data?.generation_id !== config.data?.generation_id) {
       stale();
       return;
@@ -111,7 +130,14 @@ export function useRuleList({go, query}: PageProps) {
     setConsumption({seed, consumed: true});
     initialize({kind: 'add'}, parsedSeed);
   }
+  // Cancel while a write is pending abandons it; the write may still land, so the rules and sources are read again.
   const close = () => {
+    if (pending.current) {
+      editor.cancel();
+      pending.current = false;
+      retry();
+    }
+    guard.clear();
     setDialog(null);
     if (seed) go('rules', within(query, {add: null}));
   };
@@ -123,29 +149,39 @@ export function useRuleList({go, query}: PageProps) {
     });
     if (!result) return false;
     if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: String(result.diagnostics.filter(d => d.level === 'error').length)}));
+      toast('negative', t('ui.writeInvalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return false;
     }
     return true;
   };
   const submit = async (dismiss: () => void) => {
-    if (dialog?.kind === 'remove') {
-      if (await write(dialog.source, text => removeRule(text, dialog.rule))) {
-        toast('positive', t('rule.removed'));
-        dismiss();
-      }
-      return;
-    }
-    if (!rules.data || !config.data || rules.data.generation_id !== config.data.generation_id) {
+    if (pending.current) return;
+    // Both writes address a line the dialog saw in one generation; a reload since then means starting over.
+    if (!dialog || !rules.data || !config.data || rules.data.generation_id !== dialog.generation || config.data.generation_id !== dialog.generation) {
       stale();
       return;
     }
-    const anchor = form.before === 'end' ? list.find(rule => rule.kind === 'fallback') : list.find(rule => rule.rule_id === form.before);
-    const source = sources.find(source => source.id === anchor?.source?.source_id);
-    if (!anchor?.source || !source) return;
-    if (await write(source, text => addRule(text, anchor, condition, form.outbound, form.must))) {
-      toast('positive', t('rule.added'));
-      dismiss();
+    const rule =
+      dialog.kind === 'remove' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
+    const source = dialog.sources.find(source => source.id === rule?.source?.source_id);
+    const anchor = source && rule ? ruleAnchor(source, rule) : null;
+    if (condition === null) return;
+    if (!source || !anchor) {
+      stale();
+      return;
+    }
+    pending.current = true;
+    try {
+      const written = await write(source, text =>
+        dialog.kind === 'remove' ? removeRule(text, anchor) : addRule(text, anchor, condition, form.outbound, form.must)
+      );
+      if (written) {
+        toast('positive', t(dialog.kind === 'remove' ? 'rule.removed' : 'rule.added'));
+        pending.current = false;
+        dismiss();
+      }
+    } finally {
+      pending.current = false;
     }
   };
   const draft = ruleDraftView(pick.kind, pick.value, pick.on, condition, form.condition, t);
@@ -161,29 +197,36 @@ export function useRuleList({go, query}: PageProps) {
     canWrite,
     busy: !!editor.busy,
     addDisabled: !table.positions.length || !!editor.busy,
+    editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
-    retry,
+    retry: dictionary ? retry : flows.refetch,
     dialog: dialogView,
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : 'rule.add'),
     submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : 'rule.add'),
     close,
-    openAdd: () => open({kind: 'add'}),
+    openAdd: () => {
+      if (rules.data) open({kind: 'add'});
+    },
     openRemove: (id: string) => {
       const rule = list.find(rule => rule.rule_id === id);
-      const source = sources.find(source => source.id === rule?.source?.source_id);
-      if (rule && source) open({kind: 'remove', rule, source});
+      if (rule && rules.data) open({kind: 'remove', rule});
     },
     openSource: (query: string) => go('config', query),
     submit,
     form,
-    setForm,
+    setForm: (next: RuleForm) => {
+      if (!pending.current) setForm(next);
+    },
     pick,
-    setPick,
+    setPick: (next: RulePick) => {
+      if (!pending.current) setPick(next);
+    },
     draft,
     submitDisabled: dialog?.kind !== 'remove' && (!draft.valid || !form.outbound),
     changeMode: (mode: string) => {
-      if (mode === 'text' && pick.on && pick.value.trim()) setForm({...form, condition});
+      if (pending.current) return;
+      if (mode === 'text' && pick.on && pick.value.trim() && condition) setForm({...form, condition});
       setPick({...pick, on: mode === 'pick'});
     }
   };

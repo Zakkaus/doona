@@ -10,11 +10,11 @@ export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => 
   return (
     <ModalDialog title={view.title} narrow trigger={trigger} footer={close => <Button onPress={close}>{view.close}</Button>}>
       <div className={cx('rp-about', view.honked && 'honked')}>
-        <button type="button" className={cx('rp-about-duck', view.painted && 'painted')} onClick={view.tap} aria-label={view.duck}>
+        <Button appearance="plain" className={cx('rp-about-duck', view.painted && 'painted')} onPress={view.tap} label={view.duck}>
           <img key={view.taps} src={logo} alt="" className={cx(view.hop && 'hop')} />
           <img src={night} alt="" className="night" />
           {view.honked && <span className="rp-about-bubble">{view.quack}</span>}
-        </button>
+        </Button>
         <div className="rp-about-name">
           <span className="rp-brand-text">
             <span>{view.wordmark}</span>

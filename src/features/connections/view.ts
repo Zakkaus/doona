@@ -1,24 +1,28 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
-import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
-import {chainLabel, chainNames, connectionStates, localTime, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
-import type {Translator as LabelFn} from '../../i18n';
-import {word} from '../flows/view';
-import type {Key} from '../../i18n/messages';
+import {addU64, parseU64} from '../../api/u64';
+import {chainLabel, chainNames, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {localTime, formatBytes, formatRate} from '../../i18n/format';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
+import {word} from '../../api/labels';
+import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
+import {ruleHref} from '../rules/link';
+import {within} from '../../shell/route';
+const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
   return [
-    ['ui.source', c.src ?? '—'],
+    ['ui.device', c.src ?? '—'],
     ['conn.f.dst', c.dst ?? '—'],
     ['ui.domain', c.domain ?? '—'],
     ['conn.f.ingress', word(c.ingress)],
     ['conn.f.domainSource', word(c.domain_source)],
     ['ui.process', c.pname ?? '—'],
-    ['conn.f.observedBy', c.observed_by],
-    ['ui.upload', formatBytes(c.upload_bytes)],
-    ['ui.download', formatBytes(c.download_bytes)],
-    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second)],
-    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second)],
+    ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by],
+    ['ui.upload', formatBytes(c.upload_bytes, locale)],
+    ['ui.download', formatBytes(c.download_bytes, locale)],
+    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second, locale)],
+    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second, locale)],
     ['conn.f.started', localTime(c.started_at, locale)]
   ];
 }
@@ -27,7 +31,7 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 // the target column always stays.
 export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; align?: 'end'; drop?: number}> = [
   {id: 'dst', label: 'ui.target', minWidth: 200, sortable: true},
-  {id: 'src', label: 'ui.source', minWidth: 128, sortable: true, drop: 4},
+  {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 4},
   {id: 'chain', label: 'conn.chain', minWidth: 168, drop: 2},
   {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 1},
   {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 6},
@@ -35,8 +39,8 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 5}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
-export type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
-export type TableRow = {id: string; connection: Connection} | GroupRow;
+type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
+type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = 'doona-connections-view';
 
 export function readView(stored: string | null): ConnectionView {
@@ -59,7 +63,8 @@ export function readView(stored: string | null): ConnectionView {
   }
 }
 
-export function tableRows(rows: Connection[], view: ConnectionView, locale: string): TableRow[] {
+// Sorts and groups by what the table shows: a state sorts by its label, not the wire value.
+export function tableRows(rows: Connection[], view: ConnectionView, locale: string, t: LabelFn): TableRow[] {
   let sorted = rows;
   if (view.sort) {
     const {column, direction} = view.sort;
@@ -70,7 +75,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
         case 'src':
           return row.src;
         case 'state':
-          return row.state;
+          return t(connectionStates[row.state]);
         case 'down':
           return parseU64(row.download_bytes);
         case 'age':
@@ -93,7 +98,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
   // Source groups key on the address without the port, so one client is one group.
   const groups = new Map<string, Connection[]>();
   for (const row of sorted) {
-    const key = (view.group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src) : row.outbound) ?? '—';
+    const key = view.group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : outboundLabel(row.outbound, t);
     const group = groups.get(key);
     if (group) group.push(row);
     else groups.set(key, [row]);
@@ -112,13 +117,13 @@ export type ConnectionRowView = {
   target: string;
   source: string;
   chain: string;
-  rule: {expression: string | null; ruleId: string | null; linked: boolean};
+  rule: {expression: string | null; href: string | undefined};
   recomputed: string | null;
   state: string;
   download: string;
-  age: string;
+  startedAt: string | null;
 };
-export type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
+type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
 export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
 export function connectionTableView(
   rows: Connection[],
@@ -133,13 +138,13 @@ export function connectionTableView(
     target: c.domain || c.dst || '—',
     source: c.src ?? '—',
     chain: chainLabel(c, t, names),
-    rule: {expression: c.rule_expression, ruleId: c.rule_id, linked: rulesListed},
+    rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),
-    download: formatBytes(c.download_bytes),
-    age: relativeStart(c.started_at, locale)
+    download: formatBytes(c.download_bytes, locale),
+    startedAt: c.started_at
   });
-  return tableRows(rows, view, locale).map(row =>
+  return tableRows(rows, view, locale, t).map(row =>
     'connection' in row
       ? {id: row.id, connection: project(row.connection)}
       : {
@@ -147,21 +152,21 @@ export function connectionTableView(
           group: row.group,
           children: row.children.map(project),
           label: t('conn.groupCount', {name: row.group, n: row.children.length}),
-          totals: {down: formatBytes(row.download), state: t('conn.activeCount', {n: row.active})}
+          totals: {down: formatBytes(row.download, locale), state: t('conn.activeCount', {n: row.active})}
         }
   );
 }
 
 export function connectionsView(
   rows: Array<Connection & {network: string}>,
-  shown: Array<Connection & {network: string}>,
   current: (Connection & {network: string}) | undefined,
   data: ConnectionList | undefined,
   src: string | undefined,
   rule: string,
   locale: string,
+  t: LabelFn,
   names: OutboundNames,
-  t: LabelFn
+  rulesListed: boolean
 ) {
   const seen = (values: Array<string | null | undefined>) => {
     const counts = new Map<string, number>();
@@ -174,68 +179,76 @@ export function connectionsView(
       ['tcp', t('ui.tcp')],
       ['udp', t('ui.udp')]
     ] as Array<[string, string]>,
-    outbounds: [{id: 'all', label: t('conn.allOutbounds')}, ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: id}))],
+    outbounds: [
+      {id: 'all', label: t('conn.allOutbounds')},
+      ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: outboundLabel(id, t)}))
+    ],
     picks: [
       {
-        title: t('ui.source'),
+        title: t('ui.device'),
         value: 'src:' + src,
-        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: String(n)}))
+        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: formatNumber(n, locale)}))
       },
       {
         title: t('conn.rule'),
         value: 'rule:' + rule,
-        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: String(n)}))
+        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: formatNumber(n, locale)}))
       }
     ],
     visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null,
-    closeConfirmation: t('conn.closeAllHelp', {n: shown.length}),
     detail: current
       ? {
           id: current.id,
           title: current.domain || current.dst || current.id,
           tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
-          status: `${t(connectionStates[current.state])} · ${current.network.toUpperCase()}`,
+          status: t('ui.aside', {text: t(connectionStates[current.state]), note: current.network.toUpperCase()}),
+          chain: chainLabel(current, t, names),
+          outbound: outboundLabel(current.outbound, t),
+          rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
           fields: connectionDetails(current, locale).map(
             ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
           ),
-          flowQuery: 'tab=flows&' + (current.flow_id ? 'id=' + encodeURIComponent(current.flow_id) : 'connection_id=' + encodeURIComponent(current.id)),
+          flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
           source: current.src ? (sourceIp(current.src) ?? current.src) : null,
           closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
         }
-      : null,
-    exportContent:
-      [
-        csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
-        ...shown.map(c =>
-          csvLine([
-            c.id,
-            c.dst,
-            c.domain,
-            c.src,
-            c.network,
-            c.state,
-            c.outbound,
-            chainNames(c.chain, names).join(' > '),
-            c.rule_expression,
-            c.upload_bytes,
-            c.download_bytes,
-            c.started_at
-          ])
-        )
-      ].join('\n') + '\n'
+      : null
   };
 }
 
+export function connectionsExport(shown: Array<Connection & {network: string}>, names: OutboundNames) {
+  return (
+    [
+      csvLine(['id', 'target', 'domain', 'source', 'network', 'state', 'outbound', 'chain', 'rule', 'upload_bytes', 'download_bytes', 'started_at']),
+      ...shown.map(c =>
+        csvLine([
+          c.id,
+          c.dst,
+          c.domain,
+          c.src,
+          c.network,
+          c.state,
+          c.outbound,
+          chainNames(c.chain, names).join(' > '),
+          c.rule_expression,
+          c.upload_bytes,
+          c.download_bytes,
+          c.started_at
+        ])
+      )
+    ].join('\n') + '\n'
+  );
+}
+
+// The contract's bulk close selects every live connection of a network and source; anything narrower (an
+// outbound, rule or text filter, or a truncated list) closes the listed ids one by one. The ids travel with the
+// bulk query so a 413 from the advertised limit can fall back to them without widening the confirmed scope.
+export type CloseSelection = {ids: string[]; query?: NonNullable<BulkCloseQuery>};
 export function closeSelection(
   shown: Connection[],
-  network: string,
-  out: string,
-  rule: string,
-  src: string | undefined,
-  needle: string,
-  truncated: boolean
-): {query: BulkCloseQuery} | {ids: string[]} {
-  return out === 'all' && rule === 'all' && (src || !needle) && !truncated
-    ? {query: {type: network as 'all' | 'tcp' | 'udp', src, all: true}}
-    : {ids: shown.map(c => c.id)};
+  scope: {network: string; src: string | undefined; narrowed: boolean; truncated: boolean; bulkLimit: number | null | undefined}
+): CloseSelection {
+  const ids = shown.map(c => c.id);
+  const overLimit = scope.bulkLimit != null && ids.length > scope.bulkLimit;
+  return scope.narrowed || scope.truncated || overLimit ? {ids} : {ids, query: {type: scope.network as 'all' | 'tcp' | 'udp', src: scope.src, all: true}};
 }

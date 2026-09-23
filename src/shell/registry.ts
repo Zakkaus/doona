@@ -1,7 +1,9 @@
-import type {Key} from '../i18n/messages';
-import {lazy, type ComponentType} from 'react';
+import type {Key} from '../i18n';
+import type {ComponentType} from 'react';
+import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';
-import type {PageProps} from '../features/types';
+import type {PageProps, RoutePath} from './routes';
+import {preloadSearch} from './search/load';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
@@ -11,50 +13,69 @@ import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
+// The default page stays eager so first paint has no second round trip.
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 
-// One loader per page: `lazy` renders through it, and the nav warms it up when the pointer reaches a link, so
-// the chunk is usually in hand before the click lands. The first page stays eager.
-const loaders = {
-  overview: () => import('../features/overview/Overview').then(m => ({default: m.Overview})),
-  connections: () => import('../features/connections/Connections').then(m => ({default: m.Connections})),
-  policies: () => import('../features/policies/Policies').then(m => ({default: m.Policies})),
-  nodes: () => import('../features/nodes/Nodes').then(m => ({default: m.Nodes})),
-  rules: () => import('../features/rules/Rules').then(m => ({default: m.Rules})),
-  config: () => import('../features/config/Config').then(m => ({default: m.Config})),
-  dns: () => import('../features/dns/Dns').then(m => ({default: m.Dns})),
-  logs: () => import('../features/logs/Logs').then(m => ({default: m.Logs})),
-  events: () => import('../features/events/Events').then(m => ({default: m.Events})),
-  settings: () => import('../features/settings/Settings').then(m => ({default: m.Settings}))
+// Rendering and preloading share page loaders.
+const pages = {
+  overview: preloadable<PageProps>(() => import('../features/overview/Overview').then(m => ({default: m.Overview}))),
+  connections: preloadable<PageProps>(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
+  policies: preloadable<PageProps>(() => import('../features/policies/Policies').then(m => ({default: m.Policies}))),
+  nodes: preloadable<PageProps>(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes}))),
+  rules: preloadable<PageProps>(() => import('../features/rules/Rules').then(m => ({default: m.Rules}))),
+  config: preloadable<PageProps>(() => import('../features/config/Config').then(m => ({default: m.Config}))),
+  dns: preloadable<PageProps>(() => import('../features/dns/Dns').then(m => ({default: m.Dns}))),
+  logs: preloadable<PageProps>(() => import('../features/logs/Logs').then(m => ({default: m.Logs}))),
+  events: preloadable<PageProps>(() => import('../features/events/Events').then(m => ({default: m.Events}))),
+  settings: preloadable<PageProps>(() => import('../features/settings/Settings').then(m => ({default: m.Settings})))
 };
-const Overview = lazy(loaders.overview);
-const Connections = lazy(loaders.connections);
-const Policies = lazy(loaders.policies);
-const NodesPage = lazy(loaders.nodes);
-const Rules = lazy(loaders.rules);
-const Config = lazy(loaders.config);
-const Dns = lazy(loaders.dns);
-const Logs = lazy(loaders.logs);
-const Events = lazy(loaders.events);
-const Settings = lazy(loaders.settings);
-// Loading a chunk twice costs nothing; a failed warm-up is not an error, the click loads it again.
+const Overview = pages.overview.Component;
+const Connections = pages.connections.Component;
+const Policies = pages.policies.Component;
+const NodesPage = pages.nodes.Component;
+const Rules = pages.rules.Component;
+const Config = pages.config.Component;
+const Dns = pages.dns.Component;
+const Logs = pages.logs.Component;
+const Events = pages.events.Component;
+const Settings = pages.settings.Component;
+// A failed warm-up is not an error; the click loads it again.
 export function warmPage(id: string) {
-  void loaders[id as keyof typeof loaders]?.().catch(() => undefined);
+  void pages[id as keyof typeof pages]?.preload().catch(() => undefined);
+}
+// Preload the search dialog, then the other pages, one per idle slice (the callback may still run on its timeout while
+// the page is busy); the config page carries the editor and loads on intent (hover, focus, click) only.
+export function warmAllPages() {
+  const queue = [
+    preloadSearch,
+    ...Object.keys(pages)
+      .filter(id => id !== 'config')
+      .map(id => () => warmPage(id))
+  ];
+  const next = () => {
+    const warm = queue.shift();
+    if (!warm) return;
+    warm();
+    if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
+    else setTimeout(next, 250);
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
+  else setTimeout(next, 1000);
 }
 
 type Feature = {
   id: string;
-  path: string;
-  // The question shown beneath a page title to distinguish similar pages.
+  path: RoutePath;
+  // hintKey: the question under a page title that tells similar pages apart.
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;
-  requires: {resources?: Array<keyof Capabilities['resources']>};
+  requires: {resources?: ReadonlyArray<keyof Capabilities['resources']>};
 };
 
-export const features: Feature[] = [
+const definitions = [
   // The default page stays eager so first paint has no second round trip.
   {id: 'activity', path: 'activity', shortcut: 'a', nav: {group: 'grp.status', titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
   {
@@ -128,29 +149,12 @@ export const features: Feature[] = [
     requires: {resources: ['logs']}
   },
   {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
-];
+] as const satisfies ReadonlyArray<Feature>;
+
+export const features: ReadonlyArray<Feature> = definitions;
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
   const requires = features.find(feature => feature.path === path)?.requires;
   const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);
 }
-
-// Tabs and cards the search can jump to directly; each is gated by its page's requirements.
-export const subpages: Array<{path: string; query: string; titleKey: Key}> = [
-  {path: 'rules', query: 'tab=map', titleKey: 'rule.map'},
-  {path: 'rules', query: 'tab=list', titleKey: 'rule.listTitle'},
-  {path: 'rules', query: 'tab=flows', titleKey: 'rule.flows'},
-  {path: 'rules', query: 'tab=trace', titleKey: 'rule.trace'},
-  {path: 'dns', query: 'tab=query', titleKey: 'dns.query'},
-  {path: 'dns', query: 'tab=log', titleKey: 'dns.log'},
-  {path: 'dns', query: 'tab=cache', titleKey: 'ui.cache'},
-  {path: 'config', query: 'tab=setup', titleKey: 'config.wizard'},
-  {path: 'config', query: 'tab=source', titleKey: 'config.tabSource'},
-  {path: 'config', query: 'tab=validate', titleKey: 'config.tabValidate'},
-  {path: 'settings', query: 'card=backend', titleKey: 'settings.backend'},
-  {path: 'settings', query: 'card=runtime', titleKey: 'settings.runtime'},
-  {path: 'settings', query: 'card=actions', titleKey: 'settings.actions'},
-  {path: 'settings', query: 'card=appearance', titleKey: 'settings.appearance'},
-  {path: 'settings', query: 'card=about', titleKey: 'settings.about'}
-];

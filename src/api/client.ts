@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
 import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
-import {ApiError, responseError} from './error';
+import {ApiError, clientError, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -12,7 +12,7 @@ import {normalizeCapabilities} from './capabilities';
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
-  if (result.data === undefined) throw new ApiError(result.response.status, 'empty_response', 'Response has no JSON body');
+  if (result.data === undefined) throw clientError(result.response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson');
   return result.data;
 }
 
@@ -20,12 +20,32 @@ function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; respons
   return {...data(result), retryAfter: retryAfter(result.response)};
 }
 
+// Control requests and DNS queries retry explicit transient refusals this many times.
+const MAX_REFUSALS = 3;
+
 /** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string): Api {
   const baseUrl = base.replace(/\/+$/, '');
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
-  const client = createClient<paths>({baseUrl, headers, cache: 'no-store'});
+  const client = createClient<paths>({
+    baseUrl,
+    headers,
+    cache: 'no-store',
+    fetch: async request => {
+      const retryable = request.method !== 'GET' || new URL(request.url).pathname.endsWith('/dns/query');
+      if (!retryable) return send(request);
+      // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
+      for (let refused = 0; ; refused++) {
+        const response = await send(request.clone());
+        if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
+        const error = await responseError(response.clone());
+        if (!error.transient) return response;
+        await response.body?.cancel();
+        await wait(error.retryAfter!, request.signal);
+      }
+    }
+  });
   client.use({
     onResponse: async ({response}) => {
       if (!response.ok) throw await responseError(response);
@@ -38,28 +58,45 @@ export function createApi(base: string, token?: string): Api {
   const resolveHref = (href: string) => {
     const root = new URL(baseUrl + '/', globalThis.location?.href);
     const url = new URL(href.replace(/^\/+/, ''), root);
-    if (url.origin !== root.origin) throw new ApiError(0, 'invalid_location', 'Operation URL has a different origin');
+    if (url.origin !== root.origin) throw clientError(0, 'invalid_location', 'Operation URL has a different origin', 'ui.errOtherOrigin');
     return url;
   };
   async function pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState> {
     let delay = accepted.retryAfter;
+    let dropped = 0;
     const url = resolveHref(accepted.href);
     while (true) {
       await wait(delay, signal);
-      const response = await fetch(url, {headers, cache: 'no-store', signal});
-      if (!response.ok) throw await responseError(response);
+      let response: Response;
+      try {
+        response = await send(url, {headers, cache: 'no-store', signal});
+        dropped = 0;
+      } catch (error) {
+        // A dropped connection says nothing about the accepted operation; ask again a few times before giving up.
+        if (signal?.aborted || ++dropped > 3) throw error;
+        delay = Math.min(delay * 2, 30);
+        continue;
+      }
+      if (!response.ok) {
+        const error = await responseError(response);
+        // Rate limited or briefly unavailable: the accepted operation is still running, so keep polling.
+        if (!error.transient) throw error;
+        delay = error.retryAfter!;
+        continue;
+      }
       const operation: OperationState = await response.json();
       if (operation.status === 'succeeded' || operation.status === 'failed') return operation;
       delay = retryAfter(response);
     }
   }
-  // Both SSE feeds resume with Last-Event-ID and honor Retry-After; cursor expiry restarts at the head, definitive 4xx stops, and transient failures back off to 30 seconds.
+  // Both SSE feeds resume with Last-Event-ID and honour Retry-After; cursor expiry restarts at the head, a definitive
+  // 4xx stops, and transient failures back off to 30 seconds.
   async function subscribeStream(
     url: URL,
     lastEventId: string | undefined,
     signal: AbortSignal | undefined,
     onConnectionChange: ((ready: boolean) => void) | undefined,
-    onFrame: (event: string, data: string, cursor: string) => void
+    onFrame: (event: string, data: unknown, cursor: string) => void
   ): Promise<void> {
     let cursor = lastEventId;
     let backoff = 1;
@@ -80,7 +117,7 @@ export function createApi(base: string, token?: string): Api {
             pause = retryAfter(response);
             throw error;
           }
-          if (!response.body) throw new ApiError(response.status, 'empty_stream', 'Response has no event stream');
+          if (!response.body) throw clientError(response.status, 'empty_stream', 'Response has no event stream', 'ui.errNoStream');
           await readSse(
             response.body,
             frame => {
@@ -89,7 +126,15 @@ export function createApi(base: string, token?: string): Api {
                 backoff = 1;
                 onConnectionChange?.(true);
               }
-              if (frame.data) onFrame(frame.event, frame.data, cursor ?? '');
+              if (frame.data) {
+                let value: unknown;
+                try {
+                  value = JSON.parse(frame.data);
+                } catch {
+                  return;
+                }
+                onFrame(frame.event, value, cursor ?? '');
+              }
             },
             signal
           );
@@ -114,7 +159,7 @@ export function createApi(base: string, token?: string): Api {
     const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
     if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
     return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
-      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data: JSON.parse(data)} as ApiEvent);
+      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
     });
   }
   function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
@@ -122,7 +167,7 @@ export function createApi(base: string, token?: string): Api {
     if (level) url.searchParams.set('level', level);
     if (target) url.searchParams.set('target', target);
     return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
-      if (event === 'log') onRecord({id: cursor, ...(JSON.parse(data) as LogRecord)});
+      if (event === 'log') onRecord({id: cursor, ...(data as LogRecord)});
     });
   }
   return {

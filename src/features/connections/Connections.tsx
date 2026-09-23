@@ -1,42 +1,44 @@
-import {Menu, MenuSection, Header} from 'react-aria-components';
-import {Badge, Button, DetailPanel, Kv, LabeledSelect, Light, MenuButton, MenuChoice, Segmented, TextField, ErrorMessage, TextTooltip} from '../../ui/ui';
+import {Menu} from 'react-aria-components';
+import {
+  Badge,
+  Button,
+  ConfirmButton,
+  DetailPanel,
+  Kv,
+  LabeledSelect,
+  Light,
+  ChoiceMenu,
+  MenuButton,
+  MenuChoice,
+  RuleRef,
+  Segmented,
+  TextField,
+  ErrorMessage,
+  Tabs,
+  TextTooltip
+} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
-import {CloseAllButton} from './CloseAll';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
-import {useConnections} from './useConnections';
+import {useConnectionsPage} from './useConnectionsPage';
 import type {ConnectionView} from './view';
 
 export function Connections(props: PageProps) {
   const t = useT();
-  const vm = useConnections(props);
+  const vm = useConnectionsPage(props);
   const cur = vm.detail;
-  return (
-    <div className="rp-page">
+  const list = (
+    <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
-        <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} width={260} />
+        <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} width={240} />
         <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
         <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
-        <MenuButton
-          quiet
-          label={t('conn.pick')}
-          content={
-            <Menu aria-label={t('conn.pick')} onAction={vm.pick}>
-              {vm.picks.map(section => (
-                <MenuSection key={section.title} id={section.title} selectionMode="single" selectedKeys={[section.value]}>
-                  <Header className="rp-sec-h">{section.title}</Header>
-                  {section.items.map(item => (
-                    <MenuChoice key={item.id} item={item} />
-                  ))}
-                </MenuSection>
-              ))}
-            </Menu>
-          }
-        >
+        <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick}>
           {t('conn.pick')}
-        </MenuButton>
+        </ChoiceMenu>
         <LabeledSelect
           label={t('conn.group')}
           side
@@ -78,7 +80,7 @@ export function Connections(props: PageProps) {
           </TextTooltip>
         )}
         <span className="rp-grow" />
-        {vm.canClose && <CloseAllButton {...vm.closeAll} />}
+        {vm.canClose && <ConfirmButton label={t('conn.closeAll')} {...vm.closeAll} />}
         <Button isDisabled={!vm.canExport} onPress={vm.export}>
           <Download />
           {t('conn.export')}
@@ -101,8 +103,18 @@ export function Connections(props: PageProps) {
                 {cur.status}
               </Light>
               <Kv items={cur.fields} />
+              <Kv
+                items={[
+                  [t('ui.outbound'), cur.outbound],
+                  [t('conn.chain'), cur.chain]
+                ]}
+              />
+              <div className="rp-list">
+                <span className="rp-label">{t('conn.rule')}</span>
+                <RuleRef {...cur.rule} />
+              </div>
               <div className="rp-cluster">
-                <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>
+                {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
                 {cur.source && (
                   <Button quiet onPress={vm.onlyClient}>
                     {t('conn.onlyThisClient')}
@@ -122,6 +134,24 @@ export function Connections(props: PageProps) {
         </DetailPanel>
       </div>
       {vm.notInSnapshot && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
+    </>
+  );
+  return (
+    <div className="rp-page">
+      <Tabs
+        keepMounted
+        label={t('nav.connections')}
+        value={vm.tab}
+        onChange={vm.setTab}
+        items={[
+          {
+            id: 'traffic',
+            label: t('conn.tab.traffic'),
+            content: <Traffic records={vm.rows} outbounds={vm.outboundKeys} truncated={vm.truncated} onSelect={vm.openInList} />
+          },
+          {id: 'list', label: t('conn.tab.list'), content: list}
+        ]}
+      />
     </div>
   );
 }

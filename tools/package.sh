@@ -29,11 +29,14 @@ mkdir "$stage/program" "$stage/font-package"
 for entry in dist/* dist/.[!.]* dist/..?*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
     [ "$entry" != dist/fonts ] || continue
+    # The Vite build manifest only serves the size check.
+    [ "$entry" != dist/.vite ] || continue
     cp -R "$entry" "$stage/program/"
 done
 cp LICENSE NOTICE CHANGELOG.md README.md "$stage/program/"
+mkdir "$stage/program/LICENSES"
+cp LICENSES/Apache-2.0.txt "$stage/program/LICENSES/"
 cp -R dist/fonts "$stage/font-package/"
-cp public/fonts/OFL.txt public/fonts/README "$stage/font-package/fonts/"
 
 archive() {
     # Keep tar separate from gzip so POSIX sh detects failures in either command.

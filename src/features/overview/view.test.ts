@@ -2,19 +2,20 @@ import {expect, it, vi} from 'vitest';
 import {capabilities, datapath, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, lifecycleActions, memoryFields, overviewExport, overviewView} from './view';
+import {formatBytes} from '../../i18n/format';
 const t: Translator = (key, params) => translate('en', key, params);
 const loading = {capabilities: false, runtime: false, version: false, memory: false, datapath: false};
 
 it('keeps unknown datapath vocabulary and does not invent unknown map occupancy', () => {
   expect(datapathValue('future_backend', t)).toBe('future_backend');
   const value = {...datapath, ebpf: {...datapath.ebpf!, maps: {state: 'ready' as const, conn_state: {occupancy: 0, capacity: 100, occupancy_known: false}}}};
-  expect(datapathFields(value, 'unknown', t).find(([label]) => label === t('ov.f.connState'))?.[1]).toBe('unknown');
+  expect(datapathFields(value, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe('unknown');
 });
 
 it('marks shared memory as shared and omits selected fields without losing zero counters', () => {
-  const fields = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope: 'shared'}}, t, ['ov.f.cgroupPercent']);
+  const fields = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope: 'shared'}}, t, 'en-US', ['ov.f.cgroupLimit']);
   expect(fields.find(([label]) => label === t('ov.f.cgroupScope'))?.[1]).toBe(t('ov.v.cgroupShared'));
-  expect(fields.find(([label]) => label === t('ov.f.cgroupPercent'))).toBeUndefined();
+  expect(fields.find(([label]) => label === t('ov.f.cgroupLimit'))).toBeUndefined();
   expect(fields.find(([label]) => label === t('ov.f.oomKill'))?.[1]).toBe('0');
 });
 
@@ -27,6 +28,21 @@ it('distinguishes loading and unavailable sections and deduplicates datapath err
   expect(absent.engine.state).toBe('unavailable');
   expect(absent.memory.state).toBe('loading');
   expect(absent.canExport).toBe(false);
+});
+
+it('shows the version without the runtime and formats counts for the locale', () => {
+  const engine = overviewView({version}, loading, 'en-US', t).engine;
+  expect(engine.state).toBe('ready');
+  expect(engine.fields).toContainEqual([t('ov.f.instance'), '—']);
+  const events = {...runtimeMemory.cgroup!.events!, oom: '12345'};
+  const fields = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, events}}, t, 'en-US');
+  expect(fields).toContainEqual([t('ov.f.oom'), '12,345']);
+  const maps = {state: 'ready' as const, conn_state: {occupancy: 1234, capacity: 65536, occupancy_known: true}};
+  expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', t, 'en-US')).toContainEqual([t('ov.f.connState'), '1,234 / 65,536']);
+  // A fraction follows the locale: a full-width slash in Chinese.
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', zh, 'zh-TW')).toContainEqual([zh('ov.f.connState'), '1,234／65,536']);
+  expect(overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.bar?.value).toMatch(/^\S+ \S+／\S+ \S+$/);
 });
 
 it('retains a pending operation even when lifecycle state stops offering it', () => {
@@ -46,4 +62,25 @@ it('exports raw diagnostic snapshots rather than formatted fields', () => {
     runtime,
     memory: runtimeMemory
   });
+});
+
+it('retains each known cgroup measurement when the other is unknown', () => {
+  const current = overviewView(
+    {memory: {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: '83886080', limit_bytes: null}}},
+    loading,
+    'en-US',
+    t
+  ).memory;
+  expect(current.bar).toBeNull();
+  expect(current.fields).toContainEqual([t('ov.f.cgroupCurrent'), formatBytes('83886080', 'en')]);
+  expect(current.fields).toContainEqual([t('ov.f.cgroupLimit'), '—']);
+  const limit = overviewView(
+    {memory: {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: null, limit_bytes: '83886080'}}},
+    loading,
+    'en-US',
+    t
+  ).memory;
+  expect(limit.bar).toBeNull();
+  expect(limit.fields).toContainEqual([t('ov.f.cgroupCurrent'), '—']);
+  expect(limit.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('83886080', 'en')]);
 });

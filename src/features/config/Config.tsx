@@ -1,11 +1,12 @@
 import {useT} from '../../i18n';
-import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
+import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Link, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
 import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
+import {useModules, type ModulesProps} from './useModules';
 export function Config(props: PageProps) {
   const t = useT();
   const {
@@ -15,20 +16,53 @@ export function Config(props: PageProps) {
     ready,
     metadata,
     redacted,
+    tabs,
     tab,
     setTab,
     selectedId,
-    revision,
     select,
     sourceProps,
     wizardProps,
     validateProps,
+    modulesProps,
     sourceModel,
     sourceOptions,
     exportSource,
     summaryTone,
     summaryText
   } = useConfigPage(props);
+  const content = {
+    modules: modulesProps && <Modules {...modulesProps} />,
+    setup: wizardProps && <Wizard {...wizardProps} />,
+    source: (
+      <>
+        <div className="rp-toolbar">
+          <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
+          {sourceModel && (
+            <>
+              <Badge>{sourceModel.kind}</Badge>
+              <Light small tone={sourceModel.tone}>
+                {sourceModel.editable}
+              </Light>
+              <span className="rp-label">{sourceModel.facts}</span>
+            </>
+          )}
+          {sourceModel?.hasContent && (
+            <>
+              <span className="rp-grow" />
+              <Button onPress={exportSource}>
+                <Download />
+                {t('config.export')}
+              </Button>
+            </>
+          )}
+        </div>
+        {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
+        {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
+      </>
+    ),
+    validate: validateProps && <ValidateTab {...validateProps} />
+  };
   return (
     <div className="rp-page">
       <ErrorMessage error={error} onRetry={reload} />
@@ -46,66 +80,95 @@ export function Config(props: PageProps) {
           )}
         </div>
       )}
-      {ready && (
-        <Tabs
-          key={revision}
-          label={t('nav.config')}
-          value={tab}
-          onChange={setTab}
-          items={[
-            ...(wizardProps
-              ? [
-                  {
-                    id: 'setup',
-                    label: t('config.wizard'),
-                    content: <Wizard {...wizardProps} />
-                  }
-                ]
-              : []),
-            {
-              id: 'source',
-              label: t('config.tabSource'),
-              content: (
-                <>
-                  <div className="rp-toolbar">
-                    <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
-                    {sourceModel && (
-                      <>
-                        <Badge>{sourceModel.kind}</Badge>
-                        <Light small tone={sourceModel.tone}>
-                          {sourceModel.editable}
-                        </Light>
-                        <span className="rp-label">{sourceModel.facts}</span>
-                      </>
-                    )}
-                    {sourceModel?.hasContent && (
-                      <>
-                        <span className="rp-grow" />
-                        <Button onPress={exportSource}>
-                          <Download />
-                          {t('config.export')}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
-                </>
-              )
-            },
-            {
-              id: 'validate',
-              label: t('config.tabValidate'),
-              content: validateProps && <ValidateTab {...validateProps} />
-            }
-          ]}
-        />
-      )}
+      {ready && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
+    </div>
+  );
+}
+
+function Modules(props: ModulesProps) {
+  const t = useT();
+  const vm = useModules(props);
+  return (
+    <div className="rp-page">
+      {vm.cards.map(card => (
+        <section key={card.id} className="rp-card" aria-label={card.kind}>
+          <div className="rp-row">
+            <span className="rp-cluster">
+              <h3 className="rp-h3 rp-code">{card.kind}</h3>
+              <span className="rp-label rp-code">{card.range}</span>
+              {card.editing && vm.dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
+            </span>
+            <span className="rp-cluster">
+              {card.href && (
+                <Link appearance="button" href={card.href}>
+                  {t('config.moduleOpen')}
+                </Link>
+              )}
+              {card.canEdit && !card.editing && (
+                <Button isDisabled={card.editDisabled} onPress={card.edit}>
+                  {t('config.edit')}
+                </Button>
+              )}
+              {card.manual && !card.editing && (
+                <Button quiet tip={t('config.moduleManualTip')} onPress={card.manual}>
+                  {t('config.moduleManual')}
+                </Button>
+              )}
+            </span>
+          </div>
+          <Light small tone={card.muted ? 'muted' : 'info'}>
+            {card.summary}
+          </Light>
+          {card.note && (
+            <Light small tone="muted">
+              {card.note}
+            </Light>
+          )}
+          {card.editing && (
+            <>
+              <CodeEditor
+                label={card.range}
+                value={vm.text}
+                onChange={vm.change}
+                readOnly={vm.busy}
+                marks={vm.marks}
+                outbounds={vm.outbounds}
+                onSave={vm.dirty && !vm.busy ? () => void vm.save() : undefined}
+              />
+              {vm.diagnostics.length > 0 && (
+                <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
+                  {vm.diagnostics.map(item => (
+                    <div key={item.id} role="listitem">
+                      <Light small tone={item.tone}>
+                        {item.detail}
+                      </Light>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="rp-cluster">
+                {vm.canValidate && (
+                  <Button isPending={vm.validating} isDisabled={vm.busy} onPress={() => void vm.validate()}>
+                    {t('config.validate')}
+                  </Button>
+                )}
+                <Button accent isPending={vm.saving} isDisabled={vm.busy || !vm.dirty} onPress={() => void vm.save()}>
+                  {t('config.save')}
+                </Button>
+                <Button isDisabled={vm.busy} onPress={vm.cancel}>
+                  {t('ui.cancel')}
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
 
 function SourceCard(props: SourceCardProps) {
-  const {canValidate, canWrite, contentOffered, focusLine} = props;
+  const {canValidate, canWrite, contentOffered} = props;
   const t = useT();
   const {
     editing,
@@ -113,7 +176,7 @@ function SourceCard(props: SourceCardProps) {
     marks,
     text,
     outbounds,
-    jump,
+    focus,
     dirty,
     validate,
     save,
@@ -124,7 +187,9 @@ function SourceCard(props: SourceCardProps) {
     busy,
     validating,
     saving,
+    saveTip,
     validateDisabled,
+    validateTip,
     editDisabled,
     editTip
   } = useSourceCard(props);
@@ -142,7 +207,7 @@ function SourceCard(props: SourceCardProps) {
         </span>
         <span className="rp-cluster">
           {canValidate && (
-            <Button isPending={validating} isDisabled={validateDisabled} onPress={() => void validate()}>
+            <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
               {t('config.validate')}
             </Button>
           )}
@@ -156,13 +221,7 @@ function SourceCard(props: SourceCardProps) {
               <Button isDisabled={busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
-              <Button
-                accent
-                isPending={saving}
-                isDisabled={busy || !dirty}
-                tip={t(navigator.platform.startsWith('Mac') ? 'config.saveShortcutMac' : 'config.saveShortcut')}
-                onPress={() => void save()}
-              >
+              <Button accent isPending={saving} isDisabled={busy || !dirty} tip={saveTip} onPress={() => void save()}>
                 {t('config.save')}
               </Button>
             </>
@@ -170,19 +229,21 @@ function SourceCard(props: SourceCardProps) {
         </span>
       </div>
       {shown.length > 0 && (
-        <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
+        <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
             <div className="rp-cluster" role="listitem" key={index}>
               <Light small tone={item.tone}>
-                {item.inline}
+                {item.detail}
               </Light>
+              <Button small quiet label={t('config.openSourceAt', {where: item.where})} onPress={() => props.open(item.sourceId, item.line)}>
+                {t('config.openSource')}
+              </Button>
             </div>
           ))}
         </div>
       )}
       {!view.hasContent ? (
-        // With content on, a withheld source is the one holding the API credential.
-        <Empty>{t(contentOffered ? 'config.contentCredential' : 'config.contentHidden')}</Empty>
+        <Empty>{t(contentOffered ? 'config.contentWithheld' : 'config.contentHidden')}</Empty>
       ) : (
         <CodeEditor
           label={view.label}
@@ -190,7 +251,7 @@ function SourceCard(props: SourceCardProps) {
           readOnly={!editing || busy}
           onChange={editing ? change : undefined}
           marks={marks}
-          focusLine={jump ?? focusLine}
+          focusLine={focus}
           outbounds={outbounds}
           onSave={editing && dirty && !busy ? () => void save() : undefined}
         />
@@ -214,7 +275,7 @@ function ValidateTab(props: ValidateTabProps) {
         <span className="rp-grow" />
         {canValidate && (
           <Button isPending={validating} isDisabled={blocked} tip={tip} onPress={validate}>
-            <Refresh />
+            <Refresh className="rp-spin-on-press" />
             {t('config.revalidate')}
           </Button>
         )}
@@ -252,11 +313,13 @@ function ValidateTab(props: ValidateTabProps) {
         ]}
       />
       {cur && (
-        <div className="rp-cluster">
+        <div className="rp-cluster rp-config-diagnostics">
           <Light small tone={cur.tone}>
             {cur.detail}
           </Light>
-          <Button onPress={() => open(cur.sourceId, cur.line)}>{t('config.openSource')}</Button>
+          <Button label={t('config.openSourceAt', {where: cur.where})} onPress={() => open(cur.sourceId, cur.line)}>
+            {t('config.openSource')}
+          </Button>
         </div>
       )}
     </>

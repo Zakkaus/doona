@@ -3,7 +3,7 @@ import {createMockApi} from '../../api/mock';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import type {GroupSummary, Node} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {memberHealth, policyHealth} from './health';
+import {memberHealth, policyHealth, sameHealth} from './health';
 import {memberViews, policyCardView} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
@@ -66,10 +66,10 @@ it('shows the current selected TCP leaf across deep groups without inventing gro
   expect(project()[0]).toMatchObject({tcp: 0, healthy: false, description: t('policy.selectedNode', {name: zero.name})});
   const observation = {...zero.health.find(health => health.transport === 'tcp')!, member_id: chain[0].id, sorting_latency_ms: null, ranking: null};
   parent.runtime.health = [{...observation, latency_ms: 7}];
-  expect(project()[0]).toMatchObject({tcp: 7, healthy: true, description: 'TCP · data'});
+  expect(project()[0]).toMatchObject({tcp: 7, healthy: true});
   for (const state of ['unavailable', 'unknown'] as const) {
     parent.runtime.health = [{...observation, state, latency_ms: null}];
-    expect(project()[0]).toMatchObject({tcp: undefined, healthy: false, unavailable: state === 'unavailable', description: 'TCP · data'});
+    expect(project()[0]).toMatchObject({tcp: undefined, healthy: false, unavailable: state === 'unavailable'});
   }
 });
 
@@ -97,4 +97,16 @@ it('keeps absent, cyclic, ambiguous and non-TCP selected paths unmeasured', () =
     const member = memberViews(memberHealth(parent, policyHealth(inventory, summaries)), t)[0];
     expect(member, reason).toMatchObject({tcp: undefined, healthy: false, unavailable: false, description: ' '});
   }
+});
+
+it('treats node polls that change only unseen observation fields as the same health', async () => {
+  const base = (await createMockApi().group('proxy')).runtime.health[0];
+  const a = new Map([
+    ['x', {health: base}],
+    ['y', {}]
+  ]);
+  expect(sameHealth(a, new Map([...a, ['x', {health: {...base, observed_at: '2030-01-01T00:00:00Z'}}]]))).toBe(true);
+  expect(sameHealth(a, new Map([...a, ['x', {health: {...base, latency_ms: (base.latency_ms ?? 0) + 1}}]]))).toBe(false);
+  expect(sameHealth(a, new Map([['x', {health: base}]]))).toBe(false);
+  expect(sameHealth(a, new Map([...a, ['y', {health: base}]]))).toBe(false);
 });

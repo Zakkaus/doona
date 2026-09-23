@@ -1,10 +1,24 @@
+import {useLayoutEffect, useMemo, useRef} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, DataTable, LabeledSelect, Light, ModalDialog, Segmented, Switch, ErrorMessage, TextField, TextTooltip} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  LabeledSelect,
+  Light,
+  ConfirmDialog,
+  Segmented,
+  Switch,
+  ErrorMessage,
+  TextField,
+  TextTooltip,
+  type TableColumn
+} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
-import type {ConditionKind} from '../config/groups';
-import {Coverage} from '../flows/Coverage';
-import type {PageProps} from '../types';
+import type {ConditionKind} from '../../dae/groups';
+import {Coverage} from './flows/Coverage';
+import type {PageProps} from '../../shell/routes';
 import {useRuleList, type RuleListModel as Model} from './useRuleList';
 
 export function RuleList(props: PageProps) {
@@ -14,6 +28,60 @@ export function RuleList(props: PageProps) {
 function Dictionary({view}: {view: Model}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
+  // The row actions are new functions each render; a ref keeps the columns, and so the rows, stable.
+  const latest = useRef(view);
+  useLayoutEffect(() => {
+    latest.current = view;
+  });
+  const {canWrite, busy} = view;
+  const columns = useMemo(
+    (): TableColumn<Model['table']['rows'][number]>[] => [
+      {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
+      {
+        id: 'expression',
+        label: t('rule.expression'),
+        minWidth: 160,
+        grow: 3,
+        isRowHeader: true,
+        render: row => <TextTooltip className="rp-code">{row.expression}</TextTooltip>
+      },
+      {
+        id: 'outbound',
+        label: t('ui.outbound'),
+        minWidth: 100,
+        grow: 0,
+        render: row => (
+          <span className="rp-chain">
+            {row.outbound}
+            {row.must && <Badge>must</Badge>}
+          </span>
+        )
+      },
+      {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: row => row.position},
+      {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1, render: row => row.hits},
+      {
+        id: 'actions',
+        label: t('ui.actions'),
+        minWidth: canWrite ? 96 : 56,
+        grow: 0,
+        render: row => (
+          <span className="rp-chain">
+            {row.sourceQuery && (
+              <Button small quiet icon label={t('rule.openSource')} onPress={() => latest.current.openSource(row.sourceQuery!)}>
+                <FileText />
+              </Button>
+            )}
+            {canWrite && row.removable && (
+              <Button small quiet icon isDisabled={busy} label={t('rule.remove')} onPress={() => latest.current.openRemove(row.id)}>
+                <Close />
+              </Button>
+            )}
+          </span>
+        )
+      }
+    ],
+    [t, canWrite, busy]
+  );
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
@@ -25,6 +93,7 @@ function Dictionary({view}: {view: Model}) {
           </Button>
         )}
       </div>
+      {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}
@@ -34,75 +103,19 @@ function Dictionary({view}: {view: Model}) {
         reveal
         onSelect={view.select}
         height={560}
-        empty={t('rule.distributionEmpty')}
-        cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
-          {
-            id: 'expression',
-            label: t('rule.expression'),
-            minWidth: 160,
-            grow: 3,
-            isRowHeader: true,
-            render: row => <TextTooltip className="rp-code">{row.expression}</TextTooltip>
-          },
-          {
-            id: 'outbound',
-            label: t('ui.outbound'),
-            minWidth: 100,
-            grow: 0,
-            render: row => (
-              <span className="rp-chain">
-                {row.outbound}
-                {row.must && <Badge>must</Badge>}
-              </span>
-            )
-          },
-          {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: row => row.position},
-          {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1, render: row => row.hits},
-          {
-            id: 'actions',
-            label: t('ui.actions'),
-            minWidth: view.canWrite ? 96 : 56,
-            grow: 0,
-            render: row => (
-              <span className="rp-chain">
-                {row.sourceQuery && (
-                  <Button small quiet icon label={t('rule.openSource')} onPress={() => view.openSource(row.sourceQuery!)}>
-                    <FileText />
-                  </Button>
-                )}
-                {view.canWrite && row.removable && (
-                  <Button small quiet icon isDisabled={view.busy} label={t('rule.remove')} onPress={() => view.openRemove(row.id)}>
-                    <Close />
-                  </Button>
-                )}
-              </span>
-            )
-          }
-        ]}
+        fit
+        empty={t('rule.dictionaryEmpty')}
+        cols={columns}
       />
-      <ModalDialog
+      <ConfirmDialog
         title={view.dialogTitle}
-        narrow
-        alert={dialog?.kind === 'remove'}
         isOpen={dialog !== null}
-        onOpenChange={open => {
-          if (!open) view.close();
-        }}
-        footer={close => (
-          <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button
-              negative={dialog?.kind === 'remove'}
-              accent={dialog?.kind !== 'remove'}
-              isDisabled={view.submitDisabled}
-              isPending={view.busy}
-              onPress={() => void view.submit(close)}
-            >
-              {view.submitLabel}
-            </Button>
-          </>
-        )}
+        onCancel={view.close}
+        tone={dialog?.kind === 'remove' ? 'negative' : 'accent'}
+        confirmLabel={view.submitLabel}
+        isDisabled={view.submitDisabled}
+        isPending={view.busy}
+        onConfirm={() => void view.submit(view.close)}
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
@@ -114,6 +127,7 @@ function Dictionary({view}: {view: Model}) {
           <div className="rp-list">
             <span className="rp-label">{t('rule.addHelp')}</span>
             <Segmented
+              isDisabled={view.busy}
               label={t('rule.conditionMode')}
               value={draft.mode}
               onChange={view.changeMode}
@@ -126,16 +140,19 @@ function Dictionary({view}: {view: Model}) {
               <>
                 <div className="rp-toolbar top">
                   <LabeledSelect
+                    isDisabled={view.busy}
                     label={t('rule.kind')}
                     value={pick.kind}
                     onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
                     items={draft.choices}
                   />
                   <TextField
+                    isDisabled={view.busy}
                     label={t('rule.values')}
                     value={pick.value}
                     placeholder={draft.hint}
                     description={t('rule.valuesHelp')}
+                    error={draft.pickError}
                     spellCheck={false}
                     onChange={value => setPick({...pick, value})}
                   />
@@ -144,6 +161,7 @@ function Dictionary({view}: {view: Model}) {
               </>
             ) : (
               <TextField
+                isDisabled={view.busy}
                 label={t('rule.condition')}
                 value={form.condition}
                 placeholder="domain(geosite:netflix)"
@@ -153,21 +171,50 @@ function Dictionary({view}: {view: Model}) {
               />
             )}
             <div className="rp-toolbar">
-              <LabeledSelect label={t('ui.outbound')} value={form.outbound} onChange={outbound => setForm({...form, outbound})} items={view.table.outbounds} />
-              <Switch isSelected={form.must} onChange={must => setForm({...form, must})}>
+              <LabeledSelect
+                isDisabled={view.busy}
+                label={t('ui.outbound')}
+                value={form.outbound}
+                onChange={outbound => setForm({...form, outbound})}
+                items={view.table.outbounds}
+              />
+              <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})}>
                 must
               </Switch>
             </div>
-            <LabeledSelect label={t('rule.position')} value={form.before} onChange={before => setForm({...form, before})} items={view.table.positions} />
+            <LabeledSelect
+              isDisabled={view.busy}
+              label={t('rule.position')}
+              value={form.before}
+              onChange={before => setForm({...form, before})}
+              items={view.table.positions}
+            />
           </div>
         )}
-      </ModalDialog>
+      </ConfirmDialog>
     </div>
   );
 }
 function Distribution({view}: {view: Model}) {
   const t = useT();
   const table = view.distribution;
+  const columns = useMemo(
+    (): TableColumn<Model['distribution']['rows'][number]>[] => [
+      {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId},
+      {
+        id: 'expression',
+        label: t('rule.expression'),
+        minWidth: 240,
+        grow: 3,
+        isRowHeader: true,
+        render: row => <TextTooltip className={row.expressionClass}>{row.expression}</TextTooltip>
+      },
+      {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
+      {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},
+      {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => row.share}
+    ],
+    [t]
+  );
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
@@ -184,27 +231,8 @@ function Distribution({view}: {view: Model}) {
           </Light>
         )}
       </div>
-      <ErrorMessage error={view.error} />
-      <DataTable
-        label={t('rule.listTitle')}
-        loading={view.loading}
-        rows={table.rows}
-        empty={t('rule.distributionEmpty')}
-        cols={[
-          {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId},
-          {
-            id: 'expression',
-            label: t('rule.expression'),
-            minWidth: 240,
-            grow: 3,
-            isRowHeader: true,
-            render: row => <TextTooltip className={row.expressionClass}>{row.expression}</TextTooltip>
-          },
-          {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
-          {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},
-          {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => row.share}
-        ]}
-      />
+      <ErrorMessage error={view.error} onRetry={view.retry} />
+      <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={t('rule.distributionEmpty')} cols={columns} />
     </div>
   );
 }

@@ -30,3 +30,15 @@ export function memberHealth(group: Group | undefined, fallback: ReadonlyMap<str
     return {...member, ...(health ? {health} : member.kind === 'group' ? {selectedNode: fallback.get(member.id)?.selectedNode} : {})};
   });
 }
+
+type HealthMap = ReadonlyMap<string, MemberHealth>;
+const shown = (h: HealthObservation | undefined) => h && [h.state, h.latency_ms, h.transport, h.purpose].join('\u0000');
+// A node poll that changes nothing a tile shows keeps the previous map, so every card's projection stays memoised.
+export function sameHealth(a: HealthMap, b: HealthMap) {
+  if (a.size !== b.size) return false;
+  for (const [id, member] of b) {
+    const previous = a.get(id);
+    if (!a.has(id) || shown(previous?.health) !== shown(member.health) || previous?.selectedNode?.name !== member.selectedNode?.name || previous?.selectedNode?.latency !== member.selectedNode?.latency) return false;
+  }
+  return true;
+}

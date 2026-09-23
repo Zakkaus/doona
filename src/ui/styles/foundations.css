@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   transition:
-    opacity 200ms ease-out,
-    transform 200ms ease-out;
+    opacity var(--rp-duration-panel) var(--rp-ease-out),
+    transform var(--rp-duration-panel) var(--rp-ease-out);
 }
 .rp-icon-stack > .sun {
   opacity: 0;
@@ -35,11 +35,29 @@
   opacity: 0;
   transform: rotate(-90deg) scale(0.5);
 }
+/* An icon that stands for a chosen value (language, palette) turns in the same way when the value changes. */
+.rp-icon-in {
+  animation: rp-icon-in var(--rp-duration-panel) var(--rp-ease-out);
+}
+@keyframes rp-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+}
 
 .rp-empty {
   padding: 24px;
   text-align: center;
   color: var(--rp-subtle);
+}
+/* A loading notice holds its box at once and shows after 150ms, fading in rather than popping; an empty result
+   appears at once, since live filtering can reach and leave it on every keystroke. Reduced motion zeroes the fade. */
+.rp-empty[role='status'][data-wait] {
+  visibility: hidden;
+}
+.rp-empty[role='status']:not([data-wait]) {
+  animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
 html,
 body {
@@ -58,12 +76,13 @@ body {
 body {
   font:
     14px/20px 'Noto Sans TC',
-    'Noto Sans SC',
     system-ui,
     sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-/* Simplified Chinese prefers the SC glyph forms; the TC face still fills in anything SC lacks. */
+/* Simplified Chinese prefers the SC glyph forms; anything SC lacks falls to the TC faces declared so far, then the
+   system font. The other languages leave SC out, so after zh-CN they render as they do after a reload, when the SC
+   faces are not declared. */
 :lang(zh-CN) body,
 body:lang(zh-CN) {
   font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;

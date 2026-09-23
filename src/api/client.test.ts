@@ -12,6 +12,69 @@ afterEach(() => {
 });
 
 describe('native transport', () => {
+  it('retries a refused mutation with the same body and idempotency key after the floor', async () => {
+    vi.useFakeTimers();
+    const attempts: Array<{body: string; key: string | null}> = [];
+    const request = vi.fn(async (input: Request) => {
+      attempts.push({body: await input.text(), key: input.headers.get('Idempotency-Key')});
+      return attempts.length === 1 ? json({}, 503, {'Retry-After': '3'}) : json(acceptedBody, 202);
+    });
+    vi.stubGlobal('fetch', request);
+    const result = createApi('https://honk.test').replaceConfigSource('main', 'routing {}', '"digest"');
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(result).resolves.toMatchObject({operation_id: 'op-1'});
+    expect(attempts[0].key).toBeTruthy();
+    expect(attempts[1]).toEqual(attempts[0]);
+  });
+  it('waits out a DNS query refusal and cancels a refused control request', async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json({}, 429, {'Retry-After': '2'}))
+      .mockResolvedValueOnce(json({domain: 'example.org', results: []}));
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    const query = api.dnsQuery('example.org', ['A']);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(query).resolves.toMatchObject({domain: 'example.org'});
+    request.mockResolvedValue(json({}, 503, {'Retry-After': '3'}));
+    const controller = new AbortController();
+    const result = api.startReload(controller.signal);
+    const failure = expect(result).rejects.toMatchObject({name: 'AbortError'});
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    await failure;
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+  it('does not replay an ambiguously failed mutation', async () => {
+    const request = vi.fn().mockRejectedValue(new TypeError('network down'));
+    vi.stubGlobal('fetch', request);
+    await expect(createApi('https://honk.test').startReload()).rejects.toThrow('network down');
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it('reports a request that got no response as a network failure with a translated text', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    await expect(createApi('https://honk.test').dnsCache()).rejects.toMatchObject({status: 0, code: 'network_error', text: {key: 'ui.errNetwork'}});
+  });
+  it.each(['events', 'logs'] as const)('skips malformed id-less %s frames without reconnecting', async kind => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const event = kind === 'events' ? 'runtime.updated' : 'log';
+    const request = vi.fn(async () => new Response(`event: ${event}\ndata: invalid\n\nid: good\nevent: ${event}\ndata: {"message":"valid"}\n\n`));
+    vi.stubGlobal('fetch', request);
+    const received = vi.fn(() => controller.abort());
+    const api = createApi('https://honk.test');
+    await (kind === 'events'
+      ? api.subscribeEvents({signal: controller.signal, onEvent: received})
+      : api.subscribeLogs({signal: controller.signal, onRecord: received}));
+    expect(received).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
   it('sends authenticated uncached requests and exposes structured failures', async () => {
     const request = vi.fn(async (input: Request) => {
       expect(input.url).toBe('https://honk.test/api/v1/runtime');

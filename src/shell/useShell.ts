@@ -1,9 +1,10 @@
 import {createContext, useCallback, useContext, useMemo, useRef, useState} from 'react';
-import {refetchAll, useCapabilities, useVersion} from '../api/store';
-import type {Settings} from '../features/settings/settings';
+import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
+import type {Settings} from './preferences';
 import {useT} from '../i18n';
-import {errorText, toast} from '../ui/ui';
-import {duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
+import {toast} from '../ui/ui';
+import {accessError, duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
+import {errorText} from '../api/error';
 
 export const AboutContext = createContext<AboutView | null>(null);
 export type ShellModel = ShellView & {spinning: boolean; refresh: () => Promise<void>; wordmark: string; honk: () => void};
@@ -11,12 +12,14 @@ export function useShell(settings: Settings, route: string): ShellModel {
   const t = useT();
   const capabilities = useCapabilities();
   const version = useVersion();
+  const refusal = useCredentialRefusal();
+  const capabilityError = accessError(capabilities.error, refusal);
   const [spinning, setSpinning] = useState(false);
   const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
   const view = useMemo(
-    () => shellView(settings, route, capabilities.data, capabilities.error, version.data, version.error, t),
-    [settings, route, capabilities.data, capabilities.error, version.data, version.error, t]
+    () => shellView(settings, route, capabilities.data, capabilityError, version.data, version.error, t),
+    [settings, route, capabilities.data, capabilityError, version.data, version.error, t]
   );
   const refresh = useCallback(async () => {
     if (refreshLock.current) return;
@@ -24,8 +27,9 @@ export function useShell(settings: Settings, route: string): ShellModel {
     setSpinning(true);
     try {
       const outcomes = await refetchAll();
-      const failure = outcomes.find(outcome => !outcome.ok);
-      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure.error)}) : t('ui.refreshed'));
+      // A resource unsubscribed by navigating away mid-refresh did not fail.
+      const failure = outcomes.flatMap(outcome => (outcome.ok || outcome.error.name === 'AbortError' ? [] : [outcome.error]))[0];
+      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure, t)}) : t('ui.refreshed'));
     } finally {
       refreshLock.current = false;
       setSpinning(false);

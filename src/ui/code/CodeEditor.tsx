@@ -1,7 +1,7 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useLayoutEffect, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
-import type {Key} from '../../i18n/messages';
-import {EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
+import type {Key} from '../../i18n';
+import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Transaction} from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -15,7 +15,7 @@ import {
   highlightSpecialChars
 } from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap, indentWithTab, toggleComment} from '@codemirror/commands';
-import {bracketMatching, syntaxHighlighting, HighlightStyle, foldGutter, foldKeymap, indentUnit, indentOnInput, indentService} from '@codemirror/language';
+import {bracketMatching, syntaxHighlighting, HighlightStyle, indentUnit, indentOnInput, indentService} from '@codemirror/language';
 import {setDiagnostics} from '@codemirror/lint';
 import {highlightSelectionMatches, searchKeymap, gotoLine} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
@@ -24,8 +24,9 @@ import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {toDiagnostics} from './diagnostics';
 
-// CodeMirror's search and go-to-line panels ship English phrases; these are their keys in the catalogue.
+// CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
+  ['Completions', 'cm.completions'],
   ['Find', 'cm.find'],
   ['Replace', 'cm.replace'],
   ['next', 'cm.next'],
@@ -43,12 +44,8 @@ const cmPhrases: Array<[string, Key]> = [
   ['replaced $ matches', 'cm.replacedMatches'],
   ['replaced match on line $', 'cm.replacedOnLine'],
   ['on line', 'cm.onLine'],
-  ['Fold line', 'cm.foldLine'],
-  ['Unfold line', 'cm.unfoldLine'],
-  ['Folded lines', 'cm.foldedLines'],
-  ['Unfolded lines', 'cm.unfoldedLines'],
-  ['to', 'cm.to'],
-  ['Selection deleted', 'cm.selectionDeleted']
+  ['Selection deleted', 'cm.selectionDeleted'],
+  ['Control character', 'cm.controlCharacter']
 ];
 const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(cmPhrases.map(([phrase, key]) => [phrase, t(key)])));
 
@@ -66,8 +63,6 @@ const theme = EditorView.theme({
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
   '.cm-gutters': {backgroundColor: 'transparent', color: 'var(--rp-muted)', border: 'none'},
-  '.cm-foldGutter .cm-gutterElement': {color: 'var(--rp-muted)', padding: '0 2px'},
-  '.cm-foldPlaceholder': {backgroundColor: 'var(--rp-hl-med)', border: 'none', color: 'var(--rp-subtle)', borderRadius: '4px', padding: '0 6px'},
   '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
   '.cm-activeLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
@@ -75,7 +70,7 @@ const theme = EditorView.theme({
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
   '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-pine) 20%, transparent)', outline: 'none'},
   '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 25%, transparent)'},
-  // Diagnostics are underlines in the text and the list above the editor; no gutter icons. The hover tooltip is the kit's.
+  // Diagnostics show as underlines and the list above the editor, not gutter icons; the hover tooltip is the kit's.
   '.cm-tooltip.cm-tooltip-lint': {backgroundColor: 'var(--rp-text)', color: 'var(--rp-on-text)', border: 'none', borderRadius: '6px', padding: '2px 0'},
   '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', fontFamily: 'inherit'},
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
@@ -123,8 +118,7 @@ const daeIndent = indentService.of((context, pos) => {
   return Math.max(0, base + (opens ? 2 : 0) - (closes ? 2 : 0));
 });
 
-// The whole line of a diagnostic is tinted by its level, so a problem is visible from across the file; the
-// underline then says where on the line.
+// Tint diagnostic lines as well as underlining their exact spans.
 const setLineMarks = StateEffect.define<EditorMark[]>();
 const lineDecoration = {
   error: Decoration.line({class: 'cm-diag-line cm-diag-line-error'}),
@@ -156,8 +150,11 @@ const lineMarks = StateField.define<DecorationSet>({
   provide: field => EditorView.decorations.from(field)
 });
 
-// Read-only editors remain searchable and keyboard-scrollable; focusLine moves both viewport and cursor. Keep the default marks array stable to avoid redundant CodeMirror updates.
+// A stable default, so an editor without marks does not reconfigure CodeMirror every render.
 const noMarks: EditorMark[] = [];
+// Marks a document replacement that came from the `value` prop rather than from typing.
+const external = Annotation.define<boolean>();
+
 export function CodeEditor({
   value,
   onChange,
@@ -196,14 +193,14 @@ export function CodeEditor({
   const t = useT();
   const language = useRef(new Compartment());
   const naming = useRef(new Compartment());
-  useEffect(() => {
+  // Before paint, so the first frame already shows the editor rather than an empty host.
+  useLayoutEffect(() => {
     const instance = new EditorView({
       parent: host.current!,
       state: EditorState.create({
         doc: value,
         extensions: [
           lineNumbers(),
-          foldGutter(),
           highlightActiveLineGutter(),
           highlightSpecialChars(),
           history(),
@@ -233,7 +230,6 @@ export function CodeEditor({
             {key: 'Mod-g', run: gotoLine},
             ...closeBracketsKeymap,
             ...completionKeymap,
-            ...foldKeymap,
             ...defaultKeymap,
             ...historyKeymap,
             ...searchKeymap,
@@ -241,11 +237,11 @@ export function CodeEditor({
           ]),
           editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
           language.current.of(phrasesFor(t)),
-          // A viewer's text is not editable, so it stops being focusable; keep it in the tab order so a long
-          // or wide source can still be scrolled from the keyboard.
+          // Read-only sources remain focusable for keyboard scrolling and search.
           naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
           EditorView.updateListener.of(update => {
-            if (update.docChanged) change.current?.(update.state.doc.toString());
+            // A new `value` from the parent is not an edit: it is not echoed back.
+            if (update.docChanged && !update.transactions.some(tr => tr.annotation(external))) change.current?.(update.state.doc.toString());
           })
         ]
       })
@@ -271,7 +267,11 @@ export function CodeEditor({
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;
-    instance.dispatch({changes: {from: 0, to: instance.state.doc.length, insert: value}});
+    // Kept out of the undo history: Ctrl-Z must not bring back the text the source had before a refetch.
+    instance.dispatch({
+      changes: {from: 0, to: instance.state.doc.length, insert: value},
+      annotations: [external.of(true), Transaction.addToHistory.of(false)]
+    });
   }, [value]);
   useEffect(() => {
     const instance = view.current;

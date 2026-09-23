@@ -1,24 +1,31 @@
-import {Menu, MenuSection, Header} from 'react-aria-components';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, ErrorMessage, LabeledSelect, Light, MenuButton, MenuChoice, pickMenuKey, ModalDialog, TextField} from '../../ui/ui';
-import type {PaletteId, Scheme, Wordmark} from './settings';
+import {Button, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, TextField} from '../../ui/ui';
+import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
+import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {About} from '../../shell/About';
-import type {PageProps} from '../types';
+import type {PageProps} from '../../shell/routes';
+import {settingsCard} from './view';
+
+const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
 export function Settings({query}: PageProps) {
   const t = useT();
+  const session = useSignOut();
   const {
     activeId,
     hasActive,
     firstRun,
     error,
+    retry,
     api,
     changeApi,
     token,
     changeToken,
+    demo,
+    passwordMode,
     paired,
     invalidText,
     pending,
@@ -29,6 +36,10 @@ export function Settings({query}: PageProps) {
     setName,
     confirmProfile,
     save,
+    switchProfile,
+    confirmSwitch,
+    switchPending,
+    cancelSwitch,
     testConnection,
     lang,
     pickLang,
@@ -45,20 +56,28 @@ export function Settings({query}: PageProps) {
     renameProfile,
     dialogTitle,
     dialogBlocked,
+    dialogDiscards,
     deleteHelp
   } = useSettingsPage(query);
 
   return (
-    <div className="rp-col">
-      {firstRun && <div className="rp-label">{t('settings.firstRun')}</div>}
-      {paired && <div className="rp-label">{t('settings.paired')}</div>}
-      <section className="rp-card" aria-labelledby="settings-backend">
-        <h2 className="rp-h3" id="settings-backend">
-          {t('settings.backend')}
+    <div className="rp-page">
+      {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
+      {paired && <p className="rp-note">{t('settings.paired')}</p>}
+      <section className="rp-card" aria-labelledby={cards.backend.headingId}>
+        <h2 className="rp-h3" id={cards.backend.headingId}>
+          {t(cards.backend.titleKey)}
         </h2>
-        <ErrorMessage error={error} />
+        <ErrorMessage error={error} onRetry={retry} />
         <div className="rp-toolbar">
-          <LabeledSelect label={t('settings.profile')} side value={activeId} isDisabled={!hasActive} items={profile.choices} onChange={save} />
+          <LabeledSelect
+            label={t('settings.profile')}
+            side
+            value={activeId}
+            isDisabled={!hasActive || saving}
+            items={profile.choices}
+            onChange={switchProfile}
+          />
           <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
           <Button isDisabled={!hasActive} onPress={renameProfile}>
             {t('settings.renameProfile')}
@@ -66,6 +85,11 @@ export function Settings({query}: PageProps) {
           <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
             {t('settings.deleteProfile')}
           </Button>
+          {session && (
+            <Button isPending={session.busy} onPress={() => void session.signOut()}>
+              {t('settings.signOut')}
+            </Button>
+          )}
         </div>
         <form
           className="rp-form"
@@ -85,16 +109,20 @@ export function Settings({query}: PageProps) {
             value={api}
             onChange={changeApi}
           />
-          <TextField
-            label={t('settings.token')}
-            autoComplete="off"
-            spellCheck={false}
-            action={<Button onPress={toggleToken}>{tokenToggleText}</Button>}
-            name="token"
-            type={tokenType}
-            value={token}
-            onChange={changeToken}
-          />
+          {demo ? null : passwordMode ? (
+            <p className="rp-label">{t('settings.passwordMode')}</p>
+          ) : (
+            <TextField
+              label={t('settings.token')}
+              autoComplete="off"
+              spellCheck={false}
+              reveal={{shown: tokenType === 'text', label: tokenToggleText, onToggle: toggleToken}}
+              name="token"
+              type={tokenType}
+              value={token}
+              onChange={changeToken}
+            />
+          )}
           <div className="rp-toolbar">
             <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
               {t('settings.test')}
@@ -115,37 +143,20 @@ export function Settings({query}: PageProps) {
       </section>
       <RuntimeSettingsCard />
       <BackendActionsCard />
-      <section className="rp-card" aria-labelledby="settings-appearance">
-        <h2 className="rp-h3" id="settings-appearance">
-          {t('settings.appearance')}
+      <section className="rp-card" aria-labelledby={cards.appearance.headingId}>
+        <h2 className="rp-h3" id={cards.appearance.headingId}>
+          {t(cards.appearance.titleKey)}
         </h2>
         <div className="rp-toolbar">
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           <div className="rp-field">
             <span className="lbl">{t('palette')}</span>
-            <MenuButton
+            <ChoiceMenu
               label={t('palette')}
-              content={
-                <Menu aria-label={t('palette')}>
-                  {paletteSections.map(section => (
-                    <MenuSection
-                      key={section.title}
-                      id={section.title}
-                      selectionMode="single"
-                      selectedKeys={[ap.palette]}
-                      onSelectionChange={pickMenuKey(value => ap.pickPalette(value as PaletteId))}
-                    >
-                      <Header className="rp-sec-h">{section.title}</Header>
-                      {section.items.map(item => (
-                        <MenuChoice key={item.id} item={item} />
-                      ))}
-                    </MenuSection>
-                  ))}
-                </Menu>
-              }
+              sections={paletteSections.map(section => ({...section, value: ap.palette, onChange: (value: string) => ap.pickPalette(value as PaletteId)}))}
             >
               {palette}
-            </MenuButton>
+            </ChoiceMenu>
           </div>
           <LabeledSelect
             label={t('settings.scheme')}
@@ -168,9 +179,9 @@ export function Settings({query}: PageProps) {
           />
         </div>
       </section>
-      <section className="rp-card" aria-labelledby="settings-about">
-        <h2 className="rp-h3" id="settings-about">
-          {t('settings.about')}
+      <section className="rp-card" aria-labelledby={cards.about.headingId}>
+        <h2 className="rp-h3" id={cards.about.headingId}>
+          {t(cards.about.titleKey)}
         </h2>
         {versionWarning && (
           <Light small tone="warn">
@@ -182,27 +193,31 @@ export function Settings({query}: PageProps) {
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
         </div>
       </section>
+      <ConfirmDialog
+        title={t('config.discardTitle')}
+        isOpen={switchPending}
+        onCancel={cancelSwitch}
+        confirmLabel={t('config.discard')}
+        isPending={saving}
+        onConfirm={confirmSwitch}
+      >
+        <p className="rp-label">{t('settings.switchProfileHelp')}</p>
+      </ConfirmDialog>
       {dialog && (
-        <ModalDialog
+        <ConfirmDialog
           title={dialogTitle}
           isOpen
-          narrow
-          alert={dialog === 'delete'}
-          onOpenChange={open => {
-            if (!open) setDialog(null);
-          }}
-          footer={() => (
-            <>
-              <Button onPress={() => setDialog(null)}>{t('ui.cancel')}</Button>
-              <Button accent={dialog !== 'delete'} negative={dialog === 'delete'} isDisabled={dialogBlocked} onPress={confirmProfile}>
-                {t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
-              </Button>
-            </>
-          )}
+          onCancel={() => setDialog(null)}
+          tone={dialog === 'delete' ? 'negative' : 'accent'}
+          confirmLabel={t(dialog === 'delete' ? 'settings.deleteProfile' : 'settings.save')}
+          isDisabled={dialogBlocked}
+          isPending={saving}
+          error={profile.result?.error ? {id: profile.result.id, text: profile.result.text} : null}
+          onConfirm={confirmProfile}
         >
-          {dialog === 'delete' ? <p>{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
-          {profile.result?.error && <p role="alert">{profile.result.text}</p>}
-        </ModalDialog>
+          {dialog === 'delete' ? <p className="rp-label">{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
+          {dialogDiscards && <p className="rp-label">{t('settings.profileDiscardHelp')}</p>}
+        </ConfirmDialog>
       )}
     </div>
   );

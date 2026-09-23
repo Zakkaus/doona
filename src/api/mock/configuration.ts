@@ -1,9 +1,9 @@
 import type {Api} from '../api';
-import type {Capabilities, ConfigSource, RuleList, Runtime, RuntimeSettingsPatch} from '../model';
+import type {Capabilities, ConfigSource, RuleList, Runtime} from '../model';
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
-import {diagnose, sectionLines, stored, validate} from './config';
+import {diagnose, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
 import type {MockLifecycle} from './lifecycle';
 
 type ConfigurationApi = Pick<
@@ -15,17 +15,43 @@ export function createConfiguration(
   capabilities: Capabilities,
   runtime: Pick<Runtime, 'generation' | 'lifecycle'>,
   {enqueue, log, publish, eventData, trimLogs}: Effects,
-  groupNames: () => Set<string>
+  groupNames: () => Set<string>,
+  activateInventory: (text: string, revision: string) => void
 ) {
   const settings = structuredClone(fixtures.runtimeSettings);
-  // Accepted configuration sources; hashes are filled in on first read and refreshed on replacement.
   let sources: (ConfigSource & {content: string})[] | null = null;
-  const loadSources = async () => (sources ??= await Promise.all(fixtures.configSources.map(stored)));
+  let disk: (ConfigSource & {content: string})[] = [];
+  let loading: Promise<(ConfigSource & {content: string})[]> | undefined;
+  const loadSources = () =>
+    (loading ??= Promise.all(fixtures.configSources.map(stored)).then(list => {
+      sources = list;
+      disk = [...list];
+      return list;
+    }));
   let configRevision = 40;
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
+  function sourceSet(replacement?: {id: string; content: string}) {
+    const candidate: Array<{id: string; path: string; content: string}> = [];
+    const include = (item: (typeof disk)[number]) => {
+      if (candidate.some(source => source.id === item.id)) return;
+      const content = item.id === replacement?.id ? replacement.content : item.content;
+      candidate.push({id: item.id, path: item.path, content});
+      for (const {path} of includePaths(content)) {
+        const dependency = disk.find(source => resolveIncludePath(undefined, source.path) === resolveIncludePath(item.path, path));
+        if (dependency) include(dependency);
+      }
+    };
+    const main = disk.find(source => source.kind === 'main');
+    if (main) include(main);
+    return candidate;
+  }
   // Advancing a generation increments the revision, restores configured runtime settings, and notifies listeners.
   function advance(): string {
+    const nextRevision = String(configRevision + 1);
+    const candidate = sourceSet();
+    if (candidate.length) activateInventory(candidate.map(source => source.content).join('\n'), nextRevision);
+    if (sources) sources = [...disk];
     configRevision += 1;
     Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
     log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
@@ -36,23 +62,35 @@ export function createConfiguration(
   }
   // Mirror management writes into the main source so the configuration page shows the API result.
   async function editMain(edit: (text: string) => string) {
-    const main = (await loadSources()).find(item => item.id === 'src-main');
-    if (!main) return;
-    Object.assign(main, await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()}));
+    await loadSources();
+    const main = found(
+      disk.find(item => item.kind === 'main'),
+      'Main source'
+    );
+    const next = await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()});
+    return () => {
+      if (disk.find(item => item.id === main.id) !== main) throw new ApiError(412, 'stale_revision', 'The main source changed before activation');
+      disk = disk.map(item => (item.id === main.id ? next : item));
+      return advance();
+    };
   }
   // Preserve fixture IDs for unchanged rules; new rules use their source location.
   const ruleSnapshot = async (): Promise<RuleList> => {
-    const list = await loadSources();
-    const byPath = new Map(list.map(item => [item.path.split('/').pop()!, item]));
+    await loadSources();
+    const list = sources!;
+    const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
     const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
     const entries: RuleList['rules'] = [];
     let fallback: RuleList['fallback'] | null = null;
+    const visited = new Set<string>();
     const read = (file: (typeof list)[number], bare: boolean) => {
+      if (visited.has(file.id)) return;
+      visited.add(file.id);
       sectionLines(file.content, 'routing', bare).forEach(({code, line}) => {
         const include = /^include\s+(\S+)$/.exec(code);
         if (include) {
-          const target = byPath.get(include[1]);
-          if (target) read(target, true);
+          const dependency = byPath.get(resolveIncludePath(file.path, include[1]));
+          if (dependency) read(dependency, true);
           return;
         }
         const fb = /^fallback:\s*(\S+)$/.exec(code);
@@ -77,6 +115,10 @@ export function createConfiguration(
           kind: 'rule'
         });
       });
+      for (const {path} of includePaths(file.content)) {
+        const dependency = byPath.get(resolveIncludePath(file.path, path));
+        if (dependency) read(dependency, true);
+      }
     };
     const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
@@ -92,7 +134,8 @@ export function createConfiguration(
     config: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
-      const list = await loadSources();
+      await loadSources();
+      const list = sources!;
       const generation = String(configRevision);
       const known = groupNames();
       return {
@@ -111,12 +154,14 @@ export function createConfiguration(
       if (!capabilities.resources.config_validate.available) throw new ApiError(404, 'capability_not_supported', 'Validation is unavailable');
       if (!capabilities.resources.config_validate.modes?.includes(request.mode))
         throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
-      return validate(request, String(configRevision), groupNames());
+      if (request.mode === 'full') await loadSources();
+      return validate(request, String(configRevision), disk.filter(ruleFile));
     },
     // The editing contract in order: If-Match present and current, full validation clean, then the write and a reload.
     replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
       signal?.throwIfAborted();
-      const list = await loadSources();
+      await loadSources();
+      const list = disk;
       const source = found(
         list.find(item => item.id === sourceId),
         'Configuration source'
@@ -125,12 +170,10 @@ export function createConfiguration(
       if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
-      // The same full validation the validate endpoint runs, over every rule file with the candidate in place.
-      const candidate = list.filter(ruleFile).map(item => ({id: item.id, path: item.path, content: item.id === sourceId ? content : item.content}));
-      const check = validate({sources: candidate, mode: 'full'}, String(configRevision), groupNames());
+      const check = validate({sources: sourceSet({id: sourceId, content}), mode: 'full'}, String(configRevision));
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
-      Object.assign(source, next);
+      disk = disk.map(item => (item.id === sourceId ? next : item));
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
         const generation = advance();
@@ -155,9 +198,22 @@ export function createConfiguration(
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
-      const fields = Object.entries(patch).flatMap(([section, values]) =>
-        Object.entries(values ?? {}).map(([field, value]) => [`${section}.${field}`, value] as const)
-      );
+      // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
+      const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
+      const modes = Object.entries(recorders).flatMap(([field, store]) => {
+        const value = patch[field as keyof typeof recorders];
+        return value === undefined ? [] : [[field, store, value] as const];
+      });
+      for (const [field, store, value] of modes) {
+        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (value !== 'auto' && typeof value !== 'boolean') throw invalid(`${field} must be true, false or auto`);
+        if (value === true && !settings.recording?.[store].allowed) throw invalid(`${field} is forbidden by the configuration`);
+      }
+      const fields = Object.entries(patch)
+        .filter(([section]) => !(section in recorders))
+        .flatMap(([section, values]) =>
+          Object.entries((values ?? {}) as Record<string, unknown>).map(([field, value]) => [`${section}.${field}`, value] as const)
+        );
       for (const [field, value] of fields) {
         if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
         if (field === 'log.level') {
@@ -168,10 +224,16 @@ export function createConfiguration(
         const floor = field === 'flows.retention_seconds' ? 1 : 64;
         if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
       }
-      const apply = <S extends keyof RuntimeSettingsPatch>(section: S) => Object.assign(settings[section], patch[section] ?? {});
+      const apply = (section: 'log' | 'dns_log' | 'flows') => Object.assign(settings[section], patch[section] ?? {});
       apply('log');
       apply('dns_log');
       apply('flows');
+      for (const [, store, value] of modes) {
+        const state = settings.recording![store];
+        state.mode = value === 'auto' ? 'auto' : value ? 'on' : 'off';
+        state.active = state.allowed && state.mode !== 'off';
+      }
+      if (settings.recording) settings.recording.events.active = true;
       // A smaller ring drops its oldest records at once, not when the next one arrives.
       trimLogs();
       settings.source = 'runtime';
@@ -181,6 +243,7 @@ export function createConfiguration(
     },
     startReload: async signal => {
       signal?.throwIfAborted();
+      await loadSources();
       return enqueue('reload', () => {
         const generation = advance();
         return {active_generation_id: generation, datapath_generation_id: generation};

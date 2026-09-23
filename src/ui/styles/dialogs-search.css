@@ -70,7 +70,7 @@
   width: 20px;
   height: 20px;
 }
-.rp-input .clear {
+.rp-input :is(.clear, .reveal) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -82,11 +82,28 @@
   color: var(--rp-subtle);
   cursor: pointer;
 }
-.rp-input .clear[data-hovered] {
+.rp-input :is(.clear, .reveal)[data-hovered] {
   background: var(--rp-hl-med);
 }
+.rp-input .clear {
+  transition:
+    opacity var(--rp-duration) var(--rp-ease),
+    scale var(--rp-duration) var(--rp-ease-out),
+    background-color var(--rp-duration) var(--rp-ease);
+}
+/* A secret field's show or hide toggle sits at the field's end. */
+.rp-input .reveal {
+  flex: none;
+  margin-inline-end: -10px;
+}
+.rp-input .reveal[data-focus-visible] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}
 .rp-input[data-empty] .clear {
-  display: none;
+  opacity: 0;
+  scale: 0.6;
+  pointer-events: none;
 }
 .rp-input input {
   flex: 1;
@@ -104,9 +121,7 @@
   overflow: auto;
   padding-inline-end: 12px;
 }
-.rp-section-h {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--rp-subtle);
+.rp-results .rp-sec-h {
+  /* Search results have no check column to align with. */
   padding: 8px 12px 4px;
 }

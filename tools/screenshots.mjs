@@ -1,13 +1,10 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a two-column palette sheet from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync, rmSync} from 'node:fs';
+import {mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync('/scratch/ssd/pw-browsers')) {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = '/scratch/ssd/pw-browsers';
-}
 const require = createRequire(import.meta.url);
 let browserModule;
 try {
@@ -17,12 +14,12 @@ try {
   browserModule = require.resolve('@playwright/test');
 }
 const {chromium} = require(browserModule);
-const [baseURL = 'http://127.0.0.1:4184', dir = 'docs/screenshots'] = process.argv.slice(2);
+const [baseURL = 'http://127.0.0.1:4177', dir = 'docs/screenshots'] = process.argv.slice(2);
 const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules?tab=list']
+  ['rules', 'light', '#/rules?tab=map']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -46,19 +43,10 @@ const looks = [
   ['Glass · light', 'glass/glass', 'light'],
   ['Glass · dark', 'glass/glass', 'dark']
 ];
-let webp = true;
-try {
-  execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
-} catch (error) {
-  if (error.code !== 'ENOENT') throw error;
-  webp = false;
-  console.warn('cwebp is unavailable; keeping PNG screenshots.');
-}
+execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
 async function screenshot(page, path, options = {}) {
-  await page.screenshot({path: path + '.png', ...options});
-  if (!webp) return;
-  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', path + '.png', '-o', path + '.webp']);
-  rmSync(path + '.png');
+  const png = await page.screenshot(options);
+  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', '-o', path + '.webp', '--', '-'], {input: png});
 }
 const browser = await chromium.launch();
 try {
@@ -73,6 +61,7 @@ try {
     });
     await context.addInitScript(
       ([palette, scheme]) => {
+        localStorage.setItem('doona-api', 'mock');
         localStorage.setItem('doona-lang', 'en');
         localStorage.setItem('doona-scheme', scheme);
         localStorage.setItem('doona-palette', palette);
@@ -81,7 +70,9 @@ try {
     );
     const page = await context.newPage();
     await page.goto(`${baseURL}/#/activity`);
-    await page.waitForTimeout(1500);
+    await page.locator('.rp-donut .recharts-sector').first().waitFor();
+    await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
+    await page.evaluate(() => document.fonts.ready);
     tiles.push(await page.screenshot());
     await context.close();
   }
@@ -103,6 +94,7 @@ try {
       const context = await browser.newContext({viewport: {width: 1440, height: 920}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});
       await context.addInitScript(
         ([lang, scheme]) => {
+          localStorage.setItem('doona-api', 'mock');
           localStorage.setItem('doona-lang', lang);
           localStorage.setItem('doona-scheme', scheme);
           localStorage.setItem('doona-palette', 'rose-pine/moon');
@@ -111,7 +103,12 @@ try {
       );
       const page = await context.newPage();
       await page.goto(`${baseURL}/${route}`);
-      await page.waitForTimeout(1500);
+      await page
+        .locator(name === 'policies' ? '.rp-nodes' : name === 'rules' ? '.rp-tree-tile' : '.rp-donut .recharts-sector')
+        .first()
+        .waitFor();
+      await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
+      await page.evaluate(() => document.fonts.ready);
       await screenshot(page, join(dir, lang, `${name}-${scheme}`));
       await context.close();
     }

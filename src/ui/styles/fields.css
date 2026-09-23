@@ -17,7 +17,7 @@
   border-radius: var(--rp-r-md);
   background: var(--rp-hl-high);
   position: relative;
-  transition: background 150ms;
+  transition: background var(--rp-duration) var(--rp-ease);
   flex-shrink: 0;
 }
 .rp-switch .track::after {
@@ -29,10 +29,9 @@
   height: 12px;
   border-radius: 50%;
   background: var(--rp-surface);
-  transition: transform 150ms;
 }
 .rp-switch[data-selected] .track {
-  background: var(--rp-pine);
+  background: var(--rp-accent);
 }
 .rp-switch[data-selected] .track::after {
   transform: translateX(16px);
@@ -50,6 +49,28 @@
 /* A control beside stacked fields in a top-aligned toolbar sits level with their inputs, under the label row. */
 .rp-toolbar.top > .rp-field-row {
   margin-top: 20px;
+}
+/* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge.
+   The icon and weight carry it where a palette's negative text is the body colour. */
+.rp-field-error {
+  display: flex;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--rp-negative-text);
+}
+.rp-field-error > .rp-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+}
+:is(.rp-field, .rp-cluster)[data-invalid] .rp-input {
+  border-color: var(--rp-negative);
+}
+:is(.rp-field, .rp-cluster)[data-invalid] .rp-input:focus-within {
+  box-shadow: 0 0 0 1px var(--rp-negative);
 }
 .rp-field > label,
 .rp-field .lbl {
@@ -77,4 +98,22 @@
 .rp-selectbtn[data-disabled] {
   opacity: 0.4;
   cursor: default;
+}
+/* On a phone a row of settings fields sits in two even columns instead of wrapping to ragged widths. */
+@media (max-width: 599.98px) {
+  .rp-toolbar.rp-fieldgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .rp-fieldgrid > * {
+    width: auto !important;
+    min-width: 0;
+  }
+  .rp-fieldgrid :is(.rp-input, .rp-selectbtn) {
+    width: 100%;
+  }
+  .rp-fieldgrid > .rp-label {
+    grid-column: 1 / -1;
+  }
 }

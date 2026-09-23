@@ -1,17 +1,20 @@
+import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {useRoutingTrace, type TraceResolve} from './useRoutingTrace';
-import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField} from '../../ui/ui';
+import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
+import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
 import {RuleList} from './RuleList';
-import {FlowRecords, RoutingMap} from '../flows/Flows';
-import type {PageProps} from '../types';
+import {FlowRecords, RoutingMap} from './flows/Flows';
+import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
+import type {EvaluationView} from './view';
 
 export function Rules(props: PageProps) {
   const t = useT();
   const view = useRulesPage(props);
-  const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace />};
+  const traceForm = useTraceForm();
+  const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace form={traceForm} />};
   if (view.loading) return <Loading />;
-  if (view.error) return <ErrorMessage error={view.error} />;
+  if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
       <Tabs label={t('nav.rules')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
@@ -19,10 +22,40 @@ export function Rules(props: PageProps) {
   );
 }
 
-function Trace() {
+function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
   const t = useT();
-  const trace = useRoutingTrace();
+  const trace = useRoutingTrace(state);
   const {form, setForm} = trace;
+  // Stable columns: an inline array would re-render every rule row of every result card on each keystroke.
+  const columns = useMemo(
+    (): TableColumn<EvaluationView['rows'][number]>[] => [
+      {
+        id: 'expression',
+        label: t('rule.expression'),
+        minWidth: 240,
+        grow: 2,
+        isRowHeader: true,
+        render: row => (
+          <TextTooltip className="rp-code" text={row.id}>
+            {row.expression}
+          </TextTooltip>
+        )
+      },
+      {
+        id: 'result',
+        label: t('rule.outcome'),
+        minWidth: 120,
+        grow: 0,
+        render: row => (
+          <Light small tone={row.tone}>
+            {row.outcome}
+          </Light>
+        )
+      },
+      {id: 'missing', label: t('rule.missing'), minWidth: 144, render: row => row.missing}
+    ],
+    [t]
+  );
   return (
     <>
       <form
@@ -42,28 +75,39 @@ function Trace() {
               {id: 'udp', label: t('ui.udp')}
             ]}
           />
-          <TextField label={t('ui.domain')} value={form.domain} onChange={domain => setForm({...form, domain})} error={trace.errors.domain} />
+          <TextField
+            label={t('ui.domain')}
+            value={form.domain}
+            placeholder="example.com"
+            onChange={domain => setForm({...form, domain})}
+            error={trace.errors.domain}
+          />
           <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
-          <TextField label={t('rule.dstPort')} value={form.dst_port} onChange={dst_port => setForm({...form, dst_port})} error={trace.errors.dst_port} />
+          <TextField
+            label={t('rule.dstPort')}
+            value={form.dst_port}
+            placeholder="443"
+            onChange={dst_port => setForm({...form, dst_port})}
+            error={trace.errors.dst_port}
+          />
           <LabeledSelect
             label={t('rule.resolve')}
             value={trace.resolve}
             onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
             items={trace.modes}
           />
-          <Button accent className="rp-btn rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
+          <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
             {t('rule.run')}
           </Button>
         </div>
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
           <div className="rp-toolbar">
-            <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} />
+            <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
             <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
           </div>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
-        {!trace.available && <span className="rp-label">{t('rule.unavailable')}</span>}
       </form>
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
@@ -89,37 +133,7 @@ function Trace() {
                 )}
               </div>
               {evaluation.hint && <p className="rp-label">{evaluation.hint}</p>}
-              <DataTable
-                label={evaluation.label}
-                height={360}
-                rows={evaluation.rows}
-                cols={[
-                  {
-                    id: 'expression',
-                    label: t('rule.expression'),
-                    minWidth: 240,
-                    grow: 2,
-                    isRowHeader: true,
-                    render: row => (
-                      <TextTooltip className="rp-code" text={row.id}>
-                        {row.expression}
-                      </TextTooltip>
-                    )
-                  },
-                  {
-                    id: 'result',
-                    label: t('rule.outcome'),
-                    minWidth: 120,
-                    grow: 0,
-                    render: row => (
-                      <Light small tone={row.tone}>
-                        {row.outcome}
-                      </Light>
-                    )
-                  },
-                  {id: 'missing', label: t('rule.missing'), minWidth: 144, render: row => row.missing}
-                ]}
-              />
+              <DataTable label={evaluation.label} height={360} rows={evaluation.rows} cols={columns} />
             </section>
           ))}
           {trace.result.dns.map(dns => (

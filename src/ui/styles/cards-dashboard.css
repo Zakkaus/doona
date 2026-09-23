@@ -1,9 +1,45 @@
-/* Holds a chart's height while its first samples arrive, so the card does not jump. */
+/* Holds a chart's or a card body's height while its first data arrives, so the card does not jump. */
 .rp-chart-wait {
   min-height: 182px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.rp-chart-wait.tall {
+  min-height: 264px;
+}
+.rp-chart-wait.bars {
+  min-height: 136px;
+}
+/* The runtime settings form: a row of described fields, the recorders and the apply row. */
+.rp-chart-wait.form {
+  min-height: 204px;
+}
+/* The four backend action groups. */
+.rp-chart-wait.ops {
+  min-height: 164px;
+}
+/* A card body held by invisible placeholders (Overview's BodyWait), with the loading notice centred over them. */
+.rp-body-wait {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-body-wait > :not(.rp-empty) {
+  visibility: hidden;
+}
+.rp-body-wait > .rp-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+/* An error from the mode card spans the row rather than taking one of its three slots. */
+.rp-quick > .rp-alert {
+  grid-column: 1 / -1;
 }
 .rp-card-link {
   color: inherit;
@@ -11,17 +47,17 @@
   cursor: pointer;
   outline: none;
   transition:
-    border-color 150ms var(--rp-ease),
-    background 150ms var(--rp-ease);
+    border-color var(--rp-duration) var(--rp-ease),
+    background var(--rp-duration) var(--rp-ease);
 }
 .rp-card-link[data-hovered] {
-  border-color: var(--rp-pine);
+  border-color: var(--rp-accent);
 }
 .rp-card-link[data-pressed] {
   background: var(--rp-overlay);
 }
 .rp-card-link[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-card {
@@ -36,7 +72,21 @@
   overflow: hidden;
 }
 .rp-login {
-  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.rp-login-brand img {
+  width: 56px;
+  height: 56px;
 }
 .rp-row {
   display: flex;
@@ -58,6 +108,17 @@
   flex-wrap: wrap;
   min-width: 0;
 }
+/* A header that must keep its height: the title gives way (truncating) instead of the row wrapping. */
+.rp-row.nowrap,
+.rp-cluster.nowrap {
+  flex-wrap: nowrap;
+}
+.rp-row.nowrap > .rp-cluster {
+  flex: 1 1 auto;
+}
+.rp-row.nowrap .rp-h3 {
+  min-width: 0;
+}
 .rp-label {
   font-size: 12px;
   line-height: 16px;
@@ -67,6 +128,19 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+/* A phone fits two tiles side by side; an odd last tile fills its row. */
+@media (min-width: 360px) and (max-width: 599.98px) {
+  .rp-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-strip > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  /* A wide value keeps its room; the sparkline beside it narrows, down to nothing. */
+  .rp-strip .rp-spark {
+    min-width: 0;
+  }
 }
 /* An odd fifth tile fills its row until all five fit at 1280px. */
 @media (min-width: 600px) {
@@ -123,10 +197,12 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* A feed inside a card fills the card's height and scrolls past it, so the row's cards stay level. */
+/* A feed takes no height from its rows: it fills what the row's other cards give its card and scrolls inside,
+   with the chart-wait floor for a card that stands alone. */
 .rp-feed {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 182px;
+  contain: size;
   overflow-y: auto;
 }
 .rp-quick {
@@ -191,17 +267,13 @@
   font-weight: 700;
   line-height: 28px;
 }
-.rp-delta {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--rp-subtle);
-}
-/* Colour roles: icons and deltas pick up the palette accents now that every palette has them. */
+/* Label icons keep their size when the label truncates. */
 .rp-tile-head > svg,
 .rp-qlabel > svg {
   flex: none;
 }
-/* Role colours on icons, nav groups, rankings, and the wordmark; each palette supplies its own categorical set --rp-c1..c8. */
+/* Role colours on icons, nav groups, rankings, and the wordmark; each palette supplies its own categorical set
+   --rp-c1..c8. */
 .rp-tint-c1 > svg {
   color: var(--rp-c1);
 }
@@ -232,9 +304,11 @@
 .rp-nav > svg {
   color: var(--rp-group, currentColor);
 }
+/* The group colour marks the current page through its icon and the slider; as text, gold or iris on a light base
+   reads below 4.5:1. */
 .rp-nav[aria-current='page'] {
   font-weight: 600;
-  color: var(--rp-group, var(--rp-pine));
+  color: var(--rp-text);
 }
 .rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c1);
@@ -253,12 +327,6 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.rp-delta.good {
-  color: var(--rp-pine);
-}
-.rp-delta.bad {
-  color: var(--rp-rose);
 }
 .rp-spark {
   flex: 1 1 64px;

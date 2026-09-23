@@ -18,14 +18,15 @@ build:
 check:
 	pnpm check
 
-# Everything in dist/ except the fonts, plus the licence and notices.
+# Everything in dist/ except the fonts and the Vite build manifest, plus the licence and notices.
 install:
 	@test -f dist/index.html || { echo 'run make build first' >&2; exit 1; }
-	find dist -path dist/fonts -prune -o -type f -print | while read -r f; do \
+	find dist \( -path dist/fonts -o -path dist/.vite \) -prune -o -type f -print | while read -r f; do \
 		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}" || exit 1; \
 	done
 	$(INSTALL) -Dm644 LICENSE "$(DOCDIR)/LICENSE"
 	$(INSTALL) -Dm644 NOTICE "$(DOCDIR)/NOTICE"
+	$(INSTALL) -Dm644 LICENSES/Apache-2.0.txt "$(DOCDIR)/LICENSES/Apache-2.0.txt"
 	$(INSTALL) -Dm644 README.md "$(DOCDIR)/README.md"
 	$(INSTALL) -Dm644 CHANGELOG.md "$(DOCDIR)/CHANGELOG.md"
 

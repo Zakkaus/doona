@@ -1,4 +1,4 @@
-import {useContext, useEffect, useState, type CSSProperties, type ReactNode} from 'react';
+import {useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
   UNSTABLE_Toast as RToast,
@@ -14,8 +14,8 @@ import Close from './icons/Close';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
-import {readLang, translate, useT} from '../i18n';
-import {ApiError, LocalError} from '../api/error';
+import {useT} from '../i18n';
+import {errorText} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 
@@ -30,40 +30,67 @@ export function Loading({children}: {children?: ReactNode}) {
     const timer = setTimeout(() => setVisible(true), 150);
     return () => clearTimeout(timer);
   }, []);
-  return visible ? (
-    <div className="rp-empty" role="status">
+  return (
+    <div className="rp-empty" role="status" data-wait={visible ? undefined : ''}>
       <span className="rp-spinner" aria-hidden="true" />
       {children ?? t('ui.loading')}
     </div>
-  ) : null;
+  );
 }
 
-export function errorText(error: unknown) {
-  if (error instanceof LocalError) {
-    const text = translate(readLang(), error.key);
-    return error.detail ? `${text}: ${error.detail}` : text;
-  }
-  const message = error instanceof Error ? error.message : String(error);
-  return error instanceof ApiError && error.requestId ? `${message} · request_id: ${error.requestId}` : message;
+// A message about a whole form or view, as S2's InlineAlert: a negative one takes focus when it appears after a
+// submit, so the result is announced where the person is looking.
+export function InlineAlert({
+  tone = 'negative',
+  title,
+  children,
+  action,
+  takeFocus
+}: {
+  tone?: 'negative' | 'informative';
+  title?: string;
+  children: ReactNode;
+  action?: ReactNode;
+  takeFocus?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (takeFocus) ref.current?.focus();
+  }, [takeFocus]);
+  return (
+    <div ref={ref} role={tone === 'negative' ? 'alert' : 'status'} tabIndex={takeFocus ? -1 : undefined} className={cx('rp-alert', tone)}>
+      {title && <strong className="rp-alert-title">{title}</strong>}
+      <span>{children}</span>
+      {action}
+    </div>
+  );
 }
 
 // Retry refetches the failed resource rather than reloading the page.
-export function ErrorMessage({error, onRetry}: {error: Error | null | undefined; onRetry?: () => void}) {
+// `message` replaces the load-failure wording for a failed action.
+export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: string}) {
   const t = useT();
   return error ? (
-    <p role="alert" className="rp-alert">
-      {t('ui.loadFailed', {error: errorText(error)})}
-      {onRetry && (
-        <Button small quiet onPress={onRetry}>
-          {t('ui.retry')}
-        </Button>
-      )}
-    </p>
+    <InlineAlert
+      action={
+        onRetry && (
+          <Button small quiet onPress={onRetry}>
+            {t('ui.retry')}
+          </Button>
+        )
+      }
+    >
+      {message ?? t('ui.loadFailed', {error: errorText(error, t)})}
+    </InlineAlert>
   ) : null;
 }
 
 export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
-  return <span className={cx('rp-light', tone, small && 'sm')}>{children}</span>;
+  return (
+    <span className={cx('rp-light', tone, small && 'sm')}>
+      <span>{children}</span>
+    </span>
+  );
 }
 export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
   return (
@@ -79,12 +106,15 @@ export function Bar({label, value, pct, color}: {label: ReactNode; value: string
   );
 }
 
-export function Badge({children, tone, className}: {children: ReactNode; tone?: 'warn'; className?: string}) {
-  return <TextTooltip className={cx('rp-badge', tone, className)}>{children}</TextTooltip>;
+export function Badge({children, tone, className, tip}: {children: ReactNode; tone?: 'warn'; className?: string; tip?: string}) {
+  return (
+    <TextTooltip className={cx('rp-badge', tone, className)} text={tip}>
+      {children}
+    </TextTooltip>
+  );
 }
 
-// `row` keeps each label beside its value on one line, for a strip that sits next to other one-line controls.
-// A third element is the full value behind a shortened one, shown as a tooltip.
+// `row` keeps label and value on one line; a third element is the full value, shown as a tooltip.
 export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
   return (
     <div className={cx('rp-kv', (inline || row) && 'inline', row && 'row')}>
@@ -104,14 +134,26 @@ export function Kv({items, inline, row}: {items: Array<[string, string] | [strin
   );
 }
 
-// Toasts: react-aria's queue, rendered once by the shell as S2's ToastContainer does: the newest in front with
-// the rest stacked behind it, and a "show all" that lays them out as a list over an underlay. Timers pause
-// while the region is hovered or focused and while the list is open.
+// Toasts: react-aria's queue rendered like S2's ToastContainer; timers pause while hovered, focused or listed.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 type ToastMessage = {kind: ToastKind; text: string};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
+// A repeated message replaces its earlier copy at the front instead of stacking behind it.
+const queued = new Map<string, string>();
 export const toast = (kind: ToastKind, text: string) => {
-  toasts.add({kind, text}, {timeout: 5000});
+  const id = kind + '\n' + text;
+  const earlier = queued.get(id);
+  if (earlier) toasts.close(earlier);
+  const key = toasts.add(
+    {kind, text},
+    {
+      timeout: 5000,
+      onClose: () => {
+        if (queued.get(id) === key) queued.delete(id);
+      }
+    }
+  );
+  queued.set(id, key);
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 export function Toasts() {
@@ -131,8 +173,11 @@ export function Toasts() {
   );
   useEffect(() => {
     if (!expanded) return;
+    // One Escape closes one layer: an open dialog takes it unless focus is in the toasts themselves.
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setExpanded(false);
+      if (e.key !== 'Escape') return;
+      const inToasts = (e.target as Element | null)?.closest?.('.rp-toasts');
+      if (inToasts || !document.querySelector('[role="dialog"], [role="alertdialog"]')) setExpanded(false);
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

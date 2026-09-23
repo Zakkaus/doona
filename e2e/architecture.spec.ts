@@ -1,4 +1,4 @@
-import {test as httpTest, type Page} from '@playwright/test';
+import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
@@ -96,7 +96,7 @@ for (const tab of ['source', 'setup']) {
       else {
         await expect(page.getByLabel('Subscription URL', {exact: true})).toBeDisabled();
         await expect(page.getByRole('button', {name: /Rules$/})).toBeDisabled();
-        await expect(page.getByRole('button', {name: 'Add a subscription', exact: true})).toBeDisabled();
+        await expect(page.getByRole('button', {name: 'Add subscription', exact: true})).toBeDisabled();
       }
       const writing = page.waitForRequest(request => request.method() === 'PUT');
       releaseValidation();
@@ -114,7 +114,7 @@ for (const tab of ['source', 'setup']) {
 }
 
 for (const all of [false, true]) {
-  test(`navigation cancels ${all ? 'bulk' : 'single'} close without announcing success`, async ({page}) => {
+  test(`${all ? 'Cancel abandons bulk' : 'navigation cancels single'} close without announcing success`, async ({page}) => {
     await backend(page);
     let release!: () => void;
     const gate = new Promise<void>(resolve => {
@@ -133,6 +133,8 @@ for (const all of [false, true]) {
     } else await page.getByRole('button', {name: 'Close connection', exact: true}).click();
     await request;
     await expect(page).toHaveURL(/connections\?id=1$/);
+    // A pending confirmation covers the page; its Cancel abandons the bulk close.
+    if (all) await page.getByRole('alertdialog').getByRole('button', {name: 'Cancel', exact: true}).click();
     await page.locator('.rp-nav[href="#/settings"]').click();
     await expect(page.locator('[name=api]')).toBeVisible();
     release();
@@ -145,6 +147,8 @@ for (const all of [false, true]) {
 test('Add refuses changed rule generations while its dialog is open', async ({page}) => {
   const api = await backend(page);
   const rules = await api.rules();
+  const config = await api.config();
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   const capabilities = await api.capabilities();
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   let changed!: () => void;
@@ -171,44 +175,31 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Condition'}).fill('domain(example.org)');
   rules.generation_id = 'changed-generation';
+  config.generation_id = rules.generation_id;
   changed();
   await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('changed-generation');
   const before = reads;
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
+  await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect.poll(() => reads).toBeGreaterThan(before);
   expect(writes).toBe(0);
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('textbox', {name: 'Condition'})).toHaveValue('domain(example.org)');
 });
 
-for (const action of ['add', 'remove'] as const) {
-  test(`${action} refuses a shifted source even when its generation and digest are current`, async ({page}) => {
-    const api = await backend(page);
-    const config = await api.config();
-    const main = config.sources.find(source => source.kind === 'main')!;
-    main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
-    main.content_sha256 = await sha256(main.content);
-    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-    let validations = 0;
-    await page.route('**/api/v1/config/validate', async route => {
-      validations++;
-      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-    });
-    await page.goto('/#/rules?tab=list');
-    if (action === 'add') {
-      await page.getByRole('button', {name: 'Add rule', exact: true}).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('example.org');
-      await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-    } else {
-      await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
-      await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
-    }
-    await expect(page.locator('.rp-toast.negative')).toContainText('out of step');
-    expect(validations).toBe(0);
-    await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
-  });
-}
+test('a source shifted since the rule list was read offers no rule edits', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
+  main.content_sha256 = await sha256(main.content);
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/rules?tab=list');
+  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  await expect(panel.getByRole('row').nth(1)).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+});
 
 test('routing map shows a failed rules request and retries it', async ({page}) => {
   await backend(page);
@@ -289,6 +280,16 @@ for (const tab of ['source', 'setup']) {
 
 test('global target cannot change during a pending mode apply', async ({page}) => {
   const api = await backend(page);
+  // The catch-all only goes after a prefix of must rules; the demo source is reordered to allow it.
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const ordinary = '  domain(suffix: doubleclick.net) -> block\n';
+  await api.pollOperation(
+    await api.replaceConfigSource(
+      source.id,
+      source.content!.replace(ordinary, '').replace('  domain(geosite: cn)', ordinary + '  domain(geosite: cn)'),
+      `"${source.content_sha256}"`
+    )
+  );
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -332,9 +333,10 @@ test('trace headings and selected leaves retain the submitted domain and network
     await route.fulfill({json: response});
   });
   await page.goto('/#/rules?tab=trace');
+  await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
+  await page.getByLabel('Destination port', {exact: true}).fill('443');
   await page.getByRole('button', {name: / Resolution mode$/}).click();
   await page.getByRole('option', {name: /No resolution/}).click();
-  await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
   const tracing = page.waitForRequest('**/routing/trace');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await tracing;
@@ -358,7 +360,7 @@ test('search keeps the keyboard target when an earlier connection disappears', a
   await page.route('**/api/v1/connections**', route => route.fulfill({json: snapshot}));
   await page.clock.install();
   await page.goto('/#/config');
-  await expect(page.getByRole('button', {name: /^Search pages, connections/})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Configuration', exact: true})).toBeVisible();
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('searchbox').fill('stable-');
@@ -411,7 +413,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
   await refreshed;
   await expect(filter).toHaveValue('name(hk-01)');
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  await expect(dialog.getByRole('alert')).toContainText('changed');
   await expect(filter).toHaveValue('name(hk-01)');
 });
 
@@ -435,4 +437,366 @@ test('policy details load near the viewport and a deep link explicitly mounts a 
   await page.goto('/#/policies?group=group-59');
   await expect(page.getByRole('region', {name: 'Group 59', exact: true}).getByRole('heading', {name: 'Group 59', exact: true})).toBeVisible();
   expect(loaded.has('group-59')).toBe(true);
+});
+
+test('cancelled runtime saves do not announce success and keep editing frozen until navigation', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/runtime/settings', async route => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    await gate;
+    await route.fulfill({json: await api.patchRuntimeSettings(route.request().postDataJSON())});
+  });
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend options'});
+  const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
+  await records.fill('512');
+  const saving = page.waitForRequest(request => request.method() === 'PATCH');
+  await card.getByRole('button', {name: 'Apply', exact: true}).click();
+  await saving;
+  await expect(records).toBeDisabled();
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  const discard = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  await discard.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(records).toHaveValue('512');
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  await discard.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  release();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Backend options applied'})).toHaveCount(0);
+});
+
+test('runtime drafts survive a changed poll and explicit discard loads the current values', async ({page}) => {
+  const api = await backend(page);
+  const settings = await api.runtimeSettings();
+  await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: settings}));
+  await page.clock.install();
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend options'});
+  const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
+  await records.fill('512');
+  settings.log.buffered_records = 2048;
+  const refresh = page.waitForResponse('**/api/v1/runtime/settings');
+  await page.clock.runFor(16000);
+  await refresh;
+  await expect(records).toHaveValue('512');
+  await expect(card.getByRole('alert')).toContainText('your draft was kept');
+  await card.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(records).toHaveValue('2048');
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  await expect(page).toHaveURL(/#\/connections$/);
+});
+
+test('new group validation refusal retains the dialog and its name without a success toast', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await gate;
+    const result = await api.validateConfig(route.request().postDataJSON());
+    await route.fulfill({json: {...result, valid: false}});
+  });
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: 'New group…', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group…', exact: true});
+  await dialog.getByLabel('Name', {exact: true}).fill('retained-group');
+  const validating = page.waitForRequest('**/api/v1/config/validate');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await validating;
+  await expect(dialog).toBeVisible();
+  release();
+  await expect(dialog.getByRole('alert')).toContainText('Validation');
+  await expect(dialog.getByLabel('Name', {exact: true})).toHaveValue('retained-group');
+  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
+});
+
+test('main-source actions remain disabled when advertised content fails completeness verification', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  config.sources.find(source => source.kind === 'main')!.content = 'redacted';
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/nodes?provider=inline');
+  await expect(page.getByRole('button', {name: 'Add hk-01 to a group', exact: true})).toBeDisabled();
+});
+
+test('a completed provider creation cannot close a newer node draft or clear its guard', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/providers', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const created = await api.createProvider(route.request().postDataJSON());
+    await gate;
+    await route.fulfill({json: created});
+  });
+  // The page refreshes a new provider straight away; the mock's accepted operation completes on its own.
+  await page.route('**/api/v1/providers/*/refresh', async route =>
+    route.fulfill({status: 202, json: await api.refreshProvider(new URL(route.request().url()).pathname.split('/').at(-2)!)})
+  );
+  await page.route('**/api/v1/operations/*', async route =>
+    route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').at(-1)!)})
+  );
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const provider = page.getByRole('dialog');
+  await provider.getByLabel('Name', {exact: true}).fill('slow-provider');
+  await provider.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub');
+  const submitted = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/providers'));
+  await provider.getByRole('button', {name: 'Add', exact: true}).click();
+  await submitted;
+  await provider.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const node = page.getByRole('dialog');
+  await node.getByLabel('Name', {exact: true}).fill('new-draft');
+  await node.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.org:443');
+  release();
+  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added and refreshed');
+  await expect(node.getByLabel('Name', {exact: true})).toHaveValue('new-draft');
+  await page.evaluate(() => {
+    location.hash = '#/settings';
+  });
+  await expect(page.getByRole('alertdialog', {name: 'Discard unsaved changes?'})).toBeVisible();
+});
+
+test('provider host labels cannot enable interval writes without node tag metadata', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = "subscription {\n  main: {\n    url: 'https://shared.example/sub'\n    interval: '2h'\n  }\n}\n";
+  main.content_sha256 = await sha256(main.content);
+  const providers = await api.providers();
+  const subscription = providers.providers.find(provider => provider.kind === 'subscription')!;
+  providers.providers = [
+    {...subscription, id: 'main-provider', name: 'opaque-main', url_redacted: 'https://shared.example/redacted'},
+    {...subscription, id: 'include-provider', name: 'opaque-include', url_redacted: 'https://shared.example/redacted'}
+  ];
+  const nodes = await api.nodes();
+  nodes.nodes = [];
+  nodes.next_cursor = null;
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
+  await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
+  await page.goto('/#/nodes?tab=list');
+  await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
+  await expect(page.getByRole('button', {name: /^Auto-refresh of/})).toHaveCount(0);
+});
+
+httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
+  const api = await backend(page);
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  let failProviders = true;
+  let failConnections = true;
+  const failure = (message: string) => ({status: 503, json: {request_id: 'inventory', error: {code: 'service_unavailable', message, details: null}}});
+  await page.route('**/api/v1/providers?*', async route =>
+    route.fulfill(failProviders ? failure('Provider inventory unavailable') : {json: await api.providers()})
+  );
+  await page.route('**/api/v1/connections?*', async route =>
+    route.fulfill(failConnections ? failure('Connection inventory unavailable') : {json: await api.connections()})
+  );
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend actions'});
+  const providers = card.locator('.rp-ops-group').filter({hasText: 'Provider inventory unavailable'});
+  const connections = card.locator('.rp-ops-group').filter({hasText: 'Connection inventory unavailable'});
+  await expect(providers).toBeVisible();
+  await expect(connections).toBeVisible();
+  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).toBeDisabled();
+  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).not.toContainText('(0)');
+  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeDisabled();
+  failProviders = false;
+  await providers.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(card.getByRole('button', {name: 'Refresh subscription (1)', exact: true})).toBeEnabled();
+  await expect(connections).toBeVisible();
+  failConnections = false;
+  await connections.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+});
+
+httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
+  const api = await backend(page);
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  let fail = true;
+  const failure = (message: string) => ({status: 503, json: {request_id: 'retry', error: {code: 'service_unavailable', message, details: null}}});
+  await page.route('**/api/v1/runtime/outbounds', async route => route.fulfill(fail ? failure('Outbounds unavailable') : {json: await api.runtimeOutbounds()}));
+  await page.route('**/api/v1/dns/cache{,?*}', async route => route.fulfill(fail ? failure('Cache unavailable') : {json: await api.dnsCache()}));
+  await page.route('**/api/v1/geodata', async route => route.fulfill(fail ? failure('Geodata unavailable') : {json: await api.geodata()}));
+  const retried = async (alert: Locator) => {
+    await expect(alert).toBeVisible();
+    fail = false;
+    await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+    await expect(alert).toHaveCount(0);
+    fail = true;
+  };
+  await page.goto('/#/activity');
+  await retried(page.getByRole('alert').filter({hasText: 'Outbounds unavailable'}));
+  await page.goto('/#/dns?tab=cache');
+  await retried(page.getByRole('alert').filter({hasText: 'Cache unavailable'}));
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader').first()).toBeVisible();
+  await page.goto('/#/settings');
+  await retried(page.getByRole('alert').filter({hasText: 'Geodata unavailable'}));
+});
+
+test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {
+  const api = await backend(page);
+  const snapshot = await api.flows();
+  const base = snapshot.flows[0];
+  snapshot.flows = [
+    {...base, id: 'missing', outbound: null, chain: [], rule_id: null, rule_expression: null},
+    {...base, id: 'known', outbound: 'unknown', chain: ['unknown'], rule_id: null, rule_expression: 'unknown'}
+  ];
+  snapshot.next_cursor = null;
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
+  await page.goto('/#/rules?tab=map');
+  const missing = page.locator('.rp-tree-tile[data-id="outbound:"]');
+  const known = page.locator('.rp-tree-tile[data-id="outbound:unknown"]');
+  await expect(missing).toBeVisible();
+  await expect(known).toBeVisible();
+  await expect(missing.locator('.c')).toHaveText('1');
+  await expect(known.locator('.c')).toHaveText('1');
+  await known.click();
+  await expect(known).toHaveAttribute('aria-pressed', 'true');
+  await expect(missing).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('node creation freezes its submitted draft until the response arrives', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/nodes', async route => {
+    await gate;
+    await route.fulfill({json: await api.createNode(route.request().postDataJSON())});
+  });
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('submitted-node');
+  await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#submitted-node');
+  const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/nodes'));
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await request;
+  try {
+    await expect(dialog.getByLabel('Name')).toBeDisabled();
+    await expect(dialog.getByLabel('Node link')).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page
+      .locator('.rp-table')
+      .nth(1)
+      .getByRole('row', {name: /submitted-node/})
+  ).toBeVisible();
+});
+
+test('redacted rule labels edit accepted source and freeze the draft through validation', async ({page}) => {
+  const api = await backend(page);
+  await page.route('**/api/v1/rules', async route => {
+    const rules = await api.rules();
+    rules.rules = rules.rules.map(rule => ({...rule, expression: rule.kind === 'fallback' ? 'fallback' : 'domain(<redacted>)'}));
+    await route.fulfill({json: rules});
+  });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await gate;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+  });
+  await page.route('**/api/v1/config/sources/*', async route => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    await route.fulfill({json: await api.replaceConfigSource(id, route.request().postDataJSON().content, route.request().headers()['if-match'])});
+  });
+  await page.route('**/api/v1/operations/*', async route => {
+    await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
+  });
+  const original = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  await page.goto('/#/rules?tab=list');
+  await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('accepted.example');
+  const validating = page.waitForRequest('**/config/validate');
+  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await validating;
+  try {
+    await expect(dialog.getByRole('textbox', {name: 'Values', exact: true})).toBeDisabled();
+    await expect(dialog.getByRole('radio', {name: 'Expression', exact: true})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Match by$/})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Outbound$/})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name: /Insert$/})).toBeDisabled();
+    await expect(dialog.getByRole('switch', {name: 'must', exact: true})).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
+  const rows = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=row][data-key]');
+  await expect(rows).toHaveCount(10);
+  await rows.nth(8).getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
+});
+
+test('withheld rule source disables editing and explains the restriction', async ({page}) => {
+  const api = await backend(page);
+  const config = await api.config();
+  config.sources = config.sources.map(source => ({...source, content: undefined}));
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/rules?tab=list');
+  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
+});
+
+test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {
+  const api = await backend(page);
+  const dictionary = await api.rules();
+  dictionary.rules = Array.from({length: 4096}, (_, i) => ({...dictionary.rules[0], rule_id: String(i), expression: `rule-${i}`, outbound: 'direct'}));
+  const groups = await api.groups();
+  groups[0].policy = {...groups[0].policy, kind: 'urltest', native: 'min_avg10'};
+  const flows = {...(await api.flows()), flows: []};
+  await page.route('**/api/v1/rules', route => route.fulfill({json: dictionary}));
+  await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
+  await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
+  await page.goto('/#/rules?tab=map');
+  const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
+  await expect(leaves).toHaveCount(30);
+  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('Fastest on average');
+  const first = await leaves.first().boundingBox();
+  await page.getByRole('button', {name: 'Show 30 more items', exact: true}).click();
+  await expect(leaves).toHaveCount(60);
+  const after = await leaves.first().boundingBox();
+  expect(after!.width).toBe(first!.width);
+  expect(after!.height).toBe(first!.height);
+  await leaves.nth(59).click();
+  await expect(leaves.nth(59)).toHaveAttribute('aria-pressed', 'true');
+  await leaves.nth(59).press('Escape');
+  await expect(page).not.toHaveURL(/path=/);
+  await page.getByRole('button', {name: 'Show only the first 30 items', exact: true}).click();
+  await expect(leaves).toHaveCount(30);
+});
+
+test('flow input identifiers stay literal beside localized enums and incomplete coverage', async ({page}) => {
+  const api = await backend(page);
+  const detail = await api.flow('flow-1');
+  const input = detail.trace.steps.find(step => step.stage === 'input')!;
+  input.data.values = {...input.data.values, domain: 'cache', pname: 'drop'};
+  await page.route('**/api/v1/flows/flow-1', route => route.fulfill({json: detail}));
+  await page.goto('/#/rules?tab=flows&id=flow-1');
+  const step = page.locator('.rp-step').filter({hasText: 'Input'});
+  await expect(step.getByText('cache', {exact: true})).toBeVisible();
+  await expect(step.getByText('drop', {exact: true})).toBeVisible();
+  await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('not fully observed');
 });

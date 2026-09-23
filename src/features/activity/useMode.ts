@@ -1,37 +1,39 @@
-import {useState} from 'react';
-import {useCapabilities, useGroups} from '../../api/store';
-import {useMainSourceEdit} from '../config/mainSource';
+import {useMemo, useState} from 'react';
+import {useCapabilities, useGroups} from '../../store';
+import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
-import {errorText, toast} from '../../ui/ui';
+import {toast} from '../../ui/ui';
+import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
+import {offered} from '../../api/capabilities';
 
 export function useMode() {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const groups = useGroups(resources?.groups.available === true);
-  const {main, writable, busy, apply: write} = useMainSourceEdit();
-  const current: OutboundMode = main ? readMode(main.content!) : {mode: 'rule'};
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
+  const {main, writable, busy, error, retry, apply: write} = useMainSourceEdit();
+  const content = main?.content;
+  const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
   const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t);
+  const guard = useDraftGuard(view.dirty, () => setStaged(null));
   const apply = async () => {
-    if (!staged) return;
+    if (!staged || view.incomplete) return;
     const submitted = staged;
-    try {
-      const written = await write(
-        text => writeMode(text, submitted),
-        errors => toast('negative', t('act.modeInvalid', {n: String(errors)}))
-      );
-      if (written) {
-        setStaged(current => (current === submitted ? null : current));
-        toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
-      }
-    } catch (error) {
-      toast('negative', errorText(error));
+    const result = await write(text => writeMode(text, submitted));
+    if (result.kind === 'ok') {
+      guard.clear();
+      setStaged(current => (current === submitted ? null : current));
+      toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
+    const problem = editProblem(result, t);
+    if (problem) toast('negative', problem);
   };
   return {
     ...view,
+    error,
+    retry,
     busy,
     pick: (mode: string) => {
       if (mode === 'global') setStaged({mode, target: view.target});

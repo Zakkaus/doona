@@ -1,16 +1,36 @@
 import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {Badge, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {Badge, Card, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
-import {usePalette} from '../../ui/Charts';
+import {tableLayout} from '../../ui/Table';
 import {LifecycleActions} from './Lifecycle';
+
+// While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
+// card keeps its height when the values arrive; `extra` holds the lines below the grid.
+function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
+  return (
+    <div className="rp-body-wait">
+      <div className="rp-kv" aria-hidden="true">
+        {Array.from({length: cells}, (_, i) => (
+          <div key={i}>
+            <span className="k">{'\u00a0'}</span>
+            <span className="v">{'\u00a0'}</span>
+          </div>
+        ))}
+      </div>
+      {extra > 0 && <div aria-hidden="true" style={{height: extra}} />}
+      <Loading />
+    </div>
+  );
+}
+// The least the attachments table takes: its frame, heading and two rows.
+const attachmentsFloor = 2 + tableLayout.headingHeight + 2 * tableLayout.rowHeight;
 export function Overview() {
   const t = useT();
   const vm = useOverview();
-  const palette = usePalette();
   return (
     <div className="rp-page">
-      {vm.errors.capabilities && <ErrorMessage error={vm.errors.capabilities} />}
+      <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
       <div className="rp-between">
         <div className="rp-cluster">
           <Light tone={vm.status.tone}>{vm.status.text}</Light>
@@ -31,13 +51,9 @@ export function Overview() {
           <LifecycleActions actions={vm.actions} />
         </div>
       </div>
-      {vm.errors.runtime && <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry} />}
       <div className="rp-g3">
-        <section className="rp-card" aria-labelledby="overview-engine">
-          <h3 className="rp-h3" id="overview-engine">
-            {t('ov.engine')}
-          </h3>
-          {vm.errors.version && <ErrorMessage error={vm.errors.version} />}
+        <Card title={t('ov.engine')}>
+          <ErrorMessage error={vm.errors.version} onRetry={vm.retry.version} />
           {vm.engine.state === 'ready' ? (
             <>
               <Kv items={vm.engine.fields} />
@@ -50,56 +66,41 @@ export function Overview() {
               )}
             </>
           ) : vm.engine.state === 'loading' ? (
-            <Loading />
-          ) : (
+            <BodyWait cells={6} extra={vm.engine.profiles.length > 0 ? 20 : 0} />
+          ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-counters">
-          <h3 className="rp-h3" id="overview-counters">
-            {t('ov.counters')}
-          </h3>
+        </Card>
+        <Card title={t('ov.counters')}>
+          <ErrorMessage error={vm.errors.runtime} onRetry={vm.retry.runtime} />
           {vm.counters.state === 'ready' ? (
             <>
               <Kv items={vm.counters.fields} />
               <span className="rp-label">{vm.counters.since}</span>
             </>
           ) : vm.counters.state === 'loading' ? (
-            <Loading />
-          ) : (
+            <BodyWait cells={6} extra={16} />
+          ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-memory">
-          <h3 className="rp-h3" id="overview-memory">
-            {t('ov.memory')}
-          </h3>
-          {vm.errors.memory && <ErrorMessage error={vm.errors.memory} />}
+        </Card>
+        <Card title={t('ov.memory')}>
+          <ErrorMessage error={vm.errors.memory} onRetry={vm.retry.memory} />
           {vm.memory.state === 'ready' ? (
             <>
-              {vm.memory.bar && (
-                <Bar
-                  label={vm.memory.bar.label}
-                  value={vm.memory.bar.value}
-                  pct={vm.memory.bar.pct}
-                  color={{err: palette.love, warn: palette.gold, ok: palette.cat[0]}[vm.memory.bar.tone]}
-                />
-              )}
+              {vm.memory.bar && <Bar label={vm.memory.bar.label} value={vm.memory.bar.value} pct={vm.memory.bar.pct} color={vm.memory.bar.color} />}
               <Kv items={vm.memory.fields} />
             </>
           ) : vm.memory.state === 'loading' ? (
-            <Loading />
-          ) : (
+            <BodyWait cells={8} />
+          ) : vm.errors.memory ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
+        </Card>
       </div>
       <div className="rp-g21">
-        <section className="rp-card" aria-labelledby="overview-datapath">
-          <h3 className="rp-h3" id="overview-datapath">
-            {t('ov.datapath')}
-          </h3>
-          {vm.errors.datapath && <ErrorMessage error={vm.errors.datapath} />}
+        <Card title={t('ov.datapath')}>
+          <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
             <>
               <Kv items={vm.datapath.fields} />
@@ -135,19 +136,16 @@ export function Overview() {
               )}
             </>
           ) : vm.datapath.state === 'loading' ? (
-            <Loading />
-          ) : (
+            <BodyWait cells={10} extra={attachmentsFloor} />
+          ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
-        <section className="rp-card" aria-labelledby="overview-resources">
-          <h3 className="rp-h3" id="overview-resources">
-            {t('ov.resources')}
-          </h3>
+        </Card>
+        <Card title={t('ov.resources')}>
           {vm.resources.state === 'ready' ? (
             <div className="rp-list rp-list-columns">
               {vm.resources.rows.map(row => (
-                <div key={row.id} className="rp-row">
+                <div key={row.id} className="rp-list">
                   <span>{row.label}</span>
                   <Light small tone={row.tone}>
                     {row.text}
@@ -157,10 +155,10 @@ export function Overview() {
             </div>
           ) : vm.resources.state === 'loading' ? (
             <Loading />
-          ) : (
+          ) : vm.errors.capabilities ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
-        </section>
+        </Card>
       </div>
     </div>
   );

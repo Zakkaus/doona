@@ -1,9 +1,16 @@
-import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../config/blocks';
+import {blockFields, quote, scanConfig, uncomment, unquote, type TextBlock, type TextField} from '../../dae/text';
+import {quoteName} from '../../dae/groups';
 
-export const DEFAULT_INTERVAL = 86400;
-export type SubscriptionEntry = {tag: string; host: string | null; interval: number; from: number; to: number};
+export type SubscriptionEntry = {tag: string; host: string | null; interval: number | null};
 type ScalarSubscription = {tag: string; url: string; ua: string | null};
-type SubscriptionRange = SubscriptionEntry & {block?: TextBlock; fields: TextField[]; parts: ScalarSubscription | null};
+type SubscriptionRange = SubscriptionEntry & {
+  from: number;
+  to: number;
+  block?: TextBlock;
+  fields: TextField[];
+  parts: ScalarSubscription | null;
+  comment?: string;
+};
 
 export function parseInterval(text: string): number | null {
   const found = /^(\d+(?:\.\d+)?)(ms|s|m|h)?$/.exec(text.trim());
@@ -11,7 +18,8 @@ export function parseInterval(text: string): number | null {
   const scale: Record<string, number> = {ms: 1 / 1000, s: 1, m: 60, h: 3600};
   return Math.ceil(Number(found[1]) * (scale[found[2] ?? 's'] ?? 1));
 }
-function host(url: string): string | null {
+export function urlHost(url: string | null): string | null {
+  if (!url) return null;
   try {
     return new URL(url).hostname || null;
   } catch {
@@ -38,7 +46,7 @@ function scalarParts(code: string) {
     if (split !== -1 && !url.startsWith('://', split)) {
       tag = url.slice(0, split).trim();
       url = url.slice(split + 1);
-    } else tag = host(url);
+    } else tag = urlHost(url);
   }
   const suffix = quoted ? text.slice(valueToken.to).trim() : '';
   const ua = suffix.startsWith('(') && suffix.endsWith(')') ? unquote(suffix.slice(1, -1)) : null;
@@ -68,8 +76,8 @@ function subscriptionRanges(text: string) {
           to: block.to,
           block,
           tag: block.name,
-          host: url ? host(unquote(url.value)) : null,
-          interval: interval ? (parseInterval(unquote(interval.value)) ?? 0) : DEFAULT_INTERVAL,
+          host: url ? urlHost(unquote(url.value)) : null,
+          interval: interval ? parseInterval(unquote(interval.value)) : null,
           fields,
           parts: null
         });
@@ -87,23 +95,20 @@ function subscriptionRanges(text: string) {
         while (tokens[i + 1] && !(text[tokens[i].from] === ')' && tokens[i].parens === 1)) i++;
       }
       let to = tokens[i].to;
-      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) to = tokens[++i].to;
+      let comment: string | undefined;
+      if (tokens[i + 1]?.kind === 'comment' && tokens[i + 1].line === tokens[i].line) {
+        comment = text.slice(tokens[i + 1].from, tokens[i + 1].to);
+        to = tokens[++i].to;
+      }
       const parts = scalarParts(text.slice(from, to));
-      if (parts) entries.push({from, to, tag: parts.tag, host: host(parts.url), interval: DEFAULT_INTERVAL, fields: [], parts});
+      if (parts) entries.push({from, to, tag: parts.tag, host: urlHost(parts.url), interval: null, fields: [], parts, comment});
     }
   }
   return entries;
 }
 
 export function readSubscriptions(text: string): SubscriptionEntry[] {
-  let offset = 0;
-  let line = 0;
-  return subscriptionRanges(text).map(entry => {
-    while (offset < entry.from) if (text[offset++] === '\n') line++;
-    const from = line;
-    while (offset < entry.to) if (text[offset++] === '\n') line++;
-    return {tag: entry.tag, host: entry.host, interval: entry.interval, from, to: line};
-  });
+  return subscriptionRanges(text).map(({tag, host, interval}) => ({tag, host, interval}));
 }
 
 export function writeInterval(text: string, tag: string, seconds: number): string {
@@ -112,20 +117,14 @@ export function writeInterval(text: string, tag: string, seconds: number): strin
   const indent = text.slice(entry.from, entry.to).match(/^[ \t]*/)?.[0] ?? '  ';
   const inner = indent + (indent.includes('\t') ? '\t' : '  ');
   if (entry.parts) {
-    const body = [`${indent}${/^[\w.-]+$/.test(tag) ? tag : quote(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
+    const body = [`${indent}${quoteName(tag)}: {`, `${inner}url: ${quote(entry.parts.url)}`];
     if (entry.parts.ua !== null) body.push(`${inner}ua: ${quote(entry.parts.ua)}`);
-    body.push(`${inner}interval: '${seconds}s'`, `${indent}}`);
+    body.push(`${inner}interval: '${seconds}s'`, `${indent}}${entry.comment ? ' ' + entry.comment : ''}`);
     return text.slice(0, entry.from) + body.join('\n') + text.slice(entry.to);
   }
   const field = entry.fields.find(field => field.name === 'interval');
-  if (field) {
-    if (seconds !== DEFAULT_INTERVAL) return text.slice(0, field.valueFrom) + ` '${seconds}s'` + text.slice(field.valueTo);
-    const start = text.lastIndexOf('\n', field.from - 1) + 1;
-    const end = text.indexOf('\n', field.to);
-    const ownLine = /^[ \t]*$/.test(text.slice(start, field.from)) && end !== -1 && /^[ \t]*$/.test(text.slice(field.to, end));
-    return text.slice(0, ownLine ? start : field.from) + text.slice(ownLine ? end + 1 : field.to);
-  }
-  if (seconds === DEFAULT_INTERVAL || !entry.block) return text;
+  if (field) return text.slice(0, field.valueFrom) + ` '${seconds}s'` + text.slice(field.valueTo);
+  if (!entry.block) return text;
   const at = text.lastIndexOf('\n', entry.block.close - 1) + 1;
   return text.slice(0, at) + `${inner}interval: '${seconds}s'\n` + text.slice(at);
 }

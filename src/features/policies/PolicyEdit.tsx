@@ -1,7 +1,8 @@
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
-import {Button, LabeledSelect, ModalDialog, TextField} from '../../ui/ui';
+import {Button, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PolicyEditView} from './usePolicyEdit';
+import {PolicyPicker} from './PolicyPicker';
 export function PolicyEdit({model: m}: {model: PolicyEditView}) {
   const t = useT();
   return (
@@ -14,7 +15,7 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
       }}
       trigger={
         m.available ? (
-          <Button quiet isDisabled={m.disabled} onPress={m.show}>
+          <Button quiet isDisabled={m.disabled} tip={m.tip} onPress={m.show}>
             {t('policy.edit')}
           </Button>
         ) : undefined
@@ -31,7 +32,12 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
       {m.open && (
         <div className="rp-list">
           <span className="rp-label">{t('policy.editHelp')}</span>
-          <LabeledSelect label={t('policy.policy')} value={m.policy} onChange={m.setPolicy} items={m.choices} />
+          {m.problem && (
+            <InlineAlert key={m.problem.id} takeFocus>
+              {m.problem.text}
+            </InlineAlert>
+          )}
+          <PolicyPicker value={m.policy} onChange={m.setPolicy} />
           {m.filters.map(field => (
             <TextField
               key={field.id}

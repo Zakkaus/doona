@@ -18,6 +18,9 @@ const cssMinify = (() => {
   }
 })();
 
+// The stylesheets each language's loader in src/i18n imports with its catalogue.
+const languageStyles: Record<string, string> = {'src/fonts-tc.css': 'zh-TW', 'src/fonts-sc.css': 'zh-CN'};
+
 export default defineConfig({
   base: './',
   define: {
@@ -27,7 +30,7 @@ export default defineConfig({
     'import.meta.env.VITE_DOONA_REPO': JSON.stringify(repository.url.replace(/\.git$/, '')),
     'import.meta.env.VITE_ENGINE_ORG': JSON.stringify(config.engineOrg),
     'import.meta.env.VITE_DOONA_CONTRACT_COMMIT': JSON.stringify(
-      readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/\bcommit ([0-9a-f]{7,40})\b/)![1]
+      readFileSync(new URL('contract/api-standardize/SOURCE.md', import.meta.url), 'utf8').match(/^Pin: (.+)$/m)![1]
     )
   },
   plugins: [
@@ -56,6 +59,18 @@ export default defineConfig({
         const files = Object.keys(bundle)
           .filter(name => name === 'index.html' || name.startsWith('assets/'))
           .sort();
+        // A reader needs one language, so no catalogue or its stylesheet is installed up front. The worker caches the
+        // language a page it controls reports, and any it loads later. Every file still counts towards the build hash.
+        const languages: Record<string, string[]> = {};
+        for (const name of files) {
+          const entry = bundle[name];
+          const lang =
+            entry.type === 'chunk'
+              ? entry.facadeModuleId && /\/src\/i18n\/locales\//.test(entry.facadeModuleId) && entry.name
+              : entry.originalFileNames.map(file => languageStyles[file]).find(Boolean);
+          if (lang) (languages[lang] ??= []).push(name);
+        }
+        const precache = files.filter(name => !Object.values(languages).flat().includes(name));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
@@ -65,7 +80,10 @@ export default defineConfig({
         this.emitFile({
           type: 'asset',
           fileName: 'sw.js',
-          source: template.replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16)).replace("'__PRECACHE__'", JSON.stringify(files))
+          source: template
+            .replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16))
+            .replace("'__PRECACHE__'", JSON.stringify(precache))
+            .replace("'__LANGUAGES__'", JSON.stringify(languages))
         });
       }
     }
@@ -73,17 +91,22 @@ export default defineConfig({
   build: {
     manifest: true,
     target: ['es2022'],
-    cssTarget: ['chrome120', 'safari17', 'firefox120', 'edge120'],
+    cssTarget: ['chrome120', 'safari17', 'firefox121', 'edge120'],
     cssMinify,
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('index.html', import.meta.url))
       },
       output: {
-        chunkFileNames: 'assets/[name]-[hash].js',
+        // Locale catalogues are named apart, so the service worker can leave them out of its precache.
+        chunkFileNames: chunk =>
+          chunk.facadeModuleId && /\/src\/i18n\/locales\//.test(chunk.facadeModuleId) ? 'assets/locale-[name]-[hash].js' : 'assets/[name]-[hash].js',
         manualChunks(id) {
-          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
-          if (/\/node_modules\/(react-aria-components|@react-aria\/[^/]+|@react-stately\/[^/]+|@internationalized\/[^/]+)\//.test(id)) return 'vendor-aria';
+          // clsx and use-sync-external-store are shared by react-aria and recharts; pinned here so the startup code does
+          // not pull them from the charts chunk, and with it the whole of recharts.
+          if (/\/node_modules\/(react|react-dom|scheduler|clsx|use-sync-external-store)\//.test(id)) return 'vendor-react';
+          // react-aria is left to Rollup: forcing all of it into one startup chunk shipped the components that only lazy
+          // pages use (drag and drop, grids) with the shell.
           if (/\/node_modules\/(recharts|d3-[^/]+|victory-vendor)\//.test(id)) return 'vendor-charts';
           if (/\/node_modules\/(@codemirror|@lezer|style-mod|w3c-keyname|crelt)\//.test(id)) return 'vendor-editor';
         }

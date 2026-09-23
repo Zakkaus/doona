@@ -50,6 +50,13 @@ paths:
                       rules: /api/v1/rules
                       geodata: /api/v1/geodata
                       operations: /api/v1/operations/{id}
+                      auth_setup: null
+                      auth_login: null
+                      auth_logout: null
+                    auth:
+                      mode: token
+                      setup_required: false
+                      anonymous_loopback: false
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -301,6 +308,137 @@ paths:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
+  /api/v1/auth/setup:
+    post:
+      operationId: setupAdministrator
+      summary: Create the administrator account and open a session
+      description: 'Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent.'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCredentials'
+            examples:
+              administrator:
+                value:
+                  username: admin
+                  password: correct horse battery
+      responses:
+        '201':
+          description: Administrator created; the session token authenticates later requests
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+              examples:
+                created:
+                  value:
+                    token: hnk1_3q2-7wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    expires_at: '2026-09-23T12:00:00Z'
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Exchange the administrator credentials for a session
+      description: Available only in password mode after setup. A wrong username or password is `invalid_credentials`; before setup the answer is `setup_required`. Authorization must be absent.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCredentials'
+            examples:
+              administrator:
+                value:
+                  username: admin
+                  password: correct horse battery
+      responses:
+        '200':
+          description: Session opened
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+              examples:
+                opened:
+                  value:
+                    token: hnk1_3q2-7wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    expires_at: '2026-09-23T12:00:00Z'
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      summary: End the session that authenticates this request
+      description: Requires a password-session bearer; a configured bearer cannot log out.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Session ended
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/config:
     get:
       operationId: getConfig
@@ -336,7 +474,7 @@ paths:
                     revision: '17'
                     sources:
                       - id: source-main
-                        path: <redacted>
+                        path: api.dae
                         kind: main
                         content_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
                         bytes: 128
@@ -816,7 +954,7 @@ paths:
                 redacted:
                   value:
                     id: source-main
-                    path: <redacted>
+                    path: api.dae
                     kind: main
                     content_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
                     bytes: 128
@@ -4643,6 +4781,9 @@ paths:
                         stale_until: '2026-08-15T12:06:00Z'
                     total: 1024
                     next_cursor: eyJvZmZzZXQiOjEwMH0
+                    usage:
+                      entries: '1024'
+                      entry_capacity: '100000'
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -5621,6 +5762,9 @@ components:
         - precondition_required
         - rate_limited
         - temporarily_unavailable
+        - setup_required
+        - setup_already_completed
+        - invalid_credentials
     SafeError:
       type: object
       required:
@@ -5735,6 +5879,76 @@ components:
             operations:
               type: string
               const: /api/v1/operations/{id}
+            auth_setup:
+              type:
+                - string
+                - 'null'
+              enum:
+                - /api/v1/auth/setup
+                - null
+              description: Present in password mode, null otherwise.
+            auth_login:
+              type:
+                - string
+                - 'null'
+              enum:
+                - /api/v1/auth/login
+                - null
+              description: Present in password mode, null otherwise.
+            auth_logout:
+              type:
+                - string
+                - 'null'
+              enum:
+                - /api/v1/auth/logout
+                - null
+              description: Present in password mode, null otherwise.
+        auth:
+          $ref: '#/components/schemas/AuthDiscovery'
+          description: Absent from servers that predate password login; clients then assume a configured bearer.
+    AuthDiscovery:
+      type: object
+      description: How a client authenticates. `password` mode offers setup until an administrator exists and login afterwards; `token` mode takes a configured bearer, or none when `anonymous_loopback` admits loopback peers.
+      required:
+        - mode
+        - setup_required
+        - anonymous_loopback
+      properties:
+        mode:
+          type: string
+          enum:
+            - token
+            - password
+        setup_required:
+          type: boolean
+        anonymous_loopback:
+          type: boolean
+    AuthCredentials:
+      type: object
+      additionalProperties: false
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          pattern: ^[A-Za-z0-9_.-]{1,64}$
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: 8 to 128 Unicode scalar values, at most 512 UTF-8 bytes; not normalised or trimmed.
+    AuthSession:
+      type: object
+      required:
+        - token
+        - expires_at
+      properties:
+        token:
+          type: string
+          minLength: 1
+        expires_at:
+          $ref: '#/components/schemas/Timestamp'
     Version:
       type: object
       required:
@@ -6512,7 +6726,7 @@ components:
             $ref: '#/components/schemas/ConfigDiagnostic'
         secrets_redacted:
           type: boolean
-          description: True when content is withheld or paths, text, or diagnostic messages are redacted under visibility policy.
+          description: True when a listener-secret value (native_api.secret, clash_api.secret) was masked somewhere in this response. Content, paths and diagnostics are otherwise returned in the clear to an admitted request.
     ConfigSource:
       type: object
       required:
@@ -6532,7 +6746,11 @@ components:
         path:
           type: string
           minLength: 1
-          description: Display path only, replaced with <redacted> when hidden by visibility policy; not a file-access capability.
+          description: The path relative to the entry directory, as the configuration references it; not a file-access capability.
+        absolute_path:
+          type: string
+          minLength: 1
+          description: The file's absolute path on the engine host.
         kind:
           type: string
           enum:
@@ -7567,7 +7785,7 @@ components:
             - string
             - 'null'
           minLength: 1
-          description: Display-only source URL with userinfo, query, fragment and secret-bearing path segments removed or redacted. Null for file/inline sources or when safe display is impossible. Never a fetchable credential source.
+          description: The configured source URL as written, with only listener-secret values (native_api.secret, clash_api.secret) masked. Null for file/inline sources. The wire name is kept for compatibility.
         node_count:
           $ref: '#/components/schemas/SafeUInt'
         updated_at:
@@ -10498,6 +10716,21 @@ components:
           type:
             - string
             - 'null'
+        usage:
+          $ref: '#/components/schemas/DnsCacheUsage'
+          description: Absent from servers that predate cache usage reporting.
+    DnsCacheUsage:
+      type: object
+      description: Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. The entry count is the cache's only limit; the size of an entry is not bounded.
+      required:
+        - entries
+        - entry_capacity
+      properties:
+        entries:
+          $ref: '#/components/schemas/UInt64'
+        entry_capacity:
+          $ref: '#/components/schemas/UInt64'
+          description: Effective entry limit after the engine applies its bounds, at most 100,000.
     DnsLogRecord:
       type: object
       required:
@@ -10842,6 +11075,9 @@ components:
         - dns_log.max_records
         - flows.max_flows
         - flows.retention_seconds
+        - record_flows
+        - record_logs
+        - record_dns_log
     RuntimeSettings:
       type: object
       required:
@@ -10895,11 +11131,49 @@ components:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
               description: How long a terminal flow stays, at most flows.retention_seconds.
+        recording:
+          type: object
+          required:
+            - flows
+            - logs
+            - dns_log
+            - events
+            - grace_remaining_seconds
+          description: |
+            Read-only recorder state. A client is attached while an admitted GET SSE stream on
+            /events or /logs is open, or for 60 seconds after the last stream closed or a successful
+            GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
+            renew attachment. Recording starts on attachment, so the first history a client reads may
+            be empty.
+          properties:
+            flows:
+              $ref: '#/components/schemas/RecorderState'
+            logs:
+              $ref: '#/components/schemas/RecorderState'
+            dns_log:
+              $ref: '#/components/schemas/RecorderState'
+            events:
+              type: object
+              required:
+                - active
+              properties:
+                active:
+                  type: boolean
+                  description: Event capture runs while a client is attached or any permitted recorder is pinned on.
+            grace_remaining_seconds:
+              $ref: '#/components/schemas/SafeUInt'
+              description: Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached.
     RuntimeSettingsPatch:
       type: object
       additionalProperties: false
       minProperties: 1
       properties:
+        record_flows:
+          $ref: '#/components/schemas/RecorderMode'
+        record_logs:
+          $ref: '#/components/schemas/RecorderMode'
+        record_dns_log:
+          $ref: '#/components/schemas/RecorderMode'
         log:
           type: object
           additionalProperties: false
@@ -10929,6 +11203,32 @@ components:
             retention_seconds:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
+    RecorderMode:
+      description: true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment.
+      oneOf:
+        - type: boolean
+        - type: string
+          enum:
+            - auto
+    RecorderState:
+      type: object
+      required:
+        - allowed
+        - mode
+        - active
+      properties:
+        allowed:
+          type: boolean
+          description: The configuration permits this recorder; false means never, whatever the mode.
+        mode:
+          type: string
+          enum:
+            - auto
+            - 'on'
+            - 'off'
+        active:
+          type: boolean
+          description: The recorder is capturing right now.
     StreamReadyEvent:
       type: object
       required:

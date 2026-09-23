@@ -25,7 +25,7 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 700;
-  color: var(--rp-pine);
+  color: var(--rp-text);
   padding: 8px var(--rp-cell-padding, 16px);
   background: var(--rp-base);
   border-bottom: 1px solid var(--rp-hl-med);
@@ -41,7 +41,17 @@
 .rp-table [role='row'][data-selected] {
   background: var(--rp-selected);
 }
-/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
+/* The sort arrow is one chevron that turns: ascending points up, descending down. */
+.rp-th > .rp-sort {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: 2px;
+  rotate: 180deg;
+  transition: rotate var(--rp-duration-panel) var(--rp-ease-out);
+}
+.rp-th > .rp-sort.descending {
+  rotate: 0deg;
+}
 .rp-th {
   display: inline-block;
   max-width: 100%;
@@ -49,6 +59,7 @@
   text-overflow: ellipsis;
   vertical-align: bottom;
 }
+/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
 .rp-resizer {
   position: absolute;
   top: 0;
@@ -59,20 +70,21 @@
   touch-action: none;
   border-inline-end: 2px solid transparent;
   outline: none;
+  transition: border-color var(--rp-duration) var(--rp-ease);
 }
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],
 .rp-resizer[data-focus-visible] {
-  border-inline-end-color: var(--rp-pine);
+  border-inline-end-color: var(--rp-accent);
 }
 .rp-table [role='columnheader'][data-resizing] {
-  color: var(--rp-pine);
+  color: var(--rp-text);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);
 }
 .rp-table [role='row'][data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
 .rp-table [role='rowheader'],
@@ -87,13 +99,25 @@
   outline: none;
   vertical-align: middle;
 }
+.rp-table [role='rowheader']:has(> .rp-table-empty) {
+  padding: 0;
+  overflow: visible;
+  max-width: none;
+  white-space: normal;
+}
+.rp-table-empty {
+  position: sticky;
+  inset-inline-start: 0;
+  flex-shrink: 0;
+  max-width: 100%;
+}
 .rp-table [role='row'][data-selection-mode='single'] {
   cursor: default;
 }
 .rp-table .end {
   text-align: end;
 }
-/* Virtualized tables use divs; only their layout differs from native cells. */
+/* Virtualised tables use divs; only their layout differs from native cells. */
 .rp-table > div[role='grid'],
 .rp-table > div[role='treegrid'] {
   width: 100%;

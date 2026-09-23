@@ -24,7 +24,7 @@ it('renders a nested group badge alongside selected-node zero latency and its pr
 
 it('renders nested group failures and unknown latency instead of hiding them behind the badge', () => {
   for (const unavailable of [true, false]) {
-    const html = renderToStaticMarkup(createElement(LangContext.Provider, {value: 'en'}, createElement(NodeTile, {name: 'Nested', nested: true, unavailable})));
+    const html = renderToStaticMarkup(createElement(LangContext.Provider, {value: 'en'}, createElement(NodeTile, {name: 'Nested', status: {text: unavailable ? 'Unavailable' : '—', group: 'Group'}, description: ' '})));
     expect(html).toContain('>Group<');
     expect(html).toContain(unavailable ? '>Unavailable<' : '>—<');
   }

@@ -1,4 +1,4 @@
-/* ---- Tabs: an underlined tab strip that shares the segmented control's sliding marker. ---- */
+/* Tabs share the segmented control's sliding marker. */
 .rp-tabs {
   display: flex;
   flex-direction: column;
@@ -10,6 +10,9 @@
   display: inline-flex;
   align-self: flex-start;
   max-width: 100%;
+  /* More tabs than a phone is wide scroll within the bar, not the page; the slider scrolls with them. */
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 2px;
   border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
@@ -22,29 +25,29 @@
 .rp-tab {
   position: relative;
   z-index: 1;
-  height: 28px;
-  padding: 0 12px;
+  flex: none;
+  white-space: nowrap;
+  min-height: 28px;
+  padding: 4px 12px;
   border-radius: var(--rp-r-md);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   font: inherit;
   font-weight: 500;
-  color: var(--rp-subtle);
+  /* Body text, as in the segmented control: the slider marks the selection, and a subdued label on the bar's
+     overlay falls under 4.5:1 in several palettes. */
+  color: var(--rp-text);
   cursor: pointer;
   outline: none;
-  /* The label takes the selection colour as the slider arrives, not the moment it leaves the old tab. */
-  transition: color 120ms var(--rp-ease) 100ms;
-}
-.rp-tab[data-hovered] {
-  color: var(--rp-text);
-  transition-delay: 0ms;
-}
-.rp-tab[data-selected] {
-  color: var(--rp-pine);
 }
 .rp-tab[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
+}
+.rp-tabpanel:not([data-shown]) {
+  display: none;
 }
 .rp-tabpanel {
   display: flex;
@@ -84,7 +87,11 @@
   border-radius: var(--rp-r-xl) 0 0 var(--rp-r-xl);
 }
 .rp-underlay[data-entering] .rp-modal.rp-drawer {
-  animation: rp-drawer-in 250ms var(--rp-ease) both;
+  animation: rp-drawer-in var(--rp-duration-modal-in) var(--rp-ease) both;
+}
+.rp-underlay.still[data-entering],
+.rp-underlay.still[data-entering] .rp-modal.rp-drawer {
+  animation: none;
 }
 @keyframes rp-drawer-in {
   from {

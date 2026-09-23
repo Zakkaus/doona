@@ -34,7 +34,16 @@ export function normalizeProfiles(value: unknown): Profile[] {
   });
 }
 
+// Bumped by every write to the profiles or the session and by another tab's storage event, so a reader that
+// caches what it derived from storage (the API client) knows when to look again.
+let revision = 0;
+export const storageRevision = () => revision;
+export const touchStorage = () => void revision++;
+
 let cachedProfiles: {raw: string; profiles: Profile[]} | undefined;
+// The profile this page load talks to, endpoint and token included. Another tab choosing or editing a profile changes
+// what is saved, not this tab's backend; this tab moves when it saves itself (which reloads) or is reloaded.
+let pinned: Profile | undefined;
 let profileReadError = false;
 
 export function consumeProfileReadError(): boolean {
@@ -71,17 +80,46 @@ export function readProfiles(storage?: StoragePort): Profiles {
       cachedProfiles = {raw, profiles};
     }
     const profiles = cachedProfiles.profiles;
-    const id = store.getItem('doona-profile');
-    return {profiles, activeId: profiles.find(profile => profile.id === id)?.id ?? profiles[0]?.id ?? ''};
+    const saved = () => profiles.find(profile => profile.id === store.getItem('doona-profile'));
+    if (storage) return {profiles, activeId: saved()?.id ?? profiles[0]?.id ?? ''};
+    const own = (pinned ??= saved() ?? profiles[0]);
+    return {profiles, activeId: profiles.find(profile => profile.id === own?.id)?.id ?? profiles[0]?.id ?? ''};
   } catch {
     return {profiles: [], activeId: ''};
   }
 }
 
-export function writeProfiles({profiles, activeId}: Profiles, storage: StoragePort = localStorage): void {
+// The active profile as this page load first read it, or as this tab last saved it.
+export function pinnedProfile(): Profile | undefined {
+  readProfiles();
+  return pinned;
+}
+
+export function writeProfiles({profiles, activeId}: Profiles, storage?: StoragePort): void {
+  const store = storage ?? localStorage;
   const normalized = profiles.map(profile => ({...profile, name: profile.name.trim() || profile.id, api: normalizeApi(profile.api)}));
-  storage.setItem('doona-profiles', JSON.stringify(normalized));
-  storage.setItem('doona-profile', normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '');
+  const id = normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '';
+  const write = () => {
+    store.setItem('doona-profiles', JSON.stringify(normalized));
+    store.setItem('doona-profile', id);
+  };
+  try {
+    write();
+  } catch {
+    // Stored chart history is the first thing to give up when storage is full; a second failure is the caller's.
+    dropRings();
+    write();
+  }
+  if (!storage) pinned = normalized.find(profile => profile.id === id);
+  touchStorage();
+}
+
+function dropRings() {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith('doona-rings-')) localStorage.removeItem(key);
+  } catch {
+    /* Storage can be unavailable. */
+  }
 }
 
 // Strip the hosted /ui/ suffix while preserving any reverse-proxy prefix.
@@ -91,11 +129,12 @@ export function hostedRoot(loc: {origin: string; pathname: string}): string {
 }
 
 export async function detectHostedBackend(
-  storage: StoragePort = localStorage,
+  storage?: StoragePort,
   loc: {origin: string; pathname: string; protocol: string; host: string} = location,
   fetcher: typeof fetch = fetch
 ): Promise<boolean> {
   try {
+    storage ??= localStorage;
     if (storage.getItem('doona-profiles') !== null || storage.getItem('doona-api') !== null || !/^https?:$/.test(loc.protocol)) return false;
     const api = hostedRoot(loc);
     const response = await fetcher(`${api}/api`, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(3000)});

@@ -9,7 +9,6 @@ path = [
   "tools/**",
   "install/**",
   "docs/**",
-  "reference/**",
   "contract/**",
   "public/**",
 ]
@@ -30,34 +29,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "2024 Adobe. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
-# Flag.tsx imports artwork from the MIT-licensed flag-icons dependency;
-# the SVGs are not stored in that source file. NOTICE retains their attribution.
-
 [[annotations]]
-path = ["reference/kits/vendor/s2.js", "reference/kits/vendor/spectrum.js"]
-precedence = "override"
-SPDX-FileCopyrightText = [
-  "Adobe",
-  "Facebook, Inc. and its affiliates.",
-  "Meta Platforms, Inc. and affiliates.",
-]
-SPDX-License-Identifier = "Apache-2.0 AND MIT"
-
-[[annotations]]
-path = ["reference/kits/vendor/s2.css", "reference/kits/vendor/spectrum.css"]
-precedence = "override"
-SPDX-FileCopyrightText = "Adobe"
-SPDX-License-Identifier = "Apache-2.0"
-
-[[annotations]]
-path = ["reference/kits/vendor/noto-tc.css"]
-precedence = "override"
-SPDX-FileCopyrightText = "NOASSERTION"
-SPDX-License-Identifier = "OFL-1.1"
-
-# Preserve Contributor Covenant's license rather than applying the project GPL.
-[[annotations]]
-path = ["CODE_OF_CONDUCT.md"]
+path = [".github/CODE_OF_CONDUCT.md"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC-BY-4.0"
+
+# Ebuilds carry the header the overlays require.
+[[annotations]]
+path = ["install/gentoo/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Gentoo Authors"
+SPDX-License-Identifier = "GPL-2.0-only"

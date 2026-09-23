@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {DEFAULT_INTERVAL, parseInterval, readSubscriptions, writeInterval} from './subscriptions';
+import {parseInterval, readSubscriptions, writeInterval} from './subscriptions';
+import {LocalError} from '../../api/error';
 
 const text = `global {
   log_level: info
@@ -32,10 +33,10 @@ dns {
 describe('readSubscriptions', () => {
   it('lists every entry form with its interval', () => {
     expect(readSubscriptions(text).map(e => [e.tag, e.interval])).toEqual([
-      ['primary', DEFAULT_INTERVAL],
-      ['compatible', DEFAULT_INTERVAL],
-      ['example.org', DEFAULT_INTERVAL],
-      ['paid', DEFAULT_INTERVAL],
+      ['primary', null],
+      ['compatible', null],
+      ['example.org', null],
+      ['paid', null],
       ['detailed', 10000],
       ['manual', 0]
     ]);
@@ -63,7 +64,7 @@ describe('writeInterval', () => {
   it('turns a scalar entry into a block and keeps its agent', () => {
     const next = writeInterval(text, 'compatible', 3600);
     expect(next).toContain(
-      `  compatible: {\n    url: 'https://example.net/sub'\n    ua: 'honk/1.0 like'\n    interval: '3600s'\n  }\n  'https://example.org/no_tag_link'`
+      `  compatible: {\n    url: 'https://example.net/sub'\n    ua: 'honk/1.0 like'\n    interval: '3600s'\n  } # keep the agent\n  'https://example.org/no_tag_link'`
     );
     expect(readSubscriptions(next).find(e => e.tag === 'compatible')?.interval).toBe(3600);
   });
@@ -73,14 +74,20 @@ describe('writeInterval', () => {
     expect(writeInterval(text, 'paid', 21600)).toContain(`  paid: {\n    url: 'https://example.com/paid'\n    interval: '21600s'\n  }`);
   });
 
-  it('replaces, removes or adds the interval line of a block entry', () => {
+  it('writes explicit intervals even for 24 hours without assuming an engine default', () => {
     expect(writeInterval(text, 'detailed', 43200)).toContain(`    ua: 'honk/1.0'\n    interval: '43200s'\n  }`);
-    expect(writeInterval(text, 'detailed', DEFAULT_INTERVAL)).toContain(`    ua: 'honk/1.0'\n  }`);
+    expect(writeInterval(text, 'detailed', 86400)).toContain(`    ua: 'honk/1.0'\n    interval: '86400s'\n  }`);
     expect(writeInterval(text, 'manual', 3600)).toContain(`    url: "https://example.org/manual"\n    interval: '3600s'\n  }`);
   });
 
+  it('keeps a URL with braces and backslashes as written and refuses one with an apostrophe', () => {
+    const url = 'https://example.org/{#}?token=a\\b';
+    expect(writeInterval(`subscription {\n  paid: '${url}'\n}\ngroup { proxy {} }\n`, 'paid', 3600)).toContain(`url: '${url}'`);
+    expect(() => writeInterval(`subscription {\n  paid: "https://example.org/o'brien"\n}`, 'paid', 3600)).toThrowError(LocalError);
+  });
+
   it('leaves the text alone when nothing changes', () => {
-    expect(writeInterval(text, 'primary', DEFAULT_INTERVAL)).toBe(text);
+    expect(readSubscriptions(writeInterval(text, 'primary', 86400)).find(entry => entry.tag === 'primary')?.interval).toBe(86400);
     expect(writeInterval(text, 'detailed', 10000)).toBe(text);
     expect(writeInterval(text, 'squeezed', 0)).toBe(text);
     expect(writeInterval(text, 'missing', 0)).toBe(text);
@@ -101,7 +108,7 @@ subscription {
 `;
   expect(readSubscriptions(text).map(entry => [entry.tag, entry.interval])).toEqual([
     ['first', 7200],
-    ['second', DEFAULT_INTERVAL]
+    ['second', null]
   ]);
   const out = writeInterval(text, 'first', 3600);
   expect(out).toBe(text.replace("'2h'", "'3600s'"));
@@ -115,13 +122,27 @@ it('rewrites only the selected scalar when subscriptions share a physical line',
   expect(first).toContain("b: 'https://b.example/sub'(agent)");
   expect(readSubscriptions(first).map(entry => [entry.tag, entry.interval])).toEqual([
     ['a', 3600],
-    ['b', DEFAULT_INTERVAL]
+    ['b', null]
   ]);
   const second = writeInterval(source, 'b', 0);
   expect(second).toContain("a: 'https://a.example/sub'");
   expect(readSubscriptions(second).map(entry => [entry.tag, entry.interval])).toEqual([
-    ['a', DEFAULT_INTERVAL],
+    ['a', null],
     ['b', 0]
   ]);
   expect(second).toContain("ua: 'agent'");
+});
+
+it('does not turn unreadable or unspecified intervals into manual-only or a presumed default', () => {
+  const entries = readSubscriptions(
+    "subscription {\n  complex: {\n    url: 'https://example.org'\n    interval: '1h30m'\n  }\n  absent: {\n    url: 'https://example.net'\n  }\n}"
+  );
+  expect(entries.map(entry => entry.interval)).toEqual([null, null]);
+});
+
+it('keeps a same-line comment when a one-line subscription becomes a block', () => {
+  const text = "subscription {\n  paid: 'https://example.org/sub' # work account\n}\n";
+  const out = writeInterval(text, 'paid', 3600);
+  expect(out).toContain('# work account');
+  expect(out).toContain("interval: '3600s'");
 });

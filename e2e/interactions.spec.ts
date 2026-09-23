@@ -68,7 +68,7 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
     localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'}));
   });
   await page.route('**/api/v1/**', route => route.fulfill({json: responses[new URL(route.request().url()).pathname.replace('/api/v1', '')]}));
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   const cell = page.getByRole('rowheader').getByText(full, {exact: true});
   await expect(cell).toBeVisible();
   expect(await cell.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
@@ -103,7 +103,7 @@ for (const route of routes) {
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content .rp-alert').first()).toContainText('Could not load data');
     await expect(page.locator('.rp-content h1')).toBeVisible();
-    await expect(page.locator('.rp-content [role="status"]')).toHaveCount(0);
+    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
     expect(exceptions).toEqual([]);
   });
 }
@@ -116,7 +116,7 @@ browserTest('API failures preserve request_id in the inline error', async ({page
   await page.route('**/api/v1/**', route =>
     route.fulfill({status: 503, json: {request_id: 'interaction-request-503', error: {code: 'unavailable', message: 'Backend unavailable'}}})
   );
-  await page.goto('/#/connections');
+  await page.goto('/#/connections?tab=list');
   await expect(page.locator('.rp-content .rp-alert').first()).toContainText('request_id: interaction-request-503');
 });
 
@@ -137,9 +137,93 @@ test('shared controls distinguish a held press from hover without moving', async
     await page.mouse.down();
     await expect(control).toHaveAttribute('data-pressed');
     expect(await control.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(hovered);
-    expect(await control.boundingBox()).toEqual(bounds);
+    // The press scales the control about its centre; nothing around it moves.
+    const pressed = (await control.boundingBox())!;
+    expect(pressed.x + pressed.width / 2).toBeCloseTo(bounds!.x + bounds!.width / 2, 0);
+    expect(pressed.y + pressed.height / 2).toBeCloseTo(bounds!.y + bounds!.height / 2, 0);
     await page.mouse.move(0, 0);
     await page.mouse.up();
     await page.keyboard.press('Escape');
   }
+});
+
+test('the engine version link is a styled control, not a bare anchor', async ({page}) => {
+  await page.goto('/#/activity');
+  const link = page.locator('.rp-version');
+  await expect(link).toBeVisible();
+  expect(await link.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'flex']);
+});
+
+test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content[contenteditable="true"]');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('group { proxy {\n  policy: min');
+  await page.keyboard.press('Control+Space');
+  await page.getByRole('option', {name: 'min_avg10', exact: true}).click();
+  await expect(editor).toContainText('policy: min_avg10');
+  await expect(editor).not.toContainText('policy: policy:');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText("global {\n  log_file: '/tmp/}'\n  log_l");
+  await page.keyboard.press('Control+Space');
+  await page.getByRole('option', {name: 'log_level', exact: true}).click();
+  await expect(editor).toContainText('log_level:');
+});
+
+// A relative time cell names the local time on hover; a cell that already shows the local time gives the exact timestamp.
+const localTime = /\d{1,2}\/\d{1,2}\/\d{2}, \d{1,2}:\d{2}:\d{2}\s?[AP]M$/;
+const isoTime = /^\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+for (const [route, column, tip] of [
+  ['connections?tab=list', 'Started', localTime],
+  ['rules?tab=flows', 'Started', localTime],
+  ['dns?tab=log', 'Time', localTime],
+  ['events', 'Time', isoTime],
+  ['logs', 'Time', isoTime]
+] as const)
+  test(`the ${column.toLowerCase()} cells on ${route} show ${tip === localTime ? 'the local time' : 'the exact timestamp'} as a tooltip`, async ({page}) => {
+    await page.setViewportSize({width: 1600, height: 1000});
+    // Ungrouped, so the first row is a connection rather than a source.
+    await page.addInitScript(() => localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'})));
+    await page.goto('/#/' + route);
+    const grid = page.locator('[role="grid"]:visible, [role="treegrid"]:visible').first();
+    const headers = grid.getByRole('columnheader');
+    await expect(headers.first()).toBeVisible();
+    const index = (await headers.allTextContents()).findIndex(text => text.trim() === column);
+    expect(index).toBeGreaterThanOrEqual(0);
+    const cell = grid.locator('[role="row"][data-key]').first().locator('[role="rowheader"], [role="gridcell"]').nth(index).locator('[data-tip]');
+    await expect(async () => {
+      await page.mouse.move(0, 0);
+      await cell.hover();
+      await expect(page.getByRole('tooltip')).toHaveText(tip, {timeout: 1500});
+    }).toPass();
+  });
+
+test('a kept tab panel is the same element after switching away and back', async ({page}) => {
+  await page.goto('/#/dns');
+  const cache = page.getByRole('tab', {name: 'Cache', exact: true});
+  await cache.click();
+  const panel = page.getByRole('tabpanel', {name: 'Cache'});
+  await expect(panel.getByRole('grid')).toBeVisible();
+  await panel.getByRole('grid').evaluate(grid => ((grid as HTMLElement & {kept?: boolean}).kept = true));
+  await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
+  await expect(panel).toBeHidden();
+  await cache.click();
+  expect(await panel.getByRole('grid').evaluate(grid => (grid as HTMLElement & {kept?: boolean}).kept)).toBe(true);
+});
+
+test('a segmented marker inside a hidden tab panel keeps its place', async ({page}) => {
+  await page.goto('/#/nodes?tab=latency');
+  const by = page.getByRole('radiogroup', {name: 'Group by'});
+  await by.getByRole('radio', {name: 'Protocol'}).click();
+  await expect(by.locator('.rp-slider')).not.toHaveCSS('left', '0px');
+  const slider = (await by.locator('.rp-slider').elementHandle())!;
+  const left = await slider.evaluate(el => (el as HTMLElement).style.left);
+  await page.getByRole('tab').first().click();
+  await expect(by).toBeHidden();
+  // The resize observer reports the hidden size before the next frame; the frame after it shows what it did.
+  await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+  expect(await slider.evaluate(el => (el as HTMLElement).style.left)).toBe(left);
 });

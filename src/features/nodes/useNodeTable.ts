@@ -1,15 +1,18 @@
 import {useMemo, useState} from 'react';
+import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
-import {useNodeProbe} from '../../api/store';
+import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
-import {errorText, toast, useLinked, type TableSort} from '../../ui/ui';
-import {namedIn, readGroupEntries} from '../config/groups';
-import type {MainSourceEdit} from '../config/mainSource';
+import {toast, useLinked, type TableSort} from '../../ui/ui';
+import {namedIn, readGroupEntries} from '../../dae/groups';
+import type {MainSourceEdit} from '../../store/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
+import {policyLabel} from '../policies/policyText';
+import {errorText} from '../../api/error';
 
-export type NodeTableInput = {
+type NodeTableInput = {
   nodes: Node[];
   providers: Provider[];
   names: OutboundNames;
@@ -51,58 +54,73 @@ export function useNodeTable(input: NodeTableInput) {
         .map(id => ({id, label: id})),
     [nodes]
   );
-  const members = useMemo(() => nodeRows(nodes, search, group, protocol, sort), [nodes, search, group, protocol, sort]);
+  // A filter chosen for another source applies only if this source offers that value.
+  const activeGroup = groups.some(item => item.id === group) ? group : '';
+  const activeProtocol = protocols.some(item => item.id === protocol) ? protocol : '';
+  const {contains} = useFilter({sensitivity: 'base'});
+  const members = useMemo(
+    () => nodeRows(nodes, search, activeGroup, activeProtocol, sort, contains),
+    [nodes, search, activeGroup, activeProtocol, sort, contains]
+  );
   const entries = useMemo(
     () => readGroupEntries(source.main?.content ?? '').map(entry => ({...entry, names: new Set(namedIn(entry))})),
     [source.main?.content]
   );
   const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
-  const rows = members.map(node => ({
-    ...nodeRowView(node, names, lang, t),
-    canProbe: probe.canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
-    probing: probe.busy === node.id,
-    probeDisabled: !!probe.busy,
-    probe: () =>
-      void probe.probe(node.id).then(
-        result => {
-          if (!result) return;
-          const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
-          toast(
-            sample ? 'positive' : 'negative',
-            sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
-          );
-        },
-        error => toast('negative', errorText(error))
-      ),
-    menu: () => [
-      ...entries
-        .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
-        .map(entry => ({id: entry.name, label: entry.name, desc: entry.policy ?? 'selector'})),
-      {id: '/new', label: t('nodes.newGroup')}
-    ],
-    join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
-    removable: canManage && providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline'),
-    remove: () => onRemove(node)
-  }));
+  const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
+  const display = useMemo(() => new Map(members.map(node => [node.id, nodeRowView(node, names, lang, t)])), [members, names, lang, t]);
+  const {probe: runProbe, canProbe, busy: probeBusy} = probe;
+  const rows = useMemo(
+    () =>
+      members.map(node => ({
+        ...display.get(node.id)!,
+        canProbe: canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
+        probing: probeBusy === node.id,
+        probeDisabled: !!probeBusy,
+        probe: () =>
+          void runProbe(node.id).then(
+            result => {
+              if (!result) return;
+              const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
+              toast(
+                sample ? 'positive' : 'negative',
+                sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
+              );
+            },
+            error => toast('negative', t('nodes.probeError', {name: node.name, error: errorText(error, t)}))
+          ),
+        menu: () => [
+          ...entries
+            .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
+            .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
+          {id: '/new', label: t('nodes.newGroup')}
+        ],
+        join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
+        removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
+        remove: () => onRemove(node)
+      })),
+    [members, display, canProbe, probeBusy, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
+  );
   return {
     rows,
     search,
     setSearch,
-    group,
+    group: activeGroup,
     setGroup,
-    protocol,
+    protocol: activeProtocol,
     setProtocol,
     sort,
     setSort,
     groups: [{id: '', label: t('nodes.anyGroup')}, ...groups],
     protocols: [{id: '', label: t('nodes.anyProtocol')}, ...protocols],
-    shown: t('nodes.shown', {n: formatNumber(rows.length, locale), total: formatNumber(nodes.length, locale)}),
+    shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
     label: input.label,
     canManage,
     busy: input.busy,
     writable: source.writable,
-    sourceBusy: source.busy,
+    sourceBusy: source.busy || !source.main,
+    sourceTip: source.error ? errorText(source.error, t) : undefined,
     onAdd: input.onAdd
   };
 }
@@ -143,5 +161,6 @@ export type NodeTableView = {
   busy: boolean;
   writable: boolean;
   sourceBusy: boolean;
+  sourceTip?: string;
   onAdd: () => void;
 };

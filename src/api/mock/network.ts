@@ -4,10 +4,17 @@ import {ApiError} from '../error';
 import {ipLiteral, sourceIp} from '../selectors';
 import * as fixtures from './fixtures/network';
 import {instanceId, observedAt} from './fixtures/clock';
-import {found, page} from './common';
+import {found, createPager} from './common';
 import {routingTrace} from './routing';
 
+const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
+// Derived once per flows array; a real backend keeps its ring, so the mock should not re-sort on every poll.
 function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
+  let ring = dnsRings.get(flows);
+  if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows)));
+  return ring;
+}
+function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
   return [...flows]
     .filter(flow => flow.input.domain)
     .sort((a, b) => Date.parse(b.started_at ?? '') - Date.parse(a.started_at ?? ''))
@@ -15,19 +22,23 @@ function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
       const name = flow.input.domain!.replace(/\.$/, '') + '.';
       const cached = i % 3 === 1;
       const failed = !cached && i % 11 === 7;
-      const type = flow.network === 'udp' && i % 2 ? 'AAAA' : 'A';
+      // Enough variety for the analysis card: a cached negative answer, a no-such-name, a third upstream, slow tails.
+      const missing = i % 13 === 5 || i % 13 === 4;
+      const status = failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
+      const type = (flow.network === 'udp' && i % 2) || i % 5 === 2 ? 'AAAA' : i % 11 === 3 ? 'HTTPS' : 'A';
       const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
       return {
         id: 'dl-' + String(i + 1).padStart(6, '0'),
         observed_at: new Date(Date.parse(flow.started_at ?? new Date().toISOString()) - 40).toISOString(),
         src: flow.input.src ?? null,
         question: {name, type},
-        status: failed ? 'TIMEOUT' : 'NOERROR',
+        status,
         cached,
-        upstream: cached || failed ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : 'tls://1.1.1.1',
+        upstream:
+          cached || (failed && i % 2) ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : i % 4 === 0 ? 'https://dns.google/dns-query' : 'tls://1.1.1.1',
         route: flow.outbound === 'direct' ? {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'} : {source: 'default', rule: null},
-        elapsed_ms: cached ? 0 : failed ? 5000 : 12 + ((i * 7) % 60),
-        answers: failed || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
+        elapsed_ms: cached ? 0 : failed ? (i % 2 ? 5000 : 420) : i % 9 === 2 ? 140 + ((i * 13) % 260) : 6 + ((i * 7) % 48),
+        answers: failed || missing || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
       };
     });
 }
@@ -53,6 +64,9 @@ export function createNetwork(
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>
 ) {
+  const flowPage = createPager('flows');
+  const cachePage = createPager('dnsCache');
+  const logPage = createPager('dnsLog');
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
@@ -103,15 +117,14 @@ export function createNetwork(
     },
     flows: async (query, signal) => {
       signal?.throwIfAborted();
-      const result = page(
+      const result = flowPage(
         flows.filter(
           f =>
             (!query?.network || query.network === 'all' || f.network === query.network) &&
             (!query?.state || query.state === 'all' || f.state === query.state) &&
             (query?.connection_id === undefined || f.connection_id === query.connection_id)
         ),
-        query?.cursor,
-        query?.limit
+        query
       );
       return {
         instance_id: instanceId,
@@ -125,7 +138,7 @@ export function createNetwork(
           kernel_bypass: 'none'
         },
         dropped_records: big ? '0' : fixtures.flowDroppedRecords,
-        flows: structuredClone(result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input}))),
+        flows: result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input})),
         next_cursor: result.next_cursor
       };
     },
@@ -153,8 +166,10 @@ export function createNetwork(
           (!domain || e.domain.toLowerCase().includes(domain)) &&
           (!query?.type || query.type.includes(e.type))
       );
-      const result = page(entries, query?.cursor, query?.limit);
-      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: structuredClone(result.items), total: entries.length, next_cursor: result.next_cursor};
+      const result = cachePage(entries, query);
+      // Usage covers the whole cache, whatever the listing's filters.
+      const usage = {entries: String(dnsCache.entries.length), entry_capacity: '100000'};
+      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor, usage};
     },
     dnsLog: async (query, signal) => {
       signal?.throwIfAborted();
@@ -164,14 +179,16 @@ export function createNetwork(
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
-      const records = dnsLogRecords(flows).filter(
+      const ring = dnsLogRecords(flows);
+      const records = ring.filter(
         r =>
           (!needle || r.question.name.toLowerCase().includes(needle)) &&
           (!query?.type || r.question.type === query.type) &&
           (!src || (r.src !== null && sourceIp(r.src) === src))
       );
-      const result = page(records, query?.cursor, query?.limit ?? 200);
-      return {observed_at: new Date().toISOString(), total: records.length, next_cursor: result.next_cursor, records: structuredClone(result.items)};
+      const result = logPage(records, {...query, limit: query?.limit ?? 200});
+      // total counts the ring before filters, as the contract defines it.
+      return {observed_at: new Date().toISOString(), total: ring.length, next_cursor: result.next_cursor, records: result.items};
     },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();

@@ -1,31 +1,40 @@
-export type NoticesModel = {
+type NoticesModel = {
   rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string}>;
+  total: number;
   error: Error | null;
+  retry: () => void;
   loading: boolean;
   empty: string;
 };
 import {useT} from '../../i18n';
-import {buildHash} from '../../shell/route';
-import {Empty, ErrorMessage, Light, Link, Loading} from '../../ui/ui';
+import {href} from '../../shell/route';
+import {Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 
-export function Notices({rows, error, loading, empty}: NoticesModel) {
+export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
   const t = useT();
   return (
     <section className="rp-card" aria-label={t('act.issues')}>
-      <div className="rp-row">
-        <div className="rp-cluster">
-          <h3 className="rp-h3">{t('act.issues')}</h3>
-          {rows.length > 0 && <span className="rp-label">{rows.length}</span>}
+      {/* One line in every state: the count appearing must not wrap the header and grow the row. */}
+      <div className="rp-row nowrap">
+        <div className="rp-cluster nowrap">
+          <h3 className="rp-h3 rp-grow">
+            <TextTooltip>{t('act.issues')}</TextTooltip>
+          </h3>
+          {total > 0 && <span className="rp-label">{total}</span>}
         </div>
-        <Link appearance="button" className="quiet sm" href={buildHash('events')}>
+        <Link appearance="button" className="quiet sm" href={href('events')}>
           {t('act.viewAll')}
         </Link>
       </div>
-      {error && <ErrorMessage error={error} />}
+      {error && <ErrorMessage error={error} onRetry={retry} />}
       {loading ? (
-        <Loading />
+        <div className="rp-chart-wait">
+          <Loading />
+        </div>
       ) : rows.length === 0 ? (
-        <Empty>{empty}</Empty>
+        <div className="rp-chart-wait">
+          <Empty>{empty}</Empty>
+        </div>
       ) : (
         <div className="rp-list rp-feed" role="list">
           {rows.map(row => (

@@ -1,13 +1,14 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useConnections, useRuntime, useRuntimeMemory, useRuntimeOutbounds, useTrafficHistory} from '../../api/store';
-import {formatBytes} from '../../api/u64';
+import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {fmtRate, usePalette} from '../../ui/Charts';
-import {useMemorySeries} from '../overview/useMemorySeries';
+import {formatBytes, formatRate} from '../../i18n/format';
+import {usePalette} from '../../ui/charts';
+import {useMemorySeries} from './useMemorySeries';
 import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
-import {activityView} from './view';
+import {activityView, trafficState} from './view';
+import {offered} from '../../api/capabilities';
 
 export function useActivity() {
   const t = useT();
@@ -15,14 +16,11 @@ export function useActivity() {
   const p = usePalette();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime();
-  const outbounds = useRuntimeOutbounds(resources?.runtime_outbounds.available === true);
-  const memory = useRuntimeMemory(resources?.runtime_memory.available === true);
+  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
+  const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const [range, setRange] = useState('live');
-  const [by, setBy] = useState('dev');
   const windowSeconds = trafficWindows[range] ?? 120;
-  const memoryHistory = useMemorySeries(capabilities.data, memory.data, windowSeconds);
-  const connections = useConnections(undefined, resources?.connections.available === true);
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   const polledTraffic = useTrafficSamples(runtime.data);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
@@ -44,11 +42,12 @@ export function useActivity() {
   );
   const trafficBounds = useMemo(() => ({since: series.since, until: series.until}), [series.since, series.until]);
   const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
-  const chartRate = useCallback((value: number | null | undefined) => fmtRate(value, locale, t), [locale, t]);
-  const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value == null ? null : BigInt(Math.round(value))), []);
+  // Traffic series are in KB/s.
+  const chartRate = useCallback((value: number | null | undefined) => formatRate(value == null ? null : value * 1000, locale), [locale]);
+  const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value ?? null, locale), [locale]);
   const view = useMemo(
-    () => activityView(runtime.data, memory.data, outbounds.data, connections.data, by, locale, p, t),
-    [runtime.data, memory.data, outbounds.data, connections.data, by, locale, p, t]
+    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
+    [runtime.data, memory.data, t, resources?.runtime.available, locale]
   );
   const notices = useNotices();
   const mode = useMode();
@@ -58,8 +57,6 @@ export function useActivity() {
     notices,
     range,
     setRange,
-    by,
-    setBy,
     locale,
     p,
     spark,
@@ -71,36 +68,20 @@ export function useActivity() {
     memoryBounds,
     trafficTimestamps: series.timestamps,
     memoryTimestamps: memoryHistory.timestamps,
-    ready: !!runtime.data,
-    error: runtime.error ?? capabilities.error,
-    retry: () => {
-      capabilities.refetch();
-      runtime.refetch();
-    },
+    ready: !!capabilities.data,
+    // The shell reports a failed discovery above every page; this page reports only its own reads.
+    discoveryFailed: !!capabilities.error,
+    error: runtime.error,
+    retry: runtime.refetch,
     showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
-      state: resources?.traffic_history.available === false ? 'unavailable' : !history.data ? 'loading' : !history.data.samples.length ? 'empty' : 'ready'
-    },
-    outboundState: {
-      error: outbounds.error,
-      state: resources?.runtime_outbounds.available === false ? 'unavailable' : !outbounds.data ? 'loading' : !view.outbounds.rows.length ? 'empty' : 'ready'
-    },
-    rankingState: {
-      error: connections.error,
-      truncated: !!connections.data?.truncated,
-      state: connections.data
-        ? view.ranking.length
-          ? 'ready'
-          : 'empty'
-        : connections.error
-          ? 'error'
-          : resources?.connections.available === true
-            ? 'loading'
-            : 'unavailable'
+      retry: history.refetch,
+      state: trafficState(series, resources?.traffic_history.available, !!history.data, offered(resources, 'runtime', {whileLoading: false}))
     },
     memoryState: {
       error: memory.error ?? memoryHistory.error,
+      retry: memory.error ? memory.refetch : memoryHistory.retry,
       state: memoryHistory.samples.length > 1 ? 'ready' : resources?.runtime_memory.available === false ? 'unavailable' : 'loading'
     }
   };

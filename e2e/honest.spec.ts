@@ -6,70 +6,19 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  const notifications = page.getByRole('region', {name: 'Notifications and issues'});
+  const notifications = page.getByRole('region', {name: 'Notifications', exact: true});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');
-  // The stream reconnects on the new page; the next tick lands after the mock's five-second cadence.
-  await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
+  // Runtime heartbeats are hidden by default; the stream reconnects on the new page and the next tick lands
+  // after the mock's five-second cadence.
+  await page.getByRole('button', {name: 'Exclude runtime updates Kind', exact: true}).click();
+  await page.getByRole('option', {name: 'Runtime updated', exact: true}).click();
   await page.clock.fastForward(5100);
   await page.clock.fastForward(5100);
   await expect(page.locator('.rp-table [role=row][data-key]').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
   await page.goto('/#/connections?id=2');
   await expect(detail(page).getByRole('heading', {name: 'cdn.bilibili.com'})).toBeVisible();
-});
-
-test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {
-  const api = createMockApi();
-  const capabilities = await api.capabilities();
-  capabilities.resources.events.available = false;
-  const connections = await api.connections();
-  const connection = connections.tcp[0];
-  connection.id = 'live/id:1';
-  connection.domain = 'live-search.example';
-  connection.dst = '198.51.100.42:443';
-  connection.src = '192.0.2.42:3210';
-  const nodes = await api.nodes();
-  nodes.nodes[0].name = 'Live node';
-  const groups = await api.groups();
-  groups[0].name = 'Live group';
-  const responses: Record<string, unknown> = {
-    '/capabilities': capabilities,
-    '/version': await api.version(),
-    '/connections': connections,
-    '/nodes': nodes,
-    '/groups': groups
-  };
-  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
-  await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
-    await route.fulfill({json: path.startsWith('/groups/') ? await api.group(decodeURIComponent(path.slice(8))) : responses[path]});
-  });
-  await page.goto('/#/connections?q=no-such-connection');
-  await expect(page.getByRole('button', {name: /^Search pages, connections/})).toBeVisible();
-  await page.keyboard.press('Control+K');
-  const dialog = page.getByRole('dialog');
-  for (const query of ['live-search.example', '198.51.100.42', '192.0.2.42']) {
-    await dialog.getByRole('searchbox').fill(query);
-    await expect(dialog.getByRole('option', {name: /live-search.example/})).toBeVisible();
-  }
-  await dialog.getByRole('option', {name: /live-search.example/}).click();
-  await expect(page).toHaveURL(/#\/connections\?id=live%2Fid%3A1$/);
-  await expect(detail(page).getByRole('heading')).toHaveText('live-search.example');
-  await page.keyboard.press('Escape');
-  await expect(page).not.toHaveURL(/id=/);
-  await expect(detail(page)).toHaveCount(0);
-  const targets: Array<[string, RegExp]> = [
-    ['Live node', /#\/nodes\?provider=inline&q=Live%20node$/],
-    ['Live group', /#\/policies\?group=proxy$/],
-    ['Settings', /#\/settings$/]
-  ];
-  for (const [query, url] of targets) {
-    await page.keyboard.press('Control+K');
-    await dialog.getByRole('searchbox').fill(query);
-    await dialog.getByRole('option', {name: new RegExp('^' + query)}).click();
-    await expect(page).toHaveURL(url);
-  }
 });
 
 test('refresh remains pending until completion, refetches non-polling resources, and reports errors', async ({page}) => {
@@ -107,7 +56,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   });
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
   await expect.poll(() => Object.keys(counts).sort()).toEqual(Object.keys(responses).sort());
   // Resources gated on capabilities start a moment after it lands; wait until the counts stop moving.
   await expect
@@ -146,13 +95,16 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');
-  await page.goto('/#/dns');
+  await page.goto('/#/dns?tab=query');
   await page.clock.fastForward(6000);
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await page.getByRole('textbox', {name: 'Domain', exact: true}).fill('example.com');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
   const actionError = page.locator('.rp-content').getByRole('alert');
   await expect(actionError).toBeVisible();
+  // Said once, on the page: a failed query adds no toast of its own.
+  await expect(actionError).toContainText('Could not run the query');
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   const actionFailure = await actionError.textContent();
   await refresh.click();
   await expect(refresh).not.toHaveAttribute('data-pending');

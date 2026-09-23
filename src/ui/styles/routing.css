@@ -2,9 +2,6 @@
   min-width: 0;
   overflow: hidden;
 }
-.rp-topology h2 {
-  margin: 0;
-}
 /* The routing tree: tiles placed on computed rows, the connectors drawn from the same numbers. */
 .rp-tree {
   display: flex;
@@ -39,19 +36,19 @@
 }
 .rp-tree-links path {
   opacity: 0.55;
-  transition: opacity 0.15s;
+  transition: opacity var(--rp-duration) var(--rp-ease);
 }
 .rp-tree-links path[data-kind='direct'] {
-  stroke: var(--rp-foam);
+  stroke: var(--rp-positive);
 }
 .rp-tree-links path[data-kind='block'] {
-  stroke: var(--rp-love);
+  stroke: var(--rp-negative);
 }
 .rp-tree-links path[data-kind='group'] {
   stroke: var(--rp-iris);
 }
 .rp-tree-links path[data-kind='node'] {
-  stroke: var(--rp-pine);
+  stroke: var(--rp-accent);
 }
 .rp-tree-links path[data-state='active'] {
   opacity: 1;
@@ -76,7 +73,6 @@
   line-height: 16px;
   text-align: start;
   cursor: pointer;
-  transition: opacity 0.15s;
 }
 .rp-tree-tile.dim {
   opacity: 0.35;
@@ -85,11 +81,11 @@
   background: var(--rp-hl-med);
 }
 .rp-tree-tile[data-selected] {
-  border-color: var(--rp-pine);
+  border-color: var(--rp-accent);
   background: var(--rp-selected);
 }
 .rp-tree-tile[data-focus-visible] {
-  outline: 2px solid var(--rp-pine);
+  outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
 .rp-tree-tile .l {
@@ -109,13 +105,13 @@
   color: var(--rp-subtle);
 }
 .rp-tree-tile .s.ok {
-  color: var(--rp-foam);
+  color: var(--rp-positive-text);
 }
 .rp-tree-tile .s.warn {
-  color: var(--rp-gold);
+  color: var(--rp-notice-text);
 }
 .rp-tree-tile .s.err {
-  color: var(--rp-love);
+  color: var(--rp-negative-text);
 }
 .rp-tree-tile .c {
   flex: none;

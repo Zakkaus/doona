@@ -1,19 +1,14 @@
-import type {Group, ProbeResult} from '../../api/model';
-import type {Key} from '../../i18n/messages';
+import {formatLatency} from '../../i18n/format';
+import type {Group, HealthObservation, ProbeResult} from '../../api/model';
+import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
-import type {Params} from '../../i18n';
-import {millis} from '../../api/u64';
-import {latencyTone} from '../../ui/ui';
+import {groupPolicyText} from './policyText';
+import {formatNumber, type Translator} from '../../i18n';
+import {latencyTone, type NodeStatus} from '../../ui/ui';
 import {regionOf} from './geo';
 import type {MemberHealth} from './health';
-export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
-  selector: 'policy.kind.selector',
-  urltest: 'policy.kind.urltest',
-  loadbalance: 'policy.kind.loadbalance',
-  fallback: 'policy.kind.fallback',
-  random: 'policy.kind.random',
-  score: 'policy.kind.score'
-};
+import type {PartialProbeError} from '../../store/groups';
+import {errorText} from '../../api/error';
 const groupConfigLabels: Record<string, Key> = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',
@@ -32,10 +27,18 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
       const label: Key | MessageRef = groupConfigLabels[key] ?? {key: 'flow.f.input', params: {name: key}};
       if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
       if (typeof value === 'number' && units[key]) return [label, {key: units[key], params: {n: value}}];
+      if (key === 'default_member_id') return [label, group.members.find(member => member.id === value)?.name ?? String(value)];
       return [label, String(value)];
     });
 }
 
+// A partial probe says how far it got and why it stopped.
+export function actionErrorText(error: Error, t: Translator): string {
+  if (!('partialResult' in error)) return errorText(error, t);
+  const {completed, total, cause} = error as PartialProbeError;
+  const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t)});
+  return t('ui.valuePair', {label: errorText(error, t), value: progress});
+}
 // Count each member's worst address-family outcome, without letting an absent address hide a measured result.
 const probeRank = {unknown: 0, healthy: 1, unavailable: 2};
 export function probeSummary(result: ProbeResult): MessageRef {
@@ -55,9 +58,26 @@ export function probeSummary(result: ProbeResult): MessageRef {
   };
 }
 
-type Translate = (key: Key, params?: Params) => string;
-export type MemberView = {id: string; name: string; nested: boolean; tcp?: number; unavailable: boolean; healthy: boolean; description: string; region: string};
-export function memberViews(members: Array<Group['members'][number] & MemberHealth>, t: Translate): MemberView[] {
+export type MemberView = {
+  id: string;
+  name: string;
+  nested: boolean;
+  tcp?: number;
+  unavailable: boolean;
+  healthy: boolean;
+  status: NodeStatus;
+  description: string;
+  region: string;
+};
+const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpose.data', dns: 'policy.purpose.dns', shared: 'policy.purpose.shared'};
+// Nested groups keep their badge alongside measured or selected-node latency.
+function memberStatus(member: {kind: string} & MemberHealth, t: Translator): NodeStatus {
+  const tcp = healthMillis(member.health) ?? member.selectedNode?.latency;
+  const group = member.kind === 'group' ? t('ui.group') : undefined;
+  if (tcp != null) return {text: formatLatency(tcp, t), tone: latencyTone(tcp), group};
+  return member.health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err', group} : {text: '—', group};
+}
+export function memberViews(members: Array<Group['members'][number] & MemberHealth>, t: Translator): MemberView[] {
   return members.map(member => ({
     id: member.id,
     name: member.name,
@@ -65,21 +85,25 @@ export function memberViews(members: Array<Group['members'][number] & MemberHeal
     tcp: healthMillis(member.health) ?? member.selectedNode?.latency,
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',
-    description: member.health
-      ? `${member.health.transport.toUpperCase()} · ${member.health.purpose}`
-      : member.selectedNode
-        ? t('policy.selectedNode', {name: member.selectedNode.name})
+    status: memberStatus(member, t),
+    // Only an observation other than the usual TCP on the data path says how it was made.
+    description:
+      member.health && (member.health.transport !== 'tcp' || member.health.purpose !== 'data')
+        ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
+        : member.selectedNode
+          ? t('policy.selectedNode', {name: member.selectedNode.name})
         : ' ',
     region: regionOf(member.name) ?? '?'
   }));
 }
-export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: boolean}>, t: Translate) {
+// `alive` false is an observed failure; `alive` undefined with no `tcp` is a node nothing has measured yet.
+export function menuViews(nodes: Array<{id?: string; name: string; label?: string; tcp?: number; alive?: boolean}>, t: Translator) {
   const items = nodes.map(node => ({
-    id: node.name,
-    label: node.name,
+    id: node.id ?? node.name,
+    label: node.label ?? node.name,
     tcp: node.tcp,
     region: regionOf(node.name) ?? '—',
-    description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : t('ui.latency', {n: millis(node.tcp)}),
+    description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : formatLatency(node.tcp, t),
     className: node.alive === false ? 'desc err' : node.tcp === undefined ? 'desc' : `desc ${latencyTone(node.tcp)}`
   }));
   const groups = new Map<string, typeof items>();
@@ -88,9 +112,9 @@ export function menuViews(nodes: Array<{name: string; tcp?: number; alive?: bool
     if (group) group.push(node);
     else groups.set(node.region, [node]);
   }
-  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: ` · ${items.length}`}))};
+  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: t('policy.sectionCount', {n: items.length})}))};
 }
-export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translate) {
+export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator) {
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
   const selectable = g.policy.kind === 'selector' && g.capabilities.can_select;
@@ -103,8 +127,10 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
   return {
     id: g.id,
     name: g.name,
-    kind: t(policyKindLabels[g.policy.kind]),
+    policy: groupPolicyText(g.policy, t),
     selected: network === 'tcp' ? tcp : network === 'udp' ? udp : tcp === udp ? tcp : undefined,
+    // Both networks on different members: neither is the selection, so each is marked with the network it carries.
+    marks: network === 'both' && tcp && udp && tcp !== udp ? {[tcp]: t('ui.tcp'), [udp]: t('ui.udp')} : ({} as Record<string, string>),
     selectable,
     overridable,
     pinned,
@@ -123,5 +149,36 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
         typeof key === 'string' ? t(key) : t(key.key, key.params),
         typeof value === 'string' ? value : t(value.key, value.params)
       ])
+  };
+}
+
+export function nodeGridView(
+  nodes: MemberView[],
+  filter: {q: string; region: string; sort: string; aliveOnly: boolean},
+  contains: (value: string, query: string) => boolean,
+  t: Translator,
+  locale: string
+) {
+  const big = nodes.length > 12;
+  const counts = new Map<string, number>();
+  for (const node of nodes) counts.set(node.region, (counts.get(node.region) ?? 0) + 1);
+  const shown = big
+    ? nodes.filter(
+        node =>
+          (!filter.q || contains(node.name, filter.q)) && (filter.region === 'all' || node.region === filter.region) && (!filter.aliveOnly || node.healthy)
+      )
+    : nodes;
+  if (big && filter.sort === 'latency') shown.sort((a, b) => compareLatency(a.tcp, b.tcp));
+  else if (big && filter.sort === 'name') shown.sort((a, b) => a.name.localeCompare(b.name));
+  const down = shown.filter(node => node.unavailable).length;
+  return {
+    big,
+    shown,
+    regions: [
+      {id: 'all', label: t('policy.allRegions')},
+      ...[...counts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({id, label: id === '?' ? '—' : id, desc: formatNumber(count, locale)}))
+    ],
+    regionLabel: filter.region === 'all' ? t('policy.allRegions') : filter.region === '?' ? '—' : filter.region,
+    count: down ? t('policy.membersDown', {n: shown.length, down}) : t('policy.members', {n: shown.length})
   };
 }

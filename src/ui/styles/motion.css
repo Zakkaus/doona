@@ -1,4 +1,5 @@
-/* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
+/* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in and out; modals 250ms in,
+   130ms out. ---- */
 
 .rp-btn,
 .rp-nav,
@@ -7,18 +8,63 @@
 .rp-selectbtn,
 .rp-search,
 .rp-input,
+.rp-version,
 .rp-brand,
 .rp-input .clear,
 .rp-table [role='row'],
 .rp-switch,
 .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color;
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color, scale, translate;
   transition-duration: var(--rp-duration);
   transition-timing-function: var(--rp-ease);
 }
-/* Press feedback follows S2 Button: hover and press are one colour step, no movement. */
+/* Press feedback after S2 `pressScale`: a text button sinks to about 0.95 of its size; icon buttons, tabs, rows
+   and navigation take the colour step only. */
+.rp-btn:not(.icon)[data-pressed],
+.rp-select[data-pressed],
+.rp-selectbtn[data-pressed] {
+  scale: 0.95;
+}
+/* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
+.rp-btn[aria-expanded='true']:not(.rp-disclosure-trigger) {
+  background-color: var(--rp-hl-high);
+}
+/* A pending button keeps its colour and shows its spinner at once, with the label dimmed behind it; the refresh
+   icon's own rotation (Button.tsx) stands in for the spinner. */
+.rp-btn[data-pending] > .rp-spinner:has(+ .rp-refresh) {
+  display: none;
+}
+.rp-btn[data-pending] > :not(.rp-spinner) {
+  opacity: 0.55;
+  transition: opacity var(--rp-duration) var(--rp-ease);
+}
+.rp-btn[data-pending] > .rp-refresh {
+  opacity: 1;
+}
+/* The switch handle takes the press with the control. */
+.rp-switch .track::after {
+  transition:
+    transform var(--rp-duration) var(--rp-ease-out),
+    scale var(--rp-duration) var(--rp-ease-out);
+}
+.rp-switch[data-pressed] .track::after {
+  scale: 0.9;
+}
+/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours
+   instead of flipping. Later sheets must not set `transition` on these, or the colour fades are lost. */
+.rp-node,
+.rp-tree-tile,
+.rp-node .ms,
+.rp-tree-tile .s,
+.rp-light,
+.rp-light::before {
+  transition:
+    background-color var(--rp-duration) var(--rp-ease),
+    border-color var(--rp-duration) var(--rp-ease),
+    color var(--rp-duration) var(--rp-ease),
+    opacity var(--rp-duration) var(--rp-ease);
+}
 :root {
-  --iconPrimary: currentColor;
   color-scheme: light;
   --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --rp-underlay: rgba(0, 0, 0, 0.32);
@@ -26,6 +72,28 @@
   --rp-popover-border: transparent;
   --rp-on-accent: var(--rp-surface);
   --rp-on-text: var(--rp-surface);
+  --rp-accent: var(--rp-pine);
+  /* The accent as text. Where a palette's accent is under 4.5:1 on its base or surface, the palette sets body text. */
+  --rp-accent-text: var(--rp-accent);
+  --rp-negative: var(--rp-love);
+  --rp-positive: var(--rp-foam);
+  --rp-notice: var(--rp-gold);
+  --rp-info: var(--rp-pine);
+  /* The status tones as text, set by a palette to body text where the tone is under 4.5:1 in the same way. */
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-info);
+  /* The same roles on a tile, plain or selected, where a palette sets body text for a tone under 4.5:1 there. Page text
+     is judged on the base and the surface only, so a tone that passes there keeps its colour outside tiles. */
+  --rp-accent-tile-text: var(--rp-accent-text);
+  --rp-negative-tile-text: var(--rp-negative-text);
+  --rp-notice-tile-text: var(--rp-notice-text);
+  --rp-positive-tile-text: var(--rp-positive-text);
+  --rp-info-tile-text: var(--rp-info-text);
+  /* Secondary text on a tile, plain or selected. Where a palette's subtle is under 4.5:1 there, the palette sets body
+     text; page-level secondary text keeps reading --rp-subtle. */
+  --rp-subtle-text: var(--rp-subtle);
   --rp-line: var(--rp-hl-low);
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
@@ -39,7 +107,19 @@
   --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
-  --rp-selected: color-mix(in srgb, var(--rp-pine) 10%, var(--rp-overlay));
+  --rp-duration-modal-in: 250ms;
+  --rp-duration-modal-out: 130ms;
+  --rp-duration-toast: 400ms;
+  --rp-duration-slow: 400ms;
+  --rp-duration-tab: 120ms;
+  --rp-delay-tab: 100ms;
+  --rp-delay-dialog: 160ms;
+  --rp-duration-hop: 360ms;
+  --rp-duration-pop: 240ms;
+  --rp-duration-view: 300ms;
+  --rp-duration-spin: 800ms;
+  --rp-duration-refresh: 600ms;
+  --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
 }
 /* A finger needs more than a pointer does; table rows are already 40px. */
@@ -59,11 +139,13 @@
 .rp-bar .fill {
   height: 100%;
   border-radius: 2px;
-  transition: width 200ms var(--rp-ease-out);
+  transition: width var(--rp-duration-panel) var(--rp-ease-out);
 }
 /* Segmented control: the selection slides between items (200ms, ease-out). */
 .rp-seg {
   display: inline-flex;
+  /* Counts in segment labels tick without the neighbouring segments shifting. */
+  font-variant-numeric: tabular-nums;
   gap: 4px;
   max-width: 100%;
   background: var(--rp-overlay);
@@ -78,12 +160,15 @@
   left: 0;
   border-radius: var(--rp-r-md);
   background: var(--rp-surface);
-  border: 2px solid var(--rp-pine);
+  border: 2px solid var(--rp-accent);
   /* Animate layout to avoid text rasterisation flicker from a composited slider beneath the labels. */
   transition:
-    left 200ms var(--rp-ease-out),
-    width 200ms var(--rp-ease-out);
+    left var(--rp-duration-panel) var(--rp-ease-out),
+    width var(--rp-duration-panel) var(--rp-ease-out);
   pointer-events: none;
+}
+.rp-slider[data-still] {
+  transition: none;
 }
 .rp-seg .rp-btn {
   flex: 0 1 auto;
@@ -91,28 +176,28 @@
   padding: 0 8px;
   height: var(--rp-control);
   background: transparent;
-  color: var(--rp-subtle);
+  color: var(--rp-text);
   border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   position: relative;
   z-index: 1;
   /* Like a tab: the label recolours as the slider arrives. */
-  transition: color 120ms var(--rp-ease) 100ms;
+  transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,
 .rp-tip {
   transition:
-    opacity 200ms var(--rp-ease),
-    translate 200ms var(--rp-ease);
+    opacity var(--rp-duration-panel) var(--rp-ease),
+    translate var(--rp-duration-panel) var(--rp-ease);
 }
 .rp-popover[data-entering],
 .rp-tip[data-entering] {
-  animation: rp-pop-in 200ms var(--rp-ease);
+  animation: rp-pop-in var(--rp-duration-panel) var(--rp-ease);
 }
 .rp-popover[data-exiting],
 .rp-tip[data-exiting] {
-  animation: rp-pop-out 200ms var(--rp-ease-in);
+  animation: rp-pop-out var(--rp-duration-panel) var(--rp-ease-in);
   pointer-events: none;
 }
 .rp-popover[data-placement='top'],
@@ -146,16 +231,16 @@
 }
 /* Modal: underlay fades, the dialog follows with a short delay and a 20px rise. */
 .rp-underlay[data-entering] {
-  animation: rp-fade-in 250ms var(--rp-ease);
+  animation: rp-fade-in var(--rp-duration-modal-in) var(--rp-ease);
 }
 .rp-underlay[data-exiting] {
-  animation: rp-fade-out 130ms var(--rp-ease);
+  animation: rp-fade-out var(--rp-duration-modal-out) var(--rp-ease);
 }
 .rp-underlay[data-entering] .rp-modal {
-  animation: rp-dialog-in 250ms var(--rp-ease) 160ms both;
+  animation: rp-dialog-in var(--rp-duration-modal-in) var(--rp-ease) var(--rp-delay-dialog) both;
 }
 .rp-underlay[data-exiting] .rp-modal {
-  animation: rp-fade-out 130ms var(--rp-ease) both;
+  animation: rp-fade-out var(--rp-duration-modal-out) var(--rp-ease) both;
 }
 @keyframes rp-fade-in {
   from {
@@ -171,5 +256,15 @@
   from {
     opacity: 0;
     translate: 0 20px;
+  }
+}
+/* Palette and scheme changes crossfade through a view transition (withCrossfade). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--rp-duration-view);
+}
+@keyframes rp-spin {
+  to {
+    rotate: 360deg;
   }
 }

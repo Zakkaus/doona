@@ -1,4 +1,4 @@
-import {useId, type ComponentProps, type ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
 import {
   Button as RButton,
   ToggleButton,
@@ -8,11 +8,15 @@ import {
   SearchField as RSearchField,
   Text,
   Label,
+  FieldError,
   Input as RInput
 } from 'react-aria-components';
 import Close from './icons/Close';
 import Checkmark from './icons/Checkmark';
 import Search from './icons/Search';
+import AlertTriangle from './icons/AlertTriangle';
+import Visibility from './icons/Visibility';
+import VisibilityOff from './icons/VisibilityOff';
 import {useT} from '../i18n';
 import {cx} from './cx';
 import {useSlider} from './hooks';
@@ -45,7 +49,7 @@ export function Segmented({
         if (v != null) onChange(String(v));
       }}
     >
-      {pos && <span className="rp-slider" style={{left: pos.x, width: pos.w}} />}
+      {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       {items.map(([k, l]) => (
         <ToggleButton key={k} id={k} className="rp-btn">
           {l}
@@ -87,6 +91,7 @@ export function TextField({
   description,
   error,
   action,
+  reveal,
   autoComplete,
   spellCheck,
   ...props
@@ -105,9 +110,10 @@ export function TextField({
     description?: string;
     error?: string;
     action?: ReactNode;
+    // A secret's show or hide toggle, inside the field as in S2; `label` names what pressing it does now.
+    reveal?: {shown: boolean; label: string; onToggle: () => void};
   }) {
   const t = useT();
-  const errorId = useId();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
   const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   if (search) {
@@ -123,7 +129,12 @@ export function TextField({
   }
   const input = (
     <span className={cx('rp-input', (side || !!action) && 'rp-grow')}>
-      <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} aria-describedby={error ? errorId : undefined} />
+      <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} />
+      {reveal && (
+        <RButton className="reveal" aria-label={reveal.label} onPress={reveal.onToggle}>
+          {reveal.shown ? <VisibilityOff /> : <Visibility />}
+        </RButton>
+      )}
     </span>
   );
   return (
@@ -143,9 +154,10 @@ export function TextField({
         </Text>
       )}
       {error && (
-        <span id={errorId} role="alert">
+        <FieldError className="rp-field-error">
+          <AlertTriangle />
           {error}
-        </span>
+        </FieldError>
       )}
     </RTextField>
   );

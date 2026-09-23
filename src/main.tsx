@@ -4,20 +4,45 @@ import './fonts.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
+import {pruneRings} from './api/rings';
 import {initializeApi} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {readLang, translate} from './i18n';
+import {LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
+import {unloaded} from './i18n/unloaded';
 
 stampAppearance();
+// The saved language, or zh-TW when its catalogue cannot be fetched; rejects only when neither loads.
+function startLanguage(): Promise<Lang> {
+  const saved = readLang();
+  return loadLanguage(saved).then(
+    () => saved,
+    error => (saved === 'zh-TW' ? Promise.reject(error) : loadLanguage('zh-TW').then(() => 'zh-TW' as const))
+  );
+}
 let startup: Promise<unknown> | undefined;
+let language: Promise<Lang> | undefined;
 function Startup() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [lang, setLang] = useState<Lang | null>(null);
+  const [unreadable, setUnreadable] = useState(false);
   useEffect(() => {
     let mounted = true;
-    startup ??= detectHostedBackend().then(() => initializeApi());
+    startup ??= detectHostedBackend().then(() => {
+      pruneRings();
+      return initializeApi();
+    });
+    language ??= startLanguage();
+    void language.then(
+      loaded => {
+        if (mounted) setLang(loaded);
+      },
+      () => {
+        if (mounted) setUnreadable(true);
+      }
+    );
     void startup.then(
       () => {
         if (mounted) setReady(true);
@@ -30,19 +55,35 @@ function Startup() {
       mounted = false;
     };
   }, []);
-  if (ready) return <Shell />;
+  if (ready && lang) return <Shell lang={lang} />;
+  const [problem, retry] = unloaded[readLang()];
   return (
-    <div className="rp-shell">
-      <header className="rp-top">
-        <div className="rp-brand">
-          <img src={logo} alt="" />
-          <span>doona</span>
-        </div>
-      </header>
-      <main className="rp-main">
-        <div className="rp-content">{error ? <ErrorMessage error={error} /> : <Loading />}</div>
-      </main>
-    </div>
+    <LangContext.Provider value={lang ?? 'zh-TW'}>
+      <div className="rp-shell">
+        <header className="rp-top">
+          <div className="rp-brand">
+            <img src={logo} alt="" />
+            <span>doona</span>
+          </div>
+        </header>
+        <main className="rp-main">
+          <div className="rp-content">
+            {unreadable ? (
+              <div className="rp-empty" role="alert">
+                <p>{problem}</p>
+                <button type="button" className="rp-btn" onClick={() => location.reload()}>
+                  {retry}
+                </button>
+              </div>
+            ) : lang && error ? (
+              <ErrorMessage error={error} onRetry={() => location.reload()} />
+            ) : lang ? (
+              <Loading />
+            ) : null}
+          </div>
+        </main>
+      </div>
+    </LangContext.Provider>
   );
 }
 createRoot(document.getElementById('root')!).render(
@@ -53,9 +94,19 @@ createRoot(document.getElementById('root')!).render(
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.
+  // clients.claim() fires controllerchange on first install too; only a replaced controller is a new build.
   const running = navigator.serviceWorker.controller !== null;
+  // The worker installs no language up front, so the page tells whichever worker controls it, on load and whenever
+  // a new one takes over, the language it shows. That worker caches it, and the page starts offline in it.
+  const report = async () => {
+    if (!(await (language ??= startLanguage()).catch(() => null))) return;
+    navigator.serviceWorker.controller?.postMessage({language: loadedLang(readLang())});
+  };
+  if (running) void report();
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (running) toast('info', translate(readLang(), 'ui.newBuild'));
+    void report();
+    if (!running) return;
+    toast('info', translate(loadedLang(readLang()), 'ui.newBuild'));
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);

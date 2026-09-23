@@ -1,15 +1,15 @@
-import {createContext, useCallback, useEffect, useRef, useState} from 'react';
-import type {Go} from '../features/types';
-import {shouldOpenSettings} from '../features/settings/settings';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {shouldOpenSettings} from './preferences';
+import {isRoutePath, type Go, type RoutePath} from './routes';
 
-type Route = {route: string; query: string};
-export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
+type Route = {route: RoutePath; query: string};
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
-  return route.route === 'flows' ? legacyFlows(route.query) : route;
+  if (route.route === 'flows') return legacyFlows(route.query);
+  return {route: isRoutePath(route.route) ? route.route : 'activity', query: route.query};
 }
 // The flow map and records moved under rules; old links keep working.
 function legacyFlows(query: string): Route {
@@ -27,7 +27,23 @@ export function within(query: string, patch: Record<string, string | null>): str
   return next.toString();
 }
 
-export function buildHash(route: string, query?: string): string {
+// A fixed default tab stays out of the address, so a link without one keeps following the page's default. A default
+// that depends on data or on the link (null) is always written: otherwise a poll or a cleared filter that changes the
+// default would move the page to another tab.
+export function tabQuery(query: string, next: string, fallback: string | null): string {
+  return within(query, {tab: next === fallback ? null : next});
+}
+
+export function href(route: RoutePath, params: Record<string, string | null> = {}): string {
+  return buildHash(route, within('', params));
+}
+
+export function pickTab<T extends string>(query: string, ids: readonly T[], fallback: T): T {
+  const requested = new URLSearchParams(query).get('tab');
+  return ids.find(id => id === requested) ?? fallback;
+}
+
+export function buildHash(route: RoutePath, query?: string): string {
   return '#/' + route + (query ? '?' + query : '');
 }
 
@@ -38,11 +54,23 @@ export function updateRoute(current: Route, hash: string): Route {
 
 type PendingRoute = Route & {delta?: number};
 
+export function restoreDraftRoute(current: Route, position: number): number | undefined {
+  const destination: unknown = history.state?.doonaPosition;
+  const delta = typeof destination === 'number' ? destination - position : 0;
+  if (delta) {
+    history.go(-delta);
+    return delta;
+  }
+  // An unindexed destination has no known direction; restore in place rather than traverse.
+  history.replaceState({...history.state, doonaPosition: position}, '', buildHash(current.route, current.query));
+}
+
 function currentHash(api: string | null): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
-  else if (/^#\/?flows(\?|$)/.test(location.hash)) {
+  else {
     const {route, query} = parseHash(location.hash);
-    history.replaceState(history.state, '', buildHash(route, query));
+    const canonical = buildHash(route, query);
+    if (location.hash !== canonical) history.replaceState(history.state, '', canonical);
   }
   return location.hash;
 }
@@ -61,41 +89,47 @@ export function useRoute(api: string | null) {
   }, []);
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<PendingRoute | null>(null);
-  const push = useCallback((next: Route) => {
-    history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+  const push = useCallback((next: Route, replace = false) => {
+    if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
+    else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
     setLoc(next);
   }, []);
+  // `go` keeps one identity across navigations, so memoised pages and tiles are not re-rendered by the callback alone.
+  const current = useRef(loc);
+  useLayoutEffect(() => {
+    current.current = loc;
+  }, [loc]);
   const go = useCallback<Go>(
-    (route, query = '') => {
-      const next = updateRoute(loc, buildHash(route, query));
-      if (next === loc) return;
+    (route, query = '', options) => {
+      const next = updateRoute(current.current, buildHash(route, query));
+      if (next === current.current) return;
       if (dirty.current) setPending(next);
-      else push(next);
+      else push(next, options?.replace);
     },
-    [loc, push]
+    [push]
   );
   useEffect(() => {
     const on = () => {
-      if (restoring.current) {
-        setPending(restoring.current);
-        restoring.current = null;
+      // Only the traversal back to the draft's own entry completes a restore; if the browser dropped it, this
+      // is an ordinary navigation and is handled as one.
+      const restored = restoring.current;
+      restoring.current = null;
+      if (restored && history.state?.doonaPosition === position.current) {
+        setPending(restored);
         return;
       }
       const hash = currentHash(api);
-      const nextPosition: number = history.state?.doonaPosition ?? position.current + 1;
-      if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
+      const nextPosition: number = history.state?.doonaPosition ?? position.current;
       const next = updateRoute(loc, hash);
-      const delta = nextPosition - position.current;
-      // A draft holds the page: step back to it and ask, then travel again on discard.
       if (next !== loc && dirty.current) {
-        if (delta) {
+        const delta = restoreDraftRoute(loc, position.current);
+        if (delta !== undefined) {
           restoring.current = {...next, delta};
-          history.go(-delta);
         } else {
-          history.replaceState(history.state, '', buildHash(loc.route, loc.query));
           setPending(next);
         }
       } else {
+        if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
         position.current = nextPosition;
         setLoc(next);
       }

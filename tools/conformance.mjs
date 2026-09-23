@@ -6,26 +6,50 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import {parse} from 'yaml';
 
-const contractArg = process.argv.indexOf('--contract');
-const contractPath =
-  contractArg > 0 && process.argv[contractArg + 1]
-    ? pathToFileURL(process.argv[contractArg + 1])
-    : new URL('../contract/api-standardize/openapi.yaml', import.meta.url);
-const contract = parse(readFileSync(contractPath, 'utf8'));
+let contract, operations, byId, schemas;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
-const operations = Object.entries(contract.paths).flatMap(([path, item]) =>
-  Object.entries(item)
-    .filter(([method]) => methods.has(method))
-    .map(([method, operation]) => ({...operation, path, method, parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])]}))
-);
-const byId = new Map(operations.map(operation => [operation.operationId, operation]));
 const firstPaths = ['/api', '/api/v1/version', '/api/v1/capabilities'];
+const resourceByOperation = {
+  getConfig: 'config',
+  getConfigSource: 'config',
+  getRuntime: 'runtime',
+  getRuntimeMemory: 'runtime_memory',
+  getRuntimeOutbounds: 'runtime_outbounds',
+  getTrafficHistory: 'traffic_history',
+  getMemoryHistory: 'memory_history',
+  getRuntimeSettings: 'runtime_settings',
+  getDatapath: 'datapath',
+  listNodes: 'nodes',
+  listProviders: 'providers',
+  getProvider: 'providers',
+  getGeoData: 'geodata',
+  listGroups: 'groups',
+  getGroup: 'groups',
+  listConnections: 'connections',
+  listFlows: 'flows',
+  getFlow: 'flows',
+  listRules: 'rules',
+  streamEvents: 'events',
+  streamLogs: 'logs',
+  listDnsLog: 'dns_log',
+  listDnsCache: 'dns_cache'
+};
 const ajv = new Ajv2020({allErrors: true, strict: false, validateFormats: true});
 addFormats(ajv, {mode: 'full'});
-const schemas = structuredClone(contract.components.schemas);
-// Keep string enforcement independent of the vendored UInt64 type annotation.
-schemas.UInt64 = {allOf: [schemas.UInt64, {type: 'string'}]};
 const validators = new Map();
+
+function loadContract(file = new URL('../contract/api-standardize/openapi.yaml', import.meta.url)) {
+  contract = parse(readFileSync(file, 'utf8'));
+  operations = Object.entries(contract.paths).flatMap(([path, item]) =>
+    Object.entries(item)
+      .filter(([method]) => methods.has(method))
+      .map(([method, operation]) => ({...operation, path, method, parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])]}))
+  );
+  byId = new Map(operations.map(operation => [operation.operationId, operation]));
+  schemas = structuredClone(contract.components.schemas);
+  // Keep string enforcement independent of the vendored UInt64 type annotation.
+  schemas.UInt64 = {allOf: [schemas.UInt64, {type: 'string'}]};
+}
 
 function resolve(value) {
   if (!value?.$ref) return value;
@@ -83,7 +107,7 @@ export function validateResponse({operationId, status, headers, body, variant = 
     report(name.toLowerCase(), errors.length === 0, `${name}${errors.length ? ` ${errors.join('; ')}` : ' matches the contract'}`);
   }
   if (!streaming) {
-    const schema = status >= 400 && status < 500 ? {$ref: '#/components/schemas/ErrorResponse'} : response.content?.['application/json']?.schema;
+    const schema = response.content?.['application/json']?.schema ?? (status >= 400 && status < 500 ? {$ref: '#/components/schemas/ErrorResponse'} : undefined);
     if (!listed && status !== 202 && !(status >= 400 && status < 500)) {
       checks.push(check(operationId, 'body', 'SKIP', 'no response schema for this status', variant));
     } else {
@@ -120,6 +144,7 @@ async function readReady(body, eventSchemas, report, heartbeat) {
       id = undefined;
       data = [];
       frameNumber++;
+      if (frameNumber === 1) report('first-event', kind === 'stream.ready', 'stream.ready must be the first event');
       const schema = eventSchemas[kind];
       let errors;
       try {
@@ -229,7 +254,10 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
     unreachable = false;
   const clean = value => (token ? value.replaceAll(token, '[redacted]') : value).replace(/[\r\n]/g, ' ');
   const add = entry => checks.push({...entry, detail: clean(entry.detail)});
-  const skipped = (operation, detail, variant = '') => add(check(operation.operationId, 'request', 'SKIP', detail, variant));
+  const skipped = (operation, detail, variant = '') => {
+    const selected = settings.only.has(operation.operationId) && ['capability unavailable', 'needs token', 'server unreachable'].includes(detail);
+    add(check(operation.operationId, 'request', selected ? 'FAIL' : 'SKIP', selected ? `selected but not run: ${detail}` : detail, variant));
+  };
   const serverPath = new URL(contract.servers[0].url, 'http://contract.invalid').pathname.replace(/\/$/, '');
 
   async function request(operation, path, variant = '', cursor) {
@@ -263,11 +291,14 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
         }
       }
       for (const entry of validateResponse({operationId, status: response.status, headers: response.headers, body, bodyError, variant})) add(entry);
+      if (settings.only.has(operationId) && (response.status === 401 || response.status === 403))
+        add(check(operationId, 'request', 'FAIL', `selected but not run: HTTP ${response.status} authentication or permission refusal`, variant));
       if (cursor !== undefined) {
         const accepted = response.status === 200 || (response.status === 409 && body?.error?.code === 'event_cursor_expired');
         add(check(operationId, 'resume', accepted ? 'PASS' : 'FAIL', 'resume requires 200 or 409 event_cursor_expired', variant));
-        await response.body?.cancel().catch(() => {});
-      } else if (streaming) {
+        if (!streaming) await response.body?.cancel().catch(() => {});
+      }
+      if (streaming) {
         const report = (id, passed, detail) => add(check(operationId, id, passed ? 'PASS' : 'FAIL', detail, variant));
         try {
           const ready = await readReady(response.body, eventSchemas, report, text => heartbeats.push(clean(text)));
@@ -275,7 +306,7 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
         } catch {
           report('ready', false, controller.signal.aborted ? 'stream.ready timed out' : 'stream ended or framing failed before stream.ready');
         }
-      } else if (eventSchemas) {
+      } else if (eventSchemas && cursor === undefined) {
         add(check(operationId, 'ready', 'FAIL', 'stream.ready requires an open 200 stream', variant));
       }
       if (response.ok && !bodyError) return {body};
@@ -300,7 +331,7 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
     if (needsToken) reason = 'needs token';
     else if (unreachable) reason = 'server unreachable';
     else if (!mandatory) {
-      const resource = operation['x-capability'] ?? operation.path.replace(/^\/api\/v1\//, '').split('/')[0];
+      const resource = operation['x-capability'] ?? resourceByOperation[operation.operationId];
       if (capabilities?.resources?.[resource]?.available === false) reason = 'capability unavailable';
       else if (operation.method !== 'get' || operation['x-permission'] !== 'observe')
         reason = `SKIP by design: ${operation.method.toUpperCase()} ${operation['x-permission'] ?? 'unclassified'}`;
@@ -309,11 +340,7 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
     const {filled, missing} = observedPath(operation.path, snapshots);
     if (!reason && missing) reason = `no observed id for ${missing}`;
     if (reason) {
-      // A check named by --only that the server cannot serve is a failure, not a quiet skip: the caller asked
-      // for it. An id the walk could not observe is the walk's own gap and stays a skip.
-      const unserved = ['capability unavailable', 'needs token', 'server unreachable'].includes(reason);
-      if (settings.only.has(operation.operationId) && unserved) add(check(operation.operationId, 'request', 'FAIL', `selected but not run: ${reason}`));
-      else skipped(operation, reason);
+      skipped(operation, reason);
       continue;
     }
     const parameters = operation.parameters.map(resolve);
@@ -354,6 +381,7 @@ async function main(args) {
     if (!args.length || args[0].startsWith('--')) throw new Error(usage);
     const config = {baseUrl: args[0]};
     let json = false;
+    let contractFile;
     const seen = new Set();
     for (let i = 1; i < args.length; i++) {
       const flag = args[i];
@@ -366,10 +394,13 @@ async function main(args) {
       if (!['--token', '--only', '--skip', '--timeout', '--contract'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error(usage);
       const value = args[++i];
       const name = flag.slice(2);
-      // --contract was read at module load; here it only needs to pass the argument check.
-      if (name === 'contract') continue;
+      if (name === 'contract') {
+        contractFile = value;
+        continue;
+      }
       config[name] = name === 'timeout' ? Number(value) : name === 'only' || name === 'skip' ? value.split(',') : value;
     }
+    loadContract(contractFile);
     const result = await walk(config);
     if (json) console.log(JSON.stringify(result));
     else if (result.summary.exitCode === 2) console.error(result.checks.find(entry => entry.status === 'FAIL' && entry.id.endsWith('.request')).detail);
@@ -386,3 +417,4 @@ async function main(args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = await main(process.argv.slice(2));
+else loadContract();

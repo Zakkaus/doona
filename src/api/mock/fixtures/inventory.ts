@@ -1,5 +1,6 @@
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../model';
 import {ago, now, observedAt} from './clock';
+import {groupPolicies} from './configuration';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
     transport,
@@ -10,8 +11,9 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     sample_source: 'probe',
     state: latency === null ? 'unavailable' : 'healthy',
     latency_ms: latency,
-    moving_avg_ms: latency,
-    avg10_ms: latency,
+    // The averages differ from the latest sample, as they do on a live backend.
+    moving_avg_ms: latency === null ? null : Math.round(latency * (0.8 + (latency % 7) / 15)),
+    avg10_ms: latency === null ? null : Math.round(latency * (0.85 + (latency % 5) / 10)),
     observed_at: observedAt,
     error: latency === null ? 'timeout' : null
   };
@@ -33,16 +35,20 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-function group(name: string, kind: Group['policy']['kind'], members: string[], leaf: string, nodes: Node[]): Group {
-  for (const n of nodes) if (members.includes(n.id)) n.group_ids.push(name);
+function group(name: keyof typeof groupPolicies, members: string[], leaf: string, nodes: Node[]): Group {
+  const policy = groupPolicies[name];
+  const {kind} = policy;
+  const memberIds = new Set(members);
+  const nodeIds = new Set(nodes.map(node => node.id));
+  for (const n of nodes) if (memberIds.has(n.id)) n.group_ids.push(name);
   const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
   return {
     id: name,
     name,
     icon: null,
     config_revision: '40',
-    policy: {kind, native: kind},
-    members: members.map(id => ({id, name: id, kind: nodes.some(n => n.id === id) ? 'node' : 'group'})),
+    policy: {...policy},
+    members: members.map(id => ({id, name: id, kind: nodeIds.has(id) ? 'node' : 'group'})),
     config: {
       default_member_id: kind === 'selector' ? leaf : null,
       final_outbound: null,
@@ -56,10 +62,10 @@ function group(name: string, kind: Group['policy']['kind'], members: string[], l
       // The proxy group selects different members per network so the TCP/UDP switch has something to show.
       selection: {
         tcp: selection,
-        udp: name === 'proxy' && members.includes('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
+        udp: name === 'proxy' && memberIds.has('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
       },
       health: nodes
-        .filter(n => members.includes(n.id))
+        .filter(n => memberIds.has(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))
     },
     capabilities: {
@@ -78,12 +84,12 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     node('hk-02', 91, 88, true, 'inline', 'vless'),
     node('sg-01', 63, 70, false, 'inline', 'trojan'),
     node('jp-01', null, null, false, 'inline', 'vless'),
-    node('us-01', 188, 201, true, 'inline', 'trojan')
+    node('us-01', 188, 201, true, 'inline', 'anytls')
   ];
   const groups = [
-    group('proxy', 'selector', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
-    group('resilient', 'score', ['hk-01', 'sg-01', 'us-01'], 'sg-01', nodes),
-    group('gaming', 'urltest', ['jp-01', 'hk-02'], 'hk-02', nodes)
+    group('proxy', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
+    group('resilient', ['hk-01', 'sg-01', 'us-01'], 'sg-01', nodes),
+    group('gaming', ['jp-01', 'hk-02'], 'hk-02', nodes)
   ];
   const regions: Array<[string, number]> = [
     ['香港', 60],
@@ -111,14 +117,13 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     const alive = rnd() > 0.06;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    airport.push(node(region + ' ' + n + (tag ? ' · ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
+    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
   }
   if (airport.length) {
     nodes.push(...airport);
     groups.push(
       group(
         'skylink',
-        'selector',
         airport.map(n => n.id),
         airport[0].id,
         nodes
@@ -154,7 +159,7 @@ export const providers: Provider[] = [
   }
 ];
 // Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
-export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity'];
+export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'];
 export const geodata: GeoData = {
   observed_at: observedAt,
   assets: [

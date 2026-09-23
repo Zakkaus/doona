@@ -25,6 +25,16 @@
   --rp-hl-high: #cecacd;
   --rp-shadow: 0 1px 2px rgba(87, 82, 121, 0.08);
 }
+/* Dawn's love, gold and foam are under 4.5:1 as text, and pine is under it on a selected tile. Subtle is under 4.5:1 on
+   the tiles of every Rosé Pine flavour. Glass shares the defaults above and keeps its own tones. */
+:root[data-family='rose-pine'] {
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
+}
 :root[data-family='rose-pine'][data-scheme='dark'],
 :root[data-flavour='moon'][data-scheme='dark'] {
   --rp-base: #232136;
@@ -51,6 +61,15 @@
   --rp-hl-med: #44415a;
   --rp-hl-high: #56526e;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
+  --rp-on-accent: #191724;
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-text);
+  /* Love is under 4.5:1 on Moon's tiles. */
+  --rp-negative-tile-text: var(--rp-text);
 }
 :root[data-family='catppuccin'] {
   --rp-base: #e6e9ef;
@@ -77,6 +96,13 @@
   --rp-hl-med: #ccd0da;
   --rp-hl-high: #bcc0cc;
   --rp-shadow: 0 1px 2px rgba(76, 79, 105, 0.1);
+  --rp-on-accent: #ffffff;
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-info-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='catppuccin'][data-scheme='dark'],
 :root[data-flavour='mocha'][data-scheme='dark'] {
@@ -104,9 +130,19 @@
   --rp-hl-med: #45475a;
   --rp-hl-high: #585b70;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --rp-on-accent: var(--rp-surface);
+  --rp-accent-text: var(--rp-accent);
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-info);
+  /* Red is under 4.5:1 on a selected tile in every dark flavour. */
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-subtle);
 }
 :root[data-family='nord'] {
-  /* Nord ships no light theme: Snow Storm as surfaces, Polar Night as text; mixed steps are blends of official colours. */
+  /* Nord ships no light theme: Snow Storm as surfaces, Polar Night as text; mixed steps are blends of official
+     colours. */
   --rp-base: #e5e9f0;
   --rp-surface: #eceff4;
   --rp-overlay: #d8dee9;
@@ -131,6 +167,12 @@
   --rp-hl-med: #d8dee9;
   --rp-hl-high: color-mix(in srgb, #4c566a 25%, #e5e9f0);
   --rp-shadow: 0 1px 2px rgba(46, 52, 64, 0.1);
+  --rp-on-accent: #000000;
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-info-text: var(--rp-text);
 }
 :root[data-family='nord'][data-scheme='dark'] {
   --rp-base: #2e3440;
@@ -157,9 +199,15 @@
   --rp-hl-med: #434c5e;
   --rp-hl-high: #4c566a;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-on-accent: var(--rp-base);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  /* Green is under 4.5:1 on a tile, so only yellow keeps its colour there. */
+  --rp-positive-tile-text: var(--rp-text);
 }
 :root[data-family='kary'] {
-  /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays, and blend its greys for secondary text. */
+  /* Kary Pro has few official roles: map editor background to cards, line highlight to pages, selection to overlays,
+     and blend its greys for secondary text. */
   --rp-base: #e7f0f7;
   --rp-surface: #f0f6fb;
   --rp-overlay: #cff0f9;
@@ -184,6 +232,10 @@
   --rp-hl-med: #cff0f9;
   --rp-hl-high: color-mix(in srgb, #65758d 25%, #f0f6fb);
   --rp-shadow: 0 1px 2px rgba(101, 117, 141, 0.1);
+  --rp-on-accent: #ffffff;
+  --rp-accent-text: var(--rp-text);
+  --rp-info-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='kary'][data-scheme='dark'] {
   --rp-base: #1a1a1a;
@@ -210,6 +262,15 @@
   --rp-hl-med: #133853;
   --rp-hl-high: #474747;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-on-accent: var(--rp-surface);
+  --rp-accent-text: var(--rp-accent);
+  --rp-info-text: var(--rp-info);
+  /* Every tone is under 4.5:1 on the grey overlay. */
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-notice-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
 }
 :root[data-flavour='main'][data-scheme='dark'] {
   --rp-base: #191724;
@@ -236,6 +297,8 @@
   --rp-hl-med: #403d52;
   --rp-hl-high: #524f67;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --rp-on-accent: #ffffff;
+  --rp-negative-tile-text: var(--rp-negative);
 }
 :root[data-flavour='frappe'][data-scheme='dark'] {
   --rp-base: #292c3c;
@@ -262,6 +325,11 @@
   --rp-hl-med: #51576d;
   --rp-hl-high: #626880;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Blue, green and subtle are under 4.5:1 on Frappé's tiles. */
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-flavour='macchiato'][data-scheme='dark'] {
   --rp-base: #1e2030;
@@ -288,6 +356,10 @@
   --rp-hl-med: #494d64;
   --rp-hl-high: #5b6078;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* Blue and subtle are under 4.5:1 on Macchiato's selected tile. */
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 
 /* Ant Design 5 tokens use its default/dark algorithms, palette step 6, and G2's qualitative chart colours. */
@@ -315,10 +387,16 @@
   --rp-hl-low: #f0f0f0;
   --rp-hl-med: #d9d9d9;
   --rp-hl-high: rgba(0, 0, 0, 0.15);
-  --rp-on-accent: #ffffff;
+  --rp-on-accent: var(--rp-text);
   --rp-on-text: #ffffff;
   --rp-line: #f0f0f0;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-info-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='antd'][data-scheme='dark'] {
   --rp-base: #000000;
@@ -348,6 +426,8 @@
   --rp-on-text: #141414;
   --rp-line: #303030;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
 }
 /* Arco Design (ByteDance): tokens from @arco-design/web-react's arco.css, light body and body[arco-theme=dark]. */
 :root[data-family='arco'] {
@@ -378,6 +458,12 @@
   --rp-on-text: #ffffff;
   --rp-line: #e5e6eb;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='arco'][data-scheme='dark'] {
   --rp-base: #17171a;
@@ -403,10 +489,17 @@
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: #333335;
   --rp-hl-high: rgba(255, 255, 255, 0.16);
-  --rp-on-accent: rgba(255, 255, 255, 0.9);
+  --rp-on-accent: var(--rp-base);
   --rp-on-text: #17171a;
   --rp-line: #333335;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-text);
+  /* Red is under 4.5:1 on a tile. */
+  --rp-negative-tile-text: var(--rp-text);
 }
 /* Semi Design (ByteDance): @douyinfe/semi-theme-default palette step 5 and its semantic bg/text/fill/border tokens. */
 :root[data-family='semi'] {
@@ -437,6 +530,12 @@
   --rp-on-text: #ffffff;
   --rp-line: rgba(28, 31, 35, 0.08);
   --rp-shadow: 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.1);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
 }
 :root[data-family='semi'][data-scheme='dark'] {
   --rp-base: #16161a;
@@ -462,8 +561,14 @@
   --rp-hl-low: rgba(255, 255, 255, 0.08);
   --rp-hl-med: rgba(255, 255, 255, 0.16);
   --rp-hl-high: rgba(255, 255, 255, 0.2);
-  --rp-on-accent: #e4e7f5;
+  --rp-on-accent: var(--rp-base);
   --rp-on-text: #16161a;
   --rp-line: rgba(255, 255, 255, 0.08);
   --rp-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.25);
+  /* Red and green are under 4.5:1 on a tile, so only orange keeps its colour. */
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
 }
