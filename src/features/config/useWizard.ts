@@ -10,7 +10,7 @@ import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type
 import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
 import {diagnosticRows, sourceView, wizardInitial, wizardRows} from './view';
-import {useDraftGuard} from './useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],

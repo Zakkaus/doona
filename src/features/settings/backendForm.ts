@@ -8,7 +8,7 @@ import {ApiError} from '../../api/error';
 import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {toast, useLinked} from '../../ui/ui';
 import {readSettings} from './settings';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
 
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null};

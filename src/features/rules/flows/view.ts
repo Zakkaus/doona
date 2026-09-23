@@ -1,14 +1,14 @@
-import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
-import type {Key} from '../../i18n/messages';
-import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
-import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
-import {millis, parseU64} from '../../api/u64';
-import {latencyTone} from '../../ui/ui';
-import {policyKindLabels} from '../policies/view';
+import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
+import type {Key} from '../../../i18n/messages';
+import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
+import {chainLabel, connectionStates, localTime, outboundLabel, relativeStart, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {millis, parseU64} from '../../../api/u64';
+import {latencyTone} from '../../../ui/ui';
+import {policyKindLabels} from '../../policies/view';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
-import {href} from '../../shell/route';
-import {ruleSeedHref} from '../rules/seed';
+import {href} from '../../../shell/route';
+import {ruleSeedHref} from '../seed';
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
   userspace: 'flow.v.userspace',

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useLang, useT} from '../../i18n';
-import {useContentWidth} from '../../ui/ui';
+import {useLang, useT} from '../../../i18n';
+import {useContentWidth} from '../../../ui/ui';
 import {treeIndex, treeReach, type RoutingTree} from './map';
 import {TREE_STEP, treeGeometry, treeWindow} from './view';
 

@@ -1,5 +1,5 @@
-import {useT} from '../../i18n';
-import {Light, TextTooltip} from '../../ui/ui';
+import {useT} from '../../../i18n';
+import {Light, TextTooltip} from '../../../ui/ui';
 import type {CoverageView} from './view';
 
 export function Coverage({view}: {view: CoverageView}) {

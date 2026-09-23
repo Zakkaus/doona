@@ -1,9 +1,12 @@
 import type {Lang, Message} from './index';
 
-const modules = import.meta.glob<Record<Lang, Record<string, Message>>>(['../features/*/messages.ts', '../shell/messages.ts', '../ui/messages.ts'], {
-  eager: true,
-  import: 'messages'
-});
+const modules = import.meta.glob<Record<Lang, Record<string, Message>>>(
+  ['../features/*/messages.ts', '../features/*/*/messages.ts', '../shell/messages.ts', '../ui/messages.ts'],
+  {
+    eager: true,
+    import: 'messages'
+  }
+);
 export function duplicateKeys() {
   const owners = new Set<string>();
   const duplicates: string[] = [];

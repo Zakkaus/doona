@@ -1,5 +1,5 @@
 import {useCallback, useContext, useEffect, useState} from 'react';
-import {DraftContext} from '../../shell/route';
+import {DraftContext} from './route';
 
 const drafts = new WeakMap<(dirty: boolean) => void, Set<symbol>>();
 

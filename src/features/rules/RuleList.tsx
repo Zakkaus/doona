@@ -17,7 +17,7 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import type {ConditionKind} from '../../dae/groups';
-import {Coverage} from '../flows/Coverage';
+import {Coverage} from './flows/Coverage';
 import type {PageProps} from '../types';
 import {useRuleList, type RuleListModel as Model} from './useRuleList';
 

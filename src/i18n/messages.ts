@@ -4,7 +4,7 @@ import {messages as ui} from '../ui/messages';
 import {messages as activity} from '../features/activity/messages';
 import {messages as overview} from '../features/overview/messages';
 import {messages as connections} from '../features/connections/messages';
-import {messages as flows} from '../features/flows/messages';
+import {messages as flows} from '../features/rules/flows/messages';
 import {messages as policies} from '../features/policies/messages';
 import {messages as rules} from '../features/rules/messages';
 import {messages as config} from '../features/config/messages';

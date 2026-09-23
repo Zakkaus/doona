@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
-import {useMainSourceEdit} from '../config/mainSource';
+import {useMainSourceEdit} from '../../store/mainSource';
 import {readGroupEntries} from '../../dae/groups';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';

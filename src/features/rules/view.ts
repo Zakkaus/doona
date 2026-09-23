@@ -6,7 +6,7 @@ import {localTime, outboundLabel, preferredHealth} from '../../api/selectors';
 import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
-import {coverageView, word, type CoverageView} from '../flows/view';
+import {coverageView, word, type CoverageView} from './flows/view';
 import {sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';

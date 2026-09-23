@@ -38,7 +38,7 @@ import {
 import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
-import type {MainSourceEdit} from '../../config/mainSource';
+import type {MainSourceEdit} from '../../../store/mainSource';
 import {policyKindLabels} from '../view';
 import {newGroupPolicies} from '../policies';
 import {PolicyPicker} from '../PolicyPicker';

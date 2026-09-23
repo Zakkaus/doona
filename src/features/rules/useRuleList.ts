@@ -9,7 +9,7 @@ import {within} from '../../shell/route';
 import {addRule, removeRule, ruleAnchor} from './source';
 import {parseRuleSeed, type RuleSeed} from './seed';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {useLinked} from '../../ui/ui';
 import {errorText} from '../../api/error';
 

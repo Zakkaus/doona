@@ -2,10 +2,10 @@ import {isFragment} from '../../dae/text';
 import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
-import {editProblem, type MainSourceEdit} from '../config/mainSource';
+import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast, useLinked} from '../../ui/ui';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {errorText} from '../../api/error';
 export type PolicyEditView = {
   title: string;

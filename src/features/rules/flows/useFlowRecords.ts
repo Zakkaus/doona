@@ -1,10 +1,10 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
-import {connectionStates, outboundLabel} from '../../api/selectors';
-import {useLang, useT} from '../../i18n';
-import {within} from '../../shell/route';
-import {panelQuery, useMediaQuery} from '../../ui/ui';
-import type {PageProps} from '../types';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../../store';
+import {connectionStates, outboundLabel} from '../../../api/selectors';
+import {useLang, useT} from '../../../i18n';
+import {within} from '../../../shell/route';
+import {panelQuery, useMediaQuery} from '../../../ui/ui';
+import type {PageProps} from '../../types';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 

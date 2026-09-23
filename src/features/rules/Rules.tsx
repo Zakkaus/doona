@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
 import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
 import {RuleList} from './RuleList';
-import {FlowRecords, RoutingMap} from '../flows/Flows';
+import {FlowRecords, RoutingMap} from './flows/Flows';
 import type {PageProps} from '../types';
 import {useRulesPage} from './useRulesPage';
 import type {EvaluationView} from './view';

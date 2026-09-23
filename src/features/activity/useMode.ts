@@ -1,9 +1,9 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../store';
-import {editProblem, useMainSourceEdit} from '../config/mainSource';
+import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
-import {useDraftGuard} from '../config/useDraftGuard';
+import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
 
