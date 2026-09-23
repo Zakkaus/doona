@@ -106,7 +106,9 @@ export const messages = defineMessages({
     'ui.current': '目前',
     'ui.percent': '{n}%',
     'toast.showAllCount': '顯示全部（{n}）',
-    'ui.device': '裝置'
+    'ui.device': '裝置',
+    'ui.writeInvalid': '驗證發現 {n} 個錯誤，未寫入',
+    'ui.writeFailed': '無法寫入組態：{error}'
   },
   'zh-CN': {
     'ui.separator': '，',
@@ -213,7 +215,9 @@ export const messages = defineMessages({
     'ui.current': '当前',
     'ui.percent': '{n}%',
     'toast.showAllCount': '显示全部（{n}）',
-    'ui.device': '设备'
+    'ui.device': '设备',
+    'ui.writeInvalid': '校验发现 {n} 个错误，未写入',
+    'ui.writeFailed': '无法写入配置：{error}'
   },
   en: {
     'ui.separator': ', ',
@@ -320,6 +324,8 @@ export const messages = defineMessages({
     'ui.current': 'Current',
     'ui.percent': '{n}%',
     'toast.showAllCount': 'Show all ({n})',
-    'ui.device': 'Device'
+    'ui.device': 'Device',
+    'ui.writeInvalid': {one: 'Validation found {n} error; nothing written', other: 'Validation found {n} errors; nothing written'},
+    'ui.writeFailed': 'Could not write the configuration: {error}'
   }
 });

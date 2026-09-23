@@ -86,7 +86,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toHaveAttribute('contenteditable', 'false');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Line count: 8,');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Lines: 8,');
 });
 
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {

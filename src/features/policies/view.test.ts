@@ -94,7 +94,7 @@ it('reports a partial probe with translated counts and the stopping error', () =
   const cause = new LocalError('ui.operationFailed', 'member refused');
   const error = Object.assign(new LocalError('ui.operationFailed'), {cause, partialResult: {}, completed: 1200, total: 1500});
   const text = actionErrorText(error, t);
-  expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.operationFailed') + ': member refused'}));
+  expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.valuePair', {label: t('ui.operationFailed'), value: 'member refused'})}));
   expect(text).toContain('1,200');
   expect(text).not.toContain('ui.operationFailed');
   expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe('offline');

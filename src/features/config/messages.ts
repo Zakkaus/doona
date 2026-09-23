@@ -100,7 +100,7 @@ export const messages = defineMessages({
     'config.openSource': '開啟來源',
     'config.openSourceAt': '開啟來源：{where}',
     'config.source': '來源',
-    'config.sourceFacts': '{lines} 行，{size}，{time} 載入',
+    'config.sourceFacts': '行數：{lines}，大小：{size}，載入時間：{time}',
     'config.unsaved': '未儲存',
     'config.unsavedHint': '重新整理或關閉頁面會遺失修改',
     'config.editNote':
@@ -108,7 +108,8 @@ export const messages = defineMessages({
     'config.readNote': '此來源由引擎寫入或後端未開放編輯，只能檢視。',
     'config.level.error': '錯誤',
     'config.level.warning': '警告',
-    'config.level.info': '提示'
+    'config.level.info': '提示',
+    'config.previewFailed': '無法產生組態：{error}'
   },
   'zh-CN': {
     'config.tabModules': '模块',
@@ -209,7 +210,7 @@ export const messages = defineMessages({
     'config.openSource': '打开来源',
     'config.openSourceAt': '打开来源：{where}',
     'config.source': '来源',
-    'config.sourceFacts': '{lines} 行，{size}，{time} 加载',
+    'config.sourceFacts': '行数：{lines}，大小：{size}，加载时间：{time}',
     'config.unsaved': '未保存',
     'config.unsavedHint': '刷新或关闭页面会丢失修改',
     'config.editNote':
@@ -217,7 +218,8 @@ export const messages = defineMessages({
     'config.readNote': '此来源由引擎写入或后端未开放编辑，只能查看。',
     'config.level.error': '错误',
     'config.level.warning': '警告',
-    'config.level.info': '提示'
+    'config.level.info': '提示',
+    'config.previewFailed': '无法生成配置：{error}'
   },
   en: {
     'config.tabModules': 'Modules',
@@ -323,7 +325,7 @@ export const messages = defineMessages({
     'config.openSource': 'Open source',
     'config.openSourceAt': 'Open source: {where}',
     'config.source': 'Source',
-    'config.sourceFacts': 'Line count: {lines}, {size}, loaded {time}',
+    'config.sourceFacts': 'Lines: {lines}, size: {size}, loaded: {time}',
     'config.unsaved': 'Unsaved',
     'config.unsavedHint': 'Reloading or closing the page loses the changes',
     'config.editNote':
@@ -331,6 +333,7 @@ export const messages = defineMessages({
     'config.readNote': 'This source is written by the engine or the backend does not allow editing; view only.',
     'config.level.error': 'Error',
     'config.level.warning': 'Warning',
-    'config.level.info': 'Info'
+    'config.level.info': 'Info',
+    'config.previewFailed': 'Could not generate the configuration: {error}'
   }
 });

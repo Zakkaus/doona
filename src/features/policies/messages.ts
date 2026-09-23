@@ -65,7 +65,6 @@ export const messages = defineMessages({
     'arrange.applyNote': '套用時會先驗證整份組態，寫入後重載；驗證失敗時不會寫入。',
     'arrange.emptyNew': '群組 {group} 尚無成員；沒有成員的群組會包含所有節點，請先加入節點或訂閱。',
     'arrange.unknown': '目前沒有名為 {names} 的節點；寫入後，該名稱在對應節點出現時才會生效。',
-    'arrange.invalid': '驗證發現 {n} 個錯誤，設定未寫入。',
     'arrange.applied': '已套用 {n} 項變更並重載。',
     'arrange.change.addNode': '將節點 {name} 加入 {group}',
     'arrange.change.removeNode': '從 {group} 移除節點 {name}',
@@ -125,7 +124,6 @@ export const messages = defineMessages({
     'policy.addFilter': '新增篩選',
     'policy.save': '儲存',
     'policy.editUnsafe': '篩選或策略必須寫在同一行，括號成對，且不含註解或大括號。',
-    'policy.editInvalid': '驗證發現 {n} 個錯誤，未寫入',
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇已變更',
     'policy.probeUnchanged': '{healthy} 個可用，{unavailable} 個無法使用，{unknown} 個狀態未知；選擇未變更',
@@ -135,9 +133,10 @@ export const messages = defineMessages({
     'policy.purpose.shared': '共用',
     'policy.observedVia': '{transport}（{purpose}）',
     'policy.sectionCount': '（{n}）',
-    'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
+    'policy.memberPerNetwork': 'TCP：{tcp}，UDP：{udp}',
     'policy.editNoMain': '尚未取得主組態，無法編輯',
-    'policy.editNoEntry': '主組態 group 區段中沒有此群組，無法編輯'
+    'policy.editNoEntry': '主組態 group 區段中沒有此群組，無法編輯',
+    'policy.actionFailed': '無法完成 {name} 的操作：{error}'
   },
   'zh-CN': {
     'arrange.drag': '拖动 {name}',
@@ -203,7 +202,6 @@ export const messages = defineMessages({
     'arrange.applyNote': '应用时会先校验整份配置，写入后重载；校验失败时不会写入。',
     'arrange.emptyNew': '组 {group} 尚无成员；没有成员的组会包含所有节点，请先加入节点或订阅。',
     'arrange.unknown': '当前没有名为 {names} 的节点；写入后，该名称在对应节点出现时才会生效。',
-    'arrange.invalid': '验证发现 {n} 个错误，配置未写入。',
     'arrange.applied': '已应用 {n} 项更改并重载。',
     'arrange.change.addNode': '将节点 {name} 加入 {group}',
     'arrange.change.removeNode': '从 {group} 移除节点 {name}',
@@ -263,7 +261,6 @@ export const messages = defineMessages({
     'policy.addFilter': '添加筛选',
     'policy.save': '保存',
     'policy.editUnsafe': '筛选或策略必须写在同一行，括号成对，且不含注释或大括号。',
-    'policy.editInvalid': '校验发现 {n} 个错误，未写入',
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择已更改',
     'policy.probeUnchanged': '{healthy} 个可用，{unavailable} 个不可用，{unknown} 个状态未知；选择未更改',
@@ -273,9 +270,10 @@ export const messages = defineMessages({
     'policy.purpose.shared': '共用',
     'policy.observedVia': '{transport}（{purpose}）',
     'policy.sectionCount': '（{n}）',
-    'policy.memberPerNetwork': 'TCP {tcp}、UDP {udp}',
+    'policy.memberPerNetwork': 'TCP：{tcp}，UDP：{udp}',
     'policy.editNoMain': '尚未取得主配置，无法编辑',
-    'policy.editNoEntry': '主配置 group 区段中没有此组，无法编辑'
+    'policy.editNoEntry': '主配置 group 区段中没有此组，无法编辑',
+    'policy.actionFailed': '无法完成 {name} 的操作：{error}'
   },
   en: {
     'arrange.drag': 'Drag {name}',
@@ -342,7 +340,6 @@ export const messages = defineMessages({
     'arrange.applyNote': 'Applying validates the whole configuration first, then writes and reloads; nothing is written if validation fails.',
     'arrange.emptyNew': 'Group {group} has no members yet; a group without members holds every node, so add a node or subscription first.',
     'arrange.unknown': 'No node is named {names} right now; the name takes effect once such a node appears.',
-    'arrange.invalid': {one: 'Validation found {n} error; nothing was written.', other: 'Validation found {n} errors; nothing was written.'},
     'arrange.applied': {one: 'Applied {n} change and reloaded.', other: 'Applied {n} changes and reloaded.'},
     'arrange.change.addNode': 'Add node {name} to {group}',
     'arrange.change.removeNode': 'Remove node {name} from {group}',
@@ -407,7 +404,6 @@ export const messages = defineMessages({
     'policy.addFilter': 'Add filter',
     'policy.save': 'Save',
     'policy.editUnsafe': 'Filters and the policy must stay on one line with balanced parentheses and no comment or brace.',
-    'policy.editInvalid': {one: 'Validation found {n} error; nothing written', other: 'Validation found {n} errors; nothing written'},
     'policy.cfg.millis': '{n} ms',
     'policy.probeChanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection changed',
     'policy.probeUnchanged': '{healthy} available, {unavailable} unavailable, {unknown} unknown; selection unchanged',
@@ -417,8 +413,9 @@ export const messages = defineMessages({
     'policy.purpose.shared': 'shared',
     'policy.observedVia': '{transport} ({purpose})',
     'policy.sectionCount': ' ({n})',
-    'policy.memberPerNetwork': 'TCP {tcp}, UDP {udp}',
+    'policy.memberPerNetwork': 'TCP: {tcp}, UDP: {udp}',
     'policy.editNoMain': 'The main configuration is not available yet',
-    'policy.editNoEntry': 'This group is not defined in the group section of the main configuration'
+    'policy.editNoEntry': 'This group is not defined in the group section of the main configuration',
+    'policy.actionFailed': 'Could not complete the action on {name}: {error}'
   }
 });

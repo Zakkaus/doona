@@ -33,7 +33,7 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(fact(page, 'Unavailable')).toHaveText(/^\d+ nodes?$/);
   const plot = page.getByRole('group', {name: 'Node latency'});
   for (const label of ['Latest latency', 'Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
-  const row = plot.getByRole('img', {name: /^.+: latest \d+ ms, moving average \d+ ms, average of the last 10 \d+ ms$/}).first();
+  const row = plot.getByRole('img', {name: /^.+, latest: \d+ ms, moving average: \d+ ms, average of the last 10: \d+ ms$/}).first();
   await row.hover();
   await expect(page.locator('.rp-charttip')).toContainText('Moving average');
   const showAll = plot.getByRole('button', {name: /^Show all \d+$/});

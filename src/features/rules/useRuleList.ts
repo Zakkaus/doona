@@ -68,7 +68,7 @@ export function useRuleList({go, query}: PageProps) {
     rules.refetch();
   };
   const editor = useConfigEditor(retry);
-  const report = useEffectEvent((error: Error) => toast('negative', errorText(error, t)));
+  const report = useEffectEvent((error: Error) => toast('negative', t('ui.writeFailed', {error: errorText(error, t)})));
   useEffect(() => {
     if (editor.error) report(editor.error);
   }, [editor.error]);
@@ -144,7 +144,7 @@ export function useRuleList({go, query}: PageProps) {
     });
     if (!result) return false;
     if (result.diagnostics) {
-      toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
+      toast('negative', t('ui.writeInvalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return false;
     }
     return true;

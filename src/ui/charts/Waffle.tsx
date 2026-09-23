@@ -1,3 +1,4 @@
+import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {useMemo} from 'react';
 import {waffleCells} from './layout';
@@ -7,6 +8,7 @@ export type WaffleShare = {id: string; label: string; count: number; color: stri
 
 // A hundred cells split by share: proportions read by eye, with the counts in the legend beside them.
 export function Waffle({label, shares}: {label: string; shares: WaffleShare[]}) {
+  const t = useT();
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
   const cells = useMemo(() => {
@@ -19,7 +21,7 @@ export function Waffle({label, shares}: {label: string; shares: WaffleShare[]}) 
         className="grid"
         role="img"
         aria-describedby={describedBy}
-        aria-label={`${label}: ${shares.map(share => `${share.label} ${share.text}`).join(', ')}`}
+        aria-label={t('ui.valuePair', {label, value: shares.map(share => `${share.label} ${share.text}`).join(t('ui.separator'))})}
       >
         {cells.map((share, i) => (
           <span key={i} style={{background: share.color}} onPointerMove={event => showTip(event, [share.label, share.text])} />

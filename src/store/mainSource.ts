@@ -4,7 +4,6 @@ import {useConfig, useConfigEditor, useSourceComplete} from './config';
 import type {ConfigSource} from '../api/model';
 import {LocalError, errorText} from '../api/error';
 import type {Translator} from '../i18n';
-import type {Key} from '../i18n';
 import {offered} from '../api/capabilities';
 
 // Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
@@ -21,8 +20,12 @@ export type MainSourceEdit = {
 export type EditResult = {kind: 'ok'} | {kind: 'invalid'; errors: number} | {kind: 'cancelled'} | {kind: 'failed'; error: unknown};
 
 // What to tell the person about an edit that did not land; null when it was written or cancelled.
-export const editProblem = (result: EditResult, invalid: Key, t: Translator): string | null =>
-  result.kind === 'invalid' ? t(invalid, {n: result.errors}) : result.kind === 'failed' ? errorText(result.error, t) : null;
+export const editProblem = (result: EditResult, t: Translator): string | null =>
+  result.kind === 'invalid'
+    ? t('ui.writeInvalid', {n: result.errors})
+    : result.kind === 'failed'
+      ? t('ui.writeFailed', {error: errorText(result.error, t)})
+      : null;
 
 export function useMainSourceEdit(): MainSourceEdit {
   const resources = useCapabilities().data?.resources;

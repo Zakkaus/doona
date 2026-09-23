@@ -54,7 +54,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
           }
           toast('positive', t('policy.updated', {name: draft.name}));
         }
-        const text = editProblem(result, 'policy.editInvalid', t);
+        const text = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
         if (text) {
           if (open) refuse(text);

@@ -30,7 +30,6 @@ export function useBackendActions() {
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const geodata = useGeodata(offered(resources, 'geodata', {whileLoading: false}));
-  const fail = (error: unknown) => toast('negative', errorText(error, t));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const anyAction =
     lifecycle ||
@@ -51,17 +50,20 @@ export function useBackendActions() {
         subscriptions.map(item => item.id),
         (_id, error) => failures.push(error)
       )
-      .then(done => {
-        // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
-        if (done === undefined) return;
-        const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
-        toast(
-          done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
-          failures.length
-            ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
-            : t('settings.refreshedAll', counts)
-        );
-      }, fail);
+      .then(
+        done => {
+          // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
+          if (done === undefined) return;
+          const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
+          toast(
+            done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
+            failures.length
+              ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
+              : t('settings.refreshedAll', counts)
+          );
+        },
+        error => toast('negative', t('settings.refreshAllFailed', {error: errorText(error, t)}))
+      );
   };
   const runOperation = (kind: keyof typeof operationLabels) =>
     void operations.run(kind).then(
@@ -123,8 +125,11 @@ export function useBackendActions() {
     hasGeodata: !!resources?.geodata.available,
     rows: geodataRows(geodata.data?.assets ?? [], locale),
     update: () =>
-      void geodata.update().then(result => {
-        if (result) toast('positive', t('settings.geodataUpdated'));
-      }, fail)
+      void geodata.update().then(
+        result => {
+          if (result) toast('positive', t('settings.geodataUpdated'));
+        },
+        error => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
+      )
   };
 }

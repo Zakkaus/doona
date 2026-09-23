@@ -24,7 +24,7 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
-  await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched / deleted: ${entries.length - 1} / ${entries.length - 1}`);
+  await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched: ${entries.length - 1}, deleted: ${entries.length - 1}`);
   expect(requests.filter(request => request.method() !== 'GET').map(request => [request.method(), new URL(request.url()).pathname])).toEqual([
     ['DELETE', `/api/v1/dns/cache/${encodeURIComponent(entries[0].entry_id)}`],
     ['POST', '/api/v1/dns/cache/flush']
@@ -70,5 +70,5 @@ test('a confirmation stays open while its action is pending', async ({page}) => 
   await expect(dialog).toBeVisible();
   release();
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator('.rp-toast.positive')).toContainText('matched / deleted');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Cache cleared, matched: ');
 });

@@ -72,7 +72,7 @@ export function useNodesPage({go, query}: PageProps) {
     (node: Node, group: string) => {
       void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
         if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}));
-        const problem = editProblem(result, 'nodes.writeInvalid', t);
+        const problem = editProblem(result, t);
         if (problem) toast('negative', problem);
       });
     },
@@ -125,7 +125,7 @@ export function useNodesPage({go, query}: PageProps) {
             {kind: 'addNode', group, value: node}
           ])
         );
-        const text = editProblem(result, 'nodes.writeInvalid', t);
+        const text = editProblem(result, t);
         if (text) refuse(text);
         if (result.kind !== 'ok') return;
         toast('positive', t('nodes.joined', {name: node, group}));

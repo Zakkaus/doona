@@ -63,7 +63,7 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     setFailure(null);
     try {
       const result = await source.apply(current => applyChanges(current, changes));
-      if (result.kind === 'invalid') setFailure(t('arrange.invalid', {n: result.errors}));
+      if (result.kind === 'invalid') setFailure(t('ui.writeInvalid', {n: result.errors}));
       if (result.kind === 'failed') setFailure(t('arrange.failed', {error: errorText(result.error, t)}));
       if (result.kind === 'ok') {
         toast('positive', t('arrange.applied', {n: changes.length}));

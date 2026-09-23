@@ -27,7 +27,7 @@ export function useMode() {
       setStaged(current => (current === submitted ? null : current));
       toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
-    const problem = editProblem(result, 'act.modeInvalid', t);
+    const problem = editProblem(result, t);
     if (problem) toast('negative', problem);
   };
   return {

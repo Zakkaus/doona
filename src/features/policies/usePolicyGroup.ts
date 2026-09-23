@@ -25,7 +25,9 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
-  const report = useEffectEvent((error: Error) => toast('negative', actionErrorText(error, t)));
+  const report = useEffectEvent((error: Error) =>
+    toast('negative', t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t)}))
+  );
   useEffect(() => {
     if (control.actionError) report(control.actionError);
   }, [control.actionError]);

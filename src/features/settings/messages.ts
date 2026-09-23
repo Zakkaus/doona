@@ -85,7 +85,11 @@ export const messages = defineMessages({
     'settings.paired': '已從連結帶入後端網址與 token；儲存後生效。',
     'settings.install': '安裝為應用程式',
     'settings.installed': '已安裝',
-    'settings.apiMajor': '後端 API 主版本為 {major}，本面板依 API 主版本 1 的契約實作；欄位可能不相容。'
+    'settings.apiMajor': '後端 API 主版本為 {major}，本面板依 API 主版本 1 的契約實作；欄位可能不相容。',
+    'settings.installFailed': '無法安裝：{error}',
+    'settings.runtimeFailed': '無法套用後端選項：{error}',
+    'settings.refreshAllFailed': '無法重新整理訂閱：{error}',
+    'settings.geodataFailed': '無法更新地理資料：{error}'
   },
   'zh-CN': {
     'nav.settings': '设置',
@@ -171,7 +175,11 @@ export const messages = defineMessages({
     'settings.paired': '已从链接带入后端网址与 token；保存后生效。',
     'settings.install': '安装为应用',
     'settings.installed': '已安装',
-    'settings.apiMajor': '后端 API 主版本为 {major}，本面板按 API 主版本 1 的契约实现；字段可能不兼容。'
+    'settings.apiMajor': '后端 API 主版本为 {major}，本面板按 API 主版本 1 的契约实现；字段可能不兼容。',
+    'settings.installFailed': '无法安装：{error}',
+    'settings.runtimeFailed': '无法应用后端选项：{error}',
+    'settings.refreshAllFailed': '无法刷新订阅：{error}',
+    'settings.geodataFailed': '无法更新地理数据：{error}'
   },
   en: {
     'nav.settings': 'Settings',
@@ -197,7 +205,7 @@ export const messages = defineMessages({
     'settings.testing': 'Testing connection…',
     'settings.save': 'Save',
     'settings.saveHelp': 'Saving reloads the page to apply the profile.',
-    'settings.saveError': 'Settings could not be saved. Allow local storage for this site.',
+    'settings.saveError': 'Could not save settings: allow local storage for this site.',
     'settings.firstRun': 'No backend configured; showing built-in demo data',
     'settings.demo': 'Using built-in demo data; no external backend was contacted.',
     'settings.reachable': 'Connected, API v{version}',
@@ -261,6 +269,10 @@ export const messages = defineMessages({
     'settings.paired': 'Backend URL and token were filled in from the link; they take effect once saved.',
     'settings.install': 'Install as an app',
     'settings.installed': 'Installed',
-    'settings.apiMajor': 'The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.'
+    'settings.apiMajor': 'The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.',
+    'settings.installFailed': 'Could not install: {error}',
+    'settings.runtimeFailed': 'Could not apply backend options: {error}',
+    'settings.refreshAllFailed': 'Could not refresh subscriptions: {error}',
+    'settings.geodataFailed': 'Could not update geodata: {error}'
   }
 });

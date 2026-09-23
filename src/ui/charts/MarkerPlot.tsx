@@ -1,5 +1,6 @@
 import {useState, type ReactNode} from 'react';
 import {Button} from '../Button';
+import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
 
@@ -43,6 +44,7 @@ export function MarkerPlot({
   limit?: number;
   showAll: (n: number) => string;
 }): ReactNode {
+  const t = useT();
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -79,7 +81,7 @@ export function MarkerPlot({
             return (
               <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details])}>
                 <span className="name">{row.label}</span>
-                <div className="track" role="img" aria-label={`${row.label}: ${row.description}`}>
+                <div className="track" role="img" aria-label={row.label + t('ui.separator') + row.description}>
                   {ticks.map(tick => (
                     <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />
                   ))}

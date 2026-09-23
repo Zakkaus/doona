@@ -67,14 +67,14 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const apply = async () => {
     if (busy || !valid) return;
     if (preview.error) {
-      toast('negative', errorText(preview.error, t));
+      toast('negative', t('config.previewFailed', {error: errorText(preview.error, t)}));
       return;
     }
     const result = await editor.apply(origin, text);
     if (!result) return;
     if (result.diagnostics) {
       setFound(result.diagnostics);
-      toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
+      toast('negative', t('ui.writeInvalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return;
     }
     toast('positive', t('config.saved', {path: label}));
