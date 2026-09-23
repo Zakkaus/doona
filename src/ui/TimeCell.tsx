@@ -1,4 +1,4 @@
-import {localTime, relativeStart} from '../api/selectors';
+import {localTime, relativeStart} from '../i18n/format';
 import {LOCALE, useLang} from '../i18n';
 import {useNow} from '../store/clock';
 import {TextTooltip} from './Button';

@@ -6,7 +6,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, formatBytes, millis} from '../../api/u64';
-import {formatDuration, localTime} from '../../api/selectors';
+import {formatDuration, localTime} from '../../i18n/format';
 import {latencyTone} from '../../ui/ui';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {

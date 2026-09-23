@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {useCapabilities, useRuntimeOutbounds} from '../../store';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {usePalette} from '../../ui/Charts';
+import {usePalette} from '../../ui/charts';
 import {activityOutbounds} from './view';
 
 export function useOutboundsCard() {

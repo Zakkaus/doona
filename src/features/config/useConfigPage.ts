@@ -3,7 +3,7 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError, errorText} from '../../api/error';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../../shell/routes';

@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Donut} from '../../ui/Charts';
+import {Donut} from '../../ui/charts';
 import {Empty, ErrorMessage, Loading} from '../../ui/ui';
 import {useOutboundsCard} from './useOutboundsCard';
 

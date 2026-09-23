@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {translate} from '../i18n';
-import {fmtRate} from './Charts';
+import {translate} from './index';
+import {fmtRate} from './format';
 
 it('keeps low traffic ticks distinct and preserves the rate unit', () => {
   const t = translate.bind(null, 'en');

@@ -1,6 +1,7 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n';
-import {formatDuration, lifecycleStates, lifecycleTone, localTime, shortId} from '../../api/selectors';
+import {formatDuration, localTime} from '../../i18n/format';
+import {operationLabels, lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
 import {formatBytes, parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 const datapathValues: Record<string, Key> = {
@@ -96,7 +97,6 @@ const resourceLabels = {
   geodata: 'settings.geodata'
 } as const satisfies Record<string, Key>;
 
-export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;
 export type LifecycleAction = {id: string; label: string; pending: boolean; disabled: boolean; run: () => void};
 export function lifecycleActions(
   canRun: (kind: keyof typeof operationLabels) => boolean,

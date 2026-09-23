@@ -1,5 +1,6 @@
 import type {ApiEvent, EventKind} from '../../api/model';
-import {eventKindLabels, eventSummary, localTime} from '../../api/selectors';
+import {eventKindLabels, eventSummary} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 
 type EventRow = {id: string; timestamp: string; kind: ApiEvent['event']; kindText: string; summary: string};

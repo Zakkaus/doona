@@ -1,6 +1,6 @@
 import type {Key} from '../i18n';
 import {formatNumber, LOCALE, readLang} from '../i18n';
-import type {ApiEvent, Connection, ConnectionList, EventKind, GroupSummary, HealthObservation, Node, Runtime, RuntimeOutbounds} from './model';
+import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
 // Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
@@ -81,18 +81,6 @@ export const connectionStates: Record<Connection['state'], Key> = {
   failed: 'conn.state.failed',
   unknown: 'conn.state.unknown'
 };
-const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
-export function relativeStart(startedAt: string | null, locale: string, now = Date.now()): string {
-  if (!startedAt) return '—';
-  const seconds = Math.floor((Date.parse(startedAt) - now) / 1000);
-  if (!Number.isFinite(seconds)) return '—';
-  let formatter = relativeTimes.get(locale);
-  if (!formatter) relativeTimes.set(locale, (formatter = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'})));
-  if (Math.abs(seconds) < 60) return formatter.format(seconds, 'second');
-  if (Math.abs(seconds) < 3600) return formatter.format(Math.trunc(seconds / 60), 'minute');
-  if (Math.abs(seconds) < 86400) return formatter.format(Math.trunc(seconds / 3600), 'hour');
-  return formatter.format(Math.trunc(seconds / 86400), 'day');
-}
 
 export function connectionRows(snapshot: ConnectionList | undefined) {
   return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
@@ -101,38 +89,6 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
 export type LabelFn = (key: Key) => string;
-/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
-const durationUnits = new Map<string, Intl.NumberFormat>();
-export function formatDuration(seconds: string | null, locale: string): string {
-  if (seconds === null) return '—';
-  const total = parseU64(seconds);
-  if (total === null) return '—';
-  const d = total / 86400n,
-    h = (total % 86400n) / 3600n,
-    m = (total % 3600n) / 60n;
-  const unit = (value: bigint, name: string) => {
-    const key = locale + '/' + name;
-    let formatter = durationUnits.get(key);
-    if (!formatter) durationUnits.set(key, (formatter = new Intl.NumberFormat(locale, {style: 'unit', unit: name, unitDisplay: 'short'})));
-    return formatter.format(value);
-  };
-  if (d > 0n) return `${unit(d, 'day')} ${unit(h, 'hour')}`;
-  if (h > 0n) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
-  if (m > 0n) return unit(m, 'minute');
-  return unit(total, 'second');
-}
-const localTimes = new Map<string, Intl.DateTimeFormat>();
-export function localTimeFormat(locale: string) {
-  let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
-  return formatter;
-}
-export function localTime(iso: string | null, locale: string): string {
-  if (!iso) return '—';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return iso;
-  return localTimeFormat(locale).format(t);
-}
 export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 export const eventKindLabels: Record<EventKind, Key> = {
   'stream.ready': 'event.k.streamReady',
@@ -211,3 +167,65 @@ export function resolveSelectedLeaf(
   }
   return {groups, member: null, node: null};
 }
+
+// Labels that more than one page shows.
+export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
+  selector: 'policy.kind.selector',
+  urltest: 'policy.kind.urltest',
+  loadbalance: 'policy.kind.loadbalance',
+  fallback: 'policy.kind.fallback',
+  random: 'policy.kind.random',
+  score: 'policy.kind.score'
+};
+export const logLevelLabels: Record<LogLevel, Key> = {
+  trace: 'log.level.trace',
+  debug: 'log.level.debug',
+  info: 'log.level.info',
+  warn: 'log.level.warn',
+  error: 'log.level.error'
+};
+export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;
+const flowWords: Record<string, Key> = {
+  kernel: 'flow.v.kernel',
+  userspace: 'flow.v.userspace',
+  matched: 'flow.v.matched',
+  other_family_trusted: 'flow.v.otherFamilyTrusted',
+  failed: 'flow.v.failed',
+  not_required: 'flow.v.notRequired',
+  unavailable: 'flow.v.unavailable',
+  pass: 'flow.v.pass',
+  redirect: 'flow.v.redirect',
+  hold: 'flow.v.hold',
+  arm_direct: 'flow.v.armDirect',
+  activate_direct: 'flow.v.activateDirect',
+  activate_proxy: 'flow.v.activateProxy',
+  drop: 'flow.v.drop',
+  started: 'flow.v.started',
+  succeeded: 'flow.v.succeeded',
+  cancelled: 'flow.v.cancelled',
+  transport_ready: 'flow.v.transportReady',
+  target_request_sent: 'flow.v.targetRequestSent',
+  target_confirmed: 'flow.v.targetConfirmed',
+  first_reply: 'flow.v.firstReply',
+  terminal: 'flow.v.terminal',
+  unknown: 'ui.unknown',
+  route_selected: 'flow.v.routeSelected',
+  no_new_routing_input: 'flow.v.noNewRoutingInput',
+  reply_received: 'flow.v.replyReceived',
+  hit: 'flow.v.hit',
+  miss: 'flow.v.miss',
+  stale: 'flow.v.stale',
+  bypass: 'flow.v.bypass',
+  hosts: 'flow.v.hosts',
+  coalesced: 'flow.v.coalesced',
+  cache: 'flow.v.cache',
+  upstream: 'ui.upstream',
+  lan: 'flow.v.lan',
+  wan: 'flow.v.wan',
+  tls_sni: 'flow.v.tlsSni',
+  http_host: 'flow.v.httpHost',
+  quic_sni: 'flow.v.quicSni',
+  dns_mapping: 'flow.v.dnsMapping',
+  explicit: 'flow.v.explicit'
+};
+export const word = (value: string | null | undefined): string | MessageRef => (value == null ? '—' : flowWords[value] ? {key: flowWords[value]} : value);

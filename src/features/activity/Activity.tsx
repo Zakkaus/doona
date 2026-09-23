@@ -5,7 +5,7 @@ import Data from '../../ui/icons/Data';
 import {useT} from '../../i18n';
 import {CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
 import {href} from '../../shell/route';
-import {AreaChart, Legend, Spark} from '../../ui/Charts';
+import {AreaChart, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
 import {Notices} from './Notices';
 import {useActivity} from './useActivity';

@@ -1,6 +1,6 @@
 import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {formatBytes} from '../../api/u64';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';

@@ -1,8 +1,9 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {addU64, formatBytes, formatRate, parseU64} from '../../api/u64';
-import {chainLabel, chainNames, connectionStates, localTime, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {chainLabel, chainNames, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {word} from '../rules/flows/view';
+import {word} from '../../api/selectors';
 import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';

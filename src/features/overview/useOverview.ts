@@ -2,8 +2,9 @@ import {useMemo} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, toast} from '../../ui/ui';
-import {usePalette} from '../../ui/Charts';
-import {lifecycleActions, operationLabels, overviewExport, overviewView} from './view';
+import {usePalette} from '../../ui/charts';
+import {lifecycleActions, overviewExport, overviewView} from './view';
+import {operationLabels} from '../../api/selectors';
 import {errorText} from '../../api/error';
 
 export function useOverview() {

@@ -1,14 +1,13 @@
 import {useCallback, useMemo} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
-import {usePalette} from '../../ui/Charts';
+import {usePalette, ChartCard, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {Button} from '../../ui/ui';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';
-import {ChartCard, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {levelHeatmap} from './heatmap';
-import {logLevelLabels} from './view';
+import {logLevelLabels} from '../../api/selectors';
 
 // When the feed was busy and with what: a row per level, a column per stretch of time. A row header sets the
 // minimum level the list shows, which is what the level control already means.

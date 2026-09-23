@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent} from '../../api/model';
-import {localTime} from '../../api/selectors';
+import {localTime} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
 import {eventsExport, eventsView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);

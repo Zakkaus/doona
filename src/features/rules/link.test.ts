@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {parseRuleSeed, ruleSeedHref} from './seed';
+import {parseRuleSeed, ruleSeedHref} from './link';
 
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
   for (const seed of [

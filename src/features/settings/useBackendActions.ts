@@ -9,7 +9,8 @@ import {
   useRuntime,
   useRuntimeOperations
 } from '../../store';
-import {lifecycleActions, operationLabels} from '../overview/view';
+import {lifecycleActions} from '../overview/view';
+import {operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';

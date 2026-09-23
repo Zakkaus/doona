@@ -1,7 +1,7 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useCapabilities, useConnections} from '../../store';
 import {useT} from '../../i18n';
-import {usePalette} from '../../ui/Charts';
+import {usePalette} from '../../ui/charts';
 import {activityRanking} from './view';
 
 // The poll runs only while the card is near the viewport; off screen it is paused and keeps its last list.

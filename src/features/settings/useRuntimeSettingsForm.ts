@@ -17,7 +17,7 @@ import {
   type RecorderChoice
 } from './view';
 import {useDraftGuard} from '../../shell/draft';
-import {logLevelLabels} from '../logs/view';
+import {logLevelLabels} from '../../api/selectors';
 import {errorText} from '../../api/error';
 
 export function useRuntimeSettingsForm() {
