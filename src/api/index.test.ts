@@ -51,3 +51,46 @@ it('reads storage for the client again only after a write, a storage event or th
   writeProfiles({profiles: [{id: 'home', name: 'Home', api: 'https://other.example', token: ''}], activeId: 'home'});
   expect(getApi()).not.toBe(lapsed);
 });
+
+it('keeps its backend when another tab deletes the profile this tab uses', async () => {
+  const values = new Map([
+    [
+      'doona-profiles',
+      JSON.stringify([
+        {id: 'home', name: 'Home', api: 'https://home.example', token: 'a'},
+        {id: 'work', name: 'Work', api: 'https://work.example', token: 'b'}
+      ])
+    ],
+    ['doona-profile', 'home']
+  ]);
+  const window = new EventTarget();
+  vi.stubGlobal('localStorage', storage(values));
+  vi.stubGlobal('sessionStorage', storage(new Map()));
+  vi.stubGlobal('window', window);
+  vi.resetModules();
+  const {getApi} = await import('./index');
+  const home = getApi();
+  values.set('doona-profiles', JSON.stringify([{id: 'work', name: 'Work', api: 'https://work.example', token: 'b'}]));
+  window.dispatchEvent(new Event('storage'));
+  expect(getApi()).toBe(home);
+});
+
+it('keeps its backend when another tab deletes every profile', async () => {
+  const values = new Map([
+    ['doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://home.example', token: 'a'}])],
+    ['doona-profile', 'home']
+  ]);
+  const window = new EventTarget();
+  vi.stubGlobal('localStorage', storage(values));
+  vi.stubGlobal('sessionStorage', storage(new Map()));
+  vi.stubGlobal('window', window);
+  vi.resetModules();
+  const {getApi} = await import('./index');
+  const home = getApi();
+  values.set('doona-profiles', '[]');
+  window.dispatchEvent(new Event('storage'));
+  getApi();
+  await vi.dynamicImportSettled();
+  window.dispatchEvent(new Event('storage'));
+  expect(getApi()).toBe(home);
+});

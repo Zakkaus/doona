@@ -9,7 +9,7 @@ import {initializeApi} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {LangContext, isLoaded, loadLanguage, readLang, translate, type Lang} from './i18n';
+import {LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
 import {unloaded} from './i18n/unloaded';
 
 stampAppearance();
@@ -98,8 +98,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   const running = navigator.serviceWorker.controller !== null;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!running) return;
-    const lang = readLang();
-    toast('info', translate(isLoaded(lang) ? lang : 'zh-TW', 'ui.newBuild'));
+    toast('info', translate(loadedLang(readLang()), 'ui.newBuild'));
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);

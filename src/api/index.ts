@@ -5,6 +5,7 @@ import {sessionExpiry, sessionToken} from './session';
 
 let selected: Api | undefined;
 let configuration = '';
+let pinned: string | undefined;
 let mockFactory: (() => Api) | undefined;
 // Every store hook asks for the client on every render; storage is read again only once something may have changed
 // it, or once the session it was built with has lapsed.
@@ -21,6 +22,11 @@ export async function initializeApi(): Promise<Api> {
 export function getApi(): Api {
   if (selected && checked.revision === storageRevision() && Date.now() < checked.until) return selected;
   const {profiles, activeId} = readProfiles();
+  // Another tab deleting this tab's profile does not move this tab: it keeps that backend until it is reloaded.
+  if (selected && pinned && !profiles.some(profile => profile.id === pinned)) {
+    checked = {revision: storageRevision(), until: Infinity};
+    return selected;
+  }
   const profile = profiles.find(profile => profile.id === activeId);
   const base = profile?.api;
   // A password session opened in this tab takes the place of the profile's configured bearer.
@@ -37,6 +43,7 @@ export function getApi(): Api {
       return selected;
     } else throw new Error('API initialization has not completed');
     configuration = key;
+    pinned = profile?.id;
   }
   checked = {revision: storageRevision(), until: profile && base ? sessionExpiry(profile.id, base) : Infinity};
   return selected;

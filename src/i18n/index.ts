@@ -53,6 +53,9 @@ export function loadLanguage(lang: Lang): Promise<void> {
 export function isLoaded(lang: Lang) {
   return catalogues.has(lang);
 }
+// The preferred language when this page has loaded it, otherwise one it has; another tab may have saved a
+// language this page never loaded.
+export const loadedLang = (preferred: Lang): Lang => [preferred, ...LANGS.map(([lang]) => lang)].find(isLoaded) ?? preferred;
 const plurals = new Map<Lang, Intl.PluralRules>();
 // An integer parameter is written with the language's grouping, so a count reads as 1,000 rather than 1000;
 // a measurement with decimals is already formatted by its caller.

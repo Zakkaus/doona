@@ -77,16 +77,21 @@ function read(key: string): unknown {
     return null;
   }
 }
+// A stored ring someone else wrote or an older build left malformed is dropped, not charted.
+function ring<T extends Timed>(value: unknown): T[] | null {
+  return Array.isArray(value) && value.every(sample => typeof sample === 'object' && sample !== null && Number.isFinite((sample as Timed).time))
+    ? (value as T[])
+    : null;
+}
 function load<T extends Timed>(name: string): Stored & {rings: Rings<T>} {
   const key = storageKey(name);
   const cached = stores.get(name);
   if (cached && cached.key === key) return cached as Stored & {rings: Rings<T>};
   const stored = read(key) as {fine?: unknown; coarse?: unknown} | null;
   const coarse = read(`${key}-coarse`);
-  const fine = Array.isArray(stored?.fine) ? (stored.fine as T[]) : [];
   // An older build kept both rings under one key.
-  const rings = {fine, coarse: Array.isArray(coarse) ? (coarse as T[]) : Array.isArray(stored?.coarse) ? (stored.coarse as T[]) : []};
-  const store = {key, rings, saved: Date.now(), coarseSaved: 0, writtenCoarse: Array.isArray(coarse) ? rings.coarse : null};
+  const rings = {fine: ring<T>(stored?.fine) ?? [], coarse: ring<T>(coarse) ?? ring<T>(stored?.coarse) ?? []};
+  const store = {key, rings, saved: Date.now(), coarseSaved: 0, writtenCoarse: ring(coarse) ? rings.coarse : null};
   stores.set(name, store);
   return store;
 }

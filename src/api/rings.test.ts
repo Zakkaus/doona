@@ -206,3 +206,19 @@ it('prunes the rings of a deleted or moved profile at startup', () => {
     vi.unstubAllGlobals();
   }
 });
+
+it('starts fresh from a malformed stored ring', () => {
+  const key = 'doona-rings-broken-["","mock"]';
+  const storage = new Map([[key, JSON.stringify({fine: [null]})]]);
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  try {
+    expect(record('broken', {time: 1000, value: 1}, fold).fine).toEqual([{time: 1000, value: 1}]);
+  } finally {
+    resetRings();
+    vi.unstubAllGlobals();
+  }
+});
