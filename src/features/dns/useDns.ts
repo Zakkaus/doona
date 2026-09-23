@@ -55,7 +55,7 @@ export function useDns({go, query}: PageProps) {
     error: capabilities.error,
     queryError: error,
     submit: () => void submit(),
-    setTab: (tab: string) => go('dns', tabQuery(query, tab, fallback)),
+    setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !params.has('domain') ? fallback : null)),
     tab: pickTab(
       query,
       view.tabs.map(item => item.id),

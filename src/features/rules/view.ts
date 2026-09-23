@@ -8,7 +8,7 @@ import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
 import {coverageView, type CoverageView} from './flows/view';
-import {word} from '../../api/selectors';
+import {word} from '../../api/labels';
 import {sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
@@ -187,16 +187,19 @@ export function rulesTabs(resources: Capabilities['resources'] | undefined): Arr
     ...(offered(resources, 'routing_trace', {whileLoading: true}) ? [{id: 'trace' as const, titleKey: 'rule.trace' as const}] : [])
   ];
 }
-type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string};
+type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string; fallback: string | null};
+// The default tab is the first one the backend offers; until the capabilities are known it is not fixed (null).
 export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
   const tabs = rulesTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
+  const first = tabs[0]?.id ?? 'map';
   return {
     tabs,
     tab: pickTab(
       query,
       tabs.map(tab => tab.id),
-      tabs[0]?.id ?? 'map'
-    )
+      first
+    ),
+    fallback: resources ? first : null
   };
 }
 

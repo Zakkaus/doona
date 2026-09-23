@@ -27,8 +27,10 @@ export function within(query: string, patch: Record<string, string | null>): str
   return next.toString();
 }
 
-// The default tab stays out of the address, so a link without one keeps following the page's default.
-export function tabQuery(query: string, next: string, fallback: string): string {
+// A fixed default tab stays out of the address, so a link without one keeps following the page's default. A default
+// that depends on data or on the link (null) is always written: otherwise a poll or a cleared filter that changes the
+// default would move the page to another tab.
+export function tabQuery(query: string, next: string, fallback: string | null): string {
   return within(query, {tab: next === fallback ? null : next});
 }
 

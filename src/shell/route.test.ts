@@ -75,4 +75,5 @@ describe('hash routing', () => {
 it('keeps the default tab out of the address', () => {
   expect(tabQuery('tab=latency&q=a', 'list', 'list')).toBe('q=a');
   expect(tabQuery('q=a', 'latency', 'list')).toBe('q=a&tab=latency');
+  expect(tabQuery('q=a', 'list', null)).toBe('q=a&tab=list');
 });

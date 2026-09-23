@@ -112,7 +112,7 @@ export function useConfigPage({go, query}: PageProps) {
     redacted: !!config.data?.secrets_redacted,
     tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
     tab,
-    setTab: (tab: string) => go('config', tabQuery(query, tab, fallback)),
+    setTab: (tab: string) => go('config', tabQuery(query, tab, null)),
     selectedId: selectedId ?? '',
     select,
     sourceProps,

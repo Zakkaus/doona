@@ -12,6 +12,6 @@ export function useRulesPage({go, query}: PageProps) {
     ...view,
     loading: capabilities.loading && !capabilities.data,
     error: capabilities.error,
-    changeTab: (tab: string) => go('rules', tabQuery(query, tab, view.tabs[0]?.id ?? 'map'))
+    changeTab: (tab: string) => go('rules', tabQuery(query, tab, view.fallback))
   };
 }

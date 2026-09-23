@@ -74,6 +74,9 @@ it('rejects unavailable tab requests and keeps trace-only navigation usable', as
   const view = rulesView(resources, 'tab=map', t);
   expect(view.tabs.map(tab => tab.id)).toEqual(['trace']);
   expect(view.tab).toBe('trace');
+  expect(view.fallback).toBe('trace');
+  // Before the capabilities arrive the default is not fixed, so a chosen tab is always written.
+  expect(rulesView(undefined, '', t).fallback).toBeNull();
 });
 
 it('prepares uncertain evaluations, rule fallbacks and probe eligibility', async () => {
