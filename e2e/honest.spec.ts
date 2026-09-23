@@ -6,7 +6,7 @@ test('native activity shows the API version and follows runtime events', async (
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
-  const notifications = page.getByRole('region', {name: 'Notifications and issues'});
+  const notifications = page.getByRole('region', {name: 'Notifications', exact: true});
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');

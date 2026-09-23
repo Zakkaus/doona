@@ -155,7 +155,7 @@ export const messages = defineMessages({
     'act.devices': 'Devices',
     'act.domains': 'Domains',
     'act.node': 'Node',
-    'act.issues': 'Notifications and issues',
+    'act.issues': 'Notifications',
     'act.noIssues': 'No issues require attention',
     'act.unavailable': 'Unavailable',
     'act.d7': '7 d',

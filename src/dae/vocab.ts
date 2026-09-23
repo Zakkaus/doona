@@ -1,3 +1,5 @@
+import type {Group} from '../api/model';
+
 // The dae configuration vocabulary the engine accepts, as honk's parser spells it (crates/honk-config/src/parser):
 // the editor's completions and the demo validator both read from here so they cannot drift apart.
 export const globalKeys = [
@@ -37,6 +39,23 @@ export const globalKeys = [
   'max_concurrent_dials'
 ];
 // Group policies: the canonical names first, then the dae spellings the engine maps onto them.
+// Which contract kind a native policy expression behaves as; undefined for one doona does not know.
+const policyKinds: Record<string, Group['policy']['kind']> = {
+  select: 'selector',
+  fixed: 'selector',
+  urltest: 'urltest',
+  min_moving_avg: 'urltest',
+  min_avg10: 'urltest',
+  min_last_delay: 'urltest',
+  fallback: 'fallback',
+  roundrobin: 'loadbalance',
+  loadbalance: 'loadbalance',
+  random: 'random',
+  score: 'score'
+};
+export function policyKind(native: string): Group['policy']['kind'] | undefined {
+  return policyKinds[native.toLowerCase().replace(/\(.*$/, '')];
+}
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
 // Built-in outbounds; `(must)` keeps DNS traffic from being hijacked for that rule.
 export const builtinOutbounds = ['direct', 'block', 'direct(must)', 'block(must)'];

@@ -21,7 +21,7 @@ test('policies select a member, pin one network, release and test the group', as
   await expect(automatic.getByRole('button', {name: 'Back to automatic', exact: true})).toHaveCount(0);
   await expect(automatic.getByRole('button', {name: /^sg-01\b/})).toHaveAttribute('aria-pressed', 'true');
   await automatic.getByRole('button', {name: 'Test all', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive').filter({hasText: /resilient.*available.*selection (changed|unchanged)/})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive').filter({hasText: /resilient.*Available.*selection: (changed|unchanged)/})).toBeVisible();
   await expect(automatic.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
   const controls = requests.filter(request => request.method() !== 'GET');
   expect(controls.map(request => [request.method(), new URL(request.url()).pathname + new URL(request.url()).search])).toEqual([

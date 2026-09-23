@@ -25,7 +25,7 @@ export const messages = defineMessages({
     'dns.chart.p95': 'P95',
     'dns.chart.cacheRate': '快取命中率',
     'dns.chart.failureRate': '失敗率',
-    'dns.chart.sample': '已載入 {n} 筆記錄，其中 {uncached} 筆未命中快取、{upstream} 筆送到上游；延遲依上游查詢計算，失敗率依未命中快取的查詢計算',
+    'dns.chart.sample': '已載入：{n} 筆，未命中快取：{uncached} 筆，送往上游：{upstream} 筆',
     'dns.queryFailed': '無法查詢：{error}',
     'dns.deleted': '已刪除 {n} 筆快取項目',
     'dns.deleteFailed': '無法刪除快取項目：{error}',
@@ -103,7 +103,7 @@ export const messages = defineMessages({
     'dns.chart.p95': 'P95',
     'dns.chart.cacheRate': '缓存命中率',
     'dns.chart.failureRate': '失败率',
-    'dns.chart.sample': '已加载 {n} 条记录，其中 {uncached} 条未命中缓存、{upstream} 条发往上游；延迟按上游查询计算，失败率按未命中缓存的查询计算',
+    'dns.chart.sample': '已加载：{n} 条，未命中缓存：{uncached} 条，发往上游：{upstream} 条',
     'dns.queryFailed': '无法查询：{error}',
     'dns.deleted': '已删除 {n} 条缓存项',
     'dns.deleteFailed': '无法删除缓存项：{error}',
@@ -184,10 +184,7 @@ export const messages = defineMessages({
     'dns.chart.p95': 'P95',
     'dns.chart.cacheRate': 'Cache hit rate',
     'dns.chart.failureRate': 'Failure rate',
-    'dns.chart.sample': {
-      one: '{n} loaded record: {uncached} uncached, {upstream} sent upstream; latency counts upstream lookups, the failure rate uncached ones',
-      other: '{n} loaded records: {uncached} uncached, {upstream} sent upstream; latency counts upstream lookups, the failure rate uncached ones'
-    },
+    'dns.chart.sample': 'Loaded: {n}, uncached: {uncached}, sent upstream: {upstream}',
     'dns.queryFailed': 'Could not run the query: {error}',
     'dns.deleted': {
       one: 'Deleted {n} cache entry',

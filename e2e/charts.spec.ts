@@ -16,7 +16,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
-  await expect(page.getByText(/^\d+ loaded records: \d+ uncached, \d+ sent upstream;/)).toBeVisible();
+  await expect(page.getByText(/^Loaded: \d+, uncached: \d+, sent upstream: \d+$/)).toBeVisible();
   const outcomes = page.getByRole('img', {name: /^Outcomes: /});
   for (const label of ['From the cache', 'Answered upstream', 'No such name', 'Failed']) await expect(outcomes).toHaveAccessibleName(new RegExp(label));
   await expect(page.getByRole('img', {name: /^Upstream latency \(\d+ lookups\)$/})).toBeVisible();

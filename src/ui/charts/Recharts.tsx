@@ -103,6 +103,7 @@ const LazyAreaChart = lazy(() =>
       // Rates start at zero; a level such as memory zooms to its own range so small movements stay visible.
       baseline?: 'zero' | 'auto';
     }) {
+      const t = useT();
       const p = usePalette();
       const style = useChartStyle(p);
       const uid = useId();
@@ -194,6 +195,7 @@ const LazyAreaChart = lazy(() =>
                 itemStyle={style.item}
                 labelFormatter={value => localTimeFormat(locale).format(Number(value))}
                 formatter={v => fmt(Number(v))}
+                separator={t('ui.labelSeparator')}
                 cursor={style.cursor}
               />
               {series.map((s, k) => (
@@ -356,6 +358,7 @@ const LazyDonut = lazy(() =>
                 active={hover.inside ? undefined : false}
                 contentStyle={style.content}
                 itemStyle={style.item}
+                separator={t('ui.labelSeparator')}
                 formatter={(v, name, item) => {
                   const payload: unknown = item.payload;
                   const bytes = payload && typeof payload === 'object' && 'text' in payload && typeof payload.text === 'string' ? payload.text : '';

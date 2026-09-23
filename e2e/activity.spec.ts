@@ -145,7 +145,7 @@ test('the compact node menu selects by keyboard and returns focus to its trigger
 test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
-  const notices = page.getByRole('region', {name: 'Notifications and issues'});
+  const notices = page.getByRole('region', {name: 'Notifications', exact: true});
   await expect(notices.getByRole('listitem').filter({hasText: 'Stream ready'})).toHaveCount(1);
   await page.clock.fastForward(10100);
   await expect(notices.getByRole('listitem').filter({hasText: /runtime\.updated|flow\.updated/})).toHaveCount(0);
@@ -160,7 +160,7 @@ test('notices hide housekeeping events while the Events page retains them', asyn
 test('housekeeping cannot evict notices while the page is hidden', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
-  const notices = page.getByRole('region', {name: 'Notifications and issues'});
+  const notices = page.getByRole('region', {name: 'Notifications', exact: true});
   const ready = notices.getByRole('listitem').filter({hasText: 'Stream ready'});
   await expect(ready).toHaveCount(1);
   await page.evaluate(() => {

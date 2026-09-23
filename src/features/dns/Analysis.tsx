@@ -165,7 +165,7 @@ function CacheCard({cache, t, shareText}: {cache: DnsCacheList | undefined | nul
             {t('dns.chart.coverage', {
               kinds: [state.coverage.positive && t('dns.chart.positive'), state.coverage.negative && t('dns.chart.negative')]
                 .filter(Boolean)
-                .join(t('ui.separator')),
+                .join(t('ui.listSeparator')),
               persistent: t(state.coverage.persistent ? 'dns.chart.persistent' : 'dns.chart.memoryOnly')
             })}
           </p>

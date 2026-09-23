@@ -206,3 +206,10 @@ it('describes only the selected template’s groups and omits routing changes fo
   expect(named).toContain('proxy, auto, telegram, media, apple');
   expect(named).not.toContain('mix');
 });
+
+it('names group policies in words, keeping only an expression doona does not know as written', () => {
+  const text = 'group {\n  fast { policy: min_avg10 }\n  pinned { policy: fixed(0) }\n  picked { policy: select }\n  odd { policy: custom }\n}';
+  expect(sectionSummaries([source(text)], 'en', t).find(card => card.kind === 'group')?.summary).toBe(
+    '4 groups: fast: Fastest on average, pinned: Manual, picked: Manual, odd: custom'
+  );
+});
