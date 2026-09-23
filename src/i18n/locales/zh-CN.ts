@@ -632,7 +632,7 @@ export const messages = {
   'policy.interrupt': '切换时中断现有连接',
   'policy.selectedInterrupted': '{name} 已选择 {member}，现有连接已中断',
   'policy.selectedKept': '{name} 已选择 {member}，现有连接未中断',
-  'policy.note': 'selector 组可直接切换成员；自动组可手动固定成员，并随时恢复自动选择。TCP 与 UDP 可分别选择。',
+  'policy.note': '手动选择的组可直接切换成员；自动组可手动固定成员，并随时恢复自动选择。TCP 与 UDP 可分别选择。',
   'policy.automatic': '自动',
   'policy.overridden': '已手动固定',
   'policy.releaseOverride': '恢复自动选择',

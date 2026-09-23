@@ -631,7 +631,7 @@ export const messages = {
   'policy.interrupt': '切換時中斷現有連線',
   'policy.selectedInterrupted': '{name} 已選擇 {member}，現有連線已中斷',
   'policy.selectedKept': '{name} 已選擇 {member}，現有連線未中斷',
-  'policy.note': 'selector 群組可直接切換成員；自動群組可手動固定成員，並隨時恢復自動選擇。TCP 與 UDP 可分別選擇。',
+  'policy.note': '手動選擇的群組可直接切換成員；自動群組可手動固定成員，並隨時恢復自動選擇。TCP 與 UDP 可分別選擇。',
   'policy.automatic': '自動',
   'policy.overridden': '已手動固定',
   'policy.releaseOverride': '恢復自動選擇',

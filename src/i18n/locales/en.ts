@@ -656,7 +656,7 @@ export const messages = {
   'policy.selectedInterrupted': '{name} selected {member}; existing connections interrupted',
   'policy.selectedKept': '{name} selected {member}; existing connections kept',
   'policy.note':
-    'Groups using selector switch members directly; automatic groups can pin a member and return to automatic selection at any time. TCP and UDP can be selected separately.',
+    'Manual groups switch members directly; automatic groups can pin a member and return to automatic selection at any time. TCP and UDP can be selected separately.',
   'policy.automatic': 'Automatic',
   'policy.overridden': 'Pinned',
   'policy.releaseOverride': 'Back to automatic',
