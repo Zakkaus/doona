@@ -35,6 +35,9 @@ export function normalizeProfiles(value: unknown): Profile[] {
 }
 
 let cachedProfiles: {raw: string; profiles: Profile[]} | undefined;
+// The profile this page load talks to. Another tab choosing a profile changes the saved choice, not this tab's
+// backend; this tab moves when it saves a choice itself (which reloads) or is reloaded.
+let pinnedId: string | null | undefined;
 let profileReadError = false;
 
 export function consumeProfileReadError(): boolean {
@@ -71,17 +74,20 @@ export function readProfiles(storage?: StoragePort): Profiles {
       cachedProfiles = {raw, profiles};
     }
     const profiles = cachedProfiles.profiles;
-    const id = store.getItem('doona-profile');
+    const id = storage ? store.getItem('doona-profile') : (pinnedId ??= store.getItem('doona-profile'));
     return {profiles, activeId: profiles.find(profile => profile.id === id)?.id ?? profiles[0]?.id ?? ''};
   } catch {
     return {profiles: [], activeId: ''};
   }
 }
 
-export function writeProfiles({profiles, activeId}: Profiles, storage: StoragePort = localStorage): void {
+export function writeProfiles({profiles, activeId}: Profiles, storage?: StoragePort): void {
+  const store = storage ?? localStorage;
   const normalized = profiles.map(profile => ({...profile, name: profile.name.trim() || profile.id, api: normalizeApi(profile.api)}));
-  storage.setItem('doona-profiles', JSON.stringify(normalized));
-  storage.setItem('doona-profile', normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '');
+  const id = normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '';
+  store.setItem('doona-profiles', JSON.stringify(normalized));
+  store.setItem('doona-profile', id);
+  if (!storage) pinnedId = id;
 }
 
 // Strip the hosted /ui/ suffix while preserving any reverse-proxy prefix.
