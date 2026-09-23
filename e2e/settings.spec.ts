@@ -72,10 +72,9 @@ test('saving mock reloads and restores the default activity route', async ({page
   await expect(token).toHaveAttribute('type', 'text');
   await page.getByRole('button', {name: t('settings.hideToken'), exact: true}).click();
   await expect(page.locator('.rp-content')).not.toContainText('test-secret');
-  // The built-in demo ignores any token, so it asks for none.
+  // The built-in demo ignores any token, so the field goes.
   await page.locator('[name=api]').fill(' mock ');
   await expect(token).toHaveCount(0);
-  await expect(page.getByText(t('settings.demoToken'), {exact: true})).toBeVisible();
   await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
   await expect(page.locator('.rp-toast.positive')).toContainText('Settings saved.');
   await expect(page.locator('[name=api]')).toHaveValue('mock');

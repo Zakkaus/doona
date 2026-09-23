@@ -109,9 +109,7 @@ export function Settings({query}: PageProps) {
             value={api}
             onChange={changeApi}
           />
-          {demo ? (
-            <p className="rp-label">{t('settings.demoToken')}</p>
-          ) : passwordMode ? (
+          {demo ? null : passwordMode ? (
             <p className="rp-label">{t('settings.passwordMode')}</p>
           ) : (
             <TextField
