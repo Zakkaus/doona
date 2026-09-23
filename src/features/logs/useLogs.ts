@@ -23,6 +23,9 @@ export function useLogs() {
   );
   return {
     ...view,
+    // The records the list shows, and the levels the backend offers, for the activity heatmap.
+    records: feed.records,
+    offered: resource?.levels ?? [],
     level: level ?? '',
     setLevel: (value: string) => setLevel(value as LogLevel),
     target,

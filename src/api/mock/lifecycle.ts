@@ -134,8 +134,8 @@ export function createLifecycle(
     if (logRing.length > limit) logRing.splice(0, logRing.length - limit);
     pruneCursors();
   }
-  const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null) => {
-    const record = {id: `${instanceId}:logs:${++logSequence}`, ts: new Date().toISOString(), level, target, message, fields};
+  const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null, at = Date.now()) => {
+    const record = {id: `${instanceId}:logs:${++logSequence}`, ts: new Date(at).toISOString(), level, target, message, fields};
     logRing.push(record);
     trimLogs();
     logListeners.forEach(listener => listener(record));
@@ -147,6 +147,20 @@ export function createLifecycle(
     () => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}),
     () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
   ];
+  // The last hour of an instance that has been up a while: steady routine records and one stretch, about twenty
+  // minutes ago, when a node kept failing its health check. Then the startup records, as now.
+  const started = Date.now();
+  for (let minute = 60; minute > 0; minute -= 2) {
+    const at = started - minute * 60000;
+    const trouble = minute >= 18 && minute <= 24;
+    log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: trouble ? 2 : 3, unavailable: trouble ? 1 : 0}, at);
+    log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12 + (minute % 9)}, at + 20000);
+    if (minute % 10 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
+    if (trouble) {
+      log('warn', 'honk::group', 'Health check slow.', {node: 'us-01', elapsed_ms: 2400}, at + 30000);
+      log('error', 'honk::group', 'Health check failed.', {node: 'us-01', error: 'connect timeout'}, at + 50000);
+    }
+  }
   for (const record of logSeed) log(record.level, record.target, record.message, record.fields ?? null);
   let logTimer: ReturnType<typeof setInterval> | undefined;
   async function logs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {

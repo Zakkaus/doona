@@ -18,6 +18,13 @@ export const messages = defineMessages({
     'log.clear': '清空',
     'log.export': '匯出',
     'log.message': '訊息',
+    'log.chart.title': '日誌時間分布',
+    'log.chart.answerErrors': '共 {errors} 筆錯誤，最集中在 {time}（{n} 筆）。',
+    'log.chart.answerQuiet': '沒有錯誤；記錄最多的時段是 {time}（{n} 筆）。',
+    'log.chart.sample': '根據最近的 {n} 筆記錄',
+    'log.chart.cell': '{time}，{level} {n} 筆',
+    'log.chart.minimum': '顯示{level}及以上',
+    'log.chart.current': '{level}：目前的最低等級',
     'log.empty': '尚無日誌。'
   },
   'zh-CN': {
@@ -37,6 +44,13 @@ export const messages = defineMessages({
     'log.clear': '清空',
     'log.export': '导出',
     'log.message': '消息',
+    'log.chart.title': '日志时间分布',
+    'log.chart.answerErrors': '共 {errors} 条错误，最集中在 {time}（{n} 条）。',
+    'log.chart.answerQuiet': '没有错误；记录最多的时段是 {time}（{n} 条）。',
+    'log.chart.sample': '根据最近的 {n} 条记录',
+    'log.chart.cell': '{time}，{level} {n} 条',
+    'log.chart.minimum': '显示{level}及以上',
+    'log.chart.current': '{level}：当前的最低等级',
     'log.empty': '暂无日志。'
   },
   en: {
@@ -56,6 +70,13 @@ export const messages = defineMessages({
     'log.clear': 'Clear',
     'log.export': 'Export',
     'log.message': 'Message',
+    'log.chart.title': 'Log activity over time',
+    'log.chart.answerErrors': {one: '{errors} error, most of them around {time} ({n}).', other: '{errors} errors, most of them around {time} ({n}).'},
+    'log.chart.answerQuiet': {one: 'No errors; the busiest stretch is {time} ({n} record).', other: 'No errors; the busiest stretch is {time} ({n} records).'},
+    'log.chart.sample': {one: 'From the latest {n} record', other: 'From the latest {n} records'},
+    'log.chart.cell': {one: '{time}: {n} {level} record', other: '{time}: {n} {level} records'},
+    'log.chart.minimum': 'Show {level} and above',
+    'log.chart.current': '{level}: the current minimum',
     'log.empty': 'No log records yet.'
   }
 });
