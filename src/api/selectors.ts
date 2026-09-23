@@ -3,7 +3,7 @@ import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 
-// Backends expose different TCP data probes, so rank by warmth, measurement cost, then IPv4; unknown future values sort last.
+// Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {
   tcp_connect: 0,
@@ -71,6 +71,8 @@ export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   failed: 'lifecycle.failed'
 };
 export const lifecycleTone = (state: Runtime['lifecycle']['state'] | undefined) => (state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn');
+// Nothing closed is a failure; some skipped (already gone or not closable) is worth a look.
+export const closedAllTone = (tally: {closed: number; skipped: number}) => (!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive');
 export const connectionStates: Record<Connection['state'], Key> = {
   observed: 'conn.state.observed',
   routing: 'conn.state.routing',

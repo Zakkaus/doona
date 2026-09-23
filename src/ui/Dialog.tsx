@@ -1,4 +1,4 @@
-import {createContext, useContext, useDeferredValue, useEffect, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {createContext, useContext, useDeferredValue, useEffect, useRef, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -17,7 +17,10 @@ import {
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
 import {useT} from '../i18n';
+import {errorText} from '../api/error';
 import {cx} from './cx';
+import {Button} from './Button';
+import {InlineAlert} from './Feedback';
 import {useSlider, useMediaQuery, panelQuery} from './hooks';
 
 export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
@@ -90,7 +93,140 @@ export function ModalDialog({
   );
 }
 
-// Tabs: the selected key is the caller's (URL-backed), panels render only when selected.
+// A dialog with Cancel and one action. While the action is pending the dialog stays open and the action button
+// waits; Cancel and Escape still work, and `onCancel` must then abandon the action or report its late result
+// elsewhere, so a request that never answers cannot hold the page. A failure shows inside the dialog, and a new
+// `error.id` moves focus to it again.
+export function ConfirmDialog({
+  title,
+  isOpen,
+  onCancel,
+  confirmLabel,
+  onConfirm,
+  tone = 'negative',
+  isPending,
+  isDisabled,
+  error,
+  children
+}: {
+  title: string;
+  isOpen: boolean;
+  onCancel: () => void;
+  confirmLabel: string;
+  onConfirm: () => void;
+  tone?: 'negative' | 'accent';
+  isPending?: boolean;
+  isDisabled?: boolean;
+  error?: {id: number; text: string} | null;
+  children: ReactNode;
+}) {
+  const t = useT();
+  return (
+    <ModalDialog
+      title={title}
+      narrow
+      alert={tone === 'negative'}
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open) onCancel();
+      }}
+      footer={() => (
+        <>
+          <Button onPress={onCancel}>{t('ui.cancel')}</Button>
+          <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </>
+      )}
+    >
+      {error && (
+        <InlineAlert key={error.id} takeFocus>
+          {error.text}
+        </InlineAlert>
+      )}
+      {children}
+    </ModalDialog>
+  );
+}
+
+// A negative trigger button and its ConfirmDialog. `onConfirm` resolves to the failure to show, if any; the dialog
+// closes once it resolves without one. Cancel or unmounting while it is pending calls `onAbort` and ignores the late
+// result. `open`/`setOpen` let a caller act when the dialog opens.
+export function ConfirmButton({
+  label,
+  confirmationText,
+  isDisabled,
+  isPending,
+  onConfirm,
+  onAbort,
+  open,
+  setOpen
+}: {
+  label: string;
+  confirmationText: ReactNode;
+  isDisabled?: boolean;
+  isPending?: boolean;
+  onConfirm: () => Promise<string | null | undefined | void>;
+  onAbort?: () => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+}) {
+  const t = useT();
+  const [local, setLocal] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<{id: number; text: string} | null>(null);
+  // Counts failures so a repeated one still moves focus; `attempt` tells the current run from an abandoned one.
+  const failures = useRef(0);
+  const attempt = useRef(0);
+  // Set while a run is pending: invalidates it and calls the `onAbort` it started with.
+  const abandon = useRef<(() => void) | null>(null);
+  useEffect(() => () => abandon.current?.(), []);
+  const isOpen = open ?? local;
+  const change = (next: boolean) => {
+    setError(null);
+    (setOpen ?? setLocal)(next);
+  };
+  const cancel = () => {
+    if (abandon.current) {
+      abandon.current();
+      setRunning(false);
+    }
+    change(false);
+  };
+  const confirm = async () => {
+    const current = ++attempt.current;
+    abandon.current = () => {
+      abandon.current = null;
+      attempt.current++;
+      onAbort?.();
+    };
+    setRunning(true);
+    setError(null);
+    let failure: string | null | undefined | void;
+    try {
+      failure = await onConfirm();
+    } catch (reason) {
+      failure = errorText(reason, t);
+    }
+    if (current !== attempt.current) return;
+    abandon.current = null;
+    setRunning(false);
+    if (failure) setError({id: ++failures.current, text: failure});
+    else change(false);
+  };
+  return (
+    <>
+      <Button negative quiet isDisabled={isDisabled} isPending={isPending || running} onPress={() => change(true)}>
+        {label}
+      </Button>
+      <ConfirmDialog title={label} confirmLabel={label} isOpen={isOpen} isPending={running} error={error} onCancel={cancel} onConfirm={() => void confirm()}>
+        <p className="rp-label">{confirmationText}</p>
+      </ConfirmDialog>
+    </>
+  );
+}
+
+// Tabs: the selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
 export function Tabs({
   label,
   items,
@@ -106,7 +242,7 @@ export function Tabs({
   // browse data; a panel with drafts or editors unmounts, so nothing of it keeps running out of sight.
   keepMounted?: boolean;
 }) {
-  // The marker lives beside the TabList, not inside it: anything inside is part of the RAC collection and re-renders the tabs.
+  // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
   // table of log rows) mounts in the deferred one, so the click never waits for it.

@@ -87,7 +87,7 @@ export function useNodeTable(input: NodeTableInput) {
                 sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
               );
             },
-            error => toast('negative', errorText(error, t))
+            error => toast('negative', t('nodes.probeError', {name: node.name, error: errorText(error, t)}))
           ),
         menu: () => [
           ...entries

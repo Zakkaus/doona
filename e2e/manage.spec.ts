@@ -28,7 +28,7 @@ test('the backend actions card gathers reload, DNS, subscriptions, connections a
 
 test('a pairing link fills the backend form and leaves the address bar clean', async ({page}) => {
   await page.goto('/#/settings?api=http://127.0.0.1:9527&token=secret-token');
-  await expect(page.getByLabel('Server URL', {exact: true})).toHaveValue('http://127.0.0.1:9527');
+  await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('http://127.0.0.1:9527');
   await expect(page.locator('.rp-content')).toContainText('filled in from the link');
   await expect(page).toHaveURL(/#\/settings$/);
 });

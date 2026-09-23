@@ -29,6 +29,8 @@ export function Shortcuts({
     };
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
+      // A held Ctrl or ⌘ preloads search wherever focus is, a field included.
+      if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
       if (
         event.defaultPrevented ||
         event.repeat ||
@@ -47,7 +49,6 @@ export function Shortcuts({
         return;
       }
       if (event.ctrlKey || event.metaKey || event.altKey) {
-        if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
         reset();
         return;
       }
@@ -106,7 +107,7 @@ export function Shortcuts({
       narrow
       footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}
     >
-      <p className="rp-note">{t('shell.shortcutSequence')}</p>
+      <p className="rp-label">{t('shell.shortcutSequence')}</p>
       <div className="rp-col">
         <div className="rp-row">
           <span>{t('search')}</span>
@@ -131,8 +132,8 @@ export function Shortcuts({
           </div>
         ))}
       </div>
-      <p className="rp-note">{t('shell.shortcutTables')}</p>
-      <p className="rp-note">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
+      <p className="rp-label">{t('shell.shortcutTables')}</p>
+      <p className="rp-label">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
     </ModalDialog>
   );
 }

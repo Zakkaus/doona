@@ -1,11 +1,5 @@
-/* ---- Chart cards: one module per card, titled as the activity cards are. ---- */
-.rp-chartcard {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-.rp-chartcard > .rp-note {
+/* A titled card's note sits closer to its title than the body does. */
+.rp-titled > .rp-note {
   margin: -4px 0 0;
 }
 /* Fact tiles reuse the activity tiles; a definition list keeps label and value paired for assistive technology. */
@@ -15,11 +9,12 @@
 .rp-facts dd {
   margin: 0;
 }
+/* A value is large text, but notice is under 3:1 in most light palettes; the icon beside it keeps the tone. */
 .rp-facts .negative .rp-big {
-  color: var(--rp-negative);
+  color: var(--rp-negative-text);
 }
 .rp-facts .notice .rp-big {
-  color: var(--rp-notice);
+  color: var(--rp-notice-text);
 }
 .rp-facts .negative .rp-tile-head > svg {
   color: var(--rp-negative);
@@ -31,25 +26,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-.rp-chart-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
-}
-@media (min-width: 1024px) {
-  .rp-chart-grid.split {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  }
-  .rp-chart-grid.halves {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-}
-.rp-chart-title {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--rp-subtle);
 }
 /* ---- Beeswarm and strips ---- */
 .rp-swarm,

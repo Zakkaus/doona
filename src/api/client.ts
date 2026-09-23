@@ -20,10 +20,10 @@ function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; respons
   return {...data(result), retryAfter: retryAfter(result.response)};
 }
 
-/** Base is the server root, optionally including a reverse-proxy prefix. */
 // Control requests and DNS queries retry explicit transient refusals this many times.
 const MAX_REFUSALS = 3;
 
+/** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string): Api {
   const baseUrl = base.replace(/\/+$/, '');
   const headers: Record<string, string> = {Accept: 'application/json'};
@@ -89,7 +89,8 @@ export function createApi(base: string, token?: string): Api {
       delay = retryAfter(response);
     }
   }
-  // Both SSE feeds resume with Last-Event-ID and honor Retry-After; cursor expiry restarts at the head, definitive 4xx stops, and transient failures back off to 30 seconds.
+  // Both SSE feeds resume with Last-Event-ID and honour Retry-After; cursor expiry restarts at the head, a definitive
+  // 4xx stops, and transient failures back off to 30 seconds.
   async function subscribeStream(
     url: URL,
     lastEventId: string | undefined,

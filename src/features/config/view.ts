@@ -1,6 +1,5 @@
 import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
-import {formatBytes} from '../../api/u64';
-import {localTime} from '../../i18n/format';
+import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';
@@ -8,6 +7,7 @@ import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../.
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
+import {policyLabel} from '../policies/policies';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 
 // Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
@@ -97,7 +97,7 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
           lang,
           block.children.map(child => {
             const policy = blockFields(text, child, tokens).find(field => field.name === 'policy')?.value;
-            return policy ? `${child.name}: ${policy}` : child.name;
+            return policy ? t('ui.valuePair', {label: child.name, value: policyLabel(policy, t)}) : child.name;
           })
         )
       });
@@ -201,7 +201,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
     tone: source.writable ? ('ok' as const) : ('muted' as const),
     facts: t('config.sourceFacts', {
       lines: formatNumber(source.line_count, locale),
-      size: formatBytes(String(source.bytes)),
+      size: formatBytes(String(source.bytes), locale),
       time: localTime(source.loaded_at, locale)
     }),
     hasContent: source.content !== undefined

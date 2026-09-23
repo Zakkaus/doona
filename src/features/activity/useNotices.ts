@@ -2,7 +2,7 @@ import {useMemo, useSyncExternalStore} from 'react';
 import {getApi} from '../../api';
 import type {Api} from '../../api/api';
 import type {ApiEvent} from '../../api/model';
-import {EVENT_FEED_LIMIT} from '../../store';
+import {EVENT_FEED_LIMIT, refetchAll} from '../../store';
 import {useEvents} from '../../store/events';
 import {createFeed} from '../../store/feed';
 import {useT} from '../../i18n';
@@ -29,6 +29,8 @@ export function useNotices() {
     rows,
     total: snapshot.records.length,
     error: feed.error,
+    // A failed stream reopens once the capabilities are read again.
+    retry: () => void refetchAll(),
     loading: !feed.error && feed.available === null,
     empty: t(feed.available === false ? 'event.unavailable' : 'act.noIssues')
   };

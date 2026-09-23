@@ -39,8 +39,7 @@ import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {policyKindLabels} from '../../../api/selectors';
-import {newGroupPolicies} from '../policies';
+import {groupPolicyText, newGroupPolicies} from '../policies';
 import {PolicyPicker} from '../PolicyPicker';
 import {holds, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
@@ -94,7 +93,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
   const lang = useLang();
   const heading = useId();
   const locked = !!m.blocked;
-  const policy = live ? live.policy.native || t(policyKindLabels[live.policy.kind]) : null;
+  const policy = live ? groupPolicyText(live.policy, t) : null;
   const accept = async (items: DropItem[]) => {
     const texts = await Promise.all(
       items
@@ -140,7 +139,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
               <h3 className="rp-h3" id={heading}>
                 {group.name}
               </h3>
-              {policy && <Badge>{policy}</Badge>}
+              {policy && <Badge tip={policy.id}>{policy.label}</Badge>}
               {live && (
                 <Light small tone="neutral">
                   {t('arrange.memberCount', {n: live.member_count})}
@@ -348,7 +347,7 @@ function NewGroup({m}: {m: Model}) {
   };
   return (
     <>
-      <Button onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
+      <Button small onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
         {t('arrange.newGroup')}
       </Button>
       <ModalDialog
@@ -389,7 +388,7 @@ function NewGroup({m}: {m: Model}) {
             spellCheck={false}
           />
           <PolicyPicker value={policy} onChange={setPolicy} />
-          <p className="rp-note">{t('arrange.newGroupNote')}</p>
+          <p className="rp-label">{t('arrange.newGroupNote')}</p>
         </form>
       </ModalDialog>
     </>
@@ -436,7 +435,7 @@ function Review({m}: {m: Model}) {
           </pre>
         ))}
       </Disclosure>
-      <p className="rp-note">{t('arrange.applyNote')}</p>
+      <p className="rp-label">{t('arrange.applyNote')}</p>
     </ModalDialog>
   );
 }

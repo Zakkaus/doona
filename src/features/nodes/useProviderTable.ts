@@ -27,16 +27,18 @@ export function useProviderTable(input: ProviderTableInput) {
   const locale = LOCALE[useLang()];
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
-  const fail = (error: unknown) => toast('negative', errorText(error, t));
   const rows = input.rows.map(item => ({
     ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
     refreshable: item.kind === 'subscription' && input.canRefresh,
     refreshing: refresh.busy === item.id,
     refreshDisabled: !!refresh.busy,
     refresh: () =>
-      void refresh.refresh(item.id).then(result => {
-        if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
-      }, fail),
+      void refresh.refresh(item.id).then(
+        result => {
+          if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
+        },
+        error => toast('negative', t('nodes.refreshFailed', {name: item.name, error: errorText(error, t)}))
+      ),
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
     remove: () => {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
@@ -48,7 +50,7 @@ export function useProviderTable(input: ProviderTableInput) {
         .apply(text => writeInterval(text, item.configTag!, seconds))
         .then(result => {
           if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
-          const problem = editProblem(result, 'nodes.writeInvalid', t);
+          const problem = editProblem(result, t);
           if (problem) toast('negative', problem);
         });
     }

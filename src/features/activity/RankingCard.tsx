@@ -6,7 +6,7 @@ import {useRankingCard} from './useRankingCard';
 // re-renders this card alone, not the traffic charts or the tiles beside it.
 export function RankingCard() {
   const t = useT();
-  const {ref, by, setBy, rows, state, error, truncated} = useRankingCard();
+  const {ref, by, setBy, rows, state, error, retry, truncated} = useRankingCard();
   return (
     <div className="rp-card" ref={ref}>
       <div className="rp-row">
@@ -23,7 +23,7 @@ export function RankingCard() {
           ]}
         />
       </div>
-      {error && <ErrorMessage error={error} />}
+      {error && <ErrorMessage error={error} onRetry={retry} />}
       {truncated && (
         <TextTooltip text={t('act.rankingTruncated')}>
           <Badge tone="warn">{t('act.truncated')}</Badge>
@@ -31,11 +31,11 @@ export function RankingCard() {
       )}
       {state === 'error' ? null : state === 'loading' ? (
         <div className="rp-chart-wait bars">
-          <Loading>{t('act.loading')}</Loading>
+          <Loading>{t('ui.loading')}</Loading>
         </div>
       ) : state === 'unavailable' ? (
         <div className="rp-chart-wait bars">
-          <Empty>{t('shell.notOfferedShort')}</Empty>
+          <Empty>{t('act.noConnections')}</Empty>
         </div>
       ) : state === 'empty' ? (
         <div className="rp-chart-wait bars">

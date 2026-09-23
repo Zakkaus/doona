@@ -3,7 +3,7 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Data from '../../ui/icons/Data';
 import {useT} from '../../i18n';
-import {CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
+import {Card, CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
 import {href} from '../../shell/route';
 import {AreaChart, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
@@ -18,7 +18,7 @@ export function Activity() {
   const vm = useActivity();
   const {p, locale, range, setRange, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
-  if (!vm.ready) return alert || <Loading>{t('act.loading')}</Loading>;
+  if (!vm.ready) return alert || <Loading>{t('ui.loading')}</Loading>;
   return (
     <>
       {alert}
@@ -99,11 +99,9 @@ export function Activity() {
       </div>
 
       <div className="rp-g21">
-        <section className="rp-card" aria-labelledby="activity-traffic">
-          <div className="rp-row">
-            <h3 className="rp-h3" id="activity-traffic">
-              {t('act.traffic')}
-            </h3>
+        <Card
+          title={t('act.traffic')}
+          aside={
             <Segmented
               label={t('act.historyRange')}
               value={range}
@@ -117,16 +115,17 @@ export function Activity() {
                 ['d7', t('act.d7')]
               ]}
             />
-          </div>
+          }
+        >
           {vm.history.error && vm.history.state !== 'ready' ? (
-            <ErrorMessage error={vm.history.error} />
+            <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
           ) : vm.history.state === 'unavailable' ? (
             <div className="rp-chart-wait tall">
-              <span className="rp-label">{t('act.noHistory')}</span>
+              <Empty>{t('act.noHistory')}</Empty>
             </div>
           ) : vm.history.state === 'loading' ? (
             <div className="rp-chart-wait tall">
-              <Loading>{t('act.loading')}</Loading>
+              <Loading>{t('ui.loading')}</Loading>
             </div>
           ) : vm.history.state === 'empty' ? (
             <div className="rp-chart-wait tall">
@@ -147,23 +146,22 @@ export function Activity() {
               />
             </>
           )}
-        </section>
+        </Card>
         <OutboundsCard />
       </div>
 
       <div className="rp-g3">
         <RankingCard />
-        <section className="rp-card" aria-labelledby="activity-memory">
-          <div className="rp-row">
-            <h3 className="rp-h3" id="activity-memory">
-              {t('act.memory')}
-            </h3>
+        <Card
+          title={t('act.memory')}
+          aside={
             <Link appearance="button" className="quiet sm" href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
-          </div>
+          }
+        >
           {vm.memoryState.error ? (
-            <ErrorMessage error={vm.memoryState.error} />
+            <ErrorMessage error={vm.memoryState.error} onRetry={vm.memoryState.retry} />
           ) : vm.memoryState.state === 'ready' ? (
             <>
               <Legend series={memorySeries} fmt={memoryBytes} />
@@ -186,7 +184,7 @@ export function Activity() {
               <Loading>{t('act.sampling')}</Loading>
             </div>
           )}
-        </section>
+        </Card>
         <Notices {...notices} />
       </div>
     </>

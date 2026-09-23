@@ -11,9 +11,9 @@ import {
   routineGap,
   shortId
 } from '../../api/selectors';
-import {localTime} from '../../i18n/format';
+import {localTime, formatBytes, formatRate, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {formatBytes, formatRate, millis, pctU64} from '../../api/u64';
+import {pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
 
@@ -44,7 +44,7 @@ export function modeView(
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 
 // The home card holds this many rows; the rest is one click away on the events page.
-export const NOTICE_ROWS = 8;
+const NOTICE_ROWS = 8;
 // A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
 // backend dropping records at pace does not push everything else off the card. Two notices that differ in
 // any of those never fold: a failure must not disappear behind a neighbouring success.
@@ -88,7 +88,6 @@ export function trafficState(series: {down: Array<number | null>; up: Array<numb
 }
 
 type NodeOption = {id: string; name: string; label: string; tcp?: number; alive?: boolean; unavailable: boolean; healthError?: string};
-// The picker's menu is built from `options` only while it is open (see NodeMenu), not on every poll.
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const counts = new Map<string, number>();
   for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);
@@ -114,7 +113,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     big: options.length > 12,
     id: node?.id ?? '',
     name: node?.name ?? '',
-    latency: node?.alive && node.tcp !== undefined ? t('ui.latency', {n: millis(node.tcp)}) : '—',
+    latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
     status: t(node?.alive ? 'act.good' : node?.unavailable ? 'act.unavailable' : 'act.unknown'),
     healthError: node?.healthError
@@ -125,12 +124,12 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
-      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'act.loading')
+      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading')
     },
-    download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null),
-    upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null),
+    download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null, locale),
+    upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),
     connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),
-    rss: formatBytes(memory?.process?.rss_bytes ?? null),
+    rss: formatBytes(memory?.process?.rss_bytes ?? null, locale),
     memoryBadge:
       percent === null
         ? null
@@ -145,20 +144,20 @@ export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, local
   const usage = outboundUsage(outbounds);
   return {
     since: outbounds ? t('act.since', {t: localTime(outbounds.counter_since, locale)}) : '',
-    total: formatBytes(usage.total),
+    total: formatBytes(usage.total, locale),
     rows: usage.rows.map((row, i) => ({
       name: outboundLabel(row.name, t),
       value: row.percent === null ? null : Math.round(row.percent),
-      text: formatBytes(row.bytes),
+      text: formatBytes(row.bytes, locale),
       color: row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[i % colors.cat.length]
     }))
   };
 }
 
-export function activityRanking(connections: ConnectionList | undefined, by: string, colors: {cat: string[]}, t: LabelFn) {
+export function activityRanking(connections: ConnectionList | undefined, by: string, colors: {cat: string[]}, locale: string, t: LabelFn) {
   return connectionRanking(connections, by).map((row, i) => ({
     name: row.name,
-    value: row.percent === null ? formatBytes(row.download) : t('ui.share', {bytes: formatBytes(row.download), percent: row.percent}),
+    value: row.percent === null ? formatBytes(row.download, locale) : t('ui.share', {bytes: formatBytes(row.download, locale), percent: row.percent}),
     pct: row.percent ?? 0,
     color: colors.cat[i % colors.cat.length]
   }));

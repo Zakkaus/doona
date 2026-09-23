@@ -90,10 +90,11 @@
   background: var(--rp-notice);
   color: var(--rp-on-accent);
 }
+/* The label reads --rp-negative-text; the border keeps the tone where that falls back to body text. */
 .rp-btn.negative {
   background: transparent;
   border-color: var(--rp-negative);
-  color: var(--rp-negative);
+  color: var(--rp-negative-text);
 }
 .rp-btn.negative[data-hovered] {
   background: color-mix(in srgb, var(--rp-negative) 12%, transparent);

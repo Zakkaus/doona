@@ -1,4 +1,5 @@
-/* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in / out; modals 250ms in, 130ms out. ---- */
+/* ---- Motion, after S2: default 150ms cubic-bezier(0.45,0,0.4,1); overlays 200ms in and out; modals 250ms in,
+   130ms out. ---- */
 
 .rp-btn,
 .rp-nav,
@@ -49,8 +50,8 @@
 .rp-switch[data-pressed] .track::after {
   scale: 0.9;
 }
-/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours instead of flipping.
-   Later sheets must not set `transition` on these, or the colour fades are lost. */
+/* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours
+   instead of flipping. Later sheets must not set `transition` on these, or the colour fades are lost. */
 .rp-node,
 .rp-tree-tile,
 .rp-node .ms,
@@ -78,6 +79,11 @@
   --rp-positive: var(--rp-foam);
   --rp-notice: var(--rp-gold);
   --rp-info: var(--rp-pine);
+  /* The status tones as text, set by a palette to body text where the tone is under 4.5:1 in the same way. */
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-info);
   --rp-line: var(--rp-hl-low);
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
@@ -240,5 +246,15 @@
   from {
     opacity: 0;
     translate: 0 20px;
+  }
+}
+/* Palette and scheme changes crossfade through a view transition (withCrossfade). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--rp-duration-view);
+}
+@keyframes rp-spin {
+  to {
+    rotate: 360deg;
   }
 }

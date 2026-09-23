@@ -1,3 +1,4 @@
+import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {useMemo} from 'react';
 import {useContentWidth} from '../hooks';
@@ -26,9 +27,10 @@ export function Beeswarm({
   marks?: SwarmMark[];
   rows?: SwarmRow[];
   fmt: (value: number) => string;
-  // The band grows with how high the dots stack, up to this; a few samples get a low chart, not empty space.
+  // The band's maximum height.
   maxHeight?: number;
 }) {
+  const t = useT();
   const describedBy = useChartDescription();
   const [ref, width] = useContentWidth<HTMLDivElement>();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
@@ -106,7 +108,7 @@ export function Beeswarm({
                   <span className="name">{row.label}</span>
                   <span className="rp-note">{row.detail}</span>
                 </div>
-                <svg width={width} height={20} role="img" aria-label={`${row.label}: ${row.detail}`}>
+                <svg width={width} height={20} role="img" aria-label={t('ui.valuePair', {label: row.label, value: row.detail})}>
                   <line className="grid" x1={inset} x2={inset + track} y1={10} y2={10} />
                   {row.points.map(point => (
                     <circle key={point.id} cx={x(point.value)} cy={10} r={4} fill={point.color} onPointerMove={event => showTip(event, point.lines)} />

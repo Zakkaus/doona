@@ -1,9 +1,47 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate} from '../../i18n';
-import {searchIndex, searchView as project, type SearchSources} from './view';
+import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
+import {
+  connectionEntries,
+  groupEntries,
+  nodeEntries,
+  pageEntries,
+  providerEntries,
+  ruleEntries,
+  searchSections,
+  searchView as project,
+  sourceEntries,
+  type SearchIndex
+} from './view';
 import {sourceKinds} from '../../features/config/view';
-import type {Translator} from '../../i18n';
+import type {Lang, Translator} from '../../i18n';
+
+type SearchSources = {
+  capabilities: {data: Capabilities | undefined};
+  connections: {data: ConnectionList | undefined};
+  nodes: {data: Node[] | undefined};
+  groups: {data: GroupSummary[] | undefined};
+  providers: {data: ProviderList | undefined};
+  config: {data: EffectiveConfig | undefined};
+  rules: {data: RuleList | undefined};
+};
+// Every dataset projected at once, as useSearch does one memo at a time.
+function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
+  return searchSections(
+    {
+      pages: pageEntries(sources.capabilities.data, sources.config.data, t),
+      conns: connectionEntries(sources.connections.data, t),
+      nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang, t),
+      groups: groupEntries(sources.groups.data),
+      providers: providerEntries(sources.providers.data, t),
+      sources: sourceEntries(sources.config.data, t),
+      rules: ruleEntries(sources.rules.data, lang)
+    },
+    sources.connections.data,
+    t
+  );
+}
 const searchView = (q: string, sources: SearchSources, t: Translator) => project(q, searchIndex(sources, 'en', t));
 
 it('keeps destination identity and encoded queries when different hit types have the same label', async () => {

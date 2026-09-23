@@ -1,3 +1,4 @@
+import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
 
@@ -5,6 +6,7 @@ export type ShareSegment = {id: string; label: string; count: number; color: str
 
 // One bar split by share, left to right from the largest, with the counts in the legend under it.
 export function ShareBar({label, segments}: {label: string; segments: ShareSegment[]}) {
+  const t = useT();
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
   const total = segments.reduce((sum, segment) => sum + segment.count, 0);
@@ -13,7 +15,7 @@ export function ShareBar({label, segments}: {label: string; segments: ShareSegme
       <div
         className="bar"
         role="img"
-        aria-label={`${label}: ${segments.map(segment => `${segment.label} ${segment.text}`).join(', ')}`}
+        aria-label={t('ui.valuePair', {label, value: segments.map(segment => `${segment.label} ${segment.text}`).join(t('ui.separator'))})}
         aria-describedby={describedBy}
       >
         {/* An empty share has no part of the bar; the legend still lists it with its zero. */}

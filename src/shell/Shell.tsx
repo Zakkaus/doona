@@ -2,7 +2,7 @@ import './install';
 import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
-import {Button, ModalDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
+import {Button, ConfirmDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
 import {SettingsContext} from './preferences';
@@ -53,25 +53,9 @@ export function Shell({lang: initial}: {lang: Lang}) {
 function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () => void; cancel: () => void}) {
   const t = useT();
   return (
-    <ModalDialog
-      title={t('config.discardTitle')}
-      narrow
-      alert
-      isOpen={isOpen}
-      onOpenChange={open => {
-        if (!open) cancel();
-      }}
-      footer={close => (
-        <>
-          <Button onPress={close}>{t('ui.cancel')}</Button>
-          <Button negative onPress={discard}>
-            {t('config.discard')}
-          </Button>
-        </>
-      )}
-    >
-      <p>{t('config.discardHelp')}</p>
-    </ModalDialog>
+    <ConfirmDialog title={t('config.discardTitle')} isOpen={isOpen} onCancel={cancel} confirmLabel={t('config.discard')} onConfirm={discard}>
+      <p className="rp-label">{t('config.discardHelp')}</p>
+    </ConfirmDialog>
   );
 }
 

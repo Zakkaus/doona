@@ -20,7 +20,8 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
   full: ['config.wizardFull', 'config.wizardFullHelp']
 };
-// Edit subscriptions and optional routing templates while preserving existing groups. Never write back redacted text whose digest does not match.
+// Edits subscriptions and optional routing templates, keeping existing groups. Redacted text whose digest does not
+// match is never written back.
 export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   const lang = useLang();
@@ -67,14 +68,14 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const apply = async () => {
     if (busy || !valid) return;
     if (preview.error) {
-      toast('negative', errorText(preview.error, t));
+      toast('negative', t('config.previewFailed', {error: errorText(preview.error, t)}));
       return;
     }
     const result = await editor.apply(origin, text);
     if (!result) return;
     if (result.diagnostics) {
       setFound(result.diagnostics);
-      toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
+      toast('negative', t('ui.writeInvalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
       return;
     }
     toast('positive', t('config.saved', {path: label}));

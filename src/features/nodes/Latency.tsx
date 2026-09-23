@@ -1,8 +1,8 @@
+import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT} from '../../i18n';
-import {millis} from '../../api/u64';
-import {Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
-import {usePalette, ChartCard, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
+import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
@@ -21,7 +21,6 @@ export function NodeLatency() {
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
-  const ms = (value: number) => t('ui.latency', {n: millis(value)});
   const tone = {ok: p.positive, warn: p.notice, err: p.negative};
   // One entry per node for the summary, whichever groups it sits in.
   const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
@@ -32,13 +31,13 @@ export function NodeLatency() {
           label: t('nodes.latency.lowest'),
           icon: <SpeedFast />,
           tint: 'c2',
-          value: t('nodes.latency.named', {name: measured[0].name, ms: ms(measured[0].latest)})
+          value: t('nodes.latency.named', {name: measured[0].name, ms: formatLatency(measured[0].latest, t)})
         },
         {
           label: t('nodes.latency.highest'),
           icon: <Clock />,
           tint: 'c4',
-          value: t('nodes.latency.named', {name: measured[measured.length - 1].name, ms: ms(measured[measured.length - 1].latest)})
+          value: t('nodes.latency.named', {name: measured[measured.length - 1].name, ms: formatLatency(measured[measured.length - 1].latest, t)})
         },
         {
           label: t('nodes.latency.unavailable'),
@@ -49,7 +48,6 @@ export function NodeLatency() {
         }
       ]
     : [];
-  const dash = (value: number | null) => (value === null ? '—' : ms(value));
   // Nodes without a latency are listed by state in a sentence each, naming the first few.
   const list = (rows: LatencyMissing[]) => {
     const names = formatList(
@@ -69,8 +67,10 @@ export function NodeLatency() {
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
-      <ChartCard title={t('nodes.latency.title')} note={t('nodes.latency.sample', {n: nodes.data.length})}>
-        <div className="rp-row">
+      <Card
+        title={t('nodes.latency.title')}
+        note={t('nodes.latency.sample', {n: nodes.data.length})}
+        aside={
           <Segmented
             label={t('nodes.latency.by')}
             value={by}
@@ -80,11 +80,12 @@ export function NodeLatency() {
               ['protocol', t('nodes.latency.byProtocol')]
             ]}
           />
-        </div>
+        }
+      >
         <MarkerPlot
           label={t('nodes.latency.title')}
           max={latencyMax(view)}
-          fmt={ms}
+          fmt={value => formatLatency(value, t)}
           showAll={n => t('nodes.latency.showAll', {n})}
           legend={[
             {kind: 'dot', label: t('nodes.latency.latest')},
@@ -98,19 +99,23 @@ export function NodeLatency() {
               id: row.id,
               label: row.name,
               values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
-              text: ms(row.latest),
+              text: formatLatency(row.latest, t),
               tone: tone[latencyTone(row.latest)],
-              description: t('nodes.latency.row', {latest: ms(row.latest), moving: dash(row.moving), avg10: dash(row.avg10)}),
+              description: t('nodes.latency.row', {
+                latest: formatLatency(row.latest, t),
+                moving: formatLatency(row.moving, t),
+                avg10: formatLatency(row.avg10, t)
+              }),
               details: [
-                t('ui.valuePair', {label: t('nodes.latency.latest'), value: ms(row.latest)}),
-                t('ui.valuePair', {label: t('nodes.latency.moving'), value: dash(row.moving)}),
-                t('ui.valuePair', {label: t('nodes.latency.avg10'), value: dash(row.avg10)})
+                t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
+                t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)}),
+                t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})
               ]
             })),
             notes: notes(group.missing)
           }))}
         />
-      </ChartCard>
+      </Card>
     </div>
   );
 }

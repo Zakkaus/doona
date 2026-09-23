@@ -31,13 +31,13 @@ button.rp-node[data-focus-visible] {
   font-variant-numeric: tabular-nums;
 }
 .ms.ok {
-  color: var(--rp-positive);
+  color: var(--rp-positive-text);
 }
 .ms.warn {
-  color: var(--rp-notice);
+  color: var(--rp-notice-text);
 }
 .ms.err {
-  color: var(--rp-negative);
+  color: var(--rp-negative-text);
 }
 .rp-node .s {
   display: flex;

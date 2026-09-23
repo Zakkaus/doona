@@ -12,5 +12,5 @@ export function useOutboundsCard() {
   const outbounds = useRuntimeOutbounds(available === true);
   const view = useMemo(() => activityOutbounds(outbounds.data, locale, p, t), [outbounds.data, locale, p, t]);
   const state = available === false ? 'unavailable' : !outbounds.data ? 'loading' : !view.rows.length ? 'empty' : 'ready';
-  return {view, state, error: outbounds.error};
+  return {view, state, error: outbounds.error, retry: outbounds.refetch};
 }

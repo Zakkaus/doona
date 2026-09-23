@@ -5,14 +5,14 @@ import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
 import {offered} from '../api/capabilities';
-export function dnsLogLimit(capabilities: Capabilities | undefined) {
+function dnsLogLimit(capabilities: Capabilities | undefined) {
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
   return advertised === undefined ? undefined : Math.min(200, advertised);
 }
 export function useDnsFlush() {
   const api = getApi();
-  const {busy, run} = useAction<'flush'>({rethrow: true});
-  return {busy: busy !== null, flush: useCallback(() => run('flush', signal => api.flushDnsCache(signal)), [api, run])};
+  const {busy, run, cancel} = useAction<'flush'>({rethrow: true});
+  return {busy: busy !== null, cancel, flush: useCallback(() => run('flush', signal => api.flushDnsCache(signal)), [api, run])};
 }
 export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true) {
   const api = getApi();
@@ -54,12 +54,13 @@ export function useDnsControl() {
   const resources = capabilities.data?.resources;
   const cache = useDnsCache(offered(resources, 'dns_cache', {whileLoading: false}) && !!resources?.dns_cache.read);
   const {refetch} = cache;
-  const {busy, error, run} = useAction<string>({rethrow: true});
+  const {busy, error, run, cancel} = useAction<string>({rethrow: true});
   return {
     capabilities,
     cache,
     busy,
     error,
+    cancel,
     remove: useCallback(
       (id: string) =>
         run(id, async signal => {

@@ -33,6 +33,7 @@ export function useSettingsPage(query: string) {
     profile,
     palette: paletteLabel(paletteSections, ap.palette),
     error: capabilities.error,
+    retry: capabilities.refetch,
     firstRun: form.saved.api === null,
     activeId: form.saved.activeId,
     hasActive: !!form.active,

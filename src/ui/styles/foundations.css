@@ -51,8 +51,8 @@
   text-align: center;
   color: var(--rp-subtle);
 }
-/* A loading notice holds its box at once and shows after 150ms, fading in rather than popping; an empty result appears at once, since live filtering can
-   reach and leave it on every keystroke. Reduced motion zeroes the fade. */
+/* A loading notice holds its box at once and shows after 150ms, fading in rather than popping; an empty result
+   appears at once, since live filtering can reach and leave it on every keystroke. Reduced motion zeroes the fade. */
 .rp-empty[role='status'][data-wait] {
   visibility: hidden;
 }

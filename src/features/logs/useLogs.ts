@@ -36,7 +36,6 @@ export function useLogs() {
     setTarget,
     paused,
     setPaused,
-    unavailable: resource?.available === false,
     error: capabilities.error ?? feed.error,
     loading: !capabilities.error && !feed.error && !feed.connected && !feed.records.length,
     clear: feed.clear,

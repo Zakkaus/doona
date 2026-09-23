@@ -18,7 +18,7 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
   expect(model.connections).toBe('0');
   expect(model.memoryBadge?.tone).toBe('err');
   expect(activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
-  const ranking = activityRanking(connections, 'dev', colors, t);
+  const ranking = activityRanking(connections, 'dev', colors, 'en', t);
   expect(ranking[0].pct).toBeGreaterThan(ranking[1].pct);
 });
 
@@ -79,5 +79,5 @@ it('distinguishes unsupported runtime from loading without hiding independent me
   const view = activityView(undefined, runtimeMemory, t, false);
   expect(view.status.text).toBe(t('act.modeUnavailable'));
   expect(view.rss).not.toBe('—');
-  expect(activityView(undefined, undefined, t).status.text).toBe(t('act.loading'));
+  expect(activityView(undefined, undefined, t).status.text).toBe(t('ui.loading'));
 });

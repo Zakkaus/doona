@@ -11,5 +11,5 @@ export function useMemorySeries(capabilities: Capabilities | undefined, memory: 
   const windowSeconds = advertised ? Math.min(600, capabilities?.resources.memory_history.max_window_seconds ?? 600) : 600;
   const converted = useMemo(() => (history.data ? historySamples(history.data) : []), [history.data]);
   const series = useMemo(() => memoryWindow(rings, advertised ? converted : [], windowSeconds), [rings, converted, advertised, windowSeconds]);
-  return {...series, error: advertised ? history.error : undefined};
+  return {...series, error: advertised ? history.error : undefined, retry: history.refetch};
 }

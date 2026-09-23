@@ -1,16 +1,16 @@
-import {memo, useMemo} from 'react';
-import {useT} from '../../i18n';
+import {Card} from '../../ui/ui';
+import {memo, useCallback, useMemo} from 'react';
+import {LOCALE, useLang, useT} from '../../i18n';
 import type {Connection} from '../../api/model';
 import {outboundLabel} from '../../api/selectors';
-import {formatBytes} from '../../api/u64';
-import {usePalette, ChartCard, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
+import {formatBytes} from '../../i18n/format';
+import {usePalette, FactStrip, Scatter, ScatterLegend, type ChartFact} from '../../ui/charts';
 import Download from '../../ui/icons/Download';
 import Link from '../../ui/icons/Link';
 import Upload from '../../ui/icons/Upload';
 import {trafficSeries} from './scatter';
 
 const order = [0, 2, 3, 1, 4, 5, 6, 7];
-const bytes = (value: number) => formatBytes(String(Math.round(value)));
 
 // Upload against download for the connections the table shows; the heavy ones stand apart from the crowd.
 export const Traffic = memo(function Traffic({
@@ -27,10 +27,12 @@ export const Traffic = memo(function Traffic({
 }) {
   const t = useT();
   const p = usePalette();
+  const locale = LOCALE[useLang()];
+  const bytes = useCallback((value: number) => formatBytes(value, locale), [locale]);
   const view = useMemo(() => trafficSeries(records), [records]);
   const series = useMemo(() => {
-    // As on the activity page, block takes the negative colour; the others take category colours by their place among
-    // all outbounds, in an order that keeps neighbouring hues apart (the first two are both blue-green in some palettes).
+    // As on the activity page, block takes the negative colour; the others take category colours by their place
+    // among all outbounds, ordered so neighbouring hues differ (some palettes start with two blue-greens).
     const others = outbounds.filter(outbound => outbound !== 'block');
     const colour = (outbound: string | null) => (outbound === 'block' ? p.negative : p.cat[order[Math.max(0, others.indexOf(outbound)) % order.length]]);
     return view.series.map(s => ({
@@ -45,7 +47,7 @@ export const Traffic = memo(function Traffic({
         detail: t('conn.chart.point', {down: bytes(point.down), up: bytes(point.up)})
       }))
     }));
-  }, [view, outbounds, p, t]);
+  }, [view, outbounds, p, t, bytes]);
   const facts: ChartFact[] = view.heaviest
     ? [
         {
@@ -62,7 +64,7 @@ export const Traffic = memo(function Traffic({
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
-      <ChartCard title={t('conn.chart.title')} note={sample}>
+      <Card title={t('conn.chart.title')} note={sample}>
         {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
         {view.placed > 0 && (
           <>
@@ -77,7 +79,7 @@ export const Traffic = memo(function Traffic({
             <p className="rp-note">{t('conn.chart.hint')}</p>
           </>
         )}
-      </ChartCard>
+      </Card>
     </div>
   );
 });

@@ -2,9 +2,8 @@ import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEv
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {isFragment} from '../../dae/text';
-import {localTime} from '../../i18n/format';
+import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {millis} from '../../api/u64';
 import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
 import {coverageView, type CoverageView} from './flows/view';
@@ -233,7 +232,7 @@ export function evaluationView(
   const reach = !node
     ? t('rule.noMember')
     : health?.state === 'healthy' && health.latency_ms != null
-      ? t('ui.latency', {n: millis(health.latency_ms)})
+      ? formatLatency(health.latency_ms, t)
       : health?.state === 'unavailable'
         ? t('ui.unavailable')
         : t('rule.untested');

@@ -32,7 +32,7 @@ export const messages = defineMessages({
     'rule.removeTitle': '移除此規則？',
     'rule.removeHelp': '將刪除 {file} 第 {line} 行；驗證通過後儲存並重載。',
     'rule.removed': '規則已移除，正在重載',
-    'rule.stale': '規則清單與設定不同步，已重新載入，請重試',
+    'rule.stale': '規則清單與組態不同步，已重新整理清單，請重試',
     'rule.note': '模擬目前組態的路由結果，不代表實際連線。網域與目的 IP 至少填寫一項；使用 live 或 query 解析模式時，須填寫網域並將目的 IP 留空。',
     'rule.dstPort': '目的連接埠',
     'rule.srcPort': '來源連接埠',
@@ -44,7 +44,6 @@ export const messages = defineMessages({
     'rule.invalidPort': '連接埠須為 1 至 65535 的整數。',
     'rule.invalidIp': '須為 IPv4 或 IPv6 位址。',
     'rule.invalidLive': '解析模式須提供網域，且目的 IP 必須留空。',
-    'rule.unavailable': '不支援路由追蹤',
     'rule.advanced': '進階條件',
     'rule.result.matched': '相符',
     'rule.result.not_matched': '不符',
@@ -75,7 +74,7 @@ export const messages = defineMessages({
     'rule.id': '序',
     'rule.hits': '命中',
     'rule.share': '佔比',
-    'rule.distributionCaption': '目前保留的 {n} 筆流程，按規則分組；不跨輪詢累計',
+    'rule.distributionCaption': '目前保留的 {n} 筆流程，依規則分組；不跨輪詢累計',
     'rule.distributionScope': '依運算式、ID 與來源區分；摘要不含組態代次，佔比以整份快照計算。',
     'rule.distributionSource': '規則來源',
     'rule.sourceKernel': '核心',
@@ -85,14 +84,15 @@ export const messages = defineMessages({
     'rule.distributionEmpty': '目前快照中沒有符合的流程',
     'rule.dictionaryEmpty': '沒有路由規則',
     'rule.dnsHeading': 'DNS：{name}',
-    'rule.droppedUnknown': '遺失記錄數未知'
+    'rule.droppedUnknown': '遺失記錄數未知',
+    'rule.traceFailed': '無法執行追蹤：{error}'
   },
   'zh-CN': {
     'rule.dictionaryCaption': '{n} 条规则，代次 {generation}',
     'rule.where': '位置',
     'rule.openSource': '打开来源',
     'rule.lineOnly': '第 {n} 行',
-    'rule.add': '新增规则',
+    'rule.add': '新建规则',
     'rule.addHelp': '将规则写入来源文件的 routing 区段；校验通过后保存并重载。',
     'rule.condition': '条件',
     'rule.conditionMode': '条件写法',
@@ -118,7 +118,7 @@ export const messages = defineMessages({
     'rule.removeTitle': '移除此规则？',
     'rule.removeHelp': '将删除 {file} 第 {line} 行；校验通过后保存并重载。',
     'rule.removed': '规则已移除，正在重载',
-    'rule.stale': '规则列表与配置不同步，已重新加载，请重试',
+    'rule.stale': '规则列表与配置不同步，已刷新列表，请重试',
     'rule.note': '模拟当前配置的路由结果，不代表实际连接。域名与目标 IP 至少填写一项；使用 live 或 query 解析模式时，须填写域名并将目标 IP 留空。',
     'rule.dstPort': '目标端口',
     'rule.srcPort': '来源端口',
@@ -130,7 +130,6 @@ export const messages = defineMessages({
     'rule.invalidPort': '端口须为 1 至 65535 的整数。',
     'rule.invalidIp': '须为 IPv4 或 IPv6 地址。',
     'rule.invalidLive': '解析模式须提供域名，且目标 IP 必须留空。',
-    'rule.unavailable': '不支持路由追踪',
     'rule.advanced': '高级条件',
     'rule.result.matched': '匹配',
     'rule.result.not_matched': '不匹配',
@@ -169,9 +168,10 @@ export const messages = defineMessages({
     'rule.sourceUnknown': '未知',
     'rule.unknownRule': '未知规则',
     'rule.distributionEmpty': '当前快照中没有匹配的流程',
-    'rule.dictionaryEmpty': '没有路由规则',
+    'rule.dictionaryEmpty': '暂无路由规则',
     'rule.dnsHeading': 'DNS：{name}',
-    'rule.droppedUnknown': '丢失记录数未知'
+    'rule.droppedUnknown': '丢失记录数未知',
+    'rule.traceFailed': '无法执行追踪：{error}'
   },
   en: {
     'rule.dictionaryCaption': {one: '{n} rule, generation {generation}', other: '{n} rules, generation {generation}'},
@@ -204,7 +204,7 @@ export const messages = defineMessages({
     'rule.removeTitle': 'Remove this rule?',
     'rule.removeHelp': 'Deletes line {line} of {file}, then saves and reloads after validation passes.',
     'rule.removed': 'Rule removed; reloading',
-    'rule.stale': 'The rule list and configuration are out of sync. The list has been reloaded; retry the operation.',
+    'rule.stale': 'The rule list and configuration are out of sync. The list has been refreshed; retry the operation.',
     'rule.note':
       'Simulates routing with the current configuration, not an actual connection. Enter a domain or destination IP. For live or query resolution, enter a domain and leave the destination IP empty.',
     'rule.dstPort': 'Destination port',
@@ -217,7 +217,6 @@ export const messages = defineMessages({
     'rule.invalidPort': 'Ports must be integers from 1 to 65535.',
     'rule.invalidIp': 'Enter an IPv4 or IPv6 address.',
     'rule.invalidLive': 'Resolving requires a domain and an empty destination IP.',
-    'rule.unavailable': 'Routing trace unavailable',
     'rule.advanced': 'Advanced',
     'rule.result.matched': 'Matched',
     'rule.result.not_matched': 'Not matched',
@@ -262,6 +261,7 @@ export const messages = defineMessages({
     'rule.distributionEmpty': 'No matching flows in this snapshot',
     'rule.dictionaryEmpty': 'No routing rules',
     'rule.dnsHeading': 'DNS: {name}',
-    'rule.droppedUnknown': 'Dropped record count unknown'
+    'rule.droppedUnknown': 'Dropped record count unknown',
+    'rule.traceFailed': 'Could not run the trace: {error}'
   }
 });

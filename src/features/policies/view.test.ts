@@ -52,10 +52,12 @@ it('counts worst probe outcome once per member and reports selection changes', (
   expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 0, unavailable: 1, unknown: 1}});
 });
 
-it('preserves native policy spelling and falls back to the canonical identifier', () => {
+it('names the policy as the picker does and keeps the engine spelling for the tooltip', () => {
   const group = nodeFixtures(0).groups[0];
-  expect(policyCardView({...group, policy: {kind: 'urltest', native: 'min_moving_avg'}}, [], 'both', t).kind).toBe('min_moving_avg');
-  expect(policyCardView({...group, policy: {kind: 'urltest', native: ''}}, [], 'both', t).kind).toBe('urltest');
+  const card = (native: string) => policyCardView({...group, policy: {kind: 'urltest', native}}, [], 'both', t).policy;
+  expect(card('min_moving_avg')).toEqual({label: t('arrange.policy.fastest'), id: 'min_moving_avg'});
+  expect(card('min_avg10')).toEqual({label: t('policy.kind.urltest'), id: 'min_avg10'});
+  expect(card('')).toEqual({label: t('policy.kind.urltest'), id: 'urltest'});
 });
 
 it('filters large grids by region and observed health without mutating member order', () => {
@@ -92,7 +94,7 @@ it('reports a partial probe with translated counts and the stopping error', () =
   const cause = new LocalError('ui.operationFailed', 'member refused');
   const error = Object.assign(new LocalError('ui.operationFailed'), {cause, partialResult: {}, completed: 1200, total: 1500});
   const text = actionErrorText(error, t);
-  expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.operationFailed') + ': member refused'}));
+  expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.valuePair', {label: t('ui.operationFailed'), value: 'member refused'})}));
   expect(text).toContain('1,200');
   expect(text).not.toContain('ui.operationFailed');
   expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe('offline');

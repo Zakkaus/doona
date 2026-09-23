@@ -57,7 +57,7 @@ export class LocalError extends Error {
 export function errorText(error: unknown, t: Translator): string {
   if (error instanceof LocalError) {
     const text = t(error.key);
-    return error.detail ? `${text}: ${error.detail}` : text;
+    return error.detail ? t('ui.valuePair', {label: text, value: error.detail}) : text;
   }
   if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
   const message = error instanceof Error ? error.message : String(error);

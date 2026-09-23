@@ -1,8 +1,8 @@
 import {useCallback, useMemo} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {LogLevel, LogRecord} from '../../api/model';
-import {usePalette, ChartCard, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
-import {Button} from '../../ui/ui';
+import {usePalette, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
+import {Card, Button} from '../../ui/ui';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';
@@ -74,9 +74,9 @@ export function LogActivity({
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
-      <ChartCard title={t('log.chart.title')} note={t('log.chart.sample', {n: records.length})}>
+      <Card title={t('log.chart.title')} note={t('log.chart.sample', {n: records.length})}>
         <Heatmap label={t('log.chart.title')} columns={heat.columns} rows={heat.rows} />
-      </ChartCard>
+      </Card>
     </div>
   );
 }

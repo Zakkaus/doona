@@ -4,7 +4,7 @@ import {percentile} from '../../ui/charts/layout';
 // Mutually exclusive outcomes: a cache hit counts as that whatever its status, then uncached records by status.
 export const dnsOutcomes = ['cached', 'answered', 'nxdomain', 'failed'] as const;
 export type DnsOutcome = (typeof dnsOutcomes)[number];
-export const outcomeOf = (record: DnsLogRecord): DnsOutcome =>
+const outcomeOf = (record: DnsLogRecord): DnsOutcome =>
   record.cached ? 'cached' : record.status === 'NOERROR' ? 'answered' : record.status === 'NXDOMAIN' ? 'nxdomain' : 'failed';
 
 export type LatencySample = {id: string; value: number; outcome: DnsOutcome; name: string; upstream: string};

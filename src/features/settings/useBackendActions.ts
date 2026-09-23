@@ -10,7 +10,7 @@ import {
   useRuntimeOperations
 } from '../../store';
 import {lifecycleActions} from '../overview/view';
-import {operationLabels} from '../../api/selectors';
+import {closedAllTone, operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
@@ -30,7 +30,6 @@ export function useBackendActions() {
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
   const geodata = useGeodata(offered(resources, 'geodata', {whileLoading: false}));
-  const fail = (error: unknown) => toast('negative', errorText(error, t));
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const anyAction =
     lifecycle ||
@@ -51,17 +50,20 @@ export function useBackendActions() {
         subscriptions.map(item => item.id),
         (_id, error) => failures.push(error)
       )
-      .then(done => {
-        // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
-        if (done === undefined) return;
-        const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
-        toast(
-          done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
-          failures.length
-            ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
-            : t('settings.refreshedAll', counts)
-        );
-      }, fail);
+      .then(
+        done => {
+          // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
+          if (done === undefined) return;
+          const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
+          toast(
+            done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
+            failures.length
+              ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
+              : t('settings.refreshedAll', counts)
+          );
+        },
+        error => toast('negative', t('settings.refreshAllFailed', {error: errorText(error, t)}))
+      );
   };
   const runOperation = (kind: keyof typeof operationLabels) =>
     void operations.run(kind).then(
@@ -71,30 +73,41 @@ export function useBackendActions() {
       error => toast('negative', t('ov.operationError', {error: errorText(error, t)}))
     );
   const closeAll = () =>
-    void closing.closeAll({ids: [], query: {all: true}}).then(tally => {
-      if (tally) toast(!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive', t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
-    }, fail);
+    closing.closeAll({ids: [], query: {all: true}}).then(
+      tally => {
+        if (tally) toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
+      },
+      error => t('conn.closeFailed', {error: errorText(error, t)})
+    );
   return {
     runtimeError: runtime.error,
+    retryRuntime: runtime.refetch,
     lifecycle: lifecycleActions(operations.canRun, operations.busy, runOperation, t),
     flush: {
       confirmationText: t('dns.flushConfirmAll'),
-      busy: flushing.busy,
-      onFlush: () =>
-        void flushing.flush().then(result => {
-          if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-        }, fail)
+      isPending: flushing.busy,
+      isDisabled: flushing.busy,
+      onAbort: flushing.cancel,
+      onConfirm: () =>
+        flushing.flush().then(
+          result => {
+            if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+          },
+          error => t('dns.flushFailed', {error: errorText(error, t)})
+        )
     },
     closeAll: {
       confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
-      disabled: !connectionsReady || !liveCount || !!closing.busy,
-      pending: closing.busy === 'all' || (connections.loading && !connections.data),
-      run: closeAll
+      isDisabled: !connectionsReady || !liveCount || !!closing.busy,
+      isPending: closing.busy === 'all' || (connections.loading && !connections.data),
+      onConfirm: closeAll,
+      onAbort: closing.cancel
     },
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,
     geodataLoading: geodata.loading && !geodata.data,
     geodataError: geodata.error,
+    retryGeodata: geodata.refetch,
     providersError: providers.error,
     providersLoading: providers.loading && !providers.data,
     retryProviders: providers.refetch,
@@ -112,10 +125,13 @@ export function useBackendActions() {
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: !!resources?.geodata.available,
-    rows: geodataRows(geodata.data?.assets ?? []),
+    rows: geodataRows(geodata.data?.assets ?? [], locale),
     update: () =>
-      void geodata.update().then(result => {
-        if (result) toast('positive', t('settings.geodataUpdated'));
-      }, fail)
+      void geodata.update().then(
+        result => {
+          if (result) toast('positive', t('settings.geodataUpdated'));
+        },
+        error => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
+      )
   };
 }

@@ -77,7 +77,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
     <>
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
       <div className="rp-toolbar">
-        <TextField label={t('nodes.search')} search value={m.search} width={220} onChange={m.setSearch} />
+        <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
         <LabeledSelect label={t('nodes.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />
         <LabeledSelect label={t('nodes.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
         <span className="rp-label">{m.shown}</span>

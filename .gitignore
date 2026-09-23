@@ -3,6 +3,7 @@ dist
 release/
 test-results/
 coverage/
+*.tsbuildinfo
 # agent tooling state
 .agents
 .claude

@@ -45,14 +45,14 @@ function PolicyDetail(props: PolicyGroupInput) {
   const g = m.card;
   return (
     <>
-      <ErrorMessage error={m.error} />
+      <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && <PolicyWait heading={<h3 className="rp-h3">{props.name}</h3>} members={props.members} label={m.loadingText} />}
       {g && (
         <>
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3">{g.name}</h3>
-              <Badge>{g.kind}</Badge>
+              <Badge tip={g.policy.id}>{g.policy.label}</Badge>
               <Light small tone="ok">
                 {g.healthy}
               </Light>

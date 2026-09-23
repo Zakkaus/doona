@@ -238,7 +238,7 @@ export const groupAdmits = (filters: string[], node: FilterNode) => compileFilte
 export type GroupChange =
   | {kind: 'addNode' | 'removeNode' | 'addSubscription' | 'removeSubscription'; group: string; value: string}
   | {kind: 'createGroup'; group: string; policy: string};
-export function applyChange(text: string, change: GroupChange): string {
+function applyChange(text: string, change: GroupChange): string {
   switch (change.kind) {
     case 'addNode':
       return addNamesToGroup(text, change.group, [change.value]);

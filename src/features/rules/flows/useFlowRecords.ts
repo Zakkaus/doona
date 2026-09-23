@@ -46,13 +46,14 @@ export function useFlowRecords({go, query}: PageProps) {
     id,
     rulesListed,
     error: resource.error,
+    retry: resource.refetch,
     loading: resource.loading && !resource.data,
     panelOpen: !!id && (!!detail.data || detail.loading || !!detail.error),
     panelTitle: detailView?.title ?? id ?? '',
     detailError: detail.error,
     detailRetry: detail.refetch,
     detailLoading: !detail.data && detail.loading,
-    // Opening a record adds a history entry; moving between records or closing rewrites it, so Back is not one step per row.
+    // Opening a record adds a history entry; moving between records or closing replaces it, so Back skips the rows.
     select: (value: string | null) => go('rules', within(query, {id: value}), {replace: id !== null}),
     pinLabel: pinned
       ? t('flow.mapFilter', {

@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
@@ -206,7 +206,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
     expect(await grid.getByRole('row').count()).toBeLessThan(60);
   }
   await page.getByRole('button', {name: 'Group by'}).click();
-  await page.getByRole('option', {name: 'By client', exact: true}).click();
+  await page.getByRole('option', {name: 'By device', exact: true}).click();
   await grid.evaluate(element => {
     element.scrollTop = 0;
   });
@@ -216,7 +216,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
 test('group slots stay expanded and unselectable across virtual keyboard navigation', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.getByRole('button', {name: 'Group by'}).click();
-  await page.getByRole('option', {name: 'By client', exact: true}).click();
+  await page.getByRole('option', {name: 'By device', exact: true}).click();
   const grid = page.getByRole('treegrid', {name: 'Connections'});
   const groups = grid.locator('[role=row][aria-level="1"]');
   const selected = grid.locator('[aria-selected="true"]');
@@ -255,7 +255,7 @@ test.describe('short connection lists', () => {
     const grid = page.getByRole('grid', {name: 'Connections'});
     await expect(grid).toHaveAttribute('aria-rowcount', '9');
     expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
-    const source = grid.getByRole('columnheader', {name: 'Source'});
+    const source = grid.getByRole('columnheader', {name: 'Device'});
     const chain = grid.getByRole('columnheader', {name: 'Chain'});
     await expect(source).toBeVisible();
     await expect.poll(async () => (await source.boundingBox())!.width / (await chain.boundingBox())!.width).toBeCloseTo(128 / 168, 2);
@@ -287,7 +287,7 @@ test.describe('default view', () => {
     await page.setViewportSize({width: 1440, height: 900});
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
-    await page.locator('.rp-panel').getByRole('button', {name: 'Only this client', exact: true}).click();
+    await page.locator('.rp-panel').getByRole('button', {name: 'Only this device', exact: true}).click();
     await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
     await expect(groups).toHaveCount(1);
   });
@@ -472,6 +472,42 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
   await expect(page.locator('[data-key="later"]')).toBeVisible();
 });
 
+test('close all reports skipped connections as information, as Settings does', async ({page}) => {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.connections.max_bulk_close = 1;
+  const list = await api.connections();
+  list.tcp = [
+    {...list.tcp[0], id: 'first'},
+    {...list.tcp[0], id: 'gone'}
+  ];
+  list.udp = [];
+  list.truncated = false;
+  const responses: Record<string, unknown> = {
+    '/capabilities': capabilities,
+    '/version': await api.version(),
+    '/runtime': await api.runtime(),
+    '/groups': await api.groups(),
+    '/nodes': await api.nodes()
+  };
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (route.request().method() === 'DELETE') {
+      if (path.endsWith('/gone')) return route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'Gone'}, request_id: 'e2e'}});
+      list.tcp = list.tcp.filter(row => row.id !== 'first');
+      return route.fulfill({status: 204});
+    }
+    return route.fulfill({json: path === '/connections' ? list : responses[path]});
+  });
+  expectLoadFailures(page, /\/connections\/gone$/);
+  await page.goto('/#/connections?tab=list');
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
+  await expect(page.locator('.rp-toast.info')).toContainText('Closed 1, skipped 1');
+});
+
 test('a hidden tab keeps its detail drawer closed when the window narrows', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.locator('.rp-table [data-key="c-0002"]').click();
@@ -489,4 +525,32 @@ test('clearing the filter that opened the table keeps the table open', async ({p
   await page.getByRole('button', {name: 'Clear filters', exact: true}).first().click();
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
   await expect(page.getByRole('grid').first()).toBeVisible();
+});
+
+test('an empty connection list keeps its message in view on a narrow screen', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET connections'] = async () => ({...(await api.connections()), tcp: [], udp: [], truncated: false});
+  await page.setViewportSize({width: 360, height: 800});
+  await page.goto('/#/connections?tab=list');
+  // Inside the same sticky wrapper DataTable uses, so a table wider than the screen cannot carry it out of view.
+  const message = page.locator('.rp-table-empty').getByText('No matching connections', {exact: true});
+  await expect(message).toBeVisible();
+  const box = (await message.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+});
+
+test('plain connection cells truncate with a tooltip like other tables', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-connections-view', JSON.stringify({hidden: [], sort: null, group: 'none'})));
+  await page.setViewportSize({width: 1600, height: 1000});
+  await page.goto('/#/connections?tab=list');
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  await expect(grid.locator('[role="row"][data-key]').first()).toBeVisible();
+  const headers = await grid.getByRole('columnheader').allTextContents();
+  const row = grid.locator('[role="row"][data-key]').first().locator('[role="rowheader"], [role="gridcell"]');
+  for (const column of ['State', 'Download']) {
+    const index = headers.findIndex(text => text.trim() === column);
+    expect(index, column).toBeGreaterThanOrEqual(0);
+    await expect(row.nth(index).locator('.rp-truncate')).toHaveCount(1);
+  }
 });

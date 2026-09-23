@@ -29,7 +29,6 @@ const blankForm = {
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };
-export type TraceForm = typeof blankForm;
 // Held by the rules page rather than the trace tab, so what was typed survives a tab switch.
 export function useTraceForm() {
   const [form, setForm] = useState(blankForm);
@@ -53,7 +52,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
-  const report = useEffectEvent((error: Error) => toast('negative', errorText(error, t)));
+  const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed', {error: errorText(error, t)})));
   useEffect(() => {
     if (problem) report(problem);
   }, [problem]);
@@ -112,7 +111,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         signal
       )
     );
-    // The previous result stays up while the rerun is pending; a failed rerun clears it rather than leave it looking current.
+    // The previous result stays up while a rerun is pending; a failed rerun clears it so it does not look current.
     setResult(response ? {response, input} : null);
   }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
   const generation = rules.data?.generation_id;
@@ -149,7 +148,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
       );
     } catch (error) {
-      toast('negative', errorText(error, t));
+      toast('negative', t('nodes.probeError', {name: node.name, error: errorText(error, t)}));
     }
   };
   return {

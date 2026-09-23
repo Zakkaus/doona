@@ -1,4 +1,4 @@
-import {test as httpTest, type Page} from '@playwright/test';
+import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
@@ -96,7 +96,7 @@ for (const tab of ['source', 'setup']) {
       else {
         await expect(page.getByLabel('Subscription URL', {exact: true})).toBeDisabled();
         await expect(page.getByRole('button', {name: /Rules$/})).toBeDisabled();
-        await expect(page.getByRole('button', {name: 'Add a subscription', exact: true})).toBeDisabled();
+        await expect(page.getByRole('button', {name: 'Add subscription', exact: true})).toBeDisabled();
       }
       const writing = page.waitForRequest(request => request.method() === 'PUT');
       releaseValidation();
@@ -114,7 +114,7 @@ for (const tab of ['source', 'setup']) {
 }
 
 for (const all of [false, true]) {
-  test(`navigation cancels ${all ? 'bulk' : 'single'} close without announcing success`, async ({page}) => {
+  test(`${all ? 'Cancel abandons bulk' : 'navigation cancels single'} close without announcing success`, async ({page}) => {
     await backend(page);
     let release!: () => void;
     const gate = new Promise<void>(resolve => {
@@ -133,6 +133,8 @@ for (const all of [false, true]) {
     } else await page.getByRole('button', {name: 'Close connection', exact: true}).click();
     await request;
     await expect(page).toHaveURL(/connections\?id=1$/);
+    // A pending confirmation covers the page; its Cancel abandons the bulk close.
+    if (all) await page.getByRole('alertdialog').getByRole('button', {name: 'Cancel', exact: true}).click();
     await page.locator('.rp-nav[href="#/settings"]').click();
     await expect(page.locator('[name=api]')).toBeVisible();
     release();
@@ -517,8 +519,8 @@ test('new group validation refusal retains the dialog and its name without a suc
   });
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'New group...', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'New group...', exact: true});
+  await page.getByRole('menuitemradio', {name: 'New group…', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group…', exact: true});
   await dialog.getByLabel('Name', {exact: true}).fill('retained-group');
   const validating = page.waitForRequest('**/api/v1/config/validate');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
@@ -631,6 +633,30 @@ httpTest('backend inventory failures expose independent retries without claiming
   failConnections = false;
   await connections.getByRole('button', {name: 'Retry', exact: true}).click();
   await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+});
+
+httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
+  const api = await backend(page);
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  let fail = true;
+  const failure = (message: string) => ({status: 503, json: {request_id: 'retry', error: {code: 'service_unavailable', message, details: null}}});
+  await page.route('**/api/v1/runtime/outbounds', async route => route.fulfill(fail ? failure('Outbounds unavailable') : {json: await api.runtimeOutbounds()}));
+  await page.route('**/api/v1/dns/cache{,?*}', async route => route.fulfill(fail ? failure('Cache unavailable') : {json: await api.dnsCache()}));
+  await page.route('**/api/v1/geodata', async route => route.fulfill(fail ? failure('Geodata unavailable') : {json: await api.geodata()}));
+  const retried = async (alert: Locator) => {
+    await expect(alert).toBeVisible();
+    fail = false;
+    await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+    await expect(alert).toHaveCount(0);
+    fail = true;
+  };
+  await page.goto('/#/activity');
+  await retried(page.getByRole('alert').filter({hasText: 'Outbounds unavailable'}));
+  await page.goto('/#/dns?tab=cache');
+  await retried(page.getByRole('alert').filter({hasText: 'Cache unavailable'}));
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader').first()).toBeVisible();
+  await page.goto('/#/settings');
+  await retried(page.getByRole('alert').filter({hasText: 'Geodata unavailable'}));
 });
 
 test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {
@@ -762,7 +788,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
   await page.goto('/#/rules?tab=map');
   const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
   await expect(leaves).toHaveCount(30);
-  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('min_avg10');
+  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('Fastest on average');
   const first = await leaves.first().boundingBox();
   await page.getByRole('button', {name: 'Show 30 more items', exact: true}).click();
   await expect(leaves).toHaveCount(60);

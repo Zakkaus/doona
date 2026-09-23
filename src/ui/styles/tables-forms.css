@@ -41,7 +41,6 @@
 .rp-table [role='row'][data-selected] {
   background: var(--rp-selected);
 }
-/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
 /* The sort arrow is one chevron that turns: ascending points up, descending down. */
 .rp-th > .rp-sort {
   width: 14px;
@@ -60,6 +59,7 @@
   text-overflow: ellipsis;
   vertical-align: bottom;
 }
+/* Column resizing: the header keeps its text, a thin handle sits on its right edge and shows on hover or drag. */
 .rp-resizer {
   position: absolute;
   top: 0;
@@ -117,7 +117,7 @@
 .rp-table .end {
   text-align: end;
 }
-/* Virtualized tables use divs; only their layout differs from native cells. */
+/* Virtualised tables use divs; only their layout differs from native cells. */
 .rp-table > div[role='grid'],
 .rp-table > div[role='treegrid'] {
   width: 100%;

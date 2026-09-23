@@ -1,7 +1,6 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
-import {localTime} from '../../i18n/format';
+import {localTime, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {millis} from '../../api/u64';
 import {csvLine} from '../../ui/ui';
 import type {Key} from '../../i18n';
 import {offered} from '../../api/capabilities';
@@ -15,7 +14,7 @@ export function dnsAnswerView(result: Result, t: LabelFn) {
       [t('ui.upstream'), result.upstream ?? '—'],
       [t('dns.routeSource'), routeSources[result.route.source] ? t(routeSources[result.route.source]) : result.route.source],
       [t('dns.routeRule'), result.route.rule ?? '—'],
-      [t('ui.elapsed'), t('ui.latency', {n: millis(result.elapsed_ms)})]
+      [t('ui.elapsed'), formatLatency(result.elapsed_ms, t)]
     ] as Array<[string, string]>,
     answers: (result.answers ?? []).map(answer => t('dns.answer', {name: answer.name, type: answer.type, ttl: answer.ttl, data: answer.data})),
     cacheText: t(result.cached ? 'dns.hit' : 'dns.miss'),
@@ -35,7 +34,6 @@ export function dnsQueryView(
     types,
     choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
     disabled: busy || !resources?.dns_query.available || !(type === 'all' ? types.length > 0 : types.includes(type)) || !domain.trim(),
-    unavailable: !!resources && !resources.dns_query.available,
     showCache: !!resources?.dns_cache.available,
     cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
     tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))
@@ -104,7 +102,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     answers: answer.answers,
     fields: [
       [t('ui.type'), record.question.type],
-      [t('ui.source'), record.src ?? '—'],
+      [t('ui.device'), record.src ?? '—'],
       answer.fields[0],
       [t('ui.cache'), answer.cacheText],
       ...answer.fields.slice(1),
@@ -130,7 +128,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
       result: record.status !== 'NOERROR' ? record.status : record.answers.map(answer => answer.data).join(', ') || '—',
       cached: record.cached,
       upstream: record.cached ? t('dns.hit') : (record.upstream ?? '—'),
-      elapsed: t('ui.latency', {n: millis(record.elapsed_ms)})
+      elapsed: formatLatency(record.elapsed_ms, t)
     }))
   };
 }

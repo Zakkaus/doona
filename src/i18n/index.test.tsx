@@ -16,6 +16,6 @@ it('substitutes placeholders once and selects plural forms in the active languag
     );
   expect(render('en', 'dns.deleted', {n: 1})).toBe('Deleted 1 cache entry');
   expect(render('en', 'dns.deleted', {n: 2})).toBe('Deleted 2 cache entries');
-  expect(render('zh-TW', 'dns.deleted', {n: 1})).toBe('已刪除 1 筆快取');
-  expect(render('zh-CN', 'dns.deleted', {n: 2})).toBe('已删除 2 条缓存');
+  expect(render('zh-TW', 'dns.deleted', {n: 1})).toBe('已刪除 1 筆快取項目');
+  expect(render('zh-CN', 'dns.deleted', {n: 2})).toBe('已删除 2 条缓存项');
 });

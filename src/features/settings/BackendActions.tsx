@@ -1,8 +1,6 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
-import {CloseAllButton} from '../connections/CloseAll';
-import {FlushCacheButton} from '../dns/FlushCache';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './view';
 
@@ -11,6 +9,7 @@ export function BackendActionsCard() {
   const t = useT();
   const {
     runtimeError,
+    retryRuntime,
     lifecycle,
     flush,
     closeAll,
@@ -18,6 +17,7 @@ export function BackendActionsCard() {
     geodataBlocked,
     geodataLoading,
     geodataError,
+    retryGeodata,
     providersError,
     providersLoading,
     retryProviders,
@@ -43,7 +43,7 @@ export function BackendActionsCard() {
         {t(card.titleKey)}
       </h2>
       <span className="rp-label">{waiting ? '\u00a0' : note}</span>
-      <ErrorMessage error={runtimeError} />
+      <ErrorMessage error={runtimeError} onRetry={retryRuntime} />
       <div className="rp-ops">
         {waiting && (
           <div className="rp-chart-wait ops">
@@ -62,7 +62,7 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.dns')}</span>
             <div className="rp-cluster">
-              <FlushCacheButton {...flush} />
+              <ConfirmButton label={t('dns.flushAll')} {...flush} />
             </div>
           </div>
         )}
@@ -83,7 +83,7 @@ export function BackendActionsCard() {
             <span className="rp-label">{t('nav.connections')}</span>
             <ErrorMessage error={connectionsError} onRetry={retryConnections} />
             <div className="rp-cluster">
-              <CloseAllButton {...closeAll} />
+              <ConfirmButton label={t('conn.closeAll')} {...closeAll} />
             </div>
           </div>
         )}
@@ -101,7 +101,7 @@ export function BackendActionsCard() {
             </div>
           </div>
           <span className="rp-label">{t('settings.geodataNote')}</span>
-          <ErrorMessage error={geodataError} />
+          <ErrorMessage error={geodataError} onRetry={retryGeodata} />
           <DataTable
             label={t('settings.geodata')}
             loading={geodataLoading}

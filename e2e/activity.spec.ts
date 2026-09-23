@@ -54,11 +54,11 @@ test('home charts collect memory polls and change the traffic history range', as
   const request = page.waitForRequest(
     request => request.url().includes('/runtime/traffic/history?') && new URL(request.url()).searchParams.get('window_seconds') === '3600'
   );
-  await traffic.getByRole('radio', {name: '1H', exact: true}).click();
+  await traffic.getByRole('radio', {name: '1 h', exact: true}).click();
   await request;
   await expect(traffic.locator('.recharts-surface')).toBeVisible();
   await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
-  await traffic.getByRole('radio', {name: '7D', exact: true}).click();
+  await traffic.getByRole('radio', {name: '7 d', exact: true}).click();
   await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
 });
 
@@ -304,7 +304,7 @@ test('optional runtime does not block independent activity sections or poll an u
   await expect(page.getByRole('button', {name: 'Node', exact: true})).toBeVisible();
   await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.recharts-surface')).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
-  await expect(page.getByText('Not offered by the backend', {exact: true})).toBeVisible();
+  await expect(page.getByText('Not provided by this backend', {exact: true})).toBeVisible();
   await page.clock.fastForward(10100);
   expect(requests.filter(request => new URL(request.url()).pathname === '/api/v1/runtime')).toEqual([]);
 });

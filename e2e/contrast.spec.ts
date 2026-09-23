@@ -1,7 +1,8 @@
 import {expect, test} from './fixtures';
 import type {PaletteId} from '../src/shell/preferences';
 
-// Every palette, both schemes: the accent as text on the base and surface, text on an accent fill, and body text.
+// Every palette, both schemes: the accent and the status tones as text on the base and surface, text on an accent fill,
+// and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.
 // Glass is left out: its surfaces are translucent over a gradient. Kary's own light text on its light base is 4.1:1.
 const palettes = {
@@ -17,17 +18,23 @@ const palettes = {
   'arco/arco': 1,
   'semi/semi': 1
 } satisfies Record<PaletteId, 0 | 1>;
-// Kary's light accent text falls back to that same body text.
-const known = new Set(['kary/kary light text on base', 'kary/kary light accent text on base', 'kary/kary light accent text on surface']);
+const roles = ['accent', 'negative', 'notice', 'positive', 'info'];
+// Kary's light tones sit at that same 4.1:1, and its accent and info text fall back to the body text; its body text on
+// its own overlay is 3.9:1. Each known pair keeps a floor of its own.
+const known = new Map<string, number>([
+  ['kary/kary light text on base', 4],
+  ['kary/kary light text on overlay', 3.8],
+  ...roles.flatMap(role => [[`kary/kary light ${role} text on base`, 4] as const, [`kary/kary light ${role} text on surface`, 4] as const])
+]);
 
-test('accent text and accent fills reach 4.5:1 in every palette', async ({page}) => {
+test('accent and status text and accent fills reach 4.5:1 in every palette', async ({page}) => {
   await page.goto('/#/activity');
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
     if (!checked) continue;
     for (const scheme of ['light', 'dark']) {
       const ratios = await page.evaluate(
-        ([palette, scheme]) => {
+        ([palette, scheme, roles]) => {
           const [family, flavour] = palette.split('/');
           Object.assign(document.documentElement.dataset, {family, flavour, scheme});
           const rgb = (value: string) => {
@@ -56,16 +63,23 @@ test('accent text and accent fills reach 4.5:1 in every palette', async ({page})
             return (hi + 0.05) / (lo + 0.05);
           };
           return {
-            'accent text on base': ratio('var(--rp-accent-text)', 'var(--rp-base)'),
-            'accent text on surface': ratio('var(--rp-accent-text)', 'var(--rp-surface)'),
+            // An undefined token falls back to transparent, which measures 1:1 instead of passing as inherited text.
+            ...Object.fromEntries(
+              roles.flatMap(role => [
+                [`${role} text on base`, ratio(`var(--rp-${role}-text, transparent)`, 'var(--rp-base)')],
+                [`${role} text on surface`, ratio(`var(--rp-${role}-text, transparent)`, 'var(--rp-surface)')]
+              ])
+            ),
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
-            'text on base': ratio('var(--rp-text)', 'var(--rp-base)')
+            'text on base': ratio('var(--rp-text)', 'var(--rp-base)'),
+            // Tab and segmented labels sit on the overlay track.
+            'text on overlay': ratio('var(--rp-text)', 'var(--rp-overlay)')
           };
         },
-        [palette, scheme]
+        [palette, scheme, roles] as const
       );
       for (const [pair, value] of Object.entries(ratios))
-        if (value < 4.5 && !known.has(`${palette} ${scheme} ${pair}`)) failures.push(`${palette} ${scheme} ${pair}: ${value.toFixed(2)}`);
+        if (value < (known.get(`${palette} ${scheme} ${pair}`) ?? 4.5)) failures.push(`${palette} ${scheme} ${pair}: ${value.toFixed(2)}`);
     }
   }
   expect(failures).toEqual([]);

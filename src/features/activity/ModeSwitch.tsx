@@ -14,6 +14,7 @@ type ModeCardsModel = {
   targets: Array<{id: string; label: string}>;
   busy: boolean;
   error: Error | null;
+  retry: () => void;
   pick: (mode: string) => void;
   pickTarget: (target: string) => void;
   apply: () => void;
@@ -23,7 +24,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
   const t = useT();
   return (
     <>
-      {vm.error && <ErrorMessage error={vm.error} />}
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-card">
         <div className="rp-row">
           <span className="rp-qlabel rp-tint-c3">

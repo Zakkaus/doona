@@ -53,6 +53,7 @@ export function useDns({go, query}: PageProps) {
     setType,
     pending: busy === 'query',
     error: capabilities.error,
+    retry: capabilities.refetch,
     queryError: error,
     submit: () => void submit(),
     setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !params.has('domain') ? fallback : null)),
@@ -92,17 +93,23 @@ export function useDnsCacheTab(domain: string) {
       const result = await dns.flush();
       if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
     } catch (error) {
-      toast('negative', t('dns.flushFailed', {error: errorText(error, t)}));
+      return t('dns.flushFailed', {error: errorText(error, t)});
     }
   };
   return {
     ...view,
-    // Delete and flush failures arrive as toasts, and the page above already reports the capabilities.
+    // Delete failures arrive as toasts, flush failures in its dialog, and the page above reports the capabilities.
     error: dns.cache.error,
+    retry: dns.cache.refetch,
     loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
     flushPending: dns.busy === 'flush',
     remove,
-    flush: () => void flush()
+    flush,
+    // The abandoned flush may still land, so the table is read again rather than left showing flushed entries.
+    abortFlush: () => {
+      dns.cancel();
+      dns.cache.refetch();
+    }
   };
 }
 
@@ -128,6 +135,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const key = JSON.stringify(filter);
   const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const paging = useAction<'older'>({scope: key});
   // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.
   useLinked(key, () => setHeld(null));
@@ -148,6 +156,14 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
       );
       if (!signal.aborted) setHeld(appendDnsLog(data, page));
     });
+  const refresh = () => {
+    paging.cancel();
+    setHeld(null);
+    const done = log.refetch();
+    if (!done) return;
+    setRefreshing(true);
+    void done.finally(() => setRefreshing(false));
+  };
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
@@ -172,11 +188,10 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     hasOlder: !!data?.next_cursor,
     loadingOlder: !!paging.busy,
     loadOlder,
-    refresh: () => {
-      paging.cancel();
-      setHeld(null);
-      log.refetch();
-    },
+    refreshing,
+    refresh,
+    // A failed page of older records retries that page; refreshing would drop the pages already loaded.
+    retry: paging.error ? loadOlder : refresh,
     export: () => downloadFile(exportName('dns-log', 'csv'), dnsLogsExport(data?.records ?? []), 'text/csv;charset=utf-8')
   };
 }

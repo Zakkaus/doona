@@ -6,7 +6,7 @@ import {
   DataTable,
   LabeledSelect,
   Light,
-  ModalDialog,
+  ConfirmDialog,
   Segmented,
   Switch,
   ErrorMessage,
@@ -28,7 +28,7 @@ export function RuleList(props: PageProps) {
 function Dictionary({view}: {view: Model}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
-  // The row actions are new functions each render; reading them through a ref keeps the columns, and so the rows, stable.
+  // The row actions are new functions each render; a ref keeps the columns, and so the rows, stable.
   const latest = useRef(view);
   useLayoutEffect(() => {
     latest.current = view;
@@ -93,7 +93,7 @@ function Dictionary({view}: {view: Model}) {
           </Button>
         )}
       </div>
-      {view.editHelp && <p className="rp-label">{view.editHelp}</p>}
+      {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}
@@ -106,30 +106,15 @@ function Dictionary({view}: {view: Model}) {
         empty={t('rule.dictionaryEmpty')}
         cols={columns}
       />
-      <ModalDialog
+      <ConfirmDialog
         title={view.dialogTitle}
-        narrow
-        alert={dialog?.kind === 'remove'}
         isOpen={dialog !== null}
-        onOpenChange={open => {
-          if (!open) view.close();
-        }}
-        footer={close => (
-          <>
-            <Button isDisabled={view.busy} onPress={close}>
-              {t('ui.cancel')}
-            </Button>
-            <Button
-              negative={dialog?.kind === 'remove'}
-              accent={dialog?.kind !== 'remove'}
-              isDisabled={view.submitDisabled}
-              isPending={view.busy}
-              onPress={() => void view.submit(close)}
-            >
-              {view.submitLabel}
-            </Button>
-          </>
-        )}
+        onCancel={view.close}
+        tone={dialog?.kind === 'remove' ? 'negative' : 'accent'}
+        confirmLabel={view.submitLabel}
+        isDisabled={view.submitDisabled}
+        isPending={view.busy}
+        onConfirm={() => void view.submit(view.close)}
       >
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
@@ -204,7 +189,7 @@ function Dictionary({view}: {view: Model}) {
             />
           </div>
         )}
-      </ModalDialog>
+      </ConfirmDialog>
     </div>
   );
 }
@@ -244,7 +229,7 @@ function Distribution({view}: {view: Model}) {
           </Light>
         )}
       </div>
-      <ErrorMessage error={view.error} />
+      <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} empty={t('rule.distributionEmpty')} cols={columns} />
     </div>
   );

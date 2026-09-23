@@ -19,7 +19,7 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await expect(page.locator('[name=token]')).toHaveValue('');
   await page.locator('[name=token]').fill('office-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
-  await page.getByRole('button', {name: 'Backend profile'}).click();
+  await page.getByRole('button', {name: /Profile$/}).click();
   await Promise.all([page.waitForEvent('load'), page.getByRole('option', {name: 'Home', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/settings\?from=connections$/);
   await expect(page.locator('[name=token]')).toHaveValue('home-secret');
@@ -83,4 +83,28 @@ browserTest('a token draft survives persistence failure and can be retried', asy
   await expect(token).toHaveValue('retain-this-token');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!)[0].token)).toBe('retain-this-token');
+});
+
+test('a profile that cannot be saved says so in its dialog, again on each attempt', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'doona-profiles') throw new DOMException('Blocked', 'SecurityError');
+      return setItem.call(this, key, value);
+    };
+  });
+  await page.getByRole('button', {name: 'Add profile', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add profile'});
+  const name = dialog.getByRole('textbox', {name: 'Profile name'});
+  await name.fill('Home');
+  const save = dialog.getByRole('button', {name: 'Save', exact: true});
+  const alert = dialog.getByRole('alert');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await name.focus();
+    await save.click();
+    await expect(alert).toContainText('Could not save settings');
+    await expect(alert).toBeFocused();
+  }
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
 });

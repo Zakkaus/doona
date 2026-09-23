@@ -35,26 +35,5 @@ export function pctU64(part: U64, whole: U64): number | null {
   return Number(((p > w ? w : p) * 10000n + w / 2n) / w) / 100;
 }
 
-export function formatBytes(input: U64): string {
-  const value = valueOf(input);
-  if (value === null) return '—';
-  if (value === 0n) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
-  let unit = 0,
-    scale = 1n;
-  while (unit < units.length - 1 && value >= scale * 1000n) {
-    unit++;
-    scale *= 1000n;
-  }
-  const tenths = (value * 10n + scale / 2n) / scale;
-  const text = unit > 0 && value < scale * 10n && tenths % 10n !== 0n ? `${tenths / 10n}.${tenths % 10n}` : String((value + scale / 2n) / scale);
-  return `${text} ${units[unit]}`;
-}
-
-export function formatRate(input: U64): string {
-  const text = formatBytes(input);
-  return text === '—' ? text : text + '/s';
-}
-
 /** Round displayed milliseconds to 0.1 below 10 ms and whole milliseconds otherwise. */
 export const millis = (value: number): number => (value < 10 ? Math.round(value * 10) / 10 : Math.round(value));

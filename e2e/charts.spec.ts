@@ -12,7 +12,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^\d+ cache entries; the backend reports no capacity$/)).toBeVisible();
+  await expect(page.getByText(/^\d+ cache entries; this backend does not provide a capacity limit$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
@@ -33,7 +33,7 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(fact(page, 'Unavailable')).toHaveText(/^\d+ nodes?$/);
   const plot = page.getByRole('group', {name: 'Node latency'});
   for (const label of ['Latest latency', 'Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
-  const row = plot.getByRole('img', {name: /^.+: latest \d+ ms, moving average \d+ ms, average of the last 10 \d+ ms$/}).first();
+  const row = plot.getByRole('img', {name: /^.+, latest: \d+ ms, moving average: \d+ ms, average of the last 10: \d+ ms$/}).first();
   await row.hover();
   await expect(page.locator('.rp-charttip')).toContainText('Moving average');
   const showAll = plot.getByRole('button', {name: /^Show all \d+$/});

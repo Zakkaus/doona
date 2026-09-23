@@ -13,11 +13,12 @@ import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
+// The default page stays eager so first paint has no second round trip.
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 
-// Rendering and preloading share page loaders; the default page stays eager.
+// Rendering and preloading share page loaders.
 const pages = {
   overview: preloadable<PageProps>(() => import('../features/overview/Overview').then(m => ({default: m.Overview}))),
   connections: preloadable<PageProps>(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
@@ -67,7 +68,7 @@ export function warmAllPages() {
 type Feature = {
   id: string;
   path: RoutePath;
-  // The question shown beneath a page title to distinguish similar pages.
+  // hintKey: the question under a page title that tells similar pages apart.
   nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;

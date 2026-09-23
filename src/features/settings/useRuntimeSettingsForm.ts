@@ -79,7 +79,7 @@ export function useRuntimeSettingsForm() {
         setDraft(current => (current === submitted ? null : current));
         toast('positive', t('settings.runtimeSaved'));
       },
-      (error: unknown) => toast('negative', errorText(error, t))
+      (error: unknown) => toast('negative', t('settings.runtimeFailed', {error: errorText(error, t)}))
     );
   };
   return {
@@ -96,10 +96,12 @@ export function useRuntimeSettingsForm() {
     source: baseline ? t(baseline.source === 'runtime' ? 'settings.sourceRuntime' : 'settings.sourceConfig') : null,
     sourceTone: baseline?.source === 'runtime' ? ('info' as const) : ('neutral' as const),
     capsError: caps.error,
+    retryCaps: caps.refetch,
     waiting: !capabilities,
     available,
     note: t(available ? 'settings.runtimeNote' : 'settings.runtimeUnavailable'),
     error: settings.error,
+    retry: settings.refetch,
     loading: settings.loading && !baseline,
     busy: settings.busy,
     conflict: dirty && draft.at !== stamp ? t('settings.runtimeConflict') : null,

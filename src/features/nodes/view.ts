@@ -5,8 +5,8 @@ import {urlHost, type SubscriptionEntry} from './subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
-import {addU64, formatBytes, millis} from '../../api/u64';
-import {formatDuration, localTime} from '../../i18n/format';
+import {addU64} from '../../api/u64';
+import {formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {latencyTone} from '../../ui/ui';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
@@ -16,7 +16,7 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
     id: node.id,
     name: node.name,
     protocol: node.protocol ?? '—',
-    latency: measured ? t('ui.latency', {n: millis(health.latency_ms!)}) : health?.state === 'unavailable' ? t('ui.unavailable') : '—',
+    latency: measured ? formatLatency(health.latency_ms!, t) : health?.state === 'unavailable' ? t('ui.unavailable') : '—',
     latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : health?.state === 'unavailable' ? 'ms err' : 'ms',
     groups: node.group_ids.length
       ? formatList(
@@ -162,8 +162,8 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
       used === null
         ? '—'
         : item.traffic?.total_bytes
-          ? t('nodes.used', {used: formatBytes(used), total: formatBytes(item.traffic.total_bytes)})
-          : formatBytes(used),
+          ? t('nodes.used', {used: formatBytes(used, locale), total: formatBytes(item.traffic.total_bytes, locale)})
+          : formatBytes(used, locale),
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     interval: interval == null ? '—' : intervalText(interval, locale, t),

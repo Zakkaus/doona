@@ -6,7 +6,7 @@ import {useOutboundsCard} from './useOutboundsCard';
 // Outbound usage polls on its own, so its tick does not re-render the charts beside it.
 export function OutboundsCard() {
   const t = useT();
-  const {view, state, error} = useOutboundsCard();
+  const {view, state, error, retry} = useOutboundsCard();
   return (
     <div className="rp-card">
       <div className="rp-row">
@@ -16,14 +16,14 @@ export function OutboundsCard() {
         </div>
       </div>
       {error && state !== 'ready' ? (
-        <ErrorMessage error={error} />
+        <ErrorMessage error={error} onRetry={retry} />
       ) : state === 'unavailable' ? (
         <div className="rp-chart-wait tall">
-          <span className="rp-label">{t('act.noOutbounds')}</span>
+          <Empty>{t('act.noOutbounds')}</Empty>
         </div>
       ) : state === 'loading' ? (
         <div className="rp-chart-wait tall">
-          <Loading>{t('act.loading')}</Loading>
+          <Loading>{t('ui.loading')}</Loading>
         </div>
       ) : state === 'empty' ? (
         <div className="rp-chart-wait tall">

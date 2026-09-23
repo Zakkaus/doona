@@ -86,7 +86,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toHaveAttribute('contenteditable', 'false');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Line count: 8,');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Lines: 8,');
 });
 
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
@@ -114,7 +114,7 @@ test.describe('without configuration readback', () => {
   test('the page is hidden from navigation and says so when opened', async ({page}) => {
     await page.goto('/#/config');
     await expect(page.locator('.rp-nav[href="#/config"]')).toHaveAttribute('data-unavailable', '');
-    await expect(page.locator('.rp-content')).toContainText('The backend does not offer this page.');
+    await expect(page.locator('.rp-content')).toContainText('This backend does not provide this page');
   });
 });
 
@@ -338,7 +338,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
   await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
   await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
-    '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: min_moving_avg'
+    '4 groups: proxy: fixed(0), resilient: min_avg10, gaming: min_last_delay, skylink: Fastest on average'
   );
   await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rule, 0 response rules');
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
@@ -414,7 +414,7 @@ test('quick setup preserves dotted tags and rejects duplicate subscription names
   await expect(page.getByLabel('Name', {exact: true})).toHaveValue('sub.eu');
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
   await expect(page.locator('.cm-content')).toContainText("sub.eu: 'https://example.org/new'");
-  await page.getByRole('button', {name: 'Add a subscription', exact: true}).click();
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   await page.getByLabel('Name', {exact: true}).last().fill('sub.eu');
   await page.getByLabel('Subscription URL', {exact: true}).last().fill('https://duplicate.example/sub');
   await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();

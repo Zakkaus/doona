@@ -70,7 +70,7 @@ const theme = EditorView.theme({
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
   '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-pine) 20%, transparent)', outline: 'none'},
   '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 25%, transparent)'},
-  // Diagnostics are underlines in the text and the list above the editor; no gutter icons. The hover tooltip is the kit's.
+  // Diagnostics show as underlines and the list above the editor, not gutter icons; the hover tooltip is the kit's.
   '.cm-tooltip.cm-tooltip-lint': {backgroundColor: 'var(--rp-text)', color: 'var(--rp-on-text)', border: 'none', borderRadius: '6px', padding: '2px 0'},
   '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', fontFamily: 'inherit'},
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
@@ -150,7 +150,7 @@ const lineMarks = StateField.define<DecorationSet>({
   provide: field => EditorView.decorations.from(field)
 });
 
-// Read-only editors remain searchable and keyboard-scrollable; focusLine moves both viewport and cursor. Keep the default marks array stable to avoid redundant CodeMirror updates.
+// A stable default, so an editor without marks does not reconfigure CodeMirror every render.
 const noMarks: EditorMark[] = [];
 // Marks a document replacement that came from the `value` prop rather than from typing.
 const external = Annotation.define<boolean>();

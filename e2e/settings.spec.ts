@@ -217,14 +217,14 @@ test('profile switching confirms draft loss without saving edits to the profile 
     localStorage.setItem('doona-profile', 'a');
   }, profiles);
   await page.goto('/#/settings');
-  await page.getByLabel('Server URL', {exact: true}).fill('https://unsaved.example');
+  await page.getByLabel('Backend URL', {exact: true}).fill('https://unsaved.example');
   await page.locator('[name=token]').fill('unsaved-token');
-  const picker = page.getByRole('button', {name: /Backend profile$/});
+  const picker = page.getByRole('button', {name: /Profile$/});
   await picker.click();
   await page.getByRole('option', {name: /Backend B/}).click();
   const confirm = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
   await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(page.getByLabel('Server URL', {exact: true})).toHaveValue('https://unsaved.example');
+  await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('https://unsaved.example');
   expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');
   await picker.click();
   await page.getByRole('option', {name: /Backend B/}).click();
@@ -255,4 +255,39 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.runtimeSaved')})).toBeVisible();
   await expect(recording.getByText(t('settings.recordingIdle'))).toHaveCount(1);
   expect((await api.runtimeSettings()).recording?.flows.mode).toBe('off');
+});
+
+test('a confirmation removed while its action is pending abandons the action', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  let changed!: () => void;
+  const generation = new Promise<void>(resolve => (changed = resolve));
+  await page.route('**/api/v1/events**', async route => {
+    await generation;
+    await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
+  });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  handlers['POST dns/cache/flush'] = async () => {
+    await gate;
+    return api.flushDnsCache();
+  };
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend actions'});
+  const trigger = card.getByRole('button', {name: 'Clear all cache', exact: true});
+  await trigger.click();
+  const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
+  const flushing = page.waitForRequest(request => request.method() === 'POST');
+  await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  const request = await flushing;
+  // A new generation withdraws the flush, so the button and its open dialog unmount mid-action.
+  capabilities.resources.dns_cache.flush = false;
+  changed();
+  await expect(trigger).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
+  const settled = Promise.race([request.response(), page.waitForEvent('requestfailed', failed => failed === request)]);
+  release();
+  await settled;
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
 });

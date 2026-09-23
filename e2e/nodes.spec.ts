@@ -190,3 +190,31 @@ test('without a node list the page shows providers alone, with no latency tab', 
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(0);
 });
+
+test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const node = (await api.nodes()).nodes.find(item => item.provider_id === 'inline')!;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
+    await gate;
+    return api.deleteNode(node.id);
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  const confirmation = page.getByRole('alertdialog');
+  const removing = page.waitForRequest(request => request.method() === 'DELETE');
+  await confirmation.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  await removing;
+  await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(confirmation).toHaveCount(0);
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('hk-03');
+  await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
+  const add = dialog.getByRole('button', {name: 'Add', exact: true});
+  await expect(add).toBeDisabled();
+  release();
+  await expect(page.locator('.rp-toast.positive', {hasText: `${node.name} removed`})).toBeVisible();
+  await expect(add).toBeEnabled();
+});

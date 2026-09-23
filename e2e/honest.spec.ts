@@ -103,7 +103,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   const actionError = page.locator('.rp-content').getByRole('alert');
   await expect(actionError).toBeVisible();
   // Said once, on the page: a failed query adds no toast of its own.
-  await expect(actionError).toContainText('Query failed');
+  await expect(actionError).toContainText('Could not run the query');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   const actionFailure = await actionError.textContent();
   await refresh.click();

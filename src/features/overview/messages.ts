@@ -18,7 +18,7 @@ export const messages = defineMessages({
     'ov.v.notLoaded': '未載入',
     'ov.v.attached': '已掛載',
     'ov.v.partiallyAttached': '部分掛載',
-    'ov.v.published': '已發佈',
+    'ov.v.published': '已發布',
     'ov.v.notPublished': '未發佈',
     'ov.v.healthy': '健康',
     'ov.v.ready': '就緒',
@@ -92,10 +92,10 @@ export const messages = defineMessages({
     'ov.succeeded': '已完成',
     'ov.failed': '失敗',
     'ov.loading': '載入中',
-    'ov.unavailable': '無法取得此資源',
+    'ov.unavailable': '此後端不提供該項資料',
     'ov.unknown': '未知',
     'ov.operationResult': '{action}：{status}（{id}）',
-    'ov.operationError': '操作失敗：{error}'
+    'ov.operationError': '無法執行操作：{error}'
   },
   'zh-CN': {
     'ov.v.ebpf': 'eBPF',
@@ -188,10 +188,10 @@ export const messages = defineMessages({
     'ov.succeeded': '已完成',
     'ov.failed': '失败',
     'ov.loading': '加载中',
-    'ov.unavailable': '无法获取此资源',
+    'ov.unavailable': '此后端不提供该项数据',
     'ov.unknown': '未知',
     'ov.operationResult': '{action}：{status}（{id}）',
-    'ov.operationError': '操作失败：{error}'
+    'ov.operationError': '无法执行操作：{error}'
   },
   en: {
     'ov.v.ebpf': 'eBPF',
@@ -225,7 +225,7 @@ export const messages = defineMessages({
     'ov.available': 'Available',
     'ov.notAvailable': 'Not provided',
     'ov.profileBase': 'Base',
-    'ov.profileFull': 'Full transparency',
+    'ov.profileFull': 'Full observability',
     'ov.scopeVisible': 'visible traffic',
     'ov.scopeAll': 'all traffic',
     'ov.countersSince': 'Since {t}, {scope}',
@@ -234,7 +234,7 @@ export const messages = defineMessages({
     'ov.f.build': 'Build',
     'ov.f.instance': 'Instance',
     'ov.f.started': 'Started',
-    'ov.f.activated': 'Config activated',
+    'ov.f.activated': 'Configuration activated',
     'ov.f.tcp': 'TCP connections',
     'ov.f.udp': 'UDP connections',
     'ov.f.total': 'Total connections',
@@ -257,7 +257,7 @@ export const messages = defineMessages({
     'ov.f.maps': 'Maps',
     'ov.f.connState': 'Connection map occupancy',
     'ov.f.rss': 'Resident memory',
-    'ov.f.cgroupCurrent': 'cgroup current',
+    'ov.f.cgroupCurrent': 'cgroup used',
     'ov.f.cgroupLimit': 'cgroup limit',
     'ov.f.cgroupPercent': 'cgroup usage',
     'ov.f.cgroupScope': 'cgroup scope',
@@ -267,7 +267,7 @@ export const messages = defineMessages({
     'ov.f.oom': 'OOM events',
     'ov.f.oomKill': 'OOM kills',
     'ov.f.ebpfBytes': 'eBPF kernel memory',
-    'ov.config': 'Config version',
+    'ov.config': 'Configuration version',
     'ov.uptime': 'Uptime',
     'ov.lastReload': 'Last reload',
     'ov.datapath': 'Datapath',
@@ -284,9 +284,9 @@ export const messages = defineMessages({
     'ov.succeeded': 'Completed',
     'ov.failed': 'Failed',
     'ov.loading': 'Loading',
-    'ov.unavailable': 'Resource unavailable',
+    'ov.unavailable': 'This backend does not provide this data',
     'ov.unknown': 'Unknown',
     'ov.operationResult': '{action}: {status} ({id})',
-    'ov.operationError': 'Operation failed: {error}'
+    'ov.operationError': 'Could not run the operation: {error}'
   }
 });

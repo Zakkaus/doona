@@ -4,6 +4,7 @@ import {useT} from '../../i18n';
 import {localTimeFormat} from '../../i18n/format';
 import {LoadBoundary} from '../LoadBoundary';
 import {usePalette, type Palette} from './palette';
+import {LegendItem} from './LegendItem';
 // Debounce chart relayout so a resize drag triggers one render after it settles.
 const RESIZE_DEBOUNCE = 120;
 // Pointer exit hides stale tooltips without disabling Recharts keyboard navigation.
@@ -70,10 +71,7 @@ export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null 
   return (
     <div className="rp-legend">
       {series.map(s => (
-        <span key={s.label} className="it">
-          <i className="sw" style={{background: s.color}} />
-          {s.label} <b>{fmt(s.values[s.values.length - 1])}</b>
-        </span>
+        <LegendItem key={s.label} swatch={s.color} label={s.label} value={fmt(s.values[s.values.length - 1])} />
       ))}
     </div>
   );

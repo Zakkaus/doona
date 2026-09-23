@@ -17,7 +17,7 @@ export function RuntimeSettingsCard() {
         {m.source && <Light tone={m.sourceTone}>{m.source}</Light>}
       </div>
       {m.waiting && m.capsError ? (
-        <ErrorMessage error={m.capsError} />
+        <ErrorMessage error={m.capsError} onRetry={m.retryCaps} />
       ) : (
         // The note's line is held while capabilities load, so the form's reserved box below starts where the form will.
         <span className="rp-label">{m.waiting ? '\u00a0' : m.note}</span>
@@ -29,7 +29,7 @@ export function RuntimeSettingsCard() {
       )}
       {!m.waiting && m.available && (
         <>
-          <ErrorMessage error={m.error} />
+          <ErrorMessage error={m.error} onRetry={m.retry} />
           {m.conflict && (
             <p role="alert" className="rp-alert">
               {m.conflict}
