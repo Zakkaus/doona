@@ -3,6 +3,7 @@ import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
 import type {Capabilities} from '../api/model';
 import type {PageProps, RoutePath} from './routes';
+import {preloadSearch} from './search/load';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
@@ -43,14 +44,19 @@ const Settings = pages.settings.Component;
 export function warmPage(id: string) {
   void pages[id as keyof typeof pages]?.preload().catch(() => undefined);
 }
-// Preload other pages one per idle slice (the callback may still run on its timeout while the page is busy); the
-// config page carries the editor and loads on intent (hover, focus, click) only.
+// Preload the search dialog, then the other pages, one per idle slice (the callback may still run on its timeout while
+// the page is busy); the config page carries the editor and loads on intent (hover, focus, click) only.
 export function warmAllPages() {
-  const queue = Object.keys(pages).filter(id => id !== 'config');
+  const queue = [
+    preloadSearch,
+    ...Object.keys(pages)
+      .filter(id => id !== 'config')
+      .map(id => () => warmPage(id))
+  ];
   const next = () => {
-    const id = queue.shift();
-    if (!id) return;
-    warmPage(id);
+    const warm = queue.shift();
+    if (!warm) return;
+    warm();
     if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
     else setTimeout(next, 250);
   };

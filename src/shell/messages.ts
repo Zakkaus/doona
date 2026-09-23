@@ -4,6 +4,7 @@ export const messages = defineMessages({
   'zh-TW': {
     'shell.shortcuts': '鍵盤快捷鍵',
     'shell.langUnavailable': '無法切換至{name}：介面文字載入失敗。',
+    'shell.searchUnavailable': '無法開啟搜尋：搜尋功能載入失敗。',
     'shell.notOffered': '後端未提供此頁面。',
     'shell.notOfferedShort': '後端未提供',
     'shell.toActivity': '回到活動',
@@ -123,6 +124,7 @@ export const messages = defineMessages({
   },
   'zh-CN': {
     'shell.langUnavailable': '无法切换至{name}：界面文字加载失败。',
+    'shell.searchUnavailable': '无法打开搜索：搜索功能加载失败。',
     'shell.shortcuts': '键盘快捷键',
     'shell.notOffered': '后端未提供此页面。',
     'shell.notOfferedShort': '后端未提供',
@@ -243,6 +245,7 @@ export const messages = defineMessages({
   },
   en: {
     'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',
+    'shell.searchUnavailable': 'Could not open search: it did not load.',
     'shell.shortcuts': 'Keyboard shortcuts',
     'shell.notOffered': 'The backend does not offer this page.',
     'shell.notOfferedShort': 'Not offered by the backend',

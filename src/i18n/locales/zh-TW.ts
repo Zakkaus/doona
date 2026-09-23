@@ -950,6 +950,7 @@ export const messages = {
   'settings.apiMajor': '後端 API 主版本為 {major}，本面板依 API 主版本 1 的契約實作；欄位可能不相容。',
   'shell.shortcuts': '鍵盤快捷鍵',
   'shell.langUnavailable': '無法切換至{name}：介面文字載入失敗。',
+  'shell.searchUnavailable': '無法開啟搜尋：搜尋功能載入失敗。',
   'shell.notOffered': '後端未提供此頁面。',
   'shell.notOfferedShort': '後端未提供',
   'shell.toActivity': '回到活動',

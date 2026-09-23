@@ -3,6 +3,7 @@ import {useT} from '../i18n';
 import {Button, ModalDialog} from '../ui/ui';
 import type {ShortcutView} from './view';
 import {isRoutePath, type PageProps} from './routes';
+import {preloadSearch} from './search/load';
 
 export function Shortcuts({
   go,
@@ -46,6 +47,7 @@ export function Shortcuts({
         return;
       }
       if (event.ctrlKey || event.metaKey || event.altKey) {
+        if (event.key === 'Control' || event.key === 'Meta') preloadSearch();
         reset();
         return;
       }

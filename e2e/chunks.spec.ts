@@ -1,4 +1,4 @@
-import {expect, routes, test} from './fixtures';
+import {expect, expectLoadFailures, routes, test} from './fixtures';
 
 // Keep install-time precaching out of the navigation request log.
 test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock'}});
@@ -134,19 +134,46 @@ for (const chunk of ['Policies', 'vendor-charts']) {
   });
 }
 
-test('the search dialog loads on demand, starting when the search button is hovered', async ({page}) => {
-  const scripts: string[] = [];
-  page.on('request', request => {
-    if (/\/assets\/[^/]+\.js$/.test(new URL(request.url()).pathname)) scripts.push(request.url());
+test('the idle warm-up loads the search dialog before any interaction', async ({page}) => {
+  const requested = page.waitForRequest(/\/SearchDialog-[^/]+\.js$/);
+  await page.goto('/#/activity');
+  await requested;
+});
+
+for (const intent of ['hover', 'Control'] as const) {
+  test(`with the warm-up held, ${intent === 'hover' ? 'hovering the search button' : 'pressing Control'} loads the search dialog`, async ({page}) => {
+    await page.addInitScript(() => {
+      window.requestIdleCallback = () => 0;
+    });
+    const scripts: string[] = [];
+    page.on('request', request => {
+      if (/\/assets\/[^/]+\.js$/.test(new URL(request.url()).pathname)) scripts.push(request.url());
+    });
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-strip')).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    const search = /\/SearchDialog-[^/]+\.js$/;
+    expect(scripts.some(url => search.test(url))).toBe(false);
+    const requested = page.waitForRequest(search);
+    if (intent === 'hover') await page.locator('.rp-search').hover();
+    else await page.keyboard.down('Control');
+    await requested;
+    if (intent === 'Control') await page.keyboard.up('Control');
+    await page.locator('.rp-search').click();
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
+}
+
+test('a search dialog that fails to load leaves nothing open and says so', async ({page}) => {
+  expectLoadFailures(page, /\/SearchDialog-[^/]+\.js$/);
+  await page.addInitScript(() => {
+    window.requestIdleCallback = () => 0;
+  });
+  await page.route('**/assets/SearchDialog-*.js', route => route.abort());
   await page.goto('/#/activity');
   await expect(page.locator('.rp-strip')).toBeVisible();
-  await page.waitForLoadState('networkidle');
-  const search = /\/SearchDialog-[^/]+\.js$/;
-  expect(scripts.some(url => search.test(url))).toBe(false);
-  const requested = page.waitForRequest(search);
-  await page.locator('.rp-search').hover();
-  await requested;
-  await page.locator('.rp-search').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Control+K');
+  await expect(page.locator('.rp-toast.negative')).toContainText('Could not open search');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.rp-alert')).toHaveCount(0);
 });

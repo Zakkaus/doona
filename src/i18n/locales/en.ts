@@ -980,6 +980,7 @@ export const messages = {
   'settings.installed': 'Installed',
   'settings.apiMajor': 'The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.',
   'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',
+  'shell.searchUnavailable': 'Could not open search: it did not load.',
   'shell.shortcuts': 'Keyboard shortcuts',
   'shell.notOffered': 'The backend does not offer this page.',
   'shell.notOfferedShort': 'Not offered by the backend',
