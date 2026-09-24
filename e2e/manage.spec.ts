@@ -7,13 +7,11 @@ test('close all closes what the backend owns and skips the rest', async ({page})
   await expect(page.locator('.rp-toast')).toContainText(/Closed \d+, skipped \d+/);
 });
 
-test('the backend actions card gathers reload, DNS, subscriptions, connections and geodata', async ({page}) => {
+test('the backend actions card gathers reload, DNS, subscriptions and connections', async ({page}) => {
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Backend actions'});
-  await expect(card).toContainText('geosite');
-  await expect(card).toContainText('geoip');
-  await card.getByRole('button', {name: 'Update', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Geodata updated and reloaded'})).toBeVisible();
+  // Geodata has its own card where the sources are configurable.
+  await expect(card).not.toContainText('geosite');
   await card.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
   await card.getByRole('button', {name: 'Clear all cache', exact: true}).click();

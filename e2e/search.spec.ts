@@ -15,8 +15,10 @@ test('search reaches tabs and cards, not only pages', async ({page}) => {
   await dialog.getByRole('option', {name: /Validation/}).click();
   await expect(page).toHaveURL(/#\/config\?tab=validate$/);
   dialog = await open(page, 'geodata');
-  await expect(dialog.getByRole('option')).toHaveCount(0);
-  await dialog.locator('input').fill('actions');
+  await dialog.getByRole('option', {name: /Geodata/}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=geodata$/);
+  await expect(page.getByRole('region', {name: 'Geodata', exact: true})).toBeInViewport();
+  dialog = await open(page, 'actions');
   await dialog.getByRole('option', {name: /Backend actions/}).click();
   await expect(page).toHaveURL(/#\/settings\?card=actions$/);
   await expect(page.getByRole('region', {name: 'Backend actions'})).toBeInViewport();
