@@ -20,7 +20,11 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
     const renderers: Record<string, (c: ConnectionRowView) => ReactNode> = {
       dst: c => <TextTooltip>{c.target}</TextTooltip>,
       src: c => <TextTooltip className="rp-code">{c.source}</TextTooltip>,
-      chain: c => <TextTooltip className="rp-chain">{c.chain}</TextTooltip>,
+      node: c => (
+        <TextTooltip className="rp-chain" text={c.path ?? undefined}>
+          {c.node}
+        </TextTooltip>
+      ),
       rule: c => (
         <span className="rp-rule">
           <RuleRef {...c.rule} />

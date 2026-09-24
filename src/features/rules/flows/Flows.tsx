@@ -77,7 +77,17 @@ export function FlowRecords(props: PageProps) {
   const columns = useMemo(
     (): TableColumn<FlowRow>[] => [
       {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true, render: row => <TextTooltip>{row.target}</TextTooltip>},
-      {id: 'chain', label: t('conn.chain'), minWidth: 96, drop: 2, render: row => <TextTooltip className="rp-chain">{row.chain}</TextTooltip>},
+      {
+        id: 'node',
+        label: t('conn.node'),
+        minWidth: 96,
+        drop: 2,
+        render: row => (
+          <TextTooltip className="rp-chain" text={row.path ?? undefined}>
+            {row.node}
+          </TextTooltip>
+        )
+      },
       {
         id: 'rule',
         label: t('conn.rule'),

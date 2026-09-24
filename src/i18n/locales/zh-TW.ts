@@ -178,6 +178,7 @@ export const messages = {
   'conn.chart.moreUp': '上傳較多',
   'conn.chart.hint': '橫軸：上傳量，縱軸：下載量，虛線：上傳與下載相等。選取資料點可開啟該連線。',
   'conn.chain': '鏈',
+  'conn.node': '節點',
   'conn.rule': '規則',
   'conn.recomputed': '重算',
   'conn.state.observed': '觀測中',

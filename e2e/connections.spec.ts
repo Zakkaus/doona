@@ -256,9 +256,9 @@ test.describe('short connection lists', () => {
     await expect(grid).toHaveAttribute('aria-rowcount', '55');
     expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
     const source = grid.getByRole('columnheader', {name: 'Device'});
-    const chain = grid.getByRole('columnheader', {name: 'Chain'});
+    const node = grid.getByRole('columnheader', {name: 'Node'});
     await expect(source).toBeVisible();
-    await expect.poll(async () => (await source.boundingBox())!.width / (await chain.boundingBox())!.width).toBeCloseTo(128 / 168, 2);
+    await expect.poll(async () => (await source.boundingBox())!.width / (await node.boundingBox())!.width).toBeCloseTo(128 / 120, 2);
     await expect(grid.locator('[data-key="1"]').getByRole('rowheader')).toHaveText('10.0.0.12');
     await grid.locator('[data-key="1"]').focus();
     await page.keyboard.press('d');

@@ -1,7 +1,7 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {chainLabel, connectionStates, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {chainLabel, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
 import {word} from '../../../api/labels';
 import {localTime, formatLatency} from '../../../i18n/format';
 import {parseU64} from '../../../api/u64';
@@ -212,7 +212,8 @@ const traceStates: Record<string, Key> = {complete: 'flow.status.complete', part
 type FlowRow = {
   id: string;
   target: string;
-  chain: string;
+  node: string;
+  path: string | null;
   expression: string | null;
   ruleId: string | null;
   recomputed: boolean;
@@ -236,7 +237,8 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
     rows: flows.map(flow => ({
       id: flow.id,
       target: flow.input?.domain || flow.input?.dst || flow.id,
-      chain: chainLabel(flow, t, names),
+      node: nodeLabel(flow, t, names),
+      path: flow.chain.length > 1 ? chainLabel(flow, t, names) : null,
       expression: flow.rule_expression,
       ruleId: flow.rule_id,
       recomputed: flow.rule_source === 'recomputed',

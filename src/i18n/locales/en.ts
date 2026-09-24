@@ -184,6 +184,7 @@ export const messages = {
   'conn.chart.moreUp': 'More upload',
   'conn.chart.hint': 'Horizontal: upload, vertical: download, dashed line: equal traffic. Select a point to open its connection.',
   'conn.chain': 'Chain',
+  'conn.node': 'Node',
   'conn.rule': 'Rule',
   'conn.recomputed': 'Recomputed',
   'conn.state.observed': 'Observed',
