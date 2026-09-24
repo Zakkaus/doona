@@ -921,7 +921,7 @@ export const messages = {
   'settings.recordDnsLog': 'DNS 记录',
   'settings.record.auto': '随面板',
   'settings.record.autoFlows': '连接或规则页打开时',
-  'settings.recordFlowsAuto': '流程只在连接或规则页打开期间及关闭后 60 秒内记录；其他页面不会启动流程记录。',
+  'settings.recordFlowsAuto': '流程只在连接或规则页打开期间及关闭后 {n} 秒内记录；其他页面不会启动流程记录。',
   'settings.record.on': '常开',
   'settings.record.off': '关闭',
   'settings.recordingActive': '记录中',

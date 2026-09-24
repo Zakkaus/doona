@@ -946,7 +946,7 @@ export const messages = {
   'settings.record.auto': 'With panel',
   'settings.record.autoFlows': 'While Connections or Rules is open',
   'settings.recordFlowsAuto':
-    'Flows are recorded only while Connections or Rules is open and for 60 s after it closes; other pages do not start flow recording.',
+    'Flows are recorded only while Connections or Rules is open and for {n} s after it closes; other pages do not start flow recording.',
   'settings.record.on': 'Always',
   'settings.record.off': 'Off',
   'settings.recordingActive': 'Capturing',

@@ -27,8 +27,8 @@ export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_log
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder | 'geodata'>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
 export const recorderFields: Recorder[] = ['record_flows', 'record_logs', 'record_dns_log'];
-export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {
-  record_flows: {state: 'flows', label: 'settings.recordFlows'},
+export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key; autoLabel?: Key}> = {
+  record_flows: {state: 'flows', label: 'settings.recordFlows', autoLabel: 'settings.record.autoFlows'},
   record_logs: {state: 'logs', label: 'settings.recordLogs'},
   record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
 };
@@ -43,7 +43,7 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
     value: choice,
     items: (['auto', 'on', 'off'] as const).map(mode => ({
       id: mode,
-      label: t(mode === 'auto' && id === 'record_flows' ? 'settings.record.autoFlows' : recorderChoiceLabel[mode])
+      label: t(mode === 'auto' ? (recorderAccess[id].autoLabel ?? recorderChoiceLabel.auto) : recorderChoiceLabel[mode])
     })),
     disabled: forbidden,
     tone: forbidden ? ('muted' as const) : state?.active ? ('ok' as const) : ('neutral' as const),
@@ -55,8 +55,11 @@ export function recordingNote(recording: RuntimeSettings['recording'] | undefine
   if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
   return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
-// Automatic flow recording follows pages that ask for flows, not every open panel.
-export const flowRecordingNote = (choice: RecorderChoice, t: Translator) => (choice === 'auto' ? t('settings.recordFlowsAuto') : null);
+// Automatic flow recording follows pages that ask for flows, not every open panel. The backend keeps a client
+// attached for this long after its last flow request or stream.
+const attachmentTailSeconds = 60;
+export const flowRecordingNote = (choice: RecorderChoice, t: Translator) =>
+  choice === 'auto' ? t('settings.recordFlowsAuto', {n: attachmentTailSeconds}) : null;
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
   Numeric,
