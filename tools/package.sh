@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")/.."
 case "$#:$*" in
     0:) version=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).version') ;;
-    1:--git-version) version=$(git describe --tags --always) ;;
+    1:--git-version) version=$(git describe --tags --always); version=${version#v} ;;
     *) echo "Usage: $0 [--git-version]" >&2; exit 1 ;;
 esac
 case "$version" in

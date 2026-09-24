@@ -1,5 +1,5 @@
 #!/bin/sh
-# A stable tag has no prerelease; v0.1.0-beta.3 yields VERSION=0.1.0 and PRERELEASE=beta.3.
+# A stable tag has no prerelease; Arch removes the separator before its prerelease number.
 set -eu
 tag=${1:?usage: tools/version.sh vX.Y.Z[-pre.N]}
 case "$tag" in
@@ -14,4 +14,6 @@ printf '%s\n' "$bare" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9
 version=${bare%%-*}
 pre=${bare#"$version"}
 pre=${pre#-}
-printf 'VERSION=%s\nPRERELEASE=%s\nNPM=%s\n' "$version" "$pre" "$version${pre:+-$pre}"
+printf 'VERSION=%s\nPRERELEASE=%s\nARCH_PRERELEASE=%s\nNPM=%s\nPACKAGE_RELEASE=1\n' \
+    "$version" "$pre" "$(printf '%s' "$pre" | tr -d .)" \
+    "$version${pre:+-$pre}"

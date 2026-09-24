@@ -7,10 +7,11 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=doona
 PKG_VERSION:=0.1.0_beta3
 PKG_RELEASE:=1
-PKG_REAL_VERSION:=v0.1.0-beta.3
+PKG_REAL_VERSION:=0.1.0-beta.3
+PKG_TAG:=v$(PKG_REAL_VERSION)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
+PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
 # Placeholder: replace with the program archive's SHA256SUMS entry after publication.
 PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
 
@@ -22,7 +23,7 @@ include $(INCLUDE_DIR)/package.mk
 
 FONTS_FILE:=$(PKG_NAME)-fonts-$(PKG_REAL_VERSION).tar.gz
 define Download/doona-fonts
-	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/
+	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
 	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
