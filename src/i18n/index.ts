@@ -17,13 +17,23 @@ export const LangContext = createContext<Lang>('zh-TW');
 export function useLang() {
   return useContext(LangContext);
 }
-export function readLang(storage?: Pick<Storage, 'getItem'>): Lang {
+// The browser's first preference decides: a Hant script or a TW, HK or MO region reads Traditional, any other Chinese
+// Simplified, and every other language English.
+export function browserLang(tags: readonly string[]): Lang {
+  const tag = tags[0]?.toLowerCase() ?? '';
+  if (tag !== 'zh' && !tag.startsWith('zh-')) return 'en';
+  if (/-hans\b/.test(tag)) return 'zh-CN';
+  return /-(hant|tw|hk|mo)\b/.test(tag) ? 'zh-TW' : 'zh-CN';
+}
+export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly string[]): Lang {
+  let value: string | null = null;
   try {
-    const value = (storage ?? localStorage).getItem('doona-lang');
-    return value === 'zh-CN' || value === 'en' ? value : 'zh-TW';
+    value = (storage ?? localStorage).getItem('doona-lang');
   } catch {
-    return 'zh-TW';
+    // Storage blocked: fall through to the browser.
   }
+  if (value === 'zh-TW' || value === 'zh-CN' || value === 'en') return value;
+  return browserLang(tags ?? (typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]));
 }
 // Each language is its own chunk, loaded on first use; `translate` reads only what has loaded.
 const loaders: Record<Lang, () => Promise<{messages: Record<Key, Message>}>> = {
