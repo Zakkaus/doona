@@ -144,3 +144,7 @@ it('shows only the leaf node in the table and keeps the full path for the toolti
     ['—', null]
   ]);
 });
+
+it('keeps a column hidden that was saved under its old chain id', () => {
+  expect(readView(JSON.stringify({hidden: ['chain', 'rule'], sort: null, group: 'none'})).hidden).toEqual(['node', 'rule']);
+});

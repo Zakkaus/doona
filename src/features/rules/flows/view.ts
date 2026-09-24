@@ -1,7 +1,7 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {chainLabel, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
+import {chainPath, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
 import {word} from '../../../api/labels';
 import {localTime, formatLatency} from '../../../i18n/format';
 import {parseU64} from '../../../api/u64';
@@ -238,7 +238,7 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
       id: flow.id,
       target: flow.input?.domain || flow.input?.dst || flow.id,
       node: nodeLabel(flow, t, names),
-      path: flow.chain.length > 1 ? chainLabel(flow, t, names) : null,
+      path: chainPath(flow, t, names),
       expression: flow.rule_expression,
       ruleId: flow.rule_id,
       recomputed: flow.rule_source === 'recomputed',

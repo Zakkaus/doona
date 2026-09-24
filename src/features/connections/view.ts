@@ -1,6 +1,16 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {addU64, parseU64} from '../../api/u64';
-import {chainLabel, chainNames, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {
+  chainLabel,
+  chainPath,
+  chainNames,
+  connectionStates,
+  nodeLabel,
+  outboundLabel,
+  sourceIp,
+  type MessageRef,
+  type OutboundNames
+} from '../../api/selectors';
 import {localTime, formatBytes, formatRate} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../../api/labels';
@@ -48,7 +58,9 @@ export function readView(stored: string | null): ConnectionView {
   try {
     const value = JSON.parse(stored ?? 'null');
     if (!value || typeof value !== 'object') return defaults;
-    const hidden = columns.filter(column => Array.isArray(value.hidden) && value.hidden.includes(column.id)).map(column => column.id);
+    // The chain column became the node column; a view saved before the rename keeps it hidden.
+    const saved: unknown[] = Array.isArray(value.hidden) ? value.hidden.map((id: unknown) => (id === 'chain' ? 'node' : id)) : [];
+    const hidden = columns.filter(column => saved.includes(column.id)).map(column => column.id);
     const sort = value.sort;
     return {
       hidden: hidden.length === columns.length ? [] : hidden,
@@ -139,7 +151,7 @@ export function connectionTableView(
     target: c.domain || c.dst || '—',
     source: c.src ?? '—',
     node: nodeLabel(c, t, names),
-    path: c.chain.length > 1 ? chainLabel(c, t, names) : null,
+    path: chainPath(c, t, names),
     rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
     recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
     state: t(connectionStates[c.state]),

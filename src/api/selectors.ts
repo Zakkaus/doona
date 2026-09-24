@@ -68,6 +68,9 @@ export function nodeLabel(row: Pick<Connection, 'chain' | 'outbound'>, label: La
   if (leaf) return names?.get(leaf) ?? leaf;
   return row.outbound && row.outbound !== 'unknown' ? row.outbound : '—';
 }
+// The full path for a node cell's tooltip; null when the node alone already says it.
+export const chainPath = (row: Pick<Connection, 'chain' | 'outbound'>, label: LabelFn, names?: OutboundNames) =>
+  row.chain.length > 1 ? chainLabel(row, label, names) : null;
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   starting: 'lifecycle.starting',
   running: 'lifecycle.running',
