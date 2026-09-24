@@ -24,19 +24,21 @@ export function modeView(
   groups: Array<Pick<Group, 'name'>>,
   writable: boolean,
   configAvailable: boolean,
-  t: LabelFn
+  t: LabelFn,
+  known = true
 ) {
-  const shown = staged ?? current;
+  const shown = writable ? (staged ?? current) : current;
   const target = shown.mode === 'global' ? shown.target : ((current.mode === 'global' ? current.target : groups[0]?.name) ?? '');
   return {
-    mode: shown.mode,
-    target,
-    targetText: target || '—',
+    mode: known ? shown.mode : '',
+    target: known ? target : '',
+    targetText: known ? target || '—' : '—',
     writable,
-    dirty: staged !== null && !sameMode(staged, current),
+    dirty: writable && staged !== null && !sameMode(staged, current),
     // Global mode needs a group to send everything to; without one there is nothing valid to write.
     incomplete: shown.mode === 'global' && !target,
-    status: t(configAvailable ? 'act.modeNeedsWrite' : 'act.modeUnavailable'),
+    status: t(configAvailable ? 'act.modeReadOnly' : 'act.modeUnavailable'),
+    readOnly: configAvailable && !writable,
     modes: (['rule', 'direct', 'global'] as const).map(mode => [mode, t(modeLabels[mode])] as [string, string]),
     targets: groups.map(group => ({id: group.name, label: group.name}))
   };

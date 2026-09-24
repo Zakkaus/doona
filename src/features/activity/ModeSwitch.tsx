@@ -1,5 +1,6 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, Light, ChoiceMenu, Segmented} from '../../ui/ui';
+import {Dialog, DialogTrigger, Popover} from 'react-aria-components';
+import {Button, ErrorMessage, Light, Link, ChoiceMenu, Segmented} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -10,6 +11,7 @@ type ModeCardsModel = {
   dirty: boolean;
   incomplete: boolean;
   status: string;
+  readOnly: boolean;
   modes: Array<[string, string]>;
   targets: Array<{id: string; label: string}>;
   busy: boolean;
@@ -31,20 +33,33 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
             <Shuffle />
             {t('act.mode')}
           </span>
-          {!vm.writable ? (
-            !vm.error && (
-              <Light small tone="muted">
-                {vm.status}
-              </Light>
-            )
-          ) : (
-            <span className="rp-cluster">
-              <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy} items={vm.modes} />
+          <span className="rp-cluster">
+            <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
+            {vm.writable ? (
               <Button small accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
                 {t('act.apply')}
               </Button>
-            </span>
-          )}
+            ) : vm.readOnly ? (
+              <DialogTrigger>
+                <Button small quiet label={t('act.modeWhyReadOnly')}>
+                  {vm.status}
+                </Button>
+                <Popover className="rp-popover" placement="bottom end">
+                  <Dialog className="rp-mode-help" aria-label={t('act.modeWhyReadOnly')}>
+                    <p>{t('act.modeReadOnlyReason')}</p>
+                    <p>{t('act.modeReadOnlyAction')}</p>
+                    <Link external appearance="link" href="https://github.com/Zakkaus/doona/blob/main/README.md#install">
+                      {t('act.installGuide')}
+                    </Link>
+                  </Dialog>
+                </Popover>
+              </DialogTrigger>
+            ) : (
+              <Light small tone="muted">
+                {vm.status}
+              </Light>
+            )}
+          </span>
         </div>
       </div>
       <div className="rp-card">

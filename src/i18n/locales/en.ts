@@ -32,7 +32,12 @@ export const messages = {
   'act.modeApplied': 'Outbound mode written to the configuration and reloaded: {mode}',
   'act.modeNoRouting': 'The main configuration has no routing section',
   'act.modeInterleaved': 'Ordinary rules precede must rules; the outbound mode cannot be changed safely.',
-  'act.modeNeedsWrite': 'Needs a writable main configuration',
+  'act.modeReadOnly': 'Read-only',
+  'act.modeWhyReadOnly': 'Why is the mode read-only?',
+  'act.modeReadOnlyReason':
+    'honk requires configuration writes and authenticated control. It marks the main source read-only if it contains a secret field or nested block in native_api or clash_api, or an active listener secret.',
+  'act.modeReadOnlyAction': 'Make the main file writable by honk and keep native_api in its own include file.',
+  'act.installGuide': 'Installation instructions',
   'act.modeUnavailable': 'Not provided by this backend',
   'act.viewAll': 'View all',
   'act.noticeRepeat': {one: '{n} time', other: '{n} times'},

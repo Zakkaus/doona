@@ -31,7 +31,12 @@ export const messages = {
   'act.modeApplied': '出站模式已寫入組態並重載：{mode}',
   'act.modeNoRouting': '主組態未包含 routing 區段',
   'act.modeInterleaved': '一般規則位於 must 規則之前，無法安全切換出站模式。',
-  'act.modeNeedsWrite': '需要可寫入的主組態',
+  'act.modeReadOnly': '唯讀',
+  'act.modeWhyReadOnly': '查看唯讀原因',
+  'act.modeReadOnlyReason':
+    'honk 須允許組態寫入，且控制端已設定驗證。主組態若含 native_api 或 clash_api 的密鑰欄位或巢狀區塊，會標記為唯讀。組態含目前的監聽密鑰時也一樣。',
+  'act.modeReadOnlyAction': '請確認 honk 對主組態檔案有寫入權限，並將 native_api 設定放在獨立的 include 檔案。',
+  'act.installGuide': '查看安裝說明',
   'act.modeUnavailable': '此後端不提供',
   'act.viewAll': '查看全部',
   'act.noticeRepeat': '重複 {n} 次',
