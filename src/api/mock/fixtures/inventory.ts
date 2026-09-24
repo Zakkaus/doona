@@ -1,6 +1,7 @@
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../model';
 import {ago, now, observedAt} from './clock';
 import {groupPolicies} from './configuration';
+import {defaultGeodataPreset} from '../../../dae/geodata';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
     transport,
@@ -160,22 +161,32 @@ export const providers: Provider[] = [
 ];
 // Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
 export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'];
+// The loaded files came from the built-in MetaCubeX sources three days ago; automatic updates are off.
 export const geodata: GeoData = {
   observed_at: observedAt,
   assets: [
     {
       kind: 'geosite',
       sha256: '3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c',
-      size_bytes: '4718592',
+      size_bytes: '4404019',
       modified_at: ago(3 * 86400),
-      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+      source_redacted: defaultGeodataPreset.urls.geosite[0],
+      fetched_url_redacted: defaultGeodataPreset.urls.geosite[0],
+      verified: true
     },
     {
       kind: 'geoip',
       sha256: '9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e',
-      size_bytes: '6291456',
+      size_bytes: '17406771',
       modified_at: ago(3 * 86400),
-      source_redacted: 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+      source_redacted: defaultGeodataPreset.urls.geoip[0],
+      fetched_url_redacted: defaultGeodataPreset.urls.geoip[1],
+      verified: true
     }
-  ]
+  ],
+  last_checked_at: ago(3 * 86400),
+  last_updated_at: ago(3 * 86400),
+  next_check_at: null,
+  last_error: null,
+  required_codes: {geosite: [], geoip: []}
 };

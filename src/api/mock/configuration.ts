@@ -5,6 +5,7 @@ import * as fixtures from './fixtures/configuration';
 import {found} from './common';
 import {diagnose, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
 import type {MockLifecycle} from './lifecycle';
+import type {MockGeodataState} from './geodata';
 
 type ConfigurationApi = Pick<
   Api,
@@ -16,9 +17,15 @@ export function createConfiguration(
   runtime: Pick<Runtime, 'generation' | 'lifecycle'>,
   {enqueue, log, publish, eventData, trimLogs}: Effects,
   groupNames: () => Set<string>,
-  activateInventory: (text: string, revision: string) => void
+  activateInventory: (text: string, revision: string) => void,
+  geodata: MockGeodataState
 ) {
   const settings = structuredClone(fixtures.runtimeSettings);
+  const withGeodata = () => {
+    const value = structuredClone(settings);
+    if (capabilities.resources.geodata.configurable_sources === true) value.geodata = geodata.settings();
+    return value;
+  };
   let sources: (ConfigSource & {content: string})[] | null = null;
   let disk: (ConfigSource & {content: string})[] = [];
   let loading: Promise<(ConfigSource & {content: string})[]> | undefined;
@@ -185,7 +192,7 @@ export function createConfiguration(
     runtimeSettings: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
-      return structuredClone(settings);
+      return withGeodata();
     },
     // Merge semantics: every value is checked against its ceiling before anything changes.
     patchRuntimeSettings: async (patch, signal) => {
@@ -200,6 +207,17 @@ export function createConfiguration(
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+      // geodata is stored apart from the other settings and leaves the top-level source alone.
+      const {geodata: geodataPatch, ...rest} = patch;
+      if (geodataPatch !== undefined) {
+        if (!allowed.has('geodata') || resources.geodata.configurable_sources !== true) throw invalid('geodata cannot be changed on this backend');
+        geodata.patch(geodataPatch);
+        if (!Object.keys(rest).length) {
+          log('info', 'honk::geodata', 'Geodata settings stored.', {});
+          return withGeodata();
+        }
+      }
+      patch = rest;
       // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
       const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
       const modes = Object.entries(recorders).flatMap(([field, store]) => {
@@ -241,7 +259,7 @@ export function createConfiguration(
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
       log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});
-      return structuredClone(settings);
+      return withGeodata();
     },
     startReload: async signal => {
       signal?.throwIfAborted();

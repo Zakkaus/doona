@@ -5,6 +5,7 @@ import {createInventory} from './inventory';
 import {createLifecycle} from './lifecycle';
 import {createNetwork} from './network';
 import {createRuntime} from './runtime';
+import {createGeodataState} from './geodata';
 
 export function createMockApi(): Api {
   let count = 120;
@@ -26,6 +27,7 @@ export function createMockApi(): Api {
     /* Storage can be unavailable. */
   }
   const runtime = createRuntime(capabilities, big);
+  const geodata = createGeodataState(capabilities);
   const configuration = createConfiguration(
     capabilities,
     runtime.runtime,
@@ -37,7 +39,8 @@ export function createMockApi(): Api {
       trimLogs: () => lifecycle.trimLogs()
     },
     () => inventory.groupNames(),
-    (text, revision) => inventory.activate(text, revision)
+    (text, revision) => inventory.activate(text, revision),
+    geodata
   );
   const lifecycle = createLifecycle(
     capabilities.resources.logs,
@@ -47,6 +50,6 @@ export function createMockApi(): Api {
     configuration.revision
   );
   const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot);
-  const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt);
+  const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt, geodata);
   return {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
 }
