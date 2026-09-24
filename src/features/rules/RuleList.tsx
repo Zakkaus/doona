@@ -1,5 +1,6 @@
 import {useLayoutEffect, useMemo, useRef} from 'react';
 import {useT} from '../../i18n';
+import {DaeCode} from '../../ui/DaeCode';
 import {
   Badge,
   Button,
@@ -43,7 +44,11 @@ function Dictionary({view}: {view: Model}) {
         minWidth: 160,
         grow: 3,
         isRowHeader: true,
-        render: row => <TextTooltip className="rp-code">{row.expression}</TextTooltip>
+        render: row => (
+          <TextTooltip className="rp-code">
+            <DaeCode text={row.expression} />
+          </TextTooltip>
+        )
       },
       {
         id: 'outbound',
@@ -120,7 +125,7 @@ function Dictionary({view}: {view: Model}) {
         {dialog?.kind === 'remove' && (
           <div className="rp-list">
             <span className="rp-label">{dialog.help}</span>
-            <span className="rp-code">{dialog.expression}</span>
+            <DaeCode text={dialog.expression} />
           </div>
         )}
         {dialog?.kind === 'add' && (
@@ -157,7 +162,7 @@ function Dictionary({view}: {view: Model}) {
                     onChange={value => setPick({...pick, value})}
                   />
                 </div>
-                {draft.preview && <span className="rp-code">{draft.preview}</span>}
+                {draft.preview && <DaeCode text={draft.preview} />}
               </>
             ) : (
               <TextField
@@ -207,7 +212,7 @@ function Distribution({view}: {view: Model}) {
         minWidth: 240,
         grow: 3,
         isRowHeader: true,
-        render: row => <TextTooltip className={row.expressionClass}>{row.expression}</TextTooltip>
+        render: row => <TextTooltip className={row.expressionClass}>{row.expressionClass ? <DaeCode text={row.expression} /> : row.expression}</TextTooltip>
       },
       {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
       {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},

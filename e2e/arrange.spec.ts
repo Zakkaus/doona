@@ -66,6 +66,10 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   // Review lists each change in words; one write carries them all.
   await page.getByRole('button', {name: 'Review and apply'}).click();
   const review = page.getByRole('dialog', {name: 'Review changes'});
+  await review.getByText('Show the configuration text to be written').click();
+  const preview = review.locator('pre.rp-arrange-preview').first();
+  await expect(preview.locator('.rp-dae-punctuation').first()).toBeVisible();
+  expect(await preview.textContent()).toContain('{');
   await expect(review.getByRole('listitem')).toHaveText(['Add node sg-01 to gaming', 'Add node us-01 to gaming', 'Remove node hk-01 from resilient']);
   const writes: string[] = [];
   page.on('request', request => {
