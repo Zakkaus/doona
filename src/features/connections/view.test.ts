@@ -50,11 +50,11 @@ it('drops columns by priority until the minimum widths fit, keeping the target',
       columns.filter(column => !hidden.includes(column.id)),
       width
     ).map(column => column.id);
-  expect(ids(null)).toEqual(['dst', 'src', 'chain', 'rule', 'state', 'down', 'age']);
-  expect(ids(1032)).toEqual(['dst', 'src', 'chain', 'rule', 'state', 'down', 'age']);
-  expect(ids(942)).toEqual(['dst', 'src', 'chain', 'state', 'down', 'age']);
+  expect(ids(null)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'age']);
+  expect(ids(1032)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'age']);
+  expect(ids(942)).toEqual(['dst', 'src', 'node', 'state', 'down', 'age']);
   expect(ids(726)).toEqual(['dst', 'src', 'state', 'down', 'age']);
-  expect(ids(726, ['down'])).toEqual(['dst', 'src', 'chain', 'state', 'age']);
+  expect(ids(726, ['down'])).toEqual(['dst', 'src', 'node', 'state', 'age']);
   expect(ids(100)).toEqual(['dst']);
 });
 
@@ -121,4 +121,26 @@ it('keeps resolved routing diagnostics in details when table columns are hidden'
   expect(detail?.chain).toBe('proxy → HK');
   expect(detail?.outbound).toBe('proxy');
   expect(detail?.rule).toEqual({expression: 'domain(example.com)', href: '#/rules?tab=list&rule=rule-1'});
+});
+
+it('shows only the leaf node in the table and keeps the full path for the tooltip', () => {
+  const names = new Map([
+    ['group-id', 'proxy'],
+    ['node-id', 'HK']
+  ]);
+  const base = {...connections.tcp[0], network: 'tcp'};
+  const rows = [
+    {...base, id: 'a', outbound: 'proxy', chain: ['group-id', 'node-id']},
+    {...base, id: 'b', outbound: 'proxy', chain: []},
+    {...base, id: 'c', outbound: 'direct', chain: []},
+    {...base, id: 'd', outbound: null, chain: []}
+  ];
+  const view = connectionTableView(rows, {hidden: [], sort: null, group: 'none'}, 'en-US', names, true, t);
+  const cells = view.flatMap(row => ('connection' in row ? [row.connection] : row.children)).map(c => [c.node, c.path]);
+  expect(cells).toEqual([
+    ['HK', 'proxy → HK'],
+    ['proxy', null],
+    [t('ui.direct'), null],
+    ['—', null]
+  ]);
 });

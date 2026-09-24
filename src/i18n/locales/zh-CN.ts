@@ -179,6 +179,7 @@ export const messages = {
   'conn.chart.moreUp': '上传较多',
   'conn.chart.hint': '横轴：上传量，纵轴：下载量，虚线：上传与下载相等。点击数据点可打开该连接。',
   'conn.chain': '链',
+  'conn.node': '节点',
   'conn.rule': '规则',
   'conn.recomputed': '重算',
   'conn.state.observed': '观测中',

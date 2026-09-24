@@ -61,6 +61,13 @@ export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: 
   if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
   return chainNames(row.chain, names).join(' → ') || '—';
 }
+// The leaf node alone, for narrow table cells; the full chain stays in details and the tooltip.
+export function nodeLabel(row: Pick<Connection, 'chain' | 'outbound'>, label: LabelFn, names?: OutboundNames): string {
+  if (row.outbound === 'direct' || row.outbound === 'block') return outboundLabel(row.outbound, label);
+  const leaf = row.chain.at(-1);
+  if (leaf) return names?.get(leaf) ?? leaf;
+  return row.outbound && row.outbound !== 'unknown' ? row.outbound : '—';
+}
 export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   starting: 'lifecycle.starting',
   running: 'lifecycle.running',
