@@ -19,7 +19,7 @@ export function settingsCard(id: SettingsCardId) {
   return {headingId: cardHeadingId(id), titleKey: settingsCards.find(card => card.id === id)!.titleKey};
 }
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
-export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder>;
+export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder | 'geodata'>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
 export const recorderFields: Recorder[] = ['record_flows', 'record_logs', 'record_dns_log'];
 export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {

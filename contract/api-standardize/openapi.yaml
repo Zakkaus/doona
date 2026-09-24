@@ -306,12 +306,14 @@ paths:
                           - dns_log.max_records
                           - flows.max_flows
                           - flows.retention_seconds
+                          - geodata
                       geodata:
                         available: true
                         can_update: true
                         assets:
                           - geosite
                           - geoip
+                        configurable_sources: true
                       operations:
                         available: true
                         retention_seconds: 300
@@ -2502,8 +2504,11 @@ paths:
         capability_not_supported. One entry per asset kind in
         resources.geodata.assets, describing the file the running datapath was
         built from: its digest, size and modification time, and the download source
-        POST /geodata/update fetches, redacted like a provider URL. Reading never
-        touches the network.
+        POST /geodata/update tries first, redacted like a provider URL. When
+        resources.geodata.configurable_sources is true, the response also reports
+        where each loaded file was downloaded from, whether its checksum was
+        verified, the update schedule and outcome, and required_codes. Reading
+        never touches the network.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -2527,14 +2532,67 @@ paths:
                     assets:
                       - kind: geosite
                         sha256: 3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c
-                        size_bytes: '4718592'
+                        size_bytes: '4404019'
                         modified_at: '2026-08-14T03:00:00Z'
-                        source_redacted: https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+                        source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
+                        fetched_url_redacted: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
+                        verified: true
                       - kind: geoip
                         sha256: 9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e
-                        size_bytes: '6291456'
+                        size_bytes: '17406771'
                         modified_at: '2026-08-14T03:00:00Z'
-                        source_redacted: https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+                        source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                        fetched_url_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                        verified: true
+                    last_checked_at: '2026-08-15T03:12:40Z'
+                    last_updated_at: '2026-08-14T03:00:00Z'
+                    next_check_at: '2026-08-16T03:41:07Z'
+                    last_error: null
+                    required_codes:
+                      geosite:
+                        - category-ads-all
+                        - cn
+                        - geolocation-!cn
+                        - private
+                      geoip:
+                        - cn
+                        - private
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                packaged:
+                  summary: Files installed by a package, before any update
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    assets:
+                      - kind: geosite
+                        sha256: 3f5a9c1e7b2d4c6a8e0f1b3d5a7c9e1f3b5d7a9c1e3f5a7b9d1c3e5f7a9b1d3c
+                        size_bytes: '4404019'
+                        modified_at: '2026-08-01T00:00:00Z'
+                        source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
+                        fetched_url_redacted: null
+                        verified: false
+                      - kind: geoip
+                        sha256: 9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e
+                        size_bytes: '17406771'
+                        modified_at: '2026-08-01T00:00:00Z'
+                        source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                        fetched_url_redacted: null
+                        verified: false
+                    last_checked_at: '2026-08-15T09:58:02Z'
+                    last_updated_at: null
+                    next_check_at: null
+                    last_error:
+                      code: download_failed
+                      message: No configured URL for geosite returned a usable file.
+                      details: null
+                    required_codes:
+                      geosite:
+                        - cn
+                        - geolocation-!cn
+                      geoip:
+                        - cn
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -2555,7 +2613,14 @@ paths:
         configured sources. The backend downloads every asset from its source into a
         temporary file, verifies it parses, replaces the loaded file and reloads the
         datapath once, emitting generation.changed; an asset that fails to download
-        or parse leaves the loaded file in place and fails the operation. Follow the
+        or parse leaves the loaded file in place and fails the operation. With
+        several URLs for an asset, the backend tries them in order and moves to the
+        next only when one fails: a connection error, a status other than 200
+        (redirects are not followed), the per-URL deadline, or a sha256 mismatch
+        against a checksum published at the URL with .sha256sum appended. The update
+        fails when the new file lacks a category the active configuration uses.
+        Identical bytes leave the loaded file and generation unchanged. An automatic
+        update runs as the same operation kind and holds the same exclusivity. Follow the
         shared operation ownership, retention and idempotency rules. Replaying an
         accepted Idempotency-Key returns its original operation; a distinct update
         while one is queued or running returns 409 state_conflict. A full bounded
@@ -4369,7 +4434,11 @@ paths:
         Requires resources.runtime_settings.available. Returns the current
         runtime-adjustable settings. Numeric values cannot exceed their corresponding
         capability ceilings. source is config when values come from the activated
-        configuration and runtime after a runtime override.
+        configuration and runtime after a runtime override. geodata appears when
+        resources.geodata.configurable_sources is true and carries its own source.
+        GET needs only observe, so geodata URLs are returned as written only to an
+        authenticated caller with control, which may edit them, and redacted like
+        GeoAsset.source_redacted for everyone else.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -4399,6 +4468,47 @@ paths:
                     flows:
                       max_flows: 10000
                       retention_seconds: 300
+                    geodata:
+                      source: default
+                      geosite:
+                        urls:
+                          - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
+                          - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
+                      geoip:
+                        urls:
+                          - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                          - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
+                      auto_update:
+                        enabled: false
+                        interval_hours: 24
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                config_sources:
+                  summary: Geodata URLs set in the configuration file
+                  value:
+                    observed_at: '2026-08-15T10:00:00Z'
+                    source: config
+                    log:
+                      level: info
+                      buffered_records: 4096
+                    dns_log:
+                      max_records: 2048
+                    flows:
+                      max_flows: 10000
+                      retention_seconds: 300
+                    geodata:
+                      source: config
+                      geosite:
+                        urls:
+                          - https://mirror.example.net/geodata/geosite.dat
+                      geoip:
+                        urls:
+                          - https://mirror.example.net/geodata/geoip.dat
+                      auto_update:
+                        enabled: true
+                        interval_hours: 48
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -4422,6 +4532,17 @@ paths:
         cursors older than the new floor. The change applies immediately and lasts
         until the process restarts or the next configuration activation resets it; it
         is not written to the configuration file.
+
+        geodata is the exception. It requires resources.geodata.configurable_sources
+        and an authenticated caller; the anonymous loopback principal gets 403
+        permission_denied. The backend stores it, so it survives restarts and
+        activations and does not change the top-level source. A geodata patch merges
+        into the effective settings. Patching geosite or geoip stores both URL lists
+        (geodata.source becomes db); auto_update is stored on its own; null deletes
+        everything stored. It never downloads; POST /geodata/update does. While
+        geodata.source is config the configuration file owns the URLs: a patch that
+        sets geodata.geosite or geodata.geoip returns 409 state_conflict and changes
+        nothing, while auto_update can still be patched.
       x-permission: control
       security:
         - bearerAuth: []
@@ -4441,6 +4562,31 @@ paths:
                     level: debug
                   dns_log:
                     max_records: 1024
+              geodata_sources:
+                summary: Use a mirror first and update daily
+                value:
+                  geodata:
+                    geosite:
+                      urls:
+                        - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
+                        - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
+                    geoip:
+                      urls:
+                        - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
+                        - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                    auto_update:
+                      enabled: true
+              geodata_auto_update:
+                summary: Update every two days, also while the configuration file owns the URLs
+                value:
+                  geodata:
+                    auto_update:
+                      enabled: true
+                      interval_hours: 48
+              geodata_reset:
+                summary: Return to the built-in sources
+                value:
+                  geodata: null
       responses:
         '200':
           description: Settings after the change
@@ -4466,6 +4612,35 @@ paths:
                     flows:
                       max_flows: 10000
                       retention_seconds: 300
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                geodata_stored:
+                  value:
+                    observed_at: '2026-08-15T10:00:05Z'
+                    source: config
+                    log:
+                      level: info
+                      buffered_records: 4096
+                    dns_log:
+                      max_records: 2048
+                    flows:
+                      max_flows: 10000
+                      retention_seconds: 300
+                    geodata:
+                      source: db
+                      geosite:
+                        urls:
+                          - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
+                          - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
+                      geoip:
+                        urls:
+                          - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
+                          - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
+                      auto_update:
+                        enabled: true
+                        interval_hours: 24
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -4498,6 +4673,29 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: The patch sets geodata URLs while the configuration file owns them
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                geodata_from_config:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: Geodata URLs are set in the configuration file.
+                      details: null
+                    request_id: request-4
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/dns/query:
     get:
       operationId: queryDns
@@ -6684,6 +6882,9 @@ components:
                   description: The asset kinds GET /geodata reports on this backend.
                   items:
                     $ref: '#/components/schemas/GeoAssetKind'
+                configurable_sources:
+                  type: boolean
+                  description: Download URLs and automatic updates are managed through geodata in GET and PATCH /runtime/settings, and GET /geodata reports update status and required_codes. Requires runtime_settings.available with geodata in its fields. Absent means false.
             operations:
               type: object
               required:
@@ -7942,7 +8143,21 @@ components:
             - string
             - 'null'
           minLength: 1
-          description: Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. Null when no source is configured or safe display is impossible.
+          description: Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. With several configured URLs, the first. Null when no source is configured or safe display is impossible.
+        fetched_url_redacted:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          description: Display-only URL the loaded file was downloaded from, redacted like source_redacted. Null when the backend did not download the loaded file, for example a file installed by a package. Reported when resources.geodata.configurable_sources is true.
+        verified:
+          type: boolean
+          description: The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published or the backend did not download the file. Reported when resources.geodata.configurable_sources is true.
+      dependentRequired:
+        fetched_url_redacted:
+          - verified
+        verified:
+          - fetched_url_redacted
     GeoData:
       type: object
       required:
@@ -7955,6 +8170,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GeoAsset'
+        last_checked_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: When the last update attempt, manual or automatic, finished, whatever its outcome. Null before the first.
+        last_updated_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: When an update last replaced a loaded file. Null before the first.
+        next_check_at:
+          $ref: '#/components/schemas/NullableTimestamp'
+          description: When the next automatic update is due, including its random delay and any failure backoff. Null while automatic updates are off.
+        last_error:
+          description: Why the last attempt failed after every URL was tried, with an adapter-defined code. Null after a successful or unchanged attempt, and before the first.
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SafeError'
+        required_codes:
+          type: object
+          description: For each kind in resources.geodata.assets, the lowercase category names the active configuration references, sorted and without attribute suffixes. A replacement file must contain all of them.
+          propertyNames:
+            $ref: '#/components/schemas/GeoAssetKind'
+          additionalProperties:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              minLength: 1
+      description: The update status fields and required_codes are reported together, when resources.geodata.configurable_sources is true.
+      dependentRequired:
+        last_checked_at:
+          - last_updated_at
+          - next_check_at
+          - last_error
+          - required_codes
+        last_updated_at:
+          - last_checked_at
+        next_check_at:
+          - last_checked_at
+        last_error:
+          - last_checked_at
+        required_codes:
+          - last_checked_at
     GeoDataUpdateAccepted:
       allOf:
         - $ref: '#/components/schemas/OperationAccepted'
@@ -7977,6 +8232,101 @@ components:
               $ref: '#/components/schemas/GeoData'
             error:
               type: 'null'
+    GeoDataSettingsSource:
+      type: string
+      enum:
+        - config
+        - db
+        - default
+      description: Where the download URLs come from. config when the configuration file names a geodata download URL; it then owns the URLs, while auto_update stays settable. db once a PATCH stored URLs. default for the backend's built-in URLs.
+    GeoDataUrl:
+      type: string
+      format: uri
+      maxLength: 4096
+      pattern: ^https?://(?![^/?#]*@)[^#]*$
+      description: Absolute HTTP(S) URL without userinfo or fragment; server also enforces administrator SSRF policy. The backend does not follow redirects.
+    GeoDataSources:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          description: Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. Empty only when source is config and the configuration names no URL for this asset.
+          items:
+            $ref: '#/components/schemas/GeoDataUrl'
+    GeoDataAutoUpdate:
+      type: object
+      required:
+        - enabled
+        - interval_hours
+      properties:
+        enabled:
+          type: boolean
+          default: false
+          description: Update on a schedule. Off by default.
+        interval_hours:
+          type: integer
+          minimum: 6
+          maximum: 168
+          default: 24
+          description: Hours between automatic updates, before a random delay of up to 60 minutes.
+    GeoDataSettings:
+      type: object
+      required:
+        - source
+        - geosite
+        - geoip
+        - auto_update
+      properties:
+        source:
+          $ref: '#/components/schemas/GeoDataSettingsSource'
+          description: Read-only; a patch cannot set it.
+        geosite:
+          $ref: '#/components/schemas/GeoDataSources'
+        geoip:
+          $ref: '#/components/schemas/GeoDataSources'
+        auto_update:
+          $ref: '#/components/schemas/GeoDataAutoUpdate'
+    GeoDataSourcesPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
+          description: Replaces the whole list; order is fallback order.
+          items:
+            $ref: '#/components/schemas/GeoDataUrl'
+    GeoDataSettingsPatch:
+      description: Merged into the effective settings. A patch with geosite or geoip stores both URL lists, so source becomes db, and returns 409 state_conflict while source is config. auto_update is stored on its own, under any source. null deletes everything stored.
+      oneOf:
+        - type: 'null'
+        - type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            geosite:
+              $ref: '#/components/schemas/GeoDataSourcesPatch'
+            geoip:
+              $ref: '#/components/schemas/GeoDataSourcesPatch'
+            auto_update:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                enabled:
+                  type: boolean
+                interval_hours:
+                  type: integer
+                  minimum: 6
+                  maximum: 168
     GroupPolicy:
       type: object
       required:
@@ -11100,6 +11450,7 @@ components:
         - record_flows
         - record_logs
         - record_dns_log
+        - geodata
     RuntimeSettings:
       type: object
       required:
@@ -11116,7 +11467,7 @@ components:
           enum:
             - config
             - runtime
-          description: config while every value comes from the activated configuration; runtime once any PATCH overrode one.
+          description: config while every value comes from the activated configuration; runtime once any PATCH overrode one. geodata has its own source and does not affect this one.
         log:
           type: object
           required:
@@ -11185,6 +11536,9 @@ components:
             grace_remaining_seconds:
               $ref: '#/components/schemas/SafeUInt'
               description: Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached.
+        geodata:
+          $ref: '#/components/schemas/GeoDataSettings'
+          description: Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written only to an authenticated caller with control and redacted for everyone else.
     RuntimeSettingsPatch:
       type: object
       additionalProperties: false
@@ -11225,6 +11579,8 @@ components:
             retention_seconds:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
+        geodata:
+          $ref: '#/components/schemas/GeoDataSettingsPatch'
     RecorderMode:
       description: true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment.
       oneOf:
