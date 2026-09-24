@@ -57,7 +57,14 @@ const newest = <T extends {observed_at: string}>(written: T | null, polled: T | 
   written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
-  const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {enabled});
+  const resource = useResource(
+    {
+      key: ['runtimeSettings'],
+      fetch: signal => api.runtimeSettings(signal),
+      acceptEvent: event => event.event !== 'operation.updated' || event.data.status === 'succeeded' || event.data.status === 'failed'
+    },
+    {enabled}
+  );
   const {refetch} = resource;
   const {busy, run} = useAction<'save'>({rethrow: true});
   const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);

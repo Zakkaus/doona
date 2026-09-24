@@ -31,7 +31,8 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   },
   'flow.updated': {now: ['flows', 'flow', 'connections']},
   'flow.gap': {now: ['flows', 'flow']},
-  'operation.updated': {now: ['runtime']},
+  // Every activation restores runtime settings, and a no-op one advances no generation.
+  'operation.updated': {now: ['runtime', 'runtimeSettings']},
   'generation.changed': {
     now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'rules', 'datapath', 'flows', 'flow']
   }
