@@ -51,6 +51,24 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(request).toHaveBeenCalledTimes(3);
   });
+  it('waits out a refused validation or routing trace, which write nothing', async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json({}, 503, {'Retry-After': '1'}))
+      .mockResolvedValueOnce(json({valid: true, diagnostics: []}))
+      .mockResolvedValueOnce(json({}, 429, {'Retry-After': '1'}))
+      .mockResolvedValueOnce(json({evaluations: []}));
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    const validation = api.validateConfig({sources: [{id: 'main', content: 'routing {}'}], mode: 'full'});
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(validation).resolves.toMatchObject({valid: true});
+    const trace = api.routingTrace({input: {network: 'tcp', dst_ip: '1.1.1.1', dst_port: 443}, resolve: 'none'});
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(trace).resolves.toMatchObject({evaluations: []});
+    expect(request).toHaveBeenCalledTimes(4);
+  });
   it('does not replay a refused mutation that carries no idempotency key', async () => {
     const request = vi.fn(async () => json({error: {code: 'temporarily_unavailable', message: 'busy'}, request_id: null}, 503, {'Retry-After': '1'}));
     vi.stubGlobal('fetch', request);
