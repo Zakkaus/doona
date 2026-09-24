@@ -50,6 +50,21 @@ export function useSourceComplete(source: ConfigSource | null): boolean | null {
   return source ? (isComplete(source) ?? null) : null;
 }
 
+// A 412 on replacing `source`, given the digest the backend reports for it after a refetch (undefined when that
+// failed). A new digest means the file changed and the next attempt starts from it. The same digest refused twice in
+// a row means the disk is ahead of the running configuration and no refetch helps; the first may only be a reload
+// still in progress. Returns the error to raise and the refusal to remember for the next 412.
+export function refusalOutcome(
+  error: ApiError,
+  source: Pick<ConfigSource, 'id' | 'content_sha256'>,
+  current: string | undefined,
+  lastRefused: string | null
+): {error: Error; lastRefused: string | null} {
+  if (current !== source.content_sha256) return {error, lastRefused};
+  const refused = source.id + ':' + source.content_sha256;
+  return refused === lastRefused ? {error: new LocalError('config.diskAhead'), lastRefused} : {error, lastRefused: refused};
+}
+
 export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const api = getApi();
   const validation = useCapabilities().data?.resources.config_validate;
@@ -87,15 +102,11 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal).catch(async error => {
             if (!(error instanceof ApiError) || error.status !== 412) throw error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
-            // A second refusal of the same accepted digest means the disk is ahead of the running configuration and no
-            // refetch helps; the first may only be a reload still in progress.
             const fresh = await api.config(signal).catch(() => null);
             refetch();
-            const refused = source.id + ':' + source.content_sha256;
-            if (fresh?.sources.find(item => item.id === source.id)?.content_sha256 !== source.content_sha256) throw error;
-            if (lastRefused.current === refused) throw new LocalError('config.diskAhead');
-            lastRefused.current = refused;
-            throw error;
+            const outcome = refusalOutcome(error, source, fresh?.sources.find(item => item.id === source.id)?.content_sha256, lastRefused.current);
+            lastRefused.current = outcome.lastRefused;
+            throw outcome.error;
           });
           lastRefused.current = null;
           signal.throwIfAborted();

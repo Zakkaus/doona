@@ -1,12 +1,14 @@
 import {expect, mockBackend, test} from './fixtures';
 import {ApiError} from '../src/api/error';
-import {geodataPresets} from '../src/dae/geodata';
+import {geodataPreset} from '../src/dae/geodata';
 import {LANGS, loadLanguage, translate} from '../src/i18n';
 import type {RuntimeSettings} from '../src/api/model';
 
 test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
 const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
-const [full, lite, loyal] = geodataPresets;
+const full = geodataPreset('metacubex');
+const lite = geodataPreset('metacubex-lite');
+const loyal = geodataPreset('loyalsoldier');
 const patches = (page: import('@playwright/test').Page) =>
   page.waitForRequest(request => request.method() === 'PATCH' && request.url().endsWith('/runtime/settings'));
 

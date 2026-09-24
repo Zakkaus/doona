@@ -1,14 +1,11 @@
 import type {Capabilities, GeoAssetKind, GeoData, GeoDataSettings, GeoDataSettingsPatch} from '../../api/model';
-import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
+import {geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {localTime} from '../../i18n/format';
 
 export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
 export type GeodataChoice = GeodataPresetId | 'custom';
 export type GeodataUrls = Record<GeoAssetKind, string[]>;
-// Contract bounds: GeoDataSources.urls and GeoDataAutoUpdate.interval_hours.
-export const maxGeodataUrls = 4;
-export const intervalRange = {min: 6, max: 168};
 
 export const presetLabels: Record<GeodataPresetId, Key> = {
   metacubex: 'settings.geodataPreset.metacubex',
@@ -86,22 +83,14 @@ export function draftUrls(draft: GeodataDraft): GeodataUrls {
   return {geosite: draft.custom.geosite.map(url => url.trim()).filter(Boolean), geoip: draft.custom.geoip.map(url => url.trim()).filter(Boolean)};
 }
 
-// The contract's GeoDataUrl: absolute HTTP(S), no userinfo or fragment, at most 4096 bytes.
 export function urlProblem(url: string, list: string[]): Key | null {
   const value = url.trim();
   if (!value) return null;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return 'settings.geodataUrlInvalid';
-  }
-  if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password || value.includes('#') || new TextEncoder().encode(value).length > 4096)
-    return 'settings.geodataUrlInvalid';
+  if (!validGeodataUrl(value)) return 'settings.geodataUrlInvalid';
   if (list.filter(item => item.trim() === value).length > 1) return 'settings.geodataUrlDuplicate';
   return null;
 }
-export const intervalInvalid = (value: string) => !/^\d+$/.test(value) || Number(value) < intervalRange.min || Number(value) > intervalRange.max;
+export const intervalInvalid = (value: string) => !/^\d+$/.test(value) || Number(value) < geodataIntervalRange.min || Number(value) > geodataIntervalRange.max;
 
 // Whether a draft can be sent: custom lists need one valid URL per asset, and the interval must lie in range.
 export function draftInvalid(draft: GeodataDraft, source: GeoDataSettings['source']): boolean {

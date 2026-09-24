@@ -1,16 +1,20 @@
 import type {Capabilities, GeoAssetKind, GeoData, GeoDataSettings, GeoDataSettingsPatch} from '../model';
 import {ApiError} from '../error';
-import {defaultGeodataPreset, geodataPresets} from '../../dae/geodata';
+import {defaultGeodataPreset, geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl} from '../../dae/geodata';
+import {scanConfig} from '../../dae/text';
 import * as fixtures from './fixtures/inventory';
 import {rules} from './rules';
 
 const kinds: GeoAssetKind[] = ['geosite', 'geoip'];
-const urlPattern = /^https?:\/\/(?![^/?#]*@)[^#]*$/;
 // The categories the demo configuration's rules use, lowercase and without attribute suffixes, as honk reports them.
 function requiredCodes(): Record<GeoAssetKind, string[]> {
   const codes = {geosite: new Set<string>(), geoip: new Set<string>()};
-  for (const rule of rules)
-    for (const [, kind, code] of rule.cond.matchAll(/(geosite|geoip):\s*([^,)\s]+)/g)) codes[kind as GeoAssetKind].add(code.split('@')[0].toLowerCase());
+  for (const {cond} of rules) {
+    const words = scanConfig(cond).tokens.map(token => cond.slice(token.from, token.to));
+    words.forEach((word, i) => {
+      if ((word === 'geosite' || word === 'geoip') && words[i + 1] === ':') codes[word].add(words[i + 2].split('@')[0].toLowerCase());
+    });
+  }
   return {geosite: [...codes.geosite].sort(), geoip: [...codes.geoip].sort()};
 }
 // raw.githubusercontent.com and jsDelivr serve the .sha256sum files the known sources publish; other hosts do not.
@@ -27,6 +31,21 @@ export function createGeodataState(capabilities: Capabilities) {
   const urls = () => stored ?? {geosite: [...defaultGeodataPreset.urls.geosite], geoip: [...defaultGeodataPreset.urls.geoip]};
   const nextCheck = (from: number) => (auto.enabled ? new Date(from + auto.interval_hours * 3600_000 + 17 * 60_000).toISOString() : null);
   const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+  const status = (): GeoData => {
+    const view = structuredClone(data);
+    if (!configurable) {
+      for (const asset of view.assets) {
+        delete asset.fetched_url_redacted;
+        delete asset.verified;
+      }
+      delete view.last_checked_at;
+      delete view.last_updated_at;
+      delete view.next_check_at;
+      delete view.last_error;
+      delete view.required_codes;
+    }
+    return {...view, observed_at: new Date().toISOString()};
+  };
   return {
     settings: (): GeoDataSettings => ({
       source: stored ? 'db' : 'default',
@@ -43,33 +62,20 @@ export function createGeodataState(capabilities: Capabilities) {
         for (const kind of kinds) {
           const list = patch[kind]?.urls;
           if (!list) continue;
-          if (!list.length || list.length > 4) throw invalid(`geodata.${kind}.urls must hold 1 to 4 URLs`);
+          if (!list.length || list.length > maxGeodataUrls) throw invalid(`geodata.${kind}.urls must hold 1 to ${maxGeodataUrls} URLs`);
           if (new Set(list).size !== list.length) throw invalid(`geodata.${kind}.urls must not repeat a URL`);
-          if (list.some(url => !urlPattern.test(url) || url.length > 4096)) throw invalid(`geodata.${kind}.urls holds an invalid URL`);
+          if (!list.every(validGeodataUrl)) throw invalid(`geodata.${kind}.urls holds an invalid URL`);
         }
         const interval = patch.auto_update?.interval_hours;
-        if (interval !== undefined && (!Number.isInteger(interval) || interval < 6 || interval > 168))
-          throw invalid('geodata.auto_update.interval_hours must lie in [6, 168]');
+        const {min, max} = geodataIntervalRange;
+        if (interval !== undefined && (!Number.isInteger(interval) || interval < min || interval > max))
+          throw invalid(`geodata.auto_update.interval_hours must lie in [${min}, ${max}]`);
         if (patch.geosite || patch.geoip) stored = {geosite: patch.geosite?.urls ?? urls().geosite, geoip: patch.geoip?.urls ?? urls().geoip};
         Object.assign(auto, patch.auto_update ?? {});
       }
       data.next_check_at = nextCheck(Date.now());
     },
-    status(): GeoData {
-      const view = structuredClone(data);
-      if (!configurable) {
-        for (const asset of view.assets) {
-          delete asset.fetched_url_redacted;
-          delete asset.verified;
-        }
-        delete view.last_checked_at;
-        delete view.last_updated_at;
-        delete view.next_check_at;
-        delete view.last_error;
-        delete view.required_codes;
-      }
-      return {...view, observed_at: new Date().toISOString()};
-    },
+    status,
     // Downloads from the first URL of each asset; a file lacking a category the rules use fails the whole update.
     update(): GeoData {
       const now = Date.now();
@@ -98,7 +104,7 @@ export function createGeodataState(capabilities: Capabilities) {
       }
       data.last_updated_at = at;
       data.last_error = null;
-      return this.status();
+      return status();
     }
   };
 }

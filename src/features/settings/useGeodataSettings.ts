@@ -5,7 +5,7 @@ import {formatBytes} from '../../i18n/format';
 import {toast} from '../../ui/ui';
 import {ApiError, errorText} from '../../api/error';
 import {useDraftGuard} from '../../shell/draft';
-import {geodataPresets} from '../../dae/geodata';
+import {geodataIntervalRange, geodataPresets} from '../../dae/geodata';
 import {
   customFields,
   draftInvalid,
@@ -17,7 +17,6 @@ import {
   geodataSourceLabels,
   geodataStatus,
   intervalInvalid,
-  intervalRange,
   matchPreset,
   missingCategories,
   presetLabels,
@@ -128,7 +127,7 @@ export function useGeodataSettings() {
     interval: {
       value: edits?.interval ?? '',
       invalid: edits ? intervalInvalid(edits.interval) : false,
-      description: t('settings.range', {min: formatNumber(intervalRange.min, locale), max: formatNumber(intervalRange.max, locale)}),
+      description: t('settings.range', {min: formatNumber(geodataIntervalRange.min, locale), max: formatNumber(geodataIntervalRange.max, locale)}),
       change: (value: string) => edit({interval: value.trim()})
     },
     conflict: dirty && draft.at !== stamp ? t('settings.geodataDraftConflict') : null,
