@@ -64,17 +64,19 @@ experimental {
     native_api {
         enabled: true
         listen: '127.0.0.1:9527'
-        secret: 'operator-supplied-random-token'
+        password_auth: true
         ui: '/usr/share/doona'
     }
 }
 ```
 
-Keep this block in its own include (`include { api.dae }`) so the main file stays editable from the configuration page. Requirements, serving from another web server or a reverse proxy, and the distribution packages are in the [guide](docs/guide.md#install).
+Keep this block in its own include (`include { api.dae }`) so the main file stays editable from the configuration page. For scripts and automation, use `secret: '<random token>'` instead of `password_auth: true`. Requirements, serving from another web server or a reverse proxy, and the distribution packages are in the [guide](docs/guide.md#install).
 
 ## First run
 
-Open `/ui/` on the engine host. On a first visit doona asks the origin it was served from for `/api`; when the engine answers it becomes the saved backend and a token prompt follows. Served from elsewhere, or to reach another engine, open Settings and enter the server root and the token; a pairing link such as `/ui/#/settings?api=http://router:9527&token=…` fills the form and drops the token from the address bar on load.
+Open `/ui/` on the engine host. On a first visit doona asks the origin it was served from for `/api` and saves the engine as a backend. In password mode, the locked sign-in dialog offers first-time setup to create the administrator; complete setup from a loopback or private-network client, then sign in with the username and password. Served from elsewhere, or to reach another engine, open Settings and enter the server root.
+
+In token mode, doona asks for the token. Enter it in Settings with the server root, or use a pairing link such as `/ui/#/settings?api=http://router:9527&token=…` to fill the form; doona removes the token from the address bar on load.
 
 The activity page then shows the running engine. Add a subscription or paste share links on Nodes, pick or pin members on Policies, add rules on Rules, and edit, validate and reload the sources on Configuration. Every write goes through the engine with the hash doona read the source at, and a failed reload keeps the previous generation active. The [guide](docs/guide.md#first-run) walks through each page.
 

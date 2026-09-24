@@ -64,17 +64,19 @@ experimental {
     native_api {
         enabled: true
         listen: '127.0.0.1:9527'
-        secret: 'operator-supplied-random-token'
+        password_auth: true
         ui: '/usr/share/doona'
     }
 }
 ```
 
-这个块请放在独立的 include（`include { api.dae }`），主文件才能在配置页编辑。运行环境、由其他 Web 服务器或反向代理提供、发行版软件包，见[使用指南](docs/guide.zh-CN.md#安装)。
+这个块请放在独立的 include（`include { api.dae }`），主文件才能在配置页编辑。供脚本和自动化程序使用时，以 `secret: '<random token>'` 代替 `password_auth: true`。运行环境、由其他 Web 服务器或反向代理提供、发行版软件包，见[使用指南](docs/guide.zh-CN.md#安装)。
 
 ## 首次使用
 
-在引擎主机上打开 `/ui/`。首次访问时，doona 向提供页面的来源请求 `/api`；引擎响应后就成为已保存的后端，接着提示输入 token。若页面来自别处，或要连接另一台引擎，打开设置页填写服务器根地址与 token；配对链接（`/ui/#/settings?api=http://router:9527&token=…`）可以代填表单，加载后 token 会从地址栏移除。
+在引擎主机上打开 `/ui/`。首次访问时，doona 向提供页面的来源请求 `/api`，并将引擎保存为后端。密码模式下，锁定的登录对话框提供首次设置入口，用于创建管理员；请从本机或私有网络客户端完成设置，然后使用用户名和密码登录。若页面来自别处，或要连接另一台引擎，打开设置页填写服务器根地址。
+
+token 模式下，doona 会提示输入 token。可在设置页填写服务器根地址和 token，或使用配对链接（`/ui/#/settings?api=http://router:9527&token=…`）代填表单；加载后，doona 会从地址栏移除 token。
 
 接着活动页显示运行中的引擎。在节点页新增订阅或粘贴分享链接，在策略页选择或固定群组成员，在规则页加规则，在配置页编辑、校验并重载来源。每次写入都带着读取时的哈希经过引擎；重载失败时仍沿用先前的世代。各页面的用法见[使用指南](docs/guide.zh-CN.md#首次使用)。
 
