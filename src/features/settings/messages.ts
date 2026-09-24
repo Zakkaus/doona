@@ -40,7 +40,8 @@ export const messages = defineMessages({
     'settings.appearance': '外觀',
     'settings.scheme': '明暗模式',
     'settings.runtime': '後端選項',
-    'settings.runtimeNote': '變更立即生效，不寫回組態檔；重載組態或重新啟動後，會恢復組態檔中的值。',
+    'settings.runtimeNote':
+      '變更立即生效，不寫回組態檔。重新啟動或任何會重載組態的變更，都會恢復組態檔中的值；切換出站模式、編輯節點、群組或規則、更新地理資料都會重載組態。',
     'settings.runtimeUnavailable': '此後端不提供執行期選項調整',
     'settings.sourceConfig': '組態值',
     'settings.sourceRuntime': '執行期覆寫',
@@ -174,7 +175,8 @@ export const messages = defineMessages({
     'settings.appearance': '外观',
     'settings.scheme': '明暗模式',
     'settings.runtime': '后端选项',
-    'settings.runtimeNote': '更改立即生效，不写回配置文件；重载配置或重启后，会恢复配置文件中的值。',
+    'settings.runtimeNote':
+      '更改立即生效，不写回配置文件。重启或任何会重载配置的更改，都会恢复配置文件中的值；切换出站模式、编辑节点、组或规则、更新地理数据都会重载配置。',
     'settings.runtimeUnavailable': '此后端不提供运行期选项调整',
     'settings.sourceConfig': '配置值',
     'settings.sourceRuntime': '运行期覆盖',
@@ -308,7 +310,8 @@ export const messages = defineMessages({
     'settings.appearance': 'Appearance',
     'settings.scheme': 'Color scheme',
     'settings.runtime': 'Backend options',
-    'settings.runtimeNote': 'Changes apply immediately and are not written to the configuration file; a reload or restart restores the configured values.',
+    'settings.runtimeNote':
+      'Changes apply immediately and are not written to the configuration file. A restart, or any change that reloads the configuration, restores the configured values; switching the outbound mode, editing nodes, groups or rules, and updating geodata all reload it.',
     'settings.runtimeUnavailable': 'This backend does not provide runtime option changes',
     'settings.sourceConfig': 'From configuration',
     'settings.sourceRuntime': 'Runtime override',

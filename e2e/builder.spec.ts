@@ -33,7 +33,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 2'}).fill("subtag('sub-c')");
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration updated for gaming');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for gaming written and reloaded');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText("gaming {\n    filter: name(jp-01, hk-02)\n    filter: subtag('sub-c')\n    policy: fallback\n  }");
 });
@@ -45,7 +45,7 @@ test('editing only filters preserves the native policy spelling', async ({page})
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('min_avg10');
   await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration updated for resilient');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for resilient written and reloaded');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText('resilient {\n    filter: name(hk-01, sg-01)\n    policy: min_avg10\n  }');
 });

@@ -629,7 +629,7 @@ export const messages = {
   'policy.untested': '{n} 個未測',
   'policy.network': '為 {name} 選擇網路',
   'policy.both': '兩者',
-  'policy.updated': '{name} 組態已更新',
+  'policy.updated': '{name} 組態已寫入並重載',
   'policy.interrupt': '切換時中斷現有連線',
   'policy.selectedInterrupted': '{name} 已選擇 {member}，現有連線已中斷',
   'policy.selectedKept': '{name} 已選擇 {member}，現有連線未中斷',
@@ -905,7 +905,8 @@ export const messages = {
   'settings.appearance': '外觀',
   'settings.scheme': '明暗模式',
   'settings.runtime': '後端選項',
-  'settings.runtimeNote': '變更立即生效，不寫回組態檔；重載組態或重新啟動後，會恢復組態檔中的值。',
+  'settings.runtimeNote':
+    '變更立即生效，不寫回組態檔。重新啟動或任何會重載組態的變更，都會恢復組態檔中的值；切換出站模式、編輯節點、群組或規則、更新地理資料都會重載組態。',
   'settings.runtimeUnavailable': '此後端不提供執行期選項調整',
   'settings.sourceConfig': '組態值',
   'settings.sourceRuntime': '執行期覆寫',

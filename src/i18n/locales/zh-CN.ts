@@ -630,7 +630,7 @@ export const messages = {
   'policy.untested': '{n} 个未测',
   'policy.network': '为 {name} 选择网络',
   'policy.both': '两者',
-  'policy.updated': '{name} 配置已更新',
+  'policy.updated': '{name} 配置已写入并重载',
   'policy.interrupt': '切换时中断现有连接',
   'policy.selectedInterrupted': '{name} 已选择 {member}，现有连接已中断',
   'policy.selectedKept': '{name} 已选择 {member}，现有连接未中断',
@@ -906,7 +906,8 @@ export const messages = {
   'settings.appearance': '外观',
   'settings.scheme': '明暗模式',
   'settings.runtime': '后端选项',
-  'settings.runtimeNote': '更改立即生效，不写回配置文件；重载配置或重启后，会恢复配置文件中的值。',
+  'settings.runtimeNote':
+    '更改立即生效，不写回配置文件。重启或任何会重载配置的更改，都会恢复配置文件中的值；切换出站模式、编辑节点、组或规则、更新地理数据都会重载配置。',
   'settings.runtimeUnavailable': '此后端不提供运行期选项调整',
   'settings.sourceConfig': '配置值',
   'settings.sourceRuntime': '运行期覆盖',
