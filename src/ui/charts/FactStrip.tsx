@@ -1,7 +1,14 @@
 import type {ReactNode} from 'react';
 
 // `icon` and `tint` as on the activity page's tiles: the icon takes a palette role colour, or the tone's.
-export type ChartFact = {label: string; value: string; tone?: 'negative' | 'notice'; icon?: ReactNode; tint?: 'c1' | 'c2' | 'c3' | 'c4' | 'c5'};
+export type ChartFact = {
+  label: string;
+  value: string;
+  caption?: string;
+  tone?: 'negative' | 'notice';
+  icon?: ReactNode;
+  tint?: 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
+};
 
 // The page's figures as the activity page shows its own: a strip of tiles, label above, value large.
 export function FactStrip({facts}: {facts: ChartFact[]}) {
@@ -15,7 +22,14 @@ export function FactStrip({facts}: {facts: ChartFact[]}) {
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
-            <span className="rp-big">{fact.value}</span>
+            <span className="rp-big" title={fact.value}>
+              {fact.value}
+            </span>
+            {fact.caption && (
+              <span className="rp-fact-caption" title={fact.caption}>
+                {fact.caption}
+              </span>
+            )}
           </dd>
         </div>
       ))}

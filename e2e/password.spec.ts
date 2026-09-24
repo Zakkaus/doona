@@ -41,6 +41,21 @@ async function passwordBackend(page: import('@playwright/test').Page, setupRequi
 
 test.use({storage: {'doona-lang': 'en'}});
 
+test('a released honk without the native API shows the requirement instead of a token prompt', async ({page}) => {
+  const backend = await mockBackend(page);
+  const missing = async () => {
+    throw new ApiError(404, 'not_found', 'Not found');
+  };
+  backend.handlers['GET /api'] = missing;
+  backend.handlers['GET capabilities'] = missing;
+  backend.handlers['GET version'] = missing;
+  await page.goto('/#/activity');
+  const form = page.getByRole('dialog');
+  await expect(form.getByRole('heading')).toHaveText('This honk build has no native API');
+  await expect(form.getByLabel('Token', {exact: true})).toHaveCount(0);
+  await expect(form.getByRole('link', {name: 'Native API requirements'})).toHaveAttribute('href', 'https://github.com/Zakkaus/doona#native-api-requirement');
+});
+
 test('a first visit creates the administrator and continues with its session', async ({page}) => {
   const state = await passwordBackend(page, true);
   await page.goto('/#/activity');

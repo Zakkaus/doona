@@ -1,9 +1,24 @@
-import {expect, it} from 'vitest';
-import {credentialProblems, loginProfiles, predatesAuth, signInRefusal} from './useLogin';
+import {afterEach, expect, it, vi} from 'vitest';
+import {credentialProblems, loginProfiles, predatesAuth, resolveSignInKind, signInRefusal} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
 
 const challenged = {id: 'router', name: 'Router', api: 'https://router.test/api-prefix', token: ''};
+
+afterEach(() => vi.unstubAllGlobals());
+
+it('distinguishes a missing native API from discovery without auth reporting', async () => {
+  const fetcher = vi.fn(
+    async (_input: URL) =>
+      new Response(JSON.stringify({error: {code: 'not_found', message: 'Not found'}}), {status: 404, headers: {'Content-Type': 'application/json'}})
+  );
+  vi.stubGlobal('fetch', fetcher);
+  expect(await resolveSignInKind('https://router.test')).toBe('no-api');
+  expect(fetcher.mock.calls.map(([input]) => String(input))).toEqual(['https://router.test/api', 'https://router.test/api/v1/capabilities']);
+
+  fetcher.mockImplementation(async (input: URL) => (String(input).endsWith('/api') ? new Response('{}', {status: 404}) : new Response('{}', {status: 401})));
+  expect(await resolveSignInKind('https://router.test')).toBe('token');
+});
 
 it('rejects a removed or repointed profile without changing its credentials', () => {
   const repointed = {...challenged, api: 'https://other.test', token: 'other-secret'};

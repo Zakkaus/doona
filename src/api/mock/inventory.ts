@@ -50,7 +50,7 @@ export function createInventory(
   const providerPage = createPager('providers');
   const providers = structuredClone(fixtures.providers);
   const geodata = structuredClone(fixtures.geodata);
-  const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 100);
+  const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
   const revisions = new Map<string, bigint>();
   const updating = new Set<string>();

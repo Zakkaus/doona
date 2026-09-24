@@ -4,6 +4,8 @@
 
 [README](../README.zh-CN.md) 之外只需要看一次的内容：运行环境、其他提供方式、各页面需要的后端资源、doona 自身设置的存放位置，以及开发工具。
 
+[使用示例数据体验演示版](https://zakkaus.github.io/doona/)。
+
 ## 运行环境
 
 | 组件   | 要求                                                                                                                          |
@@ -13,6 +15,8 @@
 | 构建   | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0`、pnpm 11.15.1；打包需要 GNU tar、gzip 与 sha256sum                                 |
 
 ## 安装
+
+**所需 honk 构建：**doona 需要 [Glassyiris/honk 的 `feat/native-api` 分支](https://github.com/Glassyiris/honk/tree/feat/native-api)提供的原生 API；daeuniverse/honk 尚无包含该功能的正式发行版本。`native_api` 和 `password_auth` 配置项在上游发布前可能变化。已发布的 honk 对 `/api` 和 `/ui/` 返回 404。[README 中的配置](../README.zh-CN.md#honk-原生-api-要求)仅适用于该分支。
 
 发行文件与 honk 的配置块见 [README](../README.zh-CN.md#安装)。
 
@@ -28,9 +32,9 @@
 <details>
 <summary><strong>发行版软件包</strong></summary>
 
-尚未发布。每个发行版本附 [nfpm](../install/nfpm) 通过 `make install` 生成的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的打包配置位于 [install/](../install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、Gentoo ebuild、nixpkgs 表达式；AUR 的 `doona-bin` 使用独立仓库。
+尚未发布。每个发行版本附 [nfpm](../install/nfpm) 基于预构建文件生成的 `deb`、`rpm`、`ipk` 与 Arch 软件包，全部与架构无关，`doona-fonts` 是独立的可选软件包。各软件仓库的打包配置位于 [install/](../install/)：OpenWrt feed Makefile、Alpine `APKBUILD`、Gentoo ebuild、nixpkgs 表达式；AUR 的 `doona-bin` 使用独立仓库。
 
-发行版本另附 `doona-<tag>-deps.tar.xz`（已安装的 `node_modules`），供离线构建使用。原生模块涵盖构建工具支持的 Linux 架构与 libc，清单见 `pnpm-workspace.yaml`；lightningcss 未提供二进制文件的架构改用 esbuild 压缩 CSS。其他打包方式可使用 `make install DESTDIR=… PREFIX=/usr` 与 `make install-fonts`。
+各发行版软件包均安装预构建的程序包和可选字体包，不需要离线构建依赖。打包本地构建结果时，可使用 `make install DESTDIR=… PREFIX=/usr` 和 `make install-fonts`。
 
 </details>
 

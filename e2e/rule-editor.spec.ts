@@ -4,6 +4,30 @@ import {createMockApi} from '../src/api/mock';
 const rows = (page: import('@playwright/test').Page) =>
   page.getByRole('tabpanel', {name: 'Rule list'}).locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
 
+test('the add-rule switch explains the must keyword in each locale', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/rules?tab=list');
+  for (const lang of ['zh-TW', 'en']) {
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate(
+        ({lang, scheme}) => {
+          localStorage.setItem('doona-lang', lang);
+          localStorage.setItem('doona-scheme', scheme);
+        },
+        {lang, scheme}
+      );
+      await page.reload();
+      await page
+        .getByRole('button', {name: lang === 'en' ? 'Add rule' : '新增規則', exact: true})
+        .first()
+        .click();
+      const control = page.getByRole('dialog').getByRole('switch');
+      await expect(control).toHaveAccessibleName(lang === 'en' ? 'Require this outbound must' : '強制使用此出站 must');
+      await expect(page.getByRole('dialog').locator('.rp-switch code')).toHaveText('must');
+    }
+  }
+});
+
 test('the rule list shows the dictionary in evaluation order with its source lines', async ({page}) => {
   await page.goto('/#/rules?tab=list');
   const list = rows(page);

@@ -17,6 +17,8 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 doona is a static web UI for the native API the daeuniverse engines share: honk today, dae once it implements the same contract. The engine serves it itself or any web server does; it shows what the engine is doing and manages nodes, groups, routing rules and configuration files.
 
+[Try the demo with sample data](https://zakkaus.github.io/doona/).
+
 ![The activity page](docs/screenshots/en/activity-light.webp)
 
 <details>
@@ -56,6 +58,10 @@ if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
     sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
 fi
 ```
+
+### Native API requirement
+
+**Required honk build:** doona needs the native API in [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api). No tagged daeuniverse/honk release includes it yet. The `native_api` and `password_auth` keys may change before upstream release. A released honk returns 404 for `/api` and `/ui/`. The configuration below applies to that branch.
 
 honk's native API is opt-in. Point `ui` at the extracted files and honk serves them at `/ui/`, same-origin with the API:
 

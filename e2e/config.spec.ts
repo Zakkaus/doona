@@ -623,7 +623,7 @@ for (const appearance of ['light', 'dark', 'glass'] as const) {
     config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
     await page.route('**/api/v1/config', route => route.fulfill({json: config}));
     await page.goto('/#/config?tab=source');
-    const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(message, {exact: true});
+    const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`, {exact: true});
     await expect(diagnostic).toBeVisible();
     expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     await page.getByRole('tab', {name: 'Quick setup', exact: true}).click();

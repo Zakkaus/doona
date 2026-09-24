@@ -187,6 +187,7 @@ export function DataTable<T extends {id: string}>({
   };
   const table = (
     <Table
+      style={{minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
       ref={element => {
         grid.current = element;
       }}

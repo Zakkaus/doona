@@ -179,7 +179,7 @@ function Dictionary({view}: {view: Model}) {
                 items={view.table.outbounds}
               />
               <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})}>
-                must
+                {t('rule.must')} <code>must</code>
               </Switch>
             </div>
             <LabeledSelect

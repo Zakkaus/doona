@@ -8,8 +8,7 @@ import {createFeed} from '../../store/feed';
 import {useT} from '../../i18n';
 import {interestingNotice, noticeRows} from './view';
 
-// Held per backend rather than per mount: the stream does not replay, so a fresh buffer on every return to the
-// home page would forget the notices it had already shown.
+// Held per backend rather than per mount so returning to the home page keeps notices already shown.
 const buffers = new WeakMap<Api, ReturnType<typeof createFeed<ApiEvent, Record<string, never>>>>();
 function noticeBuffer(api: Api) {
   let buffer = buffers.get(api);
@@ -23,7 +22,7 @@ export function useNotices() {
   const snapshot = useSyncExternalStore(buffer.subscribe, buffer.getSnapshot);
   const feed = useEvents(event => {
     if (interestingNotice(event)) buffer.append(event);
-  });
+  }, true);
   const rows = useMemo(() => noticeRows(snapshot.records, t), [snapshot.records, t]);
   return {
     rows,

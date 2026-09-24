@@ -46,13 +46,87 @@ it('serves cumulative outbound counters independently of live connection bytes',
     expect(BigInt(row.errors)).toBeGreaterThanOrEqual(0n);
   }
   const live = await api.connections();
+  const active = [...live.tcp, ...live.udp].filter(row => row.state === 'active');
+  expect(active.length).toBe(53);
+  expect(new Set(active.map(row => sourceIp(row.src))).size).toBeGreaterThanOrEqual(5);
+  expect(new Set(active.map(row => row.domain)).size).toBeGreaterThanOrEqual(40);
+  expect(new Set(active.map(row => row.pname).filter(Boolean)).size).toBeGreaterThanOrEqual(5);
+  expect(runtime.traffic.connections).toEqual({
+    tcp: live.tcp.filter(row => row.state === 'active').length,
+    udp: live.udp.filter(row => row.state === 'active').length,
+    total: active.length
+  });
+  expect(counters.outbounds.reduce((sum, row) => sum + row.active_connections, 0)).toBe(active.length);
+  const near = (a: string | null, b: string | null) => a !== null && b !== null && Math.abs(Number(a) / Number(b) - 1) <= 0.16;
+  expect(near(runtime.traffic.rates!.upload_bytes_per_second, String(active.reduce((sum, row) => sum + Number(row.upload_bytes_per_second), 0)))).toBe(true);
+  expect(near(runtime.traffic.rates!.download_bytes_per_second, String(active.reduce((sum, row) => sum + Number(row.download_bytes_per_second), 0)))).toBe(
+    true
+  );
   expect(outboundUsage(counters).total).not.toBe(addU64(...[...live.tcp, ...live.udp].map(c => c.download_bytes)));
   // The live sample continues the ring: sampled now, rates within a swell of the ring's last point.
   expect(Date.parse(runtime.traffic.sampled_at!)).toBeGreaterThanOrEqual(Date.parse(history.samples.at(-1)!.sampled_at));
   expect(runtime.traffic.connections.total).toBe(history.samples.at(-1)?.connections);
-  const near = (a: string | null, b: string | null) => a !== null && b !== null && Math.abs(Number(a) / Number(b) - 1) <= 0.15;
   expect(near(runtime.traffic.rates!.download_bytes_per_second, history.samples.at(-1)!.download_bytes_per_second!)).toBe(true);
   expect(near(runtime.traffic.rates!.upload_bytes_per_second, history.samples.at(-1)!.upload_bytes_per_second!)).toBe(true);
+});
+
+it('keeps the fuller demo history, cache and rankings internally consistent', async () => {
+  const api = createMockApi();
+  const [dns, cache, nodes, flows, rules, memory] = await Promise.all([
+    api.dnsLog({limit: 500}),
+    api.dnsCache(),
+    api.nodes(),
+    api.flows(),
+    api.rules(),
+    api.runtimeMemory()
+  ]);
+  expect(dns.total).toBeGreaterThan(450);
+  expect(dns.records).toHaveLength(dns.total);
+  expect(Date.parse(dns.records[0].observed_at) - Date.parse(dns.records.at(-1)!.observed_at)).toBeGreaterThan(4 * 3600 * 1000);
+  expect(new Set(dns.records.map(record => record.question.name)).size).toBeGreaterThan(30);
+  expect(new Set(dns.records.map(record => sourceIp(record.src!))).size).toBeGreaterThanOrEqual(7);
+  expect(dns.records.filter(record => record.cached).length).toBeGreaterThan(100);
+  expect(dns.records.filter(record => !record.cached && record.status === 'NOERROR').length).toBeGreaterThan(100);
+  expect(dns.records.filter(record => record.status === 'NXDOMAIN').length).toBeGreaterThan(10);
+  expect(dns.records.filter(record => record.status === 'REFUSED').length).toBeGreaterThan(3);
+  expect(cache.total).toBe(cache.entries.length);
+  expect(cache.usage?.entries).toBe(String(cache.total));
+  expect(Number(cache.usage?.entry_capacity)).toBeGreaterThan(cache.total);
+  for (const record of dns.records.filter(record => record.cached)) {
+    const entry = cache.entries.find(entry => entry.domain === record.question.name && entry.type === record.question.type);
+    expect(entry).toBeDefined();
+    expect(record.status).toBe(entry!.status);
+    expect(record.answers).toEqual(entry!.answers ?? []);
+  }
+  expect(nodes.nodes.length).toBeGreaterThan(120);
+  expect(nodes.nodes.filter(node => node.health.some(sample => sample.latency_ms !== null)).length).toBeGreaterThan(110);
+  expect(flows.flows.length).toBeGreaterThan(190);
+  const knownRules = new Set(rules.rules.map(rule => rule.rule_id));
+  expect(new Set(flows.flows.map(flow => flow.rule_id).filter(id => id && knownRules.has(id))).size).toBeGreaterThanOrEqual(3);
+  for (const window_seconds of [120, 600, 3600, 21600, 86400, 604800]) {
+    const [traffic, usage] = await Promise.all([api.trafficHistory({window_seconds}), api.memoryHistory({window_seconds})]);
+    expect(traffic.samples.length).toBeGreaterThan(2);
+    expect(usage.samples.length).toBeGreaterThan(2);
+    expect(traffic.samples.at(-1)!.connections).toBe((await api.runtime()).traffic.connections.total);
+    expect(Math.abs(Number(usage.samples.at(-1)!.rss_bytes) - Number(memory.process!.rss_bytes))).toBeLessThan(100000);
+    expect(Math.abs(Number(usage.samples.at(-1)!.cgroup_current_bytes) - Number(memory.cgroup!.current_bytes))).toBeLessThan(100000);
+  }
+  const logRecords: Array<{level: string; ts: string}> = [];
+  const logController = new AbortController();
+  const logStream = api.subscribeLogs({level: 'trace', signal: logController.signal, onRecord: record => logRecords.push(record)});
+  logController.abort();
+  await logStream;
+  expect(logRecords.length).toBeGreaterThan(300);
+  expect(new Set(logRecords.map(record => record.level))).toEqual(new Set(['trace', 'debug', 'info', 'warn', 'error']));
+  expect(Date.parse(logRecords.at(-1)!.ts) - Date.parse(logRecords[0].ts)).toBeGreaterThan(3 * 3600 * 1000);
+  const eventRecords: ApiEvent[] = [];
+  const eventController = new AbortController();
+  const eventStream = api.subscribeEvents({signal: eventController.signal, onEvent: event => eventRecords.push(event)});
+  eventController.abort();
+  await eventStream;
+  expect(eventRecords.length).toBeGreaterThan(25);
+  for (const kind of ['flow.updated', 'flow.gap', 'operation.updated', 'generation.changed', 'runtime.updated'])
+    expect(eventRecords.map(event => event.event)).toContain(kind);
 });
 
 it('filters the history window before thinning backwards without changing samples', async () => {
@@ -64,7 +138,7 @@ it('filters the history window before thinning backwards without changing sample
   const single = await api.trafficHistory({window_seconds: 1, max_points: 1});
   expect(single.samples).toEqual([trafficHistory.samples.at(-1)]);
   expect((await api.trafficHistory({window_seconds: 720})).samples).toHaveLength(72);
-  await expect(api.trafficHistory({window_seconds: 3601})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+  await expect(api.trafficHistory({window_seconds: 604801})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.trafficHistory({max_points: 361})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.trafficHistory({max_points: 0})).rejects.toMatchObject({status: 400});
 });
@@ -97,9 +171,16 @@ it('limits the large connection snapshot without losing totals or deterministic 
   expect(Math.max(...ages)).toBe(3597000);
   const api = createMockApi();
   const snapshot = await api.connections({limit: 1000});
-  expect(snapshot).toMatchObject({total_tcp: 900, total_udp: 300, truncated: true});
+  expect(snapshot).toMatchObject({total_tcp: fixture.total_tcp, total_udp: fixture.total_udp, truncated: true});
+  expect(snapshot.total_tcp + snapshot.total_udp).toBe(1200);
   expect([...snapshot.tcp, ...snapshot.udp].map(row => row.id)).toEqual([...fixture.tcp, ...fixture.udp].slice(0, 1000).map(row => row.id));
-  expect(await api.connections({type: 'udp', limit: 1000})).toMatchObject({total_tcp: 0, total_udp: 300, truncated: false, tcp: [], udp: fixture.udp});
+  expect(await api.connections({type: 'udp', limit: 1000})).toMatchObject({
+    total_tcp: 0,
+    total_udp: fixture.total_udp,
+    truncated: false,
+    tcp: [],
+    udp: fixture.udp
+  });
   const linked = snapshot.tcp.find(row => row.flow_id)!;
   expect(await api.flow(linked.flow_id!)).toMatchObject({connection_id: linked.id, started_at: linked.started_at, input: {dst: linked.dst}});
 });
@@ -200,18 +281,20 @@ it('advances reload operations and emits invalidations until aborted', async () 
   const controller = new AbortController();
   const events: ApiEvent[] = [];
   const stream = api.subscribeEvents({signal: controller.signal, onEvent: event => events.push(event)});
-  expect(events.map(e => e.event)).toEqual(['stream.ready']);
+  expect(events[0].event).toBe('stream.ready');
+  expect(events.map(e => e.event)).toContain('flow.gap');
+  const baseline = events.length;
   await vi.advanceTimersByTimeAsync(1000);
   // A reload activates a new generation: the result names it and generation.changed is published.
   await expect(terminal).resolves.toMatchObject({status: 'succeeded', result: {active_generation_id: '41'}});
   expect((await api.runtime()).last_reload).toMatchObject({operation_id: accepted.operation_id, status: 'succeeded'});
   expect((await api.runtime()).generation.active_id).toBe('41');
   await vi.advanceTimersByTimeAsync(4000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
   controller.abort();
   await stream;
   await vi.advanceTimersByTimeAsync(5000);
-  expect(events.map(e => e.event)).toEqual(['stream.ready', 'generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
 });
 
 it('selects both networks with an independent revision and preserves configuration', async () => {

@@ -22,7 +22,7 @@ it('binds event cursors to the producing instance and filters and expires evicte
   const events: ApiEvent[] = [];
   const controller = new AbortController();
   const stream = api.subscribeEvents({kinds: ['runtime.updated'], signal: controller.signal, onEvent: event => events.push(event)});
-  const cursor = events[0].id;
+  const cursor = events.at(-1)!.id;
   await vi.advanceTimersByTimeAsync(5000);
   controller.abort();
   await stream;

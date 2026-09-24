@@ -46,7 +46,11 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 {view.alert.text}
               </InlineAlert>
             )}
-            {view.kind === 'token' ? (
+            {view.kind === 'no-api' ? (
+              <Link appearance="link" href="https://github.com/Zakkaus/doona#native-api-requirement">
+                {t('login.requirements')}
+              </Link>
+            ) : view.kind === 'token' ? (
               <TextField
                 label={t('login.token')}
                 name="token"
@@ -92,9 +96,11 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
               </>
             )}
             <div className="rp-toolbar">
-              <Button accent type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
-                {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
-              </Button>
+              {view.kind !== 'no-api' && (
+                <Button accent type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
+                  {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
+                </Button>
+              )}
               <Link appearance="link" href={href('settings')}>
                 {t('login.settings')}
               </Link>

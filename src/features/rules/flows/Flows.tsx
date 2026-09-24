@@ -48,7 +48,12 @@ export function RoutingMap(props: PageProps) {
         </div>
         {view.state === 'loading' && <Loading />}
         {view.state === 'empty' && <Empty>{t('flow.mapEmpty')}</Empty>}
-        {view.state === 'ready' && <Tree tree={view.tree} pinned={view.pinned} onPin={view.pin} />}
+        {view.state === 'ready' && (
+          <>
+            <span className="rp-tree-hint">{t('flow.treePanHint')}</span>
+            <Tree tree={view.tree} pinned={view.pinned} onPin={view.pin} />
+          </>
+        )}
       </section>
       {view.pinLabel && (
         <div className="rp-toolbar">

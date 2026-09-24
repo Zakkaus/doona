@@ -54,7 +54,8 @@ export const Traffic = memo(function Traffic({
           label: t('conn.chart.busiest'),
           icon: <Link />,
           tint: 'c3',
-          value: t('conn.chart.named', {name: view.heaviest.name, outbound: outboundLabel(view.heaviest.outbound, t)})
+          value: view.heaviest.name,
+          caption: outboundLabel(view.heaviest.outbound, t)
         },
         {label: t('conn.chart.down'), value: bytes(view.heaviest.down), icon: <Download />, tint: 'c1'},
         {label: t('conn.chart.up'), value: bytes(view.heaviest.up), icon: <Upload />, tint: 'c4'}

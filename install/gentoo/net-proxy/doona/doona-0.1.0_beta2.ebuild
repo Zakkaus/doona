@@ -17,6 +17,7 @@ LICENSE="GPL-3 fonts? ( OFL-1.1 )"
 SLOT="0"
 KEYWORDS="~amd64 ~arm64"
 IUSE="+fonts"
+RESTRICT="strip"
 
 src_install() {
 	dodoc NOTICE README.md CHANGELOG.md

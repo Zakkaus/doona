@@ -1,4 +1,4 @@
-# The optional Noto Sans TC/SC subset doona loads when present (make install-fonts DESTDIR=build/stage/doona-fonts).
+# The optional Noto Sans TC/SC subset staged from the prebuilt fonts archive.
 name: doona-fonts
 arch: all
 platform: linux

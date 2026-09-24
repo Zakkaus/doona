@@ -4,6 +4,8 @@ English · [简体中文](guide.zh-CN.md) · [繁體中文](guide.zh-TW.md)
 
 The parts of the [README](../README.md) that are only needed once: what doona runs on, the other ways to serve it, what each page needs from the backend, where doona keeps its own settings, and the development tools.
 
+[Try the demo with sample data](https://zakkaus.github.io/doona/).
+
 ## Requirements
 
 | Component | Requirement                                                                                                                                                          |
@@ -13,6 +15,8 @@ The parts of the [README](../README.md) that are only needed once: what doona ru
 | Build     | Node `^22.13.0 \|\| ^24.0.0 \|\| >=26.0.0` and pnpm 11.15.1; GNU tar, gzip and sha256sum for the archives                                                            |
 
 ## Install
+
+**Required honk build:** doona needs the native API in [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api). No tagged daeuniverse/honk release includes it yet. The `native_api` and `password_auth` keys may change before upstream release. A released honk returns 404 for `/api` and `/ui/`. The [README configuration block](../README.md#native-api-requirement) applies to that branch.
 
 The release archives and the honk block are in the [README](../README.md#install).
 
@@ -28,7 +32,7 @@ A reverse proxy keeps the UI and engine same-origin. Forward the exact `/api` di
 <details>
 <summary><strong>Distribution packages</strong></summary>
 
-None published yet. Each release carries `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](../install/nfpm) from `make install`, all architecture-independent, with `doona-fonts` as a separate optional package. Recipes for the package repositories live in [install/](../install/): an OpenWrt feed Makefile, an Alpine `APKBUILD`, a Gentoo ebuild, a nixpkgs-style expression, and `doona-bin` for the AUR in its own repository. Each release also attaches `doona-<tag>-deps.tar.xz`, the installed `node_modules`, for builds that must run offline; it carries the native build helpers for every Linux architecture they ship (x86, x86_64, armv7, aarch64, riscv64, loong64, ppc64le, s390x, mips64el; glibc and musl), and the build falls back to esbuild's CSS minifier where lightningcss has no binary. `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` are the entry points for any other packaging.
+None published yet. Each release carries architecture-independent `deb`, `rpm`, `ipk` and Arch packages built by [nfpm](../install/nfpm) from the prebuilt program and font archives. Recipes in [install/](../install/) for OpenWrt, Alpine, Gentoo and Nix install the same archives. The AUR `doona-bin` recipe lives in a separate repository. Use `make install DESTDIR=… PREFIX=/usr` and `make install-fonts` when packaging a local build.
 
 </details>
 

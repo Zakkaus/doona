@@ -147,21 +147,41 @@ export function createLifecycle(
     () => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}),
     () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
   ];
-  // The last hour of an instance that has been up a while: steady routine records and one stretch, about twenty
-  // minutes ago, when a node kept failing its health check. Then the startup records, as now.
+  // A four-hour ring has routine traffic, busy periods and a short health-check incident.
   const started = Date.now();
-  for (let minute = 60; minute > 0; minute -= 2) {
+  for (let minute = 240; minute > 0; minute -= 2) {
     const at = started - minute * 60000;
-    const trouble = minute >= 18 && minute <= 24;
+    const trouble = minute >= 34 && minute <= 48;
+    const busy = (minute >= 72 && minute <= 116) || (minute >= 164 && minute <= 188);
     log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: trouble ? 2 : 3, unavailable: trouble ? 1 : 0}, at);
     log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12 + (minute % 9)}, at + 20000);
-    if (minute % 10 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
+    if (minute % 6 === 0) log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096 + minute}, at + 10000);
+    if (minute % 14 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
+    if (busy) log('info', 'honk::dns', 'Query answered.', {queries: 12 + (minute % 15)}, at + 30000);
     if (trouble) {
       log('warn', 'honk::group', 'Health check slow.', {node: 'us-01', elapsed_ms: 2400}, at + 30000);
       log('error', 'honk::group', 'Health check failed.', {node: 'us-01', error: 'connect timeout'}, at + 50000);
     }
   }
   for (const record of logSeed) log(record.level, record.target, record.message, record.fields ?? null);
+  for (let i = 28; i > 0; i--) {
+    const data = {instance_id: instanceId, observed_at: new Date(started - i * 10000).toISOString()};
+    if (i === 21) publish({id: '', event: 'generation.changed', data: {...data, previous_generation_id: '39', generation_id: '40'}});
+    else if (i === 17)
+      publish({id: '', event: 'operation.updated', data: {...data, resource_id: 'op-1182', status: 'succeeded', href: '/api/v1/operations/op-1182'}});
+    else if (i === 7) publish({id: '', event: 'flow.gap', data: {...data, resource_id: null, reason: 'sampled', dropped_records: '3'}});
+    else if (i === 6) publish({id: '', event: 'flow.gap', data: {...data, resource_id: null, reason: 'buffer_overflow', dropped_records: '12'}});
+    else if (i === 5)
+      publish({id: '', event: 'operation.updated', data: {...data, resource_id: 'op-1183', status: 'failed', href: '/api/v1/operations/op-1183'}});
+    else if (i === 4) publish({id: '', event: 'flow.gap', data: {...data, resource_id: null, reason: 'recording_changed', dropped_records: '0'}});
+    else if (i % 3 === 0)
+      publish({
+        id: '',
+        event: 'flow.updated',
+        data: {...data, resource_id: `flow-r${String(i).padStart(2, '0')}`, revision: 1, href: `/api/v1/flows/flow-r${String(i).padStart(2, '0')}`}
+      });
+    else publish({id: '', event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}});
+  }
   let logTimer: ReturnType<typeof setInterval> | undefined;
   async function logs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
     if (signal?.aborted) return;
@@ -206,7 +226,7 @@ export function createLifecycle(
       if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event))
         onEvent({...structuredClone(event), id: issueCursor('events', filter, Number(event.id.split(':')[1]))});
     };
-    const cursor = resume(lastEventId, 'events', filter, sequence);
+    const cursor = resume(lastEventId, 'events', filter, 0);
     onConnectionChange?.(true);
     emit({id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
     for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);

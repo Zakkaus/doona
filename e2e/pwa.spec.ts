@@ -109,12 +109,12 @@ test('an English visit caches only English and starts offline in it', async ({co
 });
 
 test('after an update the new build caches only the language in use and starts offline in it', async ({context, browserName}) => {
-  test.skip(browserName === 'webkit', "serving a changed worker script relies on Chromium's context routing");
+  test.skip(browserName === 'webkit', 'offline navigation cannot be emulated in WebKit');
   const page = await context.newPage();
   await page.addInitScript(() => localStorage.getItem('doona-lang') ?? localStorage.setItem('doona-lang', 'en'));
   const paths = (name: string) => page.evaluate(async name => (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname), name);
   const holds = async (name: string, lang: string) => (await paths(name)).some(path => path.includes(`/assets/locale-${lang}-`));
-  await page.goto('/');
+  await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   const [first] = await page.evaluate(() => caches.keys());
   await expect.poll(() => holds(first, 'en')).toBe(true);
@@ -122,17 +122,16 @@ test('after an update the new build caches only the language in use and starts o
   await page.evaluate(() => localStorage.setItem('doona-lang', 'zh-TW'));
   await page.reload();
   await expect.poll(() => holds(first, 'zh-TW')).toBe(true);
+  // Let the old build's resource requests settle before starting the update.
+  await page.waitForLoadState('networkidle');
   const unused = /\/assets\/(?:locale-(?:en|zh-CN)-|fonts-sc-)/;
   const fetched: string[] = [];
   context.on('request', request => fetched.push(new URL(request.url()).pathname));
-  // The same build under another hash, from another script address the route can serve, stands in for a deployment.
-  await context.route('**/sw.js?update', async route => {
-    const response = await route.fetch();
-    await route.fulfill({response, body: (await response.text()).replace(/(const CACHE = PREFIX \+ ')[^']+'/, "$1update'")});
-  });
+  // The test server serves changed bytes at the same worker URL once this context opts into the update.
   await page.evaluate(async () => {
     const taken = new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
-    await navigator.serviceWorker.register('./sw.js?update');
+    document.cookie = 'doona-pwa-update=1; Path=/ui; SameSite=Lax';
+    await (await navigator.serviceWorker.ready).update();
     await taken;
   });
   const update = first.replace(/[^:]+$/, 'update');

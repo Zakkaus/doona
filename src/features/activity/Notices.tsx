@@ -36,7 +36,8 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
           <Empty>{empty}</Empty>
         </div>
       ) : (
-        <div className="rp-list rp-feed" role="list">
+        /* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The bounded list needs keyboard focus to scroll. */
+        <div className="rp-list rp-feed" role="list" aria-label={t('act.issues')} tabIndex={0}>
           {rows.map(row => (
             <div key={row.id} role="listitem" className="rp-row">
               <Light small tone={row.tone}>

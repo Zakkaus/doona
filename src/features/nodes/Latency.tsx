@@ -31,13 +31,15 @@ export function NodeLatency() {
           label: t('nodes.latency.lowest'),
           icon: <SpeedFast />,
           tint: 'c2',
-          value: t('nodes.latency.named', {name: measured[0].name, ms: formatLatency(measured[0].latest, t)})
+          value: measured[0].name,
+          caption: formatLatency(measured[0].latest, t)
         },
         {
           label: t('nodes.latency.highest'),
           icon: <Clock />,
           tint: 'c4',
-          value: t('nodes.latency.named', {name: measured[measured.length - 1].name, ms: formatLatency(measured[measured.length - 1].latest, t)})
+          value: measured[measured.length - 1].name,
+          caption: formatLatency(measured[measured.length - 1].latest, t)
         },
         {
           label: t('nodes.latency.unavailable'),

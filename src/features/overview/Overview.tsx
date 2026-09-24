@@ -98,7 +98,7 @@ export function Overview() {
           )}
         </Card>
       </div>
-      <div className="rp-g21">
+      <div className="rp-g21 rp-overview-lower">
         <Card title={t('ov.datapath')}>
           <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
@@ -143,9 +143,9 @@ export function Overview() {
         </Card>
         <Card title={t('ov.resources')}>
           {vm.resources.state === 'ready' ? (
-            <div className="rp-list rp-list-columns">
+            <div className="rp-capabilities">
               {vm.resources.rows.map(row => (
-                <div key={row.id} className="rp-list">
+                <div key={row.id} className={'rp-capability' + (row.tone === 'muted' ? ' unavailable' : '')}>
                   <span>{row.label}</span>
                   <Light small tone={row.tone}>
                     {row.text}

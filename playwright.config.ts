@@ -40,7 +40,7 @@ export default defineConfig({
       reuseExistingServer: false
     },
     {
-      command: 'python3 tools/serve.py 4186 dist --prefix /ui',
+      command: 'python3 tools/serve.py 4186 dist --prefix /ui --worker-update',
       url: 'http://127.0.0.1:4186/ui/',
       reuseExistingServer: false
     }

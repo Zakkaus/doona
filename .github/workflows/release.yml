@@ -41,11 +41,6 @@ jobs:
         env:
           DOONA_E2E_WEBKIT: '1'
       - run: tools/package.sh --git-version
-      # The dependencies as installed, for builds that must run offline (an ebuild, a Nix derivation).
-      - name: Pack the dependencies
-        run: |
-          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git log -1 --format=%ct)" \
-            -cf - node_modules | xz -T0 > "release/doona-${GITHUB_REF_NAME}-deps.tar.xz"
       - name: Install nfpm
         run: |
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/nfpm.tar.gz" \
@@ -58,8 +53,16 @@ jobs:
       - name: Build the distribution packages
         run: |
           export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
-          make install DESTDIR=build/stage/doona
-          make install-fonts DESTDIR=build/stage/doona-fonts
+          program=build/stage/doona/usr/share/doona
+          fonts=build/stage/doona-fonts/usr/share/doona
+          mkdir -p "$program" "$fonts"
+          tar -xzf "release/doona-${GITHUB_REF_NAME}.tar.gz" -C "$program"
+          tar -xzf "release/doona-fonts-${GITHUB_REF_NAME}.tar.gz" -C "$fonts"
+          mkdir -p build/stage/doona/usr/share/doc/doona/LICENSES build/stage/doona-fonts/usr/share/doc/doona
+          mv "$program"/LICENSE "$program"/NOTICE "$program"/README.md "$program"/CHANGELOG.md build/stage/doona/usr/share/doc/doona/
+          mv "$program"/LICENSES/Apache-2.0.txt build/stage/doona/usr/share/doc/doona/LICENSES/
+          rmdir "$program"/LICENSES
+          cp "$fonts"/fonts/OFL.txt build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
           for packager in deb rpm ipk archlinux; do
             nfpm package --config install/nfpm/doona.yaml --packager "$packager" --target release/
             nfpm package --config install/nfpm/doona-fonts.yaml --packager "$packager" --target release/
@@ -69,12 +72,16 @@ jobs:
         run: |
           cd release
           for f in *~*; do [ -e "$f" ] && mv "$f" "$(printf '%s' "$f" | tr '~' '.')"; done
-          sha256sum doona* > SHA256SUMS
+          sha256sum doona*.tar.gz doona*.deb doona*.rpm doona*.ipk doona*.pkg.tar.zst > SHA256SUMS
       - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           draft: true
           prerelease: ${{ env.PRERELEASE != '' }}
           fail_on_unmatched_files: true
           files: |
-            release/doona*
+            release/doona*.tar.gz
+            release/doona*.deb
+            release/doona*.rpm
+            release/doona*.ipk
+            release/doona*.pkg.tar.zst
             release/SHA256SUMS

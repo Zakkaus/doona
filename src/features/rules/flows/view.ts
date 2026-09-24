@@ -299,8 +299,8 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
 export const TREE_STEP = 30;
 // Narrow screens pan instead of compressing the diagram.
 const MIN_WIDTH = 720;
-const PITCH = 40;
-const TILE = 32;
+const PITCH = 44;
+const TILE = 36;
 const GAP = 56;
 const shares = [5, 4, 3];
 type TreeStage = TreeBy | 'outbound' | 'node';

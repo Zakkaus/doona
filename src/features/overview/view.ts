@@ -4,6 +4,7 @@ import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {operationLabels, lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
+import {backendMessage} from '../../i18n/backend';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -200,21 +201,26 @@ export function overviewView(
         direction: datapathValue(a.direction, t),
         state: datapathValue(a.state, t)
       })),
-      errors: datapath?.errors.map(error => ({tooltip: error.code, text: error.message})) ?? [],
-      warning: datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error) ? datapath.ebpf.last_error : null
+      errors: datapath?.errors.map(error => ({tooltip: error.code, text: backendMessage(error.code, error.message, t)})) ?? [],
+      warning:
+        datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error)
+          ? t('ui.backendMessage', {message: datapath.ebpf.last_error})
+          : null
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),
       rows: capabilities
-        ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>).map(id => {
-            const available = capabilities.resources[id].available !== false;
-            return {
-              id,
-              label: t(resourceLabels[id]),
-              tone: available ? ('ok' as const) : ('muted' as const),
-              text: t(available ? 'ov.available' : 'ov.notAvailable')
-            };
-          })
+        ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>)
+            .map(id => {
+              const available = capabilities.resources[id].available !== false;
+              return {
+                id,
+                label: t(resourceLabels[id]),
+                tone: available ? ('ok' as const) : ('muted' as const),
+                text: t(available ? 'ov.available' : 'ov.notAvailable')
+              };
+            })
+            .sort((a, b) => Number(a.tone === 'muted') - Number(b.tone === 'muted'))
         : []
     },
     canExport: !!runtime

@@ -17,6 +17,8 @@
 
 doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 honk，dae 实现同一份契约后亦可。它由引擎自己或任意 Web 服务器提供，显示引擎当前的状态，并管理节点、群组、路由规则与配置文件。
 
+[使用示例数据体验演示版](https://zakkaus.github.io/doona/)。
+
 ![活动页](docs/screenshots/zh-CN/activity-light.webp)
 
 <details>
@@ -56,6 +58,10 @@ if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
     sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
 fi
 ```
+
+### honk 原生 API 要求
+
+**所需 honk 构建：**doona 需要 [Glassyiris/honk 的 `feat/native-api` 分支](https://github.com/Glassyiris/honk/tree/feat/native-api)提供的原生 API；daeuniverse/honk 尚无包含该功能的正式发行版本。`native_api` 和 `password_auth` 配置项在上游发布前可能变化。已发布的 honk 对 `/api` 和 `/ui/` 返回 404。下方配置仅适用于该分支。
 
 honk 的原生 API 需要显式开启。把 `ui` 指向解压后的目录，honk 就在 `/ui/` 提供这些文件，与 API 同源：
 

@@ -1,6 +1,7 @@
 import type {Connection, FlowDetail, FlowStep} from '../model';
 import {rules} from './rules';
 import {configRules} from './fixtures/configuration';
+import {generationId} from './fixtures/clock';
 
 type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
 export type ConnectionSeed = Omit<Connection, keyof FlowFields>;
@@ -67,7 +68,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     dscp: 0,
     mark: 0
   };
-  const common = {observed_at: observedAt, elapsed_us: 0, generation_id: '40', evidence: 'observed' as const};
+  const common = {observed_at: observedAt, elapsed_us: 0, generation_id: generationId, evidence: 'observed' as const};
   const direct = connection.outbound === 'direct';
   const blocked = connection.state === 'blocked';
   // The rule that decided this flow: a listed domain hits its config rule; a blocked flow the advert rule; a

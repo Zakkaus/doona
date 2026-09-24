@@ -1,6 +1,7 @@
 import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
+import {backendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from './names';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
@@ -238,9 +239,12 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
       sourceId: item.source_id,
       line: item.line,
       where: item.line === null ? path : `${path}:${item.line}`,
-      message: item.message,
+      message: backendMessage(item.code, item.message, t),
       code: item.code,
-      detail: item.line === null ? item.message : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: item.message})
+      detail:
+        item.line === null
+          ? backendMessage(item.code, item.message, t)
+          : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: backendMessage(item.code, item.message, t)})
     };
   });
 }

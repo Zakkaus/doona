@@ -2,6 +2,7 @@ import type {ErrorResponse} from './model';
 
 import type {Key} from '../i18n';
 import type {Params, Translator} from '../i18n/index';
+import {backendMessage} from '../i18n/backend';
 
 export class ApiError extends Error {
   constructor(
@@ -58,7 +59,8 @@ export async function send(input: RequestInfo | URL, init?: RequestInit): Promis
 export class LocalError extends Error {
   constructor(
     public key: Key,
-    public detail: string | null = null
+    public detail: string | null = null,
+    public code: string | null = null
   ) {
     super(key);
     this.name = 'LocalError';
@@ -69,9 +71,9 @@ export class LocalError extends Error {
 export function errorText(error: unknown, t: Translator): string {
   if (error instanceof LocalError) {
     const text = t(error.key);
-    return error.detail ? t('ui.valuePair', {label: text, value: error.detail}) : text;
+    return error.detail ? t('ui.valuePair', {label: text, value: error.code ? backendMessage(error.code, error.detail, t) : error.detail}) : text;
   }
   if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof ApiError ? backendMessage(error.code, error.message, t) : error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
 }

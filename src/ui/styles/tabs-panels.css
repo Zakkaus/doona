@@ -27,7 +27,7 @@
   z-index: 1;
   flex: none;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: 36px;
   padding: 4px 12px;
   border-radius: var(--rp-r-md);
   display: inline-flex;

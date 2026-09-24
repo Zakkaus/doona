@@ -22,6 +22,10 @@ esac
 export LC_ALL=C
 umask 022
 mkdir -p release
+[ ! -e "release/doona-$version-deps.tar.xz" ] || {
+    echo "Remove the obsolete dependencies archive before packaging: release/doona-$version-deps.tar.xz" >&2
+    exit 1
+}
 stage=$(mktemp -d "$PWD/release/.package.XXXXXX")
 trap 'rm -rf "$stage"' 0
 trap 'exit 1' HUP INT TERM

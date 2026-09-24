@@ -15,32 +15,41 @@ function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
   return ring;
 }
 function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
-  return [...flows]
-    .filter(flow => flow.input.domain)
-    .sort((a, b) => Date.parse(b.started_at ?? '') - Date.parse(a.started_at ?? ''))
-    .map((flow, i) => {
-      const name = flow.input.domain!.replace(/\.$/, '') + '.';
-      const cached = i % 3 === 1;
-      const failed = !cached && i % 11 === 7;
-      // Enough variety for the analysis card: a cached negative answer, a no-such-name, a third upstream, slow tails.
-      const missing = i % 13 === 5 || i % 13 === 4;
-      const status = failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
-      const type = (flow.network === 'udp' && i % 2) || i % 5 === 2 ? 'AAAA' : i % 11 === 3 ? 'HTTPS' : 'A';
-      const dst = flow.input.dst?.replace(/^\[|\]?:\d+$/g, '') ?? null;
-      return {
-        id: 'dl-' + String(i + 1).padStart(6, '0'),
-        observed_at: new Date(Date.parse(flow.started_at ?? new Date().toISOString()) - 40).toISOString(),
-        src: flow.input.src ?? null,
-        question: {name, type},
-        status,
-        cached,
-        upstream:
-          cached || (failed && i % 2) ? null : flow.outbound === 'direct' ? 'udp://223.5.5.5' : i % 4 === 0 ? 'https://dns.google/dns-query' : 'tls://1.1.1.1',
-        route: flow.outbound === 'direct' ? {source: 'dns.routing', rule: 'qname(geosite: cn) -> alidns'} : {source: 'default', rule: null},
-        elapsed_ms: cached ? 0 : failed ? (i % 2 ? 5000 : 420) : i % 9 === 2 ? 140 + ((i * 13) % 260) : 6 + ((i * 7) % 48),
-        answers: failed || missing || !dst ? [] : [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::' + (i + 1).toString(16) : dst}]
-      };
-    });
+  let seed = 941;
+  const next = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const domains = [...new Set(flows.map(flow => flow.input.domain).filter((name): name is string => !!name))];
+  const sources = [...new Set([...fixtures.connections.tcp, ...fixtures.connections.udp].map(row => sourceIp(row.src)))];
+  const blocked = ['ad.doubleclick.net', 'pagead2.googlesyndication.com', 'ads.tracker.example'];
+  let age = 0;
+  return Array.from({length: 480}, (_, i) => {
+    age += 12 + Math.floor(next() * 24) + (i % 96 < 28 ? 4 : 32);
+    const denied = i % 73 === 0;
+    const domain = denied ? blocked[i % blocked.length] : domains[Math.floor(next() * (next() < 0.72 ? Math.min(domains.length, 16) : domains.length))];
+    const name = domain.replace(/\.$/, '') + '.';
+    const type = i % 4 === 0 ? 'AAAA' : 'A';
+    const entry = fixtures.dnsCache.entries.find(row => row.domain === name && row.type === type);
+    const cached = !denied && !!entry && i % 3 === 0;
+    const failed = !cached && !denied && i % 23 === 7;
+    const missing = !cached && !failed && !denied && i % 11 === 5;
+    const status = denied ? 'REFUSED' : cached ? entry!.status : failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
+    const upstream = cached || denied ? null : i % 7 === 0 ? 'udp://223.5.5.5' : i % 4 === 0 ? 'https://dns.google/dns-query' : 'tls://1.1.1.1';
+    return {
+      id: 'dl-' + String(i + 1).padStart(6, '0'),
+      observed_at: new Date(Date.parse(observedAt) - age * 1000).toISOString(),
+      src: `${sources[Math.floor(next() * sources.length)]}:${40000 + (i % 20000)}`,
+      question: {name, type},
+      status,
+      cached,
+      upstream,
+      route: {source: 'default', rule: null},
+      elapsed_ms: cached ? 0.3 : denied ? 1.8 : failed ? 3000 + (i % 3) * 400 : i % 9 === 2 ? 150 + (i % 7) * 32 : 8 + (i % 31),
+      answers: cached
+        ? (entry?.answers ?? [])
+        : status === 'NOERROR'
+          ? [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::20' : '192.0.2.20'}]
+          : []
+    };
+  });
 }
 type NetworkApi = Pick<
   Api,
@@ -162,7 +171,7 @@ export function createNetwork(
       const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
       const result = cachePage(entries, query);
       // Usage covers the whole cache, whatever the listing's filters.
-      const usage = {entries: String(dnsCache.entries.length), entry_capacity: '100000'};
+      const usage = {entries: String(dnsCache.entries.length), entry_capacity: '256'};
       return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor, usage};
     },
     dnsLog: async (query, signal) => {

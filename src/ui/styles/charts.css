@@ -9,6 +9,26 @@
 .rp-facts dd {
   margin: 0;
 }
+.rp-facts .rp-tile-body {
+  height: auto;
+  min-height: 32px;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 0;
+}
+.rp-facts .rp-big,
+.rp-fact-caption {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-fact-caption {
+  color: var(--rp-subtle);
+  font-size: 12px;
+  line-height: 16px;
+}
 /* A value is large text, but notice is under 3:1 in most light palettes; the icon beside it keeps the tone. */
 .rp-facts .negative .rp-big {
   color: var(--rp-negative-text);
