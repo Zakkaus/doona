@@ -3,15 +3,13 @@ import {scanConfig, uncomment} from '../../dae/text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
-  if (source.source_id) return list.find(item => item.id === source.source_id);
-  const matches = list.filter(item => item.path === source.file || item.path.endsWith('/' + source.file));
-  return matches.length === 1 ? matches[0] : undefined;
+  return list.find(item => item.id === source.source_id);
 }
 
 export type RuleAnchor = {from: number; to: number; indent: string; text: string};
 
 export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
-  if (!rule.source?.source_id || rule.source.source_id !== source.id || source.content === undefined) return null;
+  if (!rule.source || rule.source.source_id !== source.id || source.content === undefined) return null;
   const text = source.content;
   let line = rule.source.line - 1;
   const {blocks, tokens} = scan ?? scanConfig(text);

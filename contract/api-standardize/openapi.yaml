@@ -16,7 +16,10 @@ paths:
     get:
       operationId: getDiscovery
       summary: Discover the native API
-      security: []
+      description: Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+      security:
+        - bearerAuth: []
+        - {}
       responses:
         '200':
           description: Native API discovery
@@ -63,11 +66,18 @@ paths:
                     X-Content-Type-Options: nosniff
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/v1/version:
     get:
       operationId: getVersion
       summary: Read native and engine version identity
-      security: []
+      description: Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+      security:
+        - bearerAuth: []
+        - {}
       responses:
         '200':
           description: Version identity
@@ -98,11 +108,18 @@ paths:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/v1/capabilities:
     get:
       operationId: getCapabilities
       summary: Negotiate resources, visibility, and limits
-      security: []
+      description: Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+      security:
+        - bearerAuth: []
+        - {}
       responses:
         '200':
           description: Adapter capabilities
@@ -308,6 +325,10 @@ paths:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/v1/auth/setup:
     post:
       operationId: setupAdministrator
@@ -622,14 +643,17 @@ paths:
         may contain secrets. Syntax mode parses only submitted text. Full mode also
         checks semantics and resolves includes/subscriptions from submitted sources
         or adapter-authorized local files and cached data, never from the network.
-        A missing or inaccessible dependency produces an error diagnostic, not a
-        successful partial validation. Neither mode writes files, refreshes caches,
-        applies configuration, publishes a generation, or starts an operation.
+        Missing or inaccessible required local dependencies produce error diagnostics.
+        An unfetched subscription produces a subscription-not-fetched warning and
+        does not by itself invalidate the candidate; validation does not fetch it.
+        Neither mode writes files, refreshes caches, applies configuration,
+        publishes a generation, or starts an operation.
         Return 200 for completed validation, including invalid candidates. Malformed
         JSON/request shape or duplicate effective source IDs returns 400; an
         unadvertised mode returns 422 unsupported_value. Enforce max_bytes over the
-        sum of UTF-8 source bytes and max_sources over the source count, including
-        locally resolved dependencies in full mode; exceeding either returns 413.
+        sum of UTF-8 configuration source bytes and max_sources over the source count,
+        including locally resolved source text in full mode; exceeding either returns
+        413. Geodata assets do not count toward the byte limit.
         The shared max_json_body_bytes limit applies independently to the HTTP body.
         Never echo candidate text, secrets, or private paths in diagnostics or errors.
       x-permission: control
@@ -1022,7 +1046,9 @@ paths:
         POST /config/validate, substituting the replacement for this source.
         Resolve dependencies only from submitted text, authorized local files,
         and cached data; never use the network or refresh caches during validation.
-        Missing or inaccessible dependencies produce error diagnostics.
+        Missing or inaccessible required local dependencies produce error diagnostics.
+        An unfetched subscription produces a subscription-not-fetched warning and
+        does not by itself invalidate the candidate; validation does not fetch it.
         If any diagnostic has level error, return 422 unsupported_value with
         error.details.diagnostics using ConfigDiagnostic; never write any file
         or start a reload. Warnings and info alone do not prevent a write.
@@ -1032,9 +1058,10 @@ paths:
         on-disk hash before replacement and return 412 if it changed.
         After the write, start a reload operation and return 202 OperationAccepted
         with kind reload, Location, and Retry-After. This is not reload completion.
-        A successful reload publishes generation.changed when events are available;
-        GET /config then shows the new accepted content_sha256. If reload fails,
-        the previous generation remains active; the file write is not rolled back.
+        If reload publishes a new generation and events are available, emit
+        generation.changed. After successful reload, GET /config reports the accepted
+        content_sha256. If reload fails, the previous generation remains active and
+        the file write is not rolled back.
         Idempotency-Key follows the operation retention rules: scope it to caller,
         method, and path in this instance. A retained same-body replay returns the
         original operation without another write or hash check; a different body
@@ -1577,11 +1604,11 @@ paths:
       operationId: getMemoryHistory
       summary: Read bounded memory history
       description: |
-        Reads a bounded in-memory ring of memory samples without starting
-        sampling on GET. Same shape and rules as traffic history: the producer
-        samples independently of readers, SSE does not replay it, and a query
-        above either advertised limit returns 400 invalid_request rather than a
-        clamped result. Requires resources.memory_history.available.
+        Requires resources.memory_history.available. Reads a bounded in-memory ring
+        sampled independently of HTTP requests. The response envelope, retention,
+        thinning, and gap rules follow traffic history; samples contain memory metrics.
+        SSE does not replay the ring. A query above either advertised limit returns
+        400 invalid_request without clamping.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -1623,7 +1650,7 @@ paths:
                       - sampled_at: '2026-08-15T09:59:50Z'
                         rss_bytes: '48234496'
                         cgroup_current_bytes: '67108864'
-                        kernel_ebpf_bytes: '18874368'
+                        kernel_ebpf_bytes: null
                       - sampled_at: '2026-08-15T09:59:55Z'
                         rss_bytes: null
                         cgroup_current_bytes: null
@@ -1631,7 +1658,7 @@ paths:
                       - sampled_at: '2026-08-15T10:00:00Z'
                         rss_bytes: '48762880'
                         cgroup_current_bytes: '67371008'
-                        kernel_ebpf_bytes: '18874368'
+                        kernel_ebpf_bytes: null
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -1814,8 +1841,8 @@ paths:
         share-link support, writes it into the node section of its managed main
         source under the given name, advances the configuration revision and emits
         generation.changed. The link is stored, never returned. A link the engine
-        cannot parse returns 422 unprocessable with the engine's reason in message;
-        a name already in use returns 409 state_conflict. The node belongs to the
+        cannot parse returns 422 unsupported_value with a sanitized reason in
+        error.message. A name already in use returns 409 state_conflict. The node belongs to the
         inline provider and to every group whose filter matches it after reload.
       x-permission: control
       security:
@@ -2035,13 +2062,12 @@ paths:
         capability_not_supported. Only kind subscription can be created here: file and
         inline providers are authored in the configuration sources. The backend writes
         the provider into the subscription section of its managed main source,
-        advances the configuration revision and emits generation.changed, so a
-        configuration editor holding the previous revision receives 412 on its next
-        write. The provider is created unfetched: node_count 0, updated_at null and
+        advances the configuration revision, and emits generation.changed. A later
+        replacement of that main source using its previous content_sha256 returns
+        412 stale_revision. The provider is created unfetched: node_count 0, updated_at null and
         status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
         never returned; the response carries url_redacted. A name already in use
-        returns 409 state_conflict; a URL that is not http(s) returns 422
-        unprocessable.
+        returns 409 state_conflict. A URL that is not HTTP(S) returns 422 unsupported_value.
       x-permission: control
       security:
         - bearerAuth: []
@@ -2641,7 +2667,7 @@ paths:
                       config_revision: '17'
                       policy:
                         kind: urltest
-                        native: min_moving_avg
+                        native: urltest
                       member_count: 2
                       selection:
                         tcp_member_id: node-hk-01
@@ -2689,7 +2715,7 @@ paths:
                     config_revision: '17'
                     policy:
                       kind: urltest
-                      native: min_moving_avg
+                      native: urltest
                     members:
                       - id: node-hk-01
                         name: hk-01
@@ -2960,10 +2986,9 @@ paths:
       responses:
         '200':
           description: |
-            The group's selection per network after the override is cleared;
-            unchanged when none stood. A network the policy has not chosen a
-            member for is null, so clearing both networks when only one had a
-            pin, or when one side is still unselected, is stated as it is.
+            Selections after clearing the requested overrides. A network without
+            a selected member is null. If no override existed, its selection is
+            unchanged.
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -3224,41 +3249,37 @@ paths:
       operationId: closeConnections
       summary: Close matching userspace-owned connections
       description: |
-        Requires resources.connections.available and can_close; otherwise returns
-        404 capability_not_supported. Requires control permission.
+        Requires control permission and resources.connections.available with
+        resources.connections.can_close; unavailable closing returns 404
+        capability_not_supported.
 
-        Uses the list's type and exact source-IP src filters, combined with AND.
-        A missing type or type=all does not restrict the set. Without type=tcp,
-        type=udp, or src, require all=true; otherwise return 400 invalid_request
-        before closing anything. This prevents an omitted filter from accidentally
-        disconnecting every userspace connection. all=true permits an unfiltered
-        request but does not override supplied filters. limit and detail are list
-        presentation parameters, not bulk-close parameters.
+        Combine type and exact source-IP src filters with AND. Missing type and
+        type=all do not restrict the set. Without type=tcp, type=udp, or src,
+        require all=true or return 400 invalid_request before closing anything.
+        all=true does not override supplied filters. Reject limit and detail,
+        which apply only to listing.
 
-        Select the matching live entries once before closing. If their count,
-        including non-closable entries, exceeds resources.connections.max_bulk_close,
-        return 413 request_too_large before closing anything; do not truncate.
-        Close every closable match and count the non-closable matches as skipped.
-        An empty match succeeds with closed=0 and skipped=0. Connections arriving
-        after selection are not included; selected entries that disappear before
-        cancellation are not counted as closed or skipped.
+        Select matching live entries once. If their count, including non-closable
+        entries, exceeds resources.connections.max_bulk_close, return 413
+        request_too_large without closing anything. Close all closable matches and
+        count non-closable matches as skipped. An empty set returns closed=0 and
+        skipped=0. Exclude later arrivals and selected entries that disappear before
+        cancellation; disappeared entries contribute to neither count.
 
-        Closable means the userspace datapath owns the TCP transport or UDP session
-        and can actually cancel or retire it, not merely delete its tracker entry.
-        observed_by labels observation, not ownership: userspace or mixed evidence
-        is not sufficient by itself. Kernel-direct and kernel-bypassed flows
-        (kernel_direct/kernel_bypass scopes, including ebpf-only observations)
-        are not closable. An outbound named direct alone does not determine ownership.
+        A connection is closable only when the userspace datapath owns and can
+        cancel its TCP transport or retire its UDP session. Deleting a tracker
+        entry is insufficient. observed_by and the outbound name do not establish
+        ownership. Kernel-direct and kernel-bypassed flows, including ebpf-only
+        observations, are not closable.
 
-        Idempotency-Key is accepted. These synchronous DELETEs evaluate current live
-        state on each call, even with a repeated key; they do not replay an earlier
-        result or return a retained operation.
+        Idempotency-Key is accepted, but every call evaluates current live state;
+        repeated keys do not replay results or return an operation.
 
-        Closing a recorded flow advances its terminal state and emits the existing
-        flow.updated invalidation when advertised. Clients fetch its href and
-        refresh /connections; runtime.updated invalidates changed runtime counters.
-        Coalescing and retention rules still apply. No flow ID or event is fabricated
-        for an unrecorded connection, and there is no new close event kind.
+        For recorded flows, closing advances terminal state and emits flow.updated
+        when advertised. Fetch the event's href and refresh /connections. Changed
+        runtime counters use runtime.updated. Existing coalescing and retention
+        rules apply. Do not fabricate a flow ID or flow event for an unrecorded
+        connection.
       x-permission: control
       security:
         - bearerAuth: []
@@ -3275,7 +3296,7 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: All selected closable matches closed; non-closable matches skipped.
+          description: Bulk-close counts; entries that disappeared before cancellation are excluded.
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -3352,30 +3373,26 @@ paths:
       operationId: closeConnection
       summary: Close one userspace-owned connection
       description: |
-        Requires resources.connections.available and can_close; otherwise returns
-        404 capability_not_supported. Requires control permission.
+        Requires control permission and resources.connections.available with
+        resources.connections.can_close; unavailable closing returns 404
+        capability_not_supported.
 
-        A connection is closable only when the userspace datapath owns its TCP
-        transport or UDP session and can actually cancel or retire it. Deleting a
-        tracker entry is not transport cancellation. observed_by is an observation
-        label, not an ownership guarantee: userspace or mixed evidence alone is not
-        sufficient. Kernel-direct and kernel-bypassed flows (kernel_direct and
-        kernel_bypass scopes, including ebpf-only observations) are not closable;
-        an observed but non-closable connection returns 409 state_conflict.
-        An outbound named direct alone does not determine ownership.
+        The userspace datapath must own and be able to cancel the TCP transport or
+        retire the UDP session. Tracker deletion, observed_by, and the outbound name
+        do not establish ownership. Kernel-direct and kernel-bypassed flows, including
+        ebpf-only observations, are not closable. An observed non-closable connection
+        returns 409 state_conflict.
 
-        Success returns 204 only after cancellation or retirement, with no body.
-        An unknown or already-gone ID returns 404 resource_not_found. Closing the
-        same ID twice returns 404 on the second call, including when Idempotency-Key
-        is repeated. The header is accepted as on other control calls, but this
-        synchronous DELETE evaluates current live state rather than replaying a
-        previous 204 or returning a retained operation.
+        Return 204 with no body only after cancellation or retirement. Unknown or
+        already-gone IDs return 404 resource_not_found. Idempotency-Key is accepted,
+        but each call evaluates current live state; a repeated close returns 404
+        rather than replaying 204 or returning an operation.
 
-        Closing a recorded flow advances its terminal state and emits the existing
-        flow.updated invalidation when advertised. Clients fetch its href and
-        refresh /connections; runtime.updated invalidates changed runtime counters.
-        Coalescing and retention rules still apply. No flow ID or event is fabricated
-        for an unrecorded connection, and there is no new close event kind.
+        For recorded flows, closing advances terminal state and emits flow.updated
+        when advertised. Fetch the event's href and refresh /connections. Changed
+        runtime counters use runtime.updated. Existing coalescing and retention
+        rules apply. Do not fabricate a flow ID or flow event for an unrecorded
+        connection.
       x-permission: control
       security:
         - bearerAuth: []
@@ -4099,9 +4116,12 @@ paths:
         in evaluation order, including its fallback entry. This resource is read-only;
         it neither evaluates traffic nor reads back raw configuration. rule_id is identical
         to the ID used by POST /api/v1/routing/trace and FlowSummary.rule_id for the same
-        generation. Join by generation_id and rule_id, never by expression or index alone.
-        generation_id is the invalidation cursor, not a pagination token. Refetch after
-        generation.changed; old flow evidence must not be joined to a new generation.
+        generation. Join rules by generation_id and rule_id, never by expression or
+        index alone. FlowSummary does not carry the rule's generation; obtain it from
+        the corresponding traffic-route step in the retained flow detail. If that
+        context is unavailable, do not join the summary to the current rule dictionary.
+        generation_id identifies the dictionary's routing generation. Refetch after
+        generation.changed; do not join old flow evidence to a new generation.
         There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
         generation cannot be pinned, return 409 snapshot_unavailable. If the complete
         dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
@@ -4135,7 +4155,9 @@ paths:
                         must: false
                         source:
                           file: '[redacted]/routing.dae'
+                          source_id: source-routing
                           line: 12
+                          column: 5
                         kind: rule
                       - rule_id: traffic:1
                         index: 1
@@ -4144,7 +4166,9 @@ paths:
                         must: false
                         source:
                           file: '[redacted]/routing.dae'
+                          source_id: source-routing
                           line: 13
+                          column: 5
                         kind: rule
                       - rule_id: traffic:2
                         index: 2
@@ -4195,6 +4219,11 @@ paths:
     get:
       operationId: streamEvents
       summary: Follow bounded resumable invalidation events
+      description: |
+        Send stream.ready first on every connection, including a valid resume.
+        Its cursor must not skip pending replay; retain the supplied Last-Event-ID
+        until replay advances it. Filtered-out IDs may leave gaps, so clients must
+        not infer loss by subtracting IDs.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -4337,13 +4366,10 @@ paths:
       operationId: getRuntimeSettings
       summary: Read the runtime-adjustable settings
       description: |
-        Requires resources.runtime_settings.available. Reports the values the running
-        engine uses for the things a panel may tune without a reload: the log level and
-        replay ring, the DNS log ring, and flow retention. Ceilings come from the
-        matching capability (logs.max_buffered_records, dns_log.max_records,
-        flows.max_flows, flows.retention_seconds); a value never exceeds its ceiling.
-        source says whether the values still come from the activated configuration
-        or were overridden at runtime.
+        Requires resources.runtime_settings.available. Returns the current
+        runtime-adjustable settings. Numeric values cannot exceed their corresponding
+        capability ceilings. source is config when values come from the activated
+        configuration and runtime after a runtime override.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -4395,7 +4421,7 @@ paths:
         and changes nothing. Shrinking a ring drops its oldest records and expires
         cursors older than the new floor. The change applies immediately and lasts
         until the process restarts or the next configuration activation resets it; it
-        is not written to the configuration file. Follows the shared idempotency rules.
+        is not written to the configuration file.
       x-permission: control
       security:
         - bearerAuth: []
@@ -4414,7 +4440,7 @@ paths:
                   log:
                     level: debug
                   dns_log:
-                    max_records: 4096
+                    max_records: 1024
       responses:
         '200':
           description: Settings after the change
@@ -4436,7 +4462,7 @@ paths:
                       level: debug
                       buffered_records: 4096
                     dns_log:
-                      max_records: 4096
+                      max_records: 1024
                     flows:
                       max_flows: 10000
                       retention_seconds: 300
@@ -4594,13 +4620,11 @@ paths:
       operationId: listDnsLog
       summary: Read the bounded ring of recent resolutions
       description: |
-        Requires resources.dns_log.available. The engine records every resolution it
-        performs for clients (not the diagnostic /dns/query calls) into a ring of at
-        most resources.dns_log.max_records; newest first, not durable, cleared on
-        restart. A record is one question and its outcome: which client asked, which
-        upstream answered or whether the cache did, the answers, the routing decision
-        and how long it took. Filters narrow by name (case-insensitive substring),
-        record type and client source IP. limit above max_page_size returns 400.
+        Requires resources.dns_log.available. Records client DNS resolutions,
+        excluding diagnostic /dns/query calls, in a bounded in-memory ring.
+        Results are newest first. The ring holds at most
+        resources.dns_log.max_records and is cleared on restart.
+        A limit above resources.dns_log.max_page_size returns 400 invalid_request.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -5234,22 +5258,6 @@ paths:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
-                reload_complete_reload:
-                  value:
-                    operation_id: op-01HZX4K8W7
-                    kind: reload
-                    status: succeeded
-                    created_at: '2026-08-15T09:29:59Z'
-                    started_at: '2026-08-15T09:30:00Z'
-                    finished_at: '2026-08-15T09:30:00Z'
-                    result:
-                      active_generation_id: generation-42
-                      datapath_generation_id: generation-42
-                    error: null
-                  x-headers:
-                    Content-Type: application/json
-                    Cache-Control: no-store
-                    X-Content-Type-Options: nosniff
                 suspend_complete:
                   value:
                     operation_id: op-01HZX4K8W8
@@ -5536,7 +5544,7 @@ components:
                 Cache-Control: no-store
                 X-Content-Type-Options: nosniff
     Forbidden:
-      description: Authenticated caller lacks the required permission
+      description: The caller lacks the required permission, or listener security policy rejects the request.
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
@@ -5742,7 +5750,7 @@ components:
       format: date-time
     ErrorCode:
       type: string
-      description: Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
+      description: Closed catalogue of HTTP error codes. Adding a code changes the contract. Embedded errors such as operation.error, datapath.errors, last_reload.error, and provider.last_error use SafeError with adapter-defined codes.
       enum:
         - invalid_request
         - authentication_required
@@ -6136,7 +6144,7 @@ components:
                 max_bytes:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
-                  description: Maximum total UTF-8 source bytes, including local dependencies in full mode; the shared JSON body ceiling also applies.
+                  description: Maximum total UTF-8 configuration source bytes, including locally resolved source text in full mode. Geodata assets do not count toward this limit. The shared JSON body limit applies separately.
                 max_sources:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -6284,7 +6292,7 @@ components:
                   description: Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available.
                 can_manage:
                   type: boolean
-                  description: POST /providers and DELETE /providers/{id} are implemented for subscription providers; the backend owns a writable main source.
+                  description: Supports creating subscription providers and deleting subscription or file providers from a writable managed main source.
                 max_page_size:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -6553,7 +6561,7 @@ components:
                 max_buffered_records:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
-                  description: Bounded replay buffer capacity, not a durable retention guarantee.
+                  description: Maximum permitted log replay-ring capacity. The current capacity is runtime settings log.buffered_records. Neither value guarantees retention duration.
             dns_query:
               type: object
               required:
@@ -6628,7 +6636,7 @@ components:
                 max_records:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
-                  description: Ring capacity in records; not a retention guarantee.
+                  description: Maximum permitted DNS log-ring capacity. The current capacity is dns_log.max_records in GET /runtime/settings. Neither value guarantees retention duration.
                 max_page_size:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -6910,7 +6918,7 @@ components:
       properties:
         valid:
           type: boolean
-          description: True exactly when validation completed without error diagnostics; warnings and info do not invalidate the candidate. No promise that a later apply will succeed.
+          description: True when validation completes without error diagnostics. Successful validation does not guarantee a later apply will succeed.
         diagnostics:
           type: array
           description: Source IDs identify submitted sources. Attribute a dependency failure to the referring submitted source and its include/subscription location, not an undisclosed local path.
@@ -7338,9 +7346,11 @@ components:
         - samples
       description: |
         Samples lie in (observed_at - window_seconds, observed_at], oldest first,
-        with the same retention, thinning and gap rules as TrafficHistory.
-        Each sample carries the metrics advertised under resources.runtime_memory.metrics;
-        an unadvertised or unobservable metric is null.
+        with the same retention, thinning, and gap rules as TrafficHistory.
+        History covers process.rss_bytes, cgroup.current_bytes, and optionally
+        kernel.ebpf_bytes, using resources.runtime_memory.metrics to determine support.
+        Required metrics are null when unadvertised or unobservable.
+        kernel_ebpf_bytes may be omitted when unadvertised.
       properties:
         observed_at:
           $ref: '#/components/schemas/Timestamp'
@@ -7804,7 +7814,7 @@ components:
             - ok
             - stale
             - error
-          description: ok has usable current data; stale retains older usable data; error has no usable data after a failure.
+          description: ok means current usable data is loaded. stale means the provider has not been fetched or retains older usable data. error means a failed load left no usable data.
         last_error:
           oneOf:
             - type: 'null'
@@ -7932,7 +7942,7 @@ components:
             - string
             - 'null'
           minLength: 1
-          description: Display-only download source with userinfo, query and fragment removed; null when the backend has no source for this asset.
+          description: Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. Null when no source is configured or safe display is impossible.
     GeoData:
       type: object
       required:
@@ -8221,7 +8231,7 @@ components:
             - string
             - 'null'
           maxLength: 2048
-          description: An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally.
+          description: Configured group icon as an absolute HTTP(S) URL or data URI; null when no icon is configured.
         config_revision:
           type: string
           minLength: 1
@@ -8259,7 +8269,7 @@ components:
             - string
             - 'null'
           maxLength: 2048
-          description: An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally.
+          description: Configured group icon as an absolute HTTP(S) URL or data URI; null when no icon is configured.
         config_revision:
           type: string
           minLength: 1
@@ -8556,8 +8566,7 @@ components:
           enum:
             - runtime
             - override
-            - policy
-          description: runtime for a selector, override while a pinned member stands, policy once the automatic choice is back.
+          description: runtime for a manual selector; override for a pinned member on an automatic policy.
         selection_revision:
           type: string
           minLength: 1
@@ -9984,6 +9993,7 @@ components:
             - direct
             - global
             - unknown
+          description: Clash-mode override observed for this outbound attempt, separate from the configured dial mode. This field does not expose a native runtime-mode setting. none means no override was applied; unknown means the recorder could not determine it.
         selection_path:
           type: array
           items:
@@ -10447,16 +10457,28 @@ components:
         - type: object
           required:
             - file
+            - source_id
             - line
+            - column
           properties:
             file:
               type: string
               minLength: 1
               description: Redacted source label; never an absolute local path or credential-bearing URL.
+            source_id:
+              type: string
+              minLength: 1
+              description: |
+                Source ID from GET /config. Open the source by ID under the configuration
+                visibility rules; never derive a path from file.
             line:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
-      description: Source location, or null when unavailable or unsafe to disclose.
+            column:
+              $ref: '#/components/schemas/NullableSafeUInt'
+              minimum: 1
+              description: One-based UTF-8 byte column of the rule's first token, or null if unknown.
+      description: Source location, or null when unavailable or unsafe to disclose. Coordinates refer to the original source before redaction.
     RoutingRule:
       type: object
       required:
@@ -11103,7 +11125,7 @@ components:
           properties:
             level:
               $ref: '#/components/schemas/LogLevel'
-              description: The minimum severity the engine emits; the stream's level filter cannot go below it.
+              description: Minimum severity the engine emits. A lower stream level cannot recover records the engine did not emit.
             buffered_records:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 64
@@ -11130,7 +11152,7 @@ components:
             retention_seconds:
               $ref: '#/components/schemas/SafeUInt'
               minimum: 1
-              description: How long a terminal flow stays, at most flows.retention_seconds.
+              description: Maximum age of a retained terminal flow, in seconds, bounded by resources.flows.retention_seconds. Capacity pressure may evict it earlier.
         recording:
           type: object
           required:

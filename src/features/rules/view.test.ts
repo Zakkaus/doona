@@ -10,6 +10,7 @@ it('offers edits only at writable sources and preserves source locations when pa
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);
   const first = rules.rules[0];
+  expect(first.source).toMatchObject({source_id: 'src-main', line: 40, column: 3});
   const view = dictionaryView(rules.rules, rules.generation_id, flows, config.sources, groups, t, 'en');
   expect(view.rows[0].position).toBe('config.dae:40');
   expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=40');
@@ -38,7 +39,7 @@ it('offers edits only at writable sources and preserves source locations when pa
   );
   expect(withheld.positions).toEqual([]);
   expect(withheld.rows.some(row => row.removable)).toBe(false);
-  const redacted = {...first, source: {file: '<redacted>', line: 40}};
+  const redacted = {...first, source: {file: '<redacted>', source_id: 'src-main', line: 40, column: null}};
   expect(dictionaryView([redacted], undefined, undefined, [], [], t, 'en').rows[0].position).toBe(t('rule.lineOnly', {n: '40'}));
   expect(removalView(redacted, [], t).help).toBe(t('rule.removeHelp', {file: '', line: '40'}));
 });
@@ -51,7 +52,7 @@ it('does not offer rules it cannot locate in their source for removal or inserti
     expression: 'pname(a)',
     outbound: 'direct',
     must: false,
-    source: {file: 'bare.dae', source_id: 'bare', line: 1}
+    source: {file: 'bare.dae', source_id: 'bare', line: 1, column: 1}
   };
   const bare = {id: 'bare', path: 'bare.dae', writable: true, content: 'pname(a) -> direct\n'} as ConfigSource;
   const view = dictionaryView([rule], '1', undefined, [bare], [], t, 'en');
@@ -150,7 +151,7 @@ it('sums current-expression hits across provenance without attributing historica
   expect(dictionaryView([rule], rules.generation_id, flows, [], [], t, 'en').rows[0].hits).toBe('2');
 });
 
-it('keeps suffix ambiguity unresolved while reusing explicit source identities', async () => {
+it('does not infer a source from its display name when the ID is unknown', async () => {
   const api = createMockApi();
   const [rules, config] = await Promise.all([api.rules(), api.config()]);
   const source = config.sources[0];
@@ -159,9 +160,9 @@ it('keeps suffix ambiguity unresolved while reusing explicit source identities',
     {...source, id: 'a', path: '/a/config.dae'},
     {...source, id: 'b', path: '/b/config.dae'}
   ];
-  const ambiguous = {...rule, source: {file: 'config.dae', line: 40}};
-  const explicit = {...rule, rule_id: 'explicit', source: {file: 'config.dae', line: 40, source_id: 'b'}};
-  const view = dictionaryView([ambiguous, explicit], undefined, undefined, sources, [], t, 'en');
+  const unknown = {...rule, source: {...rule.source!, file: 'config.dae', source_id: 'missing'}};
+  const explicit = {...rule, rule_id: 'explicit', source: {...rule.source!, file: 'config.dae', source_id: 'b'}};
+  const view = dictionaryView([unknown, explicit], undefined, undefined, sources, [], t, 'en');
   expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
   expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=40', removable: true});
 });
