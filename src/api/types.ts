@@ -542,8 +542,11 @@ export interface paths {
          *     capability_not_supported. One entry per asset kind in
          *     resources.geodata.assets, describing the file the running datapath was
          *     built from: its digest, size and modification time, and the download source
-         *     POST /geodata/update fetches, redacted like a provider URL. Reading never
-         *     touches the network.
+         *     POST /geodata/update tries first, redacted like a provider URL. When
+         *     resources.geodata.configurable_sources is true, the response also reports
+         *     where each loaded file was downloaded from, whether its checksum was
+         *     verified, the update schedule and outcome, and required_codes. Reading
+         *     never touches the network.
          */
         get: operations["getGeoData"];
         put?: never;
@@ -570,7 +573,14 @@ export interface paths {
          *     configured sources. The backend downloads every asset from its source into a
          *     temporary file, verifies it parses, replaces the loaded file and reloads the
          *     datapath once, emitting generation.changed; an asset that fails to download
-         *     or parse leaves the loaded file in place and fails the operation. Follow the
+         *     or parse leaves the loaded file in place and fails the operation. With
+         *     several URLs for an asset, the backend tries them in order and moves to the
+         *     next only when one fails: a connection error, a status other than 200
+         *     (redirects are not followed), the per-URL deadline, or a sha256 mismatch
+         *     against a checksum published at the URL with .sha256sum appended. The update
+         *     fails when the new file lacks a category the active configuration uses.
+         *     Identical bytes leave the loaded file and generation unchanged. An automatic
+         *     update runs as the same operation kind and holds the same exclusivity. Follow the
          *     shared operation ownership, retention and idempotency rules. Replaying an
          *     accepted Idempotency-Key returns its original operation; a distinct update
          *     while one is queued or running returns 409 state_conflict. A full bounded
@@ -907,7 +917,11 @@ export interface paths {
          * @description Requires resources.runtime_settings.available. Returns the current
          *     runtime-adjustable settings. Numeric values cannot exceed their corresponding
          *     capability ceilings. source is config when values come from the activated
-         *     configuration and runtime after a runtime override.
+         *     configuration and runtime after a runtime override. geodata appears when
+         *     resources.geodata.configurable_sources is true and carries its own source.
+         *     GET needs only observe, so geodata URLs are returned as written only to an
+         *     authenticated caller with control, which may edit them, and redacted like
+         *     GeoAsset.source_redacted for everyone else.
          */
         get: operations["getRuntimeSettings"];
         put?: never;
@@ -926,6 +940,17 @@ export interface paths {
          *     cursors older than the new floor. The change applies immediately and lasts
          *     until the process restarts or the next configuration activation resets it; it
          *     is not written to the configuration file.
+         *
+         *     geodata is the exception. It requires resources.geodata.configurable_sources
+         *     and an authenticated caller; the anonymous loopback principal gets 403
+         *     permission_denied. The backend stores it, so it survives restarts and
+         *     activations and does not change the top-level source. A geodata patch merges
+         *     into the effective settings. Patching geosite or geoip stores both URL lists
+         *     (geodata.source becomes db); auto_update is stored on its own; null deletes
+         *     everything stored. It never downloads; POST /geodata/update does. While
+         *     geodata.source is config the configuration file owns the URLs: a patch that
+         *     sets geodata.geosite or geodata.geoip returns 409 state_conflict and changes
+         *     nothing, while auto_update can still be patched.
          */
         patch: operations["patchRuntimeSettings"];
         trace?: never;
@@ -1383,6 +1408,8 @@ export interface components {
                     can_update?: boolean;
                     /** @description The asset kinds GET /geodata reports on this backend. */
                     assets?: components["schemas"]["GeoAssetKind"][];
+                    /** @description Download URLs and automatic updates are managed through geodata in GET and PATCH /runtime/settings, and GET /geodata reports update status and required_codes. Requires runtime_settings.available with geodata in its fields. Absent means false. */
+                    configurable_sources?: boolean;
                 };
                 operations: {
                     available: boolean;
@@ -1824,12 +1851,29 @@ export interface components {
             size_bytes: components["schemas"]["UInt64"];
             /** @description Modification time of the loaded file, or null when the filesystem does not report one. */
             modified_at: components["schemas"]["NullableTimestamp"];
-            /** @description Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. Null when no source is configured or safe display is impossible. */
+            /** @description Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. With several configured URLs, the first. Null when no source is configured or safe display is impossible. */
             source_redacted: string | null;
+            /** @description Display-only URL the loaded file was downloaded from, redacted like source_redacted. Null when the backend did not download the loaded file, for example a file installed by a package. Reported when resources.geodata.configurable_sources is true. */
+            fetched_url_redacted?: string | null;
+            /** @description The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published or the backend did not download the file. Reported when resources.geodata.configurable_sources is true. */
+            verified?: boolean;
         };
+        /** @description The update status fields and required_codes are reported together, when resources.geodata.configurable_sources is true. */
         GeoData: {
             observed_at: components["schemas"]["Timestamp"];
             assets: components["schemas"]["GeoAsset"][];
+            /** @description When the last update attempt, manual or automatic, finished, whatever its outcome. Null before the first. */
+            last_checked_at?: components["schemas"]["NullableTimestamp"];
+            /** @description When an update last replaced a loaded file. Null before the first. */
+            last_updated_at?: components["schemas"]["NullableTimestamp"];
+            /** @description When the next automatic update is due, including its random delay and any failure backoff. Null while automatic updates are off. */
+            next_check_at?: components["schemas"]["NullableTimestamp"];
+            /** @description Why the last attempt failed after every URL was tried, with an adapter-defined code. Null after a successful or unchanged attempt, and before the first. */
+            last_error?: null | components["schemas"]["SafeError"];
+            /** @description For each kind in resources.geodata.assets, the lowercase category names the active configuration references, sorted and without attribute suffixes. A replacement file must contain all of them. */
+            required_codes?: {
+                [key: string]: string[];
+            };
         };
         GeoDataUpdateAccepted: components["schemas"]["OperationAccepted"] & {
             /** @constant */
@@ -1843,6 +1887,52 @@ export interface components {
             finished_at?: components["schemas"]["Timestamp"];
             result?: components["schemas"]["GeoData"];
             error?: null;
+        };
+        /**
+         * @description Where the download URLs come from. config when the configuration file names a geodata download URL; it then owns the URLs, while auto_update stays settable. db once a PATCH stored URLs. default for the backend's built-in URLs.
+         * @enum {string}
+         */
+        GeoDataSettingsSource: "config" | "db" | "default";
+        /**
+         * Format: uri
+         * @description Absolute HTTP(S) URL without userinfo or fragment; server also enforces administrator SSRF policy. The backend does not follow redirects.
+         */
+        GeoDataUrl: string;
+        GeoDataSources: {
+            /** @description Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. Empty only when source is config and the configuration names no URL for this asset. */
+            urls: components["schemas"]["GeoDataUrl"][];
+        };
+        GeoDataAutoUpdate: {
+            /**
+             * @description Update on a schedule. Off by default.
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * @description Hours between automatic updates, before a random delay of up to 60 minutes.
+             * @default 24
+             */
+            interval_hours: number;
+        };
+        GeoDataSettings: {
+            /** @description Read-only; a patch cannot set it. */
+            source: components["schemas"]["GeoDataSettingsSource"];
+            geosite: components["schemas"]["GeoDataSources"];
+            geoip: components["schemas"]["GeoDataSources"];
+            auto_update: components["schemas"]["GeoDataAutoUpdate"];
+        };
+        GeoDataSourcesPatch: {
+            /** @description Replaces the whole list; order is fallback order. */
+            urls: components["schemas"]["GeoDataUrl"][];
+        };
+        /** @description Merged into the effective settings. A patch with geosite or geoip stores both URL lists, so source becomes db, and returns 409 state_conflict while source is config. auto_update is stored on its own, under any source. null deletes everything stored. */
+        GeoDataSettingsPatch: null | {
+            geosite?: components["schemas"]["GeoDataSourcesPatch"];
+            geoip?: components["schemas"]["GeoDataSourcesPatch"];
+            auto_update?: {
+                enabled?: boolean;
+                interval_hours?: number;
+            };
         };
         GroupPolicy: {
             /** @enum {string} */
@@ -2860,11 +2950,11 @@ export interface components {
             } | null;
         };
         /** @enum {string} */
-        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds" | "record_flows" | "record_logs" | "record_dns_log";
+        RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds" | "record_flows" | "record_logs" | "record_dns_log" | "geodata";
         RuntimeSettings: {
             observed_at: components["schemas"]["Timestamp"];
             /**
-             * @description config while every value comes from the activated configuration; runtime once any PATCH overrode one.
+             * @description config while every value comes from the activated configuration; runtime once any PATCH overrode one. geodata has its own source and does not affect this one.
              * @enum {string}
              */
             source: "config" | "runtime";
@@ -2902,6 +2992,8 @@ export interface components {
                 /** @description Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached. */
                 grace_remaining_seconds: components["schemas"]["SafeUInt"];
             };
+            /** @description Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written only to an authenticated caller with control and redacted for everyone else. */
+            geodata?: components["schemas"]["GeoDataSettings"];
         };
         RuntimeSettingsPatch: {
             record_flows?: components["schemas"]["RecorderMode"];
@@ -2918,6 +3010,7 @@ export interface components {
                 max_flows?: components["schemas"]["SafeUInt"];
                 retention_seconds?: components["schemas"]["SafeUInt"];
             };
+            geodata?: components["schemas"]["GeoDataSettingsPatch"];
         };
         /** @description true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment. */
         RecorderMode: boolean | "auto";
@@ -5072,6 +5165,17 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The patch sets geodata URLs while the configuration file owns them */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     queryDns: {
