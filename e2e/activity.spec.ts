@@ -93,11 +93,14 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });
 
-test('the global target picker is disabled without a writable main source', async ({page}) => {
+test('read-only main configuration keeps the current mode and explains the write restriction', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = main.content!.replace('\nrouting {\n', '\nrouting {\n  l4proto(tcp, udp) -> proxy # doona: outbound mode\n');
+  main.content_sha256 = await sha256(main.content);
   for (const source of config.sources) source.writable = false;
   const responses: Record<string, unknown> = {
     '/version': await api.version(),
@@ -119,7 +122,17 @@ test('the global target picker is disabled without a writable main source', asyn
   });
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toBeVisible();
+  const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await expect(mode.getByRole('radio', {name: 'Global', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await expect(mode.getByRole('radio', {name: 'Global', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toContainText('proxy');
+  await page.getByRole('button', {name: 'Why is the mode read-only?'}).click();
+  await expect(page.getByRole('dialog', {name: 'Why is the mode read-only?'})).toContainText('honk requires configuration writes');
+  await expect(page.getByRole('link', {name: 'Installation instructions'})).toHaveAttribute(
+    'href',
+    'https://github.com/Zakkaus/doona/blob/main/README.md#install'
+  );
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
 });
 

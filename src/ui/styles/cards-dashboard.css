@@ -228,6 +228,14 @@
   grid-template-columns: 1fr;
   gap: 12px;
 }
+.rp-mode-help {
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  line-height: 1.5;
+}
+.rp-mode-help p {
+  margin: 0 0 8px;
+}
 /* The mode card needs a full row for its label, switch, and apply button. */
 @media (min-width: 640px) {
   .rp-quick {

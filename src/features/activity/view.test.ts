@@ -39,6 +39,7 @@ it('stages global targets without changing the current mode and detects an uncha
   expect(staged).toMatchObject({mode: 'global', target: 'resilient', dirty: true});
   expect(modeView({mode: 'global', target: 'proxy'}, {mode: 'global', target: 'proxy'}, groups, true, true, t).dirty).toBe(false);
   expect(modeView({mode: 'rule'}, null, [], false, false, t).targetText).toBe('—');
+  expect(modeView({mode: 'global', target: 'proxy'}, {mode: 'direct'}, groups, false, true, t)).toMatchObject({mode: 'global', target: 'proxy', dirty: false});
   const targetless = modeView({mode: 'rule'}, {mode: 'global', target: ''}, [], true, true, t);
   expect(targetless).toMatchObject({dirty: true, incomplete: true});
   expect(staged.incomplete).toBe(false);

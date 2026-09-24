@@ -1,5 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useCapabilities, useGroups} from '../../store';
+import {useConfig} from '../../store/config';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
@@ -12,11 +13,12 @@ export function useMode() {
   const t = useT();
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const {main, writable, busy, error, retry, apply: write} = useMainSourceEdit();
-  const content = main?.content;
+  const content = (main ?? config.data?.sources.find(source => source.kind === 'main'))?.content;
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
-  const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t);
+  const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t, content != null);
   const guard = useDraftGuard(view.dirty, () => setStaged(null));
   const apply = async () => {
     if (!staged || view.incomplete) return;
