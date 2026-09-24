@@ -7,7 +7,7 @@ pkgrel=0
 pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
-license="GPL-3.0-only"
+license="GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT"
 subpackages="$pkgname-doc $pkgname-fonts:fonts:noarch"
 source="$pkgname-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-$_upstream_ver.tar.gz
 	$pkgname-fonts-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-fonts-$_upstream_ver.tar.gz

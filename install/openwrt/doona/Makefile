@@ -15,7 +15,7 @@ PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
 # Placeholder: replace with the program archive's SHA256SUMS entry after publication.
 PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
 
-PKG_LICENSE:=GPL-3.0-only
+PKG_LICENSE:=GPL-3.0-only 0BSD Apache-2.0 BSD-3-Clause ISC MIT
 PKG_LICENSE_FILES:=web/LICENSE
 PKG_MAINTAINER:=Zakkaus <zakk@gentoozh.org>
 

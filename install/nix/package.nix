@@ -39,7 +39,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   meta = {
     description = "Web UI for the daeuniverse engines";
     homepage = "https://github.com/Zakkaus/doona";
-    license = with lib.licenses; [ gpl3Only ] ++ lib.optional withFonts ofl;
+    license = with lib.licenses; [ gpl3Only bsd0 asl20 bsd3 isc mit ] ++ lib.optional withFonts ofl;
     platforms = lib.platforms.linux;
     # Needs a maintainers/maintainer-list.nix entry in its own commit before submission.
     maintainers = with lib.maintainers; [ zakkaus ];
