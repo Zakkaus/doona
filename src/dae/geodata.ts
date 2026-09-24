@@ -76,5 +76,15 @@ export const geodataPresets: readonly GeodataPreset[] = [
   ),
   preset('loyalsoldier', 'Loyalsoldier/v2ray-rules-dat', {geosite: 'geosite.dat', geoip: 'geoip.dat'}, {geosite: 11_100_000, geoip: 16_900_000}, null)
 ];
+export const geodataPreset = (id: GeodataPresetId): GeodataPreset => geodataPresets.find(preset => preset.id === id)!;
 // The backend's built-in sources when nothing is stored.
-export const defaultGeodataPreset = geodataPresets[0];
+export const defaultGeodataPreset = geodataPreset('metacubex');
+
+// Contract bounds: GeoDataSources.urls and GeoDataAutoUpdate.interval_hours.
+export const maxGeodataUrls = 4;
+export const geodataIntervalRange = {min: 6, max: 168};
+// The contract's GeoDataUrl: absolute HTTP(S), no userinfo or fragment, at most 4096 characters (JSON Schema's
+// maxLength counts code points, not bytes or UTF-16 units).
+export function validGeodataUrl(url: string): boolean {
+  return /^https?:\/\/(?![^/?#]*@)[^#]*$/.test(url) && URL.canParse(url) && [...url].length <= 4096;
+}

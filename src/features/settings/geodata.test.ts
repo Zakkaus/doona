@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities, GeoDataSettings} from '../../api/model';
 import {capabilities, capabilitiesBase} from '../../api/mock/fixtures/capabilities';
-import {geodataPresets, liteCategories} from '../../dae/geodata';
+import {geodataPreset, geodataPresets, liteCategories} from '../../dae/geodata';
 import {translate, type Translator} from '../../i18n';
 import {
   customFields,
@@ -19,7 +19,9 @@ import {
 import {settingsCardList} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
-const [full, lite, loyal] = geodataPresets;
+const full = geodataPreset('metacubex');
+const lite = geodataPreset('metacubex-lite');
+const loyal = geodataPreset('loyalsoldier');
 const settings = (over: Partial<GeoDataSettings> = {}): GeoDataSettings => ({
   source: 'default',
   geosite: {urls: [...full.urls.geosite]},
@@ -102,6 +104,10 @@ describe('settings patch', () => {
     expect(urlProblem('https://user:pw@m.example/a.dat', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('https://m.example/a.dat#x', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('', [])).toBeNull();
+    // The 4096 limit counts characters, as JSON Schema's maxLength does, so a long non-ASCII path still fits.
+    const long = (length: number) => 'https://m.example/' + 'é'.repeat(length - 'https://m.example/'.length);
+    expect(urlProblem(long(4096), [])).toBeNull();
+    expect(urlProblem(long(4097), [])).toBe('settings.geodataUrlInvalid');
   });
   it('offers one blank field after the URLs until the list holds four', () => {
     expect(customFields(['a'])).toEqual(['a', '']);
