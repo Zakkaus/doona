@@ -8,7 +8,7 @@ import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs} from './view';
+import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs, restartRequired} from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
@@ -36,7 +36,8 @@ function useConfigEditorController(refetch: () => void) {
   useEffect(() => {
     if (!editor.error) return;
     if (diagnostics) {
-      toast('negative', t('ui.writeInvalid', {n: diagnostics.filter(d => d.level === 'error').length}));
+      const restart = restartRequired(diagnostics);
+      toast('negative', restart ? t('config.writeRestart', {n: restart}) : t('ui.writeInvalid', {n: diagnostics.filter(d => d.level === 'error').length}));
     } else toast('negative', t('ui.writeFailed', {error: errorText(editor.error, t)}));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};

@@ -1,5 +1,5 @@
 import {ApiError} from '../api/error';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getApi} from '../api/index';
 import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
 import {LocalError} from '../api/error';
@@ -56,6 +56,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const canValidate = validation?.available === true && validation.modes?.includes('full') === true;
   const {busy, error, run, cancel} = useAction<'validate' | 'save'>({rethrow});
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const lastRefused = useRef<string | null>(null);
   return {
     busy,
     cancel,
@@ -83,16 +84,25 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
             signal.throwIfAborted();
             if (!check.valid) return {diagnostics: check.diagnostics};
           }
-          const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal).catch(error => {
+          const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal).catch(async error => {
+            if (!(error instanceof ApiError) || error.status !== 412) throw error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
-            if (error instanceof ApiError && error.status === 412) refetch();
+            // A second refusal of the same accepted digest means the disk is ahead of the running configuration and no
+            // refetch helps; the first may only be a reload still in progress.
+            const fresh = await api.config(signal).catch(() => null);
+            refetch();
+            const refused = source.id + ':' + source.content_sha256;
+            if (fresh?.sources.find(item => item.id === source.id)?.content_sha256 !== source.content_sha256) throw error;
+            if (lastRefused.current === refused) throw new LocalError('config.diskAhead');
+            lastRefused.current = refused;
             throw error;
           });
+          lastRefused.current = null;
           signal.throwIfAborted();
           const operation = await api.pollOperation(accepted, signal);
           signal.throwIfAborted();
           refetch();
-          return {result: finished(operation, 'reload')};
+          return {result: finished(operation, 'reload', {written: true})};
         }),
       [api, canValidate, run, refetch]
     )

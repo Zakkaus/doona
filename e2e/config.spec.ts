@@ -656,3 +656,93 @@ httpTest('a module draft refused with 412 is rebased and saves on the next attem
   expect(saved).toContain('# concurrent edit');
   expect(saved).toContain('domain(example.org) -> proxy');
 });
+
+const restartRefusal = {
+  request_id: 'restart',
+  error: {
+    code: 'unsupported_value',
+    message: 'Configuration validation failed',
+    details: {
+      diagnostics: [
+        {
+          level: 'error',
+          source_id: 'src-rules',
+          line: null,
+          column: null,
+          span: null,
+          code: 'restart-required',
+          message: 'Changing global.log_level requires restarting honk'
+        }
+      ]
+    }
+  }
+};
+
+httpTest('a restart-only change is refused with the setting named, and the next write goes through', async ({page}) => {
+  await configBackend(page);
+  let refused = false;
+  await page.route('**/api/v1/config/sources/*', route => {
+    if (refused) return route.fallback();
+    refused = true;
+    return route.fulfill({status: 422, json: restartRefusal});
+  });
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# restart draft\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('1 setting takes effect only after a restart; nothing written');
+  await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('global.log_level');
+  await expect(editor).toContainText('# restart draft');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
+});
+
+httpTest('a file ahead of the running configuration is explained when the refusal repeats', async ({page}) => {
+  await configBackend(page);
+  await page.route('**/api/v1/config/sources/*', route =>
+    route.fulfill({status: 412, json: {request_id: 'ahead', error: {code: 'stale_revision', message: 'Source changed on disk', details: null}}})
+  );
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# ahead draft\n');
+  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  await apply.click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  await apply.click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'not the running configuration'})).toContainText('Reload honk to apply the file');
+  await expect(editor).toContainText('# ahead draft');
+});
+
+httpTest('a reload refused after the write says the file was written but not applied', async ({page}) => {
+  await configBackend(page);
+  const href = '/api/v1/operations/op-rejected';
+  await page.route('**/api/v1/config/sources/*', route =>
+    route.fulfill({
+      status: 202,
+      headers: {'Retry-After': '1', Location: href},
+      json: {operation_id: 'op-rejected', kind: 'reload', status: 'queued', href}
+    })
+  );
+  await page.route('**' + href, route =>
+    route.fulfill({
+      json: {
+        operation_id: 'op-rejected',
+        kind: 'reload',
+        status: 'failed',
+        created_at: new Date().toISOString(),
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+        result: null,
+        error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
+      }
+    })
+  );
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# rejected reload\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Written to the configuration file but not applied');
+});
