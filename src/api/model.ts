@@ -59,6 +59,8 @@ export type Operation =
   | SucceededOperation<'suspend', NonNullable<Schema['SuspendSucceededOperation']['result']>>
   | SucceededOperation<'resume', NonNullable<Schema['ResumeSucceededOperation']['result']>>;
 export type OperationState = Operation & {retryAfter?: number};
+// The statuses an operation ends in; it never changes after reaching one.
+export const operationDone = (status: Operation['status']) => status === 'succeeded' || status === 'failed';
 export type NodeQuery = operations['listNodes']['parameters']['query'];
 export type ConnectionQuery = operations['listConnections']['parameters']['query'];
 export type BulkCloseQuery = operations['closeConnections']['parameters']['query'];

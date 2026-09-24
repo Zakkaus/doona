@@ -1,7 +1,7 @@
 import {useCallback, useState} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
-import type {Capabilities, Operation, Runtime, RuntimeSettings, RuntimeSettingsPatch} from '../api/model';
+import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
 import {finished, useAction} from './action';
 export function useVersion() {
@@ -61,7 +61,8 @@ export function useRuntimeSettings(enabled = true) {
     {
       key: ['runtimeSettings'],
       fetch: signal => api.runtimeSettings(signal),
-      acceptEvent: event => event.event !== 'operation.updated' || event.data.status === 'succeeded' || event.data.status === 'failed'
+      // Only a finished operation can have restored the settings; queued and running updates would refetch for nothing.
+      acceptEvent: event => event.event !== 'operation.updated' || operationDone(event.data.status)
     },
     {enabled}
   );

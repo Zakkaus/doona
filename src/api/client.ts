@@ -1,7 +1,18 @@
 import createClient from 'openapi-fetch';
 import type {paths} from './types';
 import type {Api} from './api';
-import type {ApiEvent, EventKind, EventOptions, FlowDetail, LogOptions, LogRecord, OperationAccepted, OperationState, RoutingTraceResponse} from './model';
+import {
+  operationDone,
+  type ApiEvent,
+  type EventKind,
+  type EventOptions,
+  type FlowDetail,
+  type LogOptions,
+  type LogRecord,
+  type OperationAccepted,
+  type OperationState,
+  type RoutingTraceResponse
+} from './model';
 import {ApiError, clientError, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
@@ -87,7 +98,7 @@ export function createApi(base: string, token?: string): Api {
         continue;
       }
       const operation: OperationState = await response.json();
-      if (operation.status === 'succeeded' || operation.status === 'failed') return operation;
+      if (operationDone(operation.status)) return operation;
       delay = retryAfter(response);
     }
   }
