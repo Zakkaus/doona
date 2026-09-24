@@ -41,7 +41,10 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
     id,
     label: t(recorderAccess[id].label),
     value: choice,
-    items: (['auto', 'on', 'off'] as const).map(mode => ({id: mode, label: t(recorderChoiceLabel[mode])})),
+    items: (['auto', 'on', 'off'] as const).map(mode => ({
+      id: mode,
+      label: t(mode === 'auto' && id === 'record_flows' ? 'settings.record.autoFlows' : recorderChoiceLabel[mode])
+    })),
     disabled: forbidden,
     tone: forbidden ? ('muted' as const) : state?.active ? ('ok' as const) : ('neutral' as const),
     status: t(forbidden ? 'settings.recordingForbidden' : state?.active ? 'settings.recordingActive' : 'settings.recordingIdle')
@@ -52,6 +55,8 @@ export function recordingNote(recording: RuntimeSettings['recording'] | undefine
   if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
   return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
+// Automatic flow recording follows pages that ask for flows, not every open panel.
+export const flowRecordingNote = (choice: RecorderChoice, t: Translator) => (choice === 'auto' ? t('settings.recordFlowsAuto') : null);
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
   Numeric,

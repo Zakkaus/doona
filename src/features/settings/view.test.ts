@@ -2,7 +2,18 @@ import {expect, it} from 'vitest';
 import {geodata, runtimeSettings} from '../../api/mock/fixtures';
 import type {RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {numericAccess, numericFieldView, geodataRows, probeFailure, profileView, paletteLabel, recorderView, recorderPatchValue, recordingNote} from './view';
+import {
+  numericAccess,
+  numericFieldView,
+  geodataRows,
+  probeFailure,
+  profileView,
+  paletteLabel,
+  recorderView,
+  recorderPatchValue,
+  recordingNote,
+  flowRecordingNote
+} from './view';
 import {ApiError} from '../../api/error';
 const t: Translator = (key, params) => translate('en', key, params);
 it('validates numeric bounds and writes typed partial patches without losing sibling edits', () => {
@@ -52,6 +63,16 @@ it('recorder controls follow the reported state and the wire form', () => {
   expect(recordingNote(recording, t)).toBe('settings.recordingDetached');
   expect(recordingNote({...(recording as object), grace_remaining_seconds: 42} as never, t)).toBe('settings.recordingGrace:{"n":42}');
   expect(recordingNote(undefined, t)).toBeNull();
+});
+
+it('names the pages that make automatic flow recording capture', () => {
+  const auto = (id: 'record_flows' | 'record_logs') => recorderView(id, 'auto', undefined, t).items.find(item => item.id === 'auto')?.label;
+  expect(auto('record_flows')).toBe('While Connections or Rules is open');
+  expect(auto('record_logs')).toBe('With panel');
+  expect(flowRecordingNote('auto', t)).toContain('60');
+  expect(flowRecordingNote('on', t)).toBeNull();
+  for (const lang of ['zh-TW', 'zh-CN'] as const)
+    for (const key of ['settings.record.autoFlows', 'settings.recordFlowsAuto'] as const) expect(translate(lang, key)).not.toBe(translate('en', key));
 });
 
 it('names why a connection test failed and ignores a cancelled test', () => {

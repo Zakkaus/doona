@@ -919,6 +919,8 @@ export const messages = {
   'settings.recordLogs': '日誌擷取',
   'settings.recordDnsLog': 'DNS 記錄',
   'settings.record.auto': '隨面板',
+  'settings.record.autoFlows': '連線或規則頁開啟時',
+  'settings.recordFlowsAuto': '流程只在連線或規則頁開啟期間及關閉後 60 秒內記錄；其他頁面不會啟動流程記錄。',
   'settings.record.on': '常開',
   'settings.record.off': '關閉',
   'settings.recordingActive': '記錄中',
