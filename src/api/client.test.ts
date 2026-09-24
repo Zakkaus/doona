@@ -51,6 +51,14 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(request).toHaveBeenCalledTimes(3);
   });
+  it('does not replay a refused mutation that carries no idempotency key', async () => {
+    const request = vi.fn(async () => json({error: {code: 'temporarily_unavailable', message: 'busy'}, request_id: null}, 503, {'Retry-After': '1'}));
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    await expect(api.createNode({name: 'hk', link: 'ss://node'})).rejects.toMatchObject({status: 503});
+    await expect(api.deleteProvider('sub')).rejects.toMatchObject({status: 503});
+    expect(request).toHaveBeenCalledTimes(2);
+  });
   it('does not replay an ambiguously failed mutation', async () => {
     const request = vi.fn().mockRejectedValue(new TypeError('network down'));
     vi.stubGlobal('fetch', request);

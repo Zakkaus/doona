@@ -20,7 +20,7 @@ function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; respons
   return {...data(result), retryAfter: retryAfter(result.response)};
 }
 
-// Control requests and DNS queries retry explicit transient refusals this many times.
+// Keyed mutations and DNS queries retry explicit transient refusals this many times.
 const MAX_REFUSALS = 3;
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
@@ -33,7 +33,9 @@ export function createApi(base: string, token?: string): Api {
     headers,
     cache: 'no-store',
     fetch: async request => {
-      const retryable = request.method !== 'GET' || new URL(request.url).pathname.endsWith('/dns/query');
+      // A mutation is replayed only under an Idempotency-Key, so a refusal that already wrote something cannot
+      // repeat the write.
+      const retryable = request.headers.has('Idempotency-Key') || new URL(request.url).pathname.endsWith('/dns/query');
       if (!retryable) return send(request);
       // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
       for (let refused = 0; ; refused++) {
