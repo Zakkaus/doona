@@ -5,9 +5,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_VERSION:=0.1.0_beta2
+PKG_VERSION:=0.1.0_beta3
 PKG_RELEASE:=1
-PKG_REAL_VERSION:=v0.1.0-beta.2
+PKG_REAL_VERSION:=v0.1.0-beta.3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_REAL_VERSION)/

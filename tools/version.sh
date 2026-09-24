@@ -1,5 +1,5 @@
 #!/bin/sh
-# A stable tag has no prerelease; v0.1.0-beta.2 yields VERSION=0.1.0 and PRERELEASE=beta.2.
+# A stable tag has no prerelease; v0.1.0-beta.3 yields VERSION=0.1.0 and PRERELEASE=beta.3.
 set -eu
 tag=${1:?usage: tools/version.sh vX.Y.Z[-pre.N]}
 case "$tag" in

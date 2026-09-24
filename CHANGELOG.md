@@ -2,6 +2,27 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.3] - 2026-09-24
+
+### Added
+
+- A public demo on GitHub Pages with sample data from the built-in mock backend.
+- A clear message when an engine has no native API, instead of a token prompt.
+
+### Changed
+
+- Releases no longer include a node_modules archive; package recipes install the prebuilt tarballs.
+- The READMEs and guides state which honk builds serve the native API and lead with password sign-in.
+- Card values keep secondary facts on a caption line, cards in a row stay equal in height, and the capabilities list uses columns.
+
+### Fixed
+
+- An updated build could miss the page language for offline start.
+- The Events page left out events received before it opened.
+- Layout on tablets and phones for Overview, DNS, the routing map and other pages.
+- Sticky table headers and overlays showed content through them in the glass palette.
+- Untranslated datapath errors and the rule editor's must switch.
+
 ## [0.1.0-beta.2] - 2026-09-24
 
 ### Added
@@ -91,6 +112,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
+[0.1.0-beta.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.2...v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/Zakkaus/doona/compare/v0.1.0-alpha.2...v0.1.0-beta.1
 [0.1.0-alpha.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-alpha.1...v0.1.0-alpha.2
