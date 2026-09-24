@@ -6,6 +6,7 @@ import {observedAt} from './fixtures/clock';
 import {found, createPager} from './common';
 import {patchGroupConfig, probeMembers, probeResult, resolveLeaf} from './control';
 import type {MockLifecycle} from './lifecycle';
+import type {MockGeodataState} from './geodata';
 import {activateInventory, writeGroupConfig} from './activation';
 import {quote} from '../../dae/text';
 import {quoteName} from '../../dae/groups';
@@ -44,12 +45,12 @@ export function createInventory(
   {enqueue, log, pending}: Pick<MockLifecycle, 'enqueue' | 'log' | 'pending'>,
   advance: () => string,
   editMain: (edit: (text: string) => string) => Promise<() => string>,
-  interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean
+  interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean,
+  geodata: MockGeodataState
 ) {
   const nodePage = createPager('nodes');
   const providerPage = createPager('providers');
   const providers = structuredClone(fixtures.providers);
-  const geodata = structuredClone(fixtures.geodata);
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
   const revisions = new Map<string, bigint>();
@@ -295,22 +296,17 @@ export function createInventory(
     geodata: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.geodata.available) throw new ApiError(404, 'capability_not_supported', 'Geodata is unavailable');
-      return {...structuredClone(geodata), observed_at: new Date().toISOString()};
+      return geodata.status();
     },
     updateGeodata: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.geodata.can_update) throw new ApiError(404, 'capability_not_supported', 'Geodata update is unavailable');
       if (pending('geodata_update')) throw new ApiError(409, 'state_conflict', 'A geodata update is already queued or running');
       return enqueue('geodata_update', () => {
-        const now = new Date().toISOString();
-        for (const asset of geodata.assets) {
-          asset.modified_at = now;
-          asset.sha256 = Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
-          asset.size_bytes = String(Number(asset.size_bytes) + Math.floor(Math.random() * 65536));
-        }
-        log('info', 'honk::geodata', 'Geodata updated; reloading.', {assets: geodata.assets.map(a => a.kind)});
+        const result = geodata.update();
+        log('info', 'honk::geodata', 'Geodata updated; reloading.', {assets: result.assets.map(a => a.kind)});
         advance();
-        return {...structuredClone(geodata), observed_at: now};
+        return result;
       });
     }
   };

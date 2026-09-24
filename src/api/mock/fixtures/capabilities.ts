@@ -24,7 +24,7 @@ export const capabilities: Capabilities = {
     memory_history: {available: true, max_window_seconds: 604800, max_points: 720},
     nodes: {available: true, can_manage: true},
     providers: {available: true, can_refresh: true, can_manage: true, max_page_size: 1000},
-    geodata: {available: true, can_update: true, assets: ['geosite', 'geoip']},
+    geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], configurable_sources: true},
     rules: {available: true, max_rules: 4096},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
@@ -40,7 +40,8 @@ export const capabilities: Capabilities = {
         'flows.retention_seconds',
         'record_flows',
         'record_logs',
-        'record_dns_log'
+        'record_dns_log',
+        'geodata'
       ]
     },
     groups: {available: true, config_patch: true, selection: true, max_patch_operations: 32},

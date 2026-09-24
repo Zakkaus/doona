@@ -75,6 +75,9 @@ export type ProviderQuery = operations['listProviders']['parameters']['query'];
 export type ProviderCreate = Schema['ProviderCreate'];
 export type NodeCreate = Schema['NodeCreate'];
 export type GeoData = Schema['GeoData'];
+export type GeoAssetKind = Schema['GeoAssetKind'];
+export type GeoDataSettings = Schema['GeoDataSettings'];
+export type GeoDataSettingsPatch = Schema['GeoDataSettingsPatch'];
 export type RuleList = Schema['RuleList'];
 // honk supplies source_id beside the redacted label, but the pinned contract does not yet declare it.
 export type RuleSource = NonNullable<Schema['RuleSource']> & {source_id?: string};
