@@ -18,6 +18,7 @@ import {
   type ConnectionView
 } from './view';
 import {offered} from '../../api/capabilities';
+import {useFlowDemand} from '../../store/events';
 
 const connectionTabs = ['traffic', 'list'] as const;
 // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
@@ -72,6 +73,8 @@ export function useConnectionsPage({go, query}: PageProps) {
   const canClose = capabilities.data?.resources.connections.can_close === true;
   const rulesListed = offered(capabilities.data?.resources, 'rules', {whileLoading: false});
   const canViewFlow = offered(capabilities.data?.resources, 'flows', {whileLoading: false});
+  // Rows take their chain and rule from flow records, which the backend keeps only while a client asks for them.
+  useFlowDemand(canViewFlow && capabilities.data?.resources.events.available === true);
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);

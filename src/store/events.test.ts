@@ -2,7 +2,7 @@ import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
-import {eventStatus, subscribeEvents} from './events';
+import {eventStatus, holdFlowDemand, subscribeEvents} from './events';
 import {watchResource} from './resource';
 import type {EventOptions} from '../api/model';
 
@@ -172,4 +172,23 @@ it('clears a capabilities error once a refetch succeeds while the stream stays u
   await vi.advanceTimersByTimeAsync(60000);
   expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
   expect(eventStatus(api)).toMatchObject({connected: true, error: null});
+});
+
+it('holds one flow-demand stream for all holders and closes it after the last release', async () => {
+  const api = createMockApi();
+  const signals: AbortSignal[] = [];
+  api.subscribeEvents = vi.fn(({signal, kinds}: EventOptions) => {
+    expect(kinds?.some(kind => kind.startsWith('flow.'))).toBe(true);
+    signals.push(signal!);
+    return new Promise<void>(() => {});
+  });
+  const first = holdFlowDemand(api);
+  const second = holdFlowDemand(api);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  first();
+  expect(signals[0].aborted).toBe(false);
+  second();
+  expect(signals[0].aborted).toBe(true);
+  holdFlowDemand(api)();
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
 });
