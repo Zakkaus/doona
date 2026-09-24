@@ -8,7 +8,7 @@
 let
   version = "0.1.0-beta.3";
   fonts = fetchurl {
-    url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-v${version}.tar.gz";
+    url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-${version}.tar.gz";
     hash = lib.fakeHash; # Replace with the published font archive hash.
   };
 in
@@ -17,7 +17,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   inherit version;
 
   src = fetchurl {
-    url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-v${finalAttrs.version}.tar.gz";
+    url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-${finalAttrs.version}.tar.gz";
     hash = lib.fakeHash; # Replace with the published program archive hash.
   };
 

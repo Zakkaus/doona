@@ -17,9 +17,23 @@ none is ready for distribution. All four consume the prebuilt program archive, w
 OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, Gentoo uses `ebuild … manifest`, and Nix uses the
 archive hashes in `SHA256SUMS`.
 
-The package recipes use tag `v0.1.0-beta.3`. nfpm receives `VERSION=0.1.0` and
-`PRERELEASE=beta.3`, yielding `0.1.0~beta.3` for deb and rpm. OpenWrt, Alpine and
-Gentoo use `0.1.0_beta3` for their package version and download the same tag.
+## Version spellings
+
+The recipes use tag `v0.1.0-beta.3`. Release assets keep the upstream version without the tag's `v`;
+package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts`.
+
+| Format           | `doona` asset                                 | Version in package or recipe                       |
+| ---------------- | --------------------------------------------- | -------------------------------------------------- |
+| Program archive  | `doona-0.1.0-beta.3.tar.gz`                   | n/a                                                |
+| Fonts archive    | `doona-fonts-0.1.0-beta.3.tar.gz`             | n/a                                                |
+| Debian           | `doona_0.1.0-beta.3-1_all.deb`                | `0.1.0~beta.3-1`                                   |
+| RPM              | `doona-0.1.0-beta.3-1.noarch.rpm`             | Version `0.1.0~beta.3`, Release `1`                |
+| OpenWrt ipk      | `doona_0.1.0-beta.3-1_all.ipk`                | `0.1.0~beta.3-1`                                   |
+| Arch             | `doona-0.1.0beta3-1-any.pkg.tar.zst`          | pkgver `0.1.0beta3`, pkgrel `1`, default epoch `0` |
+| Alpine APKBUILD  | Download the program and fonts archives above | pkgver `0.1.0_beta3`, pkgrel `0`                   |
+| Gentoo ebuild    | Download the program and fonts archives above | PV `0.1.0_beta3`                                   |
+| OpenWrt Makefile | Download the program and fonts archives above | PKG_VERSION `0.1.0_beta3`, PKG_RELEASE `1`         |
+| Nix recipe       | Download the program and fonts archives above | `0.1.0-beta.3`                                     |
 
 The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
@@ -46,10 +60,9 @@ github_account = "Zakkaus"
 The nixpkgs expression names a `zakkaus` maintainer; nixpkgs wants that entry in `maintainers/maintainer-list.nix`
 as its own commit before the package.
 
-The release workflow runs `tools/package.sh --git-version`: tag `v0.1.0-beta.3` produces
-`doona-v0.1.0-beta.3.tar.gz` and `doona-fonts-v0.1.0-beta.3.tar.gz`, matching the binary recipes.
+The release workflow runs `tools/package.sh --git-version` to produce the program and fonts archives in the table.
 The program archive has `index.html`, assets and notices at its root. The separate font archive has a
 `fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.
 Nix unpacks the release archives under `$out/share/doona`. nfpm stages the same archives for its packages.
-The default local invocation uses `package.json` instead, so its archive names omit the leading `v`.
+The default local invocation uses the version in `package.json`.

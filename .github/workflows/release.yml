@@ -32,6 +32,9 @@ jobs:
           [ "$NPM" = "$declared" ] || { echo "tag ${GITHUB_REF_NAME} is version $NPM, package.json says $declared" >&2; exit 1; }
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "PRERELEASE=$PRERELEASE" >> "$GITHUB_ENV"
+          echo "ARCH_PRERELEASE=$ARCH_PRERELEASE" >> "$GITHUB_ENV"
+          echo "NPM=$NPM" >> "$GITHUB_ENV"
+          echo "PACKAGE_RELEASE=$PACKAGE_RELEASE" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
@@ -56,32 +59,51 @@ jobs:
           program=build/stage/doona/usr/share/doona
           fonts=build/stage/doona-fonts/usr/share/doona
           mkdir -p "$program" "$fonts"
-          tar -xzf "release/doona-${GITHUB_REF_NAME}.tar.gz" -C "$program"
-          tar -xzf "release/doona-fonts-${GITHUB_REF_NAME}.tar.gz" -C "$fonts"
+          tar -xzf "release/doona-${NPM}.tar.gz" -C "$program"
+          tar -xzf "release/doona-fonts-${NPM}.tar.gz" -C "$fonts"
           mkdir -p build/stage/doona/usr/share/doc/doona/LICENSES build/stage/doona-fonts/usr/share/doc/doona
           mv "$program"/LICENSE "$program"/NOTICE "$program"/README.md "$program"/CHANGELOG.md build/stage/doona/usr/share/doc/doona/
           mv "$program"/LICENSES/Apache-2.0.txt build/stage/doona/usr/share/doc/doona/LICENSES/
           rmdir "$program"/LICENSES
           cp "$fonts"/fonts/OFL.txt build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
           for packager in deb rpm ipk archlinux; do
-            nfpm package --config install/nfpm/doona.yaml --packager "$packager" --target release/
-            nfpm package --config install/nfpm/doona-fonts.yaml --packager "$packager" --target release/
+            for config in install/nfpm/doona.yaml install/nfpm/doona-fonts.yaml; do
+              if [ "$packager" = archlinux ]; then
+                # nfpm 2.47 needs an explicit default epoch to retain Arch's prerelease in .PKGINFO.
+                arch_config="$RUNNER_TEMP/$(basename "$config")"
+                sed "/^version_schema: semver$/a epoch: '0'" "$config" > "$arch_config"
+                PRERELEASE="$ARCH_PRERELEASE" nfpm package --config "$arch_config" --packager "$packager" --target release/
+              else
+                nfpm package --config "$config" --packager "$packager" --target release/
+              fi
+            done
           done
-      # GitHub renames a `~` in an asset name to `.`; rename first so SHA256SUMS lists what is served.
+      # Keep upstream SemVer in asset names; package metadata retains each format's own version.
       - name: Sum every asset
         run: |
           cd release
-          for f in *~*; do [ -e "$f" ] && mv "$f" "$(printf '%s' "$f" | tr '~' '.')"; done
-          sha256sum doona*.tar.gz doona*.deb doona*.rpm doona*.ipk doona*.pkg.tar.zst > SHA256SUMS
+          if [ -n "$PRERELEASE" ]; then
+            for name in doona doona-fonts; do
+              mv "${name}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.deb" "${name}_${NPM}-${PACKAGE_RELEASE}_all.deb"
+              mv "${name}-${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}.noarch.rpm" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm"
+              mv "${name}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.ipk" "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk"
+            done
+          fi
+          set -- "doona-${NPM}.tar.gz" "doona-fonts-${NPM}.tar.gz"
+          for name in doona doona-fonts; do
+            set -- "$@" "${name}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
+              "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
+          done
+          sha256sum "$@" > SHA256SUMS
       - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           draft: true
           prerelease: ${{ env.PRERELEASE != '' }}
           fail_on_unmatched_files: true
           files: |
-            release/doona*.tar.gz
-            release/doona*.deb
-            release/doona*.rpm
-            release/doona*.ipk
-            release/doona*.pkg.tar.zst
+            release/*-${{ env.NPM }}.tar.gz
+            release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.deb
+            release/*-${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}.noarch.rpm
+            release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.ipk
+            release/*-${{ env.VERSION }}${{ env.ARCH_PRERELEASE }}-${{ env.PACKAGE_RELEASE }}-any.pkg.tar.zst
             release/SHA256SUMS

@@ -3,13 +3,14 @@
 
 EAPI=8
 
-MY_TAG="v${PV/_beta/-beta.}"
+MY_VERSION="${PV/_beta/-beta.}"
+MY_TAG="v${MY_VERSION}"
 MY_URI="https://github.com/Zakkaus/doona/releases/download/${MY_TAG}"
 DESCRIPTION="Web UI for the daeuniverse engines"
 HOMEPAGE="https://github.com/Zakkaus/doona"
 SRC_URI="
-	${MY_URI}/${PN}-${MY_TAG}.tar.gz -> ${P}.tar.gz
-	fonts? ( ${MY_URI}/${PN}-fonts-${MY_TAG}.tar.gz -> ${P}-fonts.tar.gz )
+	${MY_URI}/${PN}-${MY_VERSION}.tar.gz -> ${P}.tar.gz
+	fonts? ( ${MY_URI}/${PN}-fonts-${MY_VERSION}.tar.gz -> ${P}-fonts.tar.gz )
 "
 S="${WORKDIR}"
 

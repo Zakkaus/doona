@@ -5,9 +5,8 @@ arch: all
 platform: linux
 version: ${VERSION}
 prerelease: ${PRERELEASE}
+release: ${PACKAGE_RELEASE}
 version_schema: semver
-# nfpm 2.47 writes the Arch pkgver without the prerelease unless an epoch is set; 0 is pacman's default.
-epoch: '0'
 section: web
 priority: optional
 maintainer: Zakkaus <zakk@gentoozh.org>
