@@ -86,7 +86,7 @@ export function createConfiguration(
     const read = (file: (typeof list)[number], bare: boolean) => {
       if (visited.has(file.id)) return;
       visited.add(file.id);
-      sectionLines(file.content, 'routing', bare).forEach(({code, line}) => {
+      sectionLines(file.content, 'routing', bare).forEach(({code, raw, line}) => {
         const include = /^include\s+(\S+)$/.exec(code);
         if (include) {
           const dependency = byPath.get(resolveIncludePath(file.path, include[1]));
@@ -96,7 +96,9 @@ export function createConfiguration(
         const fb = /^fallback:\s*(\S+)$/.exec(code);
         const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
         if (!fb && !rule) return;
-        const source = {file: file.path.split('/').pop()!, source_id: file.id, line};
+        const firstToken = raw.search(/\S/);
+        const column = new TextEncoder().encode(raw.slice(0, firstToken)).length + 1;
+        const source = {file: file.path.split('/').pop()!, source_id: file.id, line, column};
         if (fb) {
           fallback = {outbound: fb[1], source};
           entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});

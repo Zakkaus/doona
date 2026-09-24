@@ -319,12 +319,12 @@ httpTest('a stale original digest refuses replacement and retains the draft', as
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
   const {api} = await configBackend(page);
   const rules = await api.rules();
-  for (const rule of rules.rules) if (rule.source && 'source_id' in rule.source) delete rule.source.source_id;
+  for (const rule of rules.rules) if (rule.source) rule.source.source_id = 'unknown-source';
   await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
   await page.goto('/#/rules?tab=list');
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Open source', exact: true}).first()).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Open source', exact: true})).toHaveCount(0);
 });
 
 test('modules list top-level counts and edit only routing through reload', async ({page}) => {

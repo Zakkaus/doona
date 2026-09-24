@@ -71,17 +71,14 @@ export function dictionaryView(
     if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
   }
   const byId = new Map(config.map(source => [source.id, source]));
-  const byFile = new Map<string, ConfigSource | undefined>();
   const resolve = (source: RuleSource | null | undefined) => {
     if (!source) return undefined;
-    if (source.source_id) return byId.get(source.source_id);
-    if (!byFile.has(source.file)) byFile.set(source.file, sourceFor(config, source));
-    return byFile.get(source.file);
+    return byId.get(source.source_id);
   };
   // Only a rule doona can locate in its source is offered for removal or as an insertion point.
   const scans = new Map<string, ReturnType<typeof scanConfig>>();
   const anchored = (rule: RoutingRule) => {
-    const source = byId.get(rule.source?.source_id ?? '');
+    const source = rule.source && byId.get(rule.source.source_id);
     if (!source?.writable || source.content === undefined) return false;
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
     return ruleAnchor(source, rule, scans.get(source.id)) !== null;

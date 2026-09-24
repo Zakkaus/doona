@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Discover the native API */
+        /**
+         * Discover the native API
+         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         */
         get: operations["getDiscovery"];
         put?: never;
         post?: never;
@@ -28,7 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read native and engine version identity */
+        /**
+         * Read native and engine version identity
+         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         */
         get: operations["getVersion"];
         put?: never;
         post?: never;
@@ -45,7 +51,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Negotiate resources, visibility, and limits */
+        /**
+         * Negotiate resources, visibility, and limits
+         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         */
         get: operations["getCapabilities"];
         put?: never;
         post?: never;
@@ -155,14 +164,17 @@ export interface paths {
          *     may contain secrets. Syntax mode parses only submitted text. Full mode also
          *     checks semantics and resolves includes/subscriptions from submitted sources
          *     or adapter-authorized local files and cached data, never from the network.
-         *     A missing or inaccessible dependency produces an error diagnostic, not a
-         *     successful partial validation. Neither mode writes files, refreshes caches,
-         *     applies configuration, publishes a generation, or starts an operation.
+         *     Missing or inaccessible required local dependencies produce error diagnostics.
+         *     An unfetched subscription produces a subscription-not-fetched warning and
+         *     does not by itself invalidate the candidate; validation does not fetch it.
+         *     Neither mode writes files, refreshes caches, applies configuration,
+         *     publishes a generation, or starts an operation.
          *     Return 200 for completed validation, including invalid candidates. Malformed
          *     JSON/request shape or duplicate effective source IDs returns 400; an
          *     unadvertised mode returns 422 unsupported_value. Enforce max_bytes over the
-         *     sum of UTF-8 source bytes and max_sources over the source count, including
-         *     locally resolved dependencies in full mode; exceeding either returns 413.
+         *     sum of UTF-8 configuration source bytes and max_sources over the source count,
+         *     including locally resolved source text in full mode; exceeding either returns
+         *     413. Geodata assets do not count toward the byte limit.
          *     The shared max_json_body_bytes limit applies independently to the HTTP body.
          *     Never echo candidate text, secrets, or private paths in diagnostics or errors.
          */
@@ -213,7 +225,9 @@ export interface paths {
          *     POST /config/validate, substituting the replacement for this source.
          *     Resolve dependencies only from submitted text, authorized local files,
          *     and cached data; never use the network or refresh caches during validation.
-         *     Missing or inaccessible dependencies produce error diagnostics.
+         *     Missing or inaccessible required local dependencies produce error diagnostics.
+         *     An unfetched subscription produces a subscription-not-fetched warning and
+         *     does not by itself invalidate the candidate; validation does not fetch it.
          *     If any diagnostic has level error, return 422 unsupported_value with
          *     error.details.diagnostics using ConfigDiagnostic; never write any file
          *     or start a reload. Warnings and info alone do not prevent a write.
@@ -223,9 +237,10 @@ export interface paths {
          *     on-disk hash before replacement and return 412 if it changed.
          *     After the write, start a reload operation and return 202 OperationAccepted
          *     with kind reload, Location, and Retry-After. This is not reload completion.
-         *     A successful reload publishes generation.changed when events are available;
-         *     GET /config then shows the new accepted content_sha256. If reload fails,
-         *     the previous generation remains active; the file write is not rolled back.
+         *     If reload publishes a new generation and events are available, emit
+         *     generation.changed. After successful reload, GET /config reports the accepted
+         *     content_sha256. If reload fails, the previous generation remains active and
+         *     the file write is not rolled back.
          *     Idempotency-Key follows the operation retention rules: scope it to caller,
          *     method, and path in this instance. A retained same-body replay returns the
          *     original operation without another write or hash check; a different body
@@ -328,11 +343,11 @@ export interface paths {
         };
         /**
          * Read bounded memory history
-         * @description Reads a bounded in-memory ring of memory samples without starting
-         *     sampling on GET. Same shape and rules as traffic history: the producer
-         *     samples independently of readers, SSE does not replay it, and a query
-         *     above either advertised limit returns 400 invalid_request rather than a
-         *     clamped result. Requires resources.memory_history.available.
+         * @description Requires resources.memory_history.available. Reads a bounded in-memory ring
+         *     sampled independently of HTTP requests. The response envelope, retention,
+         *     thinning, and gap rules follow traffic history; samples contain memory metrics.
+         *     SSE does not replay the ring. A query above either advertised limit returns
+         *     400 invalid_request without clamping.
          */
         get: operations["getMemoryHistory"];
         put?: never;
@@ -377,8 +392,8 @@ export interface paths {
          *     share-link support, writes it into the node section of its managed main
          *     source under the given name, advances the configuration revision and emits
          *     generation.changed. The link is stored, never returned. A link the engine
-         *     cannot parse returns 422 unprocessable with the engine's reason in message;
-         *     a name already in use returns 409 state_conflict. The node belongs to the
+         *     cannot parse returns 422 unsupported_value with a sanitized reason in
+         *     error.message. A name already in use returns 409 state_conflict. The node belongs to the
          *     inline provider and to every group whose filter matches it after reload.
          */
         post: operations["createNode"];
@@ -411,13 +426,12 @@ export interface paths {
          *     capability_not_supported. Only kind subscription can be created here: file and
          *     inline providers are authored in the configuration sources. The backend writes
          *     the provider into the subscription section of its managed main source,
-         *     advances the configuration revision and emits generation.changed, so a
-         *     configuration editor holding the previous revision receives 412 on its next
-         *     write. The provider is created unfetched: node_count 0, updated_at null and
+         *     advances the configuration revision, and emits generation.changed. A later
+         *     replacement of that main source using its previous content_sha256 returns
+         *     412 stale_revision. The provider is created unfetched: node_count 0, updated_at null and
          *     status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
          *     never returned; the response carries url_redacted. A name already in use
-         *     returns 409 state_conflict; a URL that is not http(s) returns 422
-         *     unprocessable.
+         *     returns 409 state_conflict. A URL that is not HTTP(S) returns 422 unsupported_value.
          */
         post: operations["createProvider"];
         delete?: never;
@@ -660,41 +674,37 @@ export interface paths {
         post?: never;
         /**
          * Close matching userspace-owned connections
-         * @description Requires resources.connections.available and can_close; otherwise returns
-         *     404 capability_not_supported. Requires control permission.
+         * @description Requires control permission and resources.connections.available with
+         *     resources.connections.can_close; unavailable closing returns 404
+         *     capability_not_supported.
          *
-         *     Uses the list's type and exact source-IP src filters, combined with AND.
-         *     A missing type or type=all does not restrict the set. Without type=tcp,
-         *     type=udp, or src, require all=true; otherwise return 400 invalid_request
-         *     before closing anything. This prevents an omitted filter from accidentally
-         *     disconnecting every userspace connection. all=true permits an unfiltered
-         *     request but does not override supplied filters. limit and detail are list
-         *     presentation parameters, not bulk-close parameters.
+         *     Combine type and exact source-IP src filters with AND. Missing type and
+         *     type=all do not restrict the set. Without type=tcp, type=udp, or src,
+         *     require all=true or return 400 invalid_request before closing anything.
+         *     all=true does not override supplied filters. Reject limit and detail,
+         *     which apply only to listing.
          *
-         *     Select the matching live entries once before closing. If their count,
-         *     including non-closable entries, exceeds resources.connections.max_bulk_close,
-         *     return 413 request_too_large before closing anything; do not truncate.
-         *     Close every closable match and count the non-closable matches as skipped.
-         *     An empty match succeeds with closed=0 and skipped=0. Connections arriving
-         *     after selection are not included; selected entries that disappear before
-         *     cancellation are not counted as closed or skipped.
+         *     Select matching live entries once. If their count, including non-closable
+         *     entries, exceeds resources.connections.max_bulk_close, return 413
+         *     request_too_large without closing anything. Close all closable matches and
+         *     count non-closable matches as skipped. An empty set returns closed=0 and
+         *     skipped=0. Exclude later arrivals and selected entries that disappear before
+         *     cancellation; disappeared entries contribute to neither count.
          *
-         *     Closable means the userspace datapath owns the TCP transport or UDP session
-         *     and can actually cancel or retire it, not merely delete its tracker entry.
-         *     observed_by labels observation, not ownership: userspace or mixed evidence
-         *     is not sufficient by itself. Kernel-direct and kernel-bypassed flows
-         *     (kernel_direct/kernel_bypass scopes, including ebpf-only observations)
-         *     are not closable. An outbound named direct alone does not determine ownership.
+         *     A connection is closable only when the userspace datapath owns and can
+         *     cancel its TCP transport or retire its UDP session. Deleting a tracker
+         *     entry is insufficient. observed_by and the outbound name do not establish
+         *     ownership. Kernel-direct and kernel-bypassed flows, including ebpf-only
+         *     observations, are not closable.
          *
-         *     Idempotency-Key is accepted. These synchronous DELETEs evaluate current live
-         *     state on each call, even with a repeated key; they do not replay an earlier
-         *     result or return a retained operation.
+         *     Idempotency-Key is accepted, but every call evaluates current live state;
+         *     repeated keys do not replay results or return an operation.
          *
-         *     Closing a recorded flow advances its terminal state and emits the existing
-         *     flow.updated invalidation when advertised. Clients fetch its href and
-         *     refresh /connections; runtime.updated invalidates changed runtime counters.
-         *     Coalescing and retention rules still apply. No flow ID or event is fabricated
-         *     for an unrecorded connection, and there is no new close event kind.
+         *     For recorded flows, closing advances terminal state and emits flow.updated
+         *     when advertised. Fetch the event's href and refresh /connections. Changed
+         *     runtime counters use runtime.updated. Existing coalescing and retention
+         *     rules apply. Do not fabricate a flow ID or flow event for an unrecorded
+         *     connection.
          */
         delete: operations["closeConnections"];
         options?: never;
@@ -714,30 +724,26 @@ export interface paths {
         post?: never;
         /**
          * Close one userspace-owned connection
-         * @description Requires resources.connections.available and can_close; otherwise returns
-         *     404 capability_not_supported. Requires control permission.
+         * @description Requires control permission and resources.connections.available with
+         *     resources.connections.can_close; unavailable closing returns 404
+         *     capability_not_supported.
          *
-         *     A connection is closable only when the userspace datapath owns its TCP
-         *     transport or UDP session and can actually cancel or retire it. Deleting a
-         *     tracker entry is not transport cancellation. observed_by is an observation
-         *     label, not an ownership guarantee: userspace or mixed evidence alone is not
-         *     sufficient. Kernel-direct and kernel-bypassed flows (kernel_direct and
-         *     kernel_bypass scopes, including ebpf-only observations) are not closable;
-         *     an observed but non-closable connection returns 409 state_conflict.
-         *     An outbound named direct alone does not determine ownership.
+         *     The userspace datapath must own and be able to cancel the TCP transport or
+         *     retire the UDP session. Tracker deletion, observed_by, and the outbound name
+         *     do not establish ownership. Kernel-direct and kernel-bypassed flows, including
+         *     ebpf-only observations, are not closable. An observed non-closable connection
+         *     returns 409 state_conflict.
          *
-         *     Success returns 204 only after cancellation or retirement, with no body.
-         *     An unknown or already-gone ID returns 404 resource_not_found. Closing the
-         *     same ID twice returns 404 on the second call, including when Idempotency-Key
-         *     is repeated. The header is accepted as on other control calls, but this
-         *     synchronous DELETE evaluates current live state rather than replaying a
-         *     previous 204 or returning a retained operation.
+         *     Return 204 with no body only after cancellation or retirement. Unknown or
+         *     already-gone IDs return 404 resource_not_found. Idempotency-Key is accepted,
+         *     but each call evaluates current live state; a repeated close returns 404
+         *     rather than replaying 204 or returning an operation.
          *
-         *     Closing a recorded flow advances its terminal state and emits the existing
-         *     flow.updated invalidation when advertised. Clients fetch its href and
-         *     refresh /connections; runtime.updated invalidates changed runtime counters.
-         *     Coalescing and retention rules still apply. No flow ID or event is fabricated
-         *     for an unrecorded connection, and there is no new close event kind.
+         *     For recorded flows, closing advances terminal state and emits flow.updated
+         *     when advertised. Fetch the event's href and refresh /connections. Changed
+         *     runtime counters use runtime.updated. Existing coalescing and retention
+         *     rules apply. Do not fabricate a flow ID or flow event for an unrecorded
+         *     connection.
          */
         delete: operations["closeConnection"];
         options?: never;
@@ -809,9 +815,12 @@ export interface paths {
          *     in evaluation order, including its fallback entry. This resource is read-only;
          *     it neither evaluates traffic nor reads back raw configuration. rule_id is identical
          *     to the ID used by POST /api/v1/routing/trace and FlowSummary.rule_id for the same
-         *     generation. Join by generation_id and rule_id, never by expression or index alone.
-         *     generation_id is the invalidation cursor, not a pagination token. Refetch after
-         *     generation.changed; old flow evidence must not be joined to a new generation.
+         *     generation. Join rules by generation_id and rule_id, never by expression or
+         *     index alone. FlowSummary does not carry the rule's generation; obtain it from
+         *     the corresponding traffic-route step in the retained flow detail. If that
+         *     context is unavailable, do not join the summary to the current rule dictionary.
+         *     generation_id identifies the dictionary's routing generation. Refetch after
+         *     generation.changed; do not join old flow evidence to a new generation.
          *     There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
          *     generation cannot be pinned, return 409 snapshot_unavailable. If the complete
          *     dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
@@ -834,7 +843,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Follow bounded resumable invalidation events */
+        /**
+         * Follow bounded resumable invalidation events
+         * @description Send stream.ready first on every connection, including a valid resume.
+         *     Its cursor must not skip pending replay; retain the supplied Last-Event-ID
+         *     until replay advances it. Filtered-out IDs may leave gaps, so clients must
+         *     not infer loss by subtracting IDs.
+         */
         get: operations["streamEvents"];
         put?: never;
         post?: never;
@@ -889,13 +904,10 @@ export interface paths {
         };
         /**
          * Read the runtime-adjustable settings
-         * @description Requires resources.runtime_settings.available. Reports the values the running
-         *     engine uses for the things a panel may tune without a reload: the log level and
-         *     replay ring, the DNS log ring, and flow retention. Ceilings come from the
-         *     matching capability (logs.max_buffered_records, dns_log.max_records,
-         *     flows.max_flows, flows.retention_seconds); a value never exceeds its ceiling.
-         *     source says whether the values still come from the activated configuration
-         *     or were overridden at runtime.
+         * @description Requires resources.runtime_settings.available. Returns the current
+         *     runtime-adjustable settings. Numeric values cannot exceed their corresponding
+         *     capability ceilings. source is config when values come from the activated
+         *     configuration and runtime after a runtime override.
          */
         get: operations["getRuntimeSettings"];
         put?: never;
@@ -913,7 +925,7 @@ export interface paths {
          *     and changes nothing. Shrinking a ring drops its oldest records and expires
          *     cursors older than the new floor. The change applies immediately and lasts
          *     until the process restarts or the next configuration activation resets it; it
-         *     is not written to the configuration file. Follows the shared idempotency rules.
+         *     is not written to the configuration file.
          */
         patch: operations["patchRuntimeSettings"];
         trace?: never;
@@ -944,13 +956,11 @@ export interface paths {
         };
         /**
          * Read the bounded ring of recent resolutions
-         * @description Requires resources.dns_log.available. The engine records every resolution it
-         *     performs for clients (not the diagnostic /dns/query calls) into a ring of at
-         *     most resources.dns_log.max_records; newest first, not durable, cleared on
-         *     restart. A record is one question and its outcome: which client asked, which
-         *     upstream answered or whether the cache did, the answers, the routing decision
-         *     and how long it took. Filters narrow by name (case-insensitive substring),
-         *     record type and client source IP. limit above max_page_size returns 400.
+         * @description Requires resources.dns_log.available. Records client DNS resolutions,
+         *     excluding diagnostic /dns/query calls, in a bounded in-memory ring.
+         *     Results are newest first. The ring holds at most
+         *     resources.dns_log.max_records and is cleared on restart.
+         *     A limit above resources.dns_log.max_page_size returns 400 invalid_request.
          */
         get: operations["listDnsLog"];
         put?: never;
@@ -1096,7 +1106,7 @@ export interface components {
         /** Format: date-time */
         NullableTimestamp: string | null;
         /**
-         * @description Closed catalogue of HTTP error codes (docs/errors.md keeps the prose). Adding a code is a contract change; adapters never invent codes. Errors embedded in resources (operation.error, datapath.errors, lifecycle.last_error) carry an adapter-defined code and stay plain SafeError.
+         * @description Closed catalogue of HTTP error codes. Adding a code changes the contract. Embedded errors such as operation.error, datapath.errors, last_reload.error, and provider.last_error use SafeError with adapter-defined codes.
          * @enum {string}
          */
         ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable" | "setup_required" | "setup_already_completed" | "invalid_credentials";
@@ -1239,7 +1249,7 @@ export interface components {
                 config_validate: {
                     available: boolean;
                     modes?: components["schemas"]["ConfigValidationMode"][];
-                    /** @description Maximum total UTF-8 source bytes, including local dependencies in full mode; the shared JSON body ceiling also applies. */
+                    /** @description Maximum total UTF-8 configuration source bytes, including locally resolved source text in full mode. Geodata assets do not count toward this limit. The shared JSON body limit applies separately. */
                     max_bytes?: components["schemas"]["SafeUInt"];
                     /** @description Maximum sources per validation, including local dependencies in full mode. */
                     max_sources?: components["schemas"]["SafeUInt"];
@@ -1278,7 +1288,7 @@ export interface components {
                     available: boolean;
                     /** @description Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available. */
                     can_refresh?: boolean;
-                    /** @description POST /providers and DELETE /providers/{id} are implemented for subscription providers; the backend owns a writable main source. */
+                    /** @description Supports creating subscription providers and deleting subscription or file providers from a writable managed main source. */
                     can_manage?: boolean;
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
@@ -1340,7 +1350,7 @@ export interface components {
                 logs: {
                     available: boolean;
                     levels?: components["schemas"]["LogLevel"][];
-                    /** @description Bounded replay buffer capacity, not a durable retention guarantee. */
+                    /** @description Maximum permitted log replay-ring capacity. The current capacity is runtime settings log.buffered_records. Neither value guarantees retention duration. */
                     max_buffered_records?: components["schemas"]["SafeUInt"];
                 };
                 dns_query: {
@@ -1358,7 +1368,7 @@ export interface components {
                 };
                 dns_log: {
                     available: boolean;
-                    /** @description Ring capacity in records; not a retention guarantee. */
+                    /** @description Maximum permitted DNS log-ring capacity. The current capacity is dns_log.max_records in GET /runtime/settings. Neither value guarantees retention duration. */
                     max_records?: components["schemas"]["SafeUInt"];
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
@@ -1466,7 +1476,7 @@ export interface components {
             mode: components["schemas"]["ConfigValidationMode"];
         };
         ConfigValidationResult: {
-            /** @description True exactly when validation completed without error diagnostics; warnings and info do not invalidate the candidate. No promise that a later apply will succeed. */
+            /** @description True when validation completes without error diagnostics. Successful validation does not guarantee a later apply will succeed. */
             valid: boolean;
             /** @description Source IDs identify submitted sources. Attribute a dependency failure to the referring submitted source and its include/subscription location, not an undisclosed local path. */
             diagnostics: components["schemas"]["ConfigDiagnostic"][];
@@ -1618,9 +1628,11 @@ export interface components {
         };
         /**
          * @description Samples lie in (observed_at - window_seconds, observed_at], oldest first,
-         *     with the same retention, thinning and gap rules as TrafficHistory.
-         *     Each sample carries the metrics advertised under resources.runtime_memory.metrics;
-         *     an unadvertised or unobservable metric is null.
+         *     with the same retention, thinning, and gap rules as TrafficHistory.
+         *     History covers process.rss_bytes, cgroup.current_bytes, and optionally
+         *     kernel.ebpf_bytes, using resources.runtime_memory.metrics to determine support.
+         *     Required metrics are null when unadvertised or unobservable.
+         *     kernel_ebpf_bytes may be omitted when unadvertised.
          */
         MemoryHistory: {
             observed_at: components["schemas"]["Timestamp"];
@@ -1759,7 +1771,7 @@ export interface components {
             expires_at: components["schemas"]["NullableTimestamp"];
             traffic: null | components["schemas"]["ProviderTraffic"];
             /**
-             * @description ok has usable current data; stale retains older usable data; error has no usable data after a failure.
+             * @description ok means current usable data is loaded. stale means the provider has not been fetched or retains older usable data. error means a failed load left no usable data.
              * @enum {string}
              */
             status: "ok" | "stale" | "error";
@@ -1812,7 +1824,7 @@ export interface components {
             size_bytes: components["schemas"]["UInt64"];
             /** @description Modification time of the loaded file, or null when the filesystem does not report one. */
             modified_at: components["schemas"]["NullableTimestamp"];
-            /** @description Display-only download source with userinfo, query and fragment removed; null when the backend has no source for this asset. */
+            /** @description Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. Null when no source is configured or safe display is impossible. */
             source_redacted: string | null;
         };
         GeoData: {
@@ -1900,7 +1912,7 @@ export interface components {
         Group: {
             id: string;
             name: string;
-            /** @description An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally. */
+            /** @description Configured group icon as an absolute HTTP(S) URL or data URI; null when no icon is configured. */
             icon: string | null;
             config_revision: string;
             policy: components["schemas"]["GroupPolicy"];
@@ -1912,7 +1924,7 @@ export interface components {
         GroupSummary: {
             id: string;
             name: string;
-            /** @description An icon the configuration names for this group, as an absolute http(s) URL or a data URI the client shows beside the name; null when none is configured. Clients may let the user override it locally. */
+            /** @description Configured group icon as an absolute HTTP(S) URL or data URI; null when no icon is configured. */
             icon: string | null;
             /** @description Same opaque configuration revision as Group.config_revision; preserve without numeric parsing. */
             config_revision: string;
@@ -2007,10 +2019,10 @@ export interface components {
             /** @enum {string} */
             network: "tcp" | "udp" | "both";
             /**
-             * @description runtime for a selector, override while a pinned member stands, policy once the automatic choice is back.
+             * @description runtime for a manual selector; override for a pinned member on an automatic policy.
              * @enum {string}
              */
-            source: "runtime" | "override" | "policy";
+            source: "runtime" | "override";
             selection_revision: string;
             connections_interrupted: boolean;
         };
@@ -2474,7 +2486,10 @@ export interface components {
             routing_source: "evaluation" | "forced" | "builtin" | "unknown";
             routed_outbound: string | null;
             effective_outbound: string | null;
-            /** @enum {string} */
+            /**
+             * @description Clash-mode override observed for this outbound attempt, separate from the configured dial mode. This field does not expose a native runtime-mode setting. none means no override was applied; unknown means the recorder could not determine it.
+             * @enum {string}
+             */
             mode_override: "none" | "direct" | "global" | "unknown";
             selection_path: components["schemas"]["SelectionPathItem"][];
             leaf_node_id: string | null;
@@ -2604,11 +2619,18 @@ export interface components {
             evaluations: components["schemas"]["RoutingEvaluation"][];
             dns: components["schemas"]["SimulationDnsData"][];
         };
-        /** @description Source location, or null when unavailable or unsafe to disclose. */
+        /** @description Source location, or null when unavailable or unsafe to disclose. Coordinates refer to the original source before redaction. */
         RuleSource: null | {
             /** @description Redacted source label; never an absolute local path or credential-bearing URL. */
             file: string;
+            /**
+             * @description Source ID from GET /config. Open the source by ID under the configuration
+             *     visibility rules; never derive a path from file.
+             */
+            source_id: string;
             line: components["schemas"]["SafeUInt"];
+            /** @description One-based UTF-8 byte column of the rule's first token, or null if unknown. */
+            column: components["schemas"]["NullableSafeUInt"];
         };
         RoutingRule: {
             /** @description Identical to POST /routing/trace rule IDs and FlowSummary.rule_id within the same generation; opaque to clients. */
@@ -2847,7 +2869,7 @@ export interface components {
              */
             source: "config" | "runtime";
             log: {
-                /** @description The minimum severity the engine emits; the stream's level filter cannot go below it. */
+                /** @description Minimum severity the engine emits. A lower stream level cannot recover records the engine did not emit. */
                 level: components["schemas"]["LogLevel"];
                 /** @description Log replay ring capacity, at most logs.max_buffered_records. */
                 buffered_records: components["schemas"]["SafeUInt"];
@@ -2859,7 +2881,7 @@ export interface components {
             flows: {
                 /** @description Retained flows, at most flows.max_flows. */
                 max_flows: components["schemas"]["SafeUInt"];
-                /** @description How long a terminal flow stays, at most flows.retention_seconds. */
+                /** @description Maximum age of a retained terminal flow, in seconds, bounded by resources.flows.retention_seconds. Capacity pressure may evict it earlier. */
                 retention_seconds: components["schemas"]["SafeUInt"];
             };
             /**
@@ -3017,7 +3039,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description Authenticated caller lacks the required permission */
+        /** @description The caller lacks the required permission, or listener security policy rejects the request. */
         Forbidden: {
             headers: {
                 "Cache-Control": components["headers"]["NoStore"];
@@ -3211,6 +3233,8 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getVersion: {
@@ -3233,6 +3257,8 @@ export interface operations {
                     "application/json": components["schemas"]["Version"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getCapabilities: {
@@ -3255,6 +3281,8 @@ export interface operations {
                     "application/json": components["schemas"]["Capabilities"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     setupAdministrator: {
@@ -4513,10 +4541,9 @@ export interface operations {
         requestBody?: never;
         responses: {
             /**
-             * @description The group's selection per network after the override is cleared;
-             *     unchanged when none stood. A network the policy has not chosen a
-             *     member for is null, so clearing both networks when only one had a
-             *     pin, or when one side is still unselected, is stated as it is.
+             * @description Selections after clearing the requested overrides. A network without
+             *     a selected member is null. If no override existed, its selection is
+             *     unchanged.
              */
             200: {
                 headers: {
@@ -4646,7 +4673,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description All selected closable matches closed; non-closable matches skipped. */
+            /** @description Bulk-close counts; entries that disappeared before cancellation are excluded. */
             200: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];

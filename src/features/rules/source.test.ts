@@ -9,7 +9,7 @@ const rule: RoutingRule = {
   expression: 'l4proto(<redacted>)',
   outbound: 'mix',
   must: false,
-  source: {file: '<redacted>', source_id: 'source', line: 2}
+  source: {file: '<redacted>', source_id: 'source', line: 2, column: 3}
 };
 const text = 'routing {\n  l4proto(tcp, udp) -> mix # keep\n  fallback: direct\n}\n';
 const source = {id: 'source', content: text} as ConfigSource;
@@ -37,15 +37,15 @@ it('refuses changed source anchors, unavailable identities, withheld text and no
   expect(ruleAnchor(source, {...rule, source: {...rule.source!, line: 3}})).toBeNull();
 });
 
-it('links basename-only sources only when the match is unique', () => {
+it('links rule sources by ID even when display names match', () => {
   const sources = [
     {id: 'a', path: 'rules.dae'},
     {id: 'b', path: '/etc/other/rules.dae'}
   ] as ConfigSource[];
-  const source = {file: 'rules.dae', line: 1};
-  expect(sourceFor(sources, source)).toBeUndefined();
-  expect(sourceFor(sources.slice(1), source)?.id).toBe('b');
-  expect(sourceFor(sources, {...source, source_id: 'a'})?.id).toBe('a');
+  const source = {file: 'rules.dae', source_id: 'a', line: 1, column: null};
+  expect(sourceFor(sources, source)?.id).toBe('a');
+  expect(sourceFor(sources.slice(1), source)).toBeUndefined();
+  expect(sourceFor(sources, {...source, source_id: 'b'})?.id).toBe('b');
   expect(sourceFor(sources, {...source, source_id: 'missing'})).toBeUndefined();
 });
 
