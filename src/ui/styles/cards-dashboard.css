@@ -186,6 +186,16 @@
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 }
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+  .rp-overview-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1024px) and (max-width: 1199.98px) {
+  .rp-chart-page > .rp-g21 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .rp-g3 {
   display: grid;
   grid-template-columns: 1fr;
@@ -195,6 +205,14 @@
 @media (min-width: 1024px) {
   .rp-g3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .rp-g3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-g3 > :last-child:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
 /* A feed takes no height from its rows: it fills what the row's other cards give its card and scrolls inside,

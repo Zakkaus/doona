@@ -1,5 +1,5 @@
-# Packagers' entry points. `make build` needs the dependencies installed (`make deps`, offline when a store
-# or a deps tarball is present); `make install` copies the built files, `make install-fonts` the optional
+# Packagers' entry points. `make build` needs the dependencies installed (`make deps`, offline with a store);
+# `make install` copies the built files, `make install-fonts` the optional
 # Noto Sans TC/SC. Both honour DESTDIR and PREFIX.
 PREFIX ?= /usr
 DESTDIR ?=

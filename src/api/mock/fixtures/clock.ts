@@ -4,3 +4,4 @@ export const ago = (seconds: number) => new Date(now - seconds * 1000).toISOStri
 export const ahead = (seconds: number) => new Date(now + seconds * 1000).toISOString();
 export const observedAt = ago(0);
 export const instanceId = 'mock-instance-1';
+export const generationId = '40';

@@ -35,7 +35,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await dialog.getByLabel('Name').fill('hk-03');
   await dialog.getByLabel('Node link').fill('foo://nope');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(dialog.getByRole('alert')).toContainText('Unsupported share link scheme');
+  await expect(dialog.getByRole('alert')).toContainText('Unsupported value');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 added'})).toBeVisible();
@@ -99,7 +99,7 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await expect(page).toHaveURL(/provider=inline$/);
   await expect(nodes).toHaveCount(5);
   await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 100 nodes');
+  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 120 nodes');
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {

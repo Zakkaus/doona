@@ -1,6 +1,6 @@
 /* Glass follows Apple's materials: blurred chrome, calm translucent content, and floating layers that carry the
-   specular rim. Fills, separators and system colours are Apple's published values. Blur is reserved for fixed
-   chrome and overlays; scrolling surfaces use translucent fills. */
+   specular rim. Fills, separators and system colours are Apple's published values. Blur covers fixed chrome,
+   floating layers and sticky table content. */
 
 :root[data-family='glass'][data-scheme='dark'] {
   --rp-base: rgba(255, 255, 255, 0.05);
@@ -213,10 +213,15 @@
   border-color: var(--rp-edge);
 }
 :root[data-family='glass'] .rp-table [role='columnheader'] {
-  background: transparent;
+  background: var(--rp-glass-strong);
+  backdrop-filter: blur(24px) saturate(1.6);
   color: var(--rp-subtle);
   font-weight: 600;
   border-color: var(--rp-line);
+}
+:root[data-family='glass'] .rp-table-empty {
+  background: var(--rp-glass-strong);
+  backdrop-filter: blur(24px) saturate(1.6);
 }
 :root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-hl-low);
@@ -249,6 +254,24 @@
 }
 :root[data-family='glass'] .rp-underlay {
   backdrop-filter: blur(8px);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  :root[data-family='glass'] .rp-table [role='columnheader'],
+  :root[data-family='glass'] .rp-table-empty,
+  :root[data-family='glass'] .rp-popover,
+  :root[data-family='glass'] .rp-modal,
+  :root[data-family='glass'] .rp-top,
+  :root[data-family='glass'] .rp-side {
+    background: #fff;
+  }
+  :root[data-family='glass'][data-scheme='dark'] .rp-table [role='columnheader'],
+  :root[data-family='glass'][data-scheme='dark'] .rp-table-empty,
+  :root[data-family='glass'][data-scheme='dark'] .rp-popover,
+  :root[data-family='glass'][data-scheme='dark'] .rp-modal,
+  :root[data-family='glass'][data-scheme='dark'] .rp-top,
+  :root[data-family='glass'][data-scheme='dark'] .rp-side {
+    background: #2c2c2e;
+  }
 }
 
 /* Controls are fills from the same ladder, with nothing drawn around them. */

@@ -41,7 +41,7 @@
   line-height: 16px;
 }
 .rp-btn.icon {
-  width: 32px;
+  width: var(--rp-control);
   padding: 0;
   justify-content: center;
 }

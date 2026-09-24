@@ -157,6 +157,31 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
 });
 
+test('mock notices include distinct operations and recording gaps', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/activity');
+  for (const lang of ['zh-TW', 'en']) {
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate(
+        ({lang, scheme}) => {
+          localStorage.setItem('doona-lang', lang);
+          localStorage.setItem('doona-scheme', scheme);
+        },
+        {lang, scheme}
+      );
+      await page.reload();
+      const notices = page.locator('.rp-feed');
+      await expect(notices.getByRole('listitem')).toHaveCount(6);
+      await expect(notices.locator('.rp-light.warn')).toHaveCount(2);
+      if (lang === 'en') {
+        await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
+        await expect(notices.getByRole('listitem').filter({hasText: 'Operation updated'})).toHaveCount(2);
+        await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(2);
+      }
+    }
+  }
+});
+
 test('housekeeping cannot evict notices while the page is hidden', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');

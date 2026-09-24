@@ -99,7 +99,7 @@ type MockHandler = (request: Request) => Promise<unknown>;
 // Wire parameters are strings; the in-process mock takes the typed query the client would send.
 const query = (request: Request) => {
   const params = Object.fromEntries(new URL(request.url()).searchParams) as Record<string, string | number>;
-  if (typeof params.limit === 'string') params.limit = Number(params.limit);
+  for (const key of ['limit', 'window_seconds', 'max_points']) if (typeof params[key] === 'string') params[key] = Number(params[key]);
   return params as never;
 };
 
@@ -129,8 +129,8 @@ export async function mockBackend(page: Page) {
     'dns/log': request => api.dnsLog(query(request)),
     'runtime/settings': () => api.runtimeSettings(),
     'runtime/memory': () => api.runtimeMemory(),
-    'runtime/memory/history': () => api.memoryHistory(),
-    'runtime/traffic/history': () => api.trafficHistory(),
+    'runtime/memory/history': request => api.memoryHistory(query(request)),
+    'runtime/traffic/history': request => api.trafficHistory(query(request)),
     'runtime/outbounds': () => api.runtimeOutbounds()
   };
   await page.route('**/api{,/**}', async route => {

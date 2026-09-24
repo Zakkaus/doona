@@ -35,7 +35,10 @@ export function Beeswarm({
   const [ref, width] = useContentWidth<HTMLDivElement>();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
   const domain = useMemo(() => logDomain(points.map(point => point.value)), [points]);
-  const ticks = useMemo(() => logTicks(domain, width && width < 480 ? 4 : 8), [domain, width]);
+  const ticks = useMemo(() => {
+    const values = logTicks(domain, width && width < 480 ? 4 : 8);
+    return width !== null && width < 360 ? values.filter((_, index) => index % 2 === 0) : values;
+  }, [domain, width]);
   const track = Math.max((width ?? 0) - inset * 2, 1);
   const x = (value: number) => inset + logPosition(value, domain) * track;
   // Dense samples get smaller dots so a thousand lookups still fit the band.
@@ -96,9 +99,11 @@ export function Beeswarm({
               return (
                 <g key={mark.label} className="mark">
                   <line x1={at} x2={at} y1={14} y2={height - 18} />
-                  <text x={at} y={10} textAnchor={start ? 'start' : 'end'} dx={start ? 4 : -4}>
-                    {mark.label}
-                  </text>
+                  {width >= 360 && (
+                    <text x={at} y={10} textAnchor={start ? 'start' : 'end'} dx={start ? 4 : -4}>
+                      {mark.label}
+                    </text>
+                  )}
                 </g>
               );
             })}

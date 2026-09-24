@@ -6,16 +6,16 @@ import {refuseCredentials, watchResource} from './resource';
 import {shouldRefetch} from '../api/invalidation';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
-type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent};
+type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent; recent: ApiEvent[]};
 const streams = new Map<Api, Stream>();
 const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
 export function eventStatus(api: Api) {
   return streams.get(api)?.status ?? initialStatus;
 }
-export function subscribeEvents(api: Api, listener: Listener, notify?: () => void) {
+export function subscribeEvents(api: Api, listener: Listener, notify?: () => void, replayRecent = false) {
   let stream = streams.get(api);
   if (!stream) {
-    stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus};
+    stream = {listeners: new Set(), statuses: new Set(), controller: new AbortController(), status: initialStatus, recent: []};
     streams.set(api, stream);
     const shared = stream;
     const update = (change: Partial<StreamStatus>) => {
@@ -61,6 +61,8 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
               failed = false;
               update({cursor: event.id, error: null});
             }
+            shared.recent.push(event);
+            if (shared.recent.length > 200) shared.recent.shift();
             if (shouldRefetch('capabilities', event, reconnected)) capabilities.invalidate(reconnected);
             shared.listeners.forEach(fn => fn(event, reconnected));
           }
@@ -90,7 +92,8 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
   }
   stream.listeners.add(listener);
   if (notify) stream.statuses.add(notify);
-  if (stream.ready) listener(stream.ready, false);
+  if (replayRecent) stream.recent.forEach(event => listener(event, false));
+  else if (stream.ready) listener(stream.ready, false);
   return () => {
     stream.listeners.delete(listener);
     if (notify) stream.statuses.delete(notify);
@@ -100,13 +103,16 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
     }
   };
 }
-export function useEvents(onEvent: Listener) {
+export function useEvents(onEvent: Listener, replayRecent = false) {
   const api = getApi();
   const callback = useRef(onEvent);
   useEffect(() => {
     callback.current = onEvent;
   });
-  const subscribe = useCallback((notify: () => void) => subscribeEvents(api, (event, reconnected) => callback.current(event, reconnected), notify), [api]);
+  const subscribe = useCallback(
+    (notify: () => void) => subscribeEvents(api, (event, reconnected) => callback.current(event, reconnected), notify, replayRecent),
+    [api, replayRecent]
+  );
   const getSnapshot = useCallback(() => eventStatus(api), [api]);
   return useSyncExternalStore(subscribe, getSnapshot);
 }

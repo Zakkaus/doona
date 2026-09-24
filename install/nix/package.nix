@@ -1,58 +1,34 @@
-# nixpkgs-style expression, built from source the way nixpkgs builds daed's web UI: the pnpm store is a
-# fixed-output derivation, the build runs offline, `make install` lays out $out/share/doona.
 {
   lib,
   stdenvNoCC,
-  fetchFromGitHub,
-  fetchPnpmDeps,
-  pnpmConfigHook,
-  pnpm_11,
-  nodejs,
+  fetchurl,
   nix-update-script,
   withFonts ? true,
 }:
 let
-  pnpm = pnpm_11;
+  version = "0.1.0-beta.2";
+  fonts = fetchurl {
+    url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-v${version}.tar.gz";
+    hash = lib.fakeHash; # Replace with the published font archive hash.
+  };
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doona";
-  version = "0.1.0-beta.2";
+  inherit version;
 
-  src = fetchFromGitHub {
-    owner = "Zakkaus";
-    repo = "doona";
-    tag = "v${finalAttrs.version}";
-    hash = lib.fakeHash; # Placeholder: replace with the published tag's source hash.
+  src = fetchurl {
+    url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-v${finalAttrs.version}.tar.gz";
+    hash = lib.fakeHash; # Replace with the published program archive hash.
   };
 
-  pnpmDeps = fetchPnpmDeps {
-    inherit (finalAttrs) pname version src;
-    inherit pnpm;
-    fetcherVersion = 4;
-    hash = lib.fakeHash; # Placeholder: replace with the pnpm dependency hash after publication.
-  };
-
-  nativeBuildInputs = [
-    nodejs
-    pnpmConfigHook
-    pnpm
-  ];
-
-  buildPhase = ''
-    runHook preBuild
-
-    pnpm build
-
-    runHook postBuild
-  '';
-
+  dontUnpack = true;
   installPhase = ''
     runHook preInstall
-
-    make install PREFIX=$out
+    mkdir -p $out/share/doona
+    tar -xzf $src -C $out/share/doona
   ''
   + lib.optionalString withFonts ''
-    make install-fonts PREFIX=$out
+    tar -xzf ${fonts} -C $out/share/doona
   ''
   + ''
     runHook postInstall

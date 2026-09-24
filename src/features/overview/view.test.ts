@@ -22,7 +22,16 @@ it('marks shared memory as shared and omits selected fields without losing zero 
 it('distinguishes loading and unavailable sections and deduplicates datapath errors', () => {
   const view = overviewView({capabilities, runtime, version, datapath, memory: runtimeMemory}, loading, 'en-US', t);
   expect(view.datapath.warning).toBeNull();
-  expect(view.datapath.errors.map(error => error.text)).toEqual(['Routing map sample delayed']);
+  expect(view.datapath.errors.map(error => error.text)).toEqual([t('ui.backend.sampleDelayed')]);
+  for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
+    const localized = (key: Parameters<Translator>[0], params?: Parameters<Translator>[1]) => translate(lang, key, params);
+    const rendered = overviewView({datapath}, loading, lang, localized);
+    expect(rendered.datapath.errors[0].text).toBe(localized('ui.backend.sampleDelayed'));
+    const unknown = {...datapath, errors: [{code: 'future_issue', message: 'backend detail'}]};
+    expect(overviewView({datapath: unknown}, loading, lang, localized).datapath.errors[0].text).toBe(
+      localized('ui.backendMessage', {message: 'backend detail'})
+    );
+  }
   expect(view.memory.bar?.pct).toBe(25);
   const absent = overviewView({}, {...loading, memory: true}, 'en-US', t);
   expect(absent.engine.state).toBe('unavailable');

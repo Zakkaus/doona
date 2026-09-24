@@ -22,7 +22,7 @@ it('projects source locations without inventing a line for source-wide diagnosti
   expect(rows[0].where).toBe('config.dae:5');
   expect(rows[0].tone).toBe('warn');
   expect(rows[1].where).toBe('missing');
-  expect(rows[1].detail).toBe(configNotes[0].message);
+  expect(rows[1].detail).toBe(t('ui.backendMessage', {message: configNotes[0].message}));
 });
 it('initializes empty setup and preserves opaque subscription lines while hiding blank lines', () => {
   const empty = wizardInitial('');

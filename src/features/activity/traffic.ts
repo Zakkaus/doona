@@ -3,8 +3,7 @@ import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 
 type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
-// Windows are seconds; live is two minutes at full resolution. Backend history covers ten minutes, then session polls
-// provide minute buckets for longer spans.
+// Windows are seconds; live is two minutes at full resolution. Longer ranges use backend history when offered.
 export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
 const rate = (value: string | null | undefined) => {
   const parsed = parseU64(value ?? null);

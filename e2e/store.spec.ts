@@ -13,13 +13,14 @@ test('Test all completes a group larger than the advertised job ceiling', async 
   const jobs = requests
     .filter(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/probes'))
     .map(request => request.postDataJSON());
-  expect(jobs.map(job => job.members.length)).toEqual([64, 36]);
+  expect(jobs.map(job => job.members.length)).toEqual([64, group.members.length - 64]);
   expect(jobs.flatMap(job => job.members)).toEqual(group.members.map(member => member.id));
   await expect(card.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
 });
 
 test('a failed second probe batch reports partial completion instead of success', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
+  const group = await api.group('skylink');
   let jobs = 0;
   handlers['POST probes'] = request => {
     if (++jobs === 2) throw new ApiError(422, 'unsupported_value', 'Batch refused');
@@ -28,7 +29,7 @@ test('a failed second probe batch reports partial completion instead of success'
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'skylink', exact: true});
   await card.getByRole('button', {name: 'Test all', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Tested 64 of 100 members');
+  await expect(page.locator('.rp-toast.negative')).toContainText(`Tested 64 of ${group.members.length} members`);
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await expect(card.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
 });

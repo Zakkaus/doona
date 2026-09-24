@@ -103,5 +103,5 @@ it('reports a partial probe with translated counts and the stopping error', () =
   expect(text).toContain(t('policy.probePartial', {done: 1200, n: 1500, error: t('ui.valuePair', {label: t('ui.operationFailed'), value: 'member refused'})}));
   expect(text).toContain('1,200');
   expect(text).not.toContain('ui.operationFailed');
-  expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe('offline');
+  expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe(t('ui.backendMessage', {message: 'offline'}));
 });

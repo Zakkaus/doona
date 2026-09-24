@@ -138,7 +138,7 @@ export const providers: Provider[] = [
     name: 'sub-c',
     kind: 'subscription',
     url_redacted: 'https://sub.example.net/api/v1/client/subscribe?token=<redacted>',
-    node_count: 100,
+    node_count: 120,
     updated_at: ago(1800),
     expires_at: new Date(now + 23 * 86400 * 1000).toISOString(),
     traffic: {upload_bytes: '48318382080', download_bytes: '412316860416', total_bytes: '1099511627776'},

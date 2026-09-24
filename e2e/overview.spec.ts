@@ -109,19 +109,83 @@ test('an accepted source reload respects Retry-After and retains the draft on te
   expect(write.headers()['if-match']).toBe(`"${source.content_sha256}"`);
 });
 
-test('backend feature labels and statuses use one stacked layout', async ({page}) => {
+test('backend features share columns with inline statuses', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/overview');
   const card = page.getByRole('region', {name: 'Backend features', exact: true});
   await expect(card.getByText('Connections', {exact: true})).toBeVisible();
-  const rows = await card.locator('.rp-list-columns > div').evaluateAll(elements =>
+  const rows = await card.locator('.rp-capabilities > div').evaluateAll(elements =>
     elements.map(element => {
       const [label, status] = [...element.children].map(child => child.getBoundingClientRect());
-      return {label: {left: label.left, bottom: label.bottom}, status: {left: status.left, top: status.top}};
+      return {label: {left: label.left, top: label.top}, status: {left: status.left, top: status.top}};
     })
   );
+  expect(rows.length).toBeGreaterThan(10);
+  expect(new Set(rows.map(row => Math.round(row.label.left))).size).toBeGreaterThanOrEqual(2);
   for (const row of rows) {
-    expect(row.status.top).toBeGreaterThanOrEqual(row.label.bottom);
-    expect(row.status.left).toBeCloseTo(row.label.left, 0);
+    expect(Math.abs(row.status.top - row.label.top)).toBeLessThan(8);
+    expect(row.status.left).toBeGreaterThan(row.label.left);
+  }
+});
+
+test('overview cards keep readable summaries and fill their rows at 1024 px', async ({page}) => {
+  await page.goto('/#/overview');
+  for (const lang of ['zh-TW', 'en']) {
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate(
+        ({lang, scheme}) => {
+          localStorage.setItem('doona-lang', lang);
+          localStorage.setItem('doona-scheme', scheme);
+        },
+        {lang, scheme}
+      );
+      for (const width of [1024, 1280, 1440]) {
+        await page.setViewportSize({width, height: 900});
+        await page.reload();
+        await expect(page.locator('.rp-capability').first()).toBeVisible();
+        const columns = await page.locator('.rp-capability').evaluateAll(rows => new Set(rows.map(row => Math.round(row.getBoundingClientRect().left))).size);
+        expect(columns, `${lang} ${scheme} ${width}px capability columns`).toBeGreaterThanOrEqual(2);
+        if (width !== 1024) continue;
+        const memory = page.locator('.rp-g3 > .rp-card:nth-child(3)');
+        const memoryBar = memory.locator('.rp-bar .top .l');
+        expect(await memoryBar.evaluate(label => label.scrollWidth <= label.clientWidth), 'memory label is not clipped').toBe(true);
+        const memoryWidth = await memory.evaluate(card => card.getBoundingClientRect().width);
+        const gridWidth = await page.locator('.rp-g3').evaluate(grid => grid.getBoundingClientRect().width);
+        expect(Math.abs(memoryWidth - gridWidth)).toBeLessThan(2);
+        const bottomGap = await page.locator('.rp-overview-lower > .rp-card:first-child').evaluate(card => {
+          const content = [...card.children].at(-1)!;
+          return card.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom;
+        });
+        expect(bottomGap).toBeLessThan(40);
+      }
+    }
+  }
+});
+
+test('Activity and Overview keep cards in each grid row equal height', async ({page}) => {
+  for (const scheme of ['light', 'dark']) {
+    await page.addInitScript(value => localStorage.setItem('doona-scheme', value), scheme);
+    for (const width of [1440, 1024, 768, 390]) {
+      await page.setViewportSize({width, height: 900});
+      for (const route of ['activity', 'overview']) {
+        await page.goto('/#/' + route);
+        await expect(page.locator('.rp-card').first()).toBeVisible();
+        if (route === 'overview') await expect(page.locator('.rp-capability').first()).toBeVisible();
+        const rows = await page.locator('.rp-quick, .rp-strip, .rp-g21, .rp-g3').evaluateAll(grids =>
+          grids.flatMap(grid => {
+            const cards = [...grid.children].filter(child => child.classList.contains('rp-card'));
+            const byTop = new Map<number, number[]>();
+            for (const card of cards) {
+              const rect = card.getBoundingClientRect();
+              const top = Math.round(rect.top);
+              byTop.set(top, [...(byTop.get(top) ?? []), rect.height]);
+            }
+            return [...byTop.values()].filter(heights => heights.length > 1);
+          })
+        );
+        if (route === 'activity' || width >= 1024) expect(rows.length, `${route} ${scheme} ${width}px`).toBeGreaterThan(0);
+        for (const heights of rows) expect(Math.max(...heights) - Math.min(...heights), `${route} ${scheme} ${width}px`).toBeLessThanOrEqual(2);
+      }
+    }
   }
 });

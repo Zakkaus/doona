@@ -7,7 +7,7 @@ import {createNetwork} from './network';
 import {createRuntime} from './runtime';
 
 export function createMockApi(): Api {
-  let count = 100;
+  let count = 120;
   let big = false;
   try {
     const value = localStorage.getItem('doona-mock-big');

@@ -100,12 +100,12 @@ it('bounds each tree reveal while keeping layout, connector endpoints and branch
   expect(view.placed.filter(tile => tile.view.stage === 'rule')).toHaveLength(30);
   expect(treeWindow(tree, 60).leaves.at(-1)?.id).toBe('rule:59');
   expect(view.placed.find(tile => tile.view.id === 'rule:0')?.style.top).toBe(0);
-  expect(view.placed.find(tile => tile.view.id === 'rule:1')?.style.top).toBe(40);
-  expect(view.placed.find(tile => tile.view.id === 'outbound:direct')?.style.top).toBe(580);
-  expect(view.height).toBe(1192);
+  expect(view.placed.find(tile => tile.view.id === 'rule:1')?.style.top).toBe(44);
+  expect(view.placed.find(tile => tile.view.id === 'outbound:direct')?.style.top).toBe(638);
+  expect(view.height).toBe(1312);
   expect(view.geometry).toHaveLength(30);
   const edge = view.geometry[0];
-  expect(edge.path).toBe('M253.33333333333331,16 C281.3333333333333,16 281.3333333333333,596 309.3333333333333,596');
+  expect(edge.path).toBe('M253.33333333333331,18 C281.3333333333333,18 281.3333333333333,656 309.3333333333333,656');
   expect(treeGeometry(shown, 390, t, 'en').width).toBe(720);
   const reached = treeReach(treeIndex(tree), 'rule:0');
   expect([...reached.items]).toEqual(['rule:0', 'outbound:direct']);

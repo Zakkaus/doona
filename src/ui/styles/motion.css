@@ -128,6 +128,11 @@
     --rp-control: 36px;
   }
 }
+@media (max-width: 599px) {
+  :root {
+    --rp-control: 36px;
+  }
+}
 :root[data-scheme='dark'] {
   color-scheme: dark;
   --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -183,6 +188,15 @@
   z-index: 1;
   /* Like a tab: the label recolours as the slider arrives. */
   transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
+}
+@media (max-width: 599px) {
+  .rp-seg {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .rp-seg .rp-btn {
+    flex: none;
+  }
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,

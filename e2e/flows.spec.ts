@@ -35,16 +35,24 @@ test('a pinned tree item carries into the records', async ({page}) => {
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar3$/);
   await expect(rule).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', {name: 'Show the 4 flows on this path', exact: true}).click();
+  const showFlows = page.getByRole('button', {name: /^Show the \d+ flows? on this path$/});
+  const matching = Number((await showFlows.innerText()).match(/\d+/)?.[0]);
+  expect(matching).toBeGreaterThan(0);
+  await showFlows.click();
   await expect(page).toHaveURL(/tab=flows/);
+  const grid = page.getByRole('grid');
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rows).toHaveCount(4);
+  const count = async () => {
+    const virtualCount = await grid.getAttribute('aria-rowcount');
+    return virtualCount ? Number(virtualCount) - 1 : rows.count();
+  };
+  await expect.poll(count).toBe(matching);
   await expect(rows.first()).toContainText('dip(geoip: private)');
   const clearPath = page.getByRole('button', {name: 'Clear path filter: Path: dip(geoip: private)', exact: true});
   await expect(clearPath).toHaveText('Path: dip(geoip: private)');
   await clearPath.click();
   await expect(page).not.toHaveURL(/path=/);
-  await expect.poll(() => rows.count()).toBeGreaterThan(4);
+  await expect.poll(count).toBeGreaterThan(matching);
   await page.goto('/#/flows');
   await expect(page).toHaveURL(/#\/rules\?tab=map$/);
   await expect(topology).toBeVisible();
@@ -72,20 +80,21 @@ test('a flow offers a rule for its target, prefilled in the rule list', async ({
 
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
   await page.goto('/#/rules?tab=flows');
+  const grid = page.getByRole('grid');
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
-  const total = await rows.count();
+  const total = Number(await grid.getAttribute('aria-rowcount')) - 1;
   await page.getByRole('radio', {name: 'UDP', exact: true}).click();
   await expect(rows.first()).toContainText('UDP');
-  expect(await rows.count()).toBeLessThan(total);
+  expect(Number(await grid.getAttribute('aria-rowcount')) - 1).toBeLessThan(total);
   await page.getByRole('radio', {name: 'All', exact: true}).click();
-  await expect(rows).toHaveCount(total);
+  await expect(grid).toHaveAttribute('aria-rowcount', String(total + 1));
   await page.goto('/#/rules?tab=flows&connection_id=1');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('api.telegram.org');
   await page.getByRole('button', {name: 'Clear connection filter: Connection: 1', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
-  await expect(rows).toHaveCount(total);
+  await expect(grid).toHaveAttribute('aria-rowcount', String(total + 1));
 });
 
 test.describe('flows unavailable', () => {
@@ -180,6 +189,28 @@ test('the tree can be seen by device, with the toggle in the address and pins ca
 
 test.describe('narrow screens', () => {
   test.use({viewport: {width: 390, height: 844}});
+
+  test('the map cues horizontal panning and gives tiles a 36 px target', async ({page}) => {
+    await page.goto('/#/rules?tab=map');
+    for (const lang of ['zh-TW', 'en']) {
+      for (const scheme of ['light', 'dark']) {
+        await page.evaluate(
+          ({lang, scheme}) => {
+            localStorage.setItem('doona-lang', lang);
+            localStorage.setItem('doona-scheme', scheme);
+          },
+          {lang, scheme}
+        );
+        await page.reload();
+        const map = page.locator('.rp-topology');
+        await expect(map.locator('.rp-tree-hint')).toBeVisible();
+        await expect(map.locator('.rp-tree-tile').first()).toBeVisible();
+        const heights = await map.locator('.rp-tree-tile').evaluateAll(tiles => tiles.map(tile => tile.getBoundingClientRect().height));
+        expect(Math.min(...heights), `${lang} ${scheme} tile height`).toBeGreaterThanOrEqual(36);
+        expect(await map.locator('.rp-tree').evaluate(tree => tree.scrollWidth > tree.clientWidth)).toBe(true);
+      }
+    }
+  });
 
   test('the tree keeps its shape and pans inside its card instead of widening the page', async ({page}) => {
     await page.goto('/#/rules?tab=map');

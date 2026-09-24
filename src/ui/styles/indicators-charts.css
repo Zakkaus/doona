@@ -103,7 +103,38 @@
   align-content: space-between;
   flex: 1 1 auto;
 }
-
+.rp-capabilities {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
+  gap: 4px 12px;
+  flex: 1 1 auto;
+  align-content: space-between;
+}
+.rp-capability {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+}
+.rp-capability > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-capability .rp-light {
+  flex: none;
+  white-space: nowrap;
+}
+.rp-capability.unavailable {
+  color: var(--rp-negative-text);
+}
+.rp-capability.unavailable .rp-light {
+  color: var(--rp-negative-text);
+  --dot: var(--rp-negative);
+}
 .rp-legend {
   display: flex;
   gap: 16px;

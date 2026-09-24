@@ -1,7 +1,6 @@
 import type {Group, RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
 import {rules, type ConfigRule} from '../rules';
-import {runtime} from './runtime';
-import {ago, observedAt} from './clock';
+import {ago, observedAt, generationId} from './clock';
 export const groupPolicies = {
   proxy: {kind: 'selector', native: 'fixed(0)'},
   resilient: {kind: 'urltest', native: 'min_avg10'},
@@ -26,7 +25,7 @@ export const runtimeSettings: RuntimeSettings = {
 
 // Initial routing dictionary for fixture flow evidence and stable rule IDs.
 type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
-export const configRules: MockConfigRules = {generation_id: runtime.generation.active_id!, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
+export const configRules: MockConfigRules = {generation_id: generationId, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
 export {rules};
 const configMain = `global {
   tproxy_port: 12345

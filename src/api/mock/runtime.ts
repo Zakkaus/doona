@@ -7,6 +7,13 @@ type RuntimeApi = Pick<
   Api,
   'discovery' | 'version' | 'capabilities' | 'runtime' | 'runtimeOutbounds' | 'trafficHistory' | 'memoryHistory' | 'datapath' | 'runtimeMemory'
 >;
+function memoryValues(at: number) {
+  const drift = 1 + 0.04 * Math.sin(at / 60000) + 0.03 * Math.sin(at / 3600000) + 0.01 * Math.sin(at / 21600000);
+  return {
+    rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift)),
+    cgroup_current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))
+  };
+}
 export function createRuntime(capabilities: Capabilities, big: boolean) {
   const runtime = structuredClone(fixtures.runtime);
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
@@ -92,6 +99,16 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
       )
         throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
       const history = fixtures.trafficHistory;
+      if (window_seconds > 3600) {
+        const step = Math.ceil(window_seconds / Math.max(1, max_points - 1) / 10) * 10;
+        const count = Math.min(max_points, Math.floor(window_seconds / step) + 1);
+        return {
+          ...history,
+          window_seconds,
+          sampled_every_seconds: step,
+          samples: Array.from({length: count}, (_, i) => fixtures.trafficSample((count - 1 - i) * step))
+        };
+      }
       const samples = history.samples.filter(s => Date.parse(s.sampled_at) > Date.parse(history.observed_at) - window_seconds * 1000);
       const stride = Math.max(1, Math.ceil(samples.length / max_points));
       return {
@@ -116,22 +133,19 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
         max_points > limits.max_points!
       )
         throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
-      // Synthesize five-second history with the memory snapshot's drift so their newest points agree.
       const now = Date.now();
-      const every = 5;
-      const count = Math.min(Math.floor(window_seconds / every), max_points);
-      const stride = Math.max(1, Math.ceil(window_seconds / every / max_points));
+      const every = Math.ceil(window_seconds / Math.max(1, max_points - 1) / 5) * 5;
+      const count = Math.min(max_points, Math.floor(window_seconds / every) + 1);
       const samples = Array.from({length: count}, (_, i) => {
-        const at = now - (count - 1 - i) * every * stride * 1000;
-        const drift = 1 + 0.04 * Math.sin(at / 60000);
+        const age = (count - 1 - i) * every;
+        const at = now - age * 1000;
         return {
           sampled_at: new Date(at).toISOString(),
-          rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift)),
-          cgroup_current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift)),
+          ...memoryValues(at),
           kernel_ebpf_bytes: fixtures.runtimeMemory.kernel?.ebpf_bytes ?? null
         };
       });
-      return {observed_at: new Date(now).toISOString(), window_seconds, sampled_every_seconds: every * stride, samples};
+      return {observed_at: new Date(now).toISOString(), window_seconds, sampled_every_seconds: every, samples};
     },
     datapath: async (detail, signal) => {
       signal?.throwIfAborted();
@@ -144,13 +158,12 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
     },
     runtimeMemory: async signal => {
       signal?.throwIfAborted();
-      // Each poll is a fresh observation with a little drift, so memory sparklines and charts get a shape.
       const memory = structuredClone(fixtures.runtimeMemory);
       const now = Date.now();
-      const drift = 1 + 0.04 * Math.sin(now / 60000);
+      const values = memoryValues(now);
       memory.observed_at = new Date(now).toISOString();
-      memory.process = {rss_bytes: String(Math.round(Number(fixtures.runtimeMemory.process!.rss_bytes) * drift))};
-      memory.cgroup = {...memory.cgroup!, current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))};
+      memory.process = {rss_bytes: values.rss_bytes};
+      memory.cgroup = {...memory.cgroup!, current_bytes: values.cgroup_current_bytes};
       return memory;
     }
   };

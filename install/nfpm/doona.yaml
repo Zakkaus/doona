@@ -1,4 +1,4 @@
-# nfpm packages the installed tree (make install DESTDIR=build/stage/doona) for deb, rpm, ipk and Arch.
+# nfpm packages the staged prebuilt release archive for deb, rpm, ipk and Arch.
 # VERSION and PRERELEASE come from the tag (tools/version.sh); the package is architecture-independent.
 name: doona
 arch: all

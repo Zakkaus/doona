@@ -3,19 +3,19 @@
 Each file follows a package that already exists in the target repository; keep them in step with that model
 rather than with each other.
 
-| File                                       | Modelled on                                                                                                                                                                                                                     |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nfpm/doona.yaml`, `nfpm/doona-fonts.yaml` | the nfpm configs in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux/tree/main/nfpm) (`dae.yaml`, `v2ray-rules-dat.yaml`)                                                                             |
-| `openwrt/doona/Makefile`                   | [openwrt/packages](https://github.com/openwrt/packages) `net/v2ray-geodata` (data-only, `PKGARCH:=all`, `Download/` blocks) and `net/v2raya` (unpacking a release tarball in `Build/Prepare`)                                   |
-| `alpine/APKBUILD`                          | [aports](https://gitlab.alpinelinux.org/alpine/aports) `community/font-noto-cjk` (noarch, subpackage)                                                                                                                           |
-| `gentoo/net-proxy/doona`                   | the [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)'s dashboards (`net-proxy/zashboard`, `net-proxy/daed` with its upstream `web.zip`): release archives in `SRC_URI`, `doins -r`, fonts behind a USE flag            |
-| `nix/package.nix`                          | [nixpkgs](https://github.com/NixOS/nixpkgs) `pkgs/by-name/da/daed/package.nix` (the `web` derivation: `fetchPnpmDeps`, `pnpmConfigHook`, `pnpm build`) and the pnpm section of `doc/languages-frameworks/javascript.section.md` |
-| the AUR `doona-bin` (separate repository)  | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                                      |
+| File                                       | Modelled on                                                                                                                                                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nfpm/doona.yaml`, `nfpm/doona-fonts.yaml` | the nfpm configs in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux/tree/main/nfpm) (`dae.yaml`, `v2ray-rules-dat.yaml`)                                                                  |
+| `openwrt/doona/Makefile`                   | [openwrt/packages](https://github.com/openwrt/packages) `net/v2ray-geodata` (data-only, `PKGARCH:=all`, `Download/` blocks) and `net/v2raya` (unpacking a release tarball in `Build/Prepare`)                        |
+| `alpine/APKBUILD`                          | [aports](https://gitlab.alpinelinux.org/alpine/aports) `community/font-noto-cjk` (noarch, subpackage)                                                                                                                |
+| `gentoo/net-proxy/doona`                   | the [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)'s dashboards (`net-proxy/zashboard`, `net-proxy/daed` with its upstream `web.zip`): release archives in `SRC_URI`, `doins -r`, fonts behind a USE flag |
+| `nix/package.nix`                          | [nixpkgs](https://github.com/NixOS/nixpkgs) prebuilt web packages using `fetchurl` and `stdenvNoCC`                                                                                                                  |
+| the AUR `doona-bin` (separate repository)  | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                           |
 
 The OpenWrt, Alpine, Gentoo and Nix recipes are unpublished templates. Replace every marked hash before submission;
-none is ready for distribution. OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, Gentoo
-`ebuild … manifest`, and Nix needs the source hash from `nix-prefetch-github` and the dependency hash from the
-first build's mismatch message.
+none is ready for distribution. All four consume the prebuilt program archive, with the font archive where enabled.
+OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, Gentoo uses `ebuild … manifest`, and Nix uses the
+archive hashes in `SHA256SUMS`.
 
 The package recipes use tag `v0.1.0-beta.2`. nfpm receives `VERSION=0.1.0` and
 `PRERELEASE=beta.2`, yielding `0.1.0~beta.2` for deb and rpm. OpenWrt, Alpine and
@@ -51,5 +51,5 @@ The release workflow runs `tools/package.sh --git-version`: tag `v0.1.0-beta.2` 
 The program archive has `index.html`, assets and notices at its root. The separate font archive has a
 `fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.
-Nix builds the source tag instead, using `make install` and optional `make install-fonts` under `$out/share/doona`.
+Nix unpacks the release archives under `$out/share/doona`. nfpm stages the same archives for its packages.
 The default local invocation uses `package.json` instead, so its archive names omit the leading `v`.

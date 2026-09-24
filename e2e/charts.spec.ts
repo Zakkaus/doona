@@ -13,9 +13,9 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
+  await expect(page.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
-  await expect(fact(page, 'P95')).toHaveText(/^\d+ ms$/);
+  await expect(fact(page, 'P95')).toHaveText(/^[\d,]+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
   await expect(page.getByText(/^Loaded: \d+, uncached: \d+, sent upstream: \d+$/)).toBeVisible();
   const outcomes = page.getByRole('img', {name: /^Outcomes: /});
@@ -29,8 +29,10 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
 test('node latency groups two ways, shortens long groups and shows a tip on hover', async ({page}) => {
   await page.goto('/#/nodes?tab=latency');
   await expect(page.getByRole('tab', {name: 'Latency'})).toHaveAttribute('aria-selected', 'true');
-  await expect(fact(page, 'Lowest')).toHaveText(/^.+ \(\d+ ms\)$/);
-  await expect(fact(page, 'Highest')).toHaveText(/^.+ \(\d+ ms\)$/);
+  await expect(fact(page, 'Lowest').locator('.rp-big')).toHaveText(/.+/);
+  await expect(fact(page, 'Lowest').locator('.rp-fact-caption')).toHaveText(/^\d+ ms$/);
+  await expect(fact(page, 'Highest').locator('.rp-big')).toHaveText(/.+/);
+  await expect(fact(page, 'Highest').locator('.rp-fact-caption')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Unavailable')).toHaveText(/^\d+ nodes?$/);
   const plot = page.getByRole('group', {name: 'Node latency'});
   for (const label of ['Latest latency', 'Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
@@ -49,8 +51,9 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
 test('traffic is the first connections tab, and a point opens its connection in the list', async ({page}) => {
   await page.goto('/#/connections');
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');
-  await expect(fact(page, 'Heaviest connection')).toHaveText('cdn.bilibili.com (direct)');
-  await expect(fact(page, 'Download')).toHaveText('1.1 GB');
+  await expect(fact(page, 'Heaviest connection').locator('.rp-big')).toHaveText('cdn.bilibili.com');
+  await expect(fact(page, 'Heaviest connection').locator('.rp-fact-caption')).toHaveText('direct');
+  await expect(fact(page, 'Download')).toHaveText('1.2 GB');
   await expect(page.getByText(/^Connections: \d+(?:, without byte totals: \d+)?$/)).toBeVisible();
   await page.locator('.rp-scatter circle').first().click();
   await expect(page).toHaveURL(/[?&]tab=list/);
@@ -61,7 +64,8 @@ test('traffic is the first connections tab, and a point opens its connection in 
 test('the log heatmap sits above the list and sets the minimum level from a row', async ({page}) => {
   await page.goto('/#/logs');
   await expect(fact(page, 'Errors')).toHaveText(/^\d+ records?$/);
-  await expect(fact(page, 'Most errors')).toHaveText(/^\d\d:\d\d–\d\d:\d\d \(\d+\)$/);
+  await expect(fact(page, 'Most errors').locator('.rp-big')).toHaveText(/^\d\d:\d\d–\d\d:\d\d$/);
+  await expect(fact(page, 'Most errors').locator('.rp-fact-caption')).toHaveText(/^\d+ records?$/);
   await page.getByRole('button', {name: 'Show Warning and above'}).click();
   await expect(page.getByRole('group', {name: 'Log activity over time'}).getByText('Info', {exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: /Level$/})).toContainText('Warning');
@@ -71,7 +75,7 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   const backend = await mockBackend(page);
   const card = page.getByRole('region', {name: 'Cache', exact: true});
   await page.goto('/#/dns');
-  await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
+  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
   await expect(card.getByText('Usage', {exact: true})).toBeVisible();
   // The entry count is the cache's only limit, so no size is stated.
   await expect(card.getByText(/\bsize\b|\bMB\b|\bKB\b/)).toHaveCount(0);
@@ -110,7 +114,7 @@ for (const count of [0, 4]) {
     backend.handlers['GET dns/log'] = async () => ({...seed, records: seed.records.slice(0, count), next_cursor: null});
     await page.goto('/#/dns');
     const card = page.getByRole('region', {name: 'Cache', exact: true});
-    await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
+    await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
     await expect(page.getByText('Too few records to chart yet', {exact: true})).toHaveCount(3);
     await expect(page.locator('.rp-facts')).toHaveCount(0);
   });
@@ -123,7 +127,7 @@ test('a failed first log read shows in the charts it feeds while the cache card 
   };
   await page.goto('/#/dns');
   const card = page.getByRole('region', {name: 'Cache', exact: true});
-  await expect(card.getByText(/^Entries: \d+ \/ 100,000$/)).toBeVisible();
+  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
   await expect(card.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(3);
 });
@@ -138,4 +142,56 @@ test('the latency axis keeps its last label inside the chart on a phone', async 
     return Math.max(...[...svg.querySelectorAll('text.tick')].map(tick => tick.getBoundingClientRect().right - edge));
   });
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('the narrow latency plot keeps its annotations clear of axis labels', async ({page}) => {
+  await page.setViewportSize({width: 320, height: 844});
+  await page.goto('/#/dns');
+  for (const lang of ['zh-TW', 'en']) {
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate(
+        ({lang, scheme}) => {
+          localStorage.setItem('doona-lang', lang);
+          localStorage.setItem('doona-scheme', scheme);
+        },
+        {lang, scheme}
+      );
+      await page.reload();
+      const chart = page.locator('.rp-swarm svg').first();
+      await expect(chart).toBeVisible();
+      await expect(chart.locator('.mark line')).toHaveCount(2);
+      await expect(chart.locator('.mark text')).toHaveCount(0);
+      const overlap = await chart.locator('text.tick').evaluateAll(labels => {
+        const boxes = labels.map(label => label.getBoundingClientRect());
+        return boxes.some((a, i) => boxes.slice(i + 1).some(b => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+      });
+      expect(overlap, `${lang} ${scheme} axis labels`).toBe(false);
+    }
+  }
+});
+
+test('DNS summaries use their card height at 1024 px', async ({page}) => {
+  await page.setViewportSize({width: 1024, height: 900});
+  await page.goto('/#/dns');
+  for (const lang of ['zh-TW', 'en']) {
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate(
+        ({lang, scheme}) => {
+          localStorage.setItem('doona-lang', lang);
+          localStorage.setItem('doona-scheme', scheme);
+        },
+        {lang, scheme}
+      );
+      await page.reload();
+      await expect(page.locator('.rp-waffle')).toBeVisible();
+      const gaps = await page.locator('.rp-chart-page > .rp-g21 > .rp-card:nth-child(2)').evaluateAll(cards =>
+        cards.map(card => {
+          const last = [...card.children].at(-1)!;
+          return card.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom;
+        })
+      );
+      expect(gaps).toHaveLength(2);
+      for (const gap of gaps) expect(gap, `${lang} ${scheme} summary gap`).toBeLessThan(40);
+    }
+  }
 });

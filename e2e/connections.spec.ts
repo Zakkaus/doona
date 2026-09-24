@@ -253,7 +253,7 @@ test.describe('short connection lists', () => {
   test('virtualizes immediately and keeps first-visible sizing and type-ahead', async ({page}) => {
     await page.goto('/#/connections?tab=list');
     const grid = page.getByRole('grid', {name: 'Connections'});
-    await expect(grid).toHaveAttribute('aria-rowcount', '9');
+    await expect(grid).toHaveAttribute('aria-rowcount', '55');
     expect(await grid.evaluate(element => element.tagName)).toBe('DIV');
     const source = grid.getByRole('columnheader', {name: 'Device'});
     const chain = grid.getByRole('columnheader', {name: 'Chain'});

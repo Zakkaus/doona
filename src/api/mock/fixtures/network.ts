@@ -11,12 +11,13 @@ function connection(
   download: string,
   upload: string,
   domain: string | null = null,
-  network: 'tcp' | 'udp' = 'tcp'
+  network: 'tcp' | 'udp' = 'tcp',
+  pname: string | null = null
 ): Connection {
   const seed: ConnectionSeed = {
     id,
     flow_id: ['1', '2', '5'].includes(id) ? 'flow-' + id : null,
-    pname: null,
+    pname,
     state: outbound === 'block' ? 'blocked' : 'active',
     src,
     dst,
@@ -26,13 +27,63 @@ function connection(
     observed_by: outbound === 'direct' || outbound === 'block' ? 'ebpf' : 'userspace',
     upload_bytes: upload,
     download_bytes: download,
-    upload_bytes_per_second: '0',
-    download_bytes_per_second: '0'
+    upload_bytes_per_second: outbound === 'block' ? '0' : String(800 + Number(id) * 173),
+    download_bytes_per_second: outbound === 'block' ? '0' : String(8000 + Number(id) * 2279)
   };
   const flow = createFlow(seed, network, observedAt, instanceId);
   flows.push(flow);
   return {...seed, ...flowFields(flow.input, flow.trace.steps)};
 }
+export const demoDomains = [
+  'www.netflix.com',
+  'rr1---sn-ab5l6n7z.googlevideo.com',
+  'www.google.com',
+  'raw.githubusercontent.com',
+  'gateway.icloud.com',
+  'login.live.com',
+  'store.steampowered.com',
+  'api.spotify.com',
+  'pbs.twimg.com',
+  'scontent.cdninstagram.com',
+  'chatgpt.com',
+  'claude.ai',
+  'www.reddit.com',
+  'en.wikipedia.org',
+  'api.cloudflare.com',
+  'www.taobao.com',
+  'weixin.qq.com',
+  'www.zhihu.com',
+  'www.douyin.com',
+  'www.iqiyi.com',
+  'www.jd.com',
+  'www.xiaohongshu.com',
+  'www.baidu.com',
+  'steamcdn-a.akamaihd.net',
+  'www.speedtest.net',
+  'controlplane.tailscale.com',
+  'www.youtube.com',
+  'graph.facebook.com',
+  'api.github.com',
+  'registry.npmjs.org',
+  'updates.mozilla.org',
+  'www.twitch.tv',
+  'music.apple.com',
+  'api.weather.com',
+  'maps.googleapis.com',
+  'cdn.jsdelivr.net',
+  'fonts.gstatic.com',
+  'www.wikipedia.org',
+  'www.amazon.com',
+  'www.microsoft.com',
+  'www.nytimes.com',
+  'www.bbc.com',
+  'api.openai.com',
+  'www.cloudflare.com',
+  'media.discordapp.net',
+  'www.bing.com'
+] as const;
+const devices = ['10.0.0.7', '10.0.0.20', '10.0.0.31', '10.0.0.42', '10.0.0.53', '10.0.0.64'];
+const processes = ['firefox', 'chromium', 'steam', 'curl', 'spotify', 'discord'];
 export const connections: ConnectionList = {
   observed_at: observedAt,
   instance_id: instanceId,
@@ -42,8 +93,8 @@ export const connections: ConnectionList = {
   total_udp: 2,
   tcp: [
     connection('1', '149.154.167.220:443', '10.0.0.12', 'proxy', '1200000', '84000', 'api.telegram.org'),
-    connection('2', '120.92.78.14:443', '10.0.0.7', 'direct', '1099998000', '1100000', 'cdn.bilibili.com'),
-    connection('3', '52.84.19.3:443', '10.0.0.7', 'proxy', '307400000', '12000'),
+    connection('2', '120.92.78.14:443', '10.0.0.7', 'direct', '1200000000', '9400000', 'cdn.bilibili.com'),
+    connection('3', '52.84.19.3:443', '10.0.0.7', 'proxy', '58000000', '12000'),
     connection('4', '142.250.66.46:443', '10.0.0.31', 'block', '0', '0', 'doubleclick.net'),
     connection('6', '104.16.132.229:443', '10.0.0.31', 'proxy', '3400000', '210000', 'discord.com'),
     connection('7', '203.0.113.9:8443', '10.0.0.20', 'resilient', '96000', '40000')
@@ -53,6 +104,45 @@ export const connections: ConnectionList = {
     connection('8', '10.0.0.1:53', '10.0.0.20', 'gaming', '12000', '1000', null, 'udp')
   ]
 };
+
+// Byte totals shaped by what a destination is used for, so the traffic plot spreads out like a real network:
+// streams download almost only, backups and calls upload, and pages stay small. Deterministic per index.
+const STREAMS = /netflix|googlevideo|youtube|twitch|iqiyi|douyin|steamcdn|speedtest|music\.apple|spotify/;
+const UPLOADS = /icloud|github\.com|npmjs|speedtest/;
+const CALLS = /weixin|discordapp|tailscale/;
+function traffic(domain: string, i: number): [download: string, upload: string] {
+  const spread = (salt: number) => (((i + 1) * 2654435761 + salt * 40503) >>> 0) / 2 ** 32;
+  const scale = (low: number, high: number, salt: number) => Math.round(low * (high / low) ** spread(salt));
+  if (STREAMS.test(domain)) {
+    const down = scale(40e6, 900e6, 1);
+    return [String(down), String(Math.round(down * (0.002 + 0.02 * spread(2))))];
+  }
+  if (UPLOADS.test(domain)) {
+    const up = scale(8e6, 160e6, 3);
+    return [String(Math.round(up * (0.05 + 0.3 * spread(4)))), String(up)];
+  }
+  if (CALLS.test(domain)) {
+    const down = scale(2e6, 40e6, 5);
+    return [String(down), String(Math.round(down * (0.4 + 0.8 * spread(6))))];
+  }
+  const down = scale(60e3, 12e6, 7);
+  return [String(down), String(Math.round(down * (0.03 + 0.4 * spread(8))))];
+}
+const extra = demoDomains.map((domain, i) => {
+  const id = String(i + 9);
+  const outbound = i >= 15 && i <= 22 ? 'direct' : [6, 23, 31].includes(i) ? 'gaming' : i % 9 === 0 ? 'resilient' : i % 4 === 0 ? 'direct' : 'proxy';
+  const network = i % 6 === 0 ? 'udp' : 'tcp';
+  const src = devices[i % devices.length];
+  const dst = `203.0.113.${10 + i}:443`;
+  return {
+    network,
+    row: connection(id, dst, src, outbound, ...traffic(domain, i), domain, network, processes[i % processes.length])
+  };
+});
+connections.tcp.push(...extra.filter(item => item.network === 'tcp').map(item => item.row));
+connections.udp.push(...extra.filter(item => item.network === 'udp').map(item => item.row));
+connections.total_tcp = connections.tcp.length;
+connections.total_udp = connections.udp.length;
 
 export const flowDroppedRecords = '3';
 export const flowSummaryOmitsInput: Record<string, true> = {'flow-unobserved': true};
@@ -86,7 +176,7 @@ function retained(id: string, domain: string, outbound: string, network: 'tcp' |
     dst: '203.0.113.' + (Number(id.replace(/\D/g, '')) % 250) + ':443',
     domain,
     outbound,
-    started_at: ago(600 + Number(id.replace(/\D/g, '')) * 7),
+    started_at: ago(15 + ((Number(id.replace(/\D/g, '')) * 13) % 270)),
     observed_by: outbound === 'direct' || outbound === 'block' ? 'ebpf' : 'userspace',
     upload_bytes: '4096',
     download_bytes: '65536',
@@ -128,12 +218,19 @@ for (const [id, domain, outbound] of [
   ['r30', 'graph.facebook.com', 'proxy']
 ] as const)
   retained(id, domain, outbound);
+for (let i = 31; i <= 150; i++) {
+  const domain = i % 19 === 0 ? 'ad.doubleclick.net' : demoDomains[(i * 7) % demoDomains.length];
+  const outbound = domain.includes('doubleclick.net') ? 'block' : i % 5 === 0 ? 'direct' : 'proxy';
+  retained('r' + String(i).padStart(2, '0'), domain, outbound, i % 7 === 0 ? 'udp' : 'tcp');
+}
 
 export function connectionFixtures() {
   const templates = [
     ...connections.tcp.map(connection => ({connection, network: 'tcp' as const})),
     ...connections.udp.map(connection => ({connection, network: 'udp' as const}))
-  ].sort((a, b) => Number(a.connection.id) - Number(b.connection.id));
+  ]
+    .filter(({connection}) => Number(connection.id) <= 8)
+    .sort((a, b) => Number(a.connection.id) - Number(b.connection.id));
   const snapshot: ConnectionList = {...connections, tcp: [], udp: [], total_tcp: 0, total_udp: 0};
   const recorded: FlowDetail[] = [];
   for (let i = 0; i < 1200; i++) {
@@ -195,3 +292,33 @@ export const dnsCache: DnsCacheList = {
     {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null}
   ]
 };
+for (const [index, domain] of demoDomains.entries()) {
+  for (const type of ['A', 'AAAA'] as const) {
+    const name = domain + '.';
+    if (dnsCache.entries.some(entry => entry.domain === name && entry.type === type)) continue;
+    const negative = type === 'AAAA' && index % 9 === 0;
+    dnsCache.entries.push({
+      entry_id: `demo-${index}-${type}`,
+      domain: name,
+      type,
+      class: 'IN',
+      status: negative ? 'NXDOMAIN' : 'NOERROR',
+      ...(negative
+        ? {}
+        : {
+            answers: [
+              {
+                name,
+                type,
+                class: 'IN' as const,
+                ttl: 600,
+                data: type === 'A' ? `192.0.2.${index + 20}` : `2001:db8::${(index + 20).toString(16)}`
+              }
+            ]
+          }),
+      expires_at: ahead(600 + (index % 6) * 300),
+      stale_until: null
+    });
+  }
+}
+dnsCache.total = dnsCache.entries.length;

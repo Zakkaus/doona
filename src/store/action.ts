@@ -47,7 +47,7 @@ export const etag = (revision: string) => '"' + revision + '"';
 type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
 export function finished<K extends Operation['kind']>(operation: OperationState, kind: K): SucceededResult<K> {
   if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as SucceededResult<K>;
-  throw new LocalError('ui.operationFailed', operation.error?.message ?? null);
+  throw new LocalError('ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null);
 }
 // A warm TCP data probe over every reachable IP version; a group target probes its direct members, a node target
 // must not name members.

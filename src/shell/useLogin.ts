@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {useT, type Params} from '../i18n';
 import type {Key} from '../i18n';
-import {ApiError, errorText} from '../api/error';
+import {ApiError, errorText, send} from '../api/error';
 import {discoverAuth, openSession, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
 import {normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
@@ -38,11 +38,26 @@ export function signInRefusal(error: unknown): Refusal | null {
   return null;
 }
 
-// A backend without discovery (404), one that guards it (401, 403) or a host answering with something other than JSON
-// predates password login and takes a token. A network or server failure says nothing about the backend's sign-in.
+// A missing discovery endpoint may still belong to a native API without auth reporting.
 export function predatesAuth(error: unknown): boolean {
   if (error instanceof SyntaxError) return true;
   return error instanceof ApiError && (error.status === 404 || error.status === 401 || error.status === 403);
+}
+
+export async function resolveSignInKind(api: string, signal?: AbortSignal): Promise<SignIn | 'no-api'> {
+  try {
+    return signInKind(await discoverAuth(api, signal));
+  } catch (error) {
+    if (!predatesAuth(error)) throw error;
+    if (!(error instanceof ApiError) || error.status !== 404) return 'token';
+    const base = api.replace(/\/+$/, '');
+    const response = await send(new URL(`${base}/api/v1/capabilities`, globalThis.location?.href), {
+      headers: {Accept: 'application/json'},
+      cache: 'no-store',
+      signal
+    });
+    return response.status === 404 ? 'no-api' : 'token';
+  }
 }
 
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
@@ -50,16 +65,15 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   // A session this tab held and the backend no longer accepts has ended; it is dropped before asking again.
   // endSession is idempotent for the page load, so running it in the initializer is safe under StrictMode.
   const [ended] = useState(() => endSession(profileId, api));
-  const [kind, setKind] = useState<SignIn | null>(null);
+  const [kind, setKind] = useState<SignIn | 'no-api' | null>(null);
   const [discovery, setDiscovery] = useState<{attempt: number; error: Error | null}>({attempt: 0, error: null});
   useEffect(() => {
     const controller = new AbortController();
-    discoverAuth(api, controller.signal).then(
-      auth => setKind(signInKind(auth)),
+    resolveSignInKind(api, controller.signal).then(
+      kind => setKind(kind),
       (error: unknown) => {
         if (controller.signal.aborted) return;
-        if (predatesAuth(error)) setKind('token');
-        else setDiscovery(state => ({...state, error: error instanceof Error ? error : new Error(String(error))}));
+        setDiscovery(state => ({...state, error: error instanceof Error ? error : new Error(String(error))}));
       }
     );
     return () => controller.abort();
@@ -116,20 +130,22 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const usesPassword = kind === 'setup' || kind === 'login';
   // A refusal after a submit takes focus; the notes shown on arrival do not.
   const alert =
-    failure !== null
-      ? {tone: 'negative' as const, text: typeof failure === 'string' ? failure : t(failure.key, failure.params), focus: true, id: attempt}
-      : ended
-        ? {tone: 'informative' as const, text: t('login.sessionEnded'), focus: false, id: 0}
-        : rejected && kind === 'token'
-          ? {tone: 'negative' as const, text: t('login.rejected'), focus: false, id: 0}
-          : null;
+    kind === 'no-api'
+      ? null
+      : failure !== null
+        ? {tone: 'negative' as const, text: typeof failure === 'string' ? failure : t(failure.key, failure.params), focus: true, id: attempt}
+        : ended
+          ? {tone: 'informative' as const, text: t('login.sessionEnded'), focus: false, id: 0}
+          : rejected && kind === 'token'
+            ? {tone: 'negative' as const, text: t('login.rejected'), focus: false, id: 0}
+            : null;
   const fieldError = (field: Field) => (problems[field] ? t(problems[field]) : undefined);
   return {
     kind,
     discoveryError: discovery.error,
     retryDiscovery: () => setDiscovery(state => ({attempt: state.attempt + 1, error: null})),
-    title: t(kind === 'setup' ? 'login.setupTitle' : kind === 'token' ? 'login.title' : 'login.passwordTitle'),
-    note: kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? null : t('login.note', {backend}),
+    title: t(kind === 'no-api' ? 'login.noApiTitle' : kind === 'setup' ? 'login.setupTitle' : kind === 'token' ? 'login.title' : 'login.passwordTitle'),
+    note: kind === 'no-api' ? t('login.noApiNote') : kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? null : t('login.note', {backend}),
     alert,
     busy,
     token,
@@ -144,14 +160,14 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     setConfirm: edit('confirm', setConfirm),
     confirmError: fieldError('confirm'),
     submit: () => {
-      if (busy) return;
+      if (busy || kind === 'no-api') return;
       setFailure(null);
       setAttempt(value => value + 1);
       if (usesPassword) void submitPassword(kind);
       else submitToken();
     },
     // Credentials are checked on submit and each problem shows on its field, so the button stays enabled for them.
-    canSubmit: usesPassword || !!token.trim(),
+    canSubmit: kind !== 'no-api' && (usesPassword || !!token.trim()),
     secretType: shown ? 'text' : 'password',
     toggle: () => setShown(value => !value),
     toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken')
