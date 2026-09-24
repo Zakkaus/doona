@@ -101,6 +101,12 @@ export const messages = {
   'config.valid': 'Validation passed',
   'config.invalid': {one: 'Validation found {n} error', other: 'Validation found {n} errors'},
   'config.saved': '{path} written, configuration reloaded',
+  'config.writeRestart': {
+    one: '{n} setting takes effect only after a restart; nothing written. Change it in the file, then restart honk',
+    other: '{n} settings take effect only after a restart; nothing written. Change them in the file, then restart honk'
+  },
+  'config.diskAhead':
+    'The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart',
   'config.diagnostics': 'Diagnostics',
   'config.export': 'Export',
   'config.exportWarning': 'Exports preserve the displayed source bytes and may contain credentials. Review them before sharing.',
@@ -1209,6 +1215,8 @@ export const messages = {
   'ui.block': 'block',
   'ui.error': 'Error',
   'ui.operationFailed': 'The operation did not succeed',
+  'ui.writtenNotApplied':
+    'Written to the configuration file but not applied; the running configuration is unchanged. Fix the file, then reload or restart honk',
   'ui.probeUnsupported': 'This backend does not provide a TCP probe for this target',
   'ui.groupNotLoaded': 'The group has not loaded',
   'ui.config': 'Configuration',

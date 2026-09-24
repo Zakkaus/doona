@@ -42,6 +42,8 @@ export const messages = defineMessages({
     'config.valid': '驗證通過',
     'config.invalid': '驗證發現 {n} 個錯誤',
     'config.saved': '{path} 已寫入，組態已重載',
+    'config.writeRestart': '{n} 項設定需重新啟動才會生效，未寫入。請在檔案中修改後重新啟動 honk',
+    'config.diskAhead': '磁碟上的檔案與執行中的組態不同，因此未寫入。請重載 honk 以套用該檔案；若檔案變更了需重新啟動的設定，請重新啟動 honk',
     'config.diagnostics': '診斷',
     'config.export': '匯出',
     'config.exportWarning': '匯出檔案保留顯示的原始文字，可能含有憑證；分享前請檢查內容。',
@@ -152,6 +154,8 @@ export const messages = defineMessages({
     'config.valid': '校验通过',
     'config.invalid': '校验发现 {n} 个错误',
     'config.saved': '{path} 已写入，配置已重载',
+    'config.writeRestart': '{n} 项设置需重启才会生效，未写入。请在文件中修改后重启 honk',
+    'config.diskAhead': '磁盘上的文件与运行中的配置不同，因此未写入。请重载 honk 以应用该文件；若文件更改了需重启的设置，请重启 honk',
     'config.diagnostics': '诊断',
     'config.export': '导出',
     'config.exportWarning': '导出文件保留显示的原始文本，可能包含凭据；分享前请检查内容。',
@@ -263,6 +267,12 @@ export const messages = defineMessages({
     'config.valid': 'Validation passed',
     'config.invalid': {one: 'Validation found {n} error', other: 'Validation found {n} errors'},
     'config.saved': '{path} written, configuration reloaded',
+    'config.writeRestart': {
+      one: '{n} setting takes effect only after a restart; nothing written. Change it in the file, then restart honk',
+      other: '{n} settings take effect only after a restart; nothing written. Change them in the file, then restart honk'
+    },
+    'config.diskAhead':
+      'The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart',
     'config.diagnostics': 'Diagnostics',
     'config.export': 'Export',
     'config.exportWarning': 'Exports preserve the displayed source bytes and may contain credentials. Review them before sharing.',

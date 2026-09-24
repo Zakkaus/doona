@@ -227,6 +227,10 @@ type DiagnosticRow = {
 type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
+// honk refuses a write that changes a setting only a restart applies, one error per setting, and names the setting in
+// the message; nothing was written, so the draft and every later write stay valid.
+export const restartRequired = (diagnostics: ConfigDiagnostic[]) =>
+  diagnostics.filter(item => item.level === 'error' && item.code === 'restart-required').length;
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
   const paths = new Map(sources.map(source => [source.id, fileName(source)]));
   return diagnostics.map((item, index) => {

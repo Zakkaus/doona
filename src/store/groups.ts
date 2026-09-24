@@ -109,7 +109,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
         run('config', async signal => {
           if (!resource.data) throw new LocalError('ui.groupNotLoaded');
           const result = await api.patchGroup(id, [{op: 'replace', path: '/config/interrupt_connections', value}], etag(resource.data.config_revision), signal);
-          if ('operation_id' in result) finished(await api.pollOperation(result, signal), 'group_update');
+          if ('operation_id' in result) finished(await api.pollOperation(result, signal), 'group_update', {written: true});
           return true;
         }),
       [api, id, resource.data, run]
