@@ -6,7 +6,7 @@ import {type RoutePath} from '../routes';
 import {within} from '../route';
 import {dnsTabs} from '../../features/dns/view';
 import {rulesTabs} from '../../features/rules/view';
-import {settingsCards} from '../../features/settings/view';
+import {settingsCardList} from '../../features/settings/view';
 import {ownedNodes, providerRows} from '../../features/nodes/view';
 import {configTabs, setupAvailable, sourceKinds} from '../../features/config/view';
 
@@ -36,7 +36,7 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...configTabs(setupAvailable(resources, main)).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
-    ...settingsCards.map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey}))
+    ...settingsCardList(resources).map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey}))
   ];
   const places = [
     ...features
