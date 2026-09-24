@@ -1,4 +1,5 @@
 import {useT} from '../../i18n';
+import {DaeCode} from '../../ui/DaeCode';
 import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Link, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
@@ -309,7 +310,7 @@ function ValidateTab(props: ValidateTabProps) {
             render: item => <span className="rp-code">{item.where}</span>
           },
           {id: 'message', label: t('config.message'), minWidth: 240, grow: 2, isRowHeader: true, render: item => <TextTooltip>{item.message}</TextTooltip>},
-          {id: 'code', label: t('config.code'), minWidth: 140, drop: 1, render: item => <span className="rp-code">{item.code}</span>}
+          {id: 'code', label: t('config.code'), minWidth: 140, drop: 1, render: item => <DaeCode text={item.code} />}
         ]}
       />
       {cur && (

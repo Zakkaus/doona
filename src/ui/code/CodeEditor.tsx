@@ -97,14 +97,14 @@ const theme = EditorView.theme({
   }
 });
 const highlight = HighlightStyle.define([
-  {tag: tags.comment, color: 'var(--rp-muted)'},
-  {tag: tags.keyword, color: 'var(--rp-love)', fontWeight: '700'},
-  {tag: tags.string, color: 'var(--rp-gold)'},
-  {tag: tags.number, color: 'var(--rp-iris)'},
-  {tag: tags.propertyName, color: 'var(--rp-pine)'},
-  {tag: tags.variableName, color: 'var(--rp-text)'},
-  {tag: tags.operator, color: 'var(--rp-subtle)'},
-  {tag: tags.punctuation, color: 'var(--rp-subtle)'}
+  {tag: tags.comment, color: 'var(--rp-code-comment)'},
+  {tag: tags.keyword, color: 'var(--rp-code-keyword)', fontWeight: '700'},
+  {tag: tags.string, color: 'var(--rp-code-string)'},
+  {tag: tags.number, color: 'var(--rp-code-number)'},
+  {tag: tags.propertyName, color: 'var(--rp-code-propertyName)'},
+  {tag: tags.variableName, color: 'var(--rp-code-variableName)'},
+  {tag: tags.operator, color: 'var(--rp-code-operator)'},
+  {tag: tags.punctuation, color: 'var(--rp-code-punctuation)'}
 ]);
 
 // dae nests with braces and two spaces: a line after "{" indents, a line starting with "}" steps back out.

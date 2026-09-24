@@ -14,6 +14,7 @@ import {
 } from 'react-aria-components';
 import {formatList, useLang, useT} from '../../../i18n';
 import {href} from '../../../shell/route';
+import {DaeCode} from '../../../ui/DaeCode';
 import {
   ActionBar,
   Badge,
@@ -183,9 +184,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
             <div className="rp-arrange-rules">
               <span className="rp-label">{t('arrange.byRule')}</span>
               {group.rules.map(rule => (
-                <code key={rule} className="rp-code">
-                  {rule}
-                </code>
+                <DaeCode key={rule} as="code" text={rule} />
               ))}
               {group.ruleNodes.length > 0 && (
                 <span>
@@ -430,9 +429,7 @@ function Review({m}: {m: Model}) {
       </ol>
       <Disclosure title={t('arrange.showText')}>
         {m.preview.map(item => (
-          <pre key={item.group} className="rp-code rp-arrange-preview">
-            {item.text}
-          </pre>
+          <DaeCode key={item.group} as="pre" className="rp-arrange-preview" text={item.text} />
         ))}
       </Disclosure>
       <p className="rp-label">{t('arrange.applyNote')}</p>

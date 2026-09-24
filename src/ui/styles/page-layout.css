@@ -50,9 +50,44 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+:root {
+  --rp-code-comment: var(--rp-muted);
+  --rp-code-string: var(--rp-gold);
+  --rp-code-keyword: var(--rp-love);
+  --rp-code-number: var(--rp-iris);
+  --rp-code-propertyName: var(--rp-pine);
+  --rp-code-variableName: var(--rp-text);
+  --rp-code-punctuation: var(--rp-subtle);
+  --rp-code-operator: var(--rp-subtle);
+}
 .rp-code {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: 13px;
+}
+.rp-dae-comment {
+  color: var(--rp-code-comment);
+}
+.rp-dae-string {
+  color: var(--rp-code-string);
+}
+.rp-dae-keyword {
+  color: var(--rp-code-keyword);
+  font-weight: 700;
+}
+.rp-dae-number {
+  color: var(--rp-code-number);
+}
+.rp-dae-propertyName {
+  color: var(--rp-code-propertyName);
+}
+.rp-dae-variableName {
+  color: var(--rp-code-variableName);
+}
+.rp-dae-punctuation {
+  color: var(--rp-code-punctuation);
+}
+.rp-dae-operator {
+  color: var(--rp-code-operator);
 }
 .rp-kv {
   display: grid;

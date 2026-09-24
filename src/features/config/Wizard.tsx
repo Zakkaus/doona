@@ -1,4 +1,5 @@
 import {useT} from '../../i18n';
+import {DaeCode} from '../../ui/DaeCode';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {Button, LabeledSelect, Light, TextField} from '../../ui/ui';
@@ -41,7 +42,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
           <div className="rp-toolbar top" key={item.index}>
             {item.raw !== null ? (
               // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
-              <span className="rp-code rp-grow rp-config-raw">{item.raw}</span>
+              <DaeCode text={item.raw} className="rp-grow rp-config-raw" />
             ) : (
               <>
                 <TextField
