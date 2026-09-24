@@ -1,19 +1,24 @@
 import {formatBytes} from '../../i18n/format';
-import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
+import type {Capabilities, RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
 import {formatNumber, type Params, type Translator} from '../../i18n';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
+import {geodataConfigurable} from './geodata';
 
 // The page's cards in order. Search lists the same cards, so the page takes its titles from here; `?card=` scrolls
 // to the card's heading, id `settings-{id}`.
-type SettingsCardId = 'backend' | 'runtime' | 'actions' | 'appearance' | 'about';
+type SettingsCardId = 'backend' | 'runtime' | 'geodata' | 'actions' | 'appearance' | 'about';
 export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> = [
   {id: 'backend', titleKey: 'settings.backend'},
   {id: 'runtime', titleKey: 'settings.runtime'},
+  {id: 'geodata', titleKey: 'settings.geodata'},
   {id: 'actions', titleKey: 'settings.actions'},
   {id: 'appearance', titleKey: 'settings.appearance'},
   {id: 'about', titleKey: 'settings.about'}
 ];
+// The cards the page shows for a backend: the geodata card only where its sources can be configured.
+export const settingsCardList = (resources: Capabilities['resources'] | undefined) =>
+  settingsCards.filter(card => card.id !== 'geodata' || geodataConfigurable(resources));
 export const cardHeadingId = (id: string) => `settings-${id}`;
 export function settingsCard(id: SettingsCardId) {
   return {headingId: cardHeadingId(id), titleKey: settingsCards.find(card => card.id === id)!.titleKey};
@@ -106,7 +111,9 @@ export function geodataRows(assets: GeoData['assets'], locale: string) {
     modifiedAt: asset.modified_at,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,
-    source: asset.source_redacted ?? '—'
+    source: asset.source_redacted ?? '—',
+    fetched: asset.fetched_url_redacted ?? '—',
+    verified: asset.verified === true
   }));
 }
 export function profileView(

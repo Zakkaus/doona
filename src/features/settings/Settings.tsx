@@ -5,6 +5,7 @@ import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
+import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
 import type {PageProps} from '../../shell/routes';
 import {settingsCard} from './view';
@@ -142,6 +143,7 @@ export function Settings({query}: PageProps) {
         </form>
       </section>
       <RuntimeSettingsCard />
+      <GeodataSettingsCard />
       <BackendActionsCard />
       <section className="rp-card" aria-labelledby={cards.appearance.headingId}>
         <h2 className="rp-h3" id={cards.appearance.headingId}>

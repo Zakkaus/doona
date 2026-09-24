@@ -14,6 +14,7 @@ import {closedAllTone, operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
+import {geodataConfigurable} from './geodata';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 export function useBackendActions() {
@@ -29,14 +30,16 @@ export function useBackendActions() {
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
   const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
-  const geodata = useGeodata(offered(resources, 'geodata', {whileLoading: false}));
+  // Where sources are configurable, geodata has its own card with the update button, so this card leaves it out.
+  const plainGeodata = !!resources?.geodata.available && !geodataConfigurable(resources);
+  const geodata = useGeodata(plainGeodata);
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
   const anyAction =
     lifecycle ||
     !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
     !!resources?.providers.can_refresh ||
     !!resources?.connections.can_close ||
-    !!resources?.geodata.can_update;
+    (plainGeodata && !!resources?.geodata.can_update);
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
   const providersReady = !!providers.data && !providers.error && !providers.loading;
   const connectionsReady = !!connections.data && !connections.error && !connections.loading;
@@ -124,7 +127,7 @@ export function useBackendActions() {
     canRefresh: !!resources?.providers.can_refresh,
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
-    hasGeodata: !!resources?.geodata.available,
+    hasGeodata: plainGeodata,
     rows: geodataRows(geodata.data?.assets ?? [], locale),
     update: () =>
       void geodata.update().then(
