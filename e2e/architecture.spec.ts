@@ -452,6 +452,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
   });
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Backend options'});
+  await expect(card).toContainText('any change that reloads the configuration, restores the configured values');
   const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
   await records.fill('512');
   const saving = page.waitForRequest(request => request.method() === 'PATCH');

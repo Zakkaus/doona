@@ -647,7 +647,7 @@ export const messages = {
   'policy.untested': '{n} untested',
   'policy.network': 'Select network for {name}',
   'policy.both': 'Both',
-  'policy.updated': 'Configuration updated for {name}',
+  'policy.updated': 'Configuration for {name} written and reloaded',
   'policy.interrupt': 'Interrupt existing connections on switch',
   'policy.selectedInterrupted': '{name} selected {member}; existing connections interrupted',
   'policy.selectedKept': '{name} selected {member}; existing connections kept',
@@ -930,7 +930,8 @@ export const messages = {
   'settings.appearance': 'Appearance',
   'settings.scheme': 'Color scheme',
   'settings.runtime': 'Backend options',
-  'settings.runtimeNote': 'Changes apply immediately and are not written to the configuration file; a reload or restart restores the configured values.',
+  'settings.runtimeNote':
+    'Changes apply immediately and are not written to the configuration file. A restart, or any change that reloads the configuration, restores the configured values; switching the outbound mode, editing nodes, groups or rules, and updating geodata all reload it.',
   'settings.runtimeUnavailable': 'This backend does not provide runtime option changes',
   'settings.sourceConfig': 'From configuration',
   'settings.sourceRuntime': 'Runtime override',
