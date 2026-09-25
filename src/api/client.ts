@@ -19,11 +19,13 @@ import {readSse} from './sse';
 import {wait} from './wait';
 import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
+import {noteServerTime, resetServerClock} from './serverClock';
 
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
   if (result.data === undefined) throw clientError(result.response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson');
+  noteServerTime((result.data as {observed_at?: unknown} | null)?.observed_at);
   return result.data;
 }
 
@@ -39,6 +41,7 @@ const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
 /** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string): Api {
   const baseUrl = base.replace(/\/+$/, '');
+  resetServerClock();
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
   const client = createClient<paths>({

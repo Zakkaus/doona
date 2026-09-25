@@ -26,7 +26,7 @@ export function historySamples(history: MemoryHistory): MemorySample[] {
   });
 }
 
-export function memoryWindow(rings: Rings<MemorySample>, history: MemorySample[], windowSeconds: number, now = Date.now()) {
+export function memoryWindow(rings: Rings<MemorySample>, history: MemorySample[], windowSeconds: number, now?: number) {
   const series = window(rings, history, windowSeconds, foldMemory, now);
   return {
     ...series,

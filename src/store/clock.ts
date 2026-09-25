@@ -1,16 +1,17 @@
 import {useSyncExternalStore} from 'react';
+import {serverNow} from '../api/serverClock';
 
-// One ticking store shared by every subscriber. Relative times and freshness advance on it rather than on each poll,
+// One ticking store shared by every subscriber, on the host's clock. Relative times and freshness advance on it rather than on each poll,
 // since an unchanged poll keeps its snapshot and triggers no render. It stops while the page is hidden and ticks once
 // when the page is shown again.
 const every = 5000;
 const subscribers = new Set<() => void>();
-let now = Date.now();
+let now = serverNow();
 let timer: ReturnType<typeof setInterval> | undefined;
 let watching = false;
 
 function tick() {
-  now = Date.now();
+  now = serverNow();
   subscribers.forEach(fn => fn());
 }
 
@@ -27,7 +28,7 @@ function subscribe(notify: () => void) {
       run();
     });
   }
-  if (!subscribers.size) now = Date.now();
+  if (!subscribers.size) now = serverNow();
   subscribers.add(notify);
   if (subscribers.size === 1) run();
   return () => {

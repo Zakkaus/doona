@@ -1,17 +1,28 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
 import {ApiError} from './error';
+import {resetServerClock, serverNow} from './serverClock';
 import type {ApiEvent} from './model';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json', ...headers}});
 afterEach(() => {
+  resetServerClock();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe('native transport', () => {
+  it('reads the host clock from the observed_at of a response', async () => {
+    const behind = Date.now() - 600_000;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({observed_at: new Date(behind).toISOString()}))
+    );
+    await createApi('https://honk.test').runtime();
+    expect(Math.abs(serverNow() - behind)).toBeLessThan(1000);
+  });
   it('retries a refused mutation with the same body and idempotency key after the floor', async () => {
     vi.useFakeTimers();
     const attempts: Array<{body: string; key: string | null}> = [];
