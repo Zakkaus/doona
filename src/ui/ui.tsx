@@ -3,7 +3,7 @@ export {useSlider, useContentWidth, useFillHeight, useDebounced, useMediaQuery, 
 export {exportName, downloadFile, csvLine} from './files';
 export {Button, TextTooltip, Link} from './Button';
 export {TextField, Switch, Segmented, Check} from './Fields';
-export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection} from './Select';
+export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
 export {ModalDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, DisclosureGroup, Tabs, useTabShown} from './Dialog';
 export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';

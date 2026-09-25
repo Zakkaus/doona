@@ -71,7 +71,7 @@ test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   expect(content).toBeLessThanOrEqual(top);
 });
 
-test('language, theme, palette and wordmark are one overflow menu away', async ({page}) => {
+test('language, theme, palette and wordmark are each two taps away in the overflow menu', async ({page}) => {
   await page.goto('/#/overview');
   const top = page.locator('.rp-top');
   await expect(top.getByRole('button', {name: 'Search'})).toBeVisible();
@@ -81,19 +81,68 @@ test('language, theme, palette and wordmark are one overflow menu away', async (
   const more = top.getByRole('button', {name: 'More options'});
   const box = (await more.boundingBox())!;
   expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
-  const pick = async (item: string) => {
+  // The menu is four short rows, each naming its current value; a row opens its choices in the same popover.
+  await more.click();
+  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient']);
+  await page.keyboard.press('Escape');
+  const pick = async (row: string, item: string) => {
     await more.click();
+    await page.getByRole('menuitem', {name: row}).click();
     // A palette's name continues with its variants, so the name only has to start with the item.
-    await page.getByRole('menuitemradio', {name: new RegExp(`^${item}`)}).click();
+    const choice = page.getByRole('menuitemradio', {name: new RegExp(`^${item}`)});
+    const {x, width} = (await choice.boundingBox())!;
+    expect(x).toBeGreaterThanOrEqual(0);
+    expect(x + width).toBeLessThanOrEqual(390);
+    await choice.click();
+    await expect(page.getByRole('menu')).toHaveCount(0);
   };
-  await pick('Dark');
+  await pick('Theme', 'Dark');
   await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
-  await pick('Nord');
+  await pick('Palette', 'Nord');
   await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-  await pick('Plain');
+  await pick('Wordmark', 'Plain');
   await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
-  await pick('简体中文');
+  await pick('Language', '简体中文');
   await expect(top.getByRole('button', {name: '更多选项'})).toBeVisible();
+});
+
+test('the overflow menu opens and leaves a submenu by keyboard', async ({page}) => {
+  await page.goto('/#/overview');
+  await page.locator('.rp-top').getByRole('button', {name: 'More options'}).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', {name: 'Language'})).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('menu', {name: 'Theme'})).toBeVisible();
+  await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu', {name: 'Palette'})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem', {name: 'Palette'})).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test.describe('between phone and desktop widths', () => {
+  test.use({viewport: {width: 800, height: 700}});
+  test('a submenu opens beside its row and stays on screen', async ({page}) => {
+    await page.goto('/#/overview');
+    await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
+    await page.getByRole('menuitem', {name: 'Palette'}).click();
+    await expect(page.getByRole('menu')).toHaveCount(2);
+    const {x, width} = (await page.getByRole('menu', {name: 'Palette'}).boundingBox())!;
+    expect(x).toBeGreaterThanOrEqual(0);
+    expect(x + width).toBeLessThanOrEqual(800);
+    await page.getByRole('menuitemradio', {name: /^Nord/}).click();
+    await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  });
 });
 
 for (const width of [320, 360])

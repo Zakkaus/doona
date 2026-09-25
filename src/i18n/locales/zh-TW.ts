@@ -1201,6 +1201,7 @@ export const messages = {
   'cm.selectionDeleted': '已刪除選取範圍',
   'cm.controlCharacter': '控制字元',
   close: '關閉',
+  'ui.back': '返回',
   'toast.collapse': '收合',
   'toast.clearAll': '全部清除',
   'ui.openRule': '在規則清單中查看 {rule}',
