@@ -130,16 +130,25 @@ function SectionMenu({
   labelledBy,
   sections,
   headers = true,
+  focusedByCaller,
   onAction
 }: {
   label: string;
   labelledBy?: string;
   sections: ChoiceSection[];
   headers?: boolean;
+  // The caller moves focus itself, so the menu does not take it to its first item as a trigger's menu does.
+  focusedByCaller?: boolean;
   onAction?: (key: string) => void;
 }) {
   return (
-    <Menu aria-label={label} aria-labelledby={labelledBy} onAction={onAction && (key => onAction(String(key)))}>
+    <Menu
+      aria-label={label}
+      aria-labelledby={labelledBy}
+      // eslint-disable-next-line jsx-a11y/no-autofocus -- false only: the caller places focus instead of the trigger
+      autoFocus={focusedByCaller ? false : undefined}
+      onAction={onAction && (key => onAction(String(key)))}
+    >
       {sections.map(section => (
         <MenuSection
           key={section.title}
@@ -185,25 +194,27 @@ const phone = '(max-width: 639px)';
 function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[]}) {
   const t = useT();
   const inline = useMediaQuery(phone);
-  const [open, setOpen] = useState<number | null>(null);
-  const back = useRef<number | null>(null);
+  // The open submenu, and the row just left, which takes focus back.
+  const [{open, left}, setView] = useState<{open: number | null; left: number | null}>({open: null, left: null});
   const root = useRef<HTMLDivElement>(null);
   const title = useId();
   // The wrapper holds focus while one view replaces the other, so the popover does not see focus lost and move it.
   const go = (to: number | null) => {
     root.current?.focus();
-    setOpen(to);
+    setView({open: to, left: to == null ? open : null});
   };
   // A submenu opens on its current choice; back on the list, focus returns to the row that opened the submenu. The
-  // menu renders its items a pass after mounting, so the focus waits a frame.
+  // menu the trigger would focus on its first item is told not to, and its items render a pass after mounting, so the
+  // focus waits a frame and gives way if a key has moved it since.
   useEffect(() => {
     const el = root.current;
-    if (!el || (open == null && back.current == null)) return;
-    const target = open == null ? `[data-key="${back.current}"]` : '[aria-checked="true"]';
-    back.current = null;
-    const frame = requestAnimationFrame(() => el.querySelector<HTMLElement>(target)?.focus());
+    if (!el || (open == null && left == null)) return;
+    const target = open == null ? `[data-key="${left}"]` : '[aria-checked="true"]';
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement === el) el.querySelector<HTMLElement>(target)?.focus();
+    });
     return () => cancelAnimationFrame(frame);
-  }, [open]);
+  }, [open, left]);
   if (!inline)
     return (
       <Menu aria-label={label}>
@@ -219,10 +230,7 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
     );
   const submenu = open == null ? null : submenus[open];
   if (submenu) {
-    const leave = () => {
-      back.current = open;
-      go(null);
-    };
+    const leave = () => go(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'Escape') return;
       e.preventDefault();
@@ -236,7 +244,7 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
           <span id={title}>{submenu.label}</span>
         </RButton>
         {/* Named by its title, not by the menu button the trigger would name it after. */}
-        <SectionMenu label={submenu.label} labelledBy={title} sections={submenu.sections} headers={submenu.sections.length > 1} />
+        <SectionMenu label={submenu.label} labelledBy={title} sections={submenu.sections} headers={submenu.sections.length > 1} focusedByCaller />
       </div>
     );
   }
@@ -248,7 +256,13 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
   };
   return (
     <div ref={root} className="rp-drill" tabIndex={-1} onKeyDownCapture={onKey}>
-      <Menu aria-label={label} shouldCloseOnSelect={false} onAction={key => go(Number(key))}>
+      <Menu
+        aria-label={label}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- false only, on return: focus goes back to the row just left
+        autoFocus={left == null ? undefined : false}
+        shouldCloseOnSelect={false}
+        onAction={key => go(Number(key))}
+      >
         {submenus.map((submenu, index) => (
           <SubmenuItem key={submenu.label} id={String(index)} {...submenu} />
         ))}
