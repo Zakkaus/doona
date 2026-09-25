@@ -18,8 +18,15 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     else nextNodes.push({id: field.name, name: field.name, protocol, provider_id: 'inline', subscription_tag: null, group_ids: [], health: []});
   }
   const nextProviders = providers.filter(provider => provider.kind === 'inline' || providerIds.has(provider.name));
+  // A block entry (`tag: {url: …}`) carries its URL as a field of that block.
+  const blockUrl = (name: string) =>
+    blocks
+      .filter(block => block.name === 'subscription')
+      .flatMap(block => block.children.filter(child => child.name === name))
+      .flatMap(child => blockFields(text, child, tokens))
+      .find(field => field.name === 'url')?.value;
   for (const field of subscriptions) {
-    const url = URL.parse(unquote(field.value));
+    const url = URL.parse(unquote(blockUrl(field.name) ?? field.value));
     const url_redacted = url ? url.origin + url.pathname + (url.search ? '?[redacted]' : '') : null;
     const existing = nextProviders.find(provider => provider.name === field.name);
     if (existing) {
