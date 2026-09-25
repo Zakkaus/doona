@@ -61,3 +61,9 @@ test('a group whose networks use different members marks each with its network',
   await expect(udp.locator('.cur')).toHaveText('UDP');
   await expect(proxy.getByRole('button', {name: /^sg-01\b/})).not.toHaveClass(/\bcur\b/);
 });
+
+test('the page note does not promise pinning, which honk groups refuse', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/policies');
+  await expect(page.locator('.rp-note').first()).toHaveText('Manual groups switch members directly, and TCP and UDP can be selected separately.');
+});
