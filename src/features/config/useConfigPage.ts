@@ -2,9 +2,9 @@ import {useEffect, useMemo, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
-import {ApiError, errorText} from '../../api/error';
+import {ApiError} from '../../api/error';
 import {localTime} from '../../i18n/format';
-import {downloadFile, isMac, toast, useLinked} from '../../ui/ui';
+import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {fileName, groupNames} from './names';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
@@ -38,7 +38,7 @@ function useConfigEditorController(refetch: () => void) {
     if (diagnostics) {
       const restart = restartRequired(diagnostics);
       toast('negative', restart ? t('config.writeRestart', {n: restart}) : t('ui.writeInvalid', {n: diagnostics.filter(d => d.level === 'error').length}));
-    } else toast('negative', t('ui.writeFailed', {error: errorText(editor.error, t)}));
+    } else toastFailure(editor.error, t, error => t('ui.writeFailed', {error}));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};
 }

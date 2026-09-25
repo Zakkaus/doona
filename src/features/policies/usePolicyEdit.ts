@@ -54,11 +54,11 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
           }
           toast('positive', t('policy.updated', {name: draft.name}));
         }
-        const text = editProblem(result, t);
+        const problem = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
-        if (text) {
-          if (open) refuse(text);
-          else toast('negative', text);
+        if (problem) {
+          if (open) refuse(problem.text);
+          else toast(problem.kind, problem.text);
         }
       });
   };

@@ -77,3 +77,10 @@ export function errorText(error: unknown, t: Translator): string {
   const message = error instanceof ApiError ? backendMessage(error.code, error.message, t) : error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
 }
+
+// What to tell the person about a failed action, wrapped in that action's failure wording. An operation whose outcome
+// is unknown did not fail: it is reported on its own, neutrally.
+export function failureNotice(error: unknown, t: Translator, wrap: (error: string) => string) {
+  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral' as const, text: t(error.key)};
+  return {kind: 'negative' as const, text: wrap(errorText(error, t))};
+}

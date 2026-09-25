@@ -2,7 +2,7 @@ import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../store';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
@@ -10,7 +10,6 @@ import {addRule, removeRule, ruleAnchor} from './source';
 import {parseRuleSeed, type RuleSeed} from './link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
-import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
@@ -68,7 +67,7 @@ export function useRuleList({go, query}: PageProps) {
     rules.refetch();
   };
   const editor = useConfigEditor(retry);
-  const report = useEffectEvent((error: Error) => toast('negative', t('ui.writeFailed', {error: errorText(error, t)})));
+  const report = useEffectEvent((error: Error) => toastFailure(error, t, error => t('ui.writeFailed', {error})));
   useEffect(() => {
     if (editor.error) report(editor.error);
   }, [editor.error]);

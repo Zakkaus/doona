@@ -1277,7 +1277,7 @@ export const messages = {
   'ui.block': 'block',
   'ui.error': 'Error',
   'ui.operationFailed': 'The operation did not succeed',
-  'ui.operationUnknown': 'Result unknown; the backend no longer tracks this operation. Check the current state before retrying',
+  'ui.operationUnknown': 'Could not confirm the result of the operation; the data was reloaded',
   'ui.writtenNotApplied':
     'Written to the configuration file but not applied; the running configuration is unchanged. Fix the file, then reload or restart honk',
   'ui.probeUnsupported': 'This backend does not provide a TCP probe for this target',

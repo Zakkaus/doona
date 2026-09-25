@@ -1,7 +1,7 @@
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
@@ -37,7 +37,7 @@ export function useProviderTable(input: ProviderTableInput) {
         result => {
           if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
         },
-        error => toast('negative', t('nodes.refreshFailed', {name: item.name, error: errorText(error, t)}))
+        error => toastFailure(error, t, error => t('nodes.refreshFailed', {name: item.name, error}))
       ),
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
     remove: () => {
@@ -51,7 +51,7 @@ export function useProviderTable(input: ProviderTableInput) {
         .then(result => {
           if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
           const problem = editProblem(result, t);
-          if (problem) toast('negative', problem);
+          if (problem) toast(problem.kind, problem.text);
         });
     }
   }));
