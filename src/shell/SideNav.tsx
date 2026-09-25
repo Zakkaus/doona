@@ -1,5 +1,4 @@
 import {memo, type CSSProperties, type RefObject} from 'react';
-import {Link as RLink} from 'react-aria-components';
 import GitHub from '../ui/icons/GitHub';
 import {useT} from '../i18n';
 import {Link} from '../ui/ui';
@@ -24,7 +23,7 @@ export const SideNav = memo(function SideNav({groups, busy, engine, navRef, navS
         <div key={group.id} data-group={group.id}>
           <div className="rp-group">{group.label}</div>
           {group.items.map(item => (
-            <RLink
+            <Link
               key={item.id}
               className="rp-nav"
               href={item.href}
@@ -36,7 +35,7 @@ export const SideNav = memo(function SideNav({groups, busy, engine, navRef, navS
             >
               <item.Icon />
               {item.label}
-            </RLink>
+            </Link>
           ))}
         </div>
       ))}

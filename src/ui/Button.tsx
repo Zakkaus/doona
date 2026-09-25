@@ -3,15 +3,18 @@ import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow,
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
 
-// accent / negative are the coloured variants; every neutral button shares one look.
+// The looks a button, or a link dressed as one, can take. accent / negative are the coloured variants; every neutral
+// button shares one look.
+export type ButtonStyle = {quiet?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
+
+// The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
+export function buttonClass({quiet, small, icon, accent, negative}: ButtonStyle, base = 'rp-btn') {
+  return cx(base, quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
+}
+
 export function Button({
   children,
   onPress,
-  quiet,
-  small,
-  icon,
-  accent,
-  negative,
   label,
   isDisabled,
   isPending,
@@ -19,15 +22,11 @@ export function Button({
   type,
   form,
   appearance,
-  className
+  className,
+  ...style
 }: {
   children?: ReactNode;
   onPress?: () => void;
-  quiet?: boolean;
-  small?: boolean;
-  icon?: boolean;
-  accent?: boolean;
-  negative?: boolean;
   label?: string;
   isDisabled?: boolean;
   isPending?: boolean;
@@ -39,7 +38,7 @@ export function Button({
   // field). `className` is added to the base, never in place of it.
   appearance?: 'select' | 'plain';
   className?: string;
-}) {
+} & ButtonStyle) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
   const ref = useRef<HTMLButtonElement>(null);
   // A pending button keeps its colour and stays focusable, so the wrapper must not add a second tab stop.
@@ -86,15 +85,7 @@ export function Button({
   const btn = (
     <RButton
       ref={ref}
-      className={cx(
-        appearance === 'plain' ? undefined : appearance ? `rp-${appearance}` : 'rp-btn',
-        className,
-        quiet && 'quiet',
-        small && 'sm',
-        icon && 'icon',
-        accent && 'accent',
-        negative && 'negative'
-      )}
+      className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
       onPress={press}
       aria-label={label}
       isDisabled={disabled}
@@ -217,24 +208,32 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
 }
 
 // Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
+// The button style applies only with `appearance="button"`.
 export function Link({
   external,
   appearance,
   label,
   className,
+  quiet,
+  small,
+  icon,
+  accent,
+  negative,
   ...props
-}: ComponentPropsWithRef<typeof RLink> & {
-  external?: boolean;
-  appearance?: 'button' | 'version' | 'link';
-  label?: string;
-}) {
+}: ComponentPropsWithRef<typeof RLink> &
+  ButtonStyle & {
+    external?: boolean;
+    appearance?: 'button' | 'version' | 'link';
+    label?: string;
+  }) {
+  const base = appearance === 'button' ? buttonClass({quiet, small, icon, accent, negative}) : `rp-${appearance}`;
   return (
     <RLink
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={label}
       {...props}
-      className={appearance ? composeRenderProps(className, value => cx(appearance === 'button' ? 'rp-btn' : `rp-${appearance}`, value)) : className}
+      className={appearance ? composeRenderProps(className, value => cx(base, value)) : className}
     />
   );
 }

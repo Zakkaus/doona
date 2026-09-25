@@ -1,7 +1,7 @@
 export {cx} from './cx';
 export {useSlider, useContentWidth, useFillHeight, useDebounced, useMediaQuery, useNearViewport, useLinked, withCrossfade, panelQuery, isMac} from './hooks';
 export {exportName, downloadFile, csvLine} from './files';
-export {Button, TextTooltip, Link} from './Button';
+export {Button, TextTooltip, Link, buttonClass, type ButtonStyle} from './Button';
 export {TextField, Switch, Segmented} from './Fields';
 export {Check} from './Check';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';

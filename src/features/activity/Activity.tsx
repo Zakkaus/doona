@@ -27,7 +27,7 @@ export function Activity() {
         <div className="rp-card">
           <div className="rp-row">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
-            <Link appearance="button" className="quiet" href={href('overview')}>
+            <Link appearance="button" quiet href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
           </div>
@@ -155,7 +155,7 @@ export function Activity() {
         <Card
           title={t('act.memory')}
           aside={
-            <Link appearance="button" className="quiet sm" href={href('overview')}>
+            <Link appearance="button" quiet small href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
           }
