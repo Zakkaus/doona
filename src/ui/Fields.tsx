@@ -12,7 +12,6 @@ import {
   Input as RInput
 } from 'react-aria-components';
 import Close from './icons/Close';
-import Checkmark from './icons/Checkmark';
 import Search from './icons/Search';
 import AlertTriangle from './icons/AlertTriangle';
 import Visibility from './icons/Visibility';
@@ -69,9 +68,6 @@ export function Segmented({
     </div>
   );
 }
-
-// S2 marks the selected item with a checkmark in a leading column, not with a background.
-export const Check = () => <Checkmark className="rp-check-mark" />;
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
