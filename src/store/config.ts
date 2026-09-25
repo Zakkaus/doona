@@ -71,24 +71,23 @@ const utf8 = (text: string) => new TextEncoder().encode(text).length;
 const tooLarge = (limit: number) => clientError(413, 'request_too_large', `Configuration exceeds the ${limit}-byte limit`, 'config.tooLarge', {limit});
 
 // The contract applies the content limit to the source text and the shared JSON body limit to the request, which
-// escaping makes larger than the text. Returns the limit this write exceeds.
-export function exceededLimit(limits: WriteLimits, content: string, body: unknown): number | undefined {
-  if (limits.content !== undefined && utf8(content) > limits.content) return limits.content;
-  if (limits.body !== undefined && utf8(JSON.stringify(body)) > limits.body) return limits.body;
-  return undefined;
+// escaping makes larger than the text. Returns the advertised limit this write uses the largest share of: the one it
+// exceeds, if any, and otherwise the likeliest cause of a 413, which does not say which limit refused it.
+export function closestLimit(limits: WriteLimits, content: string, body: unknown): {limit: number; exceeded: boolean} | undefined {
+  const [closest] = [
+    {limit: limits.content, size: utf8(content)},
+    {limit: limits.body, size: utf8(JSON.stringify(body))}
+  ]
+    .filter((share): share is {limit: number; size: number} => share.limit !== undefined)
+    .sort((a, b) => b.size / b.limit - a.size / a.limit);
+  return closest && {limit: closest.limit, exceeded: closest.size > closest.limit};
 }
 
-// A 413 does not say which limit refused the write, so it names the tighter one advertised.
-export function sizeRefusal(error: unknown, limits: WriteLimits): unknown {
-  const advertised = [limits.content, limits.body].filter(limit => limit !== undefined);
-  return error instanceof ApiError && error.status === 413 && advertised.length ? tooLarge(Math.min(...advertised)) : error;
-}
-
-async function withinLimits<T>(limits: WriteLimits, content: string, body: unknown, send: () => Promise<T>): Promise<T> {
-  const limit = exceededLimit(limits, content, body);
-  if (limit !== undefined) throw tooLarge(limit);
+export async function withinLimits<T>(limits: WriteLimits, content: string, body: unknown, send: () => Promise<T>): Promise<T> {
+  const closest = closestLimit(limits, content, body);
+  if (closest?.exceeded) throw tooLarge(closest.limit);
   return send().catch((error: unknown) => {
-    throw sizeRefusal(error, limits);
+    throw error instanceof ApiError && error.status === 413 && closest ? tooLarge(closest.limit) : error;
   });
 }
 
