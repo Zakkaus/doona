@@ -131,4 +131,22 @@ test.describe('1440px', () => {
     await expect(picker).toHaveCount(0);
     expect(await page.evaluate(() => (window as unknown as {seen: string[]}).seen)).toEqual([]);
   });
+
+  test('focus inside the control moves with it when it collapses into a picker and back', async ({page}) => {
+    await page.goto('/#/activity');
+    const card = page.getByRole('region', {name: '流量'});
+    const group = card.getByRole('radiogroup', {name: '历史范围'});
+    const picker = card.getByRole('button', {name: /历史范围/});
+    const selected = group.getByRole('radio', {checked: true});
+    await selected.focus();
+    await card.evaluate(el => (el.style.width = '300px'));
+    await expect(picker).toBeFocused();
+    await card.evaluate(el => (el.style.width = ''));
+    await expect(selected).toBeFocused();
+    // Focus elsewhere stays where it is.
+    await selected.blur();
+    await card.evaluate(el => (el.style.width = '300px'));
+    await expect(picker).toBeVisible();
+    await expect(picker).not.toBeFocused();
+  });
 });
