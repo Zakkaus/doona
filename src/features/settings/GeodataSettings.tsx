@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {Button, ConfirmDialog, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
-import {settingsCard} from './view';
+import {settingsCard} from './nav';
 
 const card = settingsCard('geodata');
 

@@ -1,6 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import type {Capabilities, GeoData} from '../../api/model';
-import {capabilities, capabilitiesBase} from '../../api/mock/fixtures/capabilities';
+import type {GeoData} from '../../api/model';
 import {geodataPreset, geodataPresets, liteCategories} from '../../dae/geodata';
 import {translate, type Translator} from '../../i18n';
 import {
@@ -8,7 +7,6 @@ import {
   cleanUrls,
   customFields,
   customInvalid,
-  geodataConfigurable,
   intervalChoices,
   matchPreset,
   missingCategories,
@@ -17,7 +15,6 @@ import {
   statusLine,
   urlProblem
 } from './geodata';
-import {settingsCardList} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
 const full = geodataPreset('metacubex');
@@ -143,17 +140,5 @@ describe('rows', () => {
     const details = assetDetails(status(), [], 'en-US', t);
     expect(details[0]).toEqual(['geosite', expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full.urls.geosite[0]]);
     expect(assetDetails(undefined, [], 'en-US', t)).toEqual([]);
-  });
-});
-
-describe('capability', () => {
-  it('shows the geodata card only with configurable sources and the geodata settings field', () => {
-    expect(geodataConfigurable(capabilities.resources)).toBe(true);
-    expect(settingsCardList(capabilities.resources).map(card => card.id)).toContain('geodata');
-    const without: Capabilities['resources'] = {...capabilities.resources, geodata: {available: true, can_update: true, assets: ['geosite', 'geoip']}};
-    expect(geodataConfigurable(without)).toBe(false);
-    expect(settingsCardList(without).map(card => card.id)).not.toContain('geodata');
-    expect(geodataConfigurable({...capabilities.resources, runtime_settings: {available: true, fields: ['log.level']}})).toBe(false);
-    expect(geodataConfigurable(capabilitiesBase.resources)).toBe(false);
   });
 });

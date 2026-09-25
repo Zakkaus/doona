@@ -1,14 +1,13 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
-import {chainLabel, connectionRows} from '../../api/selectors';
+import {chainLabel, connectionRows, nodeOwner} from '../../api/selectors';
 import {features, navAvailable} from '../registry';
 import {type RoutePath} from '../routes';
 import {within} from '../route';
-import {dnsTabs} from '../../features/dns/view';
-import {rulesTabs} from '../../features/rules/view';
-import {settingsCardList} from '../../features/settings/view';
-import {ownedNodes, providerRows} from '../../features/nodes/view';
-import {configTabs, setupAvailable, sourceKinds} from '../../features/config/view';
+import {dnsTabs} from '../../features/dns/nav';
+import {rulesTabs} from '../../features/rules/nav';
+import {settingsCardList} from '../../features/settings/nav';
+import {configTabs, setupAvailable, sourceKinds} from '../../features/config/nav';
 
 type SearchHit = {id: string; label: string; description: string | undefined; route: RoutePath; query: string};
 // A hit with its lower-cased match text, projected once per dataset so a keystroke only filters.
@@ -67,20 +66,11 @@ export function connectionEntries(connections: ConnectionList | undefined, t: Tr
     entry([c.domain, c.dst, c.src], `connection:${c.id}`, c.domain || c.dst || c.src || c.id, chainLabel(c, t), 'connections', within('', {id: c.id}))
   );
 }
-export function nodeEntries(nodes: Node[] | undefined, providers: ProviderList | undefined, lang: Lang, t: Translator): SearchEntry[] {
-  const nodeList = nodes ?? [];
-  const owners = providerRows(providers?.providers ?? [], nodeList, [], t).list;
-  const syntheticOwners = new Map<string, string>();
-  for (const owner of owners) {
-    if (owner.kind !== 'builtin' && owner.kind !== 'unattributed') continue;
-    for (const node of ownedNodes(nodeList, null, owner.kind)) syntheticOwners.set(node.id, owner.id);
-  }
-  // The nodes page filters by owner and name; the owner comes from the same projection the page uses.
-  const nodeQuery = (node: Node) => {
-    const owner = node.provider_id ?? syntheticOwners.get(node.id);
-    return within('', {provider: owner ?? null, q: node.name});
-  };
-  return nodeList.map(n => entry([n.name], `node:${n.id}`, n.name, formatList(lang, n.group_ids) || undefined, 'nodes', nodeQuery(n)));
+export function nodeEntries(nodes: Node[] | undefined, providers: ProviderList | undefined, lang: Lang): SearchEntry[] {
+  const listed = providers?.providers ?? [];
+  // The nodes page filters by owner and name; the owner is the one the page files the node under.
+  const nodeQuery = (node: Node) => within('', {provider: nodeOwner(node, listed), q: node.name});
+  return (nodes ?? []).map(n => entry([n.name], `node:${n.id}`, n.name, formatList(lang, n.group_ids) || undefined, 'nodes', nodeQuery(n)));
 }
 export function groupEntries(groups: GroupSummary[] | undefined): SearchEntry[] {
   return (groups ?? []).map(g => entry([g.name], `group:${g.id}`, g.name, g.policy.native, 'policies', within('', {group: g.id})));

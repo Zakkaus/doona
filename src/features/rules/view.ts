@@ -11,7 +11,7 @@ import {word} from '../../api/labels';
 import {ruleAnchor, ruleOutbounds, sourceFor} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
-import {offered} from '../../api/capabilities';
+import {rulesTabs, type RuleTab} from './nav';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -185,17 +185,6 @@ export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Trans
   };
 }
 
-type RuleTab = 'map' | 'list' | 'flows' | 'trace';
-export function rulesTabs(resources: Capabilities['resources'] | undefined): Array<{id: RuleTab; titleKey: Key}> {
-  const flows = offered(resources, 'flows', {whileLoading: true});
-  const rules = offered(resources, 'rules', {whileLoading: false});
-  return [
-    ...(flows ? [{id: 'map' as const, titleKey: 'rule.map' as const}] : []),
-    ...(flows || rules ? [{id: 'list' as const, titleKey: 'rule.listTitle' as const}] : []),
-    ...(flows ? [{id: 'flows' as const, titleKey: 'rule.flows' as const}] : []),
-    ...(offered(resources, 'routing_trace', {whileLoading: true}) ? [{id: 'trace' as const, titleKey: 'rule.trace' as const}] : [])
-  ];
-}
 type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string; fallback: string | null};
 // The default tab is the first one the backend offers; until the capabilities are known it is not fixed (null).
 export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {

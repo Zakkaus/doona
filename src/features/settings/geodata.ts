@@ -1,4 +1,4 @@
-import type {Capabilities, GeoAssetKind, GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
+import type {GeoAssetKind, GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
 import {geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
@@ -13,17 +13,6 @@ export const presetLabels: Record<GeodataPresetId, Key> = {
   'metacubex-lite': 'settings.geodataPreset.metacubexLite',
   loyalsoldier: 'settings.geodataPreset.loyalsoldier'
 };
-
-// The sources section needs both the capability and geodata among the runtime settings fields; without either the
-// page keeps the plain geodata table in the backend actions card.
-export function geodataConfigurable(resources: Capabilities['resources'] | undefined): boolean {
-  return (
-    resources?.geodata.available === true &&
-    resources.geodata.configurable_sources === true &&
-    resources.runtime_settings.available &&
-    (resources.runtime_settings.fields ?? []).includes('geodata')
-  );
-}
 
 // A list names a preset when every URL of both assets is one of that preset's links or mirrors, in any order.
 export function matchPreset(urls: GeodataUrls): GeodataPreset | null {

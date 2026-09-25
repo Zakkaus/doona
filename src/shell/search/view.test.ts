@@ -14,7 +14,7 @@ import {
   sourceEntries,
   type SearchIndex
 } from './view';
-import {sourceKinds} from '../../features/config/view';
+import {sourceKinds} from '../../features/config/nav';
 import type {Lang, Translator} from '../../i18n';
 
 type SearchSources = {
@@ -32,7 +32,7 @@ function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchI
     {
       pages: pageEntries(sources.capabilities.data, sources.config.data, t),
       conns: connectionEntries(sources.connections.data, t),
-      nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang, t),
+      nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang),
       groups: groupEntries(sources.groups.data),
       providers: providerEntries(sources.providers.data, t),
       sources: sourceEntries(sources.config.data, t),
