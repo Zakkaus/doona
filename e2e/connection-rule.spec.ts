@@ -136,6 +136,8 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
   const apply = top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true});
   await expect(apply.locator('.rp-held-count')).toHaveText('2');
+  // Refresh stays a plain re-read beside it.
+  await expect(top(page).getByRole('button', {name: 'Refresh', exact: true}).locator('.rp-held-count')).toHaveCount(0);
   // The rule list shows what is held, and a held rule can be discarded there.
   await page.goto('/#/rules?tab=list');
   const held = page.getByRole('region', {name: 'Pending: 2'});
@@ -149,7 +151,7 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   expect(content).toContain('domain(full: api.telegram.org) -> proxy');
   expect(content).toContain('domain(full: cdn.bilibili.com) -> direct');
   await expect(held).toHaveCount(0);
-  await expect(top(page).getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
+  await expect(top(page).getByRole('button', {name: 'Reload honk', exact: true})).toBeVisible();
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
 });
 
@@ -171,11 +173,12 @@ test('a refused apply keeps the held rules and shows the diagnostics in the rule
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
   await held.getByRole('button', {name: 'Discard held rule', exact: true}).click();
   await expect(held).toHaveCount(0);
-  await expect(top(page).getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
+  await expect(top(page).getByRole('button', {name: 'Reload honk', exact: true})).toBeVisible();
 });
 
-test('with nothing held the top bar button re-reads the data and writes nothing', async ({page}) => {
+test('refresh re-reads the data and writes nothing, even with rules held', async ({page}) => {
   const {requests} = await mockBackend(page);
+  await hold(page, '1');
   await page.goto('/#/connections?id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   const before = requests.length;
@@ -183,6 +186,15 @@ test('with nothing held the top bar button re-reads the data and writes nothing'
   await expect(page.locator('.rp-toast.positive', {hasText: 'Data refreshed.'})).toBeVisible();
   expect(requests.slice(before).some(request => request.url().includes('/connections'))).toBe(true);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+  await expect(top(page).locator('.rp-held-count')).toHaveText('1');
+});
+
+test('with nothing held the reload button reloads the engine and reports the operation', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.goto('/#/connections');
+  await top(page).getByRole('button', {name: 'Reload honk', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Reload'})).toBeVisible();
+  expect(requests.filter(request => request.method() !== 'GET').map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/reload$/)]);
 });
 
 test('the dialog starts from the outbound the connection uses', async ({page}) => {

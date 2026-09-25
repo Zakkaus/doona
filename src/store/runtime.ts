@@ -92,10 +92,10 @@ export function useRuntimeOperations(runtime: Runtime | undefined, capabilities:
   const {run: act} = action;
   const canRun = useCallback(
     (kind: RuntimeAction) =>
-      !!runtime &&
+      // Reload does not depend on the lifecycle state, so it is offered before the runtime has been read.
       !!capabilities?.resources.operations.available &&
       !!capabilities.resources[kind].available &&
-      (kind === 'reload' || runtime.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended')),
+      (kind === 'reload' || runtime?.lifecycle.state === (kind === 'suspend' ? 'running' : 'suspended')),
     [runtime, capabilities]
   );
   const run = useCallback(

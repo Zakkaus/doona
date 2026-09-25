@@ -6,6 +6,7 @@ import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import MoreVertical from '../ui/icons/MoreVertical';
 import Refresh from '../ui/icons/Refresh';
+import Replay from '../ui/icons/Replay';
 import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
@@ -36,8 +37,11 @@ type TopBarProps = {
   openSearch: () => void;
   refresh: () => void;
   spinning: boolean;
+  // Null when the backend offers no reload and no rules are held.
+  reload: (() => void) | null;
+  reloading: boolean;
   held: number;
-  heldLabel: string;
+  reloadLabel: string;
   honk: () => void;
   wordmark: string;
   versionText: string;
@@ -55,8 +59,10 @@ export const TopBar = memo(function TopBar({
   openSearch,
   refresh,
   spinning,
+  reload,
+  reloading,
   held,
-  heldLabel,
+  reloadLabel,
   honk,
   wordmark,
   versionText,
@@ -97,10 +103,15 @@ export const TopBar = memo(function TopBar({
             <Search />
           </Button>
         </span>
-        <Button quiet icon className="rp-held" label={held ? heldLabel : t('refresh')} isPending={spinning} onPress={refresh}>
+        <Button quiet icon label={t('refresh')} isPending={spinning} onPress={refresh}>
           <Refresh className="rp-refresh rp-spin-on-press" />
-          {!!held && <span className="rp-held-count">{held}</span>}
         </Button>
+        {reload && (
+          <Button quiet icon className="rp-held" label={reloadLabel} isPending={reloading} onPress={reload}>
+            <Replay />
+            {!!held && <span className="rp-held-count">{held}</span>}
+          </Button>
+        )}
         {/* Below the side navigation's breakpoint, language and appearance share one overflow menu. */}
         <span className="rp-wide-only">
           <Separator orientation="vertical" className="rp-vrule" />

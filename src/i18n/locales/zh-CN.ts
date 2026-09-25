@@ -1133,6 +1133,7 @@ export const messages = {
   'search.sources': '配置来源',
   'search.nodeCount': '{n} 个节点',
   'shell.theme': '主题：{theme}',
+  'shell.reloadEngine': '重载 honk',
   'shell.shortcut': 'Ctrl K',
   'shell.macShortcut': '⌘K',
   'palette.rosePine': 'Rosé Pine',

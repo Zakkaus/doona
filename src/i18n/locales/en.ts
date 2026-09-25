@@ -1159,6 +1159,7 @@ export const messages = {
   'search.sources': 'Configuration sources',
   'search.nodeCount': {one: '{n} node', other: '{n} nodes'},
   'shell.theme': 'Theme: {theme}',
+  'shell.reloadEngine': 'Reload honk',
   'shell.shortcut': 'Ctrl K',
   'shell.macShortcut': '⌘K',
   'palette.rosePine': 'Rosé Pine',

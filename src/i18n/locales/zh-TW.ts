@@ -1132,6 +1132,7 @@ export const messages = {
   'search.sources': '組態來源',
   'search.nodeCount': '{n} 個節點',
   'shell.theme': '主題：{theme}',
+  'shell.reloadEngine': '重載 honk',
   'shell.shortcut': 'Ctrl K',
   'shell.macShortcut': '⌘K',
   'palette.rosePine': 'Rosé Pine',
