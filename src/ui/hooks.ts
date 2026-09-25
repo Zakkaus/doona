@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {type RefObject, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 
 export function withCrossfade(fn: () => void) {
@@ -28,6 +28,23 @@ export function useSlider(value: string, selector = '[data-selected]') {
     return () => ro.disconnect();
   }, [value, selector]);
   return [ref, pos] as const;
+}
+
+// Whether an element's content is wider than the element, tracked through resizes of it and of its children (a label
+// that changes, a web font that arrives). `key` names the children, so new ones are observed.
+export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
+  const [over, setOver] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setOver(el.scrollWidth > el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of el.children) ro.observe(child);
+    return () => ro.disconnect();
+  }, [ref, key]);
+  return over;
 }
 
 // The content width of an element, tracked through resizes; null until measured.

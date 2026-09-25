@@ -3,12 +3,12 @@ import type {Locator} from '@playwright/test';
 
 const ranges = ['实时', '10 分钟', '1 小时', '6 小时', '24 小时', '7 天'];
 
-// Scrollbars and anything drawn past the card's edge, which the card clips.
+// Scrollbars and anything drawn past the card's edge, which the card clips. The picker's native select is hidden.
 const spill = (card: Locator) =>
   card.evaluate(root => {
     const edge = root.getBoundingClientRect();
     return [...root.querySelectorAll<HTMLElement>('*')]
-      .filter(el => el.checkVisibility({visibilityProperty: true}))
+      .filter(el => el.checkVisibility({visibilityProperty: true}) && !el.closest('[aria-hidden=true]'))
       .flatMap(el => {
         const style = getComputedStyle(el);
         const box = el.getBoundingClientRect();

@@ -19,8 +19,11 @@ import Visibility from './icons/Visibility';
 import VisibilityOff from './icons/VisibilityOff';
 import {useT} from '../i18n';
 import {cx} from './cx';
-import {useSlider} from './hooks';
+import {useOverflow, useSlider} from './hooks';
+import {LabeledSelect} from './Select';
 
+// S2 does not scroll a segmented control: one too wide for its space collapses into a picker, as S2 Tabs do. The hidden
+// track keeps its box, so the switch moves nothing, and is measured to tell when the items fit again.
 export function Segmented({
   items,
   value,
@@ -35,27 +38,35 @@ export function Segmented({
   isDisabled?: boolean;
 }) {
   const [ref, pos] = useSlider(value);
+  const collapsed = useOverflow(ref, items.flat().join('\n'));
   return (
-    <ToggleButtonGroup
-      ref={ref}
-      className="rp-seg"
-      aria-label={label}
-      isDisabled={isDisabled}
-      selectionMode="single"
-      disallowEmptySelection
-      selectedKeys={[value]}
-      onSelectionChange={k => {
-        const v = [...k][0];
-        if (v != null) onChange(String(v));
-      }}
-    >
-      {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
-      {items.map(([k, l]) => (
-        <ToggleButton key={k} id={k} className="rp-btn">
-          {l}
-        </ToggleButton>
-      ))}
-    </ToggleButtonGroup>
+    <div className="rp-segfit" data-collapsed={collapsed || undefined}>
+      <ToggleButtonGroup
+        ref={ref}
+        className="rp-seg"
+        aria-label={label}
+        isDisabled={isDisabled}
+        selectionMode="single"
+        disallowEmptySelection
+        selectedKeys={[value]}
+        onSelectionChange={k => {
+          const v = [...k][0];
+          if (v != null) onChange(String(v));
+        }}
+      >
+        {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
+        {items.map(([k, l]) => (
+          <ToggleButton key={k} id={k} className="rp-btn">
+            {l}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+      {collapsed && (
+        <div className="rp-segpick">
+          <LabeledSelect bare label={label} value={value} onChange={onChange} isDisabled={isDisabled} items={items.map(([id, l]) => ({id, label: l}))} />
+        </div>
+      )}
+    </div>
   );
 }
 
