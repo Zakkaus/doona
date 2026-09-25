@@ -182,6 +182,10 @@
   font-weight: 700;
   pointer-events: none;
 }
+/* The tip comes before the total in the box; without this the total's glyphs paint through it. */
+.rp-donut .rp-charttip-bounded {
+  z-index: 1;
+}
 .rp-donut .lst {
   flex: 1 1 160px;
   min-width: 0;

@@ -394,3 +394,23 @@ test('the donut keeps stepping after a refresh leaves fewer slices than the one 
   await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
   await expect(donut.locator('.rp-charttip-bounded li')).toContainText(/\d/);
 });
+
+test('the donut tooltip paints above the total in the middle of the ring', async ({page}) => {
+  await page.goto('/#/activity');
+  const donut = page.locator('.rp-donut');
+  await donut.getByRole('application').focus();
+  const tip = donut.locator('.rp-charttip-bounded');
+  await expect(tip).toBeVisible();
+  // Both ignore the pointer; let them take it for a moment to ask which one is on top where the tip is.
+  const top = await donut.evaluate(root => {
+    const tip = root.querySelector<HTMLElement>('.rp-charttip-bounded')!;
+    const center = root.querySelector<HTMLElement>('.center')!;
+    tip.style.pointerEvents = center.style.pointerEvents = 'auto';
+    const box = tip.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    tip.style.pointerEvents = 'none';
+    center.style.pointerEvents = '';
+    return hit?.closest('.rp-charttip-bounded, .center')?.className;
+  });
+  expect(top).toBe('rp-charttip-bounded');
+});
