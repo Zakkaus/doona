@@ -1,7 +1,7 @@
 import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, test} from './fixtures';
 import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -222,6 +222,39 @@ httpTest('validation refusal keeps the draft and never replaces the source', asy
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await expect(editor).toContainText('domain(example.org) -> nowhere');
   expect((await api.config()).sources.find(source => source.id === 'src-rules')!.content).toBe(original);
+});
+
+test('a source over the advertised body limit is refused before anything is sent, naming the limit', async ({page}) => {
+  const {capabilities} = await configBackend(page);
+  capabilities.limits.max_json_body_bytes = 200;
+  const writes: string[] = [];
+  page.on('request', request => {
+    if (request.method() !== 'GET') writes.push(request.url());
+  });
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# grown past the limit\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('larger than the backend accepts. Limit: 200 bytes');
+  expect(writes).toEqual([]);
+});
+
+test('a 413 on a config write names the tighter advertised limit', async ({page}) => {
+  await configBackend(page);
+  await page.route('**/api/v1/config/sources/*', route =>
+    route.fulfill({
+      status: 413,
+      json: {request_id: 'config-test', error: {code: 'request_too_large', message: 'Request body exceeds its limit', details: null}}
+    })
+  );
+  expectLoadFailures(page, /\/config\/sources\//);
+  await page.goto('/#/config?source=src-rules');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# refused by the backend\n');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Limit: 65,536 bytes');
 });
 
 test('source application works without the optional full validation endpoint', async ({page}) => {

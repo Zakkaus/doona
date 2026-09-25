@@ -102,6 +102,7 @@ export const messages = {
   'config.saved': '{path} 已写入，配置已重载',
   'config.writeRestart': '{n} 项设置需重启才会生效，未写入。请在文件中修改后重启 honk',
   'config.diskAhead': '磁盘上的文件与运行中的配置不同，因此未写入。请重载 honk 以应用该文件；若文件更改了需重启的设置，请重启 honk',
+  'config.tooLarge': '配置超过后端可接受的大小。上限：{limit} 字节',
   'config.diagnostics': '诊断',
   'config.export': '导出',
   'config.exportWarning': '导出文件保留显示的原始文本，可能包含凭据；分享前请检查内容。',

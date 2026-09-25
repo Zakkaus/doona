@@ -107,6 +107,7 @@ export const messages = {
   },
   'config.diskAhead':
     'The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart',
+  'config.tooLarge': 'The configuration is larger than the backend accepts. Limit: {limit} bytes',
   'config.diagnostics': 'Diagnostics',
   'config.export': 'Export',
   'config.exportWarning': 'Exports preserve the displayed source bytes and may contain credentials. Review them before sharing.',
