@@ -97,8 +97,10 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         ap={ap}
         mac={mac}
         openSearch={openSearch}
-        refresh={view.refresh}
-        spinning={view.spinning}
+        refresh={view.topAction}
+        spinning={view.spinning || view.held.busy}
+        held={view.held.count}
+        heldLabel={view.held.label}
         honk={view.honk}
         wordmark={view.wordmark}
         versionText={view.about.versionText}

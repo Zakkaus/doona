@@ -421,3 +421,21 @@
   line-height: 36px;
   color: var(--rp-text);
 }
+/* Held rules: a count on the refresh button, which then applies them. Positioned over the icon, so no width changes. */
+.rp-held {
+  position: relative;
+}
+.rp-held-count {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-accent);
+  color: var(--rp-on-accent);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+}

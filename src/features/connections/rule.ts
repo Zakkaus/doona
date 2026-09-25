@@ -1,10 +1,7 @@
-import type {ConfigDiagnostic, ConfigSource, Connection, RoutingRule} from '../../api/model';
-import {ApiError, failureNotice} from '../../api/error';
+import type {ConfigSource, Connection, RoutingRule} from '../../api/model';
 import {sourceIp} from '../../api/selectors';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
-import {backendMessage} from '../../i18n/backend';
 import type {Translator} from '../../i18n';
-import {fileName} from '../config/names';
 import {ruleAnchor} from '../rules/source';
 
 export type RuleTarget = {kind: ConditionKind; condition: string};
@@ -37,22 +34,4 @@ export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], mat
   return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: t('conn.ruleTop')}] : [])]
     .filter(choice => anchored(choice.rule))
     .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression}));
-}
-
-// A refused write: the validation errors with their lines when the backend sent them, else what went wrong.
-export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | null, sources: ConfigSource[], t: Translator) {
-  const found =
-    diagnostics ??
-    (error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? null) : null);
-  if (!found) return {text: failureNotice(error, t, error => t('ui.writeFailed', {error})).text, lines: []};
-  const errors = found.filter(item => item.level === 'error');
-  const restart = errors.filter(item => item.code === 'restart-required').length;
-  return {
-    text: restart ? t('config.writeRestart', {n: restart}) : t('ui.writeInvalid', {n: errors.length}),
-    lines: found.map(item => {
-      const message = backendMessage(item.code, item.message, t);
-      const source = sources.find(source => source.id === item.source_id);
-      return item.line === null ? message : t('config.atFile', {file: source ? fileName(source) : item.source_id, line: item.line, message});
-    })
-  };
 }

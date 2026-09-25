@@ -35,6 +35,8 @@ type TopBarProps = {
   openSearch: () => void;
   refresh: () => void;
   spinning: boolean;
+  held: number;
+  heldLabel: string;
   honk: () => void;
   wordmark: string;
   versionText: string;
@@ -52,6 +54,8 @@ export const TopBar = memo(function TopBar({
   openSearch,
   refresh,
   spinning,
+  held,
+  heldLabel,
   honk,
   wordmark,
   versionText,
@@ -88,8 +92,9 @@ export const TopBar = memo(function TopBar({
             <Search />
           </Button>
         </span>
-        <Button quiet icon label={t('refresh')} isPending={spinning} onPress={refresh}>
+        <Button quiet icon className="rp-held" label={held ? heldLabel : t('refresh')} isPending={spinning} onPress={refresh}>
           <Refresh className="rp-refresh rp-spin-on-press" />
+          {!!held && <span className="rp-held-count">{held}</span>}
         </Button>
         <Separator orientation="vertical" className="rp-vrule" />
         <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>

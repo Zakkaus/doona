@@ -1,5 +1,6 @@
 import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, useRules} from '../../store';
+import {pendingRules, useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, usePendingRules, useRules} from '../../store';
+import {pendingView} from './pending';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
@@ -29,6 +30,8 @@ export type RuleListModel = {
   setSource: (source: string) => void;
   selected: string | null;
   select: (row: string | null) => void;
+  held: ReturnType<typeof pendingView>;
+  discard: (id: number) => void;
   canWrite: boolean;
   busy: boolean;
   addDisabled: boolean;
@@ -184,6 +187,7 @@ export function useRuleList({go, query}: PageProps) {
     }
   };
   const draft = ruleDraftView(pick.kind, pick.value, pick.on, condition, form.condition, t);
+  const held = usePendingRules();
   const dialogView = dialog?.kind === 'remove' ? {kind: 'remove' as const, ...removalView(dialog.rule, sources, t)} : dialog;
   return {
     kind: dictionary ? ('dictionary' as const) : ('distribution' as const),
@@ -193,6 +197,8 @@ export function useRuleList({go, query}: PageProps) {
     setSource,
     selected,
     select: (row: string | null) => setPicked({landed, row}),
+    held: pendingView(held.rules, held.failure, t),
+    discard: (id: number) => pendingRules.remove([id]),
     canWrite,
     busy: !!editor.busy,
     addDisabled: !table.positions.length || !!editor.busy,

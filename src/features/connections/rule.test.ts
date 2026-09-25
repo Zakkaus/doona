@@ -1,9 +1,8 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {ApiError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../rules/source';
-import {ruleFailure, rulePositions, ruleTargets} from './rule';
+import {rulePositions, ruleTargets} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers a domain exactly or as a suffix, and otherwise the destination IP of either family', () => {
@@ -44,18 +43,4 @@ it('inserts before the matched rule by default, else first, and only where the s
       sources.map(source => ({...source, writable: false}))
     )
   ).toEqual([]);
-});
-
-it('explains a refused write with its diagnostics, restart-only settings or the failure itself', async () => {
-  const {sources} = await createMockApi().config();
-  const diagnostic = {level: 'error' as const, source_id: 'src-main', line: 44, column: 3, span: null, code: 'unknown-outbound', message: 'no group nope'};
-  expect(ruleFailure(null, [diagnostic], sources, t)).toEqual({
-    text: 'Validation found 1 error; nothing written',
-    lines: ['config.dae line 44: Backend message: no group nope']
-  });
-  const restart = new ApiError(422, 'validation_failed', 'invalid', undefined, {
-    diagnostics: [{...diagnostic, line: null, code: 'restart-required', message: 'global.tproxy_port'}]
-  });
-  expect(ruleFailure(restart, null, sources, t).text).toContain('1 setting takes effect only after a restart');
-  expect(ruleFailure(new Error('offline'), null, sources, t)).toEqual({text: 'Could not write the configuration: offline', lines: []});
 });
