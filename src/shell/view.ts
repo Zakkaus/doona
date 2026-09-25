@@ -3,7 +3,7 @@ import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
 import type {Scheme, Settings} from './preferences';
 import {palettes, type PaletteId} from './palettes';
-import {hubs, type PageProps} from './routes';
+import {defaultRoute, hubs, type PageProps} from './routes';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';
@@ -57,7 +57,7 @@ export function shellView(
   t: Translator
 ): ShellView {
   const profile = settings.profiles.find(item => item.id === settings.activeId);
-  const feature = features.find(item => item.path === route) ?? features[0];
+  const feature = features.find(item => item.path === route) ?? features.find(item => item.path === defaultRoute)!;
   const offered = (path: string) => navAvailable(path, capabilities);
   const groups = hubs.map(hub => ({
     id: hub.id,
@@ -83,9 +83,9 @@ export function shellView(
   const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
   const needsLogin = refused(capabilityError) || (capabilityError instanceof ApiError && capabilityError.status === 404);
   const content: ShellView['content'] =
-    needsLogin && feature.id !== 'settings'
+    needsLogin && !feature.offline
       ? {kind: 'login', profileId: profile?.id ?? '', api: profile?.api ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
-      : !capabilities && !capabilityError && feature.id !== 'settings'
+      : !capabilities && !capabilityError && !feature.offline
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)
           ? {kind: 'unavailable'}
