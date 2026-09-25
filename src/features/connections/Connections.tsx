@@ -114,12 +114,12 @@ export function Connections(props: PageProps) {
                 <span className="rp-label">{t('conn.rule')}</span>
                 <RuleRef {...cur.rule} />
               </div>
-              {(vm.ruleAction.canAdd || vm.ruleAction.canEdit) && (
+              {(vm.ruleAction.canAdd || vm.ruleAction.canShow) && (
                 <div className="rp-cluster">
                   {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
-                  {vm.ruleAction.canEdit && (
-                    <Button quiet onPress={vm.editRule}>
-                      {t('conn.editRule')}
+                  {vm.ruleAction.canShow && (
+                    <Button quiet onPress={vm.showRule}>
+                      {t('conn.showRule')}
                     </Button>
                   )}
                 </div>

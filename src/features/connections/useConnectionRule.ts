@@ -73,7 +73,7 @@ export function useConnectionRule(connection: Connection | undefined) {
   const targets = connection ? ruleTargets(connection) : [];
   return {
     canAdd: canWrite && targets.length > 0,
-    canEdit: canWrite && !!connection?.rule_id,
+    canShow: canWrite && !!connection?.rule_id,
     openAdd: () => {
       if (connection) setDraft({targets, matched: connection.rule_id, target: 0, outbound: '', before: ''});
     },

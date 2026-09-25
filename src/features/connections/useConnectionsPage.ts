@@ -205,7 +205,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
     ruleAction,
-    editRule: () => {
+    showRule: () => {
       if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id}));
     },
     showFlow: () => {

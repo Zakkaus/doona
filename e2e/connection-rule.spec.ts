@@ -50,10 +50,10 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await expect(dialog).toHaveCount(0);
 });
 
-test('edit matched rule opens the rule list on that rule', async ({page}) => {
+test('show matched rule opens the rule list on that rule', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/connections?id=1');
-  await detail(page).getByRole('button', {name: 'Edit matched rule', exact: true}).click();
+  await detail(page).getByRole('button', {name: 'Show matched rule', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
   const selected = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=row][aria-selected=true]');
   await expect(selected).toHaveCount(1);
@@ -68,7 +68,7 @@ test('a connection with no recorded rule only adds, first in the list', async ({
   };
   await page.goto('/#/connections?id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-  await expect(detail(page).getByRole('button', {name: 'Edit matched rule', exact: true})).toHaveCount(0);
+  await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(page.getByRole('dialog', {name: 'Add rule'}).getByRole('button', {name: /Insert$/})).toContainText('First');
 });
@@ -80,5 +80,5 @@ test('the rule actions are hidden when the configuration cannot be written', asy
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await expect(detail(page).getByRole('link', {name: /in the rule list$/})).toBeVisible();
   await expect(detail(page).getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
-  await expect(detail(page).getByRole('button', {name: 'Edit matched rule', exact: true})).toHaveCount(0);
+  await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
 });
