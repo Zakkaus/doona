@@ -365,6 +365,8 @@ export const messages = {
   'log.reconnecting': '重新连接中',
   'log.disconnected': '已断开连接',
   'log.gap': '日志丢失：断开连接期间的记录无法取回',
+  'log.recorded': '引擎记录：{level}及以上',
+  'log.levelNotRecorded': '{level}：请先在设置页调低日志级别',
   'log.clear': '清空',
   'log.export': '导出',
   'log.message': '消息',

@@ -364,6 +364,8 @@ export const messages = {
   'log.reconnecting': '重新連線中',
   'log.disconnected': '已中斷連線',
   'log.gap': '日誌遺失：中斷連線期間的記錄無法取回',
+  'log.recorded': '引擎記錄：{level}及以上',
+  'log.levelNotRecorded': '{level}：請先在設定頁調低日誌等級',
   'log.clear': '清空',
   'log.export': '匯出',
   'log.message': '訊息',

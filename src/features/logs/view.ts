@@ -3,6 +3,7 @@ import type {LogLevel, LogRecord} from '../../api/model';
 import {localTime} from '../../i18n/format';
 import type {Translator as LabelFn} from '../../i18n';
 
+const severity: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error'];
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
 type LogRow = {
   id: string;
@@ -48,15 +49,19 @@ export function logView(
   locale: string,
   t: LabelFn,
   failed = false,
-  gaps: ReadonlySet<LogRecord> = new Set()
+  gaps: ReadonlySet<LogRecord> = new Set(),
+  // The runtime log.level: the engine emits nothing below it, whatever the stream asks for.
+  recorded?: LogLevel
 ) {
+  const below = (level: LogLevel) => !!recorded && severity.indexOf(level) < severity.indexOf(recorded);
   return {
     rows: records.flatMap(record => {
       const row = logRow(record, locale, t);
       if (!gaps.has(record)) return [row];
       return [{...row, id: `gap ${record.id}`, timestamp: '', iso: '', levelText: '', target: '', gap: true, message: t('log.gap')}, row];
     }),
-    levels: levels.map(id => ({id, label: t(logLevelLabels[id])})),
+    levels: levels.map(id => ({id, label: below(id) ? t('log.levelNotRecorded', {level: t(logLevelLabels[id])}) : t(logLevelLabels[id])})),
+    recordedText: recorded ? t('log.recorded', {level: t(logLevelLabels[recorded])}) : null,
     // A failed stream is not retried until asked, so it is not "connecting".
     status: failed
       ? {tone: 'err' as const, text: t('log.disconnected')}

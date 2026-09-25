@@ -108,3 +108,18 @@ test('logs mark the records a reconnect could not recover', async ({page}) => {
   const rows = page.getByRole('grid', {name: 'Logs'}).getByRole('rowheader');
   await expect(rows).toHaveText(['After the gap', 'Logs lost: records sent while disconnected cannot be recovered', 'Before the gap']);
 });
+
+test('logs state the level the engine records and mark the levels below it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  await page.route('**/api/v1/logs?*', route =>
+    fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
+  );
+  await page.goto('/#/logs');
+  const level = (await api.runtimeSettings()).log.level;
+  expect(level).toBe('info');
+  await expect(page.getByText('Engine records: Info and above', {exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Info Level', exact: true}).click();
+  await expect(page.getByRole('option', {name: 'Debug: lower the log level in Settings first', exact: true})).toBeVisible();
+  await expect(page.getByRole('option', {name: 'Warning', exact: true})).toBeVisible();
+});

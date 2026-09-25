@@ -380,6 +380,8 @@ export const messages = {
   'log.reconnecting': 'Reconnecting',
   'log.disconnected': 'Disconnected',
   'log.gap': 'Logs lost: records sent while disconnected cannot be recovered',
+  'log.recorded': 'Engine records: {level} and above',
+  'log.levelNotRecorded': '{level}: lower the log level in Settings first',
   'log.clear': 'Clear',
   'log.export': 'Export',
   'log.message': 'Message',
