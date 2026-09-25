@@ -256,6 +256,41 @@ test('the live curves are drawn when the page opens after the session has run a 
   await expectLiveCurves(page);
 });
 
+for (const width of [390, 1440]) {
+  test.describe(`${width}px metric tiles`, () => {
+    test.use({viewport: {width, height: 900}});
+    test('keep a readable sparkline and equal heights in each row', async ({page}) => {
+      await page.goto('/#/activity');
+      await expect(page.locator('.rp-strip .rp-spark')).toHaveCount(3);
+      const tiles = await page.locator('.rp-strip > *').evaluateAll(elements =>
+        elements.map(tile => {
+          const box = tile.getBoundingClientRect();
+          const style = getComputedStyle(tile);
+          const inset = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+          const value = tile.querySelector('.rp-big')!.getBoundingClientRect();
+          const spark = tile.querySelector('.rp-spark')?.getBoundingClientRect();
+          return {
+            label: tile.querySelector('.rp-tile-head')!.textContent,
+            top: Math.round(box.top),
+            height: box.height,
+            content: box.width - inset,
+            spark: spark && {width: spark.width, beside: spark.left >= value.right, below: spark.top >= value.bottom}
+          };
+        })
+      );
+      for (const tile of tiles) {
+        const row = tiles.filter(other => other.top === tile.top);
+        for (const other of row) expect(other.height, `${tile.label} and ${other.label} share a row`).toBeCloseTo(tile.height, 0);
+        if (!tile.spark) continue;
+        if (width === 390) {
+          expect(tile.spark.below, `${tile.label}: sparkline under the value`).toBe(true);
+          expect(tile.spark.width, `${tile.label}: sparkline width`).toBeGreaterThanOrEqual(tile.content * 0.6);
+        } else expect(tile.spark.beside, `${tile.label}: sparkline beside the value`).toBe(true);
+      }
+    });
+  });
+}
+
 test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {
