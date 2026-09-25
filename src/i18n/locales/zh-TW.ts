@@ -1083,6 +1083,8 @@ export const messages = {
   'grp.system': '系統',
   search: '搜尋頁面、連線、節點、群組與來源',
   refresh: '重新整理',
+  'shell.rateLimited': '已達請求次數上限：{n} 秒後重試',
+  'shell.backendBusy': '後端忙碌：{n} 秒後重試',
   'theme.system': '跟隨系統',
   'theme.light': '亮色',
   'theme.dark': '暗色',

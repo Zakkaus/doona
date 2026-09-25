@@ -3,6 +3,7 @@ import {createApi} from './client';
 import {ApiError} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent} from './model';
+import {currentRefusal} from './refusal';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
@@ -74,6 +75,20 @@ describe('native transport', () => {
     await failure;
     await vi.advanceTimersByTimeAsync(3000);
     expect(request).toHaveBeenCalledTimes(3);
+  });
+  it('shows a long rate-limit wait while it lasts', async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json({}, 429, {'Retry-After': '30'}))
+      .mockResolvedValueOnce(json({domain: 'example.org', results: []}));
+    vi.stubGlobal('fetch', request);
+    const query = createApi('https://honk.test').dnsQuery('example.org', ['A']);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(currentRefusal()).toMatchObject({status: 429});
+    await vi.advanceTimersByTimeAsync(30000);
+    await expect(query).resolves.toMatchObject({domain: 'example.org'});
+    expect(currentRefusal()).toBeNull();
   });
   it('waits out a refused validation or routing trace, which write nothing', async () => {
     vi.useFakeTimers();

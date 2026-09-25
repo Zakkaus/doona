@@ -17,6 +17,7 @@ import {ApiError, clientError, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
+import {waitOutRefusal} from './refusal';
 import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
 import {createServerClock, type ServerClock} from './serverClock';
@@ -72,7 +73,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
         const error = await responseError(response.clone());
         if (!error.transient) return response;
         await response.body?.cancel();
-        await wait(error.retryAfter!, request.signal);
+        await waitOutRefusal(response.status, error.retryAfter!, request.signal);
       }
     }
   });

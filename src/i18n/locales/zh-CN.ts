@@ -1084,6 +1084,8 @@ export const messages = {
   'grp.system': '系统',
   search: '搜索页面、连接、节点、组和来源',
   refresh: '刷新',
+  'shell.rateLimited': '已达请求次数上限：{n} 秒后重试',
+  'shell.backendBusy': '后端繁忙：{n} 秒后重试',
   'theme.system': '跟随系统',
   'theme.light': '浅色',
   'theme.dark': '深色',
