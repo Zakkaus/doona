@@ -443,6 +443,55 @@ test('module validation maps whole-file errors onto section lines and refuses an
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
 });
 
+test('typing in a module keeps its diagnostics and layout until the next validation', async ({page}) => {
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  await editor.fill('routing {\n  # note\n  domain(example.org) -> nowhere\n  domain(example.com) -> elsewhere\n  fallback: resilient\n}');
+  const list = routing.getByRole('list', {name: 'Diagnostics'});
+  await expect(list.getByRole('listitem')).toHaveCount(2);
+  await expect(list).toContainText('elsewhere');
+  // Every frame while typing: where the card's parts sit, and which lines carry the error tint.
+  const record = () =>
+    page.evaluate(() => {
+      const card = document.querySelector('section[aria-label="routing"]')!;
+      const box = (selector: string) => {
+        const rect = card.querySelector(selector)?.getBoundingClientRect();
+        return rect ? `${Math.round(rect.top)}+${Math.round(rect.height)}` : 'none';
+      };
+      const frames = new Set<string>();
+      (window as unknown as {frames: Set<string>}).frames = frames;
+      const tick = () => {
+        const errors = [...card.querySelectorAll('.cm-diag-line-error')].map(line => line.textContent);
+        frames.add(JSON.stringify({editor: box('.rp-editor'), list: box('.rp-config-diagnostics'), actions: box(':scope > .rp-cluster'), errors}));
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  const frames = () => page.evaluate(() => [...(window as unknown as {frames: Set<string>}).frames].map(frame => JSON.parse(frame)));
+  const pause = () => page.waitForTimeout(900);
+  await editor.getByText('# note').click();
+  await page.keyboard.press('End');
+  await pause();
+  await record();
+  for (const key of 'abcd') {
+    await page.keyboard.type(key);
+    if (key < 'c') await pause();
+  }
+  await pause();
+  expect(await frames()).toHaveLength(1);
+  // A line inserted above the error carries the tint along with it until the next validation places it again.
+  await editor.getByText('routing {').click();
+  await page.keyboard.press('End');
+  await record();
+  await page.keyboard.press('Enter');
+  await pause();
+  expect(new Set((await frames()).map(frame => frame.errors.join('\n')))).toEqual(
+    new Set(['  domain(example.org) -> nowhere\n  domain(example.com) -> elsewhere'])
+  );
+});
+
 test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
   const {api} = await configBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;

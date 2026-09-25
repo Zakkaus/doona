@@ -3,6 +3,7 @@ import {ApiError} from '../../api/error';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
+import type {EditorMark} from '../../ui/code/CodeEditor';
 import {groupNames} from './names';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
@@ -53,7 +54,9 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const shown = (editor.errorSource === sourceId ? editor.diagnostics : null) ?? found ?? config.diagnostics;
   // The editor holds one file; diagnostics from other sources belong to their own cards.
   const own = useMemo(() => shown.filter(item => item.source_id === sourceId), [shown, sourceId]);
-  const marks = useMemo(() => (draft ? sectionMarks(own, draft.section.source.id, draft.section.block, draft.text) : []), [own, draft]);
+  // Placed once per set of diagnostics, against the text they describe; CodeMirror carries them through later typing.
+  const [marks, setMarks] = useState<EditorMark[]>([]);
+  useLinked(own, next => setMarks(draft ? sectionMarks(next, draft.section.source.id, draft.section.block, draft.text) : []));
   const outbounds = useMemo(() => groupNames(fullText ?? config.sources.find(source => source.kind === 'main')?.content ?? ''), [fullText, config]);
   const cancel = () => {
     editor.cancel();
@@ -105,10 +108,8 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
       }
     })),
     text: draft?.text ?? '',
-    change: (text: string) => {
-      setFound(null);
-      setDraft(previous => (previous ? {...previous, text} : null));
-    },
+    // The last diagnostics stay until the next validation replaces them, so the list and marks do not flicker.
+    change: (text: string) => setDraft(previous => (previous ? {...previous, text} : null)),
     marks,
     diagnostics: diagnosticRows(own, config.sources, locale, t),
     outbounds: () => outbounds,
