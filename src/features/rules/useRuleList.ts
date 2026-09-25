@@ -1,6 +1,6 @@
 import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, usePendingRules, useRules} from '../../store';
-import {pendingView} from './pending';
+import {pendingView} from '../shared/pending';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
@@ -8,7 +8,7 @@ import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {addRule, removeRule, ruleAnchor} from '../../dae/ruleText';
-import {parseRuleSeed, type RuleSeed} from './link';
+import {parseRuleSeed, type RuleSeed} from '../shared/link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {offered} from '../../api/capabilities';

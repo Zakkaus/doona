@@ -6,7 +6,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
-import {groupNameError, newGroupPolicies} from '../policies/policyText';
+import {groupNameError, newGroupPolicies} from '../shared/policyText';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
 import {intervalItems, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';

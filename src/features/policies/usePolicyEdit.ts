@@ -6,7 +6,7 @@ import type {ConfigSource} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {errorText} from '../../api/error';
-import {groupEditSafe} from './policyText';
+import {groupEditSafe} from '../shared/policyText';
 export type PolicyEditView = {
   title: string;
   open: boolean;

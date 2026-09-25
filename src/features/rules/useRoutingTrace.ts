@@ -11,7 +11,7 @@ import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
-import {probeToast} from '../nodes/view';
+import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};

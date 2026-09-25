@@ -7,7 +7,7 @@ import {applyChanges, isWritableName, readGroupEntries, type GroupChange} from '
 import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {groupNameError} from '../policyText';
+import {groupNameError} from '../../shared/policyText';
 import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
 import {offered} from '../../../api/capabilities';

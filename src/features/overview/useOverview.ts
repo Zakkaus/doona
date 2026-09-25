@@ -4,7 +4,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
 import {usePalette} from '../../ui/charts';
 import {overviewExport, overviewView} from './view';
-import {useLifecycle} from './useLifecycle';
+import {useLifecycle} from '../shared/useLifecycle';
 import {offered} from '../../api/capabilities';
 
 export function useOverview() {

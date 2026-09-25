@@ -5,7 +5,7 @@ import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
-import {PolicyPicker} from '../policies/PolicyPicker';
+import {PolicyPicker} from '../shared/PolicyPicker';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {

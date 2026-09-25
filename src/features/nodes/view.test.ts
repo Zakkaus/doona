@@ -1,18 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import type {Node, ProbeResult, Provider} from '../../api/model';
+import type {Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {
-  nodeRows,
-  ownedNodes,
-  providerRows,
-  nodeRowView,
-  probeToast,
-  providerRowView,
-  intervalText,
-  intervalItems,
-  providerCreate,
-  selectedProvider
-} from './view';
+import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText, intervalItems, providerCreate, selectedProvider} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';
@@ -253,18 +242,4 @@ it('falls back to the first real source when the linked provider is no longer li
   const {list} = providerRows([provider('a'), provider('b')], [], [], t);
   expect(selectedProvider(list, 'b')).toBe('b');
   expect(selectedProvider(list, 'gone')).toBe('a');
-});
-
-it('tells a failed probe from one whose result is unknown', () => {
-  const item = (state: 'healthy' | 'unavailable' | 'unknown', latency_ms: number | null, error: string | null = null) =>
-    ({member_id: 'hk', state, latency_ms, error}) as ProbeResult['results'][number];
-  const result = (...results: ProbeResult['results']) => ({results}) as ProbeResult;
-  expect(probeToast(result(item('healthy', 5.4)), 'hk', 'HK', t)).toEqual({kind: 'positive', text: t('nodes.probed', {name: 'HK', n: 5.4})});
-  expect(probeToast(result(item('unavailable', null, 'refused')), 'hk', 'HK', t)).toEqual({kind: 'negative', text: t('nodes.probeFailed', {name: 'HK'})});
-  expect(probeToast(result(item('unknown', null, 'probe timed out')), 'hk', 'HK', t)).toEqual({
-    kind: 'neutral',
-    text: t('nodes.probeUnknownWhy', {name: 'HK', error: 'probe timed out'})
-  });
-  expect(probeToast(result(item('unknown', null)), 'hk', 'HK', t)).toEqual({kind: 'neutral', text: t('nodes.probeUnknown', {name: 'HK'})});
-  expect(probeToast(result(), 'hk', 'HK', t)).toEqual({kind: 'neutral', text: t('nodes.probeUnknown', {name: 'HK'})});
 });

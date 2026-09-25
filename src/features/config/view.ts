@@ -8,7 +8,7 @@ import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../.
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
-import {groupPolicyText} from '../policies/policyText';
+import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 

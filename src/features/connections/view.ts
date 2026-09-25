@@ -17,7 +17,7 @@ import {word} from '../../api/labels';
 import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import {csvLine} from '../../ui/ui';
-import {ruleHref} from '../rules/link';
+import {ruleHref} from '../shared/link';
 import {within} from '../../shell/route';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
