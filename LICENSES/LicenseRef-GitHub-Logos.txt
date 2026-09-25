@@ -1,0 +1,5 @@
+The GitHub mark is a trademark of GitHub, Inc. It is not covered by this
+project's licenses. doona shows it only to link to the project's GitHub
+repository, as the GitHub Logos and Usage terms allow:
+
+https://github.com/logos

@@ -1,3 +1,4 @@
+// Drawn for doona, not an Adobe icon: a stroked gear on the Spectrum 20px grid.
 import type {SVGProps} from 'react';
 import {cx} from '../cx';
 
