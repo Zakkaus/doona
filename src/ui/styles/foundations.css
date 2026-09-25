@@ -66,10 +66,13 @@ body {
   background: var(--rp-base);
   color: var(--rp-text);
 }
-/* Reserve a gutter above phone width so scroll locking cannot shift menus and dialogs sideways. */
+/* Above phone width the root always shows its scrollbar, so the layout keeps one width whether a page is short or
+   long. `scrollbar-gutter: stable` is not enough: Chrome on Linux drops the root's classic scrollbar and its gutter
+   while a page is briefly shorter than the window, and every table jumps sideways on navigation. React Aria's scroll
+   lock, under dialogs and menus, swaps this for `overflow: hidden` with a stable gutter, so the width holds there too. */
 @media (min-width: 640px) {
   html {
-    scrollbar-gutter: stable;
+    overflow-y: scroll;
   }
 }
 /* Integer line heights everywhere so 1px rules land on whole pixels. */
