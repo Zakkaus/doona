@@ -192,7 +192,13 @@ test('five taps on the duck honk, and the header wears the long name for the ses
   await expect(brand).toHaveText('doona');
   await page.locator('.rp-brand').click();
   const duck = page.getByRole('dialog', {name: 'About doona', exact: true}).getByRole('button', {name: 'Pet me', exact: true});
-  for (let i = 0; i < 4; i++) await duck.click();
+  const night = duck.locator('img.night');
+  await expect(night).not.toHaveAttribute('src');
+  const painting = page.waitForResponse(response => /duck-night.*\.webp$/.test(new URL(response.url()).pathname));
+  await duck.click();
+  await painting;
+  await expect.poll(() => night.evaluate(img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  for (let i = 1; i < 4; i++) await duck.click();
   await expect(brand).toHaveText('doona');
   await duck.click();
   await expect(page.getByText('Honk!', {exact: true})).toBeVisible();

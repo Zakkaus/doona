@@ -12,7 +12,8 @@ export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => 
       <div className={cx('rp-about', view.honked && 'honked')}>
         <Button appearance="plain" className={cx('rp-about-duck', view.painted && 'painted')} onPress={view.tap} label={view.duck}>
           <img key={view.taps} src={logo} alt="" className={cx(view.hop && 'hop')} />
-          <img src={night} alt="" className="night" />
+          {/* Fetched on the first tap, well before the painting fades in, rather than with every open of the dialog. */}
+          <img src={view.taps > 0 ? night : undefined} alt="" className="night" />
           {view.honked && <span className="rp-about-bubble">{view.quack}</span>}
         </Button>
         <div className="rp-about-name">
