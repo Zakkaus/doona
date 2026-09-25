@@ -28,7 +28,23 @@ The source tree has one folder per concern:
 | `src/ui`       | The presentational kit and its stylesheets                                                                                                                           |
 | `src/i18n`     | Message loading and formatting                                                                                                                                       |
 
-Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Read backend data through `src/store` hooks from a feature's controller; components receive prepared values and callbacks and never fetch, guard or format on their own.
+Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Read backend data through `src/store` hooks from a feature's controller; components receive prepared values and callbacks and never fetch, guard or format on their own. A projection too large for one `view.ts` may move into pure sibling modules beside it, such as `dns/cache.ts`, `dns/stats.ts` and `activity/ranking.ts`; they follow the same rules as `view.ts`: no React, no store, and a unit test beside each.
+
+Imports point down the layers:
+
+| Code in                          | May not import                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/ui`                         | `src/features`, `src/store`, `src/shell`; the kit takes data as props                                        |
+| `src/store`                      | `src/features`, `src/shell`, `src/ui`                                                                        |
+| `src/api`, `src/dae`, `src/i18n` | `src/features`, `src/shell`, `src/store`, `src/ui`                                                           |
+| a feature                        | another feature; share through `src/features/shared` or a lower layer                                        |
+| `src/shell`                      | `src/features`, except `src/features/shared`, each feature's `nav.ts`, and the page loaders in `registry.ts` |
+
+Some lists have one home, and everything else reads them:
+
+- Pages: `routePaths` in `src/shell/routes.ts` and the definition keyed by that path in `src/shell/registry.ts`.
+- Palettes: `src/shell/palettes.ts`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
+- Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
 Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
 
@@ -36,7 +52,21 @@ Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-C
 
 React Spectrum S2 is the design reference: behaviour, spacing, states and wording follow it. Components are built on `react-aria-components` with doona's own CSS in `src/ui`; a new component starts from the S2 design and only then from React Aria.
 
-doona does not depend on `@react-spectrum/s2`. Version 1.7.1 unpacks to about 54 MB against about 6.6 MB for `react-aria-components`, and its styles come from `@parcel/macros`, a build-time macro that needs a bundler plugin. doona is served by routers and keeps gzip budgets of 275 KB for the startup shell and 655 KB for all JavaScript.
+doona does not depend on `@react-spectrum/s2`. Version 1.7.1 unpacks to about 54 MB against about 6.6 MB for `react-aria-components`, and its styles come from `@parcel/macros`, a build-time macro that needs a bundler plugin. doona is served by routers and keeps gzip budgets of 275 KB for the startup shell and 680 KB for all JavaScript (`sizeBudget` in `package.json`, enforced by `pnpm check:size`).
+
+Each role has one kit component in `src/ui`. Variants are typed props, never class strings, and styling uses tokens only. Features compose kit components and do not use React Aria components or kit class names directly; a composition with a single consumer may stay in its feature until a second one needs it.
+
+| Role (S2 name)                  | Kit component                          |
+| ------------------------------- | -------------------------------------- |
+| Button, LinkButton              | `Button`, `Link`                       |
+| ActionGroup                     | `ActionGroup`                          |
+| Menu, ActionMenu                | `ChoiceMenu`                           |
+| Picker                          | `LabeledSelect`, `InlineSelect`        |
+| SegmentedControl                | `Segmented`                            |
+| Card                            | `Card`                                 |
+| TableView                       | `DataTable`                            |
+| InlineAlert, IllustratedMessage | `InlineAlert`, `Empty`, `ErrorMessage` |
+| TagGroup                        | `Tags`, `Tag`                          |
 
 What this leaves out, on purpose:
 
