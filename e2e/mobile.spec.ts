@@ -2,25 +2,72 @@ import {expect, mockBackend, routes, test} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
-test('mobile page select exposes and opens every page without horizontal overflow', async ({page}) => {
+test('the bottom bar opens its four pages and marks the open one', async ({page}) => {
   await page.goto('/#/activity');
-  const select = page.locator('.rp-mobile-nav').getByRole('button');
-  // The mock offers every route, so the select should preserve registry order.
-  await select.click();
-  const listed = await page.getByRole('option').evaluateAll(items => items.map(item => item.getAttribute('data-key')));
-  await page.keyboard.press('Escape');
-  const shown = routes.filter(route => listed.includes(route));
-  expect(shown.length).toBe(listed.length);
-  for (const [index, route] of shown.entries()) {
-    await select.click();
-    const options = page.getByRole('option');
-    await expect(options).toHaveCount(shown.length);
-    await options.nth(index).click();
+  const bar = page.getByRole('navigation', {name: 'Pages'});
+  await expect(bar.locator('[aria-current]')).toHaveCount(0);
+  for (const [route, label] of [
+    ['overview', 'Overview'],
+    ['connections', 'Connections'],
+    ['nodes', 'Nodes'],
+    ['rules', 'Rules']
+  ]) {
+    const link = bar.getByRole('link', {name: label});
+    await link.click();
     await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    await expect(link).toHaveAttribute('aria-current', 'page');
+    await expect(bar.locator('[aria-current]')).toHaveCount(1);
   }
+  for (const box of await bar.locator('a, button').evaluateAll(items => items.map(item => item.getBoundingClientRect())))
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+});
+
+test('More lists every page in a drawer that traps focus and gives it back', async ({page}) => {
   await page.goto('/#/activity');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const more = page.getByRole('button', {name: 'More'});
+  const drawer = page.getByRole('dialog', {name: 'Pages'});
+  await more.click();
+  await expect(drawer.locator('.rp-nav')).toHaveCount(routes.length);
+  for (const route of routes) await expect(drawer.locator(`.rp-nav[href="#/${route}"]`)).toBeVisible();
+  for (let index = 0; index < routes.length + 3; index++) await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => !!document.activeElement?.closest('[role=dialog]'))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(more).toBeFocused();
+
+  // A tap on the underlay closes it, and so does following a link; a page outside the bar marks More.
+  await more.click();
+  expect((await page.locator('.rp-navdrawer').boundingBox())!.x).toBeGreaterThanOrEqual(48);
+  await page.mouse.click(8, 400);
+  await expect(drawer).toHaveCount(0);
+  await more.click();
+  await drawer.getByRole('link', {name: 'DNS'}).click();
+  await expect(page).toHaveURL(/#\/dns$/);
+  await expect(drawer).toHaveCount(0);
+  await expect(more).toHaveAttribute('data-current', '');
+});
+
+test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
+  await page.goto('/#/overview');
+  await expect(page.locator('.rp-content > *').first()).toBeVisible();
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+  // Long enough to scroll, so the bar would sit over the end of the page without the reserved space.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  const {content, bar} = await page.evaluate(() => ({
+    content: document.querySelector('.rp-content')!.getBoundingClientRect().bottom,
+    bar: document.querySelector('.rp-bottomnav')!.getBoundingClientRect().top
+  }));
+  expect(content).toBeLessThanOrEqual(bar);
+});
+
+test.describe('desktop', () => {
+  test.use({viewport: {width: 1280, height: 900}});
+  test('keeps the side navigation and hides the bottom bar', async ({page}) => {
+    await page.goto('/#/overview');
+    await expect(page.locator('.rp-side')).toBeVisible();
+    await expect(page.locator('.rp-bottomnav')).toBeHidden();
+  });
 });
 
 for (const [scheme, palette] of [

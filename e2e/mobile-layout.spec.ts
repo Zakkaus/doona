@@ -47,7 +47,7 @@ for (const width of [1280, 1024, 390, 320]) {
         }
 
         if (width <= 390) {
-          const undersized = await page.locator('.rp-top .rp-btn.icon, .rp-mobile-nav .rp-selectbtn, .rp-content .rp-tab').evaluateAll(elements =>
+          const undersized = await page.locator('.rp-top .rp-btn.icon, .rp-bottomnav > *, .rp-content .rp-tab').evaluateAll(elements =>
             elements
               .filter(element => element.getClientRects().length)
               .map(element => {
