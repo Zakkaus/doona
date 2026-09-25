@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {settingsCard} from './nav';
 
@@ -30,11 +30,7 @@ export function RuntimeSettingsCard() {
       {!m.waiting && m.available && (
         <>
           <ErrorMessage error={m.error} onRetry={m.retry} />
-          {m.conflict && (
-            <p role="alert" className="rp-alert">
-              {m.conflict}
-            </p>
-          )}
+          {m.conflict && <InlineAlert>{m.conflict}</InlineAlert>}
           {m.loading && (
             <div className="rp-chart-wait form">
               <Loading />

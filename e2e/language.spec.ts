@@ -62,7 +62,11 @@ test.describe('language loading', () => {
     await page.route(localeChunk(), route => route.abort());
     await page.goto('/#/activity');
     await expect(page.getByRole('alert')).toContainText('The interface text could not be loaded.');
-    await expect(page.getByRole('button', {name: 'Retry', exact: true})).toBeVisible();
+    const retry = page.getByRole('button', {name: 'Retry', exact: true});
+    await expect(retry).toBeVisible();
+    // Retry reloads the page, since nothing on it can load the language again.
+    await Promise.all([page.waitForEvent('load'), retry.click()]);
+    await expect(page.getByRole('alert')).toContainText('The interface text could not be loaded.');
   });
 
   test('keeps the current language when a new one does not load', async ({page}) => {
