@@ -2,6 +2,7 @@ import type {Key} from '../i18n';
 import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
 import {addU64, parseU64, pctU64} from './u64';
+import {isBuiltinOutbound} from '../dae/vocab';
 
 // Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
@@ -49,8 +50,7 @@ export function ipLiteral(text: string): string | undefined {
 // A node no provider lists belongs to a pseudo owner on the nodes page: the built-in outbounds or the unattributed
 // nodes. The owner's id is its kind, lengthened while a real provider already uses that id.
 export type PseudoOwner = 'builtin' | 'unattributed';
-export const pseudoOwner = (node: Pick<Node, 'protocol'>): PseudoOwner =>
-  node.protocol === 'direct' || node.protocol === 'block' ? 'builtin' : 'unattributed';
+export const pseudoOwner = (node: Pick<Node, 'protocol'>): PseudoOwner => (isBuiltinOutbound(node.protocol) ? 'builtin' : 'unattributed');
 export function pseudoOwnerId(kind: PseudoOwner, providers: ReadonlyArray<{id: string}>): string {
   let id: string = kind;
   while (providers.some(provider => provider.id === id)) id += '-';
@@ -72,12 +72,12 @@ export function outboundLabel(name: string | null, label: LabelFn): string {
 export type OutboundNames = ReadonlyMap<string, string>;
 export const chainNames = (chain: string[], names?: OutboundNames) => chain.map(id => names?.get(id) ?? id);
 export function chainLabel(row: Pick<Connection, 'chain' | 'outbound'>, label?: LabelFn, names?: OutboundNames): string {
-  if (row.outbound === 'direct' || row.outbound === 'block') return label ? outboundLabel(row.outbound, label) : row.outbound;
+  if (isBuiltinOutbound(row.outbound)) return label ? outboundLabel(row.outbound, label) : row.outbound!;
   return chainNames(row.chain, names).join(' → ') || '—';
 }
 // The leaf node alone, for narrow table cells; the full chain stays in details and the tooltip.
 export function nodeLabel(row: Pick<Connection, 'chain' | 'outbound'>, label: LabelFn, names?: OutboundNames): string {
-  if (row.outbound === 'direct' || row.outbound === 'block') return outboundLabel(row.outbound, label);
+  if (isBuiltinOutbound(row.outbound)) return outboundLabel(row.outbound, label);
   const leaf = row.chain.at(-1);
   if (leaf) return names?.get(leaf) ?? leaf;
   return row.outbound && row.outbound !== 'unknown' ? row.outbound : '—';

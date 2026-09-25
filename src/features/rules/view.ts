@@ -1,4 +1,5 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {isFragment, scanConfig} from '../../dae/text';
@@ -251,7 +252,7 @@ export function evaluationView(
     ],
     hint: likely ? t('rule.likelyHelp', {inputs: formatList(lang, evaluation.missing_inputs)}) : null,
     probe:
-      node && canProbe && node.protocol !== 'direct' && node.protocol !== 'block'
+      node && canProbe && !isBuiltinOutbound(node.protocol)
         ? {id: node.id, label: t('nodes.probe', {name: node.name}), pending: busy === node.id, disabled: !!busy}
         : null,
     rows: evaluation.rules.map(rule => ({

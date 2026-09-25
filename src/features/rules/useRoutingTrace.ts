@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import type {Key} from '../../i18n';
 import {getApi} from '../../api';
 import type {RoutingTraceRequest, RoutingTraceResponse} from '../../api/model';
@@ -124,9 +125,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
             : null;
         const outbound = evaluation.outbound ?? likely;
         const selected =
-          outbound && outbound !== 'direct' && outbound !== 'block'
-            ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById)
-            : null;
+          outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
         return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
       }) ?? [],
     [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]

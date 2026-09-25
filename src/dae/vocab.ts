@@ -57,5 +57,8 @@ export function policyKind(native: string): Group['policy']['kind'] | undefined 
   return policyKinds[native.toLowerCase().replace(/\(.*$/, '')];
 }
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
-// Built-in outbounds; `(must)` keeps DNS traffic from being hijacked for that rule.
-export const builtinOutbounds = ['direct', 'block', 'direct(must)', 'block(must)'];
+// Built-in outbounds, as nodes, groups and rules name them; a rule may add `(must)`, which keeps DNS traffic from
+// being hijacked for that rule.
+export const builtinOutboundNames = ['direct', 'block'];
+export const builtinOutbounds = [...builtinOutboundNames, ...builtinOutboundNames.map(name => `${name}(must)`)];
+export const isBuiltinOutbound = (name: string | null | undefined): boolean => name != null && builtinOutbounds.includes(name);

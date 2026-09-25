@@ -1,4 +1,5 @@
 import {blockFields, isBareName, isFragment, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextField} from './text';
+import {isBuiltinOutbound} from './vocab';
 
 export type GroupEntry = {
   name: string;
@@ -243,19 +244,18 @@ function parseLine(filter: string): Term[] | null {
   const terms = splitTop(filter, '&&').map(parseTerm);
   return terms.every((term): term is Term => term !== null) && terms.length ? terms : null;
 }
-const BUILTIN = new Set(['direct', 'block']);
 export type FilterNode = {name: string; subscription_tag: string | null};
 // A group's filter lines parsed and compiled once, as a test honk would apply to each node.
 export function compileFilters(filters: string[]): (node: FilterNode) => boolean {
   const lines = filters.map(parseLine).filter((line): line is Term[] => line !== null);
   if (!lines.length) {
     const subgroupsOnly = filters.some(filter => filter.startsWith('group('));
-    return node => !subgroupsOnly && !BUILTIN.has(node.name);
+    return node => !subgroupsOnly && !isBuiltinOutbound(node.name);
   }
   return node =>
     lines.some(
       line =>
-        (!BUILTIN.has(node.name) || line.some(term => term.call === 'name' && !term.negated && term.exact.includes(node.name))) &&
+        (!isBuiltinOutbound(node.name) || line.some(term => term.call === 'name' && !term.negated && term.exact.includes(node.name))) &&
         line.every(term => term.tests.some(test => test(term.call === 'name' ? node.name : (node.subscription_tag ?? ''))) !== term.negated)
     );
 }
