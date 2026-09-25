@@ -15,3 +15,10 @@ it('reports an unknown operation outcome neutrally and without the failure wordi
   expect(failureNotice(new LocalError('ui.operationUnknown'), t, wrap)).toEqual({kind: 'neutral', text: t('ui.operationUnknown')});
   expect(failureNotice(new LocalError('ui.operationFailed'), t, wrap)).toEqual({kind: 'negative', text: wrap(t('ui.operationFailed'))});
 });
+
+it('reports a file written but not applied without the failure wording that says it was not written', () => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
+  const wrap = (error: string) => t('ui.writeFailed', {error});
+  const error = new LocalError('ui.writtenNotApplied', 'Reload rejected');
+  expect(failureNotice(error, t, wrap)).toEqual({kind: 'negative', text: errorText(error, t)});
+});
