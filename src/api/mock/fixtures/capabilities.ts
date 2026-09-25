@@ -23,7 +23,13 @@ export const capabilities: Capabilities = {
     traffic_history: {available: true, max_window_seconds: 604800, max_points: 360},
     memory_history: {available: true, max_window_seconds: 604800, max_points: 720},
     nodes: {available: true, can_manage: true},
-    providers: {available: true, can_refresh: true, can_manage: true, max_page_size: 1000},
+    providers: {
+      available: true,
+      can_refresh: true,
+      can_manage: true,
+      create_options: {update_interval: 86400, user_agent: 'honk/0.0.1-alpha', cache: true},
+      max_page_size: 1000
+    },
     geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], configurable_sources: true},
     rules: {available: true, max_rules: 4096},
     config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},

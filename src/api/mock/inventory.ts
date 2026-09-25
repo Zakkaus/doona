@@ -241,7 +241,22 @@ export function createInventory(
       if (providers.some(item => item.name === request.name)) throw new ApiError(409, 'state_conflict', `A provider named ${request.name} already exists`);
       const url = URL.parse(request.url);
       if (!url) throw new ApiError(422, 'unsupported_value', 'The subscription URL cannot be parsed');
-      const line = configLine(() => `  ${quoteName(request.name)}: ${quote(request.url)}\n`);
+      const {update_interval: interval, user_agent: agent, cache} = request;
+      const offered = capabilities.resources.providers.create_options ?? {};
+      if (
+        (['update_interval', 'user_agent', 'cache'] as const).some(key => request[key] !== undefined && offered[key] === undefined) ||
+        (interval !== undefined && !(Number.isInteger(interval) && interval >= 0 && interval <= 31536000)) ||
+        (agent !== undefined && !/^[\x20-\x7E]{1,256}$/.test(agent))
+      )
+        throw new ApiError(422, 'unsupported_value', 'The subscription options are not supported');
+      // Like honk, an entry with options becomes a block; one without stays a scalar line.
+      const fields = [agent !== undefined && `ua: ${quote(agent)}`, interval !== undefined && `interval: '${interval}s'`, cache !== undefined && `cache: ${cache}`];
+      const options = fields.filter(Boolean).map(field => `    ${field}\n`);
+      const line = configLine(() =>
+        options.length
+          ? `  ${quoteName(request.name)}: {\n    url: ${quote(request.url)}\n${options.join('')}  }\n`
+          : `  ${quoteName(request.name)}: ${quote(request.url)}\n`
+      );
       const activate = await editMain(text => text.replace(/^(subscription \{\n)/m, `$1${line}`));
       log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
       activate();
@@ -259,7 +274,8 @@ export function createInventory(
       if (index < 0) return {deleted: 0};
       if (providers[index].kind === 'inline') throw new ApiError(404, 'capability_not_supported', 'The inline provider is the node section itself');
       const provider = providers[index];
-      const activate = await editMain(text => text.replace(new RegExp(`^\\s*${escapeRegExp(provider.name)}:.*\\n`, 'm'), ''));
+      const name = escapeRegExp(provider.name);
+      const activate = await editMain(text => text.replace(new RegExp(`^\\s*${name}:\\s*\\{\\n[\\s\\S]*?\\n\\s*\\}\\n|^\\s*${name}:.*\\n`, 'm'), ''));
       log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
       activate();
       return {deleted: 1};

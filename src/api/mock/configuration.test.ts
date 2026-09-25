@@ -112,6 +112,22 @@ it('refuses names the configuration cannot quote instead of altering them', asyn
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(before);
 });
 
+it('writes subscription options as a block, checks them against create_options and deletes the whole block', async () => {
+  const api = createMockApi();
+  const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  const before = await main();
+  const base = {kind: 'subscription', url: 'https://example.net/sub?token=x'} as const;
+  for (const invalid of [{update_interval: -1}, {update_interval: 31536001}, {user_agent: ''}, {user_agent: 'a\nb'}]) {
+    await expect(api.createProvider({name: 'optioned', ...base, ...invalid})).rejects.toMatchObject({status: 422});
+  }
+  expect(await main()).toBe(before);
+  const created = await api.createProvider({name: 'optioned', ...base, update_interval: 3600, user_agent: 'clash.meta', cache: false});
+  expect(created).toMatchObject({name: 'optioned', url_redacted: 'https://example.net/sub?[redacted]'});
+  expect(await main()).toContain("  optioned: {\n    url: 'https://example.net/sub?token=x'\n    ua: 'clash.meta'\n    interval: '3600s'\n    cache: false\n  }\n");
+  await api.deleteProvider(created.id);
+  expect(await main()).toBe(before);
+});
+
 it('activates included groups and rules and rejects an unresolved native include without writing', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
