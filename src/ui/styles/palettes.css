@@ -61,6 +61,9 @@
   --rp-hl-med: #44415a;
   --rp-hl-high: #56526e;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Highlight low is the surface's own step here, so lines and fills on a card take the next step. */
+  --rp-line: var(--rp-hl-med);
+  --rp-fill: var(--rp-hl-med);
   /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
   --rp-on-accent: #191724;
   --rp-accent-text: var(--rp-text);
@@ -167,6 +170,9 @@
   --rp-hl-med: #d8dee9;
   --rp-hl-high: color-mix(in srgb, #4c566a 25%, #e5e9f0);
   --rp-shadow: 0 1px 2px rgba(46, 52, 64, 0.1);
+  /* Highlight low is the base or the surface in both schemes, so lines and fills on a card take the next step. */
+  --rp-line: var(--rp-hl-med);
+  --rp-fill: var(--rp-hl-med);
   --rp-on-accent: #000000;
   --rp-accent-text: var(--rp-text);
   --rp-negative-text: var(--rp-text);
@@ -232,6 +238,10 @@
   --rp-hl-med: #cff0f9;
   --rp-hl-high: color-mix(in srgb, #65758d 25%, #f0f6fb);
   --rp-shadow: 0 1px 2px rgba(101, 117, 141, 0.1);
+  /* Highlight low is the base or the surface in both schemes, and highlight med is the selection blue, so lines and
+     fills on a card take the grey above. */
+  --rp-line: var(--rp-hl-high);
+  --rp-fill: var(--rp-hl-high);
   --rp-on-accent: #ffffff;
   --rp-accent-text: var(--rp-text);
   --rp-info-text: var(--rp-text);

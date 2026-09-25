@@ -20,7 +20,7 @@
 }
 .rp-tag.new {
   border-color: var(--rp-accent);
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-tag.removed > .rp-tag-label {
   color: var(--rp-subtle);

@@ -29,7 +29,7 @@
   background: transparent;
 }
 .rp-btn.quiet[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-btn:not(.icon) > .rp-icon {
   width: 16px;
@@ -118,7 +118,7 @@
 }
 .rp-item[data-focused],
 .rp-item[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-item[data-pressed] {
   background: var(--rp-hl-med);
@@ -179,10 +179,10 @@
   text-align: start;
 }
 .rp-drill-back[data-focus-visible] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-subitem[data-open] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-item .desc.ok {
   color: var(--rp-positive-text);

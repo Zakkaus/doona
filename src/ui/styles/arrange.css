@@ -24,7 +24,7 @@
 }
 .rp-drop[data-drop-target] {
   border-color: var(--rp-accent);
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-drop[data-focus-visible] {
   outline: 2px solid var(--rp-accent);

@@ -321,7 +321,7 @@
   opacity: 0.6;
 }
 .rp-nav[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
   color: var(--rp-text);
 }
 
@@ -357,7 +357,7 @@
   text-decoration: none;
 }
 .rp-version[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-main {
   margin-inline-end: 0;
@@ -449,7 +449,7 @@
   transition: background-color var(--rp-duration) var(--rp-ease);
 }
 .rp-hubbar > [data-hovered] .rp-hubbar-pill {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-hubbar > [aria-current='page'] {
   color: var(--rp-text);

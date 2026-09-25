@@ -142,7 +142,7 @@
   cursor: default;
   pointer-events: none;
   color: var(--rp-muted);
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
   border-color: transparent;
 }
 .rp-btn.quiet[data-disabled] {

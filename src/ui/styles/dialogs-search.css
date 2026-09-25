@@ -13,7 +13,7 @@
   line-height: 16px;
 }
 .rp-select[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 /* The box is the modal; the dialog scrolls inside it, so the surface and its rim never scroll away. */
 .rp-modal {

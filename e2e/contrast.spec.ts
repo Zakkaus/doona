@@ -128,3 +128,46 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
   }
   expect(failures).toEqual([]);
 });
+
+// Table rows, card dividers, hover and empty cells draw --rp-line and --rp-fill on a card. Several palettes set
+// highlight low to their own surface, where both vanished; the palette points them at a step that shows instead.
+test('lines and quiet fills show on a card in every palette', async ({page}) => {
+  await page.goto('/#/activity');
+  const failures: string[] = [];
+  for (const [palette, checked] of Object.entries(palettes)) {
+    if (!checked) continue;
+    for (const scheme of ['light', 'dark']) {
+      const ratios = await page.evaluate(
+        ([palette, scheme]) => {
+          const [family, flavour] = palette.split('/');
+          Object.assign(document.documentElement.dataset, {family, flavour, scheme});
+          const rgb = (value: string) => {
+            const probe = document.createElement('i');
+            probe.style.color = value;
+            document.body.append(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            const channels = color.match(/[\d.]+/g)!.map(Number);
+            return color.startsWith('color(') ? channels.map((channel, i) => (i < 3 ? channel * 255 : channel)) : channels;
+          };
+          const luminance = (value: number[], below: number[]) => {
+            const [r, g, b, a = 1] = value;
+            const [lr, lg, lb] = [r, g, b]
+              .map((channel, i) => (channel * a + below[i] * (1 - a)) / 255)
+              .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+            return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+          };
+          const surface = rgb('var(--rp-surface)');
+          const on = (token: string) => {
+            const [hi, lo] = [luminance(rgb(`var(${token})`), surface), luminance(surface, surface)].sort((x, y) => y - x);
+            return (hi + 0.05) / (lo + 0.05);
+          };
+          return {line: on('--rp-line'), fill: on('--rp-fill')};
+        },
+        [palette, scheme] as const
+      );
+      for (const [token, value] of Object.entries(ratios)) if (value < 1.1) failures.push(`${palette} ${scheme} ${token} on surface: ${value.toFixed(3)}`);
+    }
+  }
+  expect(failures).toEqual([]);
+});
