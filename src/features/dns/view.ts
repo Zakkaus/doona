@@ -102,7 +102,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     ] as Array<[string, string]>
   };
 }
-export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, locale: string, t: LabelFn, types: string[] = []) {
+export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | undefined, t: LabelFn, types: string[] = []) {
   const records = data?.records ?? [];
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
