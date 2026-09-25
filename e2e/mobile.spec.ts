@@ -136,6 +136,8 @@ test('the overflow menu opens and leaves a submenu by keyboard', async ({page}) 
   await expect(page.getByRole('menuitem', {name: 'Palette'})).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
+  // The submenu moves focus to its current choice a frame after it opens; a key sent before that has nowhere to go.
+  await expect(page.getByRole('menuitemradio', {name: 'Gradient'})).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
