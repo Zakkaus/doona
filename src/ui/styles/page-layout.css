@@ -187,23 +187,23 @@
   gap: 8px;
   margin-top: 8px;
 }
-/* Geodata URL lists: geosite and geoip side by side, stacking when the card is narrow. */
-.rp-geodata-urls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  align-items: start;
-  gap: 12px 16px;
+/* Settings geodata: a lite source's missing categories and a failed update take their tone's text colour. */
+.rp-geodata-note.notice {
+  color: var(--rp-notice-text);
 }
-.rp-geodata-urls .rp-field {
-  gap: 8px;
+.rp-geodata-note.negative {
+  color: var(--rp-negative-text);
 }
-.rp-geodata-auto {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
+/* One asset per line, wrapping, so its size, host and route read whole; the full URL is the tooltip. */
+.rp-geodata-details .rp-kv {
+  grid-template-columns: minmax(0, 1fr);
 }
-.rp-geodata-lines > span {
-  display: block;
+.rp-geodata-details .v {
+  white-space: normal;
+}
+/* The custom URL dialog's move up button: the down chevron turned over. */
+.rp-icon.rp-up {
+  rotate: 180deg;
 }
 
 /* Configuration page: diagnostics and unmodelled subscription lines wrap instead of overflowing the card. */

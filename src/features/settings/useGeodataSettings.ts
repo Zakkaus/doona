@@ -1,99 +1,151 @@
-import {useState} from 'react';
-import {useCapabilities, useGeodata, useRuntimeSettings} from '../../store';
+import {useRef, useState} from 'react';
+import type {GeoDataSettingsPatch} from '../../api/model';
+import {useCapabilities, useGeodata, useGroups, useNow, useRuntimeSettings} from '../../store';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
-import {formatBytes} from '../../i18n/format';
 import {toast} from '../../ui/ui';
 import {errorText} from '../../api/error';
-import {useDraftGuard} from '../../shell/draft';
-import {geodataIntervalRange, geodataPresets} from '../../dae/geodata';
+import {geodataPresets, type GeodataPresetId} from '../../dae/geodata';
 import {
+  assetDetails,
+  cleanUrls,
   customFields,
-  draftInvalid,
-  draftUrls,
+  customInvalid,
   geodataConfigurable,
-  geodataDraft,
   geodataKinds,
-  geodataPatch,
-  geodataSourceLabels,
-  geodataStatus,
-  intervalInvalid,
+  hostOf,
+  intervalChoices,
   matchPreset,
-  missingCategories,
   presetLabels,
-  sourceName,
+  presetNote,
+  statusLine,
   urlProblem,
-  type GeodataChoice,
-  type GeodataDraft
+  type GeodataUrls
 } from './geodata';
-import {geodataRows} from './view';
 
+type Patch = Exclude<GeoDataSettingsPatch, null>;
+type Route = 'routing' | 'direct' | 'group';
+
+// Every control saves as it changes. A source change then downloads at once, so the files follow what is shown.
 export function useGeodataSettings() {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
+  const now = useNow();
   const caps = useCapabilities();
   const available = geodataConfigurable(caps.data?.resources);
   const settings = useRuntimeSettings(available);
   const geodata = useGeodata(available);
-  const baseline = settings.data?.geodata;
-  const stamp = baseline ? JSON.stringify(baseline) : '';
-  const [draft, setDraft] = useState<{at: string; value: GeodataDraft} | null>(null);
-  const edits = draft?.value ?? (baseline ? geodataDraft(baseline) : null);
-  const patch = baseline && edits ? geodataPatch(baseline, edits) : null;
-  const dirty = !!draft && !!baseline && JSON.stringify(draft.value) !== JSON.stringify(geodataDraft(baseline));
-  const guard = useDraftGuard(dirty, () => setDraft(null));
-  const edit = (next: Partial<GeodataDraft>) => {
-    if (edits && !settings.busy) setDraft({at: draft?.at ?? stamp, value: {...edits, ...next}});
-  };
-  const urls = edits ? draftUrls(edits) : {geosite: [], geoip: []};
-  const preset = matchPreset(urls);
-  const missing = missingCategories(preset, geodata.data?.required_codes);
-  const stored = baseline ? {geosite: baseline.geosite.urls, geoip: baseline.geoip.urls} : null;
-  const apply = () => {
-    if (!patch || settings.busy) return;
-    const submitted = draft;
-    void settings.save({geodata: patch}).then(
+  const groups = useGroups(available);
+  const stored = settings.data?.geodata;
+  // The patch being saved shows in the controls until the settings come back, and is dropped on failure.
+  const [pending, setPending] = useState<Patch | null>(null);
+  const [custom, setCustom] = useState<GeodataUrls | null>(null);
+  const [routeChoice, setRouteChoice] = useState<Route | null>(null);
+  const busy = settings.busy || geodata.busy;
+  const canUpdate = !!caps.data?.resources.geodata.can_update;
+
+  const update = () =>
+    geodata.update().then(
       result => {
-        if (result === undefined) return;
-        setDraft(current => (current === submitted ? null : current));
-        // The next check moves with the schedule, and GET /geodata is not polled.
-        geodata.refetch();
-        toast('positive', t(patch.geosite ? 'settings.geodataSaved' : 'settings.geodataAutoSaved'));
+        if (result) toast('positive', t('settings.geodataUpdated'));
       },
-      (error: unknown) => toast('negative', t('settings.geodataSaveFailed', {error: errorText(error, t)}))
+      (error: unknown) => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
+    );
+  // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
+  // One save at a time: a second press while one is in flight, or while an update runs, does nothing.
+  const inflight = useRef(false);
+  const save = (patch: Patch) => {
+    if (inflight.current || busy) return Promise.resolve(false);
+    inflight.current = true;
+    setPending(patch);
+    return settings.save({geodata: patch}).then(
+      result => {
+        inflight.current = false;
+        setPending(null);
+        if (result === undefined) return false;
+        geodata.refetch();
+        if (patch.geosite && canUpdate) void update();
+        else toast('positive', t(patch.geosite ? 'settings.geodataSaved' : 'settings.geodataAutoSaved'));
+        return true;
+      },
+      (error: unknown) => {
+        inflight.current = false;
+        setPending(null);
+        toast('negative', t('settings.geodataSaveFailed', {error: errorText(error, t)}));
+        return false;
+      }
     );
   };
+
+  const urls: GeodataUrls | null =
+    pending?.geosite && pending.geoip
+      ? {geosite: pending.geosite.urls, geoip: pending.geoip.urls}
+      : stored
+        ? {geosite: stored.geosite.urls, geoip: stored.geoip.urls}
+        : null;
+  const preset = urls ? matchPreset(urls) : null;
+  const auto = {...stored?.auto_update, ...pending?.auto_update};
+  const download = pending?.download ?? stored?.download;
+  // Downloads follow the routing rules unless a route is stored.
+  const route = routeChoice ?? download?.route ?? 'routing';
+  const note = (id: GeodataPresetId) =>
+    presetNote(
+      geodataPresets.find(item => item.id === id)!,
+      geodata.data?.required_codes,
+      locale,
+      t
+    );
+  const status = statusLine(geodata.data, geodata.busy || !!pending?.geosite, now, locale, t);
+
   return {
     available,
-    loading: settings.loading && !baseline,
+    loading: settings.loading && !stored,
     error: settings.error,
     retry: settings.refetch,
-    hasBaseline: !!edits,
-    busy: settings.busy,
-    source: baseline ? t(geodataSourceLabels[baseline.source]) : null,
-    sourceTone: baseline?.source === 'db' ? ('info' as const) : ('neutral' as const),
-    seededFromConfig: baseline?.source === 'config',
-    current: stored ? sourceName(stored, t) : '—',
-    choice: edits?.choice ?? 'custom',
-    choices: [...geodataPresets.map(item => ({id: item.id, label: t(presetLabels[item.id])})), {id: 'custom', label: t('settings.geodataCustom')}],
-    setChoice: (value: string) => {
-      if (!edits) return;
-      const choice = value as GeodataChoice;
-      // Custom starts from the URLs chosen so far, so a mirror can be swapped without typing the rest.
-      edit(choice === 'custom' ? {choice, custom: draftUrls(edits)} : {choice});
+    ready: !!stored,
+    busy,
+    seededFromConfig: stored?.source === 'config',
+    source: {
+      value: urls ? (preset?.id ?? 'custom') : '',
+      items: [
+        ...geodataPresets.map(item => ({id: item.id, label: t(presetLabels[item.id]), desc: note(item.id).text})),
+        {id: 'custom', label: t('settings.geodataCustom')}
+      ],
+      note: preset ? note(preset.id) : null,
+      // Custom opens the URL dialog from the current lists; nothing is stored until it is saved.
+      change: (id: string) => {
+        if (id === 'custom') setCustom(urls ? {geosite: [...urls.geosite], geoip: [...urls.geoip]} : null);
+        else if (id !== preset?.id) {
+          const chosen = geodataPresets.find(item => item.id === id)!;
+          void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
+        }
+      }
     },
-    presetSize: preset
-      ? t('settings.geodataPresetSize', {geosite: formatBytes(preset.sizes.geosite, locale), geoip: formatBytes(preset.sizes.geoip, locale)})
-      : null,
-    custom:
-      edits?.choice === 'custom'
-        ? geodataKinds.map(kind => ({
+    customHosts: urls && !preset ? formatList(lang, [...new Set([...urls.geosite, ...urls.geoip].map(hostOf))]) : null,
+    editCustom: () => urls && setCustom({geosite: [...urls.geosite], geoip: [...urls.geoip]}),
+    dialog: custom
+      ? {
+          lists: geodataKinds.map(kind => ({
             kind,
-            fields: customFields(edits.custom[kind]).map((value, index, list) => {
+            fields: customFields(custom[kind]).map((value, index, list) => {
               const problem = urlProblem(value, list);
+              // The order is the fallback order, so a stored URL can trade places with its neighbour.
+              const swap = (to: number) =>
+                to >= 0 && to < custom[kind].length && index < custom[kind].length
+                  ? () => {
+                      const values = [...custom[kind]];
+                      [values[index], values[to]] = [values[to], values[index]];
+                      setCustom({...custom, [kind]: values});
+                    }
+                  : undefined;
+              const label = t('settings.geodataUrlLabel', {kind, n: formatNumber(index + 1, locale)});
               return {
+                up: swap(index - 1),
+                down: swap(index + 1),
+                upLabel: t('settings.geodataMoveUp', {url: label}),
+                downLabel: t('settings.geodataMoveDown', {url: label}),
                 id: `${kind}-${index}`,
-                label: t('settings.geodataUrlLabel', {kind, n: formatNumber(index + 1, locale)}),
+                label,
                 value,
                 error: problem ? t(problem) : undefined,
                 change: (next: string) => {
@@ -101,49 +153,55 @@ export function useGeodataSettings() {
                   values[index] = next;
                   // Blank fields past the last URL are dropped, so the list keeps a single empty slot.
                   while (values.length && !values[values.length - 1].trim()) values.pop();
-                  edit({custom: {...edits.custom, [kind]: values}});
+                  setCustom({...custom, [kind]: values});
                 }
               };
             }),
-            empty: !edits.custom[kind].some(url => url.trim())
-          }))
-        : [],
-    missing: missing
-      ? {
-          title: t('settings.geodataMissingTitle', {name: preset ? t(presetLabels[preset.id]) : ''}),
-          lines: geodataKinds.flatMap(kind => (missing[kind] ? [t('settings.geodataMissingKind', {kind, codes: formatList(lang, missing[kind])})] : []))
+            empty: !custom[kind].some(url => url.trim())
+          })),
+          blocked: customInvalid(custom),
+          pending: settings.busy,
+          cancel: () => setCustom(null),
+          save: () => {
+            const lists = cleanUrls(custom);
+            void save({geosite: {urls: lists.geosite}, geoip: {urls: lists.geoip}}).then(saved => saved && setCustom(null));
+          }
         }
       : null,
-    enabled: edits?.enabled ?? false,
-    setEnabled: (enabled: boolean) => edit({enabled}),
-    interval: {
-      value: edits?.interval ?? '',
-      invalid: edits ? intervalInvalid(edits.interval) : false,
-      description: t('settings.range', {min: formatNumber(geodataIntervalRange.min, locale), max: formatNumber(geodataIntervalRange.max, locale)}),
-      change: (value: string) => edit({interval: value.trim()})
+    route: {
+      value: route,
+      items: (['routing', 'direct', 'group'] as const).map(id => ({
+        id,
+        label: t(id === 'routing' ? 'settings.geodataRouteRouting' : id === 'direct' ? 'settings.geodataRouteDirect' : 'settings.geodataRouteGroup')
+      })),
+      // A group route needs its group, so choosing it only reveals the group select.
+      change: (id: string) => {
+        if (id === 'group') return setRouteChoice('group');
+        setRouteChoice(null);
+        if (id !== download?.route) void save({download: {route: id as Route}});
+      },
+      group: route === 'group' ? (download?.route === 'group' ? (download.group_id ?? '') : '') : null,
+      groups: (groups.data ?? []).map(group => ({id: group.id, label: group.name})),
+      pickGroup: (id: string) => {
+        if (id === (download?.route === 'group' ? download.group_id : null)) return;
+        void save({download: {route: 'group', group_id: id}}).then(saved => saved && setRouteChoice(null));
+      }
     },
-    conflict: dirty && draft.at !== stamp ? t('settings.geodataDraftConflict') : null,
-    dirty,
-    blocked: !patch || (!!edits && draftInvalid(edits)),
-    apply,
-    discard: () => {
-      guard.clear();
-      setDraft(null);
+    auto: {
+      enabled: !!auto.enabled,
+      toggle: (enabled: boolean) => void save({auto_update: {enabled}}),
+      interval: String(auto.interval_hours ?? ''),
+      intervals: auto.interval_hours ? intervalChoices(auto.interval_hours, locale) : [],
+      pick: (hours: string) => {
+        if (Number(hours) !== stored?.auto_update.interval_hours) void save({auto_update: {interval_hours: Number(hours)}});
+      }
     },
-    status: geodataStatus(geodata.data, baseline?.auto_update.enabled ?? false, locale, t),
+    status: {...status, details: assetDetails(geodata.data, groups.data, locale, t)},
     statusError: geodata.error,
     retryStatus: geodata.refetch,
-    rows: geodataRows(geodata.data?.assets ?? [], locale),
-    rowsLoading: geodata.loading && !geodata.data,
-    canUpdate: !!caps.data?.resources.geodata.can_update,
+    canUpdate,
     updating: geodata.busy,
-    updateBlocked: geodata.busy || !geodata.data,
-    update: () =>
-      void geodata.update().then(
-        result => {
-          if (result) toast('positive', t('settings.geodataUpdated'));
-        },
-        error => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
-      )
+    updateBlocked: busy || !geodata.data,
+    update: () => void update()
   };
 }

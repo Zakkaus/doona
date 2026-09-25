@@ -62,19 +62,22 @@ export function Segmented({
 // S2 marks the selected item with a checkmark in a leading column, not with a background.
 export const Check = () => <Checkmark className="rp-check-mark" />;
 
+// A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
   children,
   isSelected,
   onChange,
-  isDisabled
+  isDisabled,
+  'aria-label': label
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   isSelected: boolean;
   onChange: (v: boolean) => void;
   isDisabled?: boolean;
+  'aria-label'?: string;
 }) {
   return (
-    <RSwitch className="rp-switch" isSelected={isSelected} onChange={onChange} isDisabled={isDisabled}>
+    <RSwitch className="rp-switch" isSelected={isSelected} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
       <span className="track" />
       {children}
     </RSwitch>
