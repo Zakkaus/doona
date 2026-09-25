@@ -1,4 +1,5 @@
 import {useCallback, useState} from 'react';
+import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
@@ -25,7 +26,7 @@ export function useTrafficHistory(windowSeconds: number, capabilities: Capabilit
   const window_seconds = Math.min(windowSeconds, limits?.max_window_seconds ?? 600);
   const max_points = Math.min(600, limits?.max_points ?? 600);
   return useResource(
-    {key: ['trafficHistory', {window_seconds, max_points}], every: 60000, fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
+    {key: ['trafficHistory', {window_seconds, max_points}], every: poll.background, fetch: signal => api.trafficHistory({window_seconds, max_points}, signal)},
     {
       enabled: limits?.available === true
     }
@@ -39,7 +40,7 @@ export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const window_seconds = Math.min(600, limits?.max_window_seconds ?? 600);
   const max_points = Math.min(120, limits?.max_points ?? 120);
   return useResource(
-    {key: ['memoryHistory', {window_seconds, max_points}], every: 60000, fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
+    {key: ['memoryHistory', {window_seconds, max_points}], every: poll.background, fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
     {enabled: limits?.available === true}
   );
 }

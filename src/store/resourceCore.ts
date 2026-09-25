@@ -1,6 +1,7 @@
 // The resource cache and its watchers. The event stream watches the capabilities through here, so this module
 // takes its event feed as a parameter rather than importing the stream.
 import {useCallback, useSyncExternalStore} from 'react';
+import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent} from '../api/model';
@@ -162,7 +163,7 @@ export type ResourceState<T> = {data: T | undefined; loading: boolean; error: Er
 
 function createWatcher<T>(
   api: Api,
-  {key, fetch, every = 5000, acceptEvent, retryErrors = false, events}: Resource<T>,
+  {key, fetch, every = poll.live, acceptEvent, retryErrors = false, events}: Resource<T>,
   data: T | undefined,
   publish: (state: ResourceState<T>) => void
 ) {

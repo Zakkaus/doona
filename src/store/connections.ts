@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {MAX_PAGE} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {BulkCloseQuery, BulkCloseResult} from '../api/model';
@@ -12,13 +13,11 @@ export function useConnections(src?: string, enabled = true, paused = false, eve
     {
       key: ['connections', {src}],
       every,
-      fetch: signal => api.connections({type: 'all', detail: 'full', limit: listLimit, src}, signal)
+      fetch: signal => api.connections({type: 'all', detail: 'full', limit: MAX_PAGE, src}, signal)
     },
     {enabled, paused}
   );
 }
-// Totals count every matching entry before the limit, so one returned entry is enough to read them.
-const listLimit = 1000;
 type CloseApi = Pick<Api, 'closeConnections' | 'closeConnection' | 'connections'>;
 const tooLarge = (error: unknown) => error instanceof ApiError && error.status === 413;
 const add = (tally: BulkCloseResult, more: BulkCloseResult) => {
@@ -63,7 +62,7 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
       return {closed: closed + round.closed, skipped: round.skipped};
     }
     // Only the full detail tier carries `src`.
-    const listing = await api.connections({type, src: query.src, detail: 'full', limit: listLimit}, signal);
+    const listing = await api.connections({type, src: query.src, detail: 'full', limit: MAX_PAGE}, signal);
     const listed = listing[type];
     const sources = new Map<string | undefined, string[]>();
     for (const row of listed) {
@@ -76,6 +75,7 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
   }
 }
 
+// Totals count every matching entry before the limit, so one returned entry is enough to read them.
 export function useConnectionTotals(enabled = true) {
   const api = getApi();
   return useResource({key: ['connections', {totals: true}], fetch: signal => api.connections({type: 'all', detail: 'summary', limit: 1}, signal)}, {enabled});

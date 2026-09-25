@@ -1,4 +1,5 @@
 import {getApi} from '../api/index';
+import {poll} from './cadence';
 import type {Api} from '../api/api';
 import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
 import {clientError} from '../api/error';
@@ -64,7 +65,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
   return useResource(
     {
       key: ['flows', {connection_id, network, state, limit}],
-      every: 15000,
+      every: poll.lists,
       fetch: signal =>
         walk(
           cursor => api.flows({network, state, connection_id, cursor, limit, detail: 'full'}, signal),

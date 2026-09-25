@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
+import {MAX_PAGE} from './cadence';
 import {getApi} from '../api/index';
 import type {Capabilities} from '../api/model';
 import {ApiError} from '../api/error';
@@ -60,4 +61,4 @@ export async function walk<P extends {next_cursor: string | null}, T>(
 }
 // The page size a resource advertises, capped at the wire ceiling; undefined until the capabilities are known,
 // which leaves the backend's own default in force rather than guessing above its ceiling.
-export const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(1000, max ?? 1000) : undefined);
+export const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(MAX_PAGE, max ?? MAX_PAGE) : undefined);
