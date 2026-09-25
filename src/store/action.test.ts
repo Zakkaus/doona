@@ -3,9 +3,9 @@ import type {Api} from '../api/api';
 import type {OperationAccepted, OperationState} from '../api/model';
 import {ApiError} from '../api/error';
 import {finished, settle} from './action';
-import {refetchAll} from './resource';
+import {refetchAll} from './resourceCore';
 
-vi.mock('./resource', () => ({refetchAll: vi.fn(async () => [])}));
+vi.mock('./resourceCore', () => ({refetchAll: vi.fn(async () => [])}));
 
 const failed = (details: Record<string, unknown> | null): OperationState =>
   ({

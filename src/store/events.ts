@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, Capabilities} from '../api/model';
-import {refuseCredentials, watchResource} from './resource';
+import {refuseCredentials, watchResource} from './resourceCore';
 import {shouldRefetch} from '../api/invalidation';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
@@ -86,11 +86,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
           }
         });
     };
-    const capabilities = watchResource(
-      api,
-      {key: ['capabilities'], every: 0, retryErrors: true, followEvents: false, fetch: signal => api.capabilities(signal)},
-      changed
-    );
+    const capabilities = watchResource(api, {key: ['capabilities'], every: 0, retryErrors: true, fetch: signal => api.capabilities(signal)}, changed);
     changed();
     shared.controller.signal.addEventListener(
       'abort',

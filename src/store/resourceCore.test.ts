@@ -4,7 +4,7 @@ import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
 import {createMockApi} from '../api/mock';
 import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
-import {credentialRefusal, refetchAll, retainInactive, watchResource} from './resource';
+import {credentialRefusal, refetchAll, retainInactive, watchResource} from './resourceCore';
 import {ApiError} from '../api/error';
 
 vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
@@ -175,7 +175,12 @@ it('coalesces one event subscription for consumers sharing a resource', async ()
   const api = createMockApi();
   vi.mocked(subscribeEvents).mockClear();
   const fetch = vi.fn().mockResolvedValue('value');
-  const descriptor = {key: ['runtime'] as ResourceKey, every: 0, fetch};
+  const descriptor = {
+    key: ['runtime'] as ResourceKey,
+    every: 0,
+    fetch,
+    events: (listener: Parameters<typeof subscribeEvents>[1]) => subscribeEvents(api, listener)
+  };
   const first = watchResource(api, descriptor, () => {});
   const second = watchResource(api, descriptor, () => {});
   disposers.push(first.dispose, second.dispose);

@@ -1,4 +1,4 @@
-export {refetchAll, useCredentialRefusal} from './resource';
+export {refetchAll, useCredentialRefusal} from './resourceCore';
 export {tcpProbe} from './action';
 export {
   useVersion,

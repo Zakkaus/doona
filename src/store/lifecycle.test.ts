@@ -5,9 +5,7 @@ import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
 import {createMockApi} from '../api/mock';
 import {version} from '../api/mock/fixtures';
 import type {Version} from '../api/model';
-import {refetchAll, watchResource as subscribeResource} from './resource';
-
-vi.mock('./events', () => ({subscribeEvents: () => () => {}}));
+import {refetchAll, watchResource as subscribeResource} from './resourceCore';
 
 function watchResource(
   {api, key, every}: {api: Api; key: ResourceKey; every: number},

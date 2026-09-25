@@ -3,7 +3,7 @@ import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
 import {eventStatus, historyLost, subscribeEvents} from './events';
-import {watchResource} from './resource';
+import {watchResource} from './resourceCore';
 import type {ApiEvent, EventOptions} from '../api/model';
 
 const disposers: Array<() => void> = [];
@@ -27,11 +27,7 @@ it('shares visibility-aware capability recovery even when events are unavailable
     .mockRejectedValueOnce(new ApiError(503, '', 'offline'))
     .mockResolvedValue(recovered);
   api.subscribeEvents = vi.fn();
-  const resource = watchResource(
-    api,
-    {key: ['capabilities'], every: 0, retryErrors: true, followEvents: false, fetch: signal => api.capabilities(signal)},
-    () => {}
-  );
+  const resource = watchResource(api, {key: ['capabilities'], every: 0, retryErrors: true, fetch: signal => api.capabilities(signal)}, () => {});
   disposers.push(
     resource.dispose,
     subscribeEvents(api, () => {})
@@ -73,11 +69,7 @@ it('starts from capabilities already loaded by a mounted consumer without anothe
   const api = createMockApi();
   api.capabilities = vi.fn().mockResolvedValue(capabilities);
   api.subscribeEvents = vi.fn().mockResolvedValue(undefined);
-  const resource = watchResource(
-    api,
-    {key: ['capabilities'], every: 0, retryErrors: true, followEvents: false, fetch: signal => api.capabilities(signal)},
-    () => {}
-  );
+  const resource = watchResource(api, {key: ['capabilities'], every: 0, retryErrors: true, fetch: signal => api.capabilities(signal)}, () => {});
   disposers.push(resource.dispose);
   await vi.advanceTimersByTimeAsync(0);
   disposers.push(subscribeEvents(api, () => {}));
@@ -94,7 +86,7 @@ it('refreshes capabilities on generation and reconnect without replacing a healt
     value.onEvent({id: 'ready', event: 'stream.ready', data: {instance_id: 'first', observed_at: ''}});
   });
   api.capabilities = vi.fn(async () => structuredClone(capabilities));
-  const resource = watchResource(api, {key: ['capabilities'], every: 0, followEvents: false, fetch: signal => api.capabilities(signal)}, () => {});
+  const resource = watchResource(api, {key: ['capabilities'], every: 0, fetch: signal => api.capabilities(signal)}, () => {});
   disposers.push(
     resource.dispose,
     subscribeEvents(api, () => {})
@@ -138,7 +130,11 @@ it('leaves history and connection polling on their own cadence under runtime hea
   };
   const fetches = ['trafficHistory', 'memoryHistory', 'connections'].map(name => {
     const fetch = vi.fn(async () => name);
-    const resource = watchResource(api, {key: [name as 'trafficHistory' | 'memoryHistory' | 'connections'], every: 5000, fetch}, () => {});
+    const resource = watchResource(
+      api,
+      {key: [name as 'trafficHistory' | 'memoryHistory' | 'connections'], every: 5000, fetch, events: listener => subscribeEvents(api, listener)},
+      () => {}
+    );
     disposers.push(resource.dispose);
     return fetch;
   });
