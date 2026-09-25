@@ -37,7 +37,8 @@ export function usePendingApply() {
       return result.diagnostics ? {written: false, failure: ruleFailure(null, result.diagnostics, sources, t)} : {written: true, failure: null};
     } catch (error) {
       if (signal.aborted) return undefined;
-      const written = error instanceof LocalError && error.key === 'ui.writtenNotApplied';
+      // A lost operation is only reported after the backend accepted the write, so the file already holds the rules.
+      const written = error instanceof LocalError && (error.key === 'ui.writtenNotApplied' || error.key === 'ui.operationUnknown');
       return {written, failure: ruleFailure(error, null, sources, t)};
     }
   };

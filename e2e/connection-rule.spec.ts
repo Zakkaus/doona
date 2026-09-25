@@ -417,6 +417,24 @@ test('held rules cannot be discarded while they are applied', async ({page}) => 
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
 
+test('a rule written whose operation the backend forgot is not held again', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['PUT config/sources/src-main'] = async request => ({
+    ...(await api.replaceConfigSource('src-main', request.postDataJSON().content, request.headers()['if-match'])),
+    operation_id: 'op-gone',
+    href: '/api/v1/operations/op-gone'
+  });
+  handlers['GET operations/op-gone'] = async () => {
+    throw new ApiError(404, 'resource_not_found', 'Operation not found');
+  };
+  await hold(page, '1');
+  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast', {hasText: 'Could not confirm the result of the operation'})).toBeVisible();
+  // The write was accepted, so the rule is in the file and is not offered for a second write.
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+});
+
 test('the dialog waits for the groups before it writes', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const groups = gate();
