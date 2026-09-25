@@ -128,7 +128,12 @@ describe('native API conformance', () => {
     const observedPaths = Object.entries(contract.paths)
       .filter(([, item]) => item.get?.['x-permission'] === 'observe')
       .map(([path]) =>
-        path.replace('{groupId}', 'group-proxy').replace('{flow_id}', 'flow-23').replace('{id}', 'provider-a').replace('{source_id}', 'source-main')
+        path
+          .replace('{groupId}', 'group-proxy')
+          .replace('{flow_id}', 'flow-23')
+          .replace('/nodes/{id}', '/nodes/node-hk-01')
+          .replace('{id}', 'provider-a')
+          .replace('{source_id}', 'source-main')
       );
     expect(new Set(server.requests.map(request => request.path))).toEqual(new Set(['/api', '/api/v1/version', '/api/v1/capabilities', ...observedPaths]));
     expect(server.requests.slice(0, 3).map(request => request.path)).toEqual(['/api', '/api/v1/version', '/api/v1/capabilities']);
