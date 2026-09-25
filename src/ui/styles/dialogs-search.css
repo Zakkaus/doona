@@ -9,7 +9,7 @@
   border: 0;
   color: var(--rp-text);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
 }
 .rp-select[data-hovered] {

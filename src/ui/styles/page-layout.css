@@ -6,7 +6,7 @@
 }
 .rp-note {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
   line-height: 20px;
   color: var(--rp-subtle);
 }
@@ -44,7 +44,7 @@
 
 .rp-h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--rp-text-lg);
   line-height: 20px;
   font-weight: 700;
   min-width: 0;
@@ -62,7 +62,7 @@
 }
 .rp-code {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
 }
 .rp-dae-comment {
   color: var(--rp-code-comment);
@@ -96,7 +96,7 @@
 }
 .rp-kv .k {
   display: block;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
 }
@@ -113,7 +113,7 @@
   height: 20px;
   padding: 0 8px;
   border-radius: var(--rp-r-sm);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   /* Flex centres the glyphs; a line box as tall as the badge would sit CJK glyphs below its middle. */
   line-height: 1;
   font-weight: 500;

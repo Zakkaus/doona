@@ -14,7 +14,7 @@
 .rp-tree-hint {
   display: none;
   color: var(--rp-subtle);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
 }
 @media (max-width: 600px) {
@@ -80,7 +80,7 @@
   background: var(--rp-overlay);
   color: var(--rp-text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
   line-height: 16px;
   text-align: start;
   cursor: pointer;
@@ -108,11 +108,11 @@
 }
 .rp-tree-tile[data-stage='rule'] .l {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
 }
 .rp-tree-tile .s {
   margin-inline-start: 8px;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   color: var(--rp-subtle);
 }
 .rp-tree-tile .s.ok {

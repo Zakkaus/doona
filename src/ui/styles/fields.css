@@ -63,7 +63,7 @@
 .rp-field-error {
   display: flex;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   font-weight: 500;
   color: var(--rp-negative-text);
@@ -82,7 +82,7 @@
 }
 .rp-field > label,
 .rp-field .lbl {
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
 }

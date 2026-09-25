@@ -43,7 +43,7 @@ button.rp-node[data-focus-visible] {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
   white-space: pre;

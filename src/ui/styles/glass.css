@@ -38,6 +38,7 @@
   --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
   --rp-glass: rgba(28, 28, 30, 0.62);
   --rp-glass-strong: rgba(44, 44, 46, 0.82);
+  --rp-glass-fallback: #2c2c2e;
   --rp-edge: rgba(255, 255, 255, 0.08);
   --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.06) 40%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.14) 100%);
   --rp-track: rgba(118, 118, 128, 0.24);
@@ -89,6 +90,8 @@
   --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.18);
   --rp-glass: rgba(255, 255, 255, 0.72);
   --rp-glass-strong: rgba(255, 255, 255, 0.82);
+  /* The opaque layer where backdrop-filter is unsupported. */
+  --rp-glass-fallback: #fff;
   --rp-edge: rgba(255, 255, 255, 0.6);
   --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0.55) 100%);
   --rp-track: rgba(118, 118, 128, 0.12);
@@ -267,16 +270,7 @@
   :root[data-family='glass'] .rp-top,
   :root[data-family='glass'] .rp-side,
   :root[data-family='glass'] .rp-hubbar {
-    background: #fff;
-  }
-  :root[data-family='glass'][data-scheme='dark'] .rp-table [role='columnheader'],
-  :root[data-family='glass'][data-scheme='dark'] .rp-table-empty,
-  :root[data-family='glass'][data-scheme='dark'] .rp-popover,
-  :root[data-family='glass'][data-scheme='dark'] .rp-modal,
-  :root[data-family='glass'][data-scheme='dark'] .rp-top,
-  :root[data-family='glass'][data-scheme='dark'] .rp-side,
-  :root[data-family='glass'][data-scheme='dark'] .rp-hubbar {
-    background: #2c2c2e;
+    background: var(--rp-glass-fallback);
   }
 }
 
