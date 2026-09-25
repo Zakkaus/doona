@@ -1,7 +1,7 @@
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0_beta4
-_tag=v0.1.0-beta.4
+pkgver=0.1.0_beta5
+_tag=v0.1.0-beta.5
 _upstream_ver=${_tag#v}
 pkgrel=0
 pkgdesc="Web UI for the daeuniverse engines"
@@ -41,6 +41,6 @@ fonts() {
 
 # Placeholder SHA-512 values: replace both with `abuild checksum` after publication.
 sha512sums="
-0  doona-0.1.0-beta.4.tar.gz
-0  doona-fonts-0.1.0-beta.4.tar.gz
+0  doona-0.1.0-beta.5.tar.gz
+0  doona-fonts-0.1.0-beta.5.tar.gz
 "
