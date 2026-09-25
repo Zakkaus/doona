@@ -62,28 +62,12 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
       return {closed: closed + round.closed, skipped: round.skipped};
     }
     const listed = (await api.connections({type, src: query.src, detail: 'summary', limit: listLimit}, signal))[type];
-    if (query.src)
-      add(
-        round,
-        await closeEach(
-          api,
-          listed.map(row => row.id),
-          signal
-        )
-      );
-    else
-      for (const src of new Set(listed.map(row => sourceIp(row.src ?? undefined)))) {
-        if (src) add(round, await closeInBatches(api, {type, src}, signal));
-        else
-          add(
-            round,
-            await closeEach(
-              api,
-              listed.filter(row => !sourceIp(row.src ?? undefined)).map(row => row.id),
-              signal
-            )
-          );
-      }
+    const sources = new Map<string | undefined, string[]>();
+    for (const row of listed) {
+      const src = query.src ?? sourceIp(row.src ?? undefined);
+      sources.set(src, (sources.get(src) ?? []).concat(row.id));
+    }
+    for (const [src, ids] of sources) add(round, src && !query.src ? await closeInBatches(api, {type, src}, signal) : await closeEach(api, ids, signal));
     closed += round.closed;
     if (!round.closed) return {closed, skipped: round.skipped};
   }
