@@ -42,24 +42,24 @@ test('home charts collect memory polls and change the traffic history range', as
   await page.goto('/#/activity');
   const memory = page.getByRole('region', {name: 'Memory', exact: true});
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  await expect(traffic.locator('.recharts-surface')).toBeVisible();
+  await expect(traffic.locator('.rp-activity-surface')).toBeVisible();
   releaseNodes();
   // One sample is not a curve yet; the second poll draws it.
   await expect(memory.getByRole('status')).toContainText('Sampling');
   await page.clock.fastForward(5100);
-  await expect(memory.locator('.recharts-surface')).toBeVisible();
+  await expect(memory.locator('.rp-activity-surface')).toBeVisible();
   await expect(memory.locator('.rp-legend')).toContainText('2 MB');
-  await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', /L|C/);
-  const memoryCurve = await memory.locator('.recharts-area-curve').first().getAttribute('d');
+  await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', /L|C/);
+  const memoryCurve = await memory.locator('.rp-area-curve').first().getAttribute('d');
   const request = page.waitForRequest(
     request => request.url().includes('/runtime/traffic/history?') && new URL(request.url()).searchParams.get('window_seconds') === '3600'
   );
   await traffic.getByRole('radio', {name: '1 h', exact: true}).click();
   await request;
-  await expect(traffic.locator('.recharts-surface')).toBeVisible();
-  await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
+  await expect(traffic.locator('.rp-activity-surface')).toBeVisible();
+  await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', memoryCurve!);
   await traffic.getByRole('radio', {name: '7 d', exact: true}).click();
-  await expect(memory.locator('.recharts-area-curve').first()).toHaveAttribute('d', memoryCurve!);
+  await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', memoryCurve!);
 });
 
 test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
@@ -216,14 +216,14 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
 
 // The live window is two minutes of ten-second history, so a curve drawn from it has a dozen points across the plot.
 async function expectLiveCurves(page: Page) {
-  const curves = page.locator('.rp-spark .recharts-area-curve');
+  const curves = page.locator('.rp-spark .rp-area-curve');
   await expect(curves).toHaveCount(3);
   for (const curve of await curves.all()) await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(10);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  const area = traffic.locator('.recharts-area-curve').first();
+  const area = traffic.locator('.rp-area-curve').first();
   await expect.poll(() => area.evaluate(pointCount)).toBeGreaterThanOrEqual(10);
   // The curve spans the window rather than bunching at its newest edge.
-  const plot = await traffic.locator('.recharts-cartesian-grid').first().boundingBox();
+  const plot = await traffic.locator('.rp-area-grid').first().boundingBox();
   const drawn = await area.boundingBox();
   expect(drawn!.width).toBeGreaterThan(plot!.width * 0.8);
 }
@@ -403,7 +403,7 @@ test('local traffic renders without history and duplicate node names retain inde
     return route.fulfill({json: responses[path]});
   });
   await page.goto('/#/activity');
-  await expect(page.getByRole('region', {name: 'Traffic', exact: true}).locator('.recharts-surface')).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Traffic', exact: true}).locator('.rp-activity-surface')).toBeVisible();
   const trigger = page.getByRole('button', {name: 'Node', exact: true});
   await trigger.click();
   await page.getByRole('menuitemradio').filter({hasText: 'provider-b'}).click();
@@ -446,7 +446,7 @@ test('optional runtime does not block independent activity sections or poll an u
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.getByRole('button', {name: 'Node', exact: true})).toBeVisible();
-  await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.recharts-surface')).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.rp-activity-surface')).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
   await expect(page.getByText('Not provided by this backend', {exact: true})).toBeVisible();
   await page.clock.fastForward(10100);

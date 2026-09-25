@@ -48,20 +48,44 @@ export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
   return over;
 }
 
-// The content width of an element, tracked through resizes; null until measured.
-export function useContentWidth<E extends HTMLElement>() {
+// Content dimensions shared by responsive SVG charts; activity charts round and throttle resize updates.
+export function useContentSize<E extends HTMLElement>(round = Math.floor, interval = 0) {
   const ref = useRef<E>(null);
-  const [width, setWidth] = useState<number | null>(null);
+  const [size, setSize] = useState<{width: number; height: number} | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Measured before the first paint, so a table never shows its minimum widths for one frame.
-    setWidth(Math.floor(el.clientWidth));
-    const observer = new ResizeObserver(entries => setWidth(Math.floor(entries[0].contentRect.width)));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let pending = {width: 0, height: 0};
+    const measure = (width: number, height: number) => {
+      const next = {width: round(width), height: round(height)};
+      setSize(previous => (previous?.width === next.width && previous.height === next.height ? previous : next));
+    };
+    const initial = el.getBoundingClientRect();
+    measure(round === Math.floor ? el.clientWidth : initial.width, initial.height);
+    const observer = new ResizeObserver(entries => {
+      const {width, height} = entries[0].contentRect;
+      pending = {width, height};
+      if (!interval) measure(width, height);
+      else if (timer === undefined)
+        timer = setTimeout(() => {
+          timer = undefined;
+          measure(pending.width, pending.height);
+        }, interval);
+    });
     observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, width] as const;
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [round, interval]);
+  return [ref, size] as const;
+}
+
+// The content width of an element, tracked through resizes; null until measured.
+export function useContentWidth<E extends HTMLElement>() {
+  const [ref, size] = useContentSize<E>();
+  return [ref, size?.width ?? null] as const;
 }
 // Fill the remaining viewport without shrinking below min.
 export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {

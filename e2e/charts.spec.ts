@@ -320,3 +320,52 @@ test('DNS summaries use their card height at 1024 px', async ({page}) => {
     }
   }
 });
+
+test('activity draws all six charts without loading a chart vendor', async ({page}) => {
+  const requests: string[] = [];
+  page.on('request', request => requests.push(request.url()));
+  await page.goto('/#/activity');
+  await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
+  expect(requests.filter(url => /vendor-charts/.test(url))).toEqual([]);
+  await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
+  const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
+  const chart = traffic.getByRole('application');
+  await chart.focus();
+  await expect(traffic.getByRole('status')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(traffic.getByRole('status')).toBeHidden();
+  await page.keyboard.press('ArrowRight');
+  await expect(traffic.getByRole('status')).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(traffic.getByRole('status')).toBeVisible();
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await expect(traffic.locator('.rp-charttip-bounded')).toHaveCSS('transition-duration', '0.4s');
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await expect(traffic.locator('.rp-charttip-bounded')).toHaveCSS('transition-duration', '0s');
+  await page.keyboard.press('Enter');
+  await expect(traffic.getByRole('status')).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(traffic.getByRole('status')).toBeVisible();
+});
+
+for (const lang of ['zh-TW', 'zh-CN']) {
+  test.describe(`activity tooltips in ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    test('sorts translated series names consistently', async ({page}) => {
+      await page.goto('/#/activity');
+      await page.getByRole('application').nth(2).focus();
+      await expect(page.locator('.rp-charttip-bounded li').first()).toContainText(/^cgroup/);
+    });
+  });
+}
+
+test('decorative sparklines retain their pointer highlight without a tooltip or focus stop', async ({page}) => {
+  await page.goto('/#/activity');
+  const spark = page.locator('.rp-spark svg').first();
+  await spark.hover();
+  await expect(spark.locator('circle')).toHaveAttribute('r', '4');
+  await expect(spark).not.toHaveAttribute('tabindex');
+  await expect(page.locator('.rp-charttip-bounded')).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await expect(spark.locator('circle')).toHaveCount(0);
+});

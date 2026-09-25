@@ -1,4 +1,4 @@
-// Pure layout for the charts drawn without a chart library; every function here is tested on its own.
+// Shared chart layout and axis helpers.
 
 // Nearest-rank percentile of values already sorted ascending; null for no values.
 export function percentile(sorted: number[], p: number): number | null {
@@ -115,4 +115,44 @@ export function symlogAxis(max: number): {end: number; ticks: number[]} {
   const ticks = [0];
   for (let tick = 1000; tick <= end; tick *= 1000) ticks.push(tick);
   return {end, ticks};
+}
+
+export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {
+  const fraction = hi === lo ? 0.5 : (value - lo) / (hi - lo);
+  return start * (1 - fraction) + end * fraction;
+}
+
+// Keep the last label, optionally the first, shifting end labels inside the SVG before thinning.
+export function visibleTicks(positions: number[], sizes: number[], start: number, end: number, gap: number, preserveStart: boolean) {
+  if (!positions.length) return [];
+  const sign = positions.length > 1 && positions[1] < positions[0] ? -1 : 1;
+  let lo = start;
+  let hi = end;
+  const shown: Array<{index: number; position: number}> = [];
+  const last = positions.length - 1;
+  const visit = (index: number) => {
+    const size = sizes[index];
+    if (!Number.isFinite(size) || !Number.isFinite(positions[index])) return;
+    let pos = sign * positions[index];
+    if (index === last) pos = Math.min(pos, hi - size / 2);
+    else if (index === 0 && preserveStart) pos = Math.max(pos, lo + size / 2);
+    if (pos - size / 2 < lo || pos + size / 2 > hi) return;
+    shown.push({index, position: sign * pos});
+    if (preserveStart && index !== last) lo = pos + size / 2 + gap;
+    else hi = pos - size / 2 - gap;
+  };
+  if (sign < 0) {
+    lo = -end;
+    hi = -start;
+  }
+  visit(last);
+  if (preserveStart) for (let i = 0; i < last; i++) visit(i);
+  else for (let i = last - 1; i >= 0; i--) visit(i);
+  return shown.sort((a, b) => a.index - b.index);
+}
+
+export function nearestIndex(positions: number[], coordinate: number): number {
+  let index = 0;
+  for (let i = 1; i < positions.length; i++) if (Math.abs(positions[i] - coordinate) < Math.abs(positions[index] - coordinate)) index = i;
+  return index;
 }
