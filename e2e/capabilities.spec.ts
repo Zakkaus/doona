@@ -122,13 +122,11 @@ test.describe('first-release backend', () => {
     await expect(page.locator('.rp-strip')).toBeVisible();
     await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
     await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Overview', 'Activity', 'Connections', 'Settings']);
-    for (const route of ['overview', 'connections', 'settings'] as const) {
+    // Every page loads, the offered ones as the current navigation entry and the rest in their unavailable state.
+    const offeredPages: readonly string[] = ['activity', 'overview', 'connections', 'settings'];
+    for (const route of routes) {
       await page.goto(`/#/${route}`);
-      await expect(page.locator('.rp-nav[href="#/' + route + '"]')).toHaveAttribute('aria-current', 'page');
-      await expect(page.locator('.rp-content')).toBeVisible();
-    }
-    for (const route of routes.filter(r => !['activity', 'overview', 'connections', 'settings'].includes(r))) {
-      await page.goto(`/#/${route}`);
+      if (offeredPages.includes(route)) await expect(page.locator('.rp-nav[href="#/' + route + '"]')).toHaveAttribute('aria-current', 'page');
       await expect(page.locator('.rp-content')).toBeVisible();
     }
     await page.goto('/#/connections?tab=list');
