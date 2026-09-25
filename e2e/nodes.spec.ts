@@ -268,3 +268,25 @@ test('the source kind badge shows its whole label in every language', async ({pa
     for (const badge of await badges.all()) expect(await badge.evaluate(element => element.scrollWidth <= element.clientWidth), lang).toBe(true);
   }
 });
+
+test.describe('in Traditional Chinese', () => {
+  test.use({storage: {'doona-lang': 'zh-TW'}});
+
+  test('a failed subscription refresh names its cause in the page language', async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    handlers['GET providers'] = async () => {
+      const list = await api.providers();
+      const subscription = list.providers.find(item => item.kind === 'subscription')!;
+      subscription.status = 'error';
+      subscription.last_error = {code: 'fetch_failed', message: 'Provider refresh did not complete successfully.', details: null};
+      return list;
+    };
+    await page.goto('/#/nodes?tab=list');
+    const status = rows(page.locator('.rp-table').first()).getByText('失敗', {exact: true});
+    await expect(async () => {
+      await page.mouse.move(0, 0);
+      await status.hover();
+      await expect(page.getByRole('tooltip')).toContainText('無法下載訂閱，沿用目前的節點', {timeout: 1500});
+    }).toPass();
+  });
+});

@@ -2,6 +2,7 @@ import type {Capabilities, GeoAssetKind, GeoData, GeoDataSettings, GeoDataSettin
 import {geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {localTime} from '../../i18n/format';
+import {backendMessage} from '../../i18n/backend';
 
 export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
 export type GeodataChoice = GeodataPresetId | 'custom';
@@ -131,6 +132,6 @@ export function geodataStatus(data: GeoData | undefined, autoUpdate: boolean, lo
     [t('settings.geodataLastChecked'), time(data?.last_checked_at)],
     [t('settings.geodataLastUpdated'), time(data?.last_updated_at)],
     [t('settings.geodataNextCheck'), data?.next_check_at ? localTime(data.next_check_at, locale) : autoUpdate ? '—' : t('settings.geodataAutoOff')],
-    [t('settings.geodataLastError'), data?.last_error ? data.last_error.message : t('settings.geodataNoError')]
+    [t('settings.geodataLastError'), data?.last_error ? backendMessage(data.last_error.code, data.last_error.message, t) : t('settings.geodataNoError')]
   ];
 }

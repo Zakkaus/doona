@@ -22,7 +22,21 @@ const known: Record<string, Key> = {
   temporarily_unavailable: 'ui.backend.temporarilyUnavailable',
   setup_required: 'ui.backend.setupRequired',
   setup_already_completed: 'ui.backend.setupAlreadyCompleted',
-  invalid_credentials: 'ui.backend.invalidCredentials'
+  invalid_credentials: 'ui.backend.invalidCredentials',
+  // Codes honk sets on operation.error and provider.last_error; the contract leaves these to the adapter.
+  reload_rejected: 'ui.backend.reloadRejected',
+  reload_degraded: 'ui.backend.reloadDegraded',
+  engine_unavailable: 'ui.backend.engineUnavailable',
+  request_exhausted: 'ui.backend.requestExhausted',
+  lifecycle_failed: 'ui.backend.lifecycleFailed',
+  geodata_update_failed: 'ui.backend.geodataUpdateFailed',
+  probe_interrupted: 'ui.backend.probeInterrupted',
+  probe_cleanup_failed: 'ui.backend.probeCleanupFailed',
+  publication_rejected: 'ui.backend.publicationRejected',
+  publication_degraded: 'ui.backend.publicationDegraded',
+  fetch_failed: 'ui.backend.fetchFailed',
+  provider_replaced: 'ui.backend.providerReplaced',
+  result_too_large: 'ui.backend.resultTooLarge'
 };
 
 export function backendMessage(code: string, message: string, t: Translator): string {

@@ -135,4 +135,15 @@ describe('capability and status', () => {
       ['Last error', 'None']
     ]);
   });
+  it('words the last error by its code, as other operation failures are', () => {
+    const failed = (code: string) =>
+      geodataStatus(
+        {observed_at: '', assets: [], last_error: {code, message: 'Geodata update did not complete successfully', details: null}},
+        false,
+        'en-US',
+        t
+      )[3][1];
+    expect(failed('geodata_update_failed')).toBe(t('ui.backend.geodataUpdateFailed'));
+    expect(failed('adapter_specific')).toBe(t('ui.backendMessage', {message: 'Geodata update did not complete successfully'}));
+  });
 });
