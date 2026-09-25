@@ -492,6 +492,18 @@ test('typing in a module keeps its diagnostics and layout until the next validat
   );
 });
 
+test('code scrolled sideways passes under the line numbers', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  await routing.locator('.cm-content').fill(`routing {\n  domain(${'long.'.repeat(40)}example.org) -> proxy\n  fallback: resilient\n}`);
+  const gutter = routing.locator('.cm-gutters');
+  const before = await gutter.screenshot();
+  await routing.locator('.cm-scroller').evaluate(scroller => (scroller.scrollLeft = 120));
+  expect(await gutter.screenshot()).toEqual(before);
+});
+
 test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
   const {api} = await configBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
