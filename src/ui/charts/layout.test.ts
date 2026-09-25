@@ -1,5 +1,19 @@
 import {describe, expect, it} from 'vitest';
-import {heatTone, logDomain, logPosition, logTicks, percentile, swarm, symlogAxis, symlogPosition, timeBuckets, waffleCells} from './layout';
+import {
+  linearPosition,
+  visibleTicks,
+  nearestIndex,
+  heatTone,
+  logDomain,
+  logPosition,
+  logTicks,
+  percentile,
+  swarm,
+  symlogAxis,
+  symlogPosition,
+  timeBuckets,
+  waffleCells
+} from './layout';
 
 describe('chart layout', () => {
   it('takes nearest-rank percentiles on odd and even counts', () => {
@@ -72,4 +86,27 @@ describe('chart layout', () => {
     expect(symlogPosition(1e6, 1e12)).toBeCloseTo(0.5, 2);
     expect(symlogPosition(-5, 1e12)).toBe(0);
   });
+});
+
+describe('linearPosition', () => {
+  it('interpolates without clipping, centring a constant domain', () => {
+    expect(linearPosition(15, [10, 20], [20, 120])).toBe(70);
+    expect(linearPosition(30, [10, 20], [20, 120])).toBe(220);
+    expect(linearPosition(7, [7, 7], [20, 120])).toBe(70);
+  });
+});
+it('keeps end ticks and thins overlapping interior labels', () => {
+  expect(visibleTicks([10, 30, 50, 70, 90], [20, 20, 20, 20, 20], 0, 100, 16, true)).toEqual([
+    {index: 0, position: 10},
+    {index: 2, position: 50},
+    {index: 4, position: 90}
+  ]);
+});
+
+it('omits ticks until their label dimensions are measured', () => {
+  expect(visibleTicks([10, 50], [], 0, 100, 16, true)).toEqual([]);
+});
+it('selects the nearest sample, keeping the earlier sample at a midpoint', () => {
+  expect(nearestIndex([0, 10, 20], 5)).toBe(0);
+  expect(nearestIndex([0, 10, 20], 16)).toBe(2);
 });

@@ -1,6 +1,7 @@
-// The one chart entry point: pages take charts and the palette from here and never import a chart library.
+// Charts live here, built on d3-shape and the shared palette, tooltip and layout helpers.
+// Pages use this entry point; never draw ad-hoc SVG charts or import chart libraries.
 export {usePalette, type Palette} from './palette';
-export {AreaChart, Spark, Donut, Legend} from './Recharts';
+export {AreaChart, Spark, Donut, Legend} from './Charts';
 export {FactStrip, type ChartFact} from './FactStrip';
 export {LegendItem} from './LegendItem';
 export {Beeswarm, type SwarmPoint, type SwarmMark, type SwarmRow} from './Beeswarm';

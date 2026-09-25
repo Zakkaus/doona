@@ -53,16 +53,17 @@
     "@codemirror/state": "^6.7.5",
     "@codemirror/view": "^6.43.12",
     "@lezer/highlight": "^1.2.3",
+    "d3-shape": "^3.2.0",
     "react": "^19.2.0",
     "react-aria": "3.52.1",
     "react-aria-components": "1.21.1",
-    "react-dom": "^19.2.0",
-    "recharts": "^3.10.1"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
     "@react-aria/optimize-locales-plugin": "^1.1.4",
+    "@types/d3-shape": "^3.2.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.7.0",

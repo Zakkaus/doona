@@ -82,7 +82,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
 test('activity keeps card geometry while its charts load', async ({page}) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
-  await page.route('**/assets/vendor-charts-*.js', async route => {
+  await page.route('**/assets/{AreaChart,Sparkline,Donut}-*.js', async route => {
     await gate;
     await route.continue();
   });
@@ -92,16 +92,16 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
     await expect(page.locator('.rp-legend').first()).toBeVisible();
     const cards = page.locator('.rp-content .rp-card');
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
-    await expect(page.locator('.recharts-surface')).toHaveCount(0);
+    await expect(page.locator('.rp-activity-surface')).toHaveCount(0);
     release();
-    await expect(page.locator('.recharts-surface').first()).toBeVisible();
+    await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();
   }
 });
 
-for (const chunk of ['Policies', 'vendor-charts']) {
+for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
   test(`a rejected ${chunk} import preserves navigation and recovers after retry`, async ({browser}) => {
     const context = await browser.newContext({serviceWorkers: 'block'});
     const page = await context.newPage();
@@ -126,7 +126,7 @@ for (const chunk of ['Policies', 'vendor-charts']) {
       await alert.getByRole('button', {name: 'Retry'}).click();
       await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : '.rp-strip')).toBeVisible();
       await expect(page.locator('.rp-content .rp-alert')).toHaveCount(0);
-      if (chunk === 'vendor-charts') await expect(page.locator('.recharts-surface')).toHaveCount(6);
+      if (chunk !== 'Policies') await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
       expect(uncaught).toEqual([]);
     } finally {
       await context.close();

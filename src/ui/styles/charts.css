@@ -437,3 +437,9 @@
     grid-template-columns: repeat(var(--facts), minmax(0, 1fr));
   }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .rp-charttip-bounded {
+    transition: transform 400ms ease;
+  }
+}
