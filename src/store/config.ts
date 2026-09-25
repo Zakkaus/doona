@@ -1,4 +1,4 @@
-import {ApiError} from '../api/error';
+import {ApiError, clientError} from '../api/error';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getApi} from '../api/index';
 import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
@@ -65,10 +65,48 @@ export function refusalOutcome(
   return refused === lastRefused ? {error: new LocalError('config.diskAhead'), lastRefused} : {error, lastRefused: refused};
 }
 
+// Advertised byte limits for one kind of write, from discovery; either may be missing on an older backend.
+export type WriteLimits = {content?: number; body?: number};
+const utf8 = (text: string) => new TextEncoder().encode(text).length;
+const tooLarge = (limit: number) => clientError(413, 'request_too_large', `Configuration exceeds the ${limit}-byte limit`, 'config.tooLarge', {limit});
+
+// The contract applies the content limit to the source text and the shared JSON body limit to the request, which
+// escaping makes larger than the text. Returns the limit this write exceeds.
+export function exceededLimit(limits: WriteLimits, content: string, body: unknown): number | undefined {
+  if (limits.content !== undefined && utf8(content) > limits.content) return limits.content;
+  if (limits.body !== undefined && utf8(JSON.stringify(body)) > limits.body) return limits.body;
+  return undefined;
+}
+
+// A 413 does not say which limit refused the write, so it names the tighter one advertised.
+export function sizeRefusal(error: unknown, limits: WriteLimits): unknown {
+  const advertised = [limits.content, limits.body].filter(limit => limit !== undefined);
+  return error instanceof ApiError && error.status === 413 && advertised.length ? tooLarge(Math.min(...advertised)) : error;
+}
+
+async function withinLimits<T>(limits: WriteLimits, content: string, body: unknown, send: () => Promise<T>): Promise<T> {
+  const limit = exceededLimit(limits, content, body);
+  if (limit !== undefined) throw tooLarge(limit);
+  return send().catch((error: unknown) => {
+    throw sizeRefusal(error, limits);
+  });
+}
+
 export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const api = getApi();
-  const validation = useCapabilities().data?.resources.config_validate;
+  const capabilities = useCapabilities().data;
+  const validation = capabilities?.resources.config_validate;
   const canValidate = validation?.available === true && validation.modes?.includes('full') === true;
+  const body = capabilities?.limits.max_json_body_bytes;
+  const writeMax = capabilities?.resources.config.max_bytes;
+  const validateMax = validation?.max_bytes;
+  const validateConfig = useCallback(
+    (request: ConfigValidationRequest, signal: AbortSignal) =>
+      withinLimits({content: validateMax, body}, request.sources.map(source => source.content ?? '').join(''), request, () =>
+        api.validateConfig(request, signal)
+      ),
+    [api, validateMax, body]
+  );
   const {busy, error, run, cancel} = useAction<'validate' | 'save'>({rethrow});
   const [sourceId, setSourceId] = useState<string | null>(null);
   const lastRefused = useRef<string | null>(null);
@@ -81,9 +119,9 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
       (request: ConfigValidationRequest): Promise<ConfigValidationResult | undefined> =>
         run('validate', signal => {
           setSourceId(request.sources.length === 1 ? (request.sources[0].id ?? null) : null);
-          return api.validateConfig(request, signal);
+          return validateConfig(request, signal);
         }),
-      [api, run]
+      [validateConfig, run]
     ),
     apply: useCallback(
       (source: ConfigSource, candidate: string | ((text: string) => string | null)) =>
@@ -95,11 +133,13 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           const content = typeof candidate === 'string' ? candidate : candidate(source.content!);
           if (content === null) return undefined;
           if (canValidate && source.kind === 'main' && source.path !== '<redacted>') {
-            const check = await api.validateConfig({sources: [{id: source.id, path: source.path, content}], mode: 'full'}, signal);
+            const check = await validateConfig({sources: [{id: source.id, path: source.path, content}], mode: 'full'}, signal);
             signal.throwIfAborted();
             if (!check.valid) return {diagnostics: check.diagnostics};
           }
-          const accepted = await api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal).catch(async error => {
+          const accepted = await withinLimits({content: writeMax, body}, content, {content}, () =>
+            api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal)
+          ).catch(async error => {
             if (!(error instanceof ApiError) || error.status !== 412) throw error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
             const fresh = await api.config(signal).catch(() => null);
@@ -115,7 +155,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           refetch();
           return {result: finished(operation, 'reload', {written: true})};
         }),
-      [api, canValidate, run, refetch]
+      [api, canValidate, validateConfig, writeMax, body, run, refetch]
     )
   };
 }

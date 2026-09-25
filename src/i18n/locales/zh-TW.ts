@@ -101,6 +101,7 @@ export const messages = {
   'config.saved': '{path} 已寫入，組態已重載',
   'config.writeRestart': '{n} 項設定需重新啟動才會生效，未寫入。請在檔案中修改後重新啟動 honk',
   'config.diskAhead': '磁碟上的檔案與執行中的組態不同，因此未寫入。請重載 honk 以套用該檔案；若檔案變更了需重新啟動的設定，請重新啟動 honk',
+  'config.tooLarge': '組態超過後端可接受的大小。上限：{limit} 位元組',
   'config.diagnostics': '診斷',
   'config.export': '匯出',
   'config.exportWarning': '匯出檔案保留顯示的原始文字，可能含有憑證；分享前請檢查內容。',
