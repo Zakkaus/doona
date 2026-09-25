@@ -33,7 +33,6 @@ const known: Record<string, Key> = {
   probe_interrupted: 'ui.backend.probeInterrupted',
   probe_cleanup_failed: 'ui.backend.probeCleanupFailed',
   publication_rejected: 'ui.backend.publicationRejected',
-  publication_degraded: 'ui.backend.publicationDegraded',
   fetch_failed: 'ui.backend.fetchFailed',
   provider_replaced: 'ui.backend.providerReplaced',
   result_too_large: 'ui.backend.resultTooLarge'

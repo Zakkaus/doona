@@ -1199,7 +1199,6 @@ export const messages = {
   'ui.backend.probeInterrupted': '探测在完成前中断',
   'ui.backend.probeCleanupFailed': '探测已完成，但清理失败',
   'ui.backend.publicationRejected': '后端拒绝应用新节点，沿用当前节点',
-  'ui.backend.publicationDegraded': '节点已应用，但数据路径处于降级状态',
   'ui.backend.fetchFailed': '无法下载订阅，沿用当前节点',
   'ui.backend.providerReplaced': '刷新期间订阅已更改，本次结果已丢弃',
   'ui.backend.resultTooLarge': '操作结果超过后端的内存上限',
