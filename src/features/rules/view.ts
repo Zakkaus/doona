@@ -8,7 +8,7 @@ import {conditionKinds, type ConditionKind} from '../../dae/groups';
 import {fileName} from '../config/names';
 import {coverageView, type CoverageView} from './flows/view';
 import {word} from '../../api/labels';
-import {ruleAnchor, sourceFor} from './source';
+import {ruleAnchor, ruleOutbounds, sourceFor} from './source';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
@@ -108,7 +108,7 @@ export function dictionaryView(
         .filter((_, i) => rows[i].removable)
         .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
     ],
-    outbounds: [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}))
+    outbounds: ruleOutbounds(groups)
   };
 }
 type DistributionRow = {

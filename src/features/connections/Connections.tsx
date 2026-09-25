@@ -20,6 +20,7 @@ import {
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
+import {RuleDialog} from './RuleDialog';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
@@ -113,6 +114,16 @@ export function Connections(props: PageProps) {
                 <span className="rp-label">{t('conn.rule')}</span>
                 <RuleRef {...cur.rule} />
               </div>
+              {(vm.ruleAction.canAdd || vm.ruleAction.canEdit) && (
+                <div className="rp-cluster">
+                  {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
+                  {vm.ruleAction.canEdit && (
+                    <Button quiet onPress={vm.editRule}>
+                      {t('conn.editRule')}
+                    </Button>
+                  )}
+                </div>
+              )}
               <div className="rp-cluster">
                 {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
                 {cur.source && (
@@ -134,6 +145,7 @@ export function Connections(props: PageProps) {
         </DetailPanel>
       </div>
       {vm.notInSnapshot && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
+      <RuleDialog dialog={vm.ruleAction.dialog} />
     </>
   );
   return (
