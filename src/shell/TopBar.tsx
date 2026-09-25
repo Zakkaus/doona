@@ -132,7 +132,7 @@ export const TopBar = memo(function TopBar({
               {label: t('lang'), icon: <Translate />, sections: [{title: t('lang'), items: languageItems, value: lang, onChange: k => pickLang(k as Lang)}]},
               {
                 label: t('theme'),
-                icon: <SchemeIcon dark={ap.dark} />,
+                icon: <Contrast />,
                 sections: [{title: t('theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
               },
               {label: t('palette'), icon: <Color />, sections: palettes},

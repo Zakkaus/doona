@@ -106,6 +106,18 @@ test('language, theme, palette and wordmark are each two taps away in the overfl
   await expect(top.getByRole('button', {name: '更多选项'})).toBeVisible();
 });
 
+test('the overflow menu draws every row icon at the same size, whatever the scheme', async ({page}) => {
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({colorScheme: scheme});
+    await page.goto('/#/overview');
+    await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
+    const icons = page.locator('.rp-subitem .ic > *');
+    await expect(icons).toHaveCount(4);
+    for (const box of await icons.evaluateAll(els => els.map(el => el.getBoundingClientRect()))) expect([box.width, box.height]).toEqual([16, 16]);
+    await page.keyboard.press('Escape');
+  }
+});
+
 test('the overflow menu opens and leaves a submenu by keyboard', async ({page}) => {
   await page.goto('/#/overview');
   await page.locator('.rp-top').getByRole('button', {name: 'More options'}).focus();

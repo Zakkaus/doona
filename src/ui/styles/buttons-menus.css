@@ -148,7 +148,7 @@
   display: flex;
   color: var(--rp-subtle);
 }
-.rp-subitem > .ic > :is(svg, img, .rp-icon-stack) {
+.rp-subitem > .ic > :is(svg, img) {
   width: 16px;
   height: 16px;
 }
