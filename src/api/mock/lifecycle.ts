@@ -33,7 +33,8 @@ export function createLifecycle(
   eventsCapability: Capabilities['resources']['events'],
   runtime: Pick<Runtime, 'observed_at' | 'last_reload'>,
   logSettings: () => RuntimeSettings['log'],
-  revision: () => string
+  revision: () => string,
+  trickleEvery = 2500
 ): MockLifecycle {
   const operations = new Map<string, OperationState>();
   let sequence = 0;
@@ -201,7 +202,7 @@ export function createLifecycle(
       return;
     }
     logListeners.add(emit);
-    if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), 2500);
+    if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), trickleEvery);
     await new Promise<void>(resolve => {
       signal?.addEventListener(
         'abort',

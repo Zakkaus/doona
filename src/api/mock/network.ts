@@ -71,7 +71,8 @@ export function createNetwork(
   profile: string | null,
   outbounds: RuntimeOutbounds,
   revision: () => string,
-  ruleSnapshot: () => Promise<RuleList>
+  ruleSnapshot: () => Promise<RuleList>,
+  busy = false
 ) {
   const flowPage = createPager('flows');
   const cachePage = createPager('dnsCache');
@@ -110,6 +111,8 @@ export function createNetwork(
   const api: NetworkApi = {
     connections: async (query, signal) => {
       signal?.throwIfAborted();
+      if (busy)
+        for (const c of [...connections.tcp, ...connections.udp]) if (c.state === 'active') c.download_bytes = String(BigInt(c.download_bytes ?? '0') + 1460n);
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
       if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
       const tcp = query?.type === 'udp' ? [] : connections.tcp.filter(c => !src || sourceIp(c.src) === src);
