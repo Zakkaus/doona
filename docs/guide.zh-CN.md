@@ -96,7 +96,7 @@ doona 没有用于存储自身界面设置的服务器端存储。配置与运�
 
 在仓库根目录执行 `DOONA_API=http://router:9527 DOONA_TOKEN=… pnpm e2e:live`，可对实际后端执行只读的无障碍、移动端导航与键盘测试。`DOONA_API` 必填；后端不要求身份验证时可省略 `DOONA_TOKEN`。测试拒绝通过 fixture 存储覆盖后端设置，并中止控制请求，包括 DNS 查询。普通 `pnpm e2e` 测试在设置了 `DOONA_API` 时拒绝执行，除非显式设置 `DOONA_LIVE_OBSERVE=1`。
 
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面与配色总览，输出无损 WebP，需要安装 `cwebp`。另见 [CONTRIBUTING.md](../CONTRIBUTING.md) 与 [CHANGELOG.md](../CHANGELOG.md)。
+`pnpm dev` 以 Vite 开发服务器提供模拟后端。版本号本机取自 `package.json`，标签上取自 Git 描述；时间戳用 `SOURCE_DATE_EPOCH`，未设置时用 HEAD 提交时间。`node tools/screenshots.mjs <url> docs/screenshots` 从运行中的构建截取页面、配色总览、手机拼图与两段动画，输出 WebP，需要安装 `cwebp` 和 `img2webp`。另见 [CONTRIBUTING.md](../CONTRIBUTING.md) 与 [CHANGELOG.md](../CHANGELOG.md)。
 
 | 路径            | 用途                                          |
 | --------------- | --------------------------------------------- |
