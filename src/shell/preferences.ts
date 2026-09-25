@@ -1,6 +1,7 @@
 import {createContext} from 'react';
 import {readLang, type Lang} from '../i18n';
 import {readProfiles, type Profile, type StoragePort} from '../api/profiles';
+import {storageKeys} from '../api/storage';
 import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
@@ -17,17 +18,10 @@ export type Settings = {
   wordmark: Wordmark;
 };
 
-const keys = {
-  lang: 'doona-lang',
-  scheme: 'doona-scheme',
-  palette: 'doona-palette',
-  wordmark: 'doona-wordmark'
-} as const;
-
 // A storage that throws (private mode, quota) costs the persistence, not the change.
-export function writeSetting(key: keyof typeof keys, value: string, storage?: StoragePort) {
+export function writeSetting(key: 'lang' | 'scheme' | 'palette' | 'wordmark', value: string, storage?: StoragePort) {
   try {
-    (storage ?? localStorage).setItem(keys[key], value);
+    (storage ?? localStorage).setItem(storageKeys[key], value);
   } catch {}
 }
 
@@ -39,8 +33,8 @@ export function readSettings(storage?: StoragePort): Settings {
       return null;
     }
   };
-  const scheme = read(keys.scheme);
-  const palette = read(keys.palette);
+  const scheme = read(storageKeys.scheme);
+  const palette = read(storageKeys.palette);
   const profiles = readProfiles(storage);
   const active = profiles.profiles.find(profile => profile.id === profiles.activeId);
   return {
@@ -50,7 +44,7 @@ export function readSettings(storage?: StoragePort): Settings {
     lang: readLang(storage),
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
     palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
-    wordmark: read(keys.wordmark) === 'plain' ? 'plain' : 'gradient'
+    wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient'
   };
 }
 

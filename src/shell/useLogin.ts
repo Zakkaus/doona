@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react';
 import {useT, type Params} from '../i18n';
 import type {Key} from '../i18n';
-import {ApiError, errorText, send} from '../api/error';
-import {discoverAuth, openSession, signInKind, type SignIn} from '../api/auth';
+import {ApiError, errorText} from '../api/error';
+import {discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
 import {normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
 
@@ -50,13 +50,7 @@ export async function resolveSignInKind(api: string, signal?: AbortSignal): Prom
   } catch (error) {
     if (!predatesAuth(error)) throw error;
     if (!(error instanceof ApiError) || error.status !== 404) return 'token';
-    const base = api.replace(/\/+$/, '');
-    const response = await send(new URL(`${base}/api/v1/capabilities`, globalThis.location?.href), {
-      headers: {Accept: 'application/json'},
-      cache: 'no-store',
-      signal
-    });
-    return response.status === 404 ? 'no-api' : 'token';
+    return (await servesNativeApi(api, signal)) ? 'token' : 'no-api';
   }
 }
 

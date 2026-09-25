@@ -1,10 +1,11 @@
 import {useEffect, useState} from 'react';
 import {Link as RLink} from 'react-aria-components';
 import {useT} from '../i18n';
+import {storageKeys} from '../api/storage';
 import {useSlider} from '../ui/hooks';
 import type {NavGroup} from './view';
 
-const key = 'doona-hub-pages';
+const key = storageKeys.hubPages;
 // Moving between hubs, or between a hub's pages, replaces the history entry as an Android navigation bar does, so Back
 // leaves the app's top level instead of retracing every tap.
 const replace = {replace: true};

@@ -1,11 +1,19 @@
+import {storageKeys} from './storage';
+
 export type Profile = {id: string; name: string; api: string; token: string};
 type Profiles = {profiles: Profile[]; activeId: string};
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
+// The built-in demo backend: a profile with this address, or none, runs on the in-browser mock.
+export const DEMO_API = 'mock';
+export function isDemoApi(api: string | undefined): api is typeof DEMO_API | '' | undefined {
+  return !api || api === DEMO_API;
+}
+
 /** Accept a server root or proxy prefix, never credentials, a query, or a fragment. */
 export function normalizeApi(value: string): string {
   const base = value.trim();
-  if (!base || base === 'mock') return base;
+  if (isDemoApi(base)) return base;
   if (!/^https?:\/\/[^/]+/i.test(base) || /[\s\\?#]/.test(base)) throw new Error('invalid_url');
   const url = new URL(base);
   if (!url.hostname || url.username || url.password) throw new Error('invalid_url');
@@ -55,19 +63,19 @@ export function consumeProfileReadError(): boolean {
 export function readProfiles(storage?: StoragePort): Profiles {
   try {
     const store = storage ?? localStorage;
-    let raw = store.getItem('doona-profiles');
+    let raw = store.getItem(storageKeys.profiles);
     // Preserve first-visit state until a profile is explicitly written.
-    if (raw === null && store.getItem('doona-api') === null) raw = '[]';
+    if (raw === null && store.getItem(storageKeys.legacyApi) === null) raw = '[]';
     else if (raw === null) {
-      const api = store.getItem('doona-api')!;
-      const token = store.getItem('doona-api-token') ?? '';
-      const profiles = normalizeProfiles([{id: 'legacy', name: api.trim() || 'mock', api, token}]);
+      const api = store.getItem(storageKeys.legacyApi)!;
+      const token = store.getItem(storageKeys.legacyToken) ?? '';
+      const profiles = normalizeProfiles([{id: 'legacy', name: api.trim() || DEMO_API, api, token}]);
       raw = JSON.stringify(profiles);
       // Commit the migration marker before removing the old credentials.
-      store.setItem('doona-profiles', raw);
-      store.setItem('doona-profile', profiles[0]?.id ?? '');
-      store.removeItem('doona-api');
-      store.removeItem('doona-api-token');
+      store.setItem(storageKeys.profiles, raw);
+      store.setItem(storageKeys.profile, profiles[0]?.id ?? '');
+      store.removeItem(storageKeys.legacyApi);
+      store.removeItem(storageKeys.legacyToken);
     }
     if (cachedProfiles?.raw !== raw) {
       let profiles: Profile[];
@@ -80,7 +88,7 @@ export function readProfiles(storage?: StoragePort): Profiles {
       cachedProfiles = {raw, profiles};
     }
     const profiles = cachedProfiles.profiles;
-    const saved = () => profiles.find(profile => profile.id === store.getItem('doona-profile'));
+    const saved = () => profiles.find(profile => profile.id === store.getItem(storageKeys.profile));
     if (storage) return {profiles, activeId: saved()?.id ?? profiles[0]?.id ?? ''};
     const own = (pinned ??= saved() ?? profiles[0]);
     return {profiles, activeId: profiles.find(profile => profile.id === own?.id)?.id ?? profiles[0]?.id ?? ''};
@@ -100,8 +108,8 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
   const normalized = profiles.map(profile => ({...profile, name: profile.name.trim() || profile.id, api: normalizeApi(profile.api)}));
   const id = normalized.find(profile => profile.id === activeId)?.id ?? normalized[0]?.id ?? '';
   const write = () => {
-    store.setItem('doona-profiles', JSON.stringify(normalized));
-    store.setItem('doona-profile', id);
+    store.setItem(storageKeys.profiles, JSON.stringify(normalized));
+    store.setItem(storageKeys.profile, id);
   };
   try {
     write();
@@ -116,7 +124,7 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
 
 function dropRings() {
   try {
-    for (const key of Object.keys(localStorage)) if (key.startsWith('doona-rings-')) localStorage.removeItem(key);
+    for (const key of Object.keys(localStorage)) if (key.startsWith(storageKeys.ringsPrefix)) localStorage.removeItem(key);
   } catch {
     /* Storage can be unavailable. */
   }
@@ -135,7 +143,7 @@ export async function detectHostedBackend(
 ): Promise<boolean> {
   try {
     storage ??= localStorage;
-    if (storage.getItem('doona-profiles') !== null || storage.getItem('doona-api') !== null || !/^https?:$/.test(loc.protocol)) return false;
+    if (storage.getItem(storageKeys.profiles) !== null || storage.getItem(storageKeys.legacyApi) !== null || !/^https?:$/.test(loc.protocol)) return false;
     const api = hostedRoot(loc);
     const response = await fetcher(`${api}/api`, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(3000)});
     const json = response.headers.get('content-type')?.includes('application/json') ?? false;

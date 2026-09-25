@@ -2,6 +2,7 @@ import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {tagId} from '../shared/taggedId';
 import {enumLabel} from '../../i18n/enum';
 import {addU64, parseU64} from '../../api/u64';
+import {storageKeys} from '../../api/storage';
 import {
   chainLabel,
   chainPath,
@@ -53,7 +54,7 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
 type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
 type TableRow = {id: string; connection: Connection} | GroupRow;
-export const viewKey = 'doona-connections-view';
+export const viewKey = storageKeys.connectionsView;
 
 export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
