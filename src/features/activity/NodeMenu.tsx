@@ -1,40 +1,52 @@
-import {useMemo} from 'react';
-import {Autocomplete, Header, ListLayout, Menu, MenuSection, Virtualizer, useFilter} from 'react-aria-components';
+import {Suspense, useMemo, type ComponentProps} from 'react';
+import {Header, Menu, MenuSection} from 'react-aria-components';
 import {MenuButton, MenuChoice, pickMenuKey, TextField} from '../../ui/ui';
+import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import {menuViews} from '../policies/view';
+import type {NodeSearch} from './NodeSearch';
 import type {ActivityNodeMenu} from './view';
 
 type Model = ActivityNodeMenu & {setChosen: (id: string) => void};
 
+// The search for a long list stays out of the startup bundle; hovering or focusing the trigger loads it ahead of the
+// press.
+const nodeSearch = preloadable<ComponentProps<typeof NodeSearch>>(() => import('./NodeSearch').then(module => ({default: module.NodeSearch})));
+const preloadNodeSearch = () => void nodeSearch.preload().catch(() => undefined);
+
 export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
   const t = useT();
-  const {contains} = useFilter({sensitivity: 'base'});
   // The popover renders its content only while open, so the list below is not rebuilt on polls while closed.
   const menu = <NodeList model={vm} label={label} />;
+  const warm = vm.big ? preloadNodeSearch : undefined;
   return (
-    <MenuButton
-      appearance="select"
-      placement="bottom start"
-      label={label}
-      content={
-        vm.big ? (
-          <Autocomplete filter={contains}>
-            {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user into the opened menu */}
-            <TextField search label={t('policy.filter')} autoFocus className="rp-menu-search" />
-            <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, headingHeight: 26}}>
-              {menu}
-            </Virtualizer>
-          </Autocomplete>
-        ) : (
-          menu
-        )
-      }
-    >
-      <span className="rp-il">
-        <span>{vm.name}</span>
-      </span>
-    </MenuButton>
+    <span className="rp-contents" onPointerEnter={warm} onFocus={warm}>
+      <MenuButton
+        appearance="select"
+        placement="bottom start"
+        label={label}
+        content={
+          vm.big ? (
+            <Suspense
+              fallback={
+                <>
+                  <TextField search label={t('policy.filter')} isDisabled className="rp-menu-search" />
+                  <div className="rp-menu-scroll rp-menu-pending" />
+                </>
+              }
+            >
+              <nodeSearch.Component>{menu}</nodeSearch.Component>
+            </Suspense>
+          ) : (
+            menu
+          )
+        }
+      >
+        <span className="rp-il">
+          <span>{vm.name}</span>
+        </span>
+      </MenuButton>
+    </span>
   );
 }
 

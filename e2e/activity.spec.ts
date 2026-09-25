@@ -265,6 +265,35 @@ test.describe('many outbounds', () => {
     expect(await legend.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight <= 170)).toBe(true);
   });
 
+  test.describe('without the service worker', () => {
+    // Request interception does not see what a service worker fetches.
+    test.use({serviceWorkers: 'block'});
+    test('the node search loads on intent and keeps the menu size while it arrives', async ({page}) => {
+      const chunk = /\/NodeSearch-[\w-]+\.js$/;
+      let fetched = 0;
+      let release = () => {};
+      const arrived = new Promise<void>(resolve => (release = resolve));
+      await page.route(chunk, async route => {
+        fetched++;
+        await arrived;
+        await route.continue();
+      });
+      await page.goto('/#/activity');
+      const trigger = page.getByRole('button', {name: 'Node', exact: true});
+      await expect(trigger).toBeVisible();
+      expect(fetched).toBe(0);
+      await trigger.hover();
+      await expect.poll(() => fetched).toBe(1);
+      await trigger.click();
+      const popover = page.locator('.rp-popover');
+      await expect(popover.locator('.rp-menu-pending')).toBeVisible();
+      const pending = await popover.boundingBox();
+      release();
+      await expect(page.getByRole('searchbox', {name: 'Filter nodes'})).toBeFocused();
+      expect(await popover.boundingBox()).toEqual(pending);
+    });
+  });
+
   test('the node menu searches virtual sections and selects the filtered node by keyboard', async ({page}) => {
     await page.goto('/#/activity');
     const trigger = page.getByRole('button', {name: 'Node', exact: true});
