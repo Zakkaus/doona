@@ -432,6 +432,9 @@ export interface paths {
          *     status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
          *     never returned; the response carries url_redacted. A name already in use
          *     returns 409 state_conflict. A URL that is not HTTP(S) returns 422 unsupported_value.
+         *     update_interval, user_agent and cache are accepted only when named in
+         *     resources.providers.create_options; an omitted one takes the default listed there,
+         *     and one the backend does not list returns 422 unsupported_value.
          */
         post: operations["createProvider"];
         delete?: never;
@@ -493,6 +496,10 @@ export interface paths {
          *     A full bounded queue returns 503 temporarily_unavailable with Retry-After.
          *     A successful provider_refresh operation returns the refreshed Provider in result;
          *     failure uses SafeError and leaves the last successfully loaded nodes intact.
+         *     The fetch takes the provider's download route. When that route has no usable
+         *     node yet, as when the routing rules send a subscription to a group of the nodes
+         *     it has not delivered, the fetch fails with route_unavailable and never falls
+         *     back to direct.
          */
         post: operations["refreshProvider"];
         delete?: never;
@@ -1368,6 +1375,12 @@ export interface components {
                     can_refresh?: boolean;
                     /** @description Supports creating subscription providers and deleting subscription or file providers from a writable managed main source. */
                     can_manage?: boolean;
+                    /** @description Optional ProviderCreate fields the backend accepts, each with the value it applies when the field is omitted. A field not listed is unsupported. Absent means none are supported. */
+                    create_options?: {
+                        update_interval?: number;
+                        user_agent?: string;
+                        cache?: boolean;
+                    };
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
                 groups: {
@@ -1857,7 +1870,10 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "stale" | "error";
+            /** @description The last failure, or null. A subscription fetch whose download route has no usable node yet reports code route_unavailable; other fetch failures report fetch_failed. */
             last_error: null | components["schemas"]["SafeError"];
+            /** @description The route a subscription's fetches take, with the values of the geodata download route. routing follows the routing rules like user traffic, group always goes through the group in group_id, and direct connects straight to the host. group_id is null for routing and direct and for a group that no longer exists. Null for file and inline providers. Backends that fetch subscriptions only directly omit it. */
+            download?: null | components["schemas"]["GeoDataDownload"];
         };
         /** @description Provider-reported usage, not runtime counters. Each unavailable quantity is null; traffic itself may be null when no usage metadata exists. */
         ProviderTraffic: {
@@ -1890,6 +1906,12 @@ export interface components {
             kind: "subscription";
             /** @description Fetched by the engine on refresh; stored in the managed main source and never returned. */
             url: string;
+            /** @description Seconds between automatic refreshes; 0 refreshes only on request. */
+            update_interval?: number;
+            /** @description User-Agent header sent when fetching the URL. */
+            user_agent?: string;
+            /** @description Keep the last fetched body so the provider loads without the network at startup. false keeps none and removes a kept one. */
+            cache?: boolean;
         };
         NodeCreate: {
             /** @description The node name as written in the configuration; unique among inline nodes. */
