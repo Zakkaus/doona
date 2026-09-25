@@ -1,47 +1,94 @@
-import {expect, it, vi} from 'vitest';
+import {afterEach, expect, it, vi} from 'vitest';
 import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
 import type {Api} from '../api/api';
-import type {DnsLogList, DnsLogQuery} from '../api/model';
-import {dnsLogLimit, dnsLogPage} from './dns';
+import type {DnsCacheList, DnsCacheQuery} from '../api/model';
+import {dnsCacheListing, dnsLogLimit, smallerOnRefusal} from './dns';
 
-const page: DnsLogList = {observed_at: '2026-09-25T10:00:00Z', total: 3, next_cursor: null, records: []};
-const budget = () => new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', 'r1', null, 1);
-const logApi = (dnsLog: (query?: DnsLogQuery) => Promise<DnsLogList>) => ({dnsLog: vi.fn(dnsLog)}) as unknown as Api & {dnsLog: ReturnType<typeof vi.fn>};
+afterEach(() => void vi.useRealTimers());
+const budget = (retryAfter: number | null = 1) =>
+  new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', 'r1', null, retryAfter);
 
 it('asks for the backend default page, not the advertised maximum', () => {
-  expect(dnsLogLimit({...capabilities, resources: {...capabilities.resources, dns_log: {...capabilities.resources.dns_log, max_page_size: 500}}})).toBe(100);
-  expect(dnsLogLimit({...capabilities, resources: {...capabilities.resources, dns_log: {...capabilities.resources.dns_log, max_page_size: 40}}})).toBe(40);
+  const withPage = (max_page_size: number) => ({
+    ...capabilities,
+    resources: {...capabilities.resources, dns_log: {...capabilities.resources.dns_log, max_page_size}}
+  });
+  expect(dnsLogLimit(withPage(500))).toBe(100);
+  expect(dnsLogLimit(withPage(40))).toBe(40);
   expect(dnsLogLimit(undefined)).toBeUndefined();
 });
 
-it('retries a page the backend refused as too large once, at a quarter of the size', async () => {
-  const api = logApi(async query => {
-    if (query?.limit === 100) throw budget();
-    return page;
+it('waits out Retry-After, then asks once for a quarter of the page and reports the limit that answered', async () => {
+  vi.useFakeTimers();
+  const fetch = vi.fn(async (query: {limit?: number; cursor?: string}) => {
+    if (query.limit === 100) throw budget(2);
+    return 'page';
   });
-  await expect(dnsLogPage(api, {limit: 100, cursor: 'c'})).resolves.toBe(page);
-  expect(api.dnsLog.mock.calls.map(([query]) => query)).toEqual([
+  const result = smallerOnRefusal(fetch, {limit: 100, cursor: 'c'});
+  await vi.advanceTimersByTimeAsync(1900);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(100);
+  await expect(result).resolves.toEqual({page: 'page', limit: 25});
+  expect(fetch.mock.calls.map(([query]) => query)).toEqual([
     {limit: 100, cursor: 'c'},
     {limit: 25, cursor: 'c'}
   ]);
+  await expect(smallerOnRefusal(async () => 'whole', {limit: 100})).resolves.toEqual({page: 'whole', limit: 100});
 });
 
-it('passes on other failures, a second refusal and a page of one', async () => {
-  const internal = new ApiError(500, 'internal', 'boom');
-  const failing = logApi(async () => {
-    throw internal;
-  });
-  await expect(dnsLogPage(failing, {limit: 100})).rejects.toBe(internal);
-  expect(failing.dnsLog).toHaveBeenCalledTimes(1);
-  const refusing = logApi(async () => {
+it('passes on anything but a timed refusal, a second refusal and a page of one', async () => {
+  for (const error of [
+    new ApiError(500, 'internal', 'boom'),
+    budget(null),
+    new ApiError(429, 'rate_limited', 'slow down', null, null, 1),
+    new ApiError(503, 'snapshot_expired', 'other', null, null, 1)
+  ]) {
+    const fetch = vi.fn(async () => {
+      throw error;
+    });
+    await expect(smallerOnRefusal(fetch, {limit: 100})).rejects.toBe(error);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  }
+  vi.useFakeTimers();
+  const refusing = vi.fn(async () => {
     throw budget();
   });
-  await expect(dnsLogPage(refusing, {limit: 100})).rejects.toMatchObject({status: 503});
-  expect(refusing.dnsLog).toHaveBeenCalledTimes(2);
-  const single = logApi(async () => {
+  const twice = expect(smallerOnRefusal(refusing, {limit: 100})).rejects.toMatchObject({status: 503});
+  await vi.advanceTimersByTimeAsync(1000);
+  await twice;
+  expect(refusing).toHaveBeenCalledTimes(2);
+  const single = vi.fn(async () => {
     throw budget();
   });
-  await expect(dnsLogPage(single, {limit: 1})).rejects.toMatchObject({status: 503});
-  expect(single.dnsLog).toHaveBeenCalledTimes(1);
+  await expect(smallerOnRefusal(single, {limit: 1})).rejects.toMatchObject({status: 503});
+  expect(single).toHaveBeenCalledTimes(1);
+});
+
+it('walks the cache at the smaller page for the rest of the listing once a page is refused', async () => {
+  vi.useFakeTimers();
+  const pages: Record<string, DnsCacheList> = {};
+  const entry = (id: string) => ({entry_id: id}) as DnsCacheList['entries'][number];
+  const page = (ids: string[], next_cursor: string | null) =>
+    ({
+      observed_at: '2026-09-25T10:00:00Z',
+      coverage: {positive: true, negative: true, persistent: false},
+      total: 3,
+      next_cursor,
+      entries: ids.map(entry)
+    }) as DnsCacheList;
+  pages['start'] = page(['a'], 'p2');
+  pages['p2'] = page(['b', 'c'], null);
+  const dnsCache = vi.fn(async (query?: DnsCacheQuery) => {
+    if ((query?.limit ?? 0) > 250) throw budget();
+    return pages[query?.cursor ?? 'start'];
+  });
+  const listing = dnsCacheListing({dnsCache} as unknown as Api);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await listing).entries.map(item => item.entry_id)).toEqual(['a', 'b', 'c']);
+  expect(dnsCache.mock.calls.map(([query]) => [query?.cursor, query?.limit])).toEqual([
+    [undefined, 1000],
+    [undefined, 250],
+    ['p2', 250]
+  ]);
 });

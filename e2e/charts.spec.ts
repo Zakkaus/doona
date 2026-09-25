@@ -133,22 +133,29 @@ test('a failed first log read shows once above the charts it feeds while the cac
   await expect(page.getByText('Resolution log not loaded', {exact: true})).toHaveCount(3);
 });
 
-test('a log page an older backend refuses as too large is asked for again smaller and charted with a note', async ({page}) => {
-  const backend = await mockBackend(page);
-  const seed = await backend.api.dnsLog();
-  const limits: string[] = [];
-  backend.handlers['GET dns/log'] = async request => {
-    const limit = new URL(request.url()).searchParams.get('limit') ?? '';
-    limits.push(limit);
-    if (Number(limit) > 25) throw new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', null, null, 1);
-    return {...seed, records: seed.records.slice(0, 20), next_cursor: 'older'};
-  };
-  await page.goto('/#/dns');
-  await expect(page.locator('.rp-facts')).toBeVisible();
-  await expect(page.getByText('Page shortened to fit the response size limit: 20 of 100 records', {exact: true})).toBeVisible();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-  expect(limits.slice(0, 2)).toEqual(['100', '25']);
-});
+for (const [served, note] of [
+  [20, 'Page shortened to fit the response size limit: 20 of 25 records'],
+  [25, null]
+] as const) {
+  test(`a log page an older backend refuses is asked for again smaller, ${served} records served`, async ({page}) => {
+    const backend = await mockBackend(page);
+    const seed = await backend.api.dnsLog();
+    const limits: string[] = [];
+    backend.handlers['GET dns/log'] = async request => {
+      const limit = new URL(request.url()).searchParams.get('limit') ?? '';
+      limits.push(limit);
+      if (Number(limit) > 25) throw new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', null, null, 1);
+      return {...seed, records: seed.records.slice(0, served), next_cursor: 'older'};
+    };
+    await page.goto('/#/dns');
+    await expect(page.locator('.rp-facts')).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(limits.slice(0, 2)).toEqual(['100', '25']);
+    // Measured against the 25 asked for when the page was served, not the 100 that was refused.
+    if (note) await expect(page.getByText(note, {exact: true})).toBeVisible();
+    else await expect(page.getByText(/^Page shortened/)).toHaveCount(0);
+  });
+}
 
 test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});

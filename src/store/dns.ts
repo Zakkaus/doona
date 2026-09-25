@@ -2,7 +2,8 @@ import {useCallback} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {ApiError} from '../api/error';
-import type {Capabilities, DnsCacheList, DnsLogList, DnsLogQuery} from '../api/model';
+import type {Capabilities, DnsCacheList} from '../api/model';
+import {wait} from '../api/wait';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
@@ -14,17 +15,40 @@ export function dnsLogLimit(capabilities: Capabilities | undefined) {
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
   return advertised === undefined ? undefined : Math.min(DNS_LOG_PAGE, advertised);
 }
-// honk before the short-page fix refuses a page whose answers exceed its response budget with a 503 instead of
-// ending the page early, and the refusal repeats however long the client waits. A quarter of the page is asked for
-// once instead.
-export async function dnsLogPage(api: Api, query: NonNullable<DnsLogQuery>, signal?: AbortSignal): Promise<DnsLogList> {
+// honk before the short-page fix refuses a DNS page whose answers exceed its response budget with a 503 instead of
+// ending the page early, and the refusal repeats however long the client waits. After the wait it asks for, the page
+// is asked for once more at a quarter of the size. Resolves to the page and the limit that produced it.
+export async function smallerOnRefusal<Q extends {limit?: number}, P>(
+  fetch: (query: Q) => Promise<P>,
+  query: Q,
+  signal?: AbortSignal
+): Promise<{page: P; limit: number | undefined}> {
   try {
-    return await api.dnsLog(query, signal);
+    return {page: await fetch(query), limit: query.limit};
   } catch (error) {
-    const limit = query.limit;
-    if (!(error instanceof ApiError && error.status === 503) || limit === undefined || limit < 2 || signal?.aborted) throw error;
-    return api.dnsLog({...query, limit: Math.ceil(limit / 4)}, signal);
+    const {limit} = query;
+    const refused = error instanceof ApiError && error.status === 503 && error.code === 'temporarily_unavailable' && error.retryAfter !== null;
+    if (!refused || limit === undefined || limit < 2) throw error;
+    await wait(error.retryAfter!, signal);
+    const smaller = Math.ceil(limit / 4);
+    return {page: await fetch({...query, limit: smaller}), limit: smaller};
   }
+}
+// The whole cache, summaries only; once a page is refused the rest of the walk keeps the smaller size.
+export function dnsCacheListing(api: Api, signal?: AbortSignal) {
+  let limit = 1000;
+  return walk(
+    async cursor => {
+      const result = await smallerOnRefusal(query => api.dnsCache(query, signal), {cursor, limit, detail: 'summary' as const}, signal);
+      limit = result.limit!;
+      return result.page;
+    },
+    (acc: DnsCacheList | undefined, page) => {
+      if (!acc) return {...page, entries: [...page.entries]};
+      acc.entries.push(...page.entries);
+      return acc;
+    }
+  );
 }
 export function useDnsFlush() {
   const api = getApi();
@@ -39,10 +63,17 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const capabilities = useCapabilities().data;
   const limit = dnsLogLimit(capabilities);
   const resource = useResource(
-    {key: ['dnsLog', {name, type, src, limit}], fetch: signal => dnsLogPage(api, {name, type: type as never, src, limit}, signal)},
+    {
+      key: ['dnsLog', {name, type, src, limit}],
+      // The page keeps the limit it was served at, so what reads it compares against what was actually asked for.
+      fetch: async signal => {
+        const result = await smallerOnRefusal(query => api.dnsLog(query, signal), {name, type: type as never, src, limit}, signal);
+        return {...result.page, limit: result.limit};
+      }
+    },
     {enabled}
   );
-  return {...resource, limit};
+  return {...resource, limit: resource.data ? resource.data.limit : limit};
 }
 function useDnsCache(enabled = true, paused = false) {
   const api = getApi();
@@ -52,15 +83,7 @@ function useDnsCache(enabled = true, paused = false) {
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
       every: 15000,
       // The cache table shows no answers, so the summary listing, which leaves them out, is enough.
-      fetch: signal =>
-        walk(
-          cursor => api.dnsCache({cursor, limit: 1000, detail: 'summary'}, signal),
-          (acc: DnsCacheList | undefined, page) => {
-            if (!acc) return {...page, entries: [...page.entries]};
-            acc.entries.push(...page.entries);
-            return acc;
-          }
-        )
+      fetch: signal => dnsCacheListing(api, signal)
     },
     {enabled, paused}
   );
