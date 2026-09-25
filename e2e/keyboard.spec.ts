@@ -77,6 +77,9 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await page.keyboard.press('ArrowRight');
   await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
   await expect(donut.locator('.rp-charttip-bounded li')).toContainText(/\d/);
+  // The chart is a single tab stop: the next Tab leaves it.
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => !!document.activeElement?.closest('.rp-donut .box'))).toBe(false);
 });
 
 test('slash focuses the page filter and r refreshes everything', async ({page}) => {

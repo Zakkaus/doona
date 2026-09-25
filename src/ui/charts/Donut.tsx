@@ -59,7 +59,7 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
           onBlur={selection.onBlur}
           onKeyDown={selection.onKeyDown}
         >
-          <g tabIndex={0} transform={`translate(${width / 2},${height / 2})`}>
+          <g transform={`translate(${width / 2},${height / 2})`}>
             {sectors.map((sector, index) => (
               <path
                 key={data[index].name}
