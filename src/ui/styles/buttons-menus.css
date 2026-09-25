@@ -99,6 +99,10 @@
   scrollbar-color: var(--rp-hl-high) transparent;
   box-shadow: var(--rp-elevated);
   min-width: 160px;
+  /* Sized by its content, not by the room left of its position: otherwise each placement changes the width, the
+     width moves the placement, and the popover settles over several frames of resize notifications. */
+  width: max-content;
+  max-width: calc(100vw - 24px);
 }
 .rp-item {
   display: grid;
