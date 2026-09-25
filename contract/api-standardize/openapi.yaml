@@ -205,6 +205,10 @@ paths:
                         available: true
                         can_refresh: true
                         can_manage: true
+                        create_options:
+                          update_interval: 86400
+                          user_agent: honk/0.0.1-alpha
+                          cache: true
                         max_page_size: 1000
                       groups:
                         available: true
@@ -2062,6 +2066,9 @@ paths:
                           total_bytes: '107374182400'
                         status: ok
                         last_error: null
+                        download:
+                          route: routing
+                          group_id: null
                     next_cursor: null
                   x-headers:
                     Content-Type: application/json
@@ -2091,6 +2098,9 @@ paths:
         status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
         never returned; the response carries url_redacted. A name already in use
         returns 409 state_conflict. A URL that is not HTTP(S) returns 422 unsupported_value.
+        update_interval, user_agent and cache are accepted only when named in
+        resources.providers.create_options; an omitted one takes the default listed there,
+        and one the backend does not list returns 422 unsupported_value.
       x-permission: control
       security:
         - bearerAuth: []
@@ -2107,6 +2117,14 @@ paths:
                   name: provider-b
                   kind: subscription
                   url: https://subscriptions.example.com/sub?token=secret
+              options:
+                value:
+                  name: provider-c
+                  kind: subscription
+                  url: https://subscriptions.example.com/sub?token=secret
+                  update_interval: 3600
+                  user_agent: clash.meta
+                  cache: false
       responses:
         '201':
           description: Provider written to the managed configuration
@@ -2138,6 +2156,9 @@ paths:
                     traffic: null
                     status: stale
                     last_error: null
+                    download:
+                      route: routing
+                      group_id: null
                   x-headers:
                     Content-Type: application/json
                     Location: /api/v1/providers/provider-b
@@ -2283,6 +2304,9 @@ paths:
                       total_bytes: '107374182400'
                     status: ok
                     last_error: null
+                    download:
+                      route: routing
+                      group_id: null
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -2354,6 +2378,10 @@ paths:
         A full bounded queue returns 503 temporarily_unavailable with Retry-After.
         A successful provider_refresh operation returns the refreshed Provider in result;
         failure uses SafeError and leaves the last successfully loaded nodes intact.
+        The fetch takes the provider's download route. When that route has no usable
+        node yet, as when the routing rules send a subscription to a group of the nodes
+        it has not delivered, the fetch fails with route_unavailable and never falls
+        back to direct.
       x-permission: control
       security:
         - bearerAuth: []
@@ -6796,6 +6824,20 @@ components:
                 can_manage:
                   type: boolean
                   description: Supports creating subscription providers and deleting subscription or file providers from a writable managed main source.
+                create_options:
+                  type: object
+                  additionalProperties: false
+                  description: Optional ProviderCreate fields the backend accepts, each with the value it applies when the field is omitted. A field not listed is unsupported. Absent means none are supported.
+                  properties:
+                    update_interval:
+                      type: integer
+                      minimum: 0
+                      maximum: 31536000
+                    user_agent:
+                      type: string
+                      minLength: 1
+                    cache:
+                      type: boolean
                 max_page_size:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -8332,6 +8374,12 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/SafeError'
+          description: The last failure, or null. A subscription fetch whose download route has no usable node yet reports code route_unavailable; other fetch failures report fetch_failed.
+        download:
+          description: The route a subscription's fetches take, with the values of the geodata download route. routing follows the routing rules like user traffic, group always goes through the group in group_id, and direct connects straight to the host. group_id is null for routing and direct and for a group that no longer exists. Null for file and inline providers. Backends that fetch subscriptions only directly omit it.
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/GeoDataDownload'
       description: Safe metadata only. Names, URLs and last_error must not contain secrets, raw configuration or unredacted local paths.
     ProviderTraffic:
       type: object
@@ -8408,6 +8456,20 @@ components:
           maxLength: 4096
           pattern: ^https?://
           description: Fetched by the engine on refresh; stored in the managed main source and never returned.
+        update_interval:
+          type: integer
+          minimum: 0
+          maximum: 31536000
+          description: Seconds between automatic refreshes; 0 refreshes only on request.
+        user_agent:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[\x20-\x7E]+$
+          description: User-Agent header sent when fetching the URL.
+        cache:
+          type: boolean
+          description: Keep the last fetched body so the provider loads without the network at startup. false keeps none and removes a kept one.
     NodeCreate:
       type: object
       additionalProperties: false
