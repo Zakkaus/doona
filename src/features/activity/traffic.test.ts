@@ -1,12 +1,14 @@
 import {afterEach, expect, it} from 'vitest';
-import {noteServerTime, resetServerClock} from '../../api/serverClock';
+import {createServerClock, selectServerClock} from '../../api/serverClock';
 import {historyTrafficSamples, trafficWindow} from './traffic';
 
-afterEach(resetServerClock);
+afterEach(() => selectServerClock(createServerClock()));
 
 it('places the live window on the host clock, so a lagging host still charts', () => {
   const host = Date.now() - 600_000;
-  noteServerTime(new Date(host).toISOString());
+  const clock = createServerClock();
+  clock.note(new Date(host).toISOString());
+  selectServerClock(clock);
   const samples = [5, 4, 3].map(back => ({time: host - back * 1000, up: 1, down: 1, connections: 1}));
   const series = trafficWindow({fine: [], coarse: []}, samples, 120);
   expect(series.timestamps).toEqual(samples.map(s => s.time));

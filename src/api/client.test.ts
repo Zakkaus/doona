@@ -1,14 +1,13 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
 import {ApiError} from './error';
-import {resetServerClock, serverNow} from './serverClock';
+import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent} from './model';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json', ...headers}});
 afterEach(() => {
-  resetServerClock();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -20,8 +19,22 @@ describe('native transport', () => {
       'fetch',
       vi.fn(async () => json({observed_at: new Date(behind).toISOString()}))
     );
-    await createApi('https://honk.test').runtime();
-    expect(Math.abs(serverNow() - behind)).toBeLessThan(1000);
+    const clock = createServerClock();
+    await createApi('https://honk.test', undefined, clock).runtime();
+    expect(Math.abs(clock.now() - behind)).toBeLessThan(1000);
+  });
+  it('keeps a previous backend response off the new backend clock', async () => {
+    const behind = Date.now() - 600_000;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({observed_at: new Date(behind).toISOString()}))
+    );
+    const previous = createServerClock();
+    const current = createServerClock();
+    selectServerClock(current);
+    await createApi('https://old.test', undefined, previous).runtime();
+    expect(Math.abs(current.now() - Date.now())).toBeLessThan(1000);
+    selectServerClock(createServerClock());
   });
   it('retries a refused mutation with the same body and idempotency key after the floor', async () => {
     vi.useFakeTimers();
