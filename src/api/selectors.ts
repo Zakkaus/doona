@@ -100,11 +100,11 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-// Suppress routine eviction and sampling gaps; report lost history or recording-scope changes.
+// Activity hides expected recorder capacity churn; raw events and flow missing metadata retain it.
 export function routineGap(event: ApiEvent): boolean {
   if (event.event !== 'flow.gap') return false;
   const {reason} = event.data;
-  return reason === 'evicted' || reason === 'sampled';
+  return reason === 'evicted' || reason === 'sampled' || reason === 'buffer_overflow';
 }
 const gapReasons: Record<string, Key> = {
   buffer_overflow: 'event.gap.overflow',
@@ -136,7 +136,7 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
     case 'flow.gap':
       return {
-        key: 'event.gap',
+        key: event.data.resource_id == null ? 'event.gap' : 'event.gap.flow',
         params: {
           id: event.data.resource_id ?? '—',
           reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,

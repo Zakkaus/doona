@@ -24,8 +24,9 @@ export const messages = defineMessages({
     'event.flow': '{id}，修訂：{revision}',
     'event.operation': '{id}，狀態：{status}',
     'event.generation': '{previous} 至 {current}',
-    'event.gap': '{id}，原因：{reason}，捨棄記錄：{n}',
-    'event.gap.overflow': '緩衝區溢位',
+    'event.gap': '{reason}／全域累計汰換追蹤記錄 {n}（含到期清理）',
+    'event.gap.flow': '{id}／{reason}',
+    'event.gap.overflow': '追蹤記錄超出容量上限',
     'event.gap.sampled': '取樣略過',
     'event.gap.evicted': '環形緩衝區汰換',
     'event.gap.recording': '記錄設定變更'
@@ -53,10 +54,11 @@ export const messages = defineMessages({
     'event.flow': '{id}，修订：{revision}',
     'event.operation': '{id}，状态：{status}',
     'event.generation': '{previous} 至 {current}',
-    'event.gap': '{id}，原因：{reason}，丢弃记录：{n}',
-    'event.gap.overflow': '缓冲区溢出',
     'event.gap.sampled': '采样跳过',
     'event.gap.evicted': '环形缓冲区淘汰',
+    'event.gap': '{reason}／全局累计淘汰追踪记录 {n}（含到期清理）',
+    'event.gap.flow': '{id}／{reason}',
+    'event.gap.overflow': '追踪记录超出容量上限',
     'event.gap.recording': '记录设置变更'
   },
   en: {
@@ -82,8 +84,9 @@ export const messages = defineMessages({
     'event.flow': '{id}, revision: {revision}',
     'event.operation': '{id}, status: {status}',
     'event.generation': '{previous} to {current}',
-    'event.gap': '{id}, reason: {reason}, records dropped: {n}',
-    'event.gap.overflow': 'buffer overflow',
+    'event.gap': '{reason} / recorder-wide total: {n} evicted trace records (including expiration)',
+    'event.gap.flow': '{id} / {reason}',
+    'event.gap.overflow': 'trace recording limit exceeded',
     'event.gap.sampled': 'skipped by sampling',
     'event.gap.evicted': 'evicted from the ring buffer',
     'event.gap.recording': 'recording changed'

@@ -65,7 +65,7 @@ Keep this block in its own include (`include { api.dae }`) so the main file stay
 
 Open `/ui/` on the engine host. On a first visit doona asks the origin it was served from for `/api`; when the engine answers it becomes the saved backend and a token prompt follows. Served from elsewhere, or to reach another engine, open Settings and enter the server root and the token; a pairing link such as `/ui/#/settings?api=http://router:9527&token=…` fills the form and drops the token from the address bar on load.
 
-The activity page then shows the running engine. Add a subscription or paste share links on Nodes, pick or pin members on Policies, add rules on Rules, and edit, validate and reload the sources on Configuration. Every write goes through the engine with the hash doona read the source at, and a failed reload keeps the previous generation active. The [guide](docs/guide.md#first-run) walks through each page.
+The activity page then shows the running engine. Add a subscription or paste share links on Nodes, select members on Policies (pinning requires backend support), add rules on Rules, and edit, validate and reload the sources on Configuration. Source edits use the engine's revision fence, and the engine reports whether a reload committed. The [guide](docs/guide.md#first-run) walks through each page.
 
 ## Pages
 
@@ -89,6 +89,10 @@ A page is marked unavailable only when every resource it needs is unavailable. `
 DNS cache listings follow bounded summary pages and filter domains on the backend; “Clear all cache” still clears the whole cache. Nested group cards retain their group badge beside measured latency. When a group has no TCP observation, a separately labelled selected-TCP-node latency may be shown; it does not count as measured group health, and unknown or unresolved paths remain unmeasured.
 
 Flow details preserve the backend's completeness and missing-evidence reasons. Every retained step has a keyboard-accessible “Step evidence” disclosure with its original JSON, including nested rule evaluations, DNS/attempt lineage and source extensions; JSON formatting is deferred until the disclosure opens. A complete flow does not imply successful forwarding or complete global traffic coverage.
+
+With honk's demand-aware recorder, ordinary pages receive events passively. Views that read flow records and the Events page explicitly request automatic flow capture; honk stops it after the last diagnostic demand and its 60-second grace period. Explicitly pinned recording remains on. Activity omits expected trace-capacity gaps from its notices, while Events and flow details retain the gap evidence and completeness markers.
+
+Resolve-then-simulate sends one trace request per distinct DNS address, with a 16-address UI batch limit independent of the backend's per-request limit. Results spanning different engine instances or routing generations are refused rather than combined.
 
 <img src="docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 

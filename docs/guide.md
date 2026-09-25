@@ -39,7 +39,7 @@ Open `/ui/` on the engine host. On a first visit doona asks the origin it was se
 The activity page then shows the running engine. The usual route through the rest:
 
 1. **Nodes**: add a subscription (a name and its URL) or paste share links; nodes appear with their protocol, latency and groups. Set how often a subscription refreshes, test a node, or add it to a group from its row.
-2. **Policies**: each group is a card with its members' latency. Pick a member of a selector group, pin one in an automatic group and release it again, test them all, or edit the group's policy and filters.
+2. **Policies**: each group is a card with its members' latency. Pick a member of a selector group, test them all, or edit the group's policy and filters. Pinning and releasing an automatic group's member are available only when the backend advertises support.
 3. **Rules**: the routing dictionary in evaluation order with the flows each rule decided. Add a rule from a kind and its values (a domain suffix, a geosite category, a port, a process name) or as an expression, before any rule or at the end.
 4. **Configuration**: the accepted sources with their diagnostics. Edit a file in place, validate, save and reload; a quick setup covers the main file's common settings.
 

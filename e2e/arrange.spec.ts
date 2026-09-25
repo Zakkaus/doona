@@ -99,6 +99,12 @@ test('a new group needs a member before it can be applied, and undoing a change 
   await expect(review.getByRole('button', {name: 'Apply'})).toBeDisabled();
   await review.getByRole('button', {name: 'Undo: Create group streaming'}).click();
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toHaveCount(0);
+  await expect(review).toHaveCount(0);
+  await page.getByRole('button', {name: 'Remove hk-01 from resilient'}).click();
+  await expect(page.getByRole('region', {name: 'Changes not applied'})).toContainText('1 change not applied');
+  await expect(review).toHaveCount(0);
+  await page.getByRole('button', {name: 'Review and apply'}).click();
+  await expect(review).toBeVisible();
 });
 
 // The events a mouse drag produces, with one DataTransfer carried from the tray row to the group card.

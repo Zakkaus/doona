@@ -10,7 +10,8 @@ it('projects nested, failed and unmeasured members without inventing latency', (
   const members = memberViews(memberHealth(groups[0], new Map()), t);
   expect(members.find(member => member.id === 'jp-01')).toMatchObject({unavailable: true, tcp: undefined, status: {text: t('ui.unavailable'), tone: 'err'}});
   expect(members.find(member => member.id === 'resilient')).toMatchObject({
-    nested: true, healthy: false,
+    nested: true,
+    healthy: false,
     description: ' ',
     status: {text: '—', group: t('ui.group')}
   });
@@ -67,6 +68,7 @@ it('filters large grids by region and observed health without mutating member or
   const nodes = Array.from({length: 13}, (_, index) => ({
     id: String(index),
     name: `node-${index}`,
+    nested: false,
     tcp: 20 - index,
     unavailable: index === 0,
     healthy: index > 0,

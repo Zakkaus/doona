@@ -2,6 +2,7 @@ import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest} from '@playwright/test';
 import {sha256} from '../src/api/hash';
+import {loadLanguage, translate} from '../src/i18n';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
@@ -174,6 +175,72 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(ready).toHaveCount(1);
+});
+
+test('Activity requests no flow recording and hides capacity gaps that Events retains', async ({page}) => {
+  await loadLanguage('en');
+  const api = createMockApi();
+  const responses: Record<string, unknown> = {
+    '/version': await api.version(),
+    '/capabilities': await api.capabilities(),
+    '/runtime': await api.runtime(),
+    '/runtime/memory': await api.runtimeMemory(),
+    '/runtime/memory/history': await api.memoryHistory(),
+    '/runtime/outbounds': await api.runtimeOutbounds(),
+    '/runtime/traffic/history': await api.trafficHistory(),
+    '/connections': await api.connections(),
+    '/nodes': await api.nodes(),
+    '/groups': await api.groups(),
+    '/config': await api.config()
+  };
+  const kinds: Array<string[] | null> = [];
+  const reasons = [
+    ['evicted', 'event.gap.evicted'],
+    ['sampled', 'event.gap.sampled'],
+    ['buffer_overflow', 'event.gap.overflow'],
+    ['recording_changed', 'event.gap.recording'],
+    ['diagnostic-condition', null]
+  ] as const;
+  const data = {instance_id: 'engine', observed_at: '2026-09-22T00:00:00Z'};
+  const frame = (id: string, event: string, payload: unknown) => `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
+  let releaseEvents = () => {};
+  const noticesReady = new Promise<void>(resolve => {
+    releaseEvents = resolve;
+  });
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace('/api/v1', '');
+    if (path === '/events') {
+      const requested = url.searchParams.get('kinds')?.split(',') ?? null;
+      kinds.push(requested);
+      await noticesReady;
+      const gaps = !requested || requested.includes('flow.gap') ? reasons : [];
+      const body =
+        frame('ready', 'stream.ready', data) +
+        gaps.map(([reason]) => frame(reason, 'flow.gap', {...data, resource_id: null, reason, dropped_records: '1'})).join('');
+      // A fulfilled SSE body ends immediately; suppress transport retries without freezing feed publication.
+      return route.fulfill({contentType: 'text/event-stream', headers: {'Retry-After': '3600'}, body});
+    }
+    await route.fulfill({json: responses[path]});
+  });
+  await page.goto('/#/activity');
+  const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+  await expect(notices).toBeVisible();
+  releaseEvents();
+  await expect(notices.getByRole('listitem')).toHaveCount(3);
+  for (const [reason, label] of reasons)
+    await expect(notices.getByRole('listitem').filter({hasText: label ? translate('en', label) : reason})).toHaveCount(
+      reason === 'recording_changed' || reason === 'diagnostic-condition' ? 1 : 0
+    );
+  expect(kinds).toEqual([null]);
+  await notices.locator('a[href="#/events"]').click();
+  const events = page.getByRole('grid', {name: 'Events', exact: true});
+  for (const [reason, label] of reasons) await expect(events.getByRole('rowheader').filter({hasText: label ? translate('en', label) : reason})).toBeVisible();
+  expect(kinds.at(-1)).toEqual(['runtime.updated', 'operation.updated', 'generation.changed', 'flow.updated', 'flow.gap']);
+  await page.locator('nav a[href="#/activity"]').first().click();
+  await expect(notices.getByRole('listitem')).toHaveCount(3);
+  expect(kinds.at(-1)).toBeNull();
 });
 
 test.describe('many outbounds', () => {

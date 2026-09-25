@@ -38,7 +38,13 @@ export function sameHealth(a: HealthMap, b: HealthMap) {
   if (a.size !== b.size) return false;
   for (const [id, member] of b) {
     const previous = a.get(id);
-    if (!a.has(id) || shown(previous?.health) !== shown(member.health) || previous?.selectedNode?.name !== member.selectedNode?.name || previous?.selectedNode?.latency !== member.selectedNode?.latency) return false;
+    if (
+      !a.has(id) ||
+      shown(previous?.health) !== shown(member.health) ||
+      previous?.selectedNode?.name !== member.selectedNode?.name ||
+      previous?.selectedNode?.latency !== member.selectedNode?.latency
+    )
+      return false;
   }
   return true;
 }

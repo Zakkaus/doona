@@ -25,7 +25,7 @@ export function useEventFeed(withRuntime: boolean) {
   );
   const changes = useSyncExternalStore(feeds.changes.subscribe, feeds.changes.getSnapshot);
   const runtime = useSyncExternalStore(withRuntime ? feeds.runtime.subscribe : silent, withRuntime ? feeds.runtime.getSnapshot : () => none);
-  const status = useEvents(event => (event.event === 'runtime.updated' ? feeds.runtime : feeds.changes).append(event));
+  const status = useEvents(event => (event.event === 'runtime.updated' ? feeds.runtime : feeds.changes).append(event), true);
   const events = useMemo(() => {
     if (!runtime.records.length) return changes.records;
     if (!changes.records.length) return runtime.records;

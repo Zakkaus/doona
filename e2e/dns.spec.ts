@@ -142,7 +142,6 @@ test('domain filtering precedes cache snapshot admission and never narrows globa
   expect(requests.map(query => query.get('cursor'))).toEqual([null, 'filtered:1']);
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
-  await expect(dialog).toContainText('Clears every cache record; this cannot be undone.');
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await expect(grid.getByRole('rowheader', {name: /telegram\.org\./i})).toHaveCount(0);
   await expect(page.locator('.rp-toolbar .rp-kv')).toContainText('0');

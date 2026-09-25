@@ -92,7 +92,7 @@ export function memberViews(members: Array<Group['members'][number] & MemberHeal
         ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
         : member.selectedNode
           ? t('policy.selectedNode', {name: member.selectedNode.name})
-        : ' ',
+          : ' ',
     region: regionOf(member.name) ?? '?'
   }));
 }

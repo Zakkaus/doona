@@ -10,18 +10,16 @@ export async function routingTrace(
   {
     input,
     resolve,
-    recordTypes,
-    maxAddresses
+    recordTypes
   }: Omit<RoutingTraceRequest, 'resolve'> & {
     resolve: RoutingTraceRequest['resolve'] | 'query';
     recordTypes: string[];
-    maxAddresses?: number;
   },
   signal: AbortSignal
 ): Promise<RoutingTraceResponse> {
   if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
-  const limit = maxAddresses ?? (await api.capabilities(signal)).resources.routing_trace.max_addresses;
-  if (limit === undefined) throw clientError(422, 'unsupported_value', 'Routing trace address limits are unavailable', 'ui.errTraceLimits');
+  // Backend address limits bound one request; this batch sends one address at a time.
+  const limit = 16;
   const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
   const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
     lookup_id: `query:${item.type}`,

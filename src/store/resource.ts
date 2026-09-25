@@ -306,9 +306,14 @@ function createWatcher<T>(
     }
   };
   const unsubscribe = followEvents
-    ? subscribeEvents(api, (event, reconnected) => {
-        if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
-      })
+    ? subscribeEvents(
+        api,
+        (event, reconnected) => {
+          if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
+        },
+        undefined,
+        key[0] === 'flows' || key[0] === 'flow'
+      )
     : () => {};
   document.addEventListener('visibilitychange', visibility);
   if (document.hidden) dirty = true;

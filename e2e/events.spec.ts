@@ -10,7 +10,7 @@ test('event kind selection exports only the visible records', async ({page}) => 
     {id: 'events:1', event: 'stream.ready', data},
     {id: 'events:2', event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}}
   ];
-  await page.route('**/api/v1/events', route => fulfillStream(route, events));
+  await page.route('**/api/v1/events{,?*}', route => fulfillStream(route, events));
   await page.goto('/#/events');
   const grid = page.getByRole('grid', {name: 'Events', exact: true});
   await expect(grid.getByRole('gridcell', {name: 'Stream ready', exact: true})).toBeVisible();
@@ -34,7 +34,7 @@ test('runtime heartbeats cannot evict other events from the default feed or expo
   const runtime = await api.runtime();
   const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
   const ready = {id: 'ready:1', event: 'stream.ready', data};
-  await page.route('**/api/v1/events', route =>
+  await page.route('**/api/v1/events{,?*}', route =>
     fulfillStream(route, [
       ready,
       ...Array.from({length: 220}, (_, id) => ({
@@ -59,7 +59,7 @@ test('a single event takes one row, not a blank one beneath it', async ({page}) 
   const {api, capabilities} = await mockBackend(page);
   capabilities.resources.events.available = true;
   const runtime = await api.runtime();
-  await page.route('**/api/v1/events', route =>
+  await page.route('**/api/v1/events{,?*}', route =>
     fulfillStream(route, [{id: 'events:1', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
   );
   await page.goto('/#/events');

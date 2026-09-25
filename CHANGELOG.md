@@ -27,6 +27,14 @@ This changelog uses the Keep a Changelog format.
 - Bundled Noto Sans TC under its own name and used local SVG icons.
 - Revised English table labels, keyboard scrolling, and control spacing.
 - Bounded DNS cache summary pagination with backend domain filtering, and separately labelled selected-node latency for unmeasured nested groups.
+- Made ordinary pages passive event consumers, with explicit flow-capture demand only from flow diagnostics and Events.
+- Kept expected trace-capacity gaps out of Activity notices without removing raw events or partial-flow evidence.
+
+### Fixed
+
+- Kept resolve-then-simulate bounded to 16 addresses without mistaking a backend's one-address request limit for the UI's whole batch limit.
+- Closed arrangement review state when its draft becomes empty, so the next edit does not unexpectedly reopen the sheet.
+- Qualified automatic-group pinning guidance by backend capability.
 
 ### Removed
 

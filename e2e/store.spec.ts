@@ -63,20 +63,26 @@ test('a hidden main-source path does not block a validated conditional replaceme
   expect((await api.config()).sources.find(source => source.kind === 'main')?.content).toContain('# updated');
 });
 
-test('query simulation refuses DNS fan-out above the advertised address limit', async ({page}) => {
+test('query simulation refuses oversized DNS fan-out before starting route requests', async ({page}) => {
   const {api, capabilities, handlers, requests} = await mockBackend(page);
   capabilities.resources.routing_trace.resolve_modes = ['none'];
   capabilities.resources.routing_trace.max_addresses = 1;
-  handlers['GET dns/query'] = request => {
+  handlers['GET dns/query'] = async request => {
     const params = new URL(request.url()).searchParams;
-    return api.dnsQuery(params.get('domain')!, params.getAll('type'));
+    const response = await api.dnsQuery(params.get('domain')!, params.getAll('type'));
+    return {
+      ...response,
+      results: response.results.map(result =>
+        result.type === 'A' ? {...result, answers: Array.from({length: 17}, (_, index) => ({...result.answers![0], data: `192.0.2.${index + 1}`}))} : result
+      )
+    };
   };
   handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
   await page.getByLabel('Destination port', {exact: true}).fill('443');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
-  await expect(page.getByText(/DNS returned more than 1 distinct addresses/)).toBeVisible();
+  await expect(page.locator('.rp-toast.negative')).toBeVisible();
   expect(requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))).toHaveLength(0);
 });
 

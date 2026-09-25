@@ -22,9 +22,9 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const nodeList = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const nodes = nodeList.data;
-  const [changes, setChanges] = useState<GroupChange[]>([]);
+  const [{changes, reviewing}, setDraft] = useState<{changes: GroupChange[]; reviewing: boolean}>({changes: [], reviewing: false});
   // Leaving the page after confirming the draft guard drops what was staged.
-  const guard = useDraftGuard(changes.length > 0, () => setChanges([]));
+  const guard = useDraftGuard(changes.length > 0, () => setDraft({changes: [], reviewing: false}));
   const text = source.main?.content ?? '';
   const subscriptions = useMemo(() => traySubscriptions(providers.data?.providers ?? [], nodes ?? []), [providers.data, nodes]);
   const view = useMemo(() => arrangeView(text, changes, subscriptions, nodes ?? [], t), [text, changes, subscriptions, nodes, t]);
@@ -37,7 +37,6 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     [nodes, needle, contains]
   );
   const traySubs = useMemo(() => subscriptions.filter(item => !needle || contains(item.label, needle)), [subscriptions, needle, contains]);
-  const [reviewing, setReviewing] = useState(false);
   const [applying, setApplying] = useState(false);
   // A refused or failed apply is reported inside the review sheet, where it happened.
   const [failure, setFailure] = useState<string | null>(null);
@@ -45,7 +44,10 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const edit = (next: (current: GroupChange[]) => GroupChange[]) => {
     if (applying) return;
     setFailure(null);
-    setChanges(next);
+    setDraft(current => {
+      const changes = next(current.changes);
+      return {changes, reviewing: current.reviewing && changes.length > 0};
+    });
   };
   // Items the group already holds exactly are skipped: adding them again would stage an edit that writes nothing.
   const place = (group: string, items: Placeable[]) => {
@@ -69,9 +71,8 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
       if (result.kind === 'failed') setFailure(t('arrange.failed', {error: errorText(result.error, t)}));
       if (result.kind === 'ok') {
         toast('positive', t('arrange.applied', {n: changes.length}));
-        setChanges([]);
+        setDraft({changes: [], reviewing: false});
         guard.clear();
-        setReviewing(false);
       }
     } finally {
       setApplying(false);
@@ -112,11 +113,10 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     discard: () => edit(() => []),
     nameProblem,
     create: (name: string, policy: string) => edit(current => stage(current, {kind: 'createGroup', group: name, policy})),
-    // With nothing left to review the sheet closes by itself.
-    reviewing: reviewing && changes.length > 0,
+    reviewing,
     setReviewing: (open: boolean) => {
       // The sheet stays open while its apply runs, so what is being written stays in view.
-      if (!applying) setReviewing(open);
+      if (!applying) setDraft(current => ({...current, reviewing: open && current.changes.length > 0}));
     },
     preview,
     canApply: changes.length > 0 && view.emptyNew.length === 0 && !blockedReason && !applying,

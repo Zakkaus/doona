@@ -12,7 +12,11 @@ export function usePolicies({go, query}: PageProps) {
   const groups = useGroups(offered(resources, 'groups', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const focus = new URLSearchParams(query).get('group');
-  const [health, setHealth] = useState<{nodes: typeof nodes.data; groups: typeof groups.data; map: Map<string, MemberHealth>}>({nodes: undefined, groups: undefined, map: new Map()});
+  const [health, setHealth] = useState<{nodes: typeof nodes.data; groups: typeof groups.data; map: Map<string, MemberHealth>}>({
+    nodes: undefined,
+    groups: undefined,
+    map: new Map()
+  });
   if (health.nodes !== nodes.data || health.groups !== groups.data) {
     const map = policyHealth(nodes.data ?? [], groups.data ?? []);
     setHealth({nodes: nodes.data, groups: groups.data, map: sameHealth(health.map, map) ? health.map : map});
