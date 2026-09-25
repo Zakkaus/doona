@@ -1,7 +1,18 @@
 import {describe, expect, it} from 'vitest';
 import type {Node, ProbeResult, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {nodeRows, ownedNodes, providerRows, nodeRowView, probeToast, providerRowView, intervalText, selectedProvider} from './view';
+import {
+  nodeRows,
+  ownedNodes,
+  providerRows,
+  nodeRowView,
+  probeToast,
+  providerRowView,
+  intervalText,
+  intervalItems,
+  providerCreate,
+  selectedProvider
+} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';
@@ -202,6 +213,40 @@ it('does not authorize writes from shared-host guesses or conflicting node tags'
   const unspecified = providerRowView(provider('a'), null, 'en-US', t);
   expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
   expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+});
+
+describe('providerCreate', () => {
+  const form = {name: ' sub-a ', value: ' https://example.org/sub ', interval: '', agent: '', cache: null};
+  const options = {update_interval: 86400, user_agent: 'honk/1.0', cache: true};
+
+  it('sends only the options that differ from the backend default', () => {
+    const base = {name: 'sub-a', kind: 'subscription', url: 'https://example.org/sub'};
+    expect(providerCreate(form, options)).toEqual(base);
+    expect(providerCreate({...form, interval: '86400', agent: ' honk/1.0 ', cache: true}, options)).toEqual(base);
+    expect(providerCreate({...form, interval: '0', agent: ' clash.meta ', cache: false}, options)).toEqual({
+      ...base,
+      update_interval: 0,
+      user_agent: 'clash.meta',
+      cache: false
+    });
+  });
+
+  it('never sends an option the backend does not list', () => {
+    const chosen = {...form, interval: '3600', agent: 'clash.meta', cache: false};
+    expect(providerCreate(chosen, undefined)).toEqual({name: 'sub-a', kind: 'subscription', url: 'https://example.org/sub'});
+    expect(providerCreate(chosen, {user_agent: 'honk/1.0'})).toEqual({
+      name: 'sub-a',
+      kind: 'subscription',
+      url: 'https://example.org/sub',
+      user_agent: 'clash.meta'
+    });
+  });
+
+  it('offers the table presets and keeps a default outside them', () => {
+    expect(intervalItems(86400, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+    expect(intervalItems(7200, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400', '7200']);
+    expect(intervalItems(null, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+  });
 });
 
 it('falls back to the first real source when the linked provider is no longer listed', () => {

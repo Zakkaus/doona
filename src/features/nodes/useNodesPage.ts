@@ -9,7 +9,7 @@ import {isBareName} from '../../dae/text';
 import {groupNameError, newGroupPolicies} from '../policies/policyText';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
-import {ownedNodes, providerRows, selectedProvider} from './view';
+import {intervalItems, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
@@ -18,13 +18,15 @@ import {errorText} from '../../api/error';
 import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 
+const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
+
 type NodeDialog =
   {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
-  const [form, setForm] = useState({name: '', value: ''});
+  const [form, setForm] = useState<ProviderForm>(blank);
   const [policy, setPolicy] = useState(newGroupPolicies[0].id);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
@@ -37,7 +39,7 @@ export function useNodesPage({go, query}: PageProps) {
   });
   const open = useCallback((next: NodeDialog) => {
     session.current++;
-    setForm({name: '', value: ''});
+    setForm(blank);
     setPolicy(newGroupPolicies[0].id);
     setProblem(null);
     setDialog(next);
@@ -93,7 +95,7 @@ export function useNodesPage({go, query}: PageProps) {
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
-        const created = await manage.addProvider({name: form.name.trim(), kind: 'subscription', url: form.value.trim()});
+        const created = await manage.addProvider(providerCreate(form, createOptions));
         if (!created) return;
         const name = form.name.trim();
         // The contract creates the provider unfetched; a refresh is what turns it into nodes.
@@ -160,9 +162,12 @@ export function useNodesPage({go, query}: PageProps) {
             ? t('nodes.newGroup')
             : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
+  const createOptions = resources?.providers.create_options;
+  // The contract's User-Agent bound: up to 256 printable ASCII characters.
+  const agentError = /^[\x20-\x7E]{0,256}$/.test(form.agent.trim()) ? null : t('nodes.agentInvalid');
   const formValid =
     dialog?.kind === 'provider'
-      ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value)
+      ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
       : dialog?.kind === 'node'
         ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
         : dialog?.kind === 'group'
@@ -237,6 +242,14 @@ export function useNodesPage({go, query}: PageProps) {
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
     // Only a name already typed is judged; an empty field is simply not ready.
     groupNameError: form.name.trim() ? nameError : null,
+    agentError,
+    // Each option shows only when the backend lists it, with its default preselected or as the placeholder.
+    options: createOptions && {
+      intervals: createOptions.update_interval === undefined ? null : intervalItems(createOptions.update_interval, locale, t),
+      interval: form.interval || String(createOptions.update_interval),
+      agent: createOptions.user_agent,
+      cache: createOptions.cache === undefined ? null : (form.cache ?? createOptions.cache)
+    },
     policy,
     setPolicy: (next: string) => {
       if (submitting.current !== dialog) setPolicy(next);

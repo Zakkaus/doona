@@ -250,7 +250,11 @@ export function createInventory(
       )
         throw new ApiError(422, 'unsupported_value', 'The subscription options are not supported');
       // Like honk, an entry with options becomes a block; one without stays a scalar line.
-      const fields = [agent !== undefined && `ua: ${quote(agent)}`, interval !== undefined && `interval: '${interval}s'`, cache !== undefined && `cache: ${cache}`];
+      const fields = [
+        agent !== undefined && `ua: ${quote(agent)}`,
+        interval !== undefined && `interval: '${interval}s'`,
+        cache !== undefined && `cache: ${cache}`
+      ];
       const options = fields.filter(Boolean).map(field => `    ${field}\n`);
       const line = configLine(() =>
         options.length

@@ -1,4 +1,4 @@
-import type {Node, ProbeResult, Provider} from '../../api/model';
+import type {Capabilities, Node, ProbeResult, Provider, ProviderCreate} from '../../api/model';
 import {millis} from '../../api/u64';
 import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
@@ -144,6 +144,27 @@ export function intervalText(seconds: number, locale: string, t: Translator) {
       ? t('nodes.everyHours', {n: formatNumber(seconds / 3600, locale)})
       : formatDuration(String(seconds), locale);
 }
+// The presets, with a value outside them kept so a select can show it.
+export function intervalItems(current: number | null, locale: string, t: Translator) {
+  return [0, ...intervals, ...(current === null || current === 0 || intervals.includes(current) ? [] : [current])].map(value => ({
+    id: String(value),
+    label: intervalText(value, locale, t)
+  }));
+}
+
+export type ProviderForm = {name: string; value: string; interval: string; agent: string; cache: boolean | null};
+type CreateOptions = Capabilities['resources']['providers']['create_options'];
+// An option left at the backend's default is not sent, so the entry stays a one-line scalar.
+export function providerCreate(form: ProviderForm, options: CreateOptions): ProviderCreate {
+  const request: ProviderCreate = {name: form.name.trim(), kind: 'subscription', url: form.value.trim()};
+  const seconds = Number(form.interval);
+  if (options?.update_interval !== undefined && form.interval && seconds !== options.update_interval) request.update_interval = seconds;
+  const agent = form.agent.trim();
+  if (options?.user_agent !== undefined && agent && agent !== options.user_agent) request.user_agent = agent;
+  if (options?.cache !== undefined && form.cache !== null && form.cache !== options.cache) request.cache = form.cache;
+  return request;
+}
+
 export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator) {
   const kinds: Record<ProviderRow['kind'], Key> = {
     subscription: 'nodes.kind.subscription',
@@ -177,13 +198,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     intervalValue: interval == null ? '' : String(interval),
     hasInterval: interval !== undefined,
     intervalLabel: t('nodes.intervalOf', {name}),
-    intervals:
-      interval === undefined
-        ? []
-        : [0, ...intervals, ...(interval === null || intervals.includes(interval) || interval === 0 ? [] : [interval])].map(value => ({
-            id: String(value),
-            label: intervalText(value, locale, t)
-          })),
+    intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
     status: pseudo ? null : t(statuses[item.status]),
     tone: tones[item.status],
     error: item.last_error ? backendMessage(item.last_error.code, item.last_error.message, t) : undefined,
