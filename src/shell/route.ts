@@ -1,15 +1,15 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {shouldOpenSettings} from './preferences';
-import {isRoutePath, type Go, type RoutePath} from './routes';
+import {defaultRoute, isRoutePath, type Go, type RoutePath} from './routes';
 
 type Route = {route: RoutePath; query: string};
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
-  const route = {route: (i < 0 ? h : h.slice(0, i)) || 'activity', query: i < 0 ? '' : h.slice(i + 1)};
+  const route = {route: (i < 0 ? h : h.slice(0, i)) || defaultRoute, query: i < 0 ? '' : h.slice(i + 1)};
   if (route.route === 'flows') return legacyFlows(route.query);
-  return {route: isRoutePath(route.route) ? route.route : 'activity', query: route.query};
+  return {route: isRoutePath(route.route) ? route.route : defaultRoute, query: route.query};
 }
 // The flow map and records moved under rules; old links keep working.
 function legacyFlows(query: string): Route {

@@ -13,47 +13,116 @@ import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
-// The default page stays eager so first paint has no second round trip.
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 
-// Rendering and preloading share page loaders.
-const pages = {
-  overview: preloadable<PageProps>(() => import('../features/overview/Overview').then(m => ({default: m.Overview}))),
-  connections: preloadable<PageProps>(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
-  policies: preloadable<PageProps>(() => import('../features/policies/Policies').then(m => ({default: m.Policies}))),
-  nodes: preloadable<PageProps>(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes}))),
-  rules: preloadable<PageProps>(() => import('../features/rules/Rules').then(m => ({default: m.Rules}))),
-  config: preloadable<PageProps>(() => import('../features/config/Config').then(m => ({default: m.Config}))),
-  dns: preloadable<PageProps>(() => import('../features/dns/Dns').then(m => ({default: m.Dns}))),
-  logs: preloadable<PageProps>(() => import('../features/logs/Logs').then(m => ({default: m.Logs}))),
-  events: preloadable<PageProps>(() => import('../features/events/Events').then(m => ({default: m.Events}))),
-  settings: preloadable<PageProps>(() => import('../features/settings/Settings').then(m => ({default: m.Settings})))
+// A lazy page renders and preloads through the same loader.
+function lazyPage(load: () => Promise<{default: ComponentType<PageProps>}>) {
+  const page = preloadable<PageProps>(load);
+  return {Page: page.Component, preload: page.preload};
+}
+
+type Feature = {
+  id: string;
+  path: RoutePath;
+  // hintKey: the question under a page title that tells similar pages apart.
+  nav: {titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
+  Page: ComponentType<PageProps>;
+  // Absent for an eager page.
+  preload?: () => Promise<unknown>;
+  // `intent` pages load on hover, focus or click only, not in the idle warm-up.
+  warm?: 'intent';
+  // The page works without a backend, so it renders before capabilities arrive and in place of the sign-in form.
+  offline?: true;
+  shortcut?: string;
+  requires: {resources?: ReadonlyArray<keyof Capabilities['resources']>};
 };
-const Overview = pages.overview.Component;
-const Connections = pages.connections.Component;
-const Policies = pages.policies.Component;
-const NodesPage = pages.nodes.Component;
-const Rules = pages.rules.Component;
-const Config = pages.config.Component;
-const Dns = pages.dns.Component;
-const Logs = pages.logs.Component;
-const Events = pages.events.Component;
-const Settings = pages.settings.Component;
+
+// Keyed by path in navigation order, so a new route without a page fails to compile.
+const definitions = {
+  // The default page stays eager so first paint has no second round trip.
+  activity: {shortcut: 'a', nav: {titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
+  overview: {
+    shortcut: 'o',
+    nav: {titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
+    ...lazyPage(() => import('../features/overview/Overview').then(m => ({default: m.Overview}))),
+    requires: {resources: ['runtime']}
+  },
+  connections: {
+    shortcut: 'c',
+    nav: {titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
+    ...lazyPage(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
+    requires: {resources: ['connections']}
+  },
+  dns: {
+    nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
+    ...lazyPage(() => import('../features/dns/Dns').then(m => ({default: m.Dns}))),
+    requires: {resources: ['dns_query', 'dns_log', 'dns_cache']}
+  },
+  policies: {
+    shortcut: 'p',
+    nav: {titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
+    ...lazyPage(() => import('../features/policies/Policies').then(m => ({default: m.Policies}))),
+    requires: {resources: ['groups']}
+  },
+  rules: {
+    shortcut: 'r',
+    nav: {titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
+    ...lazyPage(() => import('../features/rules/Rules').then(m => ({default: m.Rules}))),
+    requires: {resources: ['routing_trace', 'flows', 'rules']}
+  },
+  nodes: {
+    shortcut: 'n',
+    nav: {titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
+    ...lazyPage(() => import('../features/nodes/Nodes').then(m => ({default: m.Nodes}))),
+    requires: {resources: ['nodes', 'providers']}
+  },
+  config: {
+    shortcut: 'g',
+    nav: {titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
+    ...lazyPage(() => import('../features/config/Config').then(m => ({default: m.Config}))),
+    // The editor is the heaviest chunk.
+    warm: 'intent',
+    requires: {resources: ['config']}
+  },
+  events: {
+    nav: {titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
+    ...lazyPage(() => import('../features/events/Events').then(m => ({default: m.Events}))),
+    requires: {resources: ['events']}
+  },
+  logs: {
+    shortcut: 'l',
+    nav: {titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
+    ...lazyPage(() => import('../features/logs/Logs').then(m => ({default: m.Logs}))),
+    requires: {resources: ['logs']}
+  },
+  settings: {
+    shortcut: 's',
+    nav: {titleKey: 'nav.settings', Icon: SettingsIcon},
+    ...lazyPage(() => import('../features/settings/Settings').then(m => ({default: m.Settings}))),
+    offline: true,
+    requires: {}
+  }
+} as const satisfies Record<RoutePath, Omit<Feature, 'id' | 'path'>>;
+
+export const features: ReadonlyArray<Feature> = Object.entries(definitions).map(([path, definition]) => ({
+  id: path,
+  path: path as RoutePath,
+  ...definition
+}));
+
 // A failed warm-up is not an error; the click loads it again.
 export function warmPage(id: string) {
-  void pages[id as keyof typeof pages]?.preload().catch(() => undefined);
+  void features
+    .find(feature => feature.id === id)
+    ?.preload?.()
+    .catch(() => undefined);
 }
 // Preload the search dialog, then the other pages, one per idle slice (the callback may still run on its timeout while
-// the page is busy); the config page carries the editor and loads on intent (hover, focus, click) only.
+// the page is busy).
 export function warmAllPages() {
-  const queue = [
-    preloadSearch,
-    ...Object.keys(pages)
-      .filter(id => id !== 'config')
-      .map(id => () => warmPage(id))
-  ];
+  const queue = [preloadSearch, ...features.filter(feature => feature.preload && feature.warm !== 'intent').map(feature => () => warmPage(feature.id))];
   const next = () => {
     const warm = queue.shift();
     if (!warm) return;
@@ -64,94 +133,6 @@ export function warmAllPages() {
   if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
   else setTimeout(next, 1000);
 }
-
-type Feature = {
-  id: string;
-  path: RoutePath;
-  // hintKey: the question under a page title that tells similar pages apart.
-  nav: {titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
-  Page: ComponentType<PageProps>;
-  shortcut?: string;
-  requires: {resources?: ReadonlyArray<keyof Capabilities['resources']>};
-};
-
-const definitions = [
-  // The default page stays eager so first paint has no second round trip.
-  {id: 'activity', path: 'activity', shortcut: 'a', nav: {titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
-  {
-    id: 'overview',
-    path: 'overview',
-    shortcut: 'o',
-    nav: {titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
-    Page: Overview,
-    requires: {resources: ['runtime']}
-  },
-  {
-    id: 'connections',
-    path: 'connections',
-    shortcut: 'c',
-    nav: {titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
-    Page: Connections,
-    requires: {resources: ['connections']}
-  },
-  {
-    id: 'dns',
-    path: 'dns',
-    nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
-    Page: Dns,
-    requires: {resources: ['dns_query', 'dns_log', 'dns_cache']}
-  },
-  {
-    id: 'policies',
-    path: 'policies',
-    shortcut: 'p',
-    nav: {titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
-    Page: Policies,
-    requires: {resources: ['groups']}
-  },
-  {
-    id: 'rules',
-    path: 'rules',
-    shortcut: 'r',
-    nav: {titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
-    Page: Rules,
-    requires: {resources: ['routing_trace', 'flows', 'rules']}
-  },
-  {
-    id: 'nodes',
-    path: 'nodes',
-    shortcut: 'n',
-    nav: {titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
-    Page: NodesPage,
-    requires: {resources: ['nodes', 'providers']}
-  },
-  {
-    id: 'config',
-    path: 'config',
-    shortcut: 'g',
-    nav: {titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
-    Page: Config,
-    requires: {resources: ['config']}
-  },
-  {
-    id: 'events',
-    path: 'events',
-    nav: {titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
-    Page: Events,
-    requires: {resources: ['events']}
-  },
-  {
-    id: 'logs',
-    path: 'logs',
-    shortcut: 'l',
-    nav: {titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
-    Page: Logs,
-    requires: {resources: ['logs']}
-  },
-  {id: 'settings', path: 'settings', shortcut: 's', nav: {titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
-] as const satisfies ReadonlyArray<Feature>;
-
-export const features: ReadonlyArray<Feature> = definitions;
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
   const requires = features.find(feature => feature.path === path)?.requires;
