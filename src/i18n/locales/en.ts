@@ -1061,6 +1061,8 @@ export const messages = {
   'settings.geodataVerifiedNo': 'Not verified',
   'settings.paired': 'Backend URL and token were filled in from the link; they take effect once saved.',
   'settings.install': 'Install as an app',
+  'settings.installHintIos': 'To install, tap Share, then Add to Home Screen.',
+  'settings.installHintMac': 'To install, choose File > Add to Dock from the menu bar.',
   'settings.installed': 'Installed',
   'settings.apiMajor': 'The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.',
   'settings.installFailed': 'Could not install: {error}',

@@ -5,7 +5,7 @@ import {toast} from '../../ui/ui';
 import {SettingsContext} from '../../shell/preferences';
 import {useBackendForm} from './useBackendForm';
 import {profileView, paletteLabel} from './view';
-import {useInstallOffer} from '../../shell/install';
+import {installHint, useInstallOffer} from '../../shell/install';
 export function useSettingsPage(query: string) {
   const t = useT();
   const offer = useInstallOffer();
@@ -24,6 +24,7 @@ export function useSettingsPage(query: string) {
         });
       }
     : null;
+  const hint = offer ? null : installHint();
   return {
     ...form,
     lang,
@@ -43,6 +44,7 @@ export function useSettingsPage(query: string) {
     toggleToken: () => setShowToken(value => !value),
     versionWarning: version.data && version.data.api.major !== 1 ? t('settings.apiMajor', {major: String(version.data.api.major)}) : null,
     install,
+    installHint: hint && t(hint === 'ios' ? 'settings.installHintIos' : 'settings.installHintMac'),
     addProfile: () => {
       form.setName('');
       form.setDialog('add');

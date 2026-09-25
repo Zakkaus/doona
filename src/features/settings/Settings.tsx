@@ -53,6 +53,7 @@ export function Settings({query}: PageProps) {
     toggleToken,
     versionWarning,
     install,
+    installHint,
     addProfile,
     renameProfile,
     dialogTitle,
@@ -193,6 +194,7 @@ export function Settings({query}: PageProps) {
         <div className="rp-cluster">
           <About trigger={<Button>{t('about.title')}</Button>} />
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
+          {installHint && <p className="rp-note">{installHint}</p>}
         </div>
       </section>
       <ConfirmDialog
