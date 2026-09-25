@@ -172,7 +172,8 @@ export const geodata: GeoData = {
       modified_at: ago(3 * 86400),
       source_redacted: defaultGeodataPreset.urls.geosite[0],
       fetched_url_redacted: defaultGeodataPreset.urls.geosite[0],
-      verified: true
+      verified: true,
+      download_route: {route: 'routing', group_id: null}
     },
     {
       kind: 'geoip',
@@ -181,7 +182,8 @@ export const geodata: GeoData = {
       modified_at: ago(3 * 86400),
       source_redacted: defaultGeodataPreset.urls.geoip[0],
       fetched_url_redacted: defaultGeodataPreset.urls.geoip[1],
-      verified: true
+      verified: true,
+      download_route: {route: 'routing', group_id: null}
     }
   ],
   last_checked_at: ago(3 * 86400),

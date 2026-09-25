@@ -80,6 +80,7 @@ export type GeoData = Schema['GeoData'];
 export type GeoAssetKind = Schema['GeoAssetKind'];
 export type GeoDataSettings = Schema['GeoDataSettings'];
 export type GeoDataSettingsPatch = Schema['GeoDataSettingsPatch'];
+export type GeoDataDownload = Schema['GeoDataDownload'];
 export type RuleList = Schema['RuleList'];
 // honk supplies source_id beside the redacted label, but the pinned contract does not yet declare it.
 export type RuleSource = NonNullable<Schema['RuleSource']> & {source_id?: string};
