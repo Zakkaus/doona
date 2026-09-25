@@ -15,7 +15,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Add and apply now', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT');
@@ -42,7 +42,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Add and apply now', exact: true}).click();
   await expect(dialog).toContainText('Validation found 1 error; nothing written');
   await expect(dialog).toContainText('config.dae line 44: Backend message: no group gaming');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
@@ -113,3 +113,70 @@ for (const width of [360, 768, 1440])
     // The destructive action ends the group on a line of its own.
     expect(lines.at(-1)).toEqual([boxes[4]]);
   });
+
+const top = (page: import('@playwright/test').Page) => page.locator('.rp-top');
+async function hold(page: import('@playwright/test').Page, id: string) {
+  await page.goto(`/#/connections?id=${id}`);
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+}
+
+test('held rules wait for one apply from the top bar, which writes them in one request', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await hold(page, '1');
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule held; not written yet'})).toBeVisible();
+  await hold(page, '2');
+  expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+  const apply = top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true});
+  await expect(apply.locator('.rp-held-count')).toHaveText('2');
+  // The rule list shows what is held, and a held rule can be discarded there.
+  await page.goto('/#/rules?tab=list');
+  const held = page.getByRole('region', {name: 'Pending: 2'});
+  await expect(held).toContainText('domain(full: api.telegram.org) -> proxy');
+  await expect(held).toContainText('domain(full: cdn.bilibili.com) -> proxy');
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  const writes = requests.filter(request => request.method() === 'PUT');
+  expect(writes).toHaveLength(1);
+  const content = writes[0].postDataJSON().content as string;
+  expect(content).toContain('domain(full: api.telegram.org) -> proxy');
+  expect(content).toContain('domain(full: cdn.bilibili.com) -> proxy');
+  await expect(held).toHaveCount(0);
+  await expect(top(page).getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+});
+
+test('a refused apply keeps the held rules and shows the diagnostics in the rule list', async ({page}) => {
+  const {handlers, requests} = await mockBackend(page);
+  handlers['POST config/validate'] = async () => ({
+    valid: false,
+    generation_id: '40',
+    validated_at: new Date().toISOString(),
+    diagnostics: [{level: 'error', source_id: 'src-main', line: 44, column: 3, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
+  });
+  await hold(page, '1');
+  await page.goto('/#/rules?tab=list');
+  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'Validation found 1 error; nothing written'})).toBeVisible();
+  const held = page.getByRole('region', {name: 'Pending: 1'});
+  await expect(held).toContainText('config.dae line 44: Backend message: no group proxy');
+  await expect(top(page).locator('.rp-held-count')).toHaveText('1');
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
+  await held.getByRole('button', {name: 'Discard held rule', exact: true}).click();
+  await expect(held).toHaveCount(0);
+  await expect(top(page).getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
+});
+
+test('with nothing held the top bar button re-reads the data and writes nothing', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.goto('/#/connections?id=1');
+  await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+  const before = requests.length;
+  await top(page).getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Data refreshed.'})).toBeVisible();
+  expect(requests.slice(before).some(request => request.url().includes('/connections'))).toBe(true);
+  expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+});

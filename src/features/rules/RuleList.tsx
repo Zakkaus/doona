@@ -11,6 +11,7 @@ import {
   Segmented,
   Switch,
   ErrorMessage,
+  InlineAlert,
   TextField,
   TextTooltip,
   type TableColumn
@@ -99,6 +100,34 @@ function Dictionary({view}: {view: Model}) {
         )}
       </div>
       {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
+      {view.held && (
+        <section className="rp-card rp-list" aria-label={view.held.title}>
+          <div className="rp-cluster">
+            <h3 className="rp-h3">{view.held.title}</h3>
+            {view.held.files && <span className="rp-label">{view.held.files}</span>}
+          </div>
+          {view.held.failure && (
+            <InlineAlert>
+              {view.held.failure.text}
+              {view.held.failure.lines.map((line, i) => (
+                <span key={i} className="rp-label">
+                  {line}
+                </span>
+              ))}
+            </InlineAlert>
+          )}
+          {view.held.rows.map(row => (
+            <div key={row.id} className="rp-cluster">
+              <DaeCode text={row.line} />
+              <span className="rp-label">{row.position}</span>
+              <span className="rp-grow" />
+              <Button small quiet icon label={t('rule.discard')} onPress={() => view.discard(row.id)}>
+                <Close />
+              </Button>
+            </div>
+          ))}
+        </section>
+      )}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={t('rule.listTitle')}

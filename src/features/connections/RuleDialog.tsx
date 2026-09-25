@@ -1,22 +1,35 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {ConfirmDialog, ErrorMessage, LabeledSelect, Segmented} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Segmented} from '../../ui/ui';
 import type {useConnectionRule} from './useConnectionRule';
 
 export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRule>['dialog']}) {
   const t = useT();
   return (
-    <ConfirmDialog
+    <ModalDialog
       title={t('rule.add')}
+      narrow
       isOpen={!!dialog}
-      onCancel={() => dialog?.close()}
-      tone="accent"
-      confirmLabel={t('rule.add')}
-      isDisabled={dialog?.disabled}
-      isPending={dialog?.busy}
-      error={dialog?.failure}
-      onConfirm={() => dialog?.submit()}
+      onOpenChange={open => {
+        if (!open) dialog?.close();
+      }}
+      footer={() => (
+        <>
+          <Button onPress={() => dialog?.close()}>{t('ui.cancel')}</Button>
+          <Button isDisabled={dialog?.disabled} isPending={dialog?.busy} onPress={() => dialog?.applyNow()}>
+            {t('rule.addApply')}
+          </Button>
+          <Button accent isDisabled={dialog?.disabled || dialog?.busy} onPress={() => dialog?.hold()}>
+            {t('rule.hold')}
+          </Button>
+        </>
+      )}
     >
+      {dialog?.failure && (
+        <InlineAlert key={dialog.failure.id} takeFocus>
+          {dialog.failure.text}
+        </InlineAlert>
+      )}
       {dialog && (
         <div className="rp-list">
           {dialog.failure?.lines.map((line, i) => (
@@ -43,6 +56,6 @@ export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRul
           <DaeCode text={dialog.preview} />
         </div>
       )}
-    </ConfirmDialog>
+    </ModalDialog>
   );
 }

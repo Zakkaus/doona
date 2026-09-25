@@ -1,4 +1,5 @@
-import {createContext, useCallback, useContext, useMemo, useRef, useState} from 'react';
+import {createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useApplyHeld} from '../features/rules/usePendingApply';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useT} from '../i18n';
@@ -7,7 +8,14 @@ import {accessError, duckView, shellView, wordmark, type AboutView, type ShellVi
 import {errorText} from '../api/error';
 
 export const AboutContext = createContext<AboutView | null>(null);
-export type ShellModel = ShellView & {spinning: boolean; refresh: () => Promise<void>; wordmark: string; honk: () => void};
+export type ShellModel = ShellView & {
+  spinning: boolean;
+  refresh: () => Promise<void>;
+  held: {count: number; label: string; busy: boolean};
+  topAction: () => void;
+  wordmark: string;
+  honk: () => void;
+};
 export function useShell(settings: Settings, route: string): ShellModel {
   const t = useT();
   const capabilities = useCapabilities();
@@ -36,7 +44,15 @@ export function useShell(settings: Settings, route: string): ShellModel {
     }
   }, [t]);
   const honk = useCallback(() => setHonked(true), []);
-  return {...view, spinning, refresh, wordmark: wordmark(honked), honk};
+  // The top bar's refresh applies held rules while there are any; the latest apply is read through a ref so the
+  // memoised top bar keeps one callback.
+  const held = useApplyHeld();
+  const latest = useRef(held);
+  useLayoutEffect(() => {
+    latest.current = held;
+  });
+  const topAction = useCallback(() => void (latest.current.count ? latest.current.apply() : refresh()), [refresh]);
+  return {...view, spinning, refresh, held: {count: held.count, label: held.label, busy: held.busy}, topAction, wordmark: wordmark(honked), honk};
 }
 export function useAbout(onHonk?: () => void) {
   const view = useContext(AboutContext)!;
