@@ -4,7 +4,7 @@
 
 [README](../README.zh-TW.md) 之外只需要看一次的內容：執行環境、其他提供方式、各頁面需要的後端資源、doona 自身設定的存放位置，以及開發工具。
 
-[使用範例資料體驗示範版](https://zakkaus.github.io/doona/)。
+[使用範例資料體驗示範版](https://demo.daeuniverse.org/)。
 
 ## 執行環境
 

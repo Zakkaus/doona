@@ -4,7 +4,7 @@ English · [简体中文](guide.zh-CN.md) · [繁體中文](guide.zh-TW.md)
 
 The parts of the [README](../README.md) that are only needed once: what doona runs on, the other ways to serve it, what each page needs from the backend, where doona keeps its own settings, and the development tools.
 
-[Try the demo with sample data](https://zakkaus.github.io/doona/).
+[Try the demo with sample data](https://demo.daeuniverse.org/).
 
 ## Requirements
 

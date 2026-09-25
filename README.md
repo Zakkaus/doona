@@ -17,7 +17,7 @@ English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
 doona is a static web UI for the native API the daeuniverse engines share: honk today, dae once it implements the same contract. The engine serves it itself or any web server does; it shows what the engine is doing and manages nodes, groups, routing rules and configuration files.
 
-[Try the demo with sample data](https://zakkaus.github.io/doona/).
+[Try the demo with sample data](https://demo.daeuniverse.org/).
 
 ![The activity page](docs/screenshots/en/activity-light.webp)
 
