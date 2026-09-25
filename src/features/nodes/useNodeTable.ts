@@ -1,10 +1,10 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
-import {toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
+import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {collator, nodeRows, nodeRowView, probeToast} from './view';
@@ -67,38 +67,39 @@ export function useNodeTable(input: NodeTableInput) {
   );
   const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
   const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
-  const display = useMemo(() => new Map(members.map(node => [node.id, nodeRowView(node, names, lang, t)])), [members, names, lang, t]);
   const {probe: runProbe, canProbe, busy: probeBusy} = probe;
-  const rows = useMemo(
-    () =>
-      members.map(node => ({
-        ...display.get(node.id)!,
-        canProbe: canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
-        probing: probeBusy === node.id,
-        probeDisabled: !!probeBusy,
-        probe: () =>
-          void runProbe(node.id).then(
-            result => {
-              if (!result) return;
-              const {kind, text} = probeToast(result, node.id, node.name, t);
-              toast(kind, text);
-            },
-            error => toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}))
-          ),
-        menu: () => [
-          ...entries
-            .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
-            .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
-          {id: '/new', label: t('nodes.newGroup')}
-        ],
-        join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
-        removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
-        remove: () => onRemove(node)
-      })),
-    [members, display, canProbe, probeBusy, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
+  // A row per node object, rebuilt only when the node or what every row reads changes. The running probe is not part
+  // of a row: the table reads it, so a probe starting or ending does not rebuild every row.
+  const build = useCallback(
+    (node: Node): NodeTableView['rows'][number] => ({
+      ...nodeRowView(node, names, lang, t),
+      canProbe: canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
+      probe: () =>
+        void runProbe(node.id).then(
+          result => {
+            if (!result) return;
+            const {kind, text} = probeToast(result, node.id, node.name, t);
+            toast(kind, text);
+          },
+          error => toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}))
+        ),
+      menu: () => [
+        ...entries
+          .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
+          .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
+        {id: '/new', label: t('nodes.newGroup')}
+      ],
+      join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
+      removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
+      remove: () => onRemove(node)
+    }),
+    [names, lang, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
   );
+  const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
+  const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
   return {
     rows,
+    probeBusy,
     search,
     setSearch,
     group: activeGroup,
@@ -132,14 +133,14 @@ export type NodeTableView = {
     joinLabel: string;
     removeLabel: string;
     canProbe: boolean;
-    probing: boolean;
-    probeDisabled: boolean;
     probe: () => void;
     menu: () => Array<{id: string; label: string; desc?: string}>;
     join: (key: string) => void;
     removable: boolean;
     remove: () => void;
   }>;
+  // The node whose probe is running; while one runs, every probe button waits.
+  probeBusy: string | null;
   search: string;
   setSearch: (value: string) => void;
   group: string;

@@ -119,6 +119,15 @@ export function useTableHeight(height: number, count: number, loading?: boolean,
   const content = 2 + tableLayout.headingHeight + (count || 2) * tableLayout.rowHeight;
   return reserved ? height : Math.min(height, content);
 }
+// Rows built once per source object. A list re-read unchanged keeps its objects (replaceEqualDeep), so their rows keep
+// their identity too, and the table re-renders only rows whose source changed. A new cache starts over.
+export function cachedRows<T extends object, R>(cache: WeakMap<T, R>, items: T[], build: (item: T) => R): R[] {
+  return items.map(item => {
+    let row = cache.get(item);
+    if (row === undefined) cache.set(item, (row = build(item)));
+    return row;
+  });
+}
 const virtualiseFrom = 40;
 // Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.
 export function DataTable<T extends {id: string}>({

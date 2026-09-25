@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {createContext, useContext, useMemo} from 'react';
 import {Menu} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Button, DataTable, LabeledSelect, MenuButton, MenuChoice, TextField, TextTooltip, pickMenuKey, type TableColumn} from '../../ui/ui';
@@ -14,6 +14,17 @@ function JoinOptions({row}: {row: NodeTableView['rows'][number]}) {
         <MenuChoice key={item.id} item={item} />
       ))}
     </Menu>
+  );
+}
+// The node whose probe is running, read by the probe buttons alone, so a probe starting or ending re-renders the
+// buttons on screen rather than the rows or columns.
+const ProbeBusy = createContext<string | null>(null);
+function ProbeButton({row}: {row: NodeTableView['rows'][number]}) {
+  const busy = useContext(ProbeBusy);
+  return (
+    <Button small quiet icon isPending={busy === row.id} isDisabled={!!busy} label={row.probeLabel} onPress={row.probe}>
+      <SpeedFast />
+    </Button>
   );
 }
 export function NodeTable({model: m}: {model: NodeTableView}) {
@@ -52,11 +63,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         grow: 0,
         render: row => (
           <span className="rp-chain">
-            {row.canProbe && (
-              <Button small quiet icon isPending={row.probing} isDisabled={row.probeDisabled} label={row.probeLabel} onPress={row.probe}>
-                <SpeedFast />
-              </Button>
-            )}
+            {row.canProbe && <ProbeButton row={row} />}
             {writable && (
               <MenuButton quiet chevron={false} label={row.joinLabel} isDisabled={sourceBusy} content={<JoinOptions row={row} />}>
                 <AddCircle />
@@ -88,7 +95,9 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           </Button>
         )}
       </div>
-      <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={t('nodes.empty')} sort={m.sort} onSort={m.setSort} cols={columns} />
+      <ProbeBusy.Provider value={m.probeBusy}>
+        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={t('nodes.empty')} sort={m.sort} onSort={m.setSort} cols={columns} />
+      </ProbeBusy.Provider>
     </>
   );
 }

@@ -5,7 +5,7 @@ export {Button, TextTooltip, Link} from './Button';
 export {TextField, Switch, Segmented, Check} from './Fields';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection} from './Select';
 export {ModalDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, DisclosureGroup, Tabs, useTabShown} from './Dialog';
-export {DataTable, fitColumns, type TableSort, type TableColumn} from './Table';
+export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
 export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, Toasts, Light, Badge, Bar, Kv} from './Feedback';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
