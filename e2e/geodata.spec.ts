@@ -139,6 +139,35 @@ test('the download route follows the routing rules by default, and a group route
   expect(sent).toEqual(['patch', 'patch']);
 });
 
+test('a backend that cannot update on request only stores the sources and says so', async ({page}) => {
+  const {sent, capabilities} = await traffic(page);
+  capabilities.resources.geodata.can_update = false;
+  await page.goto('/#/settings');
+  await expect(section(page).getByText(t('settings.geodataSourcesNoteStored'), {exact: true})).toBeVisible();
+  await expect(section(page)).not.toContainText(t('settings.geodataSourcesNote'));
+  await expect(section(page).getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true})).toHaveCount(0);
+  await pick(page, 'settings.geodataSource', t('settings.geodataPreset.loyalsoldier'), false);
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataSaved')})).toBeVisible();
+  await expect(row(page, 'settings.geodataStatus')).not.toContainText(t('settings.geodataUpdating'));
+  expect(sent).toEqual(['patch']);
+  await pick(page, 'settings.geodataSource', t('settings.geodataCustom'));
+  const dialog = page.getByRole('dialog', {name: t('settings.geodataCustomUrls')});
+  await expect(dialog.getByRole('button', {name: t('settings.geodataSaveSources'), exact: true})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: t('settings.geodataSaveUpdate'), exact: true})).toHaveCount(0);
+});
+
+test('a backend without a download route shows no route control', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const older = (settings: RuntimeSettings): RuntimeSettings => {
+    const {download, ...geodata} = settings.geodata!;
+    return {...settings, geodata: geodata as RuntimeSettings['geodata']};
+  };
+  handlers['GET runtime/settings'] = async () => older(await api.runtimeSettings());
+  await page.goto('/#/settings');
+  await expect(row(page, 'settings.geodataAutoUpdate')).toBeVisible();
+  await expect(row(page, 'settings.geodataRoute')).toHaveCount(0);
+});
+
 test('automatic updates save as they change, and the interval shows only while they are on', async ({page}) => {
   const {bodies} = await traffic(page);
   await page.goto('/#/settings');

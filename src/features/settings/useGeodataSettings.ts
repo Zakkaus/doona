@@ -25,7 +25,8 @@ import {
 type Patch = Exclude<GeoDataSettingsPatch, null>;
 type Route = 'routing' | 'direct' | 'group';
 
-// Every control saves as it changes. A source change then downloads at once, so the files follow what is shown.
+// Every control saves as it changes. Where the backend updates on request, a source change then downloads at once, so
+// the files follow what is shown.
 export function useGeodataSettings() {
   const t = useT();
   const lang = useLang();
@@ -85,7 +86,7 @@ export function useGeodataSettings() {
         : null;
   const preset = urls ? matchPreset(urls) : null;
   const auto = {...stored?.auto_update, ...pending?.auto_update};
-  const download = pending?.download ?? stored?.download;
+  const download = stored?.download && (pending?.download ?? stored.download);
   // Downloads follow the routing rules unless a route is stored.
   const route = routeChoice ?? download?.route ?? 'routing';
   const note = (id: GeodataPresetId) =>
@@ -95,7 +96,7 @@ export function useGeodataSettings() {
       locale,
       t
     );
-  const status = statusLine(geodata.data, geodata.busy || !!pending?.geosite, now, locale, t);
+  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t);
 
   return {
     available,
@@ -105,6 +106,7 @@ export function useGeodataSettings() {
     ready: !!stored,
     busy,
     seededFromConfig: stored?.source === 'config',
+    note: t(canUpdate ? 'settings.geodataSourcesNote' : 'settings.geodataSourcesNoteStored'),
     source: {
       value: urls ? (preset?.id ?? 'custom') : '',
       items: [
@@ -160,6 +162,7 @@ export function useGeodataSettings() {
             empty: !custom[kind].some(url => url.trim())
           })),
           blocked: customInvalid(custom),
+          confirm: t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources'),
           pending: settings.busy,
           cancel: () => setCustom(null),
           save: () => {
@@ -168,7 +171,8 @@ export function useGeodataSettings() {
           }
         }
       : null,
-    route: {
+    // A backend that predates the download route reports none and refuses a patch that sets one.
+    route: download && {
       value: route,
       items: (['routing', 'direct', 'group'] as const).map(id => ({
         id,

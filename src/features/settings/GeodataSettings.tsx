@@ -17,7 +17,7 @@ export function GeodataSettingsCard() {
       <h2 className="rp-h3" id={card.headingId}>
         {t(card.titleKey)}
       </h2>
-      <span className="rp-label">{t('settings.geodataSourcesNote')}</span>
+      <span className="rp-label">{m.note}</span>
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
         <div className="rp-chart-wait ops">
@@ -51,29 +51,31 @@ export function GeodataSettingsCard() {
               </div>
             </div>
           )}
-          <div className="rp-ops-group">
-            <span className="rp-label">{t('settings.geodataRoute')}</span>
-            <div className="rp-cluster">
-              <LabeledSelect
-                bare
-                label={t('settings.geodataRoute')}
-                value={m.route.value}
-                onChange={m.route.change}
-                items={m.route.items}
-                isDisabled={m.busy}
-              />
-              {m.route.group !== null && (
+          {m.route && (
+            <div className="rp-ops-group">
+              <span className="rp-label">{t('settings.geodataRoute')}</span>
+              <div className="rp-cluster">
                 <LabeledSelect
                   bare
-                  label={t('settings.geodataRouteGroup')}
-                  value={m.route.group}
-                  onChange={m.route.pickGroup}
-                  items={m.route.groups}
+                  label={t('settings.geodataRoute')}
+                  value={m.route.value}
+                  onChange={m.route.change}
+                  items={m.route.items}
                   isDisabled={m.busy}
                 />
-              )}
+                {m.route.group !== null && (
+                  <LabeledSelect
+                    bare
+                    label={t('settings.geodataRouteGroup')}
+                    value={m.route.group}
+                    onChange={m.route.pickGroup}
+                    items={m.route.groups}
+                    isDisabled={m.busy}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.geodataAutoUpdate')}</span>
             <div className="rp-cluster">
@@ -120,7 +122,7 @@ export function GeodataSettingsCard() {
           tone="accent"
           isOpen
           onCancel={m.dialog.cancel}
-          confirmLabel={t('settings.geodataSaveUpdate')}
+          confirmLabel={m.dialog.confirm}
           onConfirm={m.dialog.save}
           isPending={m.dialog.pending}
           isDisabled={m.dialog.blocked}
