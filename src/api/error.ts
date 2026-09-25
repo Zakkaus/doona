@@ -79,8 +79,10 @@ export function errorText(error: unknown, t: Translator): string {
 }
 
 // What to tell the person about a failed action, wrapped in that action's failure wording. An operation whose outcome
-// is unknown did not fail: it is reported on its own, neutrally.
+// is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is reported on its own
+// too, since the action's wording would say the write failed.
 export function failureNotice(error: unknown, t: Translator, wrap: (error: string) => string) {
   if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral' as const, text: t(error.key)};
+  if (error instanceof LocalError && error.key === 'ui.writtenNotApplied') return {kind: 'negative' as const, text: errorText(error, t)};
   return {kind: 'negative' as const, text: wrap(errorText(error, t))};
 }
