@@ -32,7 +32,7 @@ export function GeodataSettingsCard() {
               {m.conflict}
             </p>
           )}
-          {m.configOwned && <InlineAlert tone="informative">{t('settings.geodataConfigOwned')}</InlineAlert>}
+          {m.seededFromConfig && <InlineAlert tone="informative">{t('settings.geodataConfigSeeded')}</InlineAlert>}
           <Kv
             row
             items={[
@@ -41,9 +41,7 @@ export function GeodataSettingsCard() {
             ]}
           />
           <div className="rp-toolbar top rp-fieldgrid">
-            {!m.configOwned && (
-              <LabeledSelect label={t('settings.geodataSource')} value={m.choice} onChange={m.setChoice} items={m.choices} isDisabled={m.busy} />
-            )}
+            <LabeledSelect label={t('settings.geodataSource')} value={m.choice} onChange={m.setChoice} items={m.choices} isDisabled={m.busy} />
             <TextField
               width={180}
               type="text"
@@ -60,24 +58,6 @@ export function GeodataSettingsCard() {
               </Switch>
             </div>
           </div>
-          {m.configUrls.length > 0 && (
-            <div className="rp-geodata-urls">
-              {m.configUrls.map(list => (
-                <div key={list.kind} className="rp-field">
-                  <span className="rp-label">{list.kind}</span>
-                  {list.urls.length ? (
-                    list.urls.map(url => (
-                      <TextTooltip key={url} className="rp-code">
-                        {url}
-                      </TextTooltip>
-                    ))
-                  ) : (
-                    <span>—</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
           {m.custom.length > 0 && (
             <div className="rp-geodata-urls">
               {m.custom.map(list => (

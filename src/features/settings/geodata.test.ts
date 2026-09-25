@@ -89,18 +89,23 @@ describe('settings patch', () => {
     expect(geodataPatch(settings(), draft({interval: '48'}))).toEqual({auto_update: {interval_hours: 48}});
     expect(geodataPatch(settings(), draft({interval: '5'}))).toBeNull();
   });
-  it('leaves URLs out while the configuration file owns them', () => {
-    const owned = settings({source: 'config', geosite: {urls: ['https://m.example/geosite.dat']}, geoip: {urls: []}});
-    expect(geodataPatch(owned, {...geodataDraft(owned), choice: 'metacubex', enabled: true})).toEqual({auto_update: {enabled: true}});
-    expect(draftInvalid({...geodataDraft(owned), choice: 'custom', custom: {geosite: [], geoip: []}}, 'config')).toBe(false);
+  it('sends and checks URLs written from the configuration file like any others', () => {
+    const seeded = settings({source: 'config', geosite: {urls: ['https://m.example/geosite.dat']}, geoip: {urls: [...full.urls.geoip]}});
+    expect(geodataPatch(seeded, {...geodataDraft(seeded), choice: 'metacubex', enabled: true})).toEqual({
+      geosite: {urls: full.urls.geosite},
+      geoip: {urls: full.urls.geoip},
+      auto_update: {enabled: true}
+    });
+    expect(geodataPatch(seeded, {...geodataDraft(seeded), enabled: true})).toEqual({auto_update: {enabled: true}});
+    expect(draftInvalid({...geodataDraft(seeded), choice: 'custom', custom: {geosite: [], geoip: []}})).toBe(true);
   });
   it('blocks a custom list without a URL, with a bad URL or a repeat, and an interval out of range', () => {
     const custom = (geosite: string[]) => draft({choice: 'custom', custom: {geosite, geoip: [...full.urls.geoip]}});
-    expect(draftInvalid(custom(['https://m.example/a.dat']), 'db')).toBe(false);
-    expect(draftInvalid(custom(['']), 'db')).toBe(true);
-    expect(draftInvalid(custom(['ftp://m.example/a.dat']), 'db')).toBe(true);
-    expect(draftInvalid(custom(['https://m.example/a.dat', 'https://m.example/a.dat']), 'db')).toBe(true);
-    expect(draftInvalid(draft({interval: '169'}), 'db')).toBe(true);
+    expect(draftInvalid(custom(['https://m.example/a.dat']))).toBe(false);
+    expect(draftInvalid(custom(['']))).toBe(true);
+    expect(draftInvalid(custom(['ftp://m.example/a.dat']))).toBe(true);
+    expect(draftInvalid(custom(['https://m.example/a.dat', 'https://m.example/a.dat']))).toBe(true);
+    expect(draftInvalid(draft({interval: '169'}))).toBe(true);
     expect(urlProblem('https://user:pw@m.example/a.dat', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('https://m.example/a.dat#x', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('', [])).toBeNull();

@@ -94,24 +94,21 @@ export function urlProblem(url: string, list: string[]): Key | null {
 export const intervalInvalid = (value: string) => !/^\d+$/.test(value) || Number(value) < geodataIntervalRange.min || Number(value) > geodataIntervalRange.max;
 
 // Whether a draft can be sent: custom lists need one valid URL per asset, and the interval must lie in range.
-export function draftInvalid(draft: GeodataDraft, source: GeoDataSettings['source']): boolean {
+export function draftInvalid(draft: GeodataDraft): boolean {
   if (intervalInvalid(draft.interval)) return true;
-  if (source === 'config' || draft.choice !== 'custom') return false;
+  if (draft.choice !== 'custom') return false;
   return geodataKinds.some(kind => !draft.custom[kind].some(url => url.trim()) || draft.custom[kind].some(url => urlProblem(url, draft.custom[kind])));
 }
 
 const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((url, i) => url === b[i]);
 // The PATCH /runtime/settings geodata member for what the draft changed, or null when nothing did. URLs go as both
-// lists together, since the backend stores both anyway; under source config they stay out, because the configuration
-// file owns them and the backend would answer 409.
+// lists together, since the backend stores both anyway.
 export function geodataPatch(baseline: GeoDataSettings, draft: GeodataDraft): Exclude<GeoDataSettingsPatch, null> | null {
   const patch: Exclude<GeoDataSettingsPatch, null> = {};
-  if (baseline.source !== 'config') {
-    const urls = draftUrls(draft);
-    if (!geodataKinds.every(kind => sameList(urls[kind], baseline[kind].urls))) {
-      patch.geosite = {urls: urls.geosite};
-      patch.geoip = {urls: urls.geoip};
-    }
+  const urls = draftUrls(draft);
+  if (!geodataKinds.every(kind => sameList(urls[kind], baseline[kind].urls))) {
+    patch.geosite = {urls: urls.geosite};
+    patch.geoip = {urls: urls.geoip};
   }
   const auto: NonNullable<Exclude<GeoDataSettingsPatch, null>['auto_update']> = {};
   if (draft.enabled !== baseline.auto_update.enabled) auto.enabled = draft.enabled;

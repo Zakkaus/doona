@@ -197,10 +197,6 @@
 .rp-geodata-urls .rp-field {
   gap: 8px;
 }
-.rp-geodata-urls .rp-code {
-  min-width: 0;
-  max-width: 100%;
-}
 .rp-geodata-auto {
   display: flex;
   align-items: center;

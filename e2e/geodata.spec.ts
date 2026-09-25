@@ -1,5 +1,4 @@
 import {expect, mockBackend, test} from './fixtures';
-import {ApiError} from '../src/api/error';
 import {geodataPreset} from '../src/dae/geodata';
 import {LANGS, loadLanguage, translate} from '../src/i18n';
 import type {RuntimeSettings} from '../src/api/model';
@@ -66,43 +65,44 @@ test('a custom URL list is saved in order and shown as custom with its host', as
   await expect(card).toContainText(t('settings.geodataCustomHost', {host: 'mirror.example.net'}));
 });
 
-test('URLs set by the config file are read-only while automatic updates stay editable, and a 409 reloads them', async ({page}) => {
+test('URLs written from the config file stay editable, and a patch stores them as saved', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  let owned = false;
+  // honk wrote the config file's URLs into its stored settings at startup; the mock reports them until it stores a patch.
+  let seeded = true;
   const configured = (settings: RuntimeSettings): RuntimeSettings => ({
     ...settings,
-    geodata: {...settings.geodata!, source: 'config', geosite: {urls: ['https://files.example.org/geosite.dat']}, geoip: {urls: []}}
+    geodata: {...settings.geodata!, source: 'config', geosite: {urls: ['https://files.example.org/geosite.dat']}, geoip: {urls: full.urls.geoip}}
   });
-  handlers['GET runtime/settings'] = async () => (owned ? configured(await api.runtimeSettings()) : api.runtimeSettings());
+  handlers['GET runtime/settings'] = async () => (seeded ? configured(await api.runtimeSettings()) : api.runtimeSettings());
   handlers['PATCH runtime/settings'] = async request => {
-    const body = request.postDataJSON();
-    if (owned && (body.geodata?.geosite || body.geodata?.geoip)) throw new ApiError(409, 'state_conflict', 'Geodata URLs are set in the configuration file.');
-    const result = await api.patchRuntimeSettings(body);
-    return owned ? configured(result) : result;
+    const result = await api.patchRuntimeSettings(request.postDataJSON());
+    seeded &&= result.geodata!.source !== 'db';
+    return seeded ? configured(result) : result;
   };
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await card.getByRole('button', {name: t('settings.geodataSource')}).click();
-  await page.getByRole('option', {name: t('settings.geodataCustom'), exact: true}).click();
-  await card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geoip', n: '1'}), {exact: true}).fill('https://mirror.example.net/geoip.dat');
-  // The configuration file takes the URLs over before the patch arrives.
-  owned = true;
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: t('settings.geodataConfigConflict')})).toBeVisible();
   await expect(card).toContainText(t('settings.geodataFromConfig'));
-  await expect(card.getByRole('status').filter({hasText: 'geosite_download_url'})).toBeVisible();
-  await expect(card.getByRole('button', {name: t('settings.geodataSource')})).toHaveCount(0);
-  await expect(card.getByRole('textbox', {name: /geosite URL/})).toHaveCount(0);
-  await expect(card).toContainText('https://files.example.org/geosite.dat');
-  await card.getByRole('button', {name: t('config.discard'), exact: true}).click();
+  const note = card.getByRole('status').filter({hasText: t('settings.geodataConfigSeeded')});
+  await expect(note).toBeVisible();
+  await expect(card).toContainText(t('settings.geodataCustomHost', {host: 'files.example.org'}));
+  // Automatic updates are stored on their own and leave the URLs, and so the source, alone.
   await card.getByText(t('settings.geodataAutoUpdate'), {exact: true}).click();
-  await expect(card.getByRole('switch', {name: t('settings.geodataAutoUpdate')})).toBeChecked();
   await card.getByLabel(t('settings.geodataInterval'), {exact: true}).fill('48');
-  const saving = patches(page);
+  let saving = patches(page);
   await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
   expect((await saving).postDataJSON()).toEqual({geodata: {auto_update: {enabled: true, interval_hours: 48}}});
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataAutoSaved')})).toBeVisible();
-  await expect(card.getByText(t('settings.geodataAutoOff'))).toHaveCount(0);
+  await expect(note).toBeVisible();
+  const first = card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '1'}), {exact: true});
+  await expect(first).toHaveValue('https://files.example.org/geosite.dat');
+  await first.fill('https://mirror.example.net/geosite.dat');
+  saving = patches(page);
+  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
+  expect((await saving).postDataJSON()).toEqual({geodata: {geosite: {urls: ['https://mirror.example.net/geosite.dat']}, geoip: {urls: full.urls.geoip}}});
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataSaved')})).toBeVisible();
+  await expect(card).toContainText(t('settings.geodataFromDb'));
+  await expect(note).toHaveCount(0);
+  expect((await api.runtimeSettings()).geodata!.geosite.urls).toEqual(['https://mirror.example.net/geosite.dat']);
 });
 
 test('update now downloads from the stored sources and reports the status', async ({page}) => {
