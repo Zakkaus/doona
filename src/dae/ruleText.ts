@@ -1,5 +1,6 @@
 import type {ConfigSource, RoutingRule, RuleSource} from '../api/model';
 import {scanConfig, uncomment} from './text';
+import {builtinOutboundNames} from './vocab';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -43,7 +44,7 @@ export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: Retur
 
 export const ruleLine = (condition: string, outbound: string, must = false) => `${condition} -> ${outbound}${must ? '(must)' : ''}`;
 // What a new rule can route to: the groups the configuration defines, then the two built-in outbounds.
-export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}));
+export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(group => group.name), ...builtinOutboundNames].map(id => ({id, label: id}));
 
 export function addRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text

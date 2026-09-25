@@ -1,4 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
@@ -74,7 +75,7 @@ export function useNodeTable(input: NodeTableInput) {
   const build = useCallback(
     (node: Node): NodeTableView['rows'][number] => ({
       ...nodeRowView(node, names, lang, t),
-      canProbe: canProbe && node.protocol !== 'direct' && node.protocol !== 'block',
+      canProbe: canProbe && !isBuiltinOutbound(node.protocol),
       probe: () =>
         void runProbe(node.id).then(
           result => {

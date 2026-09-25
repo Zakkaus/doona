@@ -1,4 +1,5 @@
 import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../../api/model';
+import {isBuiltinOutbound} from '../../../dae/vocab';
 import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../../api/selectors';
 
 export type TreeBy = 'rule' | 'client';
@@ -14,7 +15,6 @@ export type RoutingTree = {by: TreeBy; leaves: TreeLeaf[]; outbounds: TreeOutbou
 
 const stages = ['client', 'rule', 'outbound', 'node'] as const;
 type Stage = (typeof stages)[number];
-const terminal = (outbound: string | null) => outbound === 'direct' || outbound === 'block';
 
 type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
@@ -41,7 +41,7 @@ function stagePart(
     case 'outbound':
       return flow.outbound ? {label: flow.outbound, unknown: false} : {label: 'unknown', unknown: true};
     case 'node': {
-      if (terminal(flow.outbound)) return null;
+      if (isBuiltinOutbound(flow.outbound)) return null;
       const leaf = flow.chain.at(-1) ?? null;
       return leaf ? {label: names.get(leaf) ?? leaf, unknown: false, key: leaf} : {label: 'unknown', unknown: true};
     }

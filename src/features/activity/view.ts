@@ -1,4 +1,5 @@
 import type {ApiEvent, ConnectionList, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import {
   eventKindLabels,
   eventSummary,
@@ -108,8 +109,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
       healthError: health?.error ?? undefined
     };
   });
-  const node =
-    options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => n.name !== 'direct' && n.name !== 'block') ?? options[0];
+  const node = options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => !isBuiltinOutbound(n.name)) ?? options[0];
   return {
     options,
     big: options.length > 12,
