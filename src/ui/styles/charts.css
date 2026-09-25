@@ -82,10 +82,13 @@
 .rp-scatter circle.pick {
   cursor: pointer;
 }
-.rp-scatter circle.pick:hover {
-  fill-opacity: 1;
-  stroke: var(--rp-text);
-  stroke-width: 1.5;
+/* A touch leaves :hover stuck on the tapped point, so only a fine pointer highlights it. */
+@media (hover: hover) and (pointer: fine) {
+  .rp-scatter circle.pick:hover {
+    fill-opacity: 1;
+    stroke: var(--rp-text);
+    stroke-width: 1.5;
+  }
 }
 /* Every median and percentile mark is the same dashed line, in the chart and in the upstream rows alike. */
 .rp-swarm .mark line,
