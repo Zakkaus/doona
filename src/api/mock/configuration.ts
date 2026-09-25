@@ -58,7 +58,10 @@ export function createConfiguration(
     const nextRevision = String(configRevision + 1);
     const candidate = sourceSet();
     if (candidate.length) activateInventory(candidate.map(source => source.content).join('\n'), nextRevision);
-    if (sources) sources = [...disk];
+    if (sources) {
+      sources = [...disk];
+      geodata.follow(routingOf(sources).rules.flatMap(rule => (rule.kind === 'rule' ? [rule.expression] : [])));
+    }
     configRevision += 1;
     Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
     log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
@@ -82,9 +85,7 @@ export function createConfiguration(
     };
   }
   // Preserve fixture IDs for unchanged rules; new rules use their source location.
-  const ruleSnapshot = async (): Promise<RuleList> => {
-    await loadSources();
-    const list = sources!;
+  function routingOf(list: (ConfigSource & {content: string})[]): {rules: RuleList['rules']; fallback: RuleList['fallback'] | null} {
     const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
     const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
     const entries: RuleList['rules'] = [];
@@ -131,8 +132,13 @@ export function createConfiguration(
     };
     const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
+    return {rules: entries, fallback};
+  }
+  const ruleSnapshot = async (): Promise<RuleList> => {
+    await loadSources();
+    const {rules, fallback} = routingOf(sources!);
     if (!fallback) throw new ApiError(503, 'snapshot_unavailable', 'The routing section has no fallback', null, null, 1);
-    return {generation_id: String(configRevision), rules: entries, fallback};
+    return {generation_id: String(configRevision), rules, fallback};
   };
   const api: ConfigurationApi = {
     rules: async signal => {
@@ -209,14 +215,8 @@ export function createConfiguration(
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
       // geodata is stored apart from the other settings and leaves the top-level source alone.
       const {geodata: geodataPatch, ...rest} = patch;
-      if (geodataPatch !== undefined) {
-        if (!allowed.has('geodata') || resources.geodata.configurable_sources !== true) throw invalid('geodata cannot be changed on this backend');
-        geodata.patch(geodataPatch);
-        if (!Object.keys(rest).length) {
-          log('info', 'honk::geodata', 'Geodata settings stored.', {});
-          return withGeodata();
-        }
-      }
+      if (geodataPatch !== undefined && (!allowed.has('geodata') || resources.geodata.configurable_sources !== true))
+        throw invalid('geodata cannot be changed on this backend');
       patch = rest;
       // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
       const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
@@ -243,6 +243,14 @@ export function createConfiguration(
         const ceiling = ceilings[field as keyof typeof ceilings];
         const floor = field === 'flows.retention_seconds' ? 1 : 64;
         if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
+      }
+      // Checks its own fields before storing any of them, so it runs last of the checks and first of the changes.
+      if (geodataPatch !== undefined) {
+        geodata.patch(geodataPatch);
+        if (!Object.keys(rest).length) {
+          log('info', 'honk::geodata', 'Geodata settings stored.', {});
+          return withGeodata();
+        }
       }
       const apply = (section: 'log' | 'dns_log' | 'flows') => Object.assign(settings[section], patch[section] ?? {});
       apply('log');
