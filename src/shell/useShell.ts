@@ -1,5 +1,6 @@
 import {createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useApplyHeld} from '../features/rules/usePendingApply';
+import {useLifecycle} from '../features/overview/useLifecycle';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useT} from '../i18n';
@@ -8,11 +9,11 @@ import {accessError, duckView, shellView, wordmark, type AboutView, type ShellVi
 import {errorText} from '../api/error';
 
 export const AboutContext = createContext<AboutView | null>(null);
+const rereadAll = () => void refetchAll();
 export type ShellModel = ShellView & {
   spinning: boolean;
   refresh: () => Promise<void>;
-  held: {count: number; label: string; busy: boolean};
-  topAction: () => void;
+  reload: {shown: boolean; held: number; label: string; busy: boolean; run: () => void};
   wordmark: string;
   honk: () => void;
 };
@@ -44,15 +45,24 @@ export function useShell(settings: Settings, route: string): ShellModel {
     }
   }, [t]);
   const honk = useCallback(() => setHonked(true), []);
-  // The top bar's refresh applies held rules while there are any; the latest apply is read through a ref so the
-  // memoised top bar keeps one callback.
+  // The top bar's reload writes held rules and reloads while there are any, and otherwise reloads the engine. The
+  // latest state is read through a ref so the memoised top bar keeps one callback.
   const held = useApplyHeld();
-  const latest = useRef(held);
+  // A reload can change any resource, so every one is read again once it settles.
+  const lifecycle = useLifecycle(undefined, capabilities.data, rereadAll);
+  const latest = useRef({held, lifecycle});
   useLayoutEffect(() => {
-    latest.current = held;
+    latest.current = {held, lifecycle};
   });
-  const topAction = useCallback(() => void (latest.current.count ? latest.current.apply() : refresh()), [refresh]);
-  return {...view, spinning, refresh, held: {count: held.count, label: held.label, busy: held.busy}, topAction, wordmark: wordmark(honked), honk};
+  const run = useCallback(() => void (latest.current.held.count ? latest.current.held.apply() : latest.current.lifecycle.run('reload')), []);
+  const reload = {
+    shown: !!held.count || lifecycle.canRun('reload'),
+    held: held.count,
+    label: held.count ? held.label : t('shell.reloadEngine'),
+    busy: held.busy || lifecycle.busy === 'reload',
+    run
+  };
+  return {...view, spinning, refresh, reload, wordmark: wordmark(honked), honk};
 }
 export function useAbout(onHonk?: () => void) {
   const view = useContext(AboutContext)!;

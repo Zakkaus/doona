@@ -1,18 +1,8 @@
-import {
-  useCapabilities,
-  useConnectionClose,
-  useConnectionTotals,
-  useDnsFlush,
-  useGeodata,
-  useProviderRefresh,
-  useProviders,
-  useRuntime,
-  useRuntimeOperations
-} from '../../store';
-import {lifecycleActions} from '../overview/view';
-import {closedAllTone, operationLabels} from '../../api/selectors';
+import {useCapabilities, useConnectionClose, useConnectionTotals, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../store';
+import {useLifecycle} from '../overview/useLifecycle';
+import {closedAllTone} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
 import {geodataConfigurable} from './geodata';
 import {errorText} from '../../api/error';
@@ -29,7 +19,7 @@ export function useBackendActions() {
   const connections = useConnectionTotals(offered(resources, 'connections', {whileLoading: false}) && resources?.connections.can_close === true);
   const closing = useConnectionClose(connections.refetch);
   const flushing = useDnsFlush();
-  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
+  const operations = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
   // Where sources are configurable, geodata has its own card with the update button, so this card leaves it out.
   const plainGeodata = !!resources?.geodata.available && !geodataConfigurable(resources);
   const geodata = useGeodata(plainGeodata);
@@ -71,13 +61,6 @@ export function useBackendActions() {
         error => toast('negative', t('settings.refreshAllFailed', {error: errorText(error, t)}))
       );
   };
-  const runOperation = (kind: keyof typeof operationLabels) =>
-    void operations.run(kind).then(
-      result => {
-        if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
-      },
-      error => toastFailure(error, t, error => t('ov.operationError', {error}))
-    );
   const closeAll = () =>
     closing.closeAll({ids: [], query: {all: true}}).then(
       tally => {
@@ -88,7 +71,7 @@ export function useBackendActions() {
   return {
     runtimeError: runtime.error,
     retryRuntime: runtime.refetch,
-    lifecycle: lifecycleActions(operations.canRun, operations.busy, runOperation, t),
+    lifecycle: operations.actions,
     flush: {
       confirmationText: t('dns.flushConfirmAll'),
       isPending: flushing.busy,

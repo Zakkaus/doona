@@ -1,10 +1,10 @@
 import {useMemo} from 'react';
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../store';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName, toast, toastFailure} from '../../ui/ui';
+import {downloadFile, exportName} from '../../ui/ui';
 import {usePalette} from '../../ui/charts';
-import {lifecycleActions, overviewExport, overviewView} from './view';
-import {operationLabels} from '../../api/selectors';
+import {overviewExport, overviewView} from './view';
+import {useLifecycle} from './useLifecycle';
 import {offered} from '../../api/capabilities';
 
 export function useOverview() {
@@ -16,15 +16,7 @@ export function useOverview() {
   const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
   const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const version = useVersion();
-  const operations = useRuntimeOperations(runtime.data, capabilities.data, runtime.refetch);
-  const run = async (kind: keyof typeof operationLabels) => {
-    try {
-      const result = await operations.run(kind);
-      if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
-    } catch (error) {
-      toastFailure(error, t, error => t('ov.operationError', {error}));
-    }
-  };
+  const lifecycle = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
   const data = useMemo(
     () => ({capabilities: capabilities.data, runtime: runtime.data, version: version.data, memory: memory.data, datapath: datapath.data}),
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
@@ -53,7 +45,7 @@ export function useOverview() {
       memory: memory.refetch,
       datapath: datapath.refetch
     },
-    actions: lifecycleActions(operations.canRun, operations.busy, kind => void run(kind), t),
+    actions: lifecycle.actions,
     export: () => downloadFile(exportName('doona-state', 'json'), overviewExport(data, new Date().toISOString()), 'application/json')
   };
 }
