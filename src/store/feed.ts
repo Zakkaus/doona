@@ -5,8 +5,10 @@ export function createFeed<T extends {id: string}, S extends object>(
   key: (record: T) => string = record => record.id
 ) {
   const records = new Map<string, T>();
+  // Records after which the stream lost history; the list shows a marker above each.
+  const gaps = new Set<T>();
   const listeners = new Set<() => void>();
-  let snapshot = {records: [] as T[], ...status};
+  let snapshot = {records: [] as T[], gaps: new Set(gaps) as ReadonlySet<T>, ...status};
   let dirty = false;
   let recordsDirty = false;
   let statusDirty = false;
@@ -21,9 +23,10 @@ export function createFeed<T extends {id: string}, S extends object>(
     dirty = false;
     statusDirty = false;
     // A status-only change keeps the list reference, so memoised rows downstream do not recompute.
-    const list = held || !recordsDirty ? snapshot.records : [...records.values()].reverse();
+    const stale = held || !recordsDirty;
+    const list = stale ? snapshot.records : [...records.values()].reverse();
     if (!held) recordsDirty = false;
-    snapshot = {records: list, ...status};
+    snapshot = {records: list, gaps: stale ? snapshot.gaps : new Set(gaps), ...status};
     listeners.forEach(notify => notify());
   };
   const schedule = () => {
@@ -60,7 +63,11 @@ export function createFeed<T extends {id: string}, S extends object>(
         records.delete(id);
       }
       records.set(id, record);
-      if (records.size > limit) records.delete(records.keys().next().value!);
+      if (records.size > limit) {
+        const [oldest, evicted] = records.entries().next().value!;
+        records.delete(oldest);
+        gaps.delete(evicted);
+      }
       recordsDirty = true;
       schedule();
     },
@@ -73,8 +80,16 @@ export function createFeed<T extends {id: string}, S extends object>(
     // Clearing is explicit, so it empties the published list even while held.
     clear() {
       records.clear();
-      snapshot = {...snapshot, records: []};
+      gaps.clear();
+      snapshot = {...snapshot, records: [], gaps: new Set()};
       statusDirty = true;
+      schedule();
+    },
+    markGap() {
+      const newest = [...records.values()].at(-1);
+      if (!newest || gaps.has(newest)) return;
+      gaps.add(newest);
+      recordsDirty = true;
       schedule();
     },
     hold(on: boolean) {

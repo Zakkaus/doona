@@ -25,7 +25,7 @@ it('publishes a bounded batch once and ignores replayed log ids', () => {
   vi.advanceTimersByTime(99);
   expect(notify).not.toHaveBeenCalled();
   vi.advanceTimersByTime(1);
-  expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'third'}, {id: 'second'}]});
+  expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'third'}, {id: 'second'}], gaps: new Set()});
   expect(notify).toHaveBeenCalledOnce();
   stop();
 });
@@ -52,7 +52,8 @@ it('buffers events and status while hidden, then publishes one current snapshot'
     records: [
       {id: 'first', value: 3},
       {id: 'second', value: 2}
-    ]
+    ],
+    gaps: new Set()
   });
   feed.clear();
   vi.advanceTimersByTime(100);
@@ -71,7 +72,7 @@ it('holds the published list while paused and shows what arrived meanwhile on re
   feed.append({id: 'second'});
   feed.update({connected: true});
   vi.advanceTimersByTime(100);
-  expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'first'}]});
+  expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'first'}], gaps: new Set()});
   feed.append({id: 'third'});
   feed.hold(false);
   vi.advanceTimersByTime(100);
@@ -122,4 +123,30 @@ it('keeps the last event when a resumed stream.ready carries its id', () => {
   vi.advanceTimersByTime(100);
   expect(feed.getSnapshot().records.map(event => event.event)).toEqual(['stream.ready', 'flow.updated']);
   off();
+});
+
+it('marks lost records after the newest one held and forgets the mark with that record', () => {
+  const feed = createFeed<{id: string}, Record<string, never>>(2, {}, 'ignore');
+  const stop = feed.subscribe(() => {});
+  feed.markGap();
+  feed.append({id: 'first'});
+  feed.markGap();
+  feed.append({id: 'second'});
+  vi.advanceTimersByTime(100);
+  expect([...feed.getSnapshot().gaps]).toEqual([{id: 'first'}]);
+  // A held list keeps the marks it was published with.
+  feed.hold(true);
+  feed.markGap();
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().gaps.size).toBe(1);
+  feed.hold(false);
+  vi.advanceTimersByTime(100);
+  expect([...feed.getSnapshot().gaps]).toEqual([{id: 'first'}, {id: 'second'}]);
+  feed.append({id: 'third'});
+  vi.advanceTimersByTime(100);
+  expect([...feed.getSnapshot().gaps]).toEqual([{id: 'second'}]);
+  feed.clear();
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().gaps.size).toBe(0);
+  stop();
 });

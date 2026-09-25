@@ -19,11 +19,12 @@ export function Logs() {
         minWidth: 200,
         grow: 0,
         drop: 2,
-        render: record => (
-          <TextTooltip className="rp-code" text={record.iso}>
-            {record.timestamp}
-          </TextTooltip>
-        )
+        render: record =>
+          !record.gap && (
+            <TextTooltip className="rp-code" text={record.iso}>
+              {record.timestamp}
+            </TextTooltip>
+          )
       },
       {
         id: 'level',
@@ -31,11 +32,12 @@ export function Logs() {
         minWidth: 90,
         grow: 0,
         drop: 3,
-        render: record => (
-          <Light small tone={record.tone}>
-            {record.levelText}
-          </Light>
-        )
+        render: record =>
+          !record.gap && (
+            <Light small tone={record.tone}>
+              {record.levelText}
+            </Light>
+          )
       },
       {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target}</span>},
       {

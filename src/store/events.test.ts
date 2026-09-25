@@ -2,9 +2,9 @@ import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
-import {eventStatus, subscribeEvents} from './events';
+import {eventStatus, historyLost, subscribeEvents} from './events';
 import {watchResource} from './resource';
-import type {EventOptions} from '../api/model';
+import type {ApiEvent, EventOptions} from '../api/model';
 
 const disposers: Array<() => void> = [];
 beforeEach(() => {
@@ -173,4 +173,27 @@ it('clears a capabilities error once a refetch succeeds while the stream stays u
   await vi.advanceTimersByTimeAsync(60000);
   expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
   expect(eventStatus(api)).toMatchObject({connected: true, error: null});
+});
+
+it('marks the ready event that follows an expired cursor as lost history, also for late subscribers', async () => {
+  const api = createMockApi();
+  let options!: EventOptions;
+  api.subscribeEvents = vi.fn(async (value: EventOptions) => {
+    options = value;
+    await new Promise(resolve => value.signal?.addEventListener('abort', resolve));
+  });
+  const received: ApiEvent[] = [];
+  disposers.push(subscribeEvents(api, event => received.push(event)));
+  await vi.advanceTimersByTimeAsync(0);
+  const data = {instance_id: 'i', observed_at: '2026-09-23T00:00:00Z'};
+  options.onEvent({id: 'r1', event: 'stream.ready', data});
+  options.onCursorExpired?.();
+  options.onEvent({id: 'r2', event: 'stream.ready', data});
+  // Resuming right after it repeats its id and replaces it in the feeds, so the mark carries over.
+  options.onEvent({id: 'r2', event: 'stream.ready', data});
+  options.onEvent({id: 'r3', event: 'stream.ready', data});
+  expect(received.map(historyLost)).toEqual([false, true, true, false]);
+  const late: ApiEvent[] = [];
+  disposers.push(subscribeEvents(api, event => late.push(event), undefined, true));
+  expect(late.map(historyLost)).toEqual([false, true, true, false]);
 });

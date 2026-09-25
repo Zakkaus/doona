@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {EVENT_FEED_LIMIT, refetchAll, useCapabilities, useEventFeed} from '../../store';
+import {EVENT_FEED_LIMIT, historyLost, refetchAll, useCapabilities, useEventFeed} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useLinked} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';
@@ -14,7 +14,7 @@ export function useEventsPage() {
   const single = kind !== 'all' && kind !== 'runtime.updated' && (kinds as string[] | undefined)?.includes(kind);
   const feed = useEventFeed(kind !== 'without-runtime' && !single);
   const view = useMemo(
-    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? [], !!feed.error),
+    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? [], !!feed.error, historyLost),
     [feed.events, kind, feed.connected, feed.available, feed.error, locale, t, kinds]
   );
   useLinked(view.kind, setKind);

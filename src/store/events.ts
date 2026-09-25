@@ -8,6 +8,9 @@ type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent; recent: ApiEvent[]};
 const streams = new Map<Api, Stream>();
+// `stream.ready` events that restarted the stream after its cursor expired: what the backend sent before is lost.
+const lostBefore = new WeakSet<ApiEvent>();
+export const historyLost = (event: ApiEvent) => lostBefore.has(event);
 const initialStatus: StreamStatus = {connected: false, cursor: null, error: null, available: null};
 export function eventStatus(api: Api) {
   return streams.get(api)?.status ?? initialStatus;
@@ -24,6 +27,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
       shared.statuses.forEach(fn => fn());
     };
     let failed = false;
+    let expired = false;
     let capabilityError = false;
     let current: Capabilities | undefined;
     let connection: AbortController | undefined;
@@ -54,10 +58,16 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
           onConnectionChange: connected => {
             if (!controller.signal.aborted) update({connected});
           },
+          onCursorExpired: () => {
+            if (!controller.signal.aborted) expired = true;
+          },
           onEvent: event => {
             if (controller.signal.aborted) return;
             const reconnected = event.event === 'stream.ready' && (!!shared.ready || failed);
             if (event.event === 'stream.ready') {
+              // A resume right after that ready repeats its id and replaces it in the feeds, so it keeps the mark.
+              if (expired || (shared.ready && historyLost(shared.ready) && shared.ready.id === event.id)) lostBefore.add(event);
+              expired = false;
               shared.ready = event;
               failed = false;
               update({cursor: event.id, error: null});

@@ -36,3 +36,11 @@ it('filters runtime updates before limiting the default view and its export', ()
   expect(view.rows.map(row => row.id)).toEqual(['ready']);
   expect(JSON.parse(eventsExport(view.shown))).toEqual([ready]);
 });
+
+it('says on the ready row after lost history that events are missing', () => {
+  const data = {instance_id: 'instance', observed_at: '2026-01-01T00:00:00Z'};
+  const lost: ApiEvent = {id: 'ready:2', event: 'stream.ready', data};
+  const resumed: ApiEvent = {id: 'ready:1', event: 'stream.ready', data};
+  const view = eventsView([lost, resumed], 'all', true, true, 200, 'en-US', t, ['stream.ready'], false, event => event === lost);
+  expect(view.rows.map(row => row.summary)).toEqual([t('event.lostHistory'), 'instance']);
+});

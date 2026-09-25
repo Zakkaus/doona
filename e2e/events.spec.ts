@@ -1,4 +1,4 @@
-import {downloadText, expect, fulfillStream, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, test} from './fixtures';
 
 test('event kind selection exports only the visible records', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
@@ -66,4 +66,22 @@ test('a single event takes one row, not a blank one beneath it', async ({page}) 
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Events', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(1);
   await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
+});
+
+test('events say where a reconnect could not recover what was sent meanwhile', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  expectLoadFailures(page, /\/api\/v1\/events/);
+  let baselines = 0;
+  await page.route('**/api/v1/events', async route => {
+    const cursor = route.request().headers()['last-event-id'];
+    if (cursor === 'ready:1') return route.fulfill({status: 409, json: {error: {code: 'event_cursor_expired', message: 'Cursor expired'}, request_id: 'e2e'}});
+    // A resumed stream repeats the cursor it resumed from.
+    await fulfillStream(route, [{id: cursor ?? `ready:${++baselines}`, event: 'stream.ready', data}]);
+  });
+  await page.goto('/#/events');
+  const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  await expect(grid.getByRole('rowheader')).toHaveText(['Events lost: those sent while disconnected cannot be recovered', data.instance_id]);
 });
