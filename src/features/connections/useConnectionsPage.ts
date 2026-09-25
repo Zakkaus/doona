@@ -13,6 +13,7 @@ import {
   closeSelection,
   connectionsExport,
   connectionsView,
+  connectionDetail,
   connectionTableView,
   type CloseSelection,
   type ConnectionView
@@ -102,10 +103,9 @@ export function useConnectionsPage({go, query}: PageProps) {
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   const ruleAction = useConnectionRule(cur);
-  const model = useMemo(
-    () => connectionsView(rows, cur, resource.data, src, rule, locale, t, names, rulesListed),
-    [rows, cur, resource.data, src, rule, locale, t, names, rulesListed]
-  );
+  const lists = useMemo(() => connectionsView(rows, resource.data, src, rule, locale, t), [rows, resource.data, src, rule, locale, t]);
+  const detail = useMemo(() => connectionDetail(cur, locale, t, names, rulesListed), [cur, locale, t, names, rulesListed]);
+  const model = {...lists, detail};
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;

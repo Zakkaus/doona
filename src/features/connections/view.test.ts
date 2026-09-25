@@ -1,6 +1,19 @@
 import {expect, it} from 'vitest';
 import {connections} from '../../api/mock/fixtures';
-import {closeSelection, columns, connectionDetails, connectionsExport, connectionsView, connectionTableView, readView, tableRows} from './view';
+import {
+  closeSelection,
+  columns,
+  connectionDetail,
+  connectionDetails,
+  connectionsExport,
+  connectionsView,
+  connectionTableView,
+  readView,
+  sortByKey,
+  tableRows,
+  type ConnectionView
+} from './view';
+import {parseU64} from '../../api/u64';
 import {fitColumns} from '../../ui/ui';
 import {translate, type Translator} from '../../i18n';
 const t: Translator = (key, params) => translate('en', key, params);
@@ -42,6 +55,63 @@ it('groups, sorts and describes by the displayed labels', () => {
   );
   const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
   expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
+});
+
+it('computes each sort key once and keeps equal keys in their order', () => {
+  const seen: string[] = [];
+  const items = ['b2', 'a1', 'b1', 'a2', 'c1'];
+  const sorted = sortByKey(
+    items,
+    item => {
+      seen.push(item);
+      return item[0];
+    },
+    (a, b) => a.localeCompare(b)
+  );
+  expect(sorted).toEqual(['a1', 'a2', 'b2', 'b1', 'c1']);
+  expect(seen).toEqual(items);
+  expect(items).toEqual(['b2', 'a1', 'b1', 'a2', 'c1']);
+});
+
+it('sorts every column as comparing the displayed values pairwise would', () => {
+  const c = connections.tcp[0];
+  const states = ['active', 'closed', 'blocked', 'dialing'] as const;
+  const list = Array.from({length: 40}, (_, i) => ({
+    ...c,
+    id: 'r' + i,
+    domain: i % 5 === 0 ? null : `host${(i * 7) % 13}.example`,
+    dst: i % 9 === 0 ? undefined : `10.0.0.${i % 6}:443`,
+    src: i % 11 === 0 ? undefined : `192.168.1.${(i * 3) % 8}:${1000 + i}`,
+    state: states[i % states.length],
+    download_bytes: i % 7 === 0 ? null : String((i * 7919) % 23),
+    started_at: i % 8 === 0 ? null : i % 13 === 0 ? 'not a time' : new Date(Date.UTC(2026, 0, 1, 0, (i * 17) % 29)).toISOString()
+  }));
+  const shown = (row: (typeof list)[number], column: string) =>
+    column === 'dst'
+      ? row.domain || row.dst
+      : column === 'src'
+        ? row.src
+        : column === 'state'
+          ? t(`conn.state.${row.state}`)
+          : column === 'down'
+            ? parseU64(row.download_bytes)
+            : row.started_at
+              ? Date.parse(row.started_at)
+              : null;
+  const collator = new Intl.Collator('en-US', {numeric: true});
+  for (const column of columns.filter(column => column.sortable).map(column => column.id))
+    for (const direction of ['ascending', 'descending'] as const) {
+      const expected = [...list].sort((a, b) => {
+        const left = shown(a, column),
+          right = shown(b, column);
+        if (left == null) return right == null ? 0 : 1;
+        if (right == null) return -1;
+        const order = typeof left === 'string' && typeof right === 'string' ? collator.compare(left, right) : left < right ? -1 : left > right ? 1 : 0;
+        return direction === 'descending' ? -order : order;
+      });
+      const sorted = tableRows(list, {hidden: [], sort: {column, direction}, group: 'none'}, 'en-US', t);
+      expect(sorted.map(row => row.id)).toEqual(expected.map(row => row.id));
+    }
 });
 
 it('drops columns by priority until the minimum widths fit, keeping the target', () => {
@@ -98,8 +168,8 @@ it('captures IDs without expanding the confirmed selection when live rows arrive
 
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
-  const model = connectionsView([row], row, {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t, new Map(), false);
-  expect(model.detail?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
+  const model = connectionsView([row], {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
+  expect(connectionDetail(row, 'en-US', t, new Map(), false)?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
 });
@@ -117,7 +187,7 @@ it('keeps resolved routing diagnostics in details when table columns are hidden'
     ['group-id', 'proxy'],
     ['node-id', 'HK']
   ]);
-  const detail = connectionsView([row], row, connections, undefined, 'all', 'en-US', t, names, true).detail;
+  const detail = connectionDetail(row, 'en-US', t, names, true);
   expect(detail?.chain).toBe('proxy → HK');
   expect(detail?.outbound).toBe('proxy');
   expect(detail?.rule).toEqual({expression: 'domain(example.com)', href: '#/rules?tab=list&rule=rule-1'});
@@ -147,4 +217,20 @@ it('shows only the leaf node in the table and keeps the full path for the toolti
 
 it('keeps a column hidden that was saved under its old chain id', () => {
   expect(readView(JSON.stringify({hidden: ['chain', 'rule'], sort: null, group: 'none'})).hidden).toEqual(['node', 'rule']);
+});
+
+it('reuses a projected row until the connection or a label input changes', () => {
+  const row = {...connections.tcp[0], id: 'kept'};
+  const view: ConnectionView = {hidden: [], sort: null, group: 'none'};
+  const names = new Map();
+  const project = (list: (typeof row)[], locale = 'en-US', listed = true, translate = t) =>
+    connectionTableView(list, view, locale, names, listed, translate).map(item => ('connection' in item ? item.connection : null));
+  const [first] = project([row]);
+  expect(project([row])[0]).toBe(first);
+  expect(project([{...row}])[0]).not.toBe(first);
+  expect(project([{...row}])[0]).toEqual(first);
+  expect(project([row], 'zh-CN')[0]).not.toBe(first);
+  expect(project([row], 'en-US', false)[0]).not.toBe(first);
+  const other: Translator = (key, params) => translate('zh-CN', key, params);
+  expect(project([row], 'en-US', true, other)[0]?.state).toBe(other(`conn.state.${row.state}`));
 });

@@ -75,6 +75,20 @@ export function readView(stored: string | null): ConnectionView {
   }
 }
 
+// Decorate, sort, undecorate: each item's key is computed once rather than on every comparison.
+export function sortByKey<T, K>(items: T[], key: (item: T) => K, compare: (a: K, b: K) => number): T[] {
+  return items
+    .map(item => ({item, key: key(item)}))
+    .sort((a, b) => compare(a.key, b.key))
+    .map(entry => entry.item);
+}
+const collators = new Map<string, Intl.Collator>();
+function collatorFor(locale: string) {
+  let collator = collators.get(locale);
+  if (!collator) collators.set(locale, (collator = new Intl.Collator(locale, {numeric: true})));
+  return collator;
+}
+
 // Sorts and groups by what the table shows: a state sorts by its label, not the wire value.
 export function tableRows(rows: Connection[], view: ConnectionView, locale: string, t: LabelFn): TableRow[] {
   let sorted = rows;
@@ -96,10 +110,8 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
           return null;
       }
     };
-    const collator = new Intl.Collator(locale, {numeric: true});
-    sorted = [...rows].sort((a, b) => {
-      const left = value(a),
-        right = value(b);
+    const collator = collatorFor(locale);
+    sorted = sortByKey(rows, value, (left, right) => {
       if (left == null) return right == null ? 0 : 1;
       if (right == null) return -1;
       const order = typeof left === 'string' && typeof right === 'string' ? collator.compare(left, right) : left < right ? -1 : left > right ? 1 : 0;
@@ -138,6 +150,9 @@ export type ConnectionRowView = {
 };
 type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
 export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
+// A connection a poll re-reads unchanged keeps its identity, so its row is projected once per locale, outbound names
+// and rules capability, and the table keeps that row's cached item.
+const projected = new WeakMap<Connection, {locale: string; names: OutboundNames; rulesListed: boolean; t: LabelFn; row: ConnectionRowView}>();
 export function connectionTableView(
   rows: Connection[],
   view: ConnectionView,
@@ -146,18 +161,24 @@ export function connectionTableView(
   rulesListed: boolean,
   t: LabelFn
 ): ConnectionTableRow[] {
-  const project = (c: Connection): ConnectionRowView => ({
-    id: c.id,
-    target: c.domain || c.dst || '—',
-    source: c.src ?? '—',
-    node: nodeLabel(c, t, names),
-    path: chainPath(c, t, names),
-    rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
-    recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
-    state: t(connectionStates[c.state]),
-    download: formatBytes(c.download_bytes, locale),
-    startedAt: c.started_at
-  });
+  const project = (c: Connection): ConnectionRowView => {
+    const hit = projected.get(c);
+    if (hit && hit.locale === locale && hit.names === names && hit.rulesListed === rulesListed && hit.t === t) return hit.row;
+    const row: ConnectionRowView = {
+      id: c.id,
+      target: c.domain || c.dst || '—',
+      source: c.src ?? '—',
+      node: nodeLabel(c, t, names),
+      path: chainPath(c, t, names),
+      rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
+      recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
+      state: t(connectionStates[c.state]),
+      download: formatBytes(c.download_bytes, locale),
+      startedAt: c.started_at
+    };
+    projected.set(c, {locale, names, rulesListed, t, row});
+    return row;
+  };
   return tableRows(rows, view, locale, t).map(row =>
     'connection' in row
       ? {id: row.id, connection: project(row.connection)}
@@ -171,16 +192,15 @@ export function connectionTableView(
   );
 }
 
+// The filter menus and counts follow the list; the detail follows the selection, so selecting a row does not
+// recount the list.
 export function connectionsView(
   rows: Array<Connection & {network: string}>,
-  current: (Connection & {network: string}) | undefined,
   data: ConnectionList | undefined,
   src: string | undefined,
   rule: string,
   locale: string,
-  t: LabelFn,
-  names: OutboundNames,
-  rulesListed: boolean
+  t: LabelFn
 ) {
   const seen = (values: Array<string | null | undefined>) => {
     const counts = new Map<string, number>();
@@ -209,25 +229,33 @@ export function connectionsView(
         items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: formatNumber(n, locale)}))
       }
     ],
-    visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null,
-    detail: current
-      ? {
-          id: current.id,
-          title: current.domain || current.dst || current.id,
-          tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
-          status: t('ui.aside', {text: t(connectionStates[current.state]), note: current.network.toUpperCase()}),
-          chain: chainLabel(current, t, names),
-          outbound: outboundLabel(current.outbound, t),
-          rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
-          fields: connectionDetails(current, locale).map(
-            ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
-          ),
-          flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
-          source: current.src ? (sourceIp(current.src) ?? current.src) : null,
-          closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
-        }
-      : null
+    visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null
   };
+}
+export function connectionDetail(
+  current: (Connection & {network: string}) | undefined,
+  locale: string,
+  t: LabelFn,
+  names: OutboundNames,
+  rulesListed: boolean
+) {
+  return current
+    ? {
+        id: current.id,
+        title: current.domain || current.dst || current.id,
+        tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
+        status: t('ui.aside', {text: t(connectionStates[current.state]), note: current.network.toUpperCase()}),
+        chain: chainLabel(current, t, names),
+        outbound: outboundLabel(current.outbound, t),
+        rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
+        fields: connectionDetails(current, locale).map(
+          ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
+        ),
+        flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
+        source: current.src ? (sourceIp(current.src) ?? current.src) : null,
+        closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
+      }
+    : null;
 }
 
 export function connectionsExport(shown: Array<Connection & {network: string}>, names: OutboundNames) {
