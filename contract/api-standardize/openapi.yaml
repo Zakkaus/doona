@@ -16,7 +16,7 @@ paths:
     get:
       operationId: getDiscovery
       summary: Discover the native API
-      description: Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+      description: 'Public in every auth mode, so a client can choose how to sign in. A caller the listener admits (a valid bearer or session, or no credential on an explicitly secretless loopback listener) receives the full view. Any other request without a credential receives the public view, which carries only the API name and major, the sign-in links, and the auth mode. A request that carries a credential is authenticated first: an invalid one gets 401, never the public view. No resource permission is required.'
       security:
         - bearerAuth: []
         - {}
@@ -60,6 +60,20 @@ paths:
                       mode: token
                       setup_required: false
                       anonymous_loopback: false
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                public:
+                  value:
+                    name: dae/honk-native
+                    api_major: 1
+                    links:
+                      auth_setup: /api/v1/auth/setup
+                      auth_login: /api/v1/auth/login
+                    auth:
+                      mode: password
+                      setup_required: false
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -272,6 +286,7 @@ paths:
                           - info
                           - warn
                           - error
+                        retention_seconds: 60
                         max_buffered_records: 4096
                       dns_query:
                         available: true
@@ -335,7 +350,7 @@ paths:
     post:
       operationId: setupAdministrator
       summary: Create the administrator account and open a session
-      description: 'Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent.'
+      description: 'Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent: a request that carries it is authenticated first, and before setup no session exists, so it gets 401 `authentication_required`.'
       security: []
       requestBody:
         required: true
@@ -371,6 +386,8 @@ paths:
                     X-Content-Type-Options: nosniff
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1834,6 +1851,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/SnapshotUnavailable'
     post:
       operationId: createNode
       summary: Add an inline node from a share link
@@ -1866,7 +1885,7 @@ paths:
           description: Node written to the managed configuration
           headers:
             Location:
-              description: The new node in the node list.
+              description: The new node, readable with GET.
               required: true
               schema:
                 type: string
@@ -2056,6 +2075,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/SnapshotUnavailable'
     post:
       operationId: createProvider
       summary: Add a subscription provider to the managed configuration
@@ -2453,6 +2474,49 @@ paths:
   /api/v1/nodes/{id}:
     parameters:
       - $ref: '#/components/parameters/NodeId'
+    get:
+      operationId: getNode
+      summary: Read one node and its latest typed health samples
+      description: |
+        Returns the same projection as one entry of GET /api/v1/nodes. An unknown id
+        returns 404 resource_not_found.
+      x-permission: observe
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: One node
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+              examples:
+                node:
+                  value:
+                    id: node-hk-03
+                    name: hk-03
+                    protocol: vless
+                    subscription_tag: null
+                    provider_id: inline
+                    group_ids:
+                      - group-proxy
+                    health: []
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       operationId: deleteNode
       summary: Remove an inline node from the managed configuration
@@ -3433,6 +3497,51 @@ paths:
         '413':
           $ref: '#/components/responses/TooLarge'
           description: Matching live entries exceed max_bulk_close (request_too_large); no connections closed.
+        '503':
+          description: |
+            Closing at least one selected connection could not be confirmed
+            (temporarily_unavailable). error.details counts the connections already
+            closed or skipped; they stay closed, so a retry must not assume nothing changed.
+          headers:
+            Retry-After:
+              description: Retry delay in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      error:
+                        type: object
+                        required:
+                          - details
+                        properties:
+                          details:
+                            $ref: '#/components/schemas/BulkCloseResult'
+              examples:
+                incomplete:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: Transport retirement could not be confirmed.
+                      details:
+                        closed: 2
+                        skipped: 1
+                    request_id: request-close-5
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/connections/{connection_id}:
     delete:
       operationId: closeConnection
@@ -3541,6 +3650,9 @@ paths:
                     Content-Type: application/json
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
+        '503':
+          $ref: '#/components/responses/Unavailable'
+          description: Cancellation or retirement could not be confirmed (temporarily_unavailable); the connection may already be closed.
   /api/v1/flows:
     get:
       operationId: listFlows
@@ -4160,8 +4272,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '413':
           $ref: '#/components/responses/TooLarge'
         '415':
@@ -4171,7 +4281,47 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
-          $ref: '#/components/responses/Unavailable'
+          description: A required runtime component is unavailable (temporarily_unavailable), or a coherent routing snapshot could not be pinned (snapshot_unavailable)
+          headers:
+            Retry-After:
+              description: Retry delay in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                temporarily_unavailable:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: A required runtime component is unavailable.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+                snapshot_unavailable:
+                  value:
+                    error:
+                      code: snapshot_unavailable
+                      message: A coherent routing snapshot is unavailable; retry the trace.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/rules:
     get:
       operationId: listRules
@@ -4188,7 +4338,7 @@ paths:
         generation_id identifies the dictionary's routing generation. Refetch after
         generation.changed; do not join old flow evidence to a new generation.
         There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
-        generation cannot be pinned, return 409 snapshot_unavailable. If the complete
+        generation cannot be pinned, return 503 snapshot_unavailable. If the complete
         dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
         rather than silently truncate it. Redact local paths and secret-bearing expression
         values without changing rule identities or order; never expose raw configuration.
@@ -4255,9 +4405,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          description: The running routing generation could not be pinned coherently
+        '503':
+          description: The dictionary exceeds max_rules (temporarily_unavailable), or a coherent generation could not be pinned (snapshot_unavailable)
           headers:
+            Retry-After:
+              description: Retry delay in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
             Cache-Control:
               $ref: '#/components/headers/NoStore'
             X-Content-Type-Options:
@@ -4267,6 +4423,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
+                temporarily_unavailable:
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The rule dictionary exceeds resources.rules.max_rules.
+                      details: null
+                    request_id: request-01HZX4K8W6
+                  x-headers:
+                    Content-Type: application/json
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
                 snapshot_unavailable:
                   value:
                     error:
@@ -4276,10 +4444,9 @@ paths:
                     request_id: request-01HZX4K8W6
                   x-headers:
                     Content-Type: application/json
+                    Retry-After: 1
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
-        '503':
-          $ref: '#/components/responses/Unavailable'
   /api/v1/events:
     get:
       operationId: streamEvents
@@ -4356,7 +4523,8 @@ paths:
         previous-instance or changed-filter cursors return 409 event_cursor_expired
         before opening the stream. Drop the cursor and reconnect to establish a new
         baseline; lost history is not recovered. Filtered-out IDs may leave gaps.
-        Retain at most resources.logs.max_buffered_records; this is not durable storage.
+        Retain at most resources.logs.max_buffered_records records, none older than
+        resources.logs.retention_seconds; this is not durable storage.
         Close slow clients when their bounded queue fills; never block engine writers.
         Send heartbeat comments at most 15 seconds apart while idle. Recheck credentials
         on reconnect and terminate streams when authorization is revoked.
@@ -4486,7 +4654,7 @@ paths:
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
                 config_sources:
-                  summary: Geodata URLs set in the configuration file
+                  summary: Geodata URLs written from the configuration file
                   value:
                     observed_at: '2026-08-15T10:00:00Z'
                     source: config
@@ -4535,14 +4703,15 @@ paths:
 
         geodata is the exception. It requires resources.geodata.configurable_sources
         and an authenticated caller; the anonymous loopback principal gets 403
-        permission_denied. The backend stores it, so it survives restarts and
-        activations and does not change the top-level source. A geodata patch merges
-        into the effective settings. Patching geosite or geoip stores both URL lists
-        (geodata.source becomes db); auto_update is stored on its own; null deletes
-        everything stored. It never downloads; POST /geodata/update does. While
-        geodata.source is config the configuration file owns the URLs: a patch that
-        sets geodata.geosite or geodata.geoip returns 409 state_conflict and changes
-        nothing, while auto_update can still be patched.
+        permission_denied. The backend stores it and does not change the top-level
+        source. A geodata patch merges into the stored settings. Patching geosite or
+        geoip stores both URL lists (geodata.source becomes db); auto_update is
+        stored on its own; null deletes everything stored. It never downloads; POST
+        /geodata/update does. The stored settings are the only ones in force. At
+        startup, the backend writes each geodata download URL the configuration file
+        names into the stored settings, replacing a list a patch stored, and deletes
+        a stored list that an earlier file wrote but the file no longer names.
+        Activations never change them, so patched URLs last until the next startup.
       x-permission: control
       security:
         - bearerAuth: []
@@ -4577,7 +4746,7 @@ paths:
                     auto_update:
                       enabled: true
               geodata_auto_update:
-                summary: Update every two days, also while the configuration file owns the URLs
+                summary: Update every two days
                 value:
                   geodata:
                     auto_update:
@@ -4673,29 +4842,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          description: The patch sets geodata URLs while the configuration file owns them
-          headers:
-            Cache-Control:
-              $ref: '#/components/headers/NoStore'
-            X-Content-Type-Options:
-              $ref: '#/components/headers/NoSniff'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                geodata_from_config:
-                  value:
-                    error:
-                      code: state_conflict
-                      message: Geodata URLs are set in the configuration file.
-                      details: null
-                    request_id: request-4
-                  x-headers:
-                    Content-Type: application/json
-                    Cache-Control: no-store
-                    X-Content-Type-Options: nosniff
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
   /api/v1/dns/query:
     get:
       operationId: queryDns
@@ -4823,6 +4973,11 @@ paths:
         Results are newest first. The ring holds at most
         resources.dns_log.max_records and is cleared on restart.
         A limit above resources.dns_log.max_page_size returns 400 invalid_request.
+        A page may hold fewer than limit records while next_cursor is
+        non-null, for example when the server's response size limit ends it
+        early. Only a null next_cursor ends the walk. A record whose answers
+        alone exceed that limit is served whole on a page of its own, never
+        clipped or refused.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -4923,10 +5078,18 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/dns/cache:
     get:
       operationId: listDnsCache
       summary: Read a paginated DNS cache snapshot
+      description: |
+        A page holds at most limit entries and may hold fewer while
+        next_cursor is non-null, for example when the server's response size
+        limit ends it early. Only a null next_cursor ends the walk. An entry
+        whose answers alone exceed that limit is served whole on a page of
+        its own, never clipped or refused.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -5486,10 +5649,11 @@ components:
       scheme: bearer
       bearerFormat: opaque
       description: |
-        Bearer authentication is mandatory on every request except CORS preflights
-        whenever a deployment secret is set.
-        The anonymous security alternative is permitted only on an explicitly
+        Bearer authentication is mandatory on every request except CORS preflights,
+        discovery, and password setup and login whenever a deployment secret is set.
+        Elsewhere the anonymous security alternative is permitted only on an explicitly
         secretless loopback listener, never as a fallback for invalid credentials.
+        Discovery answers any request without a credential with its public view.
         Native permissions are expressed by x-permission; see API Configuration.
   headers:
     NoStore:
@@ -5800,7 +5964,7 @@ components:
                 X-Content-Type-Options: nosniff
     Conflict:
       $ref: '#/components/responses/ErrorResponseCommon'
-      description: State, idempotency, cursor, or coherent-snapshot conflict
+      description: State, idempotency, or cursor conflict
     Gone:
       $ref: '#/components/responses/ErrorResponseCommon'
       description: Flow or paginated snapshot retention expired
@@ -5871,6 +6035,36 @@ components:
                 error:
                   code: temporarily_unavailable
                   message: A required runtime component is unavailable.
+                  details: null
+                request_id: request-01HZX4K8W6
+              x-headers:
+                Content-Type: application/json
+                Retry-After: 1
+                Cache-Control: no-store
+                X-Content-Type-Options: nosniff
+    SnapshotUnavailable:
+      description: A coherent snapshot could not be pinned or held within its budget; retry after Retry-After.
+      headers:
+        Retry-After:
+          description: Retry delay in seconds.
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        X-Content-Type-Options:
+          $ref: '#/components/headers/NoSniff'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            snapshot_unavailable:
+              value:
+                error:
+                  code: snapshot_unavailable
+                  message: A coherent snapshot is unavailable; retry the read.
                   details: null
                 request_id: request-01HZX4K8W6
               x-headers:
@@ -6009,6 +6203,11 @@ components:
             - string
             - 'null'
     Discovery:
+      description: The full view for a caller the listener admits, or the public view for any other request without a credential.
+      oneOf:
+        - $ref: '#/components/schemas/AdmittedDiscovery'
+        - $ref: '#/components/schemas/PublicDiscovery'
+    AdmittedDiscovery:
       type: object
       required:
         - name
@@ -6112,6 +6311,59 @@ components:
         auth:
           $ref: '#/components/schemas/AuthDiscovery'
           description: Absent from servers that predate password login; clients then assume a configured bearer.
+    PublicDiscovery:
+      type: object
+      description: What a client needs before it signs in. Status, base path, resource links, `auth_logout` and `auth.anonymous_loopback` are withheld.
+      additionalProperties: false
+      required:
+        - name
+        - api_major
+        - links
+        - auth
+      properties:
+        name:
+          type: string
+          const: dae/honk-native
+        api_major:
+          type: integer
+          const: 1
+        links:
+          type: object
+          additionalProperties: false
+          required:
+            - auth_setup
+            - auth_login
+          properties:
+            auth_setup:
+              type:
+                - string
+                - 'null'
+              enum:
+                - /api/v1/auth/setup
+                - null
+              description: Present in password mode, null otherwise.
+            auth_login:
+              type:
+                - string
+                - 'null'
+              enum:
+                - /api/v1/auth/login
+                - null
+              description: Present in password mode, null otherwise.
+        auth:
+          type: object
+          additionalProperties: false
+          required:
+            - mode
+            - setup_required
+          properties:
+            mode:
+              type: string
+              enum:
+                - token
+                - password
+            setup_required:
+              type: boolean
     AuthDiscovery:
       type: object
       description: How a client authenticates. `password` mode offers setup until an administrator exists and login afterwards; `token` mode takes a configured bearer, or none when `anonymous_loopback` admits loopback peers.
@@ -6746,6 +6998,7 @@ components:
               then:
                 required:
                   - levels
+                  - retention_seconds
                   - max_buffered_records
               properties:
                 available:
@@ -6756,6 +7009,10 @@ components:
                   uniqueItems: true
                   items:
                     $ref: '#/components/schemas/LogLevel'
+                retention_seconds:
+                  type: integer
+                  minimum: 1
+                  description: Maximum age of a replayable record, in seconds. A resume cursor older than this returns 409 event_cursor_expired even when the ring has room.
                 max_buffered_records:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -7086,7 +7343,9 @@ components:
         id:
           type: string
           minLength: 1
-          description: Request-local diagnostic ID. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs.
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_.-]+$
+          description: Request-local diagnostic ID of 1 to 128 ASCII letters, digits, `.`, `_` or `-`. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs.
         path:
           type: string
           minLength: 1
@@ -8238,7 +8497,7 @@ components:
         - config
         - db
         - default
-      description: Where the download URLs come from. config when the configuration file names a geodata download URL; it then owns the URLs, while auto_update stays settable. db once a PATCH stored URLs. default for the backend's built-in URLs.
+      description: Where the stored URL lists came from. config when the backend wrote every stored list from the configuration file at startup. db when a PATCH stored any of them. default when no list is stored and the backend's built-in URLs apply. An asset without a stored list uses its built-in URLs under any source. A PATCH may set URLs under any source.
     GeoDataUrl:
       type: string
       format: uri
@@ -8252,9 +8511,10 @@ components:
       properties:
         urls:
           type: array
+          minItems: 1
           maxItems: 4
           uniqueItems: true
-          description: Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. Empty only when source is config and the configuration names no URL for this asset.
+          description: Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted.
           items:
             $ref: '#/components/schemas/GeoDataUrl'
     GeoDataAutoUpdate:
@@ -8305,7 +8565,7 @@ components:
           items:
             $ref: '#/components/schemas/GeoDataUrl'
     GeoDataSettingsPatch:
-      description: Merged into the effective settings. A patch with geosite or geoip stores both URL lists, so source becomes db, and returns 409 state_conflict while source is config. auto_update is stored on its own, under any source. null deletes everything stored.
+      description: Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update is stored on its own. null deletes everything stored.
       oneOf:
         - type: 'null'
         - type: object
@@ -8410,16 +8670,19 @@ components:
             - integer
             - 'null'
           minimum: 1
+          description: Configured health-check interval in seconds. A backend that runs checks on one global interval may keep this value without applying it; see its mapping notes.
         tolerance:
           type:
-            - number
+            - integer
             - 'null'
           minimum: 0
+          description: Minimum latency improvement in milliseconds before a URLTest group switches members.
         idle_timeout:
           type:
             - integer
             - 'null'
           minimum: 0
+          description: Inactivity in seconds after which a URLTest group counts as idle.
         interrupt_connections:
           type: boolean
     SafeHttpUrl:
@@ -8787,7 +9050,7 @@ components:
           const: /config/tolerance
         value:
           type:
-            - number
+            - integer
             - 'null'
           minimum: 0
     IdleTimeoutPatch:
@@ -11047,7 +11310,7 @@ components:
           minLength: 1
         domain:
           type: string
-          minLength: 2
+          minLength: 1
           pattern: \.$
         type:
           $ref: '#/components/schemas/DnsRecordType'
@@ -11516,8 +11779,14 @@ components:
             Read-only recorder state. A client is attached while an admitted GET SSE stream on
             /events or /logs is open, or for 60 seconds after the last stream closed or a successful
             GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
-            renew attachment. Recording starts on attachment, so the first history a client reads may
-            be empty.
+            renew attachment. Automatic log and DNS-log recorders follow attachment. The automatic
+            flow recorder follows flow demand instead, so that an open panel does not record full
+            flow traces for every connection: an admitted GET /events stream whose kinds include
+            flow.updated or flow.gap, or that sets a nonblank flow_id with a flow kind in its
+            effective kinds, holds demand while open and for 60 seconds after the last one closed,
+            and a successful GET on /flows or /flows/{id} renews it for 60 seconds. Event streams
+            without kinds, /logs streams and /dns/log reads do not create flow demand. Recording
+            starts on attachment or demand, so the first history a client reads may be empty.
           properties:
             flows:
               $ref: '#/components/schemas/RecorderState'
@@ -11535,7 +11804,7 @@ components:
                   description: Event capture runs while a client is attached or any permitted recorder is pinned on.
             grace_remaining_seconds:
               $ref: '#/components/schemas/SafeUInt'
-              description: Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached.
+              description: Seconds left before the automatic log and DNS-log recorders stop, 0 while a stream is open or nothing is attached. The flow-demand grace is not reported.
         geodata:
           $ref: '#/components/schemas/GeoDataSettings'
           description: Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written only to an authenticated caller with control and redacted for everyone else.
@@ -11582,7 +11851,7 @@ components:
         geodata:
           $ref: '#/components/schemas/GeoDataSettingsPatch'
     RecorderMode:
-      description: true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment.
+      description: true pins a permitted recorder on, false forces it off, auto (the startup default) follows flow demand for record_flows and client attachment for the other recorders.
       oneOf:
         - type: boolean
         - type: string

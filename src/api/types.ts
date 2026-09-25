@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Discover the native API
-         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         * @description Public in every auth mode, so a client can choose how to sign in. A caller the listener admits (a valid bearer or session, or no credential on an explicitly secretless loopback listener) receives the full view. Any other request without a credential receives the public view, which carries only the API name and major, the sign-in links, and the auth mode. A request that carries a credential is authenticated first: an invalid one gets 401, never the public view. No resource permission is required.
          */
         get: operations["getDiscovery"];
         put?: never;
@@ -75,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * Create the administrator account and open a session
-         * @description Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent.
+         * @description Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent: a request that carries it is authenticated first, and before setup no session exists, so it gets 401 `authentication_required`.
          */
         post: operations["setupAdministrator"];
         delete?: never;
@@ -511,7 +511,12 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read one node and its latest typed health samples
+         * @description Returns the same projection as one entry of GET /api/v1/nodes. An unknown id
+         *     returns 404 resource_not_found.
+         */
+        get: operations["getNode"];
         put?: never;
         post?: never;
         /**
@@ -832,7 +837,7 @@ export interface paths {
          *     generation_id identifies the dictionary's routing generation. Refetch after
          *     generation.changed; do not join old flow evidence to a new generation.
          *     There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
-         *     generation cannot be pinned, return 409 snapshot_unavailable. If the complete
+         *     generation cannot be pinned, return 503 snapshot_unavailable. If the complete
          *     dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
          *     rather than silently truncate it. Redact local paths and secret-bearing expression
          *     values without changing rule identities or order; never expose raw configuration.
@@ -889,7 +894,8 @@ export interface paths {
          *     previous-instance or changed-filter cursors return 409 event_cursor_expired
          *     before opening the stream. Drop the cursor and reconnect to establish a new
          *     baseline; lost history is not recovered. Filtered-out IDs may leave gaps.
-         *     Retain at most resources.logs.max_buffered_records; this is not durable storage.
+         *     Retain at most resources.logs.max_buffered_records records, none older than
+         *     resources.logs.retention_seconds; this is not durable storage.
          *     Close slow clients when their bounded queue fills; never block engine writers.
          *     Send heartbeat comments at most 15 seconds apart while idle. Recheck credentials
          *     on reconnect and terminate streams when authorization is revoked.
@@ -943,14 +949,15 @@ export interface paths {
          *
          *     geodata is the exception. It requires resources.geodata.configurable_sources
          *     and an authenticated caller; the anonymous loopback principal gets 403
-         *     permission_denied. The backend stores it, so it survives restarts and
-         *     activations and does not change the top-level source. A geodata patch merges
-         *     into the effective settings. Patching geosite or geoip stores both URL lists
-         *     (geodata.source becomes db); auto_update is stored on its own; null deletes
-         *     everything stored. It never downloads; POST /geodata/update does. While
-         *     geodata.source is config the configuration file owns the URLs: a patch that
-         *     sets geodata.geosite or geodata.geoip returns 409 state_conflict and changes
-         *     nothing, while auto_update can still be patched.
+         *     permission_denied. The backend stores it and does not change the top-level
+         *     source. A geodata patch merges into the stored settings. Patching geosite or
+         *     geoip stores both URL lists (geodata.source becomes db); auto_update is
+         *     stored on its own; null deletes everything stored. It never downloads; POST
+         *     /geodata/update does. The stored settings are the only ones in force. At
+         *     startup, the backend writes each geodata download URL the configuration file
+         *     names into the stored settings, replacing a list a patch stored, and deletes
+         *     a stored list that an earlier file wrote but the file no longer names.
+         *     Activations never change them, so patched URLs last until the next startup.
          */
         patch: operations["patchRuntimeSettings"];
         trace?: never;
@@ -986,6 +993,11 @@ export interface paths {
          *     Results are newest first. The ring holds at most
          *     resources.dns_log.max_records and is cleared on restart.
          *     A limit above resources.dns_log.max_page_size returns 400 invalid_request.
+         *     A page may hold fewer than limit records while next_cursor is
+         *     non-null, for example when the server's response size limit ends it
+         *     early. Only a null next_cursor ends the walk. A record whose answers
+         *     alone exceed that limit is served whole on a page of its own, never
+         *     clipped or refused.
          */
         get: operations["listDnsLog"];
         put?: never;
@@ -1003,7 +1015,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read a paginated DNS cache snapshot */
+        /**
+         * Read a paginated DNS cache snapshot
+         * @description A page holds at most limit entries and may hold fewer while
+         *     next_cursor is non-null, for example when the server's response size
+         *     limit ends it early. Only a null next_cursor ends the walk. An entry
+         *     whose answers alone exceed that limit is served whole on a page of
+         *     its own, never clipped or refused.
+         */
         get: operations["listDnsCache"];
         put?: never;
         post?: never;
@@ -1149,7 +1168,9 @@ export interface components {
             error: components["schemas"]["ApiError"];
             request_id: string | null;
         };
-        Discovery: {
+        /** @description The full view for a caller the listener admits, or the public view for any other request without a credential. */
+        Discovery: components["schemas"]["AdmittedDiscovery"] | components["schemas"]["PublicDiscovery"];
+        AdmittedDiscovery: {
             /** @constant */
             name: "dae/honk-native";
             /** @constant */
@@ -1203,6 +1224,30 @@ export interface components {
             };
             /** @description Absent from servers that predate password login; clients then assume a configured bearer. */
             auth?: components["schemas"]["AuthDiscovery"];
+        };
+        /** @description What a client needs before it signs in. Status, base path, resource links, `auth_logout` and `auth.anonymous_loopback` are withheld. */
+        PublicDiscovery: {
+            /** @constant */
+            name: "dae/honk-native";
+            /** @constant */
+            api_major: 1;
+            links: {
+                /**
+                 * @description Present in password mode, null otherwise.
+                 * @enum {string|null}
+                 */
+                auth_setup: "/api/v1/auth/setup" | null;
+                /**
+                 * @description Present in password mode, null otherwise.
+                 * @enum {string|null}
+                 */
+                auth_login: "/api/v1/auth/login" | null;
+            };
+            auth: {
+                /** @enum {string} */
+                mode: "token" | "password";
+                setup_required: boolean;
+            };
         };
         /** @description How a client authenticates. `password` mode offers setup until an administrator exists and login afterwards; `token` mode takes a configured bearer, or none when `anonymous_loopback` admits loopback peers. */
         AuthDiscovery: {
@@ -1375,6 +1420,8 @@ export interface components {
                 logs: {
                     available: boolean;
                     levels?: components["schemas"]["LogLevel"][];
+                    /** @description Maximum age of a replayable record, in seconds. A resume cursor older than this returns 409 event_cursor_expired even when the ring has room. */
+                    retention_seconds?: number;
                     /** @description Maximum permitted log replay-ring capacity. The current capacity is runtime settings log.buffered_records. Neither value guarantees retention duration. */
                     max_buffered_records?: components["schemas"]["SafeUInt"];
                 };
@@ -1490,7 +1537,7 @@ export interface components {
         /** @enum {string} */
         ConfigValidationMode: "syntax" | "full";
         ConfigValidationSource: {
-            /** @description Request-local diagnostic ID. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs. */
+            /** @description Request-local diagnostic ID of 1 to 128 ASCII letters, digits, `.`, `_` or `-`. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs. */
             id?: string;
             /** @description Optional engine-native source name and include-resolution base within the adapter's authorized local roots; never grants arbitrary file access. */
             path?: string;
@@ -1889,7 +1936,7 @@ export interface components {
             error?: null;
         };
         /**
-         * @description Where the download URLs come from. config when the configuration file names a geodata download URL; it then owns the URLs, while auto_update stays settable. db once a PATCH stored URLs. default for the backend's built-in URLs.
+         * @description Where the stored URL lists came from. config when the backend wrote every stored list from the configuration file at startup. db when a PATCH stored any of them. default when no list is stored and the backend's built-in URLs apply. An asset without a stored list uses its built-in URLs under any source. A PATCH may set URLs under any source.
          * @enum {string}
          */
         GeoDataSettingsSource: "config" | "db" | "default";
@@ -1899,7 +1946,7 @@ export interface components {
          */
         GeoDataUrl: string;
         GeoDataSources: {
-            /** @description Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. Empty only when source is config and the configuration names no URL for this asset. */
+            /** @description Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
         GeoDataAutoUpdate: {
@@ -1925,7 +1972,7 @@ export interface components {
             /** @description Replaces the whole list; order is fallback order. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
-        /** @description Merged into the effective settings. A patch with geosite or geoip stores both URL lists, so source becomes db, and returns 409 state_conflict while source is config. auto_update is stored on its own, under any source. null deletes everything stored. */
+        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update is stored on its own. null deletes everything stored. */
         GeoDataSettingsPatch: null | {
             geosite?: components["schemas"]["GeoDataSourcesPatch"];
             geoip?: components["schemas"]["GeoDataSourcesPatch"];
@@ -1954,8 +2001,11 @@ export interface components {
             default_member_id: string | null;
             final_outbound: string | null;
             check_url: null | components["schemas"]["SafeHttpUrl"];
+            /** @description Configured health-check interval in seconds. A backend that runs checks on one global interval may keep this value without applying it; see its mapping notes. */
             check_interval: number | null;
+            /** @description Minimum latency improvement in milliseconds before a URLTest group switches members. */
             tolerance: number | null;
+            /** @description Inactivity in seconds after which a URLTest group counts as idle. */
             idle_timeout: number | null;
             interrupt_connections: boolean;
         };
@@ -2978,8 +3028,14 @@ export interface components {
              * @description Read-only recorder state. A client is attached while an admitted GET SSE stream on
              *     /events or /logs is open, or for 60 seconds after the last stream closed or a successful
              *     GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
-             *     renew attachment. Recording starts on attachment, so the first history a client reads may
-             *     be empty.
+             *     renew attachment. Automatic log and DNS-log recorders follow attachment. The automatic
+             *     flow recorder follows flow demand instead, so that an open panel does not record full
+             *     flow traces for every connection: an admitted GET /events stream whose kinds include
+             *     flow.updated or flow.gap, or that sets a nonblank flow_id with a flow kind in its
+             *     effective kinds, holds demand while open and for 60 seconds after the last one closed,
+             *     and a successful GET on /flows or /flows/{id} renews it for 60 seconds. Event streams
+             *     without kinds, /logs streams and /dns/log reads do not create flow demand. Recording
+             *     starts on attachment or demand, so the first history a client reads may be empty.
              */
             recording?: {
                 flows: components["schemas"]["RecorderState"];
@@ -2989,7 +3045,7 @@ export interface components {
                     /** @description Event capture runs while a client is attached or any permitted recorder is pinned on. */
                     active: boolean;
                 };
-                /** @description Seconds left before automatic recorders stop, 0 while a stream is open or nothing is attached. */
+                /** @description Seconds left before the automatic log and DNS-log recorders stop, 0 while a stream is open or nothing is attached. The flow-demand grace is not reported. */
                 grace_remaining_seconds: components["schemas"]["SafeUInt"];
             };
             /** @description Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written only to an authenticated caller with control and redacted for everyone else. */
@@ -3012,7 +3068,7 @@ export interface components {
             };
             geodata?: components["schemas"]["GeoDataSettingsPatch"];
         };
-        /** @description true pins a permitted recorder on, false forces it off, auto (the startup default) follows client attachment. */
+        /** @description true pins a permitted recorder on, false forces it off, auto (the startup default) follows flow demand for record_flows and client attachment for the other recorders. */
         RecorderMode: boolean | "auto";
         RecorderState: {
             /** @description The configuration permits this recorder; false means never, whatever the mode. */
@@ -3154,7 +3210,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description State, idempotency, cursor, or coherent-snapshot conflict */
+        /** @description State, idempotency, or cursor conflict */
         Conflict: {
             headers: {
                 [name: string]: unknown;
@@ -3221,6 +3277,19 @@ export interface components {
             headers: {
                 /** @description Retry delay in seconds when retryable. */
                 "Retry-After"?: number;
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description A coherent snapshot could not be pinned or held within its budget; retry after Retry-After. */
+        SnapshotUnavailable: {
+            headers: {
+                /** @description Retry delay in seconds. */
+                "Retry-After": number;
                 "Cache-Control": components["headers"]["NoStore"];
                 "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
@@ -3403,6 +3472,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -4050,6 +4120,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["SnapshotUnavailable"];
         };
     };
     createNode: {
@@ -4068,7 +4139,7 @@ export interface operations {
             /** @description Node written to the managed configuration */
             201: {
                 headers: {
-                    /** @description The new node in the node list. */
+                    /** @description The new node, readable with GET. */
                     Location: string;
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
@@ -4165,6 +4236,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["SnapshotUnavailable"];
         };
     };
     createProvider: {
@@ -4360,6 +4432,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+        };
+    };
+    getNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example node-hk-03 */
+                id: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One node */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Node"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     deleteNode: {
@@ -4803,6 +4903,27 @@ export interface operations {
             };
             /** @description Matching live entries exceed max_bulk_close (request_too_large); no connections closed. */
             413: components["responses"]["TooLarge"];
+            /**
+             * @description Closing at least one selected connection could not be confirmed
+             *     (temporarily_unavailable). error.details counts the connections already
+             *     closed or skipped; they stay closed, so a retry must not assume nothing changed.
+             */
+            503: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"] & {
+                        error?: {
+                            details: components["schemas"]["BulkCloseResult"];
+                        };
+                    };
+                };
+            };
         };
     };
     closeConnection: {
@@ -4853,6 +4974,8 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Cancellation or retirement could not be confirmed (temporarily_unavailable); the connection may already be closed. */
+            503: components["responses"]["Unavailable"];
         };
     };
     listFlows: {
@@ -4973,12 +5096,23 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["Unavailable"];
+            /** @description A required runtime component is unavailable (temporarily_unavailable), or a coherent routing snapshot could not be pinned (snapshot_unavailable) */
+            503: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     listRules: {
@@ -5004,9 +5138,11 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The running routing generation could not be pinned coherently */
-            409: {
+            /** @description The dictionary exceeds max_rules (temporarily_unavailable), or a coherent generation could not be pinned (snapshot_unavailable) */
+            503: {
                 headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
                     [name: string]: unknown;
@@ -5015,7 +5151,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            503: components["responses"]["Unavailable"];
         };
     };
     streamEvents: {
@@ -5165,17 +5300,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The patch sets geodata URLs while the configuration file owns them */
-            409: {
-                headers: {
-                    "Cache-Control": components["headers"]["NoStore"];
-                    "X-Content-Type-Options": components["headers"]["NoSniff"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
         };
     };
     queryDns: {
@@ -5267,6 +5393,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["Unavailable"];
         };
     };
     listDnsCache: {
