@@ -4,7 +4,7 @@ import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/mo
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
 import type {EditorMark} from '../../ui/code/CodeEditor';
-import {groupNames} from './names';
+import {groupNames} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';

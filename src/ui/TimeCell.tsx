@@ -1,6 +1,6 @@
 import {localTime, relativeStart} from '../i18n/format';
 import {LOCALE, useLang} from '../i18n';
-import {useNow} from '../store/clock';
+import {useNow} from './clock';
 import {TextTooltip} from './Button';
 
 // A time relative to now, with the local time as its tooltip. The cell follows the clock itself, so a tick re-renders

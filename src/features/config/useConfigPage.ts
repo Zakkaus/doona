@@ -5,10 +5,10 @@ import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigVali
 import {ApiError} from '../../api/error';
 import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
-import {fileName, groupNames} from './names';
+import {fileName, groupNames, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs, restartRequired} from './view';
+import {sourceView, diagnosticRows, sourceMarks, setupAvailable, configTabs} from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';

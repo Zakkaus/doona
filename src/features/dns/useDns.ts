@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {smallerOnRefusal, useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
+import {queryTypes, smallerOnRefusal, useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
@@ -10,7 +10,6 @@ import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, us
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
-import {queryTypes} from './query';
 import {errorText} from '../../api/error';
 import {cacheCard, cacheCardState} from './cache';
 

@@ -1,5 +1,5 @@
-import type {ConfigSource, RoutingRule, RuleSource} from '../../api/model';
-import {scanConfig, uncomment} from '../../dae/text';
+import type {ConfigSource, RoutingRule, RuleSource} from '../api/model';
+import {scanConfig, uncomment} from './text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;

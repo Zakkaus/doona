@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import type {ConfigSource, RoutingRule} from '../../api/model';
-import {addRule, removeRule, ruleAnchor, sourceFor} from './source';
+import type {ConfigSource, RoutingRule} from '../api/model';
+import {addRule, removeRule, ruleAnchor, sourceFor} from './ruleText';
 
 const rule: RoutingRule = {
   rule_id: 'r1',

@@ -4,8 +4,8 @@ import {backendMessage} from '../../i18n/backend';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
-import {fileName, restartRequired} from '../config/names';
-import {ruleAnchor, ruleLine} from './source';
+import {fileName, restartRequired} from '../../dae/sources';
+import {ruleAnchor, ruleLine} from '../../dae/ruleText';
 
 // Every held rule for one source, each in front of the rule it names, in one pass over the text; rules held before
 // the same rule keep the order they were held in. Null when a rule it names is no longer where the list said.

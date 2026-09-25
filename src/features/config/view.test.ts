@@ -5,7 +5,7 @@ import {translate, type Translator} from '../../i18n';
 import {sourceView, diagnosticRows, wizardInitial, wizardRows, sectionSummaries, sectionRange, sectionMarks, sourceMarks, splice} from './view';
 import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
-import {validationSources} from './names';
+import {validationSources} from '../../dae/sources';
 const t: Translator = (key, params) => translate('en', key, params);
 it('keeps hidden source paths out of source labels and exposes content availability', async () => {
   const configSources = (await createMockApi().config()).sources;

@@ -3,7 +3,7 @@ import {blockFields, scanConfig, uncomment, isFragment, quote, unquote} from './
 import {addNamesToGroup, namedIn, readGroupEntries} from './groups';
 import {readState, writeState} from './setup';
 import {LocalError} from '../api/error';
-import {groupNames} from '../features/config/names';
+import {groupNames} from './sources';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
   const text = `# group { fake {} }
