@@ -297,3 +297,13 @@ test('a confirmation removed while its action is pending abandons the action', a
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(page.locator('.rp-toast')).toHaveCount(0);
 });
+
+test('the service actions stay buttons on a phone and run when pressed', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/settings?card=actions');
+  const actions = page.getByRole('region', {name: t('settings.actions')});
+  await expect(actions.getByRole('button', {name: t('ov.suspend'), exact: true})).toBeVisible();
+  await expect(actions.getByRole('button', {name: t('ui.moreActions')})).toHaveCount(0);
+  await actions.getByRole('button', {name: t('ov.reload'), exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText(`${t('ov.reload')}: `);
+});
