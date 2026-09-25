@@ -1,4 +1,7 @@
 import {detail, expect, mockBackend, test} from './fixtures';
+import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
+import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -136,14 +139,14 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   await page.goto('/#/rules?tab=list');
   const held = page.getByRole('region', {name: 'Pending: 2'});
   await expect(held).toContainText('domain(full: api.telegram.org) -> proxy');
-  await expect(held).toContainText('domain(full: cdn.bilibili.com) -> proxy');
+  await expect(held).toContainText('domain(full: cdn.bilibili.com) -> direct');
   await apply.click();
   await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
   const content = writes[0].postDataJSON().content as string;
   expect(content).toContain('domain(full: api.telegram.org) -> proxy');
-  expect(content).toContain('domain(full: cdn.bilibili.com) -> proxy');
+  expect(content).toContain('domain(full: cdn.bilibili.com) -> direct');
   await expect(held).toHaveCount(0);
   await expect(top(page).getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
@@ -179,4 +182,72 @@ test('with nothing held the top bar button re-reads the data and writes nothing'
   await expect(page.locator('.rp-toast.positive', {hasText: 'Data refreshed.'})).toBeVisible();
   expect(requests.slice(before).some(request => request.url().includes('/connections'))).toBe(true);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+});
+
+test('the dialog starts from the outbound the connection uses', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/connections?id=2');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Add rule'}).locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
+});
+
+test('a matched rule gone after a reload is not retargeted until the dialog says so', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const [rules, config] = await Promise.all([api.rules(), api.config()]);
+  let reads = 0;
+  // The rules first come from generation 40; the configuration is already 41, where the matched rule is gone.
+  handlers['GET rules'] = async () => (reads++ ? {...rules, generation_id: '41', rules: rules.rules.filter(rule => rule.rule_id !== 'r5')} : rules);
+  handlers['GET config'] = async () => ({...config, generation_id: '41'});
+  await page.goto('/#/connections?id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await expect(dialog).toContainText('The matched rule changed; the rule will be added first.');
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('First');
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/rules?tab=list');
+  await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('Before rule 1');
+});
+
+test('an apply that fails in a later file keeps what it could not write and says what it wrote', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  // The mock's include holds bare rules, which doona cannot place; give it a routing section so both files take rules.
+  const wrap = (text: string) => 'routing {\n' + text + '}\n';
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const sources = config.sources.map(async source =>
+      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
+    );
+    return {...config, sources: await Promise.all(sources)};
+  };
+  handlers['GET rules'] = async () => {
+    const list = await api.rules();
+    return {
+      ...list,
+      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
+    };
+  };
+  handlers['PUT config/sources/src-rules'] = async () => {
+    throw new ApiError(422, 'validation_failed', 'invalid', null, {
+      diagnostics: [{level: 'error', source_id: 'src-rules', line: 7, column: 1, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
+    });
+  };
+  const connections = await createMockApi().connections();
+  const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
+  await hold(page, '1');
+  await hold(page, inInclude.id);
+  await page.goto('/#/rules?tab=list');
+  const held = page.getByRole('region', {name: 'Pending: 2'});
+  await expect(held).toContainText('Writes 2 files');
+  await top(page).getByRole('button', {name: 'Apply and reload (2); writes 2 files', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: '1 rule written; 1 still held'})).toBeVisible();
+  const pending = page.getByRole('region', {name: 'Pending: 1'});
+  await expect(pending).toContainText('rules.dae line 7: Backend message: no group proxy');
+  expect(requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname)).toEqual([
+    '/api/v1/config/sources/src-main',
+    '/api/v1/config/sources/src-rules'
+  ]);
 });

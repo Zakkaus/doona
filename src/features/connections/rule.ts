@@ -5,21 +5,21 @@ import type {Translator} from '../../i18n';
 import {ruleAnchor} from '../rules/source';
 
 export type RuleTarget = {kind: ConditionKind; condition: string};
-// A domain is matched exactly or with its subdomains; without one, the rule matches the destination IP.
+// A domain is matched exactly or with its subdomains; without one that dae can hold, the rule matches the destination IP.
 export function ruleTargets(c: Pick<Connection, 'domain' | 'dst'>): RuleTarget[] {
-  const ip = sourceIp(c.dst);
-  const seeds: Array<[ConditionKind, string]> = c.domain
-    ? [
+  const targets = (seeds: Array<[ConditionKind, string]>) =>
+    seeds.flatMap(([kind, value]) => {
+      const condition = ruleCondition(kind, value);
+      return condition ? [{kind, condition}] : [];
+    });
+  const domain = c.domain
+    ? targets([
         ['domain', c.domain],
         ['domainSuffix', c.domain]
-      ]
-    : ip
-      ? [['dip', ip]]
-      : [];
-  return seeds.flatMap(([kind, value]) => {
-    const condition = ruleCondition(kind, value);
-    return condition ? [{kind, condition}] : [];
-  });
+      ])
+    : [];
+  const ip = sourceIp(c.dst);
+  return domain.length ? domain : ip ? targets([['dip', ip]]) : [];
 }
 
 // Before the rule the connection matched, so the new rule takes over its traffic, and before the first rule. Only a
@@ -34,4 +34,12 @@ export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], mat
   return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: t('conn.ruleTop')}] : [])]
     .filter(choice => anchored(choice.rule))
     .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression}));
+}
+
+// The position a dialog pinned while its rule still exists: the same id in the same generation, or the same id and
+// text after a reload. Otherwise the first position, reported as moved so the dialog says so before writing there.
+export function pinnedPosition(positions: Array<{id: string; desc: string}>, pin: {generation: string; rule: RoutingRule} | null, generation?: string) {
+  if (!pin) return {before: positions[0]?.id, moved: false};
+  const kept = positions.find(position => position.id === pin.rule.rule_id && (generation === pin.generation || position.desc === pin.rule.expression));
+  return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
