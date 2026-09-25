@@ -1,4 +1,4 @@
-import type {Capabilities, ConfigDiagnostic, ConfigSource} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
@@ -11,19 +11,7 @@ import {href as routeHref} from '../../shell/route';
 import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
 import type {EditorMark} from '../../ui/code/CodeEditor';
-
-// Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
-export function setupAvailable(resources: Capabilities['resources'] | undefined, main: ConfigSource | null | undefined): boolean {
-  return !!main && resources?.config.writable === true && main.writable && main.content !== undefined;
-}
-export function configTabs(setup: boolean): Array<{id: 'modules' | 'setup' | 'source' | 'validate'; titleKey: Key}> {
-  return [
-    {id: 'modules', titleKey: 'config.tabModules'},
-    ...(setup ? [{id: 'setup' as const, titleKey: 'config.wizard' as const}] : []),
-    {id: 'source', titleKey: 'config.tabSource'},
-    {id: 'validate', titleKey: 'config.tabValidate'}
-  ];
-}
+import {sourceKinds} from './nav';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
 type SectionKind = (typeof sectionKinds)[number];
@@ -189,12 +177,6 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
   return [...sections, ...withheld];
 }
 
-export const sourceKinds: Record<ConfigSource['kind'], Key> = {
-  main: 'config.kind.main',
-  include: 'config.kind.include',
-  subscription: 'config.kind.subscription',
-  generated: 'config.kind.generated'
-};
 export function sourceView(source: ConfigSource, locale: string, t: Translator): SourceView {
   const kind = t(sourceKinds[source.kind]);
   return {

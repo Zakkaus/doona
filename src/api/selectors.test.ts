@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent, GroupSummary} from './model';
-import {eventSummary, resolveSelectedLeaf, routineGap, shortId} from './selectors';
+import {eventSummary, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
 import {formatNumber, LOCALE, readLang, translate} from '../i18n';
 import {createMockApi} from './mock';
 
@@ -51,4 +51,12 @@ it('groups dropped counts in gap summaries without rounding a large UInt64', () 
   expect(translate('en', 'event.gap', dropped('12345').params)).toContain('12,345');
   expect(dropped('18446744073709551615').params?.n).toBe(formatNumber(18446744073709551615n, LOCALE[readLang()]));
   expect(dropped(null).params?.n).toBe('—');
+});
+
+it('files a node under its provider, or under the built-in or unattributed owner the nodes page lists', () => {
+  expect(nodeOwner({provider_id: 'sub', protocol: 'vmess'}, [])).toBe('sub');
+  expect(nodeOwner({provider_id: null, protocol: 'direct'}, [])).toBe('builtin');
+  expect(nodeOwner({provider_id: null, protocol: 'vmess'}, [])).toBe('unattributed');
+  // A real provider that happens to use the pseudo owner's id keeps it; the pseudo owner moves aside.
+  expect(nodeOwner({provider_id: null, protocol: 'block'}, [{id: 'builtin'}, {id: 'builtin-'}])).toBe('builtin--');
 });

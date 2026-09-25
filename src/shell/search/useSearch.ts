@@ -22,7 +22,7 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
   const pages = useMemo(() => pageEntries(capabilities.data, config.data, t), [capabilities.data, config.data, t]);
   const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
-  const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang, t), [nodes.data, providers.data, lang, t]);
+  const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang), [nodes.data, providers.data, lang]);
   const groupHits = useMemo(() => groupEntries(groups.data), [groups.data]);
   const providerHits = useMemo(() => providerEntries(providers.data, t), [providers.data, t]);
   const sourceHits = useMemo(() => sourceEntries(config.data, t), [config.data, t]);

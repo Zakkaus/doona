@@ -6,12 +6,12 @@ import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {errorText} from '../../api/error';
 import {geodataPresets, type GeodataPresetId} from '../../dae/geodata';
+import {geodataConfigurable} from './nav';
 import {
   assetDetails,
   cleanUrls,
   customFields,
   customInvalid,
-  geodataConfigurable,
   geodataKinds,
   hostOf,
   intervalChoices,

@@ -4,7 +4,7 @@ import {closedAllTone} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
-import {geodataConfigurable} from './geodata';
+import {geodataConfigurable} from './nav';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 export function useBackendActions() {

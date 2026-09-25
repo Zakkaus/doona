@@ -1,5 +1,5 @@
 import type {Capabilities, Node, Provider, ProviderCreate} from '../../api/model';
-import {compareLatency, healthMillis, preferredHealth} from '../../api/selectors';
+import {compareLatency, healthMillis, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import {urlHost, type SubscriptionEntry} from './subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
@@ -72,23 +72,14 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
       configTag: item.kind === 'subscription' && tag && entries.filter(entry => entry.tag === tag).length === 1 ? tag : undefined
     };
   });
-  let builtin = 0,
-    unattributed = 0;
-  for (const node of nodes) {
-    if (node.provider_id != null) continue;
-    if (node.protocol === 'direct' || node.protocol === 'block') builtin++;
-    else unattributed++;
-  }
+  const counts: Record<PseudoOwner, number> = {builtin: 0, unattributed: 0};
+  for (const node of nodes) if (node.provider_id == null) counts[pseudoOwner(node)]++;
   const pseudo: ProviderRow[] = [];
-  for (const [kind, count] of [
-    ['builtin', builtin],
-    ['unattributed', unattributed]
-  ] as const) {
+  for (const kind of ['builtin', 'unattributed'] as const) {
+    const count = counts[kind];
     if (!count) continue;
-    let id: string = kind;
-    while (providers.some(provider => provider.id === id)) id += '-';
     pseudo.push({
-      id,
+      id: pseudoOwnerId(kind, providers),
       name: t(kind === 'builtin' ? 'nodes.kind.builtin' : 'nodes.kind.unattributed'),
       kind,
       url_redacted: null,
@@ -113,9 +104,7 @@ export function ownedNodes(nodes: Node[], ownerId: string | null | undefined, ki
   return nodes.filter(
     node =>
       ownerId === undefined ||
-      (ownerId === null
-        ? node.provider_id == null && (node.protocol === 'direct' || node.protocol === 'block') === (kind === 'builtin')
-        : node.provider_id === ownerId)
+      (ownerId === null ? node.provider_id == null && (pseudoOwner(node) === 'builtin') === (kind === 'builtin') : node.provider_id === ownerId)
   );
 }
 

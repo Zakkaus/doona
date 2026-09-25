@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {LifecycleActions} from '../overview/Lifecycle';
 import {useBackendActions} from './useBackendActions';
-import {settingsCard} from './view';
+import {settingsCard} from './nav';
 
 const card = settingsCard('actions');
 export function BackendActionsCard() {

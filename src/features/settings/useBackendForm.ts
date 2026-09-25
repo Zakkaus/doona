@@ -11,7 +11,8 @@ import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
-import {cardHeadingId, probeFailure} from './view';
+import {probeFailure} from './view';
+import {cardHeadingId} from './nav';
 
 // `id` changes with each failed save, so the dialog's alert takes focus again on a repeat.
 type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number};

@@ -8,7 +8,7 @@ import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
 import type {PageProps} from '../../shell/routes';
-import {settingsCard} from './view';
+import {settingsCard} from './nav';
 
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 

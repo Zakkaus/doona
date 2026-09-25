@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import {Button, ErrorMessage, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
-import {settingsCard} from './view';
+import {settingsCard} from './nav';
 
 const card = settingsCard('runtime');
 

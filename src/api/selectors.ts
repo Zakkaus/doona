@@ -46,6 +46,20 @@ export function ipLiteral(text: string): string | undefined {
   }
 }
 
+// A node no provider lists belongs to a pseudo owner on the nodes page: the built-in outbounds or the unattributed
+// nodes. The owner's id is its kind, lengthened while a real provider already uses that id.
+export type PseudoOwner = 'builtin' | 'unattributed';
+export const pseudoOwner = (node: Pick<Node, 'protocol'>): PseudoOwner =>
+  node.protocol === 'direct' || node.protocol === 'block' ? 'builtin' : 'unattributed';
+export function pseudoOwnerId(kind: PseudoOwner, providers: ReadonlyArray<{id: string}>): string {
+  let id: string = kind;
+  while (providers.some(provider => provider.id === id)) id += '-';
+  return id;
+}
+// The owner the nodes page files a node under, as its `provider` filter spells it.
+export const nodeOwner = (node: Pick<Node, 'provider_id' | 'protocol'>, providers: ReadonlyArray<{id: string}>) =>
+  node.provider_id ?? pseudoOwnerId(pseudoOwner(node), providers);
+
 export function sourceIp(src: string | undefined): string | undefined {
   if (!src) return undefined;
   return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
