@@ -24,6 +24,29 @@ test('the backend actions card gathers reload, DNS, subscriptions and connection
   await expect(page.locator('.rp-toast.positive', {hasText: 'Reload: Completed'})).toBeVisible();
 });
 
+test.describe('with more connections than one bulk close admits', () => {
+  test.use({storage: {'doona-mock-big': '600'}});
+
+  test('Settings close all closes them in batches and reports the totals', async ({page}) => {
+    await page.goto('/#/settings');
+    const card = page.getByRole('region', {name: 'Backend actions'});
+    await card.getByRole('button', {name: 'Close all', exact: true}).click();
+    const dialog = page.locator('.rp-dialog[role="alertdialog"]');
+    await expect(dialog).toContainText(/\(([\d,]+) right now\)/);
+    const live = Number(/\(([\d,]+) right now\)/.exec((await dialog.textContent()) ?? '')![1].replace(/,/g, ''));
+    expect(live).toBeGreaterThan(1000);
+    await dialog.getByRole('button', {name: 'Close all', exact: true}).click();
+    const toast = page.locator('.rp-toast', {hasText: /Closed \d+, skipped \d+/});
+    await expect(toast).toBeVisible();
+    const [, closed, skipped] = /Closed (\d+), skipped (\d+)/.exec((await toast.textContent()) ?? '')!.map(Number);
+    expect(closed).toBeGreaterThan(0);
+    expect(closed + skipped).toBe(live);
+    // What is left is what the backend could not close.
+    await card.getByRole('button', {name: 'Close all', exact: true}).click();
+    await expect(dialog).toContainText(`(${skipped.toLocaleString('en')} right now)`);
+  });
+});
+
 test('a pairing link fills the backend form and leaves the address bar clean', async ({page}) => {
   await page.goto('/#/settings?api=http://127.0.0.1:9527&token=secret-token');
   await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('http://127.0.0.1:9527');
