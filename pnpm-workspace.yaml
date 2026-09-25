@@ -1,5 +1,7 @@
 allowBuilds:
   esbuild: true
+  # eslint-plugin-import-x's resolver; its postinstall only fetches a binding the optional deps already provide.
+  unrs-resolver: false
 # The native build helpers (esbuild, rollup, lightningcss) for every Linux architecture they ship, so the
 # release deps tarball builds offline anywhere; lightningcss stops at x86_64, aarch64 and armv7, and
 # vite.config.ts falls back to esbuild's CSS minifier where it is missing.
