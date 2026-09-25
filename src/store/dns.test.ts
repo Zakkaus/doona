@@ -3,7 +3,8 @@ import {ApiError} from '../api/error';
 import {capabilities} from '../api/mock/fixtures';
 import type {Api} from '../api/api';
 import type {DnsCacheList, DnsCacheQuery} from '../api/model';
-import {dnsCacheListing, dnsLogLimit, smallerOnRefusal} from './dns';
+import {createMockApi} from '../api/mock';
+import {dnsCacheListing, dnsLogLimit, readCacheUsage, smallerOnRefusal, walkCache} from './dns';
 
 afterEach(() => void vi.useRealTimers());
 const budget = (retryAfter: number | null = 1) =>
@@ -91,4 +92,23 @@ it('walks the cache at the smaller page for the rest of the listing once a page 
     [undefined, 250],
     ['p2', 250]
   ]);
+});
+
+it('reads cache usage from a listing walked within the last minute instead of asking again', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const listing = vi.spyOn(api, 'dnsCache');
+  const signal = new AbortController().signal;
+  const cold = await readCacheUsage(api, signal);
+  expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
+  const walked = await walkCache(api, signal);
+  const calls = listing.mock.calls.length;
+  const usage = await readCacheUsage(api, signal);
+  expect(listing).toHaveBeenCalledTimes(calls);
+  expect(usage).toMatchObject({usage: walked.usage, coverage: walked.coverage, total: walked.total, entries: []});
+  expect(usage.usage).toEqual(cold.usage);
+  vi.advanceTimersByTime(60000);
+  await readCacheUsage(api, signal);
+  expect(listing).toHaveBeenCalledTimes(calls + 1);
+  expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
 });

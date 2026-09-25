@@ -75,6 +75,21 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   );
   return {...resource, limit: resource.data ? resource.data.limit : limit};
 }
+const USAGE_EVERY = 60000;
+// Every page of the listing repeats the whole cache's usage. The backend keeps a snapshot for each listing read, so
+// the usage card reuses a walk from the last minute rather than asking for a second snapshot.
+const walks = new WeakMap<Api, {at: number; list: DnsCacheList}>();
+export async function walkCache(api: Api, signal: AbortSignal) {
+  const list = await dnsCacheListing(api, signal);
+  walks.set(api, {at: Date.now(), list: {...list, entries: []}});
+  return list;
+}
+// Otherwise one entry is enough to read the usage and coverage.
+export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {
+  const recent = walks.get(api);
+  if (recent && Date.now() - recent.at < USAGE_EVERY) return Promise.resolve(recent.list);
+  return api.dnsCache({limit: 1, detail: 'summary'}, signal);
+}
 function useDnsCache(enabled = true, paused = false) {
   const api = getApi();
   return useResource(
@@ -83,15 +98,14 @@ function useDnsCache(enabled = true, paused = false) {
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
       every: 15000,
       // The cache table shows no answers, so the summary listing, which leaves them out, is enough.
-      fetch: signal => dnsCacheListing(api, signal)
+      fetch: signal => walkCache(api, signal)
     },
     {enabled, paused}
   );
 }
-// The whole cache's usage and coverage, which every page of the listing repeats: one entry is enough to read them.
 export function useDnsCacheUsage(enabled = true, paused = false) {
   const api = getApi();
-  return useResource({key: ['dnsCache', {usage: true}], every: 60000, fetch: signal => api.dnsCache({limit: 1, detail: 'summary'}, signal)}, {enabled, paused});
+  return useResource({key: ['dnsCache', {usage: true}], every: USAGE_EVERY, fetch: signal => readCacheUsage(api, signal)}, {enabled, paused});
 }
 // Paused, the listing keeps what it last read and walks the cache again only once it is resumed.
 export function useDnsControl(paused = false) {
