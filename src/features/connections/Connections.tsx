@@ -147,7 +147,17 @@ export function Connections(props: PageProps) {
           {
             id: 'traffic',
             label: t('conn.tab.traffic'),
-            content: <Traffic records={vm.rows} outbounds={vm.outboundKeys} latency={vm.latency} truncated={vm.truncated} onSelect={vm.openInList} />
+            content: (
+              <Traffic
+                records={vm.rows}
+                outbounds={vm.outboundKeys}
+                latency={vm.latency}
+                latencyError={vm.latencyError}
+                retryLatency={vm.retryLatency}
+                truncated={vm.truncated}
+                onSelect={vm.openInList}
+              />
+            )
           },
           {id: 'list', label: t('conn.tab.list'), content: list}
         ]}

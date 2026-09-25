@@ -1,4 +1,4 @@
-import {Card} from '../../ui/ui';
+import {Card, ErrorMessage} from '../../ui/ui';
 import {memo, useCallback, useMemo} from 'react';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Connection} from '../../api/model';
@@ -18,6 +18,8 @@ export const Traffic = memo(function Traffic({
   records,
   outbounds,
   latency,
+  latencyError,
+  retryLatency,
   truncated,
   onSelect
 }: {
@@ -26,6 +28,8 @@ export const Traffic = memo(function Traffic({
   outbounds: Array<string | null>;
   // Null when the backend lists no nodes or no health samples: the card is left out.
   latency: PathLatency | null;
+  latencyError: Error | null;
+  retryLatency: () => void;
   truncated: boolean;
   onSelect: (id: string) => void;
 }) {
@@ -85,7 +89,15 @@ export const Traffic = memo(function Traffic({
           </>
         )}
       </Card>
-      {latency && <LatencyCard latency={latency} />}
+      {latency ? (
+        <LatencyCard latency={latency} />
+      ) : (
+        latencyError && (
+          <Card title={t('conn.latency.title')}>
+            <ErrorMessage error={latencyError} onRetry={retryLatency} />
+          </Card>
+        )
+      )}
     </div>
   );
 });
