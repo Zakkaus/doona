@@ -15,7 +15,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
-  await dialog.getByRole('button', {name: 'Add and apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT');
@@ -42,7 +42,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await dialog.getByRole('button', {name: 'Add and apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
   await expect(dialog).toContainText('Validation found 1 error; nothing written');
   await expect(dialog).toContainText('config.dae line 44: Backend message: no group gaming');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
