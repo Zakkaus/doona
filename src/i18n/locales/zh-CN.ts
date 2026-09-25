@@ -1121,6 +1121,8 @@ export const messages = {
   'wordmark.gradient': '渐变',
   'wordmark.plain': '纯色',
   lang: '语言',
+  theme: '主题',
+  moreOptions: '更多选项',
   hubs: '页面分区',
   github: 'GitHub 仓库',
   'search.nodes': '节点',

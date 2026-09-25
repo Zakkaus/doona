@@ -186,6 +186,11 @@ export function appearanceMenu(t: Translator, scheme: Scheme, dark: boolean) {
       {id: 'gradient', label: t('wordmark.gradient')},
       {id: 'plain', label: t('wordmark.plain')}
     ],
+    schemes: [
+      {id: 'system', label: t('theme.system')},
+      {id: 'light', label: t('theme.light')},
+      {id: 'dark', label: t('theme.dark')}
+    ],
     themeLabel: t('shell.theme', {theme: t(scheme === 'system' ? 'theme.system' : dark ? 'theme.dark' : 'theme.light')})
   };
 }

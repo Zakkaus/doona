@@ -4,6 +4,7 @@ import {About} from './About';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
+import MoreVertical from '../ui/icons/MoreVertical';
 import Refresh from '../ui/icons/Refresh';
 import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
@@ -11,7 +12,7 @@ import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
 import {Button, ChoiceMenu} from '../ui/ui';
 import type {SettingsContext} from './preferences';
-import type {PaletteId, Wordmark} from './preferences';
+import type {PaletteId, Scheme, Wordmark} from './preferences';
 import type {AppearanceMenu, PaletteSection} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
@@ -65,6 +66,10 @@ export const TopBar = memo(function TopBar({
   const t = useT();
   // The language and palette icons turn in when their value changes, like the scheme icon; not on first paint.
   const [first] = useState({lang, palette: ap.palette});
+  const paletteMenu = [
+    ...paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)})),
+    {title: t('wordmark'), items: menu.wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)}
+  ];
   return (
     <header className="rp-top">
       <About
@@ -96,24 +101,33 @@ export const TopBar = memo(function TopBar({
           <Refresh className="rp-refresh rp-spin-on-press" />
           {!!held && <span className="rp-held-count">{held}</span>}
         </Button>
-        <Separator orientation="vertical" className="rp-vrule" />
-        <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
-          <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
-        </ChoiceMenu>
-        <ChoiceMenu
-          quiet
-          chevron={false}
-          label={t('palette')}
-          sections={[
-            ...paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)})),
-            {title: t('wordmark'), items: menu.wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)}
-          ]}
-        >
-          <Color key={ap.palette} className={ap.palette !== first.palette ? 'rp-icon-in' : undefined} />
-        </ChoiceMenu>
-        <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
-          <SchemeIcon dark={ap.dark} />
-        </Button>
+        {/* Below the side navigation's breakpoint, language and appearance share one overflow menu. */}
+        <span className="rp-top-wide">
+          <Separator orientation="vertical" className="rp-vrule" />
+          <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
+            <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
+          </ChoiceMenu>
+          <ChoiceMenu quiet chevron={false} label={t('palette')} sections={paletteMenu}>
+            <Color key={ap.palette} className={ap.palette !== first.palette ? 'rp-icon-in' : undefined} />
+          </ChoiceMenu>
+          <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
+            <SchemeIcon dark={ap.dark} />
+          </Button>
+        </span>
+        <span className="rp-top-more">
+          <ChoiceMenu
+            quiet
+            chevron={false}
+            label={t('moreOptions')}
+            sections={[
+              {title: t('lang'), items: languageItems, value: lang, onChange: k => pickLang(k as Lang)},
+              {title: t('theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)},
+              ...paletteMenu
+            ]}
+          >
+            <MoreVertical />
+          </ChoiceMenu>
+        </span>
       </div>
     </header>
   );

@@ -239,6 +239,17 @@
     display: none;
   }
 }
+.rp-top-wide {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .rp-top-wide {
+    display: contents;
+  }
+  .rp-top-more {
+    display: none;
+  }
+}
 .rp-vrule {
   width: 2px;
   height: 32px;
