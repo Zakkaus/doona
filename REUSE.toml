@@ -29,6 +29,20 @@ precedence = "override"
 SPDX-FileCopyrightText = "2024 Adobe. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
+# The GitHub mark is GitHub's, used as its logo terms allow; it is not an Adobe icon.
+[[annotations]]
+path = ["src/ui/icons/GitHub.tsx"]
+precedence = "override"
+SPDX-FileCopyrightText = "GitHub, Inc."
+SPDX-License-Identifier = "LicenseRef-GitHub-Logos"
+
+# Drawn for doona on the Spectrum grid, not copied from Adobe.
+[[annotations]]
+path = ["src/ui/icons/MoreVertical.tsx", "src/ui/icons/Settings.tsx"]
+precedence = "override"
+SPDX-FileCopyrightText = "doona contributors"
+SPDX-License-Identifier = "GPL-3.0-only"
+
 [[annotations]]
 path = [".github/CODE_OF_CONDUCT.md"]
 precedence = "override"

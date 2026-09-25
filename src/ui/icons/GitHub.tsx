@@ -1,3 +1,4 @@
+// The GitHub mark, GitHub's own artwork used under its logo terms (LICENSES/LicenseRef-GitHub-Logos.txt).
 import type {SVGProps} from 'react';
 import {cx} from '../cx';
 export default function GitHub({className, ...props}: SVGProps<SVGSVGElement>) {
