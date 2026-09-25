@@ -19,8 +19,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      # pnpm check's steps, with the unit tests run once, under coverage.
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm check:i18n
+      - run: pnpm format:check
       - run: pnpm test:coverage
+      - run: pnpm check:gen
       - uses: actions/upload-artifact@v4
         with:
           name: coverage
