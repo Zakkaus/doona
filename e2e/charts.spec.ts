@@ -217,7 +217,7 @@ test('a failed first log read shows once above the charts it feeds while the cac
 });
 
 for (const [served, note] of [
-  [20, 'Page shortened to fit the response size limit: 20 of 25 records'],
+  [20, 'The backend ended this page early: 20 of 25 records'],
   [25, null]
 ] as const) {
   test(`a log page an older backend refuses is asked for again smaller, ${served} records served`, async ({page}) => {
@@ -236,7 +236,7 @@ for (const [served, note] of [
     expect(limits.slice(0, 2)).toEqual(['100', '25']);
     // Measured against the 25 asked for when the page was served, not the 100 that was refused.
     if (note) await expect(page.getByText(note, {exact: true})).toBeVisible();
-    else await expect(page.getByText(/^Page shortened/)).toHaveCount(0);
+    else await expect(page.getByText(/^The backend ended this page early/)).toHaveCount(0);
   });
 }
 

@@ -300,7 +300,7 @@ export const messages = {
   'dns.log': '解析记录',
   'dns.chart.tooFew': '记录不足，暂不绘图',
   'dns.chart.noLog': '解析记录未加载',
-  'dns.chart.shortPage': '分页受响应大小上限缩短：{n}/{limit} 条',
+  'dns.chart.shortPage': '后端提前结束此分页：{n}/{limit} 条',
   'dns.chart.speed': '上游查询延迟（{n} 条）',
   'dns.chart.typical': '中位数：{value}',
   'dns.chart.slowest': 'P95：{value}',
