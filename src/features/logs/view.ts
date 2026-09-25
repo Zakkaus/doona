@@ -74,11 +74,15 @@ export function logLevel(level: LogLevel, levels: LogLevel[] = []): LogLevel | u
   return levels.includes(level) ? level : levels.includes('info') ? 'info' : levels[0];
 }
 
-export function logsExport(records: LogRecord[]) {
+// Oldest first. The gap marker the list shows gets its own line after the last record before the loss.
+export function logsExport(records: LogRecord[], gaps: ReadonlySet<LogRecord>, t: LabelFn) {
   return (
     [...records]
       .reverse()
-      .map(r => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`)
+      .flatMap(r => {
+        const line = `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`;
+        return gaps.has(r) ? [line, t('log.gap')] : [line];
+      })
       .join('\n') + '\n'
   );
 }

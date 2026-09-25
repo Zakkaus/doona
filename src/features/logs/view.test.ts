@@ -18,8 +18,8 @@ it('keeps structured fields readable in rows and lossless in chronological expor
   const view = logView(records, ['error'], false, undefined, 'en-US', t);
   expect(view.rows[0].message).toBe('failed host=a.test attempts=2 nested={"ok":false}');
   expect(view.rows[0].tone).toBe('err');
-  expect(logsExport(records).split('\n')[0]).toContain('started');
-  expect(logsExport(records)).toContain(JSON.stringify(records[0].fields));
+  expect(logsExport(records, new Set(), t).split('\n')[0]).toContain('started');
+  expect(logsExport(records, new Set(), t)).toContain(JSON.stringify(records[0].fields));
   expect(view.levels.map(level => level.id)).toEqual(['error']);
   expect(view.status.tone).toBe('warn');
   expect(logView(records, ['error'], false, undefined, 'en-US', t, true).status).toEqual({tone: 'err', text: t('log.disconnected')});
@@ -42,6 +42,8 @@ it('marks where the stream lost records between older and newer rows', () => {
     ['old', false]
   ]);
   expect(new Set(view.rows.map(row => row.id)).size).toBe(3);
+  // The export keeps the marker, oldest first.
+  expect(logsExport(records, new Set([records[1]]), t).split('\n')).toEqual([expect.stringMatching(/ old$/), t('log.gap'), expect.stringMatching(/ new$/), '']);
 });
 
 it('marks the levels the engine does not record and states the level it records', () => {

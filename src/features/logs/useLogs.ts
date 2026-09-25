@@ -42,6 +42,6 @@ export function useLogs() {
     clear: feed.clear,
     // A failed capabilities read is what blocks the page; otherwise the stream itself is reopened.
     retry: capabilities.error ? capabilities.refetch : feed.retry,
-    export: () => downloadFile(exportName(view.exportBase, 'txt'), logsExport(feed.records), 'text/plain;charset=utf-8')
+    export: () => downloadFile(exportName(view.exportBase, 'txt'), logsExport(feed.records, feed.gaps, t), 'text/plain;charset=utf-8')
   };
 }
