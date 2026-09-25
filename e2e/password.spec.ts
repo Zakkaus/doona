@@ -2,15 +2,19 @@ import type {Request} from '@playwright/test';
 import {expect, mockBackend, test} from './fixtures';
 import {ApiError} from '../src/api/error';
 
+// What a password backend shows a caller without a credential: the sign-in links and mode, nothing else.
+const publicDiscovery = (setupRequired: boolean) => ({
+  name: 'dae/honk-native',
+  api_major: 1,
+  links: {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'},
+  auth: {mode: 'password', setup_required: setupRequired}
+});
+
 // A password-mode backend: discovery says what to offer, protected reads need the session token.
 async function passwordBackend(page: import('@playwright/test').Page, setupRequired: boolean) {
   const backend = await mockBackend(page);
   const state = {setupRequired, token: 'hnk1_session', attempts: [] as Array<{path: string; body: unknown; authorization?: string}>};
-  const discovery = async () => ({
-    ...(await backend.api.discovery()),
-    auth: {mode: 'password', setup_required: state.setupRequired, anonymous_loopback: false}
-  });
-  backend.handlers['GET /api'] = discovery;
+  backend.handlers['GET /api'] = async () => publicDiscovery(state.setupRequired);
   backend.handlers['GET capabilities'] = async (request: Request) => {
     if (request.headers()['authorization'] !== 'Bearer ' + state.token) throw new ApiError(401, 'authentication_required', 'Authentication required');
     return backend.capabilities;
@@ -149,7 +153,7 @@ test('a failed discovery asks to retry instead of guessing the sign-in', async (
   let up = false;
   backend.handlers['GET /api'] = async () => {
     if (!up) throw new ApiError(502, '', 'Bad Gateway');
-    return {...(await backend.api.discovery()), auth: {mode: 'password', setup_required: false, anonymous_loopback: false}};
+    return publicDiscovery(false);
   };
   backend.handlers['GET capabilities'] = async () => {
     throw new ApiError(401, 'authentication_required', 'Authentication required');

@@ -20,6 +20,21 @@ it('distinguishes a missing native API from discovery without auth reporting', a
   expect(await resolveSignInKind('https://router.test')).toBe('token');
 });
 
+it('signs in from the public discovery view a backend gives a caller it does not admit yet', async () => {
+  const view = (setup_required: boolean) => ({
+    name: 'dae/honk-native',
+    api_major: 1,
+    links: {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'},
+    auth: {mode: 'password', setup_required}
+  });
+  const fetcher = vi.fn(async (_input: URL) => new Response(JSON.stringify(view(true)), {headers: {'Content-Type': 'application/json'}}));
+  vi.stubGlobal('fetch', fetcher);
+  expect(await resolveSignInKind('https://router.test')).toBe('setup');
+  fetcher.mockImplementation(async () => new Response(JSON.stringify(view(false)), {headers: {'Content-Type': 'application/json'}}));
+  expect(await resolveSignInKind('https://router.test')).toBe('login');
+  expect(fetcher.mock.calls.map(([input]) => String(input))).toEqual(['https://router.test/api', 'https://router.test/api']);
+});
+
 it('rejects a removed or repointed profile without changing its credentials', () => {
   const repointed = {...challenged, api: 'https://other.test', token: 'other-secret'};
   expect(loginProfiles([repointed], challenged.id, challenged.api, 'secret')).toBeNull();
@@ -55,8 +70,8 @@ it('maps refusals by code and follows a moved account state', () => {
   expect(signInRefusal(new ApiError(429, 'rate_limited', 'x', null, null, 7))).toEqual({key: 'login.rateLimited', params: {n: 7}});
   expect(signInRefusal(new ApiError(500, 'internal', 'x'))).toBeNull();
   expect(signInKind(null)).toBe('token');
-  expect(signInKind({mode: 'password', setup_required: true, anonymous_loopback: false})).toBe('setup');
-  expect(signInKind({mode: 'password', setup_required: false, anonymous_loopback: false})).toBe('login');
+  expect(signInKind({mode: 'password', setup_required: true})).toBe('setup');
+  expect(signInKind({mode: 'password', setup_required: false})).toBe('login');
 });
 
 it('takes only a missing or protected discovery for a backend that predates password login', () => {

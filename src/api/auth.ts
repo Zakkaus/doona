@@ -1,7 +1,8 @@
 import type {components} from './types';
 import {responseError, send} from './error';
 
-export type AuthDiscovery = components['schemas']['AuthDiscovery'];
+// Sign-in reads only what the public discovery view carries; the admitted view's auth adds anonymous_loopback.
+export type AuthDiscovery = components['schemas']['PublicDiscovery']['auth'];
 export type AuthCredentials = components['schemas']['AuthCredentials'];
 export type AuthSession = components['schemas']['AuthSession'];
 // What the sign-in screen offers: an administrator to create, credentials to check, or a bearer to paste.
