@@ -79,17 +79,24 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
 // Every page of the listing repeats the whole cache's usage. The backend keeps a snapshot for each listing read, so
 // the usage card reuses a walk from the last minute rather than asking for a second snapshot.
 const walks = new WeakMap<Api, {at: number; list: DnsCacheList}>();
+// Counts flushes and deletions, so a walk that was already listing when one landed does not store its older usage.
+const changes = new WeakMap<Api, number>();
 export async function walkCache(api: Api, signal: AbortSignal) {
+  const change = changes.get(api) ?? 0;
   const list = await dnsCacheListing(api, signal);
-  walks.set(api, {at: Date.now(), list: {...list, entries: []}});
+  if ((changes.get(api) ?? 0) === change) walks.set(api, {at: Date.now(), list: {...list, entries: []}});
   return list;
 }
 // A flush or a deletion changes usage, so the next read asks again rather than reuse a walk from before it.
+const changed = (api: Api) => {
+  changes.set(api, (changes.get(api) ?? 0) + 1);
+  walks.delete(api);
+};
 export function flushCache(api: Api, signal: AbortSignal) {
-  return api.flushDnsCache(signal).finally(() => walks.delete(api));
+  return api.flushDnsCache(signal).finally(() => changed(api));
 }
 export function deleteCacheEntry(api: Api, id: string, signal: AbortSignal) {
-  return api.deleteDnsEntry(id, signal).finally(() => walks.delete(api));
+  return api.deleteDnsEntry(id, signal).finally(() => changed(api));
 }
 // Otherwise one entry is enough to read the usage and coverage.
 export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {

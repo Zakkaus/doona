@@ -129,6 +129,27 @@ it('reads cache usage afresh after a flush or a deletion instead of reusing the 
   expect(listing).toHaveBeenCalledTimes(calls + 1);
 });
 
+it('does not keep a walk that started before a flush', async () => {
+  const api = createMockApi();
+  const signal = new AbortController().signal;
+  const listed = api.dnsCache.bind(api);
+  let release: () => void = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  const listing = vi.spyOn(api, 'dnsCache').mockImplementationOnce(async (query, signal) => {
+    const page = await listed(query, signal);
+    await held;
+    return page;
+  });
+  const walk = walkCache(api, signal);
+  await flushCache(api, signal);
+  release();
+  await walk;
+  const calls = listing.mock.calls.length;
+  expect((await readCacheUsage(api, signal)).total).toBe(0);
+  expect(listing).toHaveBeenCalledTimes(calls + 1);
+  expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
+});
+
 it('queries every requested type within the advertised bound and preserves all results', async () => {
   const api = createMockApi();
   const types = ['A', 'AAAA', 'MX', 'TXT', 'HTTPS'];
