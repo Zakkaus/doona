@@ -3,7 +3,7 @@ import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {Capabilities, Operation, OperationAccepted, OperationState, ProbeRequest} from '../api/model';
 import {ApiError, LocalError} from '../api/error';
-import {refetchAll} from './resource';
+import {refetchAll} from './resourceCore';
 // One action per hook; an abort drops the late result, a failure lands in `error` and rethrows when asked.
 export function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
   const api = getApi();
