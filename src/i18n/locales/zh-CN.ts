@@ -423,6 +423,8 @@ export const messages = {
   'nodes.probe': '测试 {name}',
   'nodes.probed': '{name}：{n} ms',
   'nodes.probeFailed': '{name}：无法连接',
+  'nodes.probeUnknown': '{name}：结果未知',
+  'nodes.probeUnknownWhy': '{name}：结果未知（{error}）',
   'nodes.search': '搜索节点',
   'nodes.group': '组',
   'nodes.anyGroup': '全部组',

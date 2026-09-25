@@ -439,6 +439,8 @@ export const messages = {
   'nodes.probe': 'Test {name}',
   'nodes.probed': '{name}: {n} ms',
   'nodes.probeFailed': '{name}: unreachable',
+  'nodes.probeUnknown': '{name}: result unknown',
+  'nodes.probeUnknownWhy': '{name}: result unknown ({error})',
   'nodes.search': 'Search nodes',
   'nodes.group': 'Group',
   'nodes.anyGroup': 'All groups',

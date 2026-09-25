@@ -4,11 +4,10 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
-import {millis} from '../../api/u64';
 import {toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
-import {collator, nodeRows, nodeRowView} from './view';
+import {collator, nodeRows, nodeRowView, probeToast} from './view';
 import {policyLabel} from '../policies/policyText';
 import {errorText} from '../../api/error';
 
@@ -81,11 +80,8 @@ export function useNodeTable(input: NodeTableInput) {
           void runProbe(node.id).then(
             result => {
               if (!result) return;
-              const sample = result.results.find(item => item.member_id === node.id && item.state === 'healthy' && item.latency_ms != null);
-              toast(
-                sample ? 'positive' : 'negative',
-                sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
-              );
+              const {kind, text} = probeToast(result, node.id, node.name, t);
+              toast(kind, text);
             },
             error => toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}))
           ),

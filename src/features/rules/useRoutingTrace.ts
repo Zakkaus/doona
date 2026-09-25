@@ -8,11 +8,11 @@ import {routingTrace} from '../../store/flows';
 import {useGroups, useNodeProbe, useNodes, useRules} from '../../store';
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
-import {millis} from '../../api/u64';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
+import {probeToast} from '../nodes/view';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
@@ -142,11 +142,8 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     try {
       const result = await probe.probe(id);
       if (!result) return;
-      const sample = result.results.find(item => item.member_id === id && item.state === 'healthy' && item.latency_ms != null);
-      toast(
-        sample ? 'positive' : 'negative',
-        sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
-      );
+      const {kind, text} = probeToast(result, id, node.name, t);
+      toast(kind, text);
     } catch (error) {
       toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}));
     }
