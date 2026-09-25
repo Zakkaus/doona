@@ -1,13 +1,30 @@
 import {useCallback} from 'react';
 import {getApi} from '../api/index';
-import type {Capabilities, DnsCacheList} from '../api/model';
+import type {Api} from '../api/api';
+import {ApiError} from '../api/error';
+import type {Capabilities, DnsCacheList, DnsLogList, DnsLogQuery} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
 import {useAction} from './action';
 import {useCapabilities} from './runtime';
 import {offered} from '../api/capabilities';
-function dnsLogLimit(capabilities: Capabilities | undefined) {
+// honk's own default page: enough records for the statistics and the log's first screen, and a size one response
+// carries even when the answers are long.
+const DNS_LOG_PAGE = 100;
+export function dnsLogLimit(capabilities: Capabilities | undefined) {
   const advertised = pageSize(capabilities, capabilities?.resources.dns_log.max_page_size);
-  return advertised === undefined ? undefined : Math.min(200, advertised);
+  return advertised === undefined ? undefined : Math.min(DNS_LOG_PAGE, advertised);
+}
+// honk before the short-page fix refuses a page whose answers exceed its response budget with a 503 instead of
+// ending the page early, and the refusal repeats however long the client waits. A quarter of the page is asked for
+// once instead.
+export async function dnsLogPage(api: Api, query: NonNullable<DnsLogQuery>, signal?: AbortSignal): Promise<DnsLogList> {
+  try {
+    return await api.dnsLog(query, signal);
+  } catch (error) {
+    const limit = query.limit;
+    if (!(error instanceof ApiError && error.status === 503) || limit === undefined || limit < 2 || signal?.aborted) throw error;
+    return api.dnsLog({...query, limit: Math.ceil(limit / 4)}, signal);
+  }
 }
 export function useDnsFlush() {
   const api = getApi();
@@ -22,7 +39,7 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   const capabilities = useCapabilities().data;
   const limit = dnsLogLimit(capabilities);
   const resource = useResource(
-    {key: ['dnsLog', {name, type, src, limit}], fetch: signal => api.dnsLog({name, type: type as never, src, limit}, signal)},
+    {key: ['dnsLog', {name, type, src, limit}], fetch: signal => dnsLogPage(api, {name, type: type as never, src, limit}, signal)},
     {enabled}
   );
   return {...resource, limit};

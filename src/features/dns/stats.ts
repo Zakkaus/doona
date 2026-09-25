@@ -1,4 +1,4 @@
-import type {DnsLogRecord} from '../../api/model';
+import type {DnsLogList, DnsLogRecord} from '../../api/model';
 import {percentile} from '../../ui/charts/layout';
 
 // Mutually exclusive outcomes: a cache hit counts as that whatever its status, then uncached records by status.
@@ -70,3 +70,6 @@ export function ranked<K extends string | null>(keys: K[], limit: number): {top:
 
 // The client's address without its port; IPv6 stays in its brackets.
 export const clientAddress = (src: string) => src.replace(/:\d+$/, '');
+
+// A page that stops before the log does with fewer records than asked for: the backend cut it to fit one response.
+export const shortPage = (list: DnsLogList | undefined, limit: number | undefined) => !!list?.next_cursor && limit !== undefined && list.records.length < limit;

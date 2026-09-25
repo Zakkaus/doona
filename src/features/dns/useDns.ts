@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
+import {dnsLogPage, useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
@@ -168,7 +168,8 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
       setHeld(data);
-      const page = await api.dnsLog(
+      const page = await dnsLogPage(
+        api,
         {
           name: filter.name.trim() || undefined,
           type: type === 'all' ? undefined : type,

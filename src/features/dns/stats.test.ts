@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {DnsLogRecord} from '../../api/model';
-import {clientAddress, dnsAnalysis, ranked} from './stats';
+import {clientAddress, dnsAnalysis, ranked, shortPage} from './stats';
 
 let n = 0;
 const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): DnsLogRecord => {
@@ -68,4 +68,18 @@ it('ranks domains without their trailing dot, and totals the rest', () => {
   const devices = dnsAnalysis([record({src: '10.0.0.2:5353'}), record({src: '[fd00::1]:40000'}), record({src: null})]).devices.top;
   expect(devices.map(item => item.key)).toEqual(['10.0.0.2', '[fd00::1]', null]);
   expect(clientAddress('10.0.0.2:5353')).toBe('10.0.0.2');
+});
+
+it('calls a page short only when it ends before the log does with fewer records than asked for', () => {
+  const list = (count: number, next_cursor: string | null) => ({
+    observed_at: '2026-09-23T10:00:00Z',
+    total: 500,
+    next_cursor,
+    records: Array.from({length: count}, () => record({}))
+  });
+  expect(shortPage(list(25, 'older'), 100)).toBe(true);
+  expect(shortPage(list(100, 'older'), 100)).toBe(false);
+  expect(shortPage(list(30, null), 100)).toBe(false);
+  expect(shortPage(list(25, 'older'), undefined)).toBe(false);
+  expect(shortPage(undefined, 100)).toBe(false);
 });

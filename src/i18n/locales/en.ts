@@ -299,6 +299,8 @@ export const messages = {
   'dns.viewCache': 'View cache',
   'dns.log': 'Resolution log',
   'dns.chart.tooFew': 'Too few records to chart yet',
+  'dns.chart.noLog': 'Resolution log not loaded',
+  'dns.chart.shortPage': 'Page shortened to fit the response size limit: {n} of {limit} records',
   'dns.chart.speed': {one: 'Upstream latency ({n} lookup)', other: 'Upstream latency ({n} lookups)'},
   'dns.chart.typical': 'Median: {value}',
   'dns.chart.slowest': 'P95: {value}',

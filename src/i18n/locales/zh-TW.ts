@@ -283,6 +283,8 @@ export const messages = {
   'dns.viewCache': '查看快取',
   'dns.log': '解析記錄',
   'dns.chart.tooFew': '記錄不足，暫不繪圖',
+  'dns.chart.noLog': '解析記錄未載入',
+  'dns.chart.shortPage': '分頁受回應大小上限縮短：{n}/{limit} 筆',
   'dns.chart.speed': '上游查詢延遲（{n} 筆）',
   'dns.chart.typical': '中位數：{value}',
   'dns.chart.slowest': 'P95：{value}',
