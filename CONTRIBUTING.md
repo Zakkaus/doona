@@ -98,7 +98,7 @@ and number pre-releases as `-alpha.N`, `-beta.N` or `-rc.N`. Tag each tested
 release `vX.Y.Z[-pre.N]`. Mark GitHub releases for pre-release versions as
 pre-releases. Update the declared version and changelog before tagging.
 
-For tag `v0.1.0-beta.4`, release assets keep the upstream version without `v`. See the
+For tag `v0.1.0-beta.5`, release assets keep the upstream version without `v`. See the
 [package version table](install/README.md#version-spellings) for every archive, binary package and source recipe.
 
 ## Update the contract

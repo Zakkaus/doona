@@ -50,7 +50,7 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發行頁](https://github.com/Zakkaus/doona/releases)的標籤上；第一個發行標籤發布之前，請依[開發](#開發)一節自行建置。驗證檔案並解壓至引擎或 Web 伺服器提供檔案的目錄：
 
 ```sh
-VERSION=v0.1.0-beta.4  # 替換為下載檔案對應的發行標籤
+VERSION=v0.1.0-beta.5  # 替換為下載檔案對應的發行標籤
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
