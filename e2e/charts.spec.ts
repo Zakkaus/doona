@@ -369,3 +369,28 @@ test('decorative sparklines retain their pointer highlight without a tooltip or 
   await page.mouse.move(0, 0);
   await expect(spark.locator('circle')).toHaveCount(0);
 });
+
+test('the donut keeps stepping after a refresh leaves fewer slices than the one selected', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let shrink = false;
+  handlers['GET runtime/outbounds'] = async () => {
+    const outbounds = await api.runtimeOutbounds();
+    // The first two outbounds carry nothing any more, so their slices leave the ring.
+    const idle = outbounds.outbounds.map((row, i) => (i < 2 ? {...row, upload_bytes: '0', download_bytes: '0'} : row));
+    return shrink ? {...outbounds, outbounds: idle} : outbounds;
+  };
+  await page.goto('/#/activity');
+  const donut = page.locator('.rp-donut');
+  const chart = donut.getByRole('application');
+  await expect(chart).toBeVisible();
+  const slices = await donut.locator('path').count();
+  await chart.focus();
+  for (let i = 1; i < slices; i++) await page.keyboard.press('ArrowRight');
+  await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
+  shrink = true;
+  await page.keyboard.press('r');
+  await expect(donut.locator('path')).toHaveCount(slices - 2);
+  await page.keyboard.press('ArrowLeft');
+  await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
+  await expect(donut.locator('.rp-charttip-bounded li')).toContainText(/\d/);
+});

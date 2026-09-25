@@ -16,10 +16,12 @@ export function useSelection(count: number, select: (index: number, y?: number) 
   const [keyboardIndex, setKeyboardIndex] = useState<number | null>(null);
   const [focused, setFocused] = useState(false);
   const [active, setActive] = useState(false);
+  // A poll can leave fewer samples than the stored index; the keys then start over as if nothing were chosen.
+  const current = keyboardIndex !== null && keyboardIndex < count ? keyboardIndex : null;
   return {
     onFocus: () => {
       setFocused(true);
-      if (keyboardIndex === null && count) {
+      if (current === null && count) {
         setKeyboardIndex(0);
         setActive(true);
         select(0);
@@ -37,13 +39,13 @@ export function useSelection(count: number, select: (index: number, y?: number) 
       if (!['ArrowRight', 'ArrowLeft', 'Enter'].includes(event.key)) return;
       event.preventDefault();
       if (event.key === 'Enter') {
-        if (keyboardIndex === null) return;
+        if (current === null) return;
         if (active) hide();
-        else select(keyboardIndex);
+        else select(current);
         setActive(!active);
         return;
       }
-      const next = keyboardIndex === null ? (event.key === 'ArrowRight' ? 0 : count - 1) : keyboardIndex + (event.key === 'ArrowRight' ? 1 : -1);
+      const next = current === null ? (event.key === 'ArrowRight' ? 0 : count - 1) : current + (event.key === 'ArrowRight' ? 1 : -1);
       if (next < 0 || next >= count) return;
       setKeyboardIndex(next);
       setActive(true);
