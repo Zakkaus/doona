@@ -15,6 +15,7 @@ import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import {isRoutePath, type PageProps} from './routes';
+import {RefusalWait} from './RefusalWait';
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
 const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
 
@@ -117,6 +118,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
             </div>
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />
+          <RefusalWait />
           <SettingsContext.Provider value={settingsValue}>
             {view.content.kind === 'login' ? (
               <Suspense fallback={<Loading />}>

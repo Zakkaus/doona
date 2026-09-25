@@ -257,3 +257,22 @@ test('a failed query stays on the query tab', async ({page}) => {
   await page.getByRole('tab', {name: 'Query', exact: true}).click();
   await expect(alert).toBeVisible();
 });
+
+test('a rate-limited query says how long it waits before retrying', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let refused = false;
+  handlers['GET dns/query'] = async request => {
+    if (!refused) {
+      refused = true;
+      throw new ApiError(429, 'rate_limited', 'Too many requests', null, null, 5);
+    }
+    const params = new URL(request.url()).searchParams;
+    return api.dnsQuery(params.get('domain')!, params.getAll('type') as never);
+  };
+  await page.goto('/#/dns?tab=query&domain=example.com');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  const notice = page.getByRole('status').filter({hasText: /^Rate limit reached: retrying in [45] s$/});
+  await expect(notice).toBeVisible();
+  await expect(notice).toBeHidden({timeout: 10000});
+  await expect(page.getByRole('heading', {name: /^example\.com\. /}).first()).toBeVisible();
+});

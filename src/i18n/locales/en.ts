@@ -1111,6 +1111,8 @@ export const messages = {
   'grp.system': 'System',
   search: 'Search pages, connections, nodes, groups and sources',
   refresh: 'Refresh',
+  'shell.rateLimited': 'Rate limit reached: retrying in {n} s',
+  'shell.backendBusy': 'Backend busy: retrying in {n} s',
   'theme.system': 'System',
   'theme.light': 'Light',
   'theme.dark': 'Dark',
