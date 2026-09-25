@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
 import {runAfterTransition} from 'react-aria/private/utils/runAfterTransition';
 import {consumeProfileReadError} from '../api/profiles';
-import {writeSetting} from './preferences';
+import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
 import {LANGS, LOCALE, loadLanguage, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
@@ -9,12 +9,12 @@ import {isMac, useSlider} from '../ui/hooks';
 import {warmAllPages} from './registry';
 import {searchDialog} from './search/load';
 import {parseHash, useRoute} from './route';
-import {readAppearance, useAppearance} from './useAppearance';
-import {appearanceMenu, palettes} from './view';
+import {useAppearance} from './useAppearance';
+import {appearanceMenu, paletteMenu} from './view';
 
 // `initial` is the language startup actually loaded, which may be the fallback rather than the saved one.
 export function useShellController(initial: Lang) {
-  const [settings] = useState(readAppearance);
+  const [settings] = useState(readSettings);
   const [lang, setLang] = useState<Lang>(initial);
   const shown = useRef(initial);
   const wanted = useRef(initial);
@@ -92,7 +92,7 @@ export function useShellController(initial: Lang) {
 
 export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap'], route: string) {
   const t = useT();
-  const paletteSections = useMemo(() => palettes(t), [t]);
+  const paletteSections = useMemo(() => paletteMenu(t), [t]);
   const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections}), [lang, pickLang, ap, paletteSections]);
   const menu = useMemo(() => appearanceMenu(t, ap.scheme, ap.dark), [t, ap.scheme, ap.dark]);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');

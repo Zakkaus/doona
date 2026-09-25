@@ -1,20 +1,10 @@
 import {createContext} from 'react';
 import {readLang, type Lang} from '../i18n';
 import {readProfiles, type Profile, type StoragePort} from '../api/profiles';
+import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
-export type PaletteId =
-  | 'rose-pine/main'
-  | 'rose-pine/moon'
-  | 'catppuccin/frappe'
-  | 'catppuccin/macchiato'
-  | 'catppuccin/mocha'
-  | 'nord/nord'
-  | 'kary/kary'
-  | 'glass/glass'
-  | 'antd/antd'
-  | 'arco/arco'
-  | 'semi/semi';
+export type {PaletteId};
 
 export type Settings = {
   api: string | null;
@@ -59,7 +49,7 @@ export function readSettings(storage?: StoragePort): Settings {
     token: active?.token ?? '',
     lang: readLang(storage),
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
-    palette: palette?.includes('/') ? (palette as PaletteId) : 'rose-pine/moon',
+    palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
     wordmark: read(keys.wordmark) === 'plain' ? 'plain' : 'gradient'
   };
 }

@@ -1,16 +1,7 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
-import {readSettings, writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from './preferences';
-import type {Translator} from '../i18n';
+import {writeSetting, type PaletteId, type Scheme, type Settings, type Wordmark} from './preferences';
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
-import {palettes} from './view';
 
-// Only the ids are read, so no catalogue is needed: the labels are the keys themselves.
-const idsOnly: Translator = key => key;
-const paletteIds = new Set(palettes(idsOnly).flatMap(section => section.items.map(item => item.id)));
-export function readAppearance() {
-  const settings = readSettings();
-  return {...settings, palette: paletteIds.has(settings.palette) ? settings.palette : ('rose-pine/moon' as PaletteId)};
-}
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark) {
   const [family, flavour] = palette.split('/');
   const d = document.documentElement.dataset;
