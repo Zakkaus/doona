@@ -1,4 +1,5 @@
-import {expect, isLive, offered, test} from './fixtures';
+import {expect, isLive, offered, routes, test} from './fixtures';
+import type {RoutePath} from '../src/shell/routes';
 
 for (const width of [1024, 1280, 1440]) {
   test(`desktop tables fit their scrollports at ${width}px`, async ({page}) => {
@@ -63,12 +64,14 @@ test('narrow tables retain readable columns and stop scrolling after a desktop r
 });
 
 // A scroll container that overflows by a pixel grows a scrollbar; every palette family is held to zero overflow.
+// Pages whose default tab holds no table are checked on the tab that does.
+const tableTab: Partial<Record<RoutePath, string>> = {dns: 'cache', rules: 'list'};
 for (const palette of ['glass/glass', 'rose-pine/moon', 'catppuccin/mocha']) {
   test.describe(`${palette} scroll containers`, () => {
     test.use({storage: {'doona-palette': palette}});
     test('no scroll container overflows sideways without content that needs it', async ({page}) => {
-      for (const route of ['overview', 'connections', 'dns?tab=cache', 'rules?tab=list', 'nodes', 'events', 'logs', 'settings']) {
-        await page.goto(`/#/${route}`);
+      for (const route of routes) {
+        await page.goto(`/#/${route}${tableTab[route] ? `?tab=${tableTab[route]}` : ''}`);
         await expect(page.locator('.rp-content').getByRole('heading').first()).toBeVisible();
         await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
         const spurious = await page.evaluate(() =>
