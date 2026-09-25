@@ -1,4 +1,4 @@
-import type {ComponentProps, ReactNode} from 'react';
+import {useCallback, useLayoutEffect, useRef, type ComponentProps, type ReactNode} from 'react';
 import {
   Button as RButton,
   ToggleButton,
@@ -38,6 +38,22 @@ export function Segmented({
 }) {
   const [ref, pos] = useSlider(value);
   const collapsed = useOverflow(ref, items.flat().join('\n'));
+  // Focus inside the control follows it across the switch, so it is neither hidden nor dropped to the page; focus
+  // elsewhere stays. The picker's ref detaches before the picker leaves the page, while it can still hold focus.
+  const pick = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+  const pickRef = useCallback((node: HTMLDivElement) => {
+    pick.current = node;
+    return () => {
+      refocus.current = node.contains(document.activeElement);
+      pick.current = null;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (collapsed && ref.current?.contains(document.activeElement)) pick.current?.querySelector('button')?.focus();
+    if (!collapsed && refocus.current) ref.current?.querySelector<HTMLElement>('[data-selected]')?.focus();
+    refocus.current = false;
+  }, [ref, collapsed]);
   return (
     <div className="rp-segfit" data-collapsed={collapsed || undefined}>
       <ToggleButtonGroup
@@ -61,7 +77,7 @@ export function Segmented({
         ))}
       </ToggleButtonGroup>
       {collapsed && (
-        <div className="rp-segpick">
+        <div ref={pickRef} className="rp-segpick">
           <LabeledSelect bare label={label} value={value} onChange={onChange} isDisabled={isDisabled} items={items.map(([id, l]) => ({id, label: l}))} />
         </div>
       )}
