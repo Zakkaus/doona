@@ -40,6 +40,10 @@ const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
 // stream silent for MISSED_HEARTBEATS intervals is treated as dropped.
 const HEARTBEAT_SECONDS = 15;
 const MISSED_HEARTBEATS = 2.5;
+// A tiny advertised interval must not turn a brief stall into a reconnect storm.
+const MIN_SILENCE_MS = 10000;
+const silenceLimit = (seconds: number) =>
+  Math.max(MIN_SILENCE_MS, (Number.isFinite(seconds) && seconds > 0 ? seconds : HEARTBEAT_SECONDS) * MISSED_HEARTBEATS * 1000);
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string, clock: ServerClock = createServerClock()): Api {
@@ -139,7 +143,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
         let silence: ReturnType<typeof setTimeout> | undefined;
         const alive = () => {
           clearTimeout(silence);
-          silence = setTimeout(() => attempt.abort(), heartbeatSeconds * MISSED_HEARTBEATS * 1000);
+          silence = setTimeout(() => attempt.abort(), silenceLimit(heartbeatSeconds));
         };
         alive();
         try {
