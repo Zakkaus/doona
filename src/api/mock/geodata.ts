@@ -1,4 +1,4 @@
-import type {Capabilities, GeoAssetKind, GeoData, GeoDataSettings, GeoDataSettingsPatch} from '../model';
+import type {Capabilities, GeoAssetKind, GeoData, GeoDataDownload, GeoDataSettings, GeoDataSettingsPatch} from '../model';
 import {ApiError} from '../error';
 import {defaultGeodataPreset, geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl} from '../../dae/geodata';
 import {scanConfig} from '../../dae/text';
@@ -22,14 +22,16 @@ const publishesChecksum = (url: string) => /^https:\/\/(raw\.githubusercontent\.
 const presetAt = (kind: GeoAssetKind, url: string) => geodataPresets.find(preset => preset.urls[kind].includes(url) || preset.mirrors[kind].includes(url));
 
 // The stored geodata settings and update status: the backend keeps them across reloads, unlike the other runtime settings.
-export function createGeodataState(capabilities: Capabilities) {
+export function createGeodataState(capabilities: Capabilities, groupIds: () => Set<string>) {
   const configurable = capabilities.resources.geodata.configurable_sources === true;
   let stored: Record<GeoAssetKind, string[]> | null = null;
-  const auto = {enabled: false, interval_hours: 24};
+  const auto = {enabled: true, interval_hours: 24};
+  let download: GeoDataDownload = {route: 'routing', group_id: null};
   const data = structuredClone(fixtures.geodata);
   data.required_codes = requiredCodes();
   const urls = () => stored ?? {geosite: [...defaultGeodataPreset.urls.geosite], geoip: [...defaultGeodataPreset.urls.geoip]};
   const nextCheck = (from: number) => (auto.enabled ? new Date(from + auto.interval_hours * 3600_000 + 17 * 60_000).toISOString() : null);
+  data.next_check_at = nextCheck(Date.parse(data.last_checked_at ?? '') || Date.now());
   const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
   const status = (): GeoData => {
     const view = structuredClone(data);
@@ -37,6 +39,7 @@ export function createGeodataState(capabilities: Capabilities) {
       for (const asset of view.assets) {
         delete asset.fetched_url_redacted;
         delete asset.verified;
+        delete asset.download_route;
       }
       delete view.last_checked_at;
       delete view.last_updated_at;
@@ -51,13 +54,16 @@ export function createGeodataState(capabilities: Capabilities) {
       source: stored ? 'db' : 'default',
       geosite: {urls: urls().geosite},
       geoip: {urls: urls().geoip},
-      auto_update: {...auto}
+      auto_update: {...auto},
+      // A stored group that no longer exists reads as null.
+      download: {...download, group_id: download.group_id && groupIds().has(download.group_id) ? download.group_id : null}
     }),
     // Checks the whole patch before storing any of it, as the backend does.
     patch(patch: GeoDataSettingsPatch) {
       if (patch === null) {
         stored = null;
-        Object.assign(auto, {enabled: false, interval_hours: 24});
+        Object.assign(auto, {enabled: true, interval_hours: 24});
+        download = {route: 'routing', group_id: null};
       } else {
         for (const kind of kinds) {
           const list = patch[kind]?.urls;
@@ -70,8 +76,13 @@ export function createGeodataState(capabilities: Capabilities) {
         const {min, max} = geodataIntervalRange;
         if (interval !== undefined && (!Number.isInteger(interval) || interval < min || interval > max))
           throw invalid(`geodata.auto_update.interval_hours must lie in [${min}, ${max}]`);
+        const route = patch.download;
+        if (route && (route.route === 'group') !== (route.group_id !== undefined)) throw invalid('geodata.download.group_id is required for route group only');
+        if (route?.group_id !== undefined && !groupIds().has(route.group_id))
+          throw new ApiError(422, 'unsupported_value', `geodata.download.group_id ${route.group_id} is not a current group`);
         if (patch.geosite || patch.geoip) stored = {geosite: patch.geosite?.urls ?? urls().geosite, geoip: patch.geoip?.urls ?? urls().geoip};
         Object.assign(auto, patch.auto_update ?? {});
+        if (route) download = {route: route.route, group_id: route.group_id ?? null};
       }
       data.next_check_at = nextCheck(Date.now());
     },
@@ -101,6 +112,7 @@ export function createGeodataState(capabilities: Capabilities) {
         asset.source_redacted = url;
         asset.fetched_url_redacted = url;
         asset.verified = publishesChecksum(url);
+        asset.download_route = {route: download.route, group_id: download.route === 'group' ? download.group_id : null};
       }
       data.last_updated_at = at;
       data.last_error = null;

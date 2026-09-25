@@ -549,9 +549,9 @@ export interface paths {
          *     built from: its digest, size and modification time, and the download source
          *     POST /geodata/update tries first, redacted like a provider URL. When
          *     resources.geodata.configurable_sources is true, the response also reports
-         *     where each loaded file was downloaded from, whether its checksum was
-         *     verified, the update schedule and outcome, and required_codes. Reading
-         *     never touches the network.
+         *     where each loaded file was downloaded from and through which route, whether
+         *     its checksum was verified, the update schedule and outcome, and
+         *     required_codes. Reading never touches the network.
          */
         get: operations["getGeoData"];
         put?: never;
@@ -582,8 +582,13 @@ export interface paths {
          *     several URLs for an asset, the backend tries them in order and moves to the
          *     next only when one fails: a connection error, a status other than 200
          *     (redirects are not followed), the per-URL deadline, or a sha256 mismatch
-         *     against a checksum published at the URL with .sha256sum appended. The update
-         *     fails when the new file lacks a category the active configuration uses.
+         *     against a checksum published at the URL with .sha256sum appended. The
+         *     checksum goes through the same route as its file. Every request leaves
+         *     through the route in GeoDataSettings.download; a URL the route cannot reach,
+         *     because a group has no usable member or the routing rules block it, fails like
+         *     a connection error and the next URL is tried. The backend never falls back to
+         *     direct. The update fails when the new file lacks a category the active
+         *     configuration uses.
          *     Identical bytes leave the loaded file and generation unchanged. An automatic
          *     update runs as the same operation kind and holds the same exclusivity. Follow the
          *     shared operation ownership, retention and idempotency rules. Replaying an
@@ -958,6 +963,9 @@ export interface paths {
          *     names into the stored settings, replacing a list a patch stored, and deletes
          *     a stored list that an earlier file wrote but the file no longer names.
          *     Activations never change them, so patched URLs last until the next startup.
+         *     download follows the same startup rule as the URLs, and a download with
+         *     route group whose group_id is not a current group returns 422
+         *     unsupported_value and changes nothing.
          */
         patch: operations["patchRuntimeSettings"];
         trace?: never;
@@ -1904,6 +1912,8 @@ export interface components {
             fetched_url_redacted?: string | null;
             /** @description The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published or the backend did not download the file. Reported when resources.geodata.configurable_sources is true. */
             verified?: boolean;
+            /** @description The route the loaded file was downloaded through. route is the GeoDataSettings.download route in force for that download. group_id is the group the request went through, the one the routing rules chose for route routing, and null for direct, for routing rules that chose direct or a single node, and for a group that no longer exists. Null when the backend did not download the loaded file. Reported when resources.geodata.configurable_sources is true. */
+            download_route?: null | components["schemas"]["GeoDataDownload"];
         };
         /** @description The update status fields and required_codes are reported together, when resources.geodata.configurable_sources is true. */
         GeoData: {
@@ -1951,8 +1961,8 @@ export interface components {
         };
         GeoDataAutoUpdate: {
             /**
-             * @description Update on a schedule. Off by default.
-             * @default false
+             * @description Update on a schedule. On by default.
+             * @default true
              */
             enabled: boolean;
             /**
@@ -1961,21 +1971,45 @@ export interface components {
              */
             interval_hours: number;
         };
+        /**
+         * @description How geodata downloads leave the device. routing follows the routing rules like user traffic, so a rule can send them to a node, a group, direct or block. group always goes through the group in group_id. direct connects straight to the host, outside the routing rules.
+         * @enum {string}
+         */
+        GeoDataDownloadRoute: "routing" | "group" | "direct";
+        GeoDataDownload: {
+            route: components["schemas"]["GeoDataDownloadRoute"];
+            /** @description The group for route group, as in GET /groups. Null for routing and direct, and when the stored group no longer exists; downloads then fail until the route is changed. */
+            group_id: string | null;
+        };
+        GeoDataDownloadPatch: {
+            route: components["schemas"]["GeoDataDownloadRoute"];
+            /** @description A current group id; required for route group and not allowed otherwise. */
+            group_id?: string;
+        };
         GeoDataSettings: {
             /** @description Read-only; a patch cannot set it. */
             source: components["schemas"]["GeoDataSettingsSource"];
             geosite: components["schemas"]["GeoDataSources"];
             geoip: components["schemas"]["GeoDataSources"];
             auto_update: components["schemas"]["GeoDataAutoUpdate"];
+            /**
+             * @description The route every geodata request takes. routing when nothing is stored, as for every download the backend makes itself. At startup, a route the configuration file names replaces a stored one, and a route an earlier file wrote is deleted when the file names none, as for the URLs; it does not affect source. A group that has no usable member when an update runs, for example just after startup before its health checks finish, fails that URL like a connection error; the backend tries the next URL and reports last_error, and never falls back to direct.
+             * @default {
+             *       "route": "routing",
+             *       "group_id": null
+             *     }
+             */
+            download: components["schemas"]["GeoDataDownload"];
         };
         GeoDataSourcesPatch: {
             /** @description Replaces the whole list; order is fallback order. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
-        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update is stored on its own. null deletes everything stored. */
+        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update and download are each stored on their own. null deletes everything stored. */
         GeoDataSettingsPatch: null | {
             geosite?: components["schemas"]["GeoDataSourcesPatch"];
             geoip?: components["schemas"]["GeoDataSourcesPatch"];
+            download?: components["schemas"]["GeoDataDownloadPatch"];
             auto_update?: {
                 enabled?: boolean;
                 interval_hours?: number;
@@ -5302,6 +5336,17 @@ export interface operations {
             404: components["responses"]["NotFound"];
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            /** @description geodata.download names a group_id that is not a current group */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     queryDns: {

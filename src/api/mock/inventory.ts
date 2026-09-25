@@ -313,6 +313,7 @@ export function createInventory(
   return {
     api,
     groupNames: () => new Set(groups.map(group => group.name)),
+    groupIds: () => new Set(groups.map(group => group.id)),
     activate: (text: string, revision: string) => activateInventory(text, revision, nodes, groups, providers)
   };
 }

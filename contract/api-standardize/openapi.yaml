@@ -2570,9 +2570,9 @@ paths:
         built from: its digest, size and modification time, and the download source
         POST /geodata/update tries first, redacted like a provider URL. When
         resources.geodata.configurable_sources is true, the response also reports
-        where each loaded file was downloaded from, whether its checksum was
-        verified, the update schedule and outcome, and required_codes. Reading
-        never touches the network.
+        where each loaded file was downloaded from and through which route, whether
+        its checksum was verified, the update schedule and outcome, and
+        required_codes. Reading never touches the network.
       x-permission: observe
       security:
         - bearerAuth: []
@@ -2601,6 +2601,9 @@ paths:
                         source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
                         fetched_url_redacted: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat
                         verified: true
+                        download_route:
+                          route: group
+                          group_id: group-proxy
                       - kind: geoip
                         sha256: 9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e
                         size_bytes: '17406771'
@@ -2608,6 +2611,9 @@ paths:
                         source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
                         fetched_url_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
                         verified: true
+                        download_route:
+                          route: group
+                          group_id: group-proxy
                     last_checked_at: '2026-08-15T03:12:40Z'
                     last_updated_at: '2026-08-14T03:00:00Z'
                     next_check_at: '2026-08-16T03:41:07Z'
@@ -2637,6 +2643,7 @@ paths:
                         source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat
                         fetched_url_redacted: null
                         verified: false
+                        download_route: null
                       - kind: geoip
                         sha256: 9b1d3c5e7f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e
                         size_bytes: '17406771'
@@ -2644,6 +2651,7 @@ paths:
                         source_redacted: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
                         fetched_url_redacted: null
                         verified: false
+                        download_route: null
                     last_checked_at: '2026-08-15T09:58:02Z'
                     last_updated_at: null
                     next_check_at: null
@@ -2681,8 +2689,13 @@ paths:
         several URLs for an asset, the backend tries them in order and moves to the
         next only when one fails: a connection error, a status other than 200
         (redirects are not followed), the per-URL deadline, or a sha256 mismatch
-        against a checksum published at the URL with .sha256sum appended. The update
-        fails when the new file lacks a category the active configuration uses.
+        against a checksum published at the URL with .sha256sum appended. The
+        checksum goes through the same route as its file. Every request leaves
+        through the route in GeoDataSettings.download; a URL the route cannot reach,
+        because a group has no usable member or the routing rules block it, fails like
+        a connection error and the next URL is tried. The backend never falls back to
+        direct. The update fails when the new file lacks a category the active
+        configuration uses.
         Identical bytes leave the loaded file and generation unchanged. An automatic
         update runs as the same operation kind and holds the same exclusivity. Follow the
         shared operation ownership, retention and idempotency rules. Replaying an
@@ -4647,8 +4660,11 @@ paths:
                           - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
                           - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
                       auto_update:
-                        enabled: false
+                        enabled: true
                         interval_hours: 24
+                      download:
+                        route: routing
+                        group_id: null
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -4677,6 +4693,9 @@ paths:
                       auto_update:
                         enabled: true
                         interval_hours: 48
+                      download:
+                        route: group
+                        group_id: group-proxy
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -4712,6 +4731,9 @@ paths:
         names into the stored settings, replacing a list a patch stored, and deletes
         a stored list that an earlier file wrote but the file no longer names.
         Activations never change them, so patched URLs last until the next startup.
+        download follows the same startup rule as the URLs, and a download with
+        route group whose group_id is not a current group returns 422
+        unsupported_value and changes nothing.
       x-permission: control
       security:
         - bearerAuth: []
@@ -4732,7 +4754,7 @@ paths:
                   dns_log:
                     max_records: 1024
               geodata_sources:
-                summary: Use a mirror first and update daily
+                summary: Use a mirror first
                 value:
                   geodata:
                     geosite:
@@ -4743,8 +4765,6 @@ paths:
                       urls:
                         - https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat
                         - https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat
-                    auto_update:
-                      enabled: true
               geodata_auto_update:
                 summary: Update every two days
                 value:
@@ -4752,6 +4772,13 @@ paths:
                     auto_update:
                       enabled: true
                       interval_hours: 48
+              geodata_download:
+                summary: Download geodata through a group
+                value:
+                  geodata:
+                    download:
+                      route: group
+                      group_id: group-proxy
               geodata_reset:
                 summary: Return to the built-in sources
                 value:
@@ -4810,6 +4837,9 @@ paths:
                       auto_update:
                         enabled: true
                         interval_hours: 24
+                      download:
+                        route: routing
+                        group_id: null
                   x-headers:
                     Content-Type: application/json
                     Cache-Control: no-store
@@ -4846,6 +4876,29 @@ paths:
           $ref: '#/components/responses/TooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: geodata.download names a group_id that is not a current group
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unknown_group:
+                  value:
+                    error:
+                      code: unsupported_value
+                      message: geodata.download.group_id is not a current group.
+                      details: null
+                    request_id: request-4
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
   /api/v1/dns/query:
     get:
       operationId: queryDns
@@ -8412,10 +8465,18 @@ components:
         verified:
           type: boolean
           description: The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published or the backend did not download the file. Reported when resources.geodata.configurable_sources is true.
+        download_route:
+          description: The route the loaded file was downloaded through. route is the GeoDataSettings.download route in force for that download. group_id is the group the request went through, the one the routing rules chose for route routing, and null for direct, for routing rules that chose direct or a single node, and for a group that no longer exists. Null when the backend did not download the loaded file. Reported when resources.geodata.configurable_sources is true.
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/GeoDataDownload'
       dependentRequired:
         fetched_url_redacted:
           - verified
+          - download_route
         verified:
+          - fetched_url_redacted
+        download_route:
           - fetched_url_redacted
     GeoData:
       type: object
@@ -8525,14 +8586,58 @@ components:
       properties:
         enabled:
           type: boolean
-          default: false
-          description: Update on a schedule. Off by default.
+          default: true
+          description: Update on a schedule. On by default.
         interval_hours:
           type: integer
           minimum: 6
           maximum: 168
           default: 24
           description: Hours between automatic updates, before a random delay of up to 60 minutes.
+    GeoDataDownloadRoute:
+      type: string
+      enum:
+        - routing
+        - group
+        - direct
+      description: How geodata downloads leave the device. routing follows the routing rules like user traffic, so a rule can send them to a node, a group, direct or block. group always goes through the group in group_id. direct connects straight to the host, outside the routing rules.
+    GeoDataDownload:
+      type: object
+      required:
+        - route
+        - group_id
+      properties:
+        route:
+          $ref: '#/components/schemas/GeoDataDownloadRoute'
+        group_id:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          description: The group for route group, as in GET /groups. Null for routing and direct, and when the stored group no longer exists; downloads then fail until the route is changed.
+    GeoDataDownloadPatch:
+      type: object
+      additionalProperties: false
+      required:
+        - route
+      properties:
+        route:
+          $ref: '#/components/schemas/GeoDataDownloadRoute'
+        group_id:
+          type: string
+          minLength: 1
+          description: A current group id; required for route group and not allowed otherwise.
+      if:
+        properties:
+          route:
+            const: group
+      then:
+        required:
+          - group_id
+      else:
+        not:
+          required:
+            - group_id
     GeoDataSettings:
       type: object
       required:
@@ -8540,6 +8645,7 @@ components:
         - geosite
         - geoip
         - auto_update
+        - download
       properties:
         source:
           $ref: '#/components/schemas/GeoDataSettingsSource'
@@ -8550,6 +8656,12 @@ components:
           $ref: '#/components/schemas/GeoDataSources'
         auto_update:
           $ref: '#/components/schemas/GeoDataAutoUpdate'
+        download:
+          $ref: '#/components/schemas/GeoDataDownload'
+          default:
+            route: routing
+            group_id: null
+          description: The route every geodata request takes. routing when nothing is stored, as for every download the backend makes itself. At startup, a route the configuration file names replaces a stored one, and a route an earlier file wrote is deleted when the file names none, as for the URLs; it does not affect source. A group that has no usable member when an update runs, for example just after startup before its health checks finish, fails that URL like a connection error; the backend tries the next URL and reports last_error, and never falls back to direct.
     GeoDataSourcesPatch:
       type: object
       additionalProperties: false
@@ -8565,7 +8677,7 @@ components:
           items:
             $ref: '#/components/schemas/GeoDataUrl'
     GeoDataSettingsPatch:
-      description: Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update is stored on its own. null deletes everything stored.
+      description: Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update and download are each stored on their own. null deletes everything stored.
       oneOf:
         - type: 'null'
         - type: object
@@ -8576,6 +8688,8 @@ components:
               $ref: '#/components/schemas/GeoDataSourcesPatch'
             geoip:
               $ref: '#/components/schemas/GeoDataSourcesPatch'
+            download:
+              $ref: '#/components/schemas/GeoDataDownloadPatch'
             auto_update:
               type: object
               additionalProperties: false

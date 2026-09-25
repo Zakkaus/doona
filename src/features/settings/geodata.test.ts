@@ -27,6 +27,7 @@ const settings = (over: Partial<GeoDataSettings> = {}): GeoDataSettings => ({
   geosite: {urls: [...full.urls.geosite]},
   geoip: {urls: [...full.urls.geoip]},
   auto_update: {enabled: false, interval_hours: 24},
+  download: {route: 'direct', group_id: null},
   ...over
 });
 const draft = (over: Partial<GeodataDraft> = {}): GeodataDraft => ({...geodataDraft(settings()), ...over});

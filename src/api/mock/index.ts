@@ -27,7 +27,7 @@ export function createMockApi(): Api {
     /* Storage can be unavailable. */
   }
   const runtime = createRuntime(capabilities, big);
-  const geodata = createGeodataState(capabilities);
+  const geodata = createGeodataState(capabilities, () => inventory.groupIds());
   const configuration = createConfiguration(
     capabilities,
     runtime.runtime,
