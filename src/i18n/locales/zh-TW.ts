@@ -235,7 +235,7 @@ export const messages = {
   'conn.showRule': '查看命中的規則',
   'conn.ruleBeforeMatched': '命中規則之前',
   'conn.ruleTop': '最前',
-  'conn.ruleMoved': '命中的規則已變動，規則將加在最前。',
+  'conn.ruleMoved': '命中的規則已變動，規則將加在 doona 可寫入的最前位置。',
   'conn.ruleNoPosition': '沒有規則位於 doona 可寫入的檔案中，無法決定插入位置。',
   'conn.f.dst': '目標位址',
   'conn.f.ingress': '入口',

@@ -251,7 +251,7 @@ export const messages = {
   'conn.showRule': 'Show matched rule',
   'conn.ruleBeforeMatched': 'Before the matched rule',
   'conn.ruleTop': 'First',
-  'conn.ruleMoved': 'The matched rule changed; the rule will be added first.',
+  'conn.ruleMoved': 'The matched rule changed; the rule will be added at the earliest place doona can write.',
   'conn.ruleNoPosition': 'No rule is in a file doona can write, so there is no place to insert.',
   'conn.f.dst': 'Target address',
   'conn.f.ingress': 'Ingress',

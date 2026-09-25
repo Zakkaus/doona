@@ -47,6 +47,23 @@ it('inserts before the matched rule by default, else first, and only where the s
   ).toEqual([]);
 });
 
+it('places rules the contract displays with their outbound, and falls back to the earliest writable rule', async () => {
+  const api = createMockApi();
+  const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
+  const ids = (list: typeof rules, matched: string | null, from = sources) =>
+    rulePositions(list, from, matched, t).map(position => [position.id, position.label]);
+  // The contract shows `pname(curl) -> direct`; honk sends the condition alone. Both name the same line.
+  const shown = rules.map(rule => (rule.kind === 'rule' ? {...rule, expression: ruleLine(rule.expression, rule.outbound, rule.must)} : rule));
+  expect(ids(shown, 'r5')).toEqual(ids(rules, 'r5'));
+  expect(ids(shown, 'r5')).toHaveLength(2);
+  // With the first rule in a file doona cannot write, the earliest rule it can write before is offered instead.
+  const main = sources.find(source => source.id === 'src-main')!;
+  const locked = [...sources, {...main, id: 'src-locked', writable: false}];
+  const lockedFirst = rules.map(rule => (rule === rules[0] ? {...rule, source: {...rule.source!, source_id: 'src-locked'}} : rule));
+  expect(ids(lockedFirst, null, locked)).toEqual([[rules[1].rule_id, 'Before rule 2']]);
+  expect(ids(lockedFirst, rules[0].rule_id, locked)).toEqual([[rules[1].rule_id, 'Before rule 2']]);
+});
+
 it('keeps the pinned position while its rule exists and reports it moved after a reload removed it', async () => {
   const api = createMockApi();
   const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
