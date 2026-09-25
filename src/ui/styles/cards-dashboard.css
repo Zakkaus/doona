@@ -137,10 +137,6 @@
   .rp-strip > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
-  /* A wide value keeps its room; the sparkline beside it narrows, down to nothing. */
-  .rp-strip .rp-spark {
-    min-width: 0;
-  }
 }
 /* An odd fifth tile fills its row until all five fit at 1280px. */
 @media (min-width: 600px) {
@@ -358,4 +354,26 @@
   flex: 1 1 64px;
   min-width: 48px;
   max-width: 120px;
+}
+/* A tile measures its own width, so every narrow placement stacks, whatever the viewport. Fact tiles already stack. */
+.rp-strip:not(.rp-facts) > * {
+  container: rp-tile / inline-size;
+}
+/* The widest value, 888 MB/s, is 98px at the value type in every locale; beside it go the 12px gap and the
+   sparkline's 64px basis: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
+   narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. */
+@container rp-tile (width < 174px) {
+  .rp-tile-body {
+    display: grid;
+    grid-template-rows: 28px 32px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 8px;
+    height: auto;
+  }
+  .rp-tile-body > .rp-spark {
+    width: 100%;
+    max-width: none;
+  }
 }
