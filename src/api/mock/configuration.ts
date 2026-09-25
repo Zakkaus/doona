@@ -131,7 +131,7 @@ export function createConfiguration(
     };
     const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
-    if (!fallback) throw new ApiError(409, 'snapshot_unavailable', 'The routing section has no fallback');
+    if (!fallback) throw new ApiError(503, 'snapshot_unavailable', 'The routing section has no fallback', null, null, 1);
     return {generation_id: String(configRevision), rules: entries, fallback};
   };
   const api: ConfigurationApi = {
