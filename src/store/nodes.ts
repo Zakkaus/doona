@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {MAX_PAGE, poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
@@ -9,10 +10,10 @@ export function useNodes(enabled = true) {
   return useResource(
     {
       key: ['nodes'],
-      every: 30000,
+      every: poll.inventory,
       fetch: signal =>
         walk(
-          cursor => api.nodes({cursor, limit: 1000}, signal),
+          cursor => api.nodes({cursor, limit: MAX_PAGE}, signal),
           (acc: Node[] | undefined, page) => {
             if (!acc) return [...page.nodes];
             acc.push(...page.nodes);
@@ -30,7 +31,7 @@ export function useProviders(enabled = true) {
   return useResource(
     {
       key: ['providers', {limit}],
-      every: 30000,
+      every: poll.inventory,
       fetch: signal =>
         walk(
           cursor => api.providers({cursor, limit}, signal),

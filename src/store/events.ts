@@ -8,6 +8,8 @@ type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
 type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent; recent: ApiEvent[]};
 const streams = new Map<Api, Stream>();
+// The events a page's feed keeps, and so the recent events the stream replays to a feed opened late.
+export const EVENT_FEED_LIMIT = 200;
 // `stream.ready` events that restarted the stream after its cursor expired: what the backend sent before is lost.
 const lostBefore = new WeakSet<ApiEvent>();
 export const historyLost = (event: ApiEvent) => lostBefore.has(event);
@@ -73,7 +75,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
               update({cursor: event.id, error: null});
             }
             shared.recent.push(event);
-            if (shared.recent.length > 200) shared.recent.shift();
+            if (shared.recent.length > EVENT_FEED_LIMIT) shared.recent.shift();
             if (shouldRefetch('capabilities', event, reconnected)) capabilities.invalidate(reconnected);
             shared.listeners.forEach(fn => fn(event, reconnected));
           }

@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import {MAX_PAGE, poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {ApiError} from '../api/error';
@@ -36,7 +37,7 @@ export async function smallerOnRefusal<Q extends {limit?: number}, P>(
 }
 // The whole cache, summaries only; once a page is refused the rest of the walk keeps the smaller size.
 export function dnsCacheListing(api: Api, signal?: AbortSignal) {
-  let limit = 1000;
+  let limit = MAX_PAGE;
   return walk(
     async cursor => {
       const result = await smallerOnRefusal(query => api.dnsCache(query, signal), {cursor, limit, detail: 'summary' as const}, signal);
@@ -75,7 +76,6 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
   );
   return {...resource, limit: resource.data ? resource.data.limit : limit};
 }
-const USAGE_EVERY = 60000;
 // Every page of the listing repeats the whole cache's usage. The backend keeps a snapshot for each listing read, so
 // the usage card reuses a walk from the last minute rather than asking for a second snapshot.
 const walks = new WeakMap<Api, {at: number; list: DnsCacheList}>();
@@ -94,7 +94,7 @@ export function deleteCacheEntry(api: Api, id: string, signal: AbortSignal) {
 // Otherwise one entry is enough to read the usage and coverage.
 export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {
   const recent = walks.get(api);
-  if (recent && Date.now() - recent.at < USAGE_EVERY) return Promise.resolve(recent.list);
+  if (recent && Date.now() - recent.at < poll.background) return Promise.resolve(recent.list);
   return api.dnsCache({limit: 1, detail: 'summary'}, signal);
 }
 function useDnsCache(enabled = true, paused = false) {
@@ -103,7 +103,7 @@ function useDnsCache(enabled = true, paused = false) {
     {
       key: ['dnsCache'],
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
-      every: 15000,
+      every: poll.lists,
       // The cache table shows no answers, so the summary listing, which leaves them out, is enough.
       fetch: signal => walkCache(api, signal)
     },
@@ -112,7 +112,7 @@ function useDnsCache(enabled = true, paused = false) {
 }
 export function useDnsCacheUsage(enabled = true, paused = false) {
   const api = getApi();
-  return useResource({key: ['dnsCache', {usage: true}], every: USAGE_EVERY, fetch: signal => readCacheUsage(api, signal)}, {enabled, paused});
+  return useResource({key: ['dnsCache', {usage: true}], every: poll.background, fetch: signal => readCacheUsage(api, signal)}, {enabled, paused});
 }
 // Paused, the listing keeps what it last read and walks the cache again only once it is resumed.
 export function useDnsControl(paused = false) {

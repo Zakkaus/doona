@@ -1,4 +1,5 @@
 import {useCallback, useState} from 'react';
+import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Capabilities, Group, GroupSelectionRequest, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
@@ -44,12 +45,12 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
 }
 export function useGroups(enabled = true) {
   const api = getApi();
-  return useResource({key: ['groups'], every: 30000, fetch: signal => api.groups(signal)}, {enabled});
+  return useResource({key: ['groups'], every: poll.inventory, fetch: signal => api.groups(signal)}, {enabled});
 }
 export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void, paused = false) {
   const api = getApi();
   const capabilities = useCapabilities().data;
-  const resource = useResource({key: ['group', {id}], every: 30000, fetch: signal => api.group(id, signal)}, {paused});
+  const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
   const action = useAction<'selection' | 'probe' | 'config'>({scope: id});

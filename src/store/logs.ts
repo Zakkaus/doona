@@ -1,11 +1,10 @@
 import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
-import {useEvents} from './events';
+import {EVENT_FEED_LIMIT, useEvents} from './events';
 import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
 
-export const EVENT_FEED_LIMIT = 200;
 // A resumed stream's `stream.ready` carries the cursor it resumed from, the id of the last event already listed.
 export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', event => `${event.event} ${event.id}`);
 const LOG_FEED_LIMIT = 1000;
