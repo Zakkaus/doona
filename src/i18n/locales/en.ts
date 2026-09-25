@@ -1050,6 +1050,7 @@ export const messages = {
   'settings.geodataInterval': 'Interval (hours)',
   'settings.geodataSaved': 'Geodata sources saved; they download at the next automatic update',
   'settings.geodataAutoSaved': 'Automatic update settings saved',
+  'settings.geodataRouteSaved': 'Download route saved',
   'settings.geodataSaveFailed': 'Could not save the geodata settings: {error}',
   'settings.geodataStatus': 'Status',
   'settings.geodataUpdateNow': 'Update now',

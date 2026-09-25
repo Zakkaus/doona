@@ -263,8 +263,10 @@
     padding-inline: 16px;
   }
 }
-/* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. */
-@media (max-width: 339px) {
+/* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. With it,
+   the bar needs 333px: the 24px gutter, two 8px gaps, the 137px brand with the long name a honk leaves, and the 156px
+   of search, refresh, reload and the overflow menu. */
+@media (max-width: 332px) {
   .rp-brand-text {
     position: absolute;
     width: 1px;

@@ -130,7 +130,9 @@ test('the download route follows the routing rules by default, and a group route
     .last()
     .click();
   await page.getByRole('option', {name: 'proxy', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataAutoSaved')})).toBeVisible();
+  // The route is not an automatic update setting, and its toast says what was saved.
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataRouteSaved')})).toBeVisible();
+  await expect(page.locator('.rp-toast', {hasText: t('settings.geodataAutoSaved')})).toHaveCount(0);
   expect(bodies).toEqual([{geodata: {download: {route: 'group', group_id: 'proxy'}}}]);
   await pick(page, 'settings.geodataRoute', t('settings.geodataRouteDirect'));
   await expect.poll(() => bodies.length).toBe(2);

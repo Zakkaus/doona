@@ -1024,6 +1024,7 @@ export const messages = {
   'settings.geodataInterval': '更新间隔（小时）',
   'settings.geodataSaved': '地理数据来源已保存，将在下次自动更新时下载',
   'settings.geodataAutoSaved': '自动更新设置已保存',
+  'settings.geodataRouteSaved': '下载路由已保存',
   'settings.geodataSaveFailed': '无法保存地理数据设置：{error}',
   'settings.geodataStatus': '状态',
   'settings.geodataUpdateNow': '立即更新',

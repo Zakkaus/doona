@@ -66,7 +66,7 @@ export function useGeodataSettings() {
         if (result === undefined) return false;
         geodata.refetch();
         if (patch.geosite && canUpdate) void update();
-        else toast('positive', t(patch.geosite ? 'settings.geodataSaved' : 'settings.geodataAutoSaved'));
+        else toast('positive', t(patch.geosite ? 'settings.geodataSaved' : patch.download ? 'settings.geodataRouteSaved' : 'settings.geodataAutoSaved'));
         return true;
       },
       (error: unknown) => {

@@ -119,6 +119,39 @@ for (const width of [320, 360])
       });
     });
 
+// The wordmark hides below the width the bar needs with it; every width up to the version's return must fit, with the
+// short name and with the long one a honk leaves for the session.
+for (const lang of ['en', 'zh-TW', 'zh-CN'])
+  test.describe(`${lang} top bar from 320px to 400px`, () => {
+    test.use({viewport: {width: 400, height: 700}, storage: {'doona-lang': lang}});
+    test('never pushes the page sideways', async ({page}) => {
+      await page.goto('/#/overview');
+      await expect(page.locator('.rp-top .rp-narrow-only button')).toBeVisible();
+      const sweep = async (name: string) => {
+        for (let width = 320; width <= 400; width += 4) {
+          await page.setViewportSize({width, height: 700});
+          const overflow = await page.evaluate(() => {
+            const top = document.querySelector<HTMLElement>('.rp-top')!;
+            const right = top.getBoundingClientRect().right;
+            const visible = [...top.querySelectorAll<HTMLElement>('button, .rp-brand-text > span')].filter(el => el.getClientRects().length);
+            return Math.max(
+              document.documentElement.scrollWidth - document.documentElement.clientWidth,
+              ...visible.map(el => el.getBoundingClientRect().right - right)
+            );
+          });
+          expect(overflow, `${name} at ${width}px`).toBeLessThanOrEqual(0);
+        }
+      };
+      await sweep('doona');
+      await page.locator('.rp-brand').click();
+      const duck = page.getByRole('dialog').locator('.rp-about-duck');
+      for (let i = 0; i < 5; i++) await duck.click();
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.rp-brand .rp-brand-text > span').first()).toHaveText('doooooona');
+      await sweep('doooooona');
+    });
+  });
+
 test.describe('desktop', () => {
   test.use({viewport: {width: 1280, height: 900}});
   test('groups the side navigation into the four hubs and hides the phone navigation', async ({page}) => {
