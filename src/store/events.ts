@@ -49,6 +49,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
       connection = controller;
       void api
         .subscribeEvents({
+          heartbeatSeconds: current.resources.events.heartbeat_seconds,
           signal: controller.signal,
           onConnectionChange: connected => {
             if (!controller.signal.aborted) update({connected});
