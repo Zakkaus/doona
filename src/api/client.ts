@@ -19,13 +19,12 @@ import {readSse} from './sse';
 import {wait} from './wait';
 import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
-import {noteServerTime, resetServerClock} from './serverClock';
+import {createServerClock, type ServerClock} from './serverClock';
 
 const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
   if (result.data === undefined) throw clientError(result.response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson');
-  noteServerTime((result.data as {observed_at?: unknown} | null)?.observed_at);
   return result.data;
 }
 
@@ -39,9 +38,13 @@ const MAX_REFUSALS = 3;
 const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
-export function createApi(base: string, token?: string): Api {
+export function createApi(base: string, token?: string, clock: ServerClock = createServerClock()): Api {
   const baseUrl = base.replace(/\/+$/, '');
-  resetServerClock();
+  const read = <T>(result: {data?: T; response: Response}): T => {
+    const value = data(result);
+    clock.note((value as {observed_at?: unknown} | null)?.observed_at);
+    return value;
+  };
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
   const client = createClient<paths>({
@@ -190,21 +193,21 @@ export function createApi(base: string, token?: string): Api {
     });
   }
   return {
-    discovery: async signal => data(await client.GET('/api', {signal})),
-    version: async signal => data(await client.GET('/api/v1/version', {signal})),
-    capabilities: async signal => normalizeCapabilities(data(await client.GET('/api/v1/capabilities', {signal}))),
-    runtime: async signal => data(await client.GET('/api/v1/runtime', {signal})),
-    runtimeOutbounds: async signal => data(await client.GET('/api/v1/runtime/outbounds', {signal})),
-    trafficHistory: async (query, signal) => data(await client.GET('/api/v1/runtime/traffic/history', {params: {query}, signal})),
-    memoryHistory: async (query, signal) => data(await client.GET('/api/v1/runtime/memory/history', {params: {query}, signal})),
-    datapath: async (detail, signal) => data(await client.GET('/api/v1/datapath', {params: {query: {detail}}, signal})),
-    runtimeMemory: async signal => data(await client.GET('/api/v1/runtime/memory', {signal})),
-    nodes: async (query, signal) => data(await client.GET('/api/v1/nodes', {params: {query}, signal})),
-    groups: async signal => data(await client.GET('/api/v1/groups', {signal})),
-    group: async (id, signal) => data(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
-    selectGroup: async (groupId, body, signal) => data(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
+    discovery: async signal => read(await client.GET('/api', {signal})),
+    version: async signal => read(await client.GET('/api/v1/version', {signal})),
+    capabilities: async signal => normalizeCapabilities(read(await client.GET('/api/v1/capabilities', {signal}))),
+    runtime: async signal => read(await client.GET('/api/v1/runtime', {signal})),
+    runtimeOutbounds: async signal => read(await client.GET('/api/v1/runtime/outbounds', {signal})),
+    trafficHistory: async (query, signal) => read(await client.GET('/api/v1/runtime/traffic/history', {params: {query}, signal})),
+    memoryHistory: async (query, signal) => read(await client.GET('/api/v1/runtime/memory/history', {params: {query}, signal})),
+    datapath: async (detail, signal) => read(await client.GET('/api/v1/datapath', {params: {query: {detail}}, signal})),
+    runtimeMemory: async signal => read(await client.GET('/api/v1/runtime/memory', {signal})),
+    nodes: async (query, signal) => read(await client.GET('/api/v1/nodes', {params: {query}, signal})),
+    groups: async signal => read(await client.GET('/api/v1/groups', {signal})),
+    group: async (id, signal) => read(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
+    selectGroup: async (groupId, body, signal) => read(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
     clearGroupOverride: async (groupId, network, signal) =>
-      data(await client.DELETE('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}, query: {network}}, signal})),
+      read(await client.DELETE('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}, query: {network}}, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
       const result = await client.PATCH('/api/v1/groups/{groupId}', {
         params: {path: {groupId}, header: {'If-Match': ifMatch}},
@@ -212,34 +215,34 @@ export function createApi(base: string, token?: string): Api {
         body,
         signal
       });
-      const value = data(result);
+      const value = read(result);
       return 'operation_id' in value ? accepted({data: value, response: result.response}) : value;
     },
     startProbe: async (body, signal) => accepted(await client.POST('/api/v1/probes', {body, headers: once(), signal})),
-    connections: async (query, signal) => data(await client.GET('/api/v1/connections', {params: {query}, signal})),
-    flows: async (query, signal) => data(await client.GET('/api/v1/flows', {params: {query}, signal})),
+    connections: async (query, signal) => read(await client.GET('/api/v1/connections', {params: {query}, signal})),
+    flows: async (query, signal) => read(await client.GET('/api/v1/flows', {params: {query}, signal})),
     // Readable in openapi-fetch drops required null fields from composed schemas.
-    flow: async (id, signal) => data(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
-    dnsCache: async (query, signal) => data(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
-    dnsLog: async (query, signal) => data(await client.GET('/api/v1/dns/log', {params: {query}, signal})),
-    dnsQuery: async (domain, types, signal) => data(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
+    flow: async (id, signal) => read(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
+    dnsCache: async (query, signal) => read(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
+    dnsLog: async (query, signal) => read(await client.GET('/api/v1/dns/log', {params: {query}, signal})),
+    dnsQuery: async (domain, types, signal) => read(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
     // 204 carries no body; the response middleware has already turned any error status into an ApiError.
     closeConnection: async (connection_id, signal) => {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, headers: once(), signal});
     },
-    closeConnections: async (query, signal) => data(await client.DELETE('/api/v1/connections', {params: {query}, headers: once(), signal})),
-    runtimeSettings: async signal => data(await client.GET('/api/v1/runtime/settings', {signal})),
-    providers: async (query, signal) => data(await client.GET('/api/v1/providers', {params: {query}, signal})),
+    closeConnections: async (query, signal) => read(await client.DELETE('/api/v1/connections', {params: {query}, headers: once(), signal})),
+    runtimeSettings: async signal => read(await client.GET('/api/v1/runtime/settings', {signal})),
+    providers: async (query, signal) => read(await client.GET('/api/v1/providers', {params: {query}, signal})),
     refreshProvider: async (id, signal) => accepted(await client.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, headers: once(), signal})),
-    createProvider: async (body, signal) => data(await client.POST('/api/v1/providers', {body, signal})),
-    deleteProvider: async (id, signal) => data(await client.DELETE('/api/v1/providers/{id}', {params: {path: {id}}, signal})),
-    createNode: async (body, signal) => data(await client.POST('/api/v1/nodes', {body, signal})),
-    deleteNode: async (id, signal) => data(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
-    geodata: async signal => data(await client.GET('/api/v1/geodata', {signal})),
-    rules: async signal => data(await client.GET('/api/v1/rules', {signal})),
+    createProvider: async (body, signal) => read(await client.POST('/api/v1/providers', {body, signal})),
+    deleteProvider: async (id, signal) => read(await client.DELETE('/api/v1/providers/{id}', {params: {path: {id}}, signal})),
+    createNode: async (body, signal) => read(await client.POST('/api/v1/nodes', {body, signal})),
+    deleteNode: async (id, signal) => read(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
+    geodata: async signal => read(await client.GET('/api/v1/geodata', {signal})),
+    rules: async signal => read(await client.GET('/api/v1/rules', {signal})),
     updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {headers: once(), signal})),
-    config: async signal => data(await client.GET('/api/v1/config', {signal})),
-    validateConfig: async (body, signal) => data(await client.POST('/api/v1/config/validate', {body, signal})),
+    config: async signal => read(await client.GET('/api/v1/config', {signal})),
+    validateConfig: async (body, signal) => read(await client.POST('/api/v1/config/validate', {body, signal})),
     replaceConfigSource: async (source_id, content, ifMatch, signal) =>
       accepted(
         await client.PUT('/api/v1/config/sources/{source_id}', {
@@ -249,17 +252,17 @@ export function createApi(base: string, token?: string): Api {
           signal
         })
       ),
-    patchRuntimeSettings: async (body, signal) => data(await client.PATCH('/api/v1/runtime/settings', {body, headers: once(), signal})),
-    deleteDnsEntry: async (entry_id, signal) => data(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
-    flushDnsCache: async signal => data(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
+    patchRuntimeSettings: async (body, signal) => read(await client.PATCH('/api/v1/runtime/settings', {body, headers: once(), signal})),
+    deleteDnsEntry: async (entry_id, signal) => read(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
+    flushDnsCache: async signal => read(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.
-    routingTrace: async (body, signal) => data(await client.POST('/api/v1/routing/trace', {body, signal})) as RoutingTraceResponse,
+    routingTrace: async (body, signal) => read(await client.POST('/api/v1/routing/trace', {body, signal})) as RoutingTraceResponse,
     startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, headers: once(), signal})),
     startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, headers: once(), signal})),
     startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, headers: once(), signal})),
     operation: async (id, signal) => {
       const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
-      return {...data(result), retryAfter: retryAfter(result.response)} as OperationState;
+      return {...read(result), retryAfter: retryAfter(result.response)} as OperationState;
     },
     pollOperation,
     subscribeEvents,

@@ -1,5 +1,6 @@
 import type {Api} from './api';
 import {createApi} from './client';
+import {createServerClock, selectServerClock} from './serverClock';
 import {pinnedProfile, storageRevision, touchStorage} from './profiles';
 import {sessionExpiry, sessionToken} from './session';
 
@@ -26,9 +27,14 @@ export function getApi(): Api {
   const token = (profile && base ? sessionToken(profile.id, base) : null) ?? profile?.token;
   const key = JSON.stringify([profile?.id, base, token]);
   if (!selected || configuration !== key) {
-    if (base && base !== 'mock') selected = createApi(base, token ?? undefined);
-    else if (mockFactory) selected = mockFactory();
-    else if (selected) {
+    if (base && base !== 'mock') {
+      const clock = createServerClock();
+      selected = createApi(base, token ?? undefined, clock);
+      selectServerClock(clock);
+    } else if (mockFactory) {
+      selected = mockFactory();
+      selectServerClock(createServerClock());
+    } else if (selected) {
       // This tab saved the mock and reloads: keep serving the current backend until the mock has loaded.
       void import('./mock').then(module => {
         mockFactory = module.createMockApi;
