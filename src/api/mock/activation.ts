@@ -2,6 +2,7 @@ import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
 import {groupAdmits, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
+import {redactUrl} from './common';
 
 export function activateInventory(text: string, revision: string, nodes: Node[], groups: Group[], providers: Provider[]) {
   const {blocks, tokens} = scanConfig(text);
@@ -26,8 +27,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       .flatMap(child => blockFields(text, child, tokens))
       .find(field => field.name === 'url')?.value;
   for (const field of subscriptions) {
-    const url = URL.parse(unquote(blockUrl(field.name) ?? field.value));
-    const url_redacted = url ? url.origin + url.pathname + (url.search ? '?[redacted]' : '') : null;
+    const url_redacted = redactUrl(unquote(blockUrl(field.name) ?? field.value));
     const existing = nextProviders.find(provider => provider.name === field.name);
     if (existing) {
       existing.url_redacted = url_redacted;

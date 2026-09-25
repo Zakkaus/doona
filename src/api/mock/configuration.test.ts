@@ -154,3 +154,39 @@ it('activates included groups and rules and rejects an unresolved native include
   });
   expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(content);
 });
+
+it('changes nothing, geodata included, when any field of a settings patch is refused', async () => {
+  const api = createMockApi();
+  const before = await api.runtimeSettings();
+  const patch = {geodata: {geosite: {urls: ['https://example.com/geosite.dat']}}, log: {level: 'loud' as never}};
+  await expect(api.patchRuntimeSettings(patch)).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+  expect(await api.runtimeSettings()).toEqual(before);
+});
+
+it('reports the categories the active configuration uses once an edit activates', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  expect((await api.geodata()).required_codes?.geosite).not.toContain('category-ads-all');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = `group { proxy { policy: fixed(0) } resilient { policy: fixed(0) } }
+dns { routing { request { fallback: unused } } }
+routing { domain(geosite: category-ads-all@ads) -> block
+  dip(geoip: private) -> direct
+  fallback: block
+}`;
+  await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.geodata()).required_codes).toEqual({geosite: ['category-ads-all'], geoip: ['private']});
+});
+
+it('shows a custom geodata URL without its query once an update downloads it', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  await api.patchRuntimeSettings({geodata: {geosite: {urls: ['https://example.com/geosite.dat?token=secret']}}});
+  const accepted = await api.updateGeodata();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  const asset = (await api.geodata()).assets.find(item => item.kind === 'geosite')!;
+  expect(asset.source_redacted).toBe('https://example.com/geosite.dat?[redacted]');
+  expect(asset.fetched_url_redacted).toBe('https://example.com/geosite.dat?[redacted]');
+});
