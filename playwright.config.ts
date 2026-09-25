@@ -8,7 +8,9 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  // One retry tells a flake from a regression in the report; a test that only passes on retry still fails the run.
+  retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   outputDir: 'test-results',
   use: {
