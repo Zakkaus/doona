@@ -48,10 +48,12 @@ export function useBackendActions() {
   // Failures fold into the one summary toast, which names the first error: a toast per subscription would bury it.
   const refreshAll = () => {
     const failures: unknown[] = [];
+    let degraded = false;
     return refresh
       .refreshMany(
         subscriptions.map(item => item.id),
-        (_id, error) => failures.push(error)
+        (_id, error) => failures.push(error),
+        () => (degraded = true)
       )
       .then(
         done => {
@@ -64,6 +66,7 @@ export function useBackendActions() {
               ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
               : t('settings.refreshedAll', counts)
           );
+          if (degraded) toast('info', t('settings.refreshedDegraded'));
         },
         error => toast('negative', t('settings.refreshAllFailed', {error: errorText(error, t)}))
       );

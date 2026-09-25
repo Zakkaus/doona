@@ -475,6 +475,7 @@ export const messages = {
   'nodes.groups': 'Groups',
   'nodes.empty': 'This source has no nodes',
   'nodes.refreshFailed': 'Could not refresh {name}: {error}',
+  'nodes.refreshedDegraded': '{name}: nodes applied, but the runtime is degraded',
   'nodes.probeError': 'Could not test {name}: {error}',
   'ov.v.ebpf': 'eBPF',
   'ov.v.userspace': 'Userspace',
@@ -985,6 +986,7 @@ export const messages = {
     'Closes every connection the backend owns ({n} right now), including ones opened after this dialog; kernel-direct connections are skipped.',
   'settings.refreshAll': {one: 'Refresh subscription ({n})', other: 'Refresh all subscriptions ({n})'},
   'settings.refreshedAll': 'Subscriptions refreshed: {n} of {total}',
+  'settings.refreshedDegraded': 'Nodes applied, but the runtime is degraded',
   'settings.refreshedAllFailed': 'Subscriptions refreshed: {n} of {total}; {failed} failed: {error}',
   'settings.geodata': 'Geodata',
   'settings.geodataNote':

@@ -51,3 +51,10 @@ it('reports an operation the backend no longer knows as an unknown result and re
   await expect(settle(api, accepted, signal)).rejects.toBe(other);
   expect(refetchAll).toHaveBeenCalledOnce();
 });
+
+it('reads a degraded provider publication as applied and a rejected one as failed', () => {
+  const refresh = (code: string, details: Record<string, unknown> | null) =>
+    ({...failed(null), kind: 'provider_refresh', error: {code, message: 'Provider publication', details}}) as unknown as OperationState;
+  expect(finished(refresh('publication_degraded', {committed: true}), 'provider_refresh')).toEqual({degraded: true});
+  expect(() => finished(refresh('publication_rejected', null), 'provider_refresh')).toThrow(expect.objectContaining({key: 'ui.operationFailed'}));
+});

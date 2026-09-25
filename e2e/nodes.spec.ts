@@ -290,3 +290,29 @@ test.describe('in Traditional Chinese', () => {
     }).toPass();
   });
 });
+
+test('a refresh whose nodes were applied to a degraded runtime reads as applied with a warning', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const runtime = await api.runtime();
+  handlers['POST providers/sub-c/refresh'] = async () => ({
+    operation_id: 'refresh-degraded',
+    kind: 'provider_refresh',
+    status: 'queued',
+    href: '/api/v1/operations/refresh-degraded',
+    retryAfter: 1
+  });
+  handlers['GET operations/refresh-degraded'] = async () => ({
+    operation_id: 'refresh-degraded',
+    kind: 'provider_refresh',
+    status: 'failed',
+    created_at: runtime.observed_at,
+    started_at: runtime.observed_at,
+    finished_at: runtime.observed_at,
+    result: null,
+    error: {code: 'publication_degraded', message: 'Provider nodes were committed but the runtime is degraded.', details: {committed: true}}
+  });
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
+  await expect(page.locator('.rp-toast.info')).toContainText('sub-c: nodes applied, but the runtime is degraded');
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+});

@@ -76,6 +76,7 @@ export const messages = defineMessages({
     'settings.closeAllHelp': '關閉後端持有的全部連線（目前 {n} 條），包含此對話框開啟後建立的連線；核心直通的連線會略過。',
     'settings.refreshAll': '重新整理全部訂閱（{n}）',
     'settings.refreshedAll': '已重新整理 {n} 筆訂閱，共 {total} 筆',
+    'settings.refreshedDegraded': '節點已套用，但執行期處於降級狀態',
     'settings.refreshedAllFailed': '已重新整理 {n} 筆訂閱，共 {total} 筆；{failed} 筆失敗：{error}',
     'settings.geodata': '地理資料',
     'settings.geodataNote': '規則中 geosite 與 geoip 使用的資料檔案。更新操作會從來源下載檔案，驗證後取代現有檔案並重載。',
@@ -209,6 +210,7 @@ export const messages = defineMessages({
     'settings.closeAllHelp': '关闭后端持有的全部连接（当前 {n} 条），包括此对话框打开后建立的连接；内核直通的连接会跳过。',
     'settings.refreshAll': '刷新全部订阅（{n}）',
     'settings.refreshedAll': '已刷新 {n} 条订阅，共 {total} 条',
+    'settings.refreshedDegraded': '节点已应用，但运行期处于降级状态',
     'settings.refreshedAllFailed': '已刷新 {n} 条订阅，共 {total} 条；{failed} 条失败：{error}',
     'settings.geodata': '地理数据',
     'settings.geodataNote': '规则中 geosite 与 geoip 使用的数据文件。更新操作会从来源下载文件，校验后替换现有文件并重载。',
@@ -345,6 +347,7 @@ export const messages = defineMessages({
       'Closes every connection the backend owns ({n} right now), including ones opened after this dialog; kernel-direct connections are skipped.',
     'settings.refreshAll': {one: 'Refresh subscription ({n})', other: 'Refresh all subscriptions ({n})'},
     'settings.refreshedAll': 'Subscriptions refreshed: {n} of {total}',
+    'settings.refreshedDegraded': 'Nodes applied, but the runtime is degraded',
     'settings.refreshedAllFailed': 'Subscriptions refreshed: {n} of {total}; {failed} failed: {error}',
     'settings.geodata': 'Geodata',
     'settings.geodataNote':
