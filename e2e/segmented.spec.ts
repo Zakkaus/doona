@@ -1,5 +1,5 @@
-import {expect, test} from './fixtures';
-import type {Locator} from '@playwright/test';
+import {expect, routes, test} from './fixtures';
+import type {Locator, Page} from '@playwright/test';
 
 const ranges = ['实时', '10 分钟', '1 小时', '6 小时', '24 小时', '7 天'];
 
@@ -45,6 +45,54 @@ test.describe('360px', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 });
+
+// Every radio group a user can see fits its own box and the viewport, and a collapsed control shows a picker that does.
+// The track a collapsed control keeps as a hidden placeholder is not something a user sees, so it is not checked.
+const clipped = (page: Page) =>
+  page.evaluate(() => {
+    const inside = (box: DOMRect, outer: {left: number; right: number}) => box.left >= outer.left - 1 && box.right <= outer.right + 1;
+    const viewport = {left: 0, right: document.documentElement.clientWidth};
+    const found: string[] = [];
+    for (const group of document.querySelectorAll<HTMLElement>('[role=radiogroup]')) {
+      if (!group.checkVisibility({visibilityProperty: true})) continue;
+      const name = group.getAttribute('aria-label') ?? group.textContent;
+      if (group.scrollWidth > group.clientWidth + 1) found.push(`${name}: overflows by ${group.scrollWidth - group.clientWidth}px`);
+      const edge = group.getBoundingClientRect();
+      for (const radio of group.querySelectorAll<HTMLElement>('[role=radio],input[type=radio]')) {
+        const box = (radio.closest('label') ?? radio).getBoundingClientRect();
+        if (!inside(box, edge) || !inside(box, viewport)) found.push(`${name}: ${radio.textContent || radio.closest('label')?.textContent} is clipped`);
+      }
+    }
+    for (const fit of document.querySelectorAll<HTMLElement>('.rp-segfit[data-collapsed]')) {
+      if (!fit.checkVisibility()) continue;
+      const picker = fit.querySelector<HTMLElement>('.rp-selectbtn');
+      if (!picker?.checkVisibility({visibilityProperty: true}) || !inside(picker.getBoundingClientRect(), viewport))
+        found.push(`${fit.textContent}: collapsed without a visible picker`);
+    }
+    if (document.documentElement.scrollWidth > document.documentElement.clientWidth) found.push('the page scrolls sideways');
+    return found;
+  });
+
+for (const lang of ['zh-TW', 'en']) {
+  test.describe(`360px ${lang}`, () => {
+    test.use({viewport: {width: 360, height: 740}, storage: {'doona-lang': lang}});
+
+    for (const route of routes) {
+      test(`${route}: no radio group overflows or clips an option`, async ({page}) => {
+        await page.goto(`/#/${route}`);
+        await expect(page.locator('.rp-content > *').first()).toBeVisible();
+        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        await page.evaluate(() => document.fonts.ready);
+        await expect.poll(() => clipped(page)).toEqual([]);
+        const tabs = page.locator('.rp-content [role=tab]');
+        for (let index = 0; index < (await tabs.count()); index++) {
+          await tabs.nth(index).click();
+          await expect.poll(() => clipped(page)).toEqual([]);
+        }
+      });
+    }
+  });
+}
 
 test.describe('1440px', () => {
   test.use({viewport: {width: 1440, height: 900}, storage: {'doona-lang': 'zh-CN'}});
