@@ -37,6 +37,14 @@ it('refuses changed source anchors, unavailable identities, withheld text and no
   expect(ruleAnchor(source, {...rule, source: {...rule.source!, line: 3}})).toBeNull();
 });
 
+it('anchors a rule whose display expression ends with its outbound', () => {
+  const shown = {...rule, expression: 'l4proto(tcp, udp) -> mix'};
+  expect(ruleAnchor(source, shown)).toEqual(ruleAnchor(source, {...shown, expression: 'l4proto(tcp, udp)'}));
+  expect(ruleAnchor(source, shown)).not.toBeNull();
+  expect(ruleAnchor(source, {...shown, expression: 'l4proto(tcp) -> mix'})).toBeNull();
+  expect(ruleAnchor(source, {...shown, expression: 'l4proto(tcp, udp) -> mix(must)'})).toBeNull();
+});
+
 it('links rule sources by ID even when display names match', () => {
   const sources = [
     {id: 'a', path: 'rules.dae'},

@@ -22,18 +22,20 @@ export function ruleTargets(c: Pick<Connection, 'domain' | 'dst'>): RuleTarget[]
   return domain.length ? domain : ip ? targets([['dip', ip]]) : [];
 }
 
-// Before the rule the connection matched, so the new rule takes over its traffic, and before the first rule. Only a
-// rule doona can locate in a writable source is offered; the first choice is the default.
+// Before the rule the connection matched, so the new rule takes over its traffic, and at the earliest place doona
+// can write: before the first rule, or the first one in a writable source when earlier ones are not. Only a rule doona
+// can locate in a writable source is offered; the first choice is the default.
 export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: string | null, t: Translator) {
   const anchored = (rule: RoutingRule) => {
     const source = sources.find(source => source.id === rule.source?.source_id);
     return !!source?.writable && ruleAnchor(source, rule) !== null;
   };
-  const hit = rules.find(rule => rule.rule_id === matched);
-  const top = rules[0];
-  return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: t('conn.ruleTop')}] : [])]
-    .filter(choice => anchored(choice.rule))
-    .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression}));
+  const hit = rules.find(rule => rule.rule_id === matched && anchored(rule));
+  const top = rules.find(anchored);
+  const topLabel = (rule: RoutingRule) => (rule === rules[0] ? t('conn.ruleTop') : t('rule.positionBefore', {n: rule.index + 1}));
+  return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: topLabel(top)}] : [])].map(
+    ({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression})
+  );
 }
 
 // The position a dialog pinned while its rule still exists: the same id in the same generation, or the same id and

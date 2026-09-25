@@ -29,8 +29,12 @@ export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: Retur
   // The line must still hold this rule: a source shifted since the list was read would otherwise edit its neighbour.
   const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
   const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
-  if (!arrow || bare(arrow.to, last.to) !== (rule.outbound + (rule.must ? '(must)' : '')).replace(/\s+/g, '')) return null;
-  if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== rule.expression.replace(/\s+/g, '')) return null;
+  const target = (rule.outbound + (rule.must ? '(must)' : '')).replace(/\s+/g, '');
+  if (!arrow || bare(arrow.to, last.to) !== target) return null;
+  // The display expression may end with its outbound, as the contract shows it (`pname(curl) -> direct`), or not.
+  const shown = rule.expression.replace(/\s+/g, '');
+  const condition = shown.endsWith('->' + target) ? shown.slice(0, -target.length - 2) : shown;
+  if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== condition) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
   const to = newline === -1 ? text.length : newline + 1;
