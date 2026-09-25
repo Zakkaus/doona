@@ -1,6 +1,7 @@
 import {useRef, useState} from 'react';
 import type {GeoDataSettingsPatch} from '../../api/model';
-import {useCapabilities, useGeodata, useGroups, useNow, useRuntimeSettings} from '../../store';
+import {useCapabilities, useGeodata, useGroups, useRuntimeSettings} from '../../store';
+import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {errorText} from '../../api/error';

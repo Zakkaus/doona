@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import type {ConfigSource} from '../../api/model';
-import {validationSources} from './names';
+import {validationSources} from '../../dae/sources';
 
 export function useValidationSources(
   sources: ConfigSource[],

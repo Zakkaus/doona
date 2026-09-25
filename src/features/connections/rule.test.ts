@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
-import {ruleLine} from '../rules/source';
+import {ruleLine} from '../../dae/ruleText';
 import {pinnedPosition, rulePositions, ruleTargets} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 

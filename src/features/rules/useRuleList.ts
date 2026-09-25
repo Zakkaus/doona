@@ -7,7 +7,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
-import {addRule, removeRule, ruleAnchor} from './source';
+import {addRule, removeRule, ruleAnchor} from '../../dae/ruleText';
 import {parseRuleSeed, type RuleSeed} from './link';
 import {dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';

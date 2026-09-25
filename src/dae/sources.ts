@@ -1,5 +1,5 @@
-import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../../api/model';
-import {readGroupEntries} from '../../dae/groups';
+import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../api/model';
+import {readGroupEntries} from './groups';
 
 export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
 

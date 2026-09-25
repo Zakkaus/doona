@@ -4,7 +4,7 @@ import type {Connection, RoutingRule} from '../../api/model';
 import {offered} from '../../api/capabilities';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
-import {ruleAnchor, ruleLine, ruleOutbounds} from '../rules/source';
+import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from '../rules/usePendingApply';
 import {pinnedPosition, rulePositions, ruleTargets, type RuleTarget} from './rule';
 

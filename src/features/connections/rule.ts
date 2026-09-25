@@ -2,7 +2,7 @@ import type {ConfigSource, Connection, RoutingRule} from '../../api/model';
 import {sourceIp} from '../../api/selectors';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {Translator} from '../../i18n';
-import {ruleAnchor} from '../rules/source';
+import {ruleAnchor} from '../../dae/ruleText';
 
 export type RuleTarget = {kind: ConditionKind; condition: string};
 // A domain is matched exactly or with its subdomains; without one that dae can hold, the rule matches the destination IP.

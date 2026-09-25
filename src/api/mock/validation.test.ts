@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from './index';
-import {validationSources} from '../../features/config/names';
+import {validationSources} from '../../dae/sources';
 
 it('validates an include only together with its main source', async () => {
   const api = createMockApi();

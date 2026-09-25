@@ -3,7 +3,7 @@ import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
-import {fileName, redacted} from './names';
+import {fileName, redacted} from '../../dae/sources';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
@@ -227,7 +227,6 @@ type DiagnosticRow = {
 type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
-export {restartRequired} from './names';
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
   const paths = new Map(sources.map(source => [source.id, fileName(source)]));
   return diagnostics.map((item, index) => {
