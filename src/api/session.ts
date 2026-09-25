@@ -1,9 +1,10 @@
 import {normalizeApi, touchStorage} from './profiles';
+import {storageKeys} from './storage';
 
 // A password session belongs to one tab: sessionStorage keeps it across a reload and drops it with the tab.
 // It is bound to the profile and endpoint it was opened for, so switching either never sends it elsewhere.
 type Stored = {profileId: string; api: string; token: string; expiresAt: string};
-const KEY = 'doona-session';
+const KEY = storageKeys.session;
 
 function read(): Stored | null {
   try {

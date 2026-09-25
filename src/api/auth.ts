@@ -18,6 +18,12 @@ export async function discoverAuth(base: string, signal?: AbortSignal): Promise<
   return body.auth ?? null;
 }
 
+// A backend without discovery may still serve the native API; only a 404 from its capabilities says it does not.
+export async function servesNativeApi(base: string, signal?: AbortSignal): Promise<boolean> {
+  const response = await send(url(base, '/api/v1/capabilities'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
+  return response.status !== 404;
+}
+
 export function signInKind(auth: AuthDiscovery | null): SignIn {
   if (auth?.mode !== 'password') return 'token';
   return auth.setup_required ? 'setup' : 'login';

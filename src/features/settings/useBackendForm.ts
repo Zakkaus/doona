@@ -6,7 +6,8 @@ import {discoverAuth} from '../../api/auth';
 import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
 import {ApiError} from '../../api/error';
-import {normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
+import {DEMO_API, isDemoApi, normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
+import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
@@ -98,7 +99,7 @@ export function useBackendForm(query: string) {
     } catch {
       return;
     }
-    if (!base || base === 'mock') return;
+    if (isDemoApi(base)) return;
     const controller = new AbortController();
     discoverAuth(base, controller.signal).then(
       found => setAuth({base, password: found?.mode === 'password'}),
@@ -107,7 +108,7 @@ export function useBackendForm(query: string) {
     return () => controller.abort();
   }, [saved.api]);
   // The built-in demo ignores any token.
-  const demo = ['', 'mock'].includes(api.trim());
+  const demo = isDemoApi(api.trim());
   const passwordMode = (() => {
     try {
       return auth !== null && auth.password && auth.base === normalizeApi(api);
@@ -150,7 +151,7 @@ export function useBackendForm(query: string) {
     }
     try {
       guard.clear();
-      sessionStorage.setItem('doona-saved', '1');
+      sessionStorage.setItem(storageKeys.saved, '1');
     } catch {
       /* Storage can be unavailable. */
     }
@@ -182,7 +183,7 @@ export function useBackendForm(query: string) {
     resetProbe();
     const base = validate(api);
     if (base === null) return;
-    if (!base || base === 'mock') {
+    if (isDemoApi(base)) {
       setResult({key: 'settings.demo'});
       toast('neutral', t('settings.demo'));
       return;
@@ -234,7 +235,7 @@ export function useBackendForm(query: string) {
     if (!name.trim()) return;
     // The saved profiles, not the form: an unsaved URL or token is written only by Save.
     if (dialog === 'add') {
-      const profile = {id: uuid(), name: name.trim(), api: 'mock', token: ''};
+      const profile = {id: uuid(), name: name.trim(), api: DEMO_API, token: ''};
       persist([...saved.profiles, profile], profile.id);
     } else {
       persist(

@@ -1,5 +1,6 @@
 import {useEffect, useSyncExternalStore} from 'react';
-import {readProfiles} from './profiles';
+import {DEMO_API, readProfiles} from './profiles';
+import {storageKeys} from './storage';
 import {serverNow} from './serverClock';
 
 // Session polls extend the backend's ten-minute history: an hour at poll cadence, a week of stored minute buckets
@@ -64,10 +65,10 @@ export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSec
 type Stored = {key: string; rings: Rings<Timed>; saved: number; coarseSaved: number; writtenCoarse: Timed[] | null};
 const stores = new Map<string, Stored>();
 const coarseEvery = 10 * minute;
-const owner = (id: string, api: string) => JSON.stringify([id, api || 'mock']);
+const owner = (id: string, api: string) => JSON.stringify([id, api || DEMO_API]);
 function storageKey(name: string) {
   const {activeId, profiles} = readProfiles();
-  return `doona-rings-${name}-${owner(activeId, profiles.find(profile => profile.id === activeId)?.api ?? '')}`;
+  return `${storageKeys.ringsPrefix}${name}-${owner(activeId, profiles.find(profile => profile.id === activeId)?.api ?? '')}`;
 }
 function read(key: string): unknown {
   try {
@@ -113,7 +114,7 @@ function prune(keep: string) {
   let freed = false;
   try {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('doona-rings-') && !current.has(key)) {
+      if (key.startsWith(storageKeys.ringsPrefix) && !current.has(key)) {
         localStorage.removeItem(key);
         freed = true;
       }
@@ -143,7 +144,7 @@ export function pruneRings() {
   try {
     for (const key of Object.keys(localStorage)) {
       const found = /^doona-rings-.+?-(\[.*\])(?:-coarse)?$/.exec(key);
-      if (key.startsWith('doona-rings-') && !(found && owners.has(found[1]))) localStorage.removeItem(key);
+      if (key.startsWith(storageKeys.ringsPrefix) && !(found && owners.has(found[1]))) localStorage.removeItem(key);
     }
   } catch {
     // Unavailable storage: nothing to prune.

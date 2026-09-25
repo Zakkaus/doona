@@ -1,5 +1,6 @@
 import {createContext, useContext, useMemo} from 'react';
 import type {Key} from './locales/zh-TW';
+import {storageKeys} from '../api/storage';
 export type {Key};
 
 export type Lang = 'zh-TW' | 'zh-CN' | 'en';
@@ -28,7 +29,7 @@ export function browserLang(tags: readonly string[]): Lang {
 export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly string[]): Lang {
   let value: string | null = null;
   try {
-    value = (storage ?? localStorage).getItem('doona-lang');
+    value = (storage ?? localStorage).getItem(storageKeys.lang);
   } catch {
     // Storage blocked: fall through to the browser.
   }

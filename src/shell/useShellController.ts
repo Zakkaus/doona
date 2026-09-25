@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
 import {runAfterTransition} from 'react-aria/private/utils/runAfterTransition';
 import {consumeProfileReadError} from '../api/profiles';
+import {storageKeys} from '../api/storage';
 import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
 import {LANGS, LOCALE, loadLanguage, translate, useT, type Lang} from '../i18n';
@@ -106,8 +107,8 @@ export function useStartupToasts() {
   useEffect(() => {
     if (consumeProfileReadError()) toast('negative', t('settings.profilesCorrupt'));
     try {
-      if (sessionStorage.getItem('doona-saved')) {
-        sessionStorage.removeItem('doona-saved');
+      if (sessionStorage.getItem(storageKeys.saved)) {
+        sessionStorage.removeItem(storageKeys.saved);
         toast('positive', t('ui.saved'));
       }
     } catch {

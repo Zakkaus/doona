@@ -1,7 +1,7 @@
 import type {Api} from './api';
 import {createApi} from './client';
 import {createServerClock, selectServerClock} from './serverClock';
-import {pinnedProfile, storageRevision, touchStorage} from './profiles';
+import {isDemoApi, pinnedProfile, storageRevision, touchStorage} from './profiles';
 import {sessionExpiry, sessionToken} from './session';
 
 let selected: Api | undefined;
@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') window.addEventListener('storage', touchStora
 
 export async function initializeApi(): Promise<Api> {
   const base = pinnedProfile()?.api;
-  if (!base || base === 'mock') mockFactory = (await import('./mock')).createMockApi;
+  if (isDemoApi(base)) mockFactory = (await import('./mock')).createMockApi;
   return getApi();
 }
 
@@ -30,7 +30,7 @@ export function getApi(): Api {
   const token = (profile && base ? sessionToken(profile.id, base) : null) ?? profile?.token;
   const key = JSON.stringify([profile?.id, base, token]);
   if (!selected || configuration !== key) {
-    if (base && base !== 'mock') {
+    if (!isDemoApi(base)) {
       const clock = createServerClock();
       selected = createApi(base, token ?? undefined, clock);
       selectServerClock(clock);
