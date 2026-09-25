@@ -19,7 +19,7 @@ import {
 import ChevronDown from './icons/ChevronDown';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
-import {Check} from './Fields';
+import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {useT} from '../i18n';
 
