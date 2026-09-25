@@ -359,7 +359,7 @@
 }
 .rp-main {
   margin-inline-end: 0;
-  padding: 32px 40px 48px;
+  padding: 32px 40px calc(48px + var(--rp-dock));
   background: var(--rp-surface);
   border-radius: var(--rp-r-xl) var(--rp-r-xl) 0 0;
   min-width: 0;
@@ -391,16 +391,104 @@
   flex-direction: column;
   gap: 16px;
 }
-.rp-mobile-nav {
-  display: block;
+/* ---- Bottom bar: below the side navigation's breakpoint, four pages and More sit under the thumb. The page, the
+   action bar and the toasts keep --rp-dock clear so the bar never covers them. ---- */
+:root {
+  --rp-dock: 0px;
 }
-.rp-mobile-nav .rp-selectbtn {
-  width: 100%;
+@media (max-width: 1023.98px) {
+  :root {
+    --rp-dock: calc(57px + env(safe-area-inset-bottom));
+  }
+}
+.rp-bottomnav {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 3;
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--rp-hl-med);
+  background: var(--rp-base);
 }
 @media (min-width: 1024px) {
-  .rp-mobile-nav {
+  .rp-bottomnav {
     display: none;
   }
+}
+.rp-bottomnav > * {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--rp-subtle);
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+}
+.rp-bottomnav > * > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-bottomnav > [data-unavailable] {
+  color: var(--rp-muted);
+}
+.rp-bottomnav > [data-focus-visible] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -4px;
+  border-radius: var(--rp-r-md);
+}
+/* Weight and a rail mark the current page besides the colour. More takes the mark when the page is not in the bar. */
+.rp-bottomnav > :is([aria-current='page'], [data-current]) {
+  color: var(--rp-text);
+  font-weight: 600;
+}
+.rp-bottomnav > :is([aria-current='page'], [data-current])::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  inset-inline: 30%;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--rp-accent);
+}
+.rp-bottomnav > :is([aria-current='page'], [data-current]) > svg {
+  color: var(--rp-accent);
+}
+/* The drawer holds the desktop SideNav; it stays narrow enough to leave underlay to tap, with 44px rows. */
+.rp-modal.rp-drawer.rp-navdrawer {
+  width: min(320px, calc(100vw - 48px));
+}
+.rp-navdrawer .rp-dialog {
+  padding: 8px 12px calc(16px + env(safe-area-inset-bottom)) 0;
+  gap: 0;
+}
+.rp-navdrawer .close {
+  align-self: flex-end;
+}
+.rp-navdrawer .rp-side {
+  display: flex;
+  position: relative;
+  top: 0;
+  height: auto;
+  flex: 1;
+  /* As on the desktop: the slider runs in the 12px before the rows. */
+  padding: 0 0 0 24px;
+}
+.rp-navdrawer .rp-nav {
+  height: 44px;
 }
 .rp-title {
   display: flex;

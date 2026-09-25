@@ -1,6 +1,8 @@
 // Route ids and the page contract. A leaf module, so pages and the shell import it without an import cycle.
 export const routePaths = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules', 'nodes', 'config', 'events', 'logs', 'settings'] as const;
 export type RoutePath = (typeof routePaths)[number];
+// The pages a phone's bottom bar shows directly, in order; every page stays in the drawer behind More.
+export const barPaths = ['overview', 'connections', 'nodes', 'rules'] as const satisfies readonly RoutePath[];
 
 export function isRoutePath(path: string): path is RoutePath {
   return (routePaths as readonly string[]).includes(path);

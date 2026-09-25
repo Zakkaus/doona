@@ -9,12 +9,13 @@ const settings = readSettings({getItem: () => null, setItem: () => {}, removeIte
 const t = translate.bind(null, 'en');
 beforeEach(() => vi.stubEnv('VITE_ENGINE_ORG', 'https://github.com/daeuniverse'));
 afterEach(() => vi.unstubAllEnvs());
-it('uses the same capability policy for navigation, the page select, shortcuts and content', () => {
+it('uses the same capability policy for navigation, the bottom bar, shortcuts and content', () => {
   const capabilities = structuredClone(capabilitiesBase);
   capabilities.resources.connections.available = false;
   const view = shellView(settings, 'connections', capabilities, null, version, null, t);
   expect(view.groups.flatMap(group => group.items).find(item => item.path === 'connections')).toMatchObject({current: true, unavailable: true});
-  expect(view.choices.find(item => item.id === 'connections')?.desc).toBeDefined();
+  expect(view.bar.map(item => item.path)).toEqual(['overview', 'connections', 'nodes', 'rules']);
+  expect(view.bar.find(item => item.path === 'connections')).toMatchObject({current: true, unavailable: true});
   expect(view.shortcutPaths.c).toBeUndefined();
   expect(view.content).toEqual({kind: 'unavailable'});
   expect(view.engine.text).toContain(version.engine.version);

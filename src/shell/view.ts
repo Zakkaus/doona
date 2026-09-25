@@ -2,7 +2,7 @@ import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
 import type {PaletteId, Scheme, Settings} from './preferences';
-import type {PageProps} from './routes';
+import {barPaths, type PageProps} from './routes';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';
@@ -28,14 +28,13 @@ type NavItem = {
   current: boolean;
   unavailable: boolean;
   description: string | undefined;
-  desc: string | undefined;
 };
 export type NavGroup = {id: string; label: string; items: NavItem[]};
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
-  choices: Array<{id: string; label: string; desc: string | undefined}>;
+  bar: NavItem[];
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
   content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
@@ -74,8 +73,7 @@ export function shellView(
               Icon: item.nav.Icon,
               current: item.path === route,
               unavailable: !offered(item.path),
-              description: offered(item.path) ? undefined : t('shell.notOffered'),
-              desc: offered(item.path) ? undefined : t('shell.notOfferedShort')
+              description: offered(item.path) ? undefined : t('shell.notOffered')
             }
           ]
         : []
@@ -103,7 +101,7 @@ export function shellView(
   );
   return {
     groups,
-    choices: groups.flatMap(group => group.items.map(item => ({id: item.path, label: item.label, desc: item.desc}))),
+    bar: barPaths.map(path => groups.flatMap(group => group.items).find(item => item.path === path)!),
     current: {
       id: feature.id,
       path: route,
