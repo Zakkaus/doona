@@ -61,6 +61,77 @@ test('traffic is the first connections tab, and a point opens its connection in 
   await expect(page.getByRole('tab', {name: 'Connections'})).toHaveAttribute('aria-selected', 'true');
 });
 
+const nodeLatency = (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'Node latency', exact: true});
+
+test('the traffic tab plots every node latency and marks the nodes current connections use', async ({page}) => {
+  await page.goto('/#/connections');
+  const card = nodeLatency(page);
+  await expect(card.getByText(/^Nodes with a latency: \d+, without: \d+$/)).toBeVisible();
+  await expect(card.getByText(/^All nodes, P50: \d+ ms, P90: \d+ ms$/)).toBeVisible();
+  await expect(card.getByText(/^Nodes in use, weighted by connections, P50: \d+ ms$/)).toBeVisible();
+  // One dot per node, not only the three in use.
+  const chart = card.getByRole('img', {name: 'Node latency'});
+  await expect.poll(() => chart.locator('circle').count()).toBeGreaterThan(3);
+  await expect(card.locator('.rp-legend')).toHaveText(/In use 3.*Not in use \d+/);
+  const used = chart.locator('circle').filter({visible: true});
+  // The tip of a node in use counts its connections; hk-01 carries most of the mock's proxied traffic.
+  for (let i = 0, n = await used.count(); i < n; i++) {
+    await used.nth(i).hover();
+    if (((await page.locator('.rp-charttip').textContent()) ?? '').startsWith('hk-01')) break;
+  }
+  await expect(page.locator('.rp-charttip')).toContainText(/^hk-01.*Connections: \d+$/);
+});
+
+test('the weighted median counts the connections whose node has no latency', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET nodes'] = async () => {
+    const list = await backend.api.nodes({limit: 1000});
+    const failed = (node: (typeof list.nodes)[number]) => ({...node, health: node.health.map(h => ({...h, state: 'unavailable' as const, latency_ms: null}))});
+    return {...list, nodes: list.nodes.map(node => (node.id === 'hk-02' ? failed(node) : node))};
+  };
+  await page.goto('/#/connections');
+  await expect(nodeLatency(page).getByText(/^Nodes in use, weighted by connections, P50: \d+ ms, connections without a latency: [1-9]\d*$/)).toBeVisible();
+});
+
+test('without connection chains the latency card plots every node alike', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET connections'] = async () => {
+    const list = await backend.api.connections();
+    return {...list, tcp: list.tcp.map(row => ({...row, chain: []})), udp: list.udp.map(row => ({...row, chain: []}))};
+  };
+  await page.goto('/#/connections');
+  const card = nodeLatency(page);
+  await expect(card.getByText(/^All nodes, P50: \d+ ms, P90: \d+ ms$/)).toBeVisible();
+  await expect(card.getByText(/weighted/)).toHaveCount(0);
+  await expect(card.locator('.rp-legend')).toHaveCount(0);
+  await expect.poll(() => card.locator('circle').count()).toBeGreaterThan(3);
+});
+
+test('the latency card waits for a latency, and stays out without health samples or a node list', async ({page}) => {
+  const backend = await mockBackend(page);
+  const nodes = async (health: (node: {health: unknown[]}) => object) => {
+    const list = await backend.api.nodes({limit: 1000});
+    return {...list, nodes: list.nodes.map(node => ({...node, ...health(node)}))};
+  };
+  backend.handlers['GET nodes'] = () => nodes(node => ({health: node.health.map(h => ({...(h as object), state: 'unavailable', latency_ms: null}))}));
+  await page.goto('/#/connections');
+  await expect(nodeLatency(page).getByText('No node has a latency sample yet.', {exact: true})).toBeVisible();
+  await expect(nodeLatency(page).locator('.rp-swarm')).toHaveCount(0);
+  for (const health of [() => ({health: []}), () => ({health: undefined})]) {
+    backend.handlers['GET nodes'] = () => nodes(health);
+    const read = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/api/v1/nodes'));
+    await page.reload();
+    await read;
+    await expect(page.locator('.rp-scatter')).toBeVisible();
+    await expect(nodeLatency(page)).toHaveCount(0);
+  }
+  backend.handlers['GET nodes'] = () => nodes(node => node);
+  backend.capabilities.resources.nodes.available = false;
+  await page.reload();
+  await expect(page.locator('.rp-scatter')).toBeVisible();
+  await expect(nodeLatency(page)).toHaveCount(0);
+});
+
 test('the log heatmap sits above the list and sets the minimum level from a row', async ({page}) => {
   await page.goto('/#/logs');
   await expect(fact(page, 'Errors')).toHaveText(/^\d+ records?$/);
