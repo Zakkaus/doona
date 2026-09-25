@@ -81,6 +81,8 @@ export function useConnectionsPage({go, query}: PageProps) {
   const nodesListed = offered(capabilities.data?.resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesListed);
   const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data) : null), [nodesListed, nodes.data, rows]);
+  // A failed read keeps the card, with the reason, so it does not pass for a backend without health samples.
+  const latencyError = nodesListed && !nodes.data ? nodes.error : null;
   const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')), [rows]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
@@ -151,6 +153,8 @@ export function useConnectionsPage({go, query}: PageProps) {
     rows,
     outboundKeys,
     latency,
+    latencyError,
+    retryLatency: nodes.refetch,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {

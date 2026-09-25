@@ -132,6 +132,23 @@ test('the latency card waits for a latency, and stays out without health samples
   await expect(nodeLatency(page)).toHaveCount(0);
 });
 
+test('a failed node read keeps the latency card with the reason and a retry', async ({page}) => {
+  const backend = await mockBackend(page);
+  let fail = true;
+  backend.handlers['GET nodes'] = async () => {
+    if (fail) throw new ApiError(500, 'internal', 'Node list failed', null, null, null);
+    return backend.api.nodes({limit: 1000});
+  };
+  await page.goto('/#/connections');
+  await expect(page.locator('.rp-scatter')).toBeVisible();
+  const alert = nodeLatency(page).getByRole('alert');
+  await expect(alert).toBeVisible();
+  fail = false;
+  await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(nodeLatency(page).getByRole('alert')).toHaveCount(0);
+  await expect(nodeLatency(page).locator('.rp-swarm')).toBeVisible();
+});
+
 test('the log heatmap sits above the list and sets the minimum level from a row', async ({page}) => {
   await page.goto('/#/logs');
   await expect(fact(page, 'Errors')).toHaveText(/^\d+ records?$/);
