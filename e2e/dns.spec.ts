@@ -271,8 +271,20 @@ test('a rate-limited query says how long it waits before retrying', async ({page
   };
   await page.goto('/#/dns?tab=query&domain=example.com');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
-  const notice = page.getByRole('status').filter({hasText: /^Rate limit reached: retrying in [45] s$/});
-  await expect(notice).toBeVisible();
+  const notice = page.getByRole('status').filter({hasText: 'Rate limit reached'});
+  const shown = notice.locator('[aria-hidden="true"]');
+  await expect(shown).toHaveText(/^Rate limit reached: retrying in [45] s$/);
+  // The live region's text stays as it was when the wait began, so screen readers announce it once.
+  const heard = () =>
+    notice.evaluate(element => {
+      const copy = element.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach(node => node.remove());
+      return copy.textContent;
+    });
+  const first = await heard();
+  expect(first).toMatch(/^Rate limit reached: retrying in [45] s$/);
+  await expect(shown).not.toHaveText((await shown.textContent())!);
+  expect(await heard()).toBe(first);
   await expect(notice).toBeHidden({timeout: 10000});
   await expect(page.getByRole('heading', {name: /^example\.com\. /}).first()).toBeVisible();
 });
