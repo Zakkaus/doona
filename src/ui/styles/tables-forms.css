@@ -8,6 +8,18 @@
   overflow: auto;
   outline: none;
 }
+/* React Aria sizes the columns from the clientWidth of whichever element scrolls: this container around a native
+   table, the grid itself once virtualised. With classic scrollbars (Chromium on Linux and Windows) that width drops
+   when a scrollbar appears after the rows arrive, and again when a table switches from native to virtualised, so every
+   column slid sideways a moment after load. Reserving the gutter on the scroller keeps the width the same in every
+   state. Overlay scrollbars (Firefox on Linux, macOS) reserve nothing, which is why they never showed it.
+   As with the page gutter in foundations.css, phones are left alone: their scrollbars overlay the content. */
+@media (min-width: 640px) {
+  .rp-table:has(> table),
+  .rp-table > :is([role='grid'], [role='treegrid']):not(table) {
+    scrollbar-gutter: stable;
+  }
+}
 .rp-table table {
   --rp-cell-padding: 8px;
 }

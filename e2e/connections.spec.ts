@@ -258,7 +258,8 @@ test.describe('short connection lists', () => {
     const source = grid.getByRole('columnheader', {name: 'Device'});
     const node = grid.getByRole('columnheader', {name: 'Node'});
     await expect(source).toBeVisible();
-    await expect.poll(async () => (await source.boundingBox())!.width / (await node.boundingBox())!.width).toBeCloseTo(128 / 120, 2);
+    // Columns are whole pixels, so the ratio of two flexible columns is only as exact as a pixel of rounding.
+    await expect.poll(async () => (await source.boundingBox())!.width / (await node.boundingBox())!.width).toBeCloseTo(128 / 120, 1);
     await expect(grid.locator('[data-key="1"]').getByRole('rowheader')).toHaveText('10.0.0.12');
     await grid.locator('[data-key="1"]').focus();
     await page.keyboard.press('d');
