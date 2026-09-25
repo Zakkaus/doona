@@ -5,6 +5,9 @@ import {useSlider} from '../ui/hooks';
 import type {NavGroup} from './view';
 
 const key = 'doona-hub-pages';
+// Moving between hubs, or between a hub's pages, replaces the history entry as an Android navigation bar does, so Back
+// leaves the app's top level instead of retracing every tap.
+const replace = {replace: true};
 function readLast(): Record<string, string> {
   try {
     return JSON.parse(sessionStorage.getItem(key) ?? '{}') ?? {};
@@ -34,6 +37,7 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
         return (
           <RLink
             key={group.id}
+            routerOptions={replace}
             href={(group.items.find(item => item.path === last[group.id]) ?? group.items[0]).href}
             aria-current={open?.[0] === group.id ? 'page' : undefined}
           >
@@ -57,7 +61,7 @@ export function HubPages({hub, route}: {hub: NavGroup; route: string}) {
       <div ref={ref} className="rp-seg">
         {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         {hub.items.map(item => (
-          <RLink key={item.id} className="rp-btn" href={item.href} aria-current={item.current ? 'page' : undefined}>
+          <RLink key={item.id} className="rp-btn" href={item.href} routerOptions={replace} aria-current={item.current ? 'page' : undefined}>
             {item.label}
           </RLink>
         ))}

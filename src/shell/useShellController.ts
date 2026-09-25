@@ -68,9 +68,9 @@ export function useShellController(initial: Lang) {
     return () => removeEventListener('keydown', onKey);
   }, []);
   const navigate = useCallback(
-    (href: string) => {
+    (href: string, options?: {replace?: boolean}) => {
       const next = parseHash(href);
-      go(next.route, next.query);
+      go(next.route, next.query, options);
     },
     [go]
   );

@@ -76,6 +76,7 @@ test('language, theme, palette and wordmark are one overflow menu away', async (
   const top = page.locator('.rp-top');
   await expect(top.getByRole('button', {name: 'Search'})).toBeVisible();
   await expect(top.getByRole('button', {name: 'Refresh'})).toBeVisible();
+  await expect(top.getByRole('button', {name: 'Reload honk'})).toBeVisible();
   for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
   const more = top.getByRole('button', {name: 'More options'});
   const box = (await more.boundingBox())!;
@@ -282,6 +283,32 @@ test.describe('360px actions', () => {
       );
       expect(stranded).toEqual([]);
     });
+
+  test('moving between hubs and their pages does not stack history', async ({page}) => {
+    // A same-origin page before the app stands for wherever the user came from.
+    await page.goto('/logo.svg');
+    await page.goto('/#/overview');
+    await expect(bar(page).getByRole('link', {name: 'Overview'})).toHaveAttribute('aria-current', 'page');
+    const entries = await page.evaluate(() => history.length);
+    const pages = page.locator('.rp-hubnav');
+    for (const [where, name] of [
+      [bar(page), 'Traffic'],
+      [pages, 'DNS'],
+      [pages, 'Logs'],
+      [bar(page), 'Traffic'],
+      [bar(page), 'Routing'],
+      [pages, 'Nodes'],
+      [bar(page), 'Settings'],
+      [pages, 'Configuration'],
+      [bar(page), 'Overview'],
+      [pages, 'Activity']
+    ] as const)
+      await where.getByRole('link', {name, exact: true}).click();
+    await expect(page).toHaveURL(/#\/activity$/);
+    expect(await page.evaluate(() => history.length)).toBe(entries);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/logo\.svg$/);
+  });
 
   test('toolbar actions past the first move into a menu', async ({page}) => {
     for (const [route, visible, collapsed] of [

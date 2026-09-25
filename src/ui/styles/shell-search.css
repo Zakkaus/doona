@@ -415,6 +415,11 @@
     display: none;
   }
 }
+/* The open hub's pages keep one row: a set too wide for a narrow phone scrolls inside its track. */
+.rp-hubnav .rp-seg {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
 .rp-hubbar > a {
   flex: 1 1 0;
   min-width: 0;
