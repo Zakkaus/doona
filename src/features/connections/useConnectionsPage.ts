@@ -1,4 +1,5 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
+import {readTag} from '../shared/taggedId';
 import {useCapabilities, useConnectionClose, useConnections, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
@@ -158,11 +159,11 @@ export function useConnectionsPage({go, query}: PageProps) {
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {
-      const id = String(key);
-      if (id.startsWith('src:')) {
+      const picked = readTag(String(key), ['src', 'rule'] as const);
+      if (picked?.kind === 'src') {
         setText('');
-        go('connections', stay(query, {src: src === id.slice(4) ? null : id.slice(4), q: null}));
-      } else if (id.startsWith('rule:')) setFilter('rule', rule === id.slice(5) ? 'all' : id.slice(5));
+        go('connections', stay(query, {src: src === picked.value ? null : picked.value, q: null}));
+      } else if (picked?.kind === 'rule') setFilter('rule', rule === picked.value ? 'all' : picked.value);
     },
     columns: columns.map(column => ({id: column.id, label: t(column.label)})),
     visibleColumns: columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id),

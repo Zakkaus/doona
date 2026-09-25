@@ -9,7 +9,7 @@ import {parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
 import {groupPolicyText} from '../../shared/policyText';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
-import {treeIndex, treeRows} from './map';
+import {stageOf, treeIndex, treeRows} from './map';
 import {href} from '../../../shell/route';
 import {ruleSeedHref} from '../../shared/link';
 const traceGaps: Record<string, Key> = {
@@ -326,7 +326,7 @@ export function treeGeometry(tree: RoutingTree, measured: number | null, t: Tran
   const outbounds = new Map(tree.outbounds.map(outbound => [outbound.id, outbound]));
   const geometry = tree.links.flatMap(link => {
     if (!layout.at.has(link.source) || !layout.at.has(link.target)) return [];
-    const from = link.source.startsWith('outbound:') ? 'outbound' : tree.by;
+    const from = stageOf(link.source) === 'outbound' ? 'outbound' : tree.by;
     const start = column(from);
     const x1 = start.left + start.width;
     const x2 = column(from === 'outbound' ? 'node' : 'outbound').left;
