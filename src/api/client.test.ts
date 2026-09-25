@@ -303,6 +303,51 @@ describe('native transport', () => {
     expect(await outcome).toMatchObject({status: 403, code: 'permission_denied'});
     expect(request).toHaveBeenCalledTimes(4);
   });
+  // Events advertise their heartbeat interval; logs fall back to the contract ceiling of 15 seconds.
+  it.each([
+    ['events', 10],
+    ['logs', 15]
+  ] as const)('reconnects a silent %s stream after missed heartbeats and resumes from its cursor', async (kind, seconds) => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const states: boolean[] = [];
+    const encoder = new TextEncoder();
+    let beat: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const open = () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(c) {
+            beat = c;
+            c.enqueue(encoder.encode('id: instance:4\nevent: stream.ready\ndata: {"instance_id":"instance","observed_at":"2026-09-15T14:00:00Z"}\n\n'));
+          }
+        }),
+        {headers: {'Content-Type': 'text/event-stream'}}
+      );
+    const request = vi.fn(async () => open());
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    const options = {signal: controller.signal, onConnectionChange: (state: boolean) => states.push(state)};
+    const stream =
+      kind === 'events' ? api.subscribeEvents({...options, heartbeatSeconds: seconds, onEvent: () => {}}) : api.subscribeLogs({...options, onRecord: () => {}});
+    // Heartbeat comments keep a quiet stream open.
+    for (let i = 0; i < 3; i++) {
+      await vi.advanceTimersByTimeAsync(seconds * 2000);
+      beat!.enqueue(encoder.encode(': heartbeat\n'));
+    }
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(states).toEqual([false, true]);
+    // Two and a half intervals of silence: the stream is reported down and reopened from its cursor.
+    await vi.advanceTimersByTimeAsync(seconds * 2500 - 1);
+    expect(states).toEqual([false, true]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(states.at(-1)).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(new Headers((request.mock.calls[1] as unknown as [URL, RequestInit])[1].headers).get('Last-Event-ID')).toBe('instance:4');
+    expect(states.at(-1)).toBe(true);
+    controller.abort();
+    await stream;
+  });
   it('reports readiness and disconnection while waiting to resume the stream', async () => {
     vi.useFakeTimers();
     const controller = new AbortController();

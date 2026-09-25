@@ -36,6 +36,10 @@ function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; respons
 const MAX_REFUSALS = 3;
 // Requests that write nothing, so a refusal is safe to replay without an Idempotency-Key.
 const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
+// Both streams send a heartbeat comment at least this often while idle. A half-open connection never errors, so a
+// stream silent for MISSED_HEARTBEATS intervals is treated as dropped.
+const HEARTBEAT_SECONDS = 15;
+const MISSED_HEARTBEATS = 2.5;
 
 /** Base is the server root, optionally including a reverse-proxy prefix. */
 export function createApi(base: string, token?: string, clock: ServerClock = createServerClock()): Api {
@@ -112,13 +116,14 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     }
   }
   // Both SSE feeds resume with Last-Event-ID and honour Retry-After; cursor expiry restarts at the head, a definitive
-  // 4xx stops, and transient failures back off to 30 seconds.
+  // 4xx stops, and transient failures and silent connections back off to 30 seconds.
   async function subscribeStream(
     url: URL,
     lastEventId: string | undefined,
     signal: AbortSignal | undefined,
     onConnectionChange: ((ready: boolean) => void) | undefined,
-    onFrame: (event: string, data: unknown, cursor: string) => void
+    onFrame: (event: string, data: unknown, cursor: string) => void,
+    heartbeatSeconds = HEARTBEAT_SECONDS
   ): Promise<void> {
     let cursor = lastEventId;
     let backoff = 1;
@@ -127,9 +132,18 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     try {
       while (!signal?.aborted) {
         onConnectionChange?.(false);
+        const attempt = new AbortController();
+        const cancel = () => attempt.abort(signal?.reason);
+        signal?.addEventListener('abort', cancel, {once: true});
+        let silence: ReturnType<typeof setTimeout> | undefined;
+        const alive = () => {
+          clearTimeout(silence);
+          silence = setTimeout(() => attempt.abort(), heartbeatSeconds * MISSED_HEARTBEATS * 1000);
+        };
+        alive();
         try {
           const streamHeaders = {...headers, Accept: 'text/event-stream', ...(cursor ? {'Last-Event-ID': cursor} : {})};
-          const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal});
+          const response = await fetch(url, {headers: streamHeaders, cache: 'no-store', signal: attempt.signal});
           if (!response.ok) {
             const error = await responseError(response);
             if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
@@ -158,7 +172,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
                 onFrame(frame.event, value, cursor ?? '');
               }
             },
-            signal
+            attempt.signal,
+            alive
           );
           onConnectionChange?.(false);
           await wait(retryAfter(response), signal);
@@ -169,6 +184,9 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
           await wait(Math.max(backoff, pause), signal);
           pause = 0;
           backoff = Math.min(backoff * 2, 30);
+        } finally {
+          clearTimeout(silence);
+          signal?.removeEventListener('abort', cancel);
         }
       }
     } catch (error) {
@@ -177,12 +195,19 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       onConnectionChange?.(false);
     }
   }
-  function subscribeEvents({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
+  function subscribeEvents({kinds, lastEventId, heartbeatSeconds, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
     if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
-    return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
-      if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
-    });
+    return subscribeStream(
+      url,
+      lastEventId,
+      signal,
+      onConnectionChange,
+      (event, data, cursor) => {
+        if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
+      },
+      heartbeatSeconds
+    );
   }
   function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
     const url = new URL(baseUrl + '/api/v1/logs', globalThis.location?.href);

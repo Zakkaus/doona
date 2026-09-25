@@ -102,6 +102,7 @@ it('refreshes capabilities on generation and reconnect without replacing a healt
   await vi.advanceTimersByTimeAsync(0);
   await resource.refetch();
   expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  expect(options.heartbeatSeconds).toBe(capabilities.resources.events.heartbeat_seconds);
   expect(eventStatus(api).connected).toBe(true);
   const changed = structuredClone(capabilities);
   changed.resources.probes.limits!.max_members_per_job = 3;

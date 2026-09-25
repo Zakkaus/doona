@@ -117,6 +117,8 @@ export type LogOptions = {
 export type EventOptions = {
   kinds?: EventKind[];
   lastEventId?: string;
+  /** `resources.events.heartbeat_seconds`; the contract ceiling of 15 applies when absent. */
+  heartbeatSeconds?: number;
   signal?: AbortSignal;
   onEvent: (event: ApiEvent) => void;
   onConnectionChange?: (connected: boolean) => void;

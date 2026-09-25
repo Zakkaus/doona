@@ -1,7 +1,7 @@
 type SseFrame = {id?: string; event: string; data: string};
 
-/** Dispatch complete frames only; CRLF and UTF-8 may cross fetch chunks. */
-export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame: SseFrame) => void, signal?: AbortSignal): Promise<void> {
+/** Dispatch complete frames only; CRLF and UTF-8 may cross fetch chunks. `onChunk` sees every read, comments included. */
+export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame: SseFrame) => void, signal?: AbortSignal, onChunk?: () => void): Promise<void> {
   signal?.throwIfAborted();
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -34,6 +34,7 @@ export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame:
     while (true) {
       const {value, done} = await reader.read();
       signal?.throwIfAborted();
+      onChunk?.();
       buffer += decoder.decode(value, {stream: !done});
       let start = 0;
       for (let i = 0; i < buffer.length; i++) {
