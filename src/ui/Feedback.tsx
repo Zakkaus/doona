@@ -19,8 +19,12 @@ import {errorText, failureNotice} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 
-export function Empty({children}: {children: ReactNode}) {
-  return <div className="rp-empty">{children}</div>;
+export function Empty({role, children}: {role?: 'alert'; children: ReactNode}) {
+  return (
+    <div className="rp-empty" role={role}>
+      {children}
+    </div>
+  );
 }
 
 export function Loading({children}: {children?: ReactNode}) {
