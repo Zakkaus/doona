@@ -62,7 +62,8 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
       for (const network of ['tcp', 'udp'] as const) add(round, await closeInBatches(api, {...query, type: network}, signal));
       return {closed: closed + round.closed, skipped: round.skipped};
     }
-    const listing = await api.connections({type, src: query.src, detail: 'summary', limit: listLimit}, signal);
+    // Only the full detail tier carries `src`.
+    const listing = await api.connections({type, src: query.src, detail: 'full', limit: listLimit}, signal);
     const listed = listing[type];
     const sources = new Map<string | undefined, string[]>();
     for (const row of listed) {

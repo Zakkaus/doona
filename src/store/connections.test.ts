@@ -6,7 +6,7 @@ import {closeInBatches} from './connections';
 type Row = {id: string; network: 'tcp' | 'udp'; src: string | null; owned: boolean};
 
 // A backend that refuses a bulk close selecting more than `limit` live entries, as honk does, and lists at most
-// `page` rows.
+// `page` rows; like honk, only the full detail tier carries `src`.
 function backend(rows: Row[], limit: number, page = 1000) {
   const live = [...rows];
   const calls: string[] = [];
@@ -27,10 +27,11 @@ function backend(rows: Row[], limit: number, page = 1000) {
       if (!row.owned) throw new ApiError(409, 'state_conflict', 'Not closable');
       live.splice(live.indexOf(row), 1);
     },
-    connections: async (query?: {type?: 'tcp' | 'udp' | 'all'; src?: string; limit?: number}) => {
+    connections: async (query?: {type?: 'tcp' | 'udp' | 'all'; src?: string; limit?: number; detail?: 'summary' | 'full'}) => {
       const selected = live.filter(matches({type: query?.type, src: query?.src}));
       const shown = selected.slice(0, query?.limit ?? page).slice(0, page);
-      const list = (network: 'tcp' | 'udp') => shown.filter(row => row.network === network).map(row => ({id: row.id, src: row.src}) as unknown as Connection);
+      const list = (network: 'tcp' | 'udp') =>
+        shown.filter(row => row.network === network).map(row => ({id: row.id, ...(query?.detail === 'full' ? {src: row.src} : {})}) as unknown as Connection);
       const total = (network: 'tcp' | 'udp') => selected.filter(row => row.network === network).length;
       return {
         tcp: list('tcp'),
