@@ -10,7 +10,7 @@ import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {millis} from '../../api/u64';
 import {useLang, useT} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {dnsView, evaluationView, traceStatusView} from './view';
 import {queryTypes} from '../dns/query';
 import {errorText} from '../../api/error';
@@ -148,7 +148,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
         sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
       );
     } catch (error) {
-      toast('negative', t('nodes.probeError', {name: node.name, error: errorText(error, t)}));
+      toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}));
     }
   };
   return {

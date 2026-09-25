@@ -14,8 +14,8 @@ import Close from './icons/Close';
 import CheckmarkCircle from './icons/CheckmarkCircle';
 import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
-import {useT} from '../i18n';
-import {errorText} from '../api/error';
+import {useT, type Translator} from '../i18n';
+import {errorText, failureNotice} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 
@@ -154,6 +154,11 @@ export const toast = (kind: ToastKind, text: string) => {
     }
   );
   queued.set(id, key);
+};
+// A failed action's toast; `wrap` words the failure. An unknown operation outcome is shown on its own, neutrally.
+export const toastFailure = (error: unknown, t: Translator, wrap: (error: string) => string) => {
+  const notice = failureNotice(error, t, wrap);
+  toast(notice.kind, notice.text);
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 export function Toasts() {

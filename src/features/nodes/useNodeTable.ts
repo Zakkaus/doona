@@ -5,7 +5,7 @@ import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
 import {millis} from '../../api/u64';
-import {toast, useLinked, type TableSort} from '../../ui/ui';
+import {toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {collator, nodeRows, nodeRowView} from './view';
@@ -87,7 +87,7 @@ export function useNodeTable(input: NodeTableInput) {
                 sample ? t('nodes.probed', {name: node.name, n: millis(sample.latency_ms!)}) : t('nodes.probeFailed', {name: node.name})
               );
             },
-            error => toast('negative', t('nodes.probeError', {name: node.name, error: errorText(error, t)}))
+            error => toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}))
           ),
         menu: () => [
           ...entries

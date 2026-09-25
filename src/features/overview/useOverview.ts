@@ -1,11 +1,10 @@
 import {useMemo} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeOperations, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName, toast} from '../../ui/ui';
+import {downloadFile, exportName, toast, toastFailure} from '../../ui/ui';
 import {usePalette} from '../../ui/charts';
 import {lifecycleActions, overviewExport, overviewView} from './view';
 import {operationLabels} from '../../api/selectors';
-import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 
 export function useOverview() {
@@ -23,7 +22,7 @@ export function useOverview() {
       const result = await operations.run(kind);
       if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
     } catch (error) {
-      toast('negative', t('ov.operationError', {error: errorText(error, t)}));
+      toastFailure(error, t, error => t('ov.operationError', {error}));
     }
   };
   const data = useMemo(

@@ -76,8 +76,8 @@ test('a reload the backend forgot while polling reports an unknown result and re
   const versionReads = () => requests.filter(request => new URL(request.url()).pathname === '/api/v1/version').length;
   await expect.poll(versionReads).toBe(1);
   await reload.click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Result unknown; the backend no longer tracks this operation');
-  await expect(page.locator('.rp-toast.negative')).not.toContainText('Resource not found');
+  await expect(page.locator('.rp-toast.neutral')).toHaveText(/^Could not confirm the result of the operation; the data was reloaded/);
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   await expect.poll(versionReads).toBe(2);
 });
 

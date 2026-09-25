@@ -30,7 +30,7 @@ export function useMode() {
       toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
     }
     const problem = editProblem(result, t);
-    if (problem) toast('negative', problem);
+    if (problem) toast(problem.kind, problem.text);
   };
   return {
     ...view,

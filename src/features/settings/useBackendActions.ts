@@ -12,7 +12,7 @@ import {
 import {lifecycleActions} from '../overview/view';
 import {closedAllTone, operationLabels} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {geodataRows} from './view';
 import {geodataConfigurable} from './geodata';
 import {errorText} from '../../api/error';
@@ -73,7 +73,7 @@ export function useBackendActions() {
       result => {
         if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
       },
-      error => toast('negative', t('ov.operationError', {error: errorText(error, t)}))
+      error => toastFailure(error, t, error => t('ov.operationError', {error}))
     );
   const closeAll = () =>
     closing.closeAll({ids: [], query: {all: true}}).then(

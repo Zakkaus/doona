@@ -2,7 +2,7 @@ import {useCallback, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
@@ -72,7 +72,7 @@ export function useNodesPage({go, query}: PageProps) {
       void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
         if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}));
         const problem = editProblem(result, t);
-        if (problem) toast('negative', problem);
+        if (problem) toast(problem.kind, problem.text);
       });
     },
     [apply, t]
@@ -106,7 +106,7 @@ export function useNodesPage({go, query}: PageProps) {
             result => {
               if (result) toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
             },
-            error => toast('negative', t('nodes.addedRefreshFailed', {name, error: errorText(error, t)}))
+            error => toastFailure(error, t, error => t('nodes.addedRefreshFailed', {name, error}))
           );
           return;
         }
@@ -124,8 +124,8 @@ export function useNodesPage({go, query}: PageProps) {
             {kind: 'addNode', group, value: node}
           ])
         );
-        const text = editProblem(result, t);
-        if (text) refuse(text);
+        const problem = editProblem(result, t);
+        if (problem) refuse(problem.text);
         if (result.kind !== 'ok') return;
         toast('positive', t('nodes.joined', {name: node, group}));
       } else if (dialog.kind === 'removeProvider') {
