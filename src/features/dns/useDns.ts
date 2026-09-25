@@ -185,7 +185,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMediaQuery(panelQuery);
   const types = capabilities.data?.resources.dns_query.record_types;
-  const view = useMemo(() => dnsLogView(data, enabled, locale, t, types), [data, enabled, locale, t, types]);
+  const view = useMemo(() => dnsLogView(data, enabled, t, types), [data, enabled, t, types]);
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
   return {
     ...view,

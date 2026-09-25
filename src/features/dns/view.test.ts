@@ -26,7 +26,7 @@ it('uses the same nullable field and answer projection for queries and log detai
   };
   const query = dnsQueryView(result, capabilities.resources, 'A', 'example.com', false, t);
   const data = {observed_at: record.observed_at, total: 1, next_cursor: null, records: [record]};
-  const log = dnsLogView(data, true, 'en-US', t);
+  const log = dnsLogView(data, true, t);
   expect(query.cards[0].answers).toEqual(dnsLogDetail(data, record.id, 'en-US', t)?.answers);
   expect(query.cards[0].fields).toContainEqual([t('ui.upstream'), '—']);
   expect(query.cards[0].fields).toContainEqual([t('ui.elapsed'), t('ui.latency', {n: '0'})]);
@@ -55,19 +55,19 @@ it('filters cache rows case-insensitively without narrowing the flush scope or c
 
 it('shows DNS failures instead of answer text and clears missing log selections', () => {
   const data = {observed_at: record.observed_at, total: 1, next_cursor: null, records: [{...record, status: 'NXDOMAIN', cached: false}]};
-  const log = dnsLogView(data, true, 'en-US', t);
+  const log = dnsLogView(data, true, t);
   expect(log.rows[0]).toMatchObject({resultError: true, result: 'NXDOMAIN', upstream: '—'});
   expect(dnsLogDetail(data, 'missing', 'en-US', t)).toBeNull();
 });
 
 it('offers observed and advertised record types without inventing log vocabulary', () => {
   const data = {observed_at: record.observed_at, total: 5, next_cursor: 'older', records: [{...record, question: {name: 'example.com.', type: 'CNAME'}}]};
-  const view = dnsLogView(data, true, 'en-US', t, ['A']);
+  const view = dnsLogView(data, true, t, ['A']);
   expect(view.choices.map(choice => choice.id)).toEqual(['all', 'A', 'CNAME']);
   expect(view.loaded).toContain('1 loaded');
-  expect(dnsLogView({...data, next_cursor: null}, true, 'en-US', t, ['A']).loaded).toBe('');
+  expect(dnsLogView({...data, next_cursor: null}, true, t, ['A']).loaded).toBe('');
   expect(view.total).toContain('5 records');
-  expect(dnsLogView(undefined, true, 'en-US', t).choices.map(choice => choice.id)).toEqual(['all']);
+  expect(dnsLogView(undefined, true, t).choices.map(choice => choice.id)).toEqual(['all']);
 });
 
 it('appends older pages without duplicating overlapping records or changing the snapshot total', () => {
