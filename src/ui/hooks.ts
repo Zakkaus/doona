@@ -31,7 +31,8 @@ export function useSlider(value: string, selector = '[data-selected]') {
 }
 
 // Whether an element's content is wider than the element, tracked through resizes of it and of its children (a label
-// that changes, a web font that arrives). `key` names the children, so new ones are observed.
+// that changes, a web font that arrives). `key` names the children, so new ones are observed. A resize commits before
+// the browser paints, so no frame shows the content spilling out.
 export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
   const [over, setOver] = useState(false);
   useLayoutEffect(() => {
@@ -39,7 +40,7 @@ export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
     if (!el) return;
     const measure = () => setOver(el.scrollWidth > el.clientWidth);
     measure();
-    const ro = new ResizeObserver(measure);
+    const ro = new ResizeObserver(() => flushSync(measure));
     ro.observe(el);
     for (const child of el.children) ro.observe(child);
     return () => ro.disconnect();

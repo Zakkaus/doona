@@ -29,7 +29,7 @@ test.describe('360px', () => {
     await expect(picker).toBeVisible();
     await expect(picker).toContainText('实时');
     await expect(card.getByRole('radiogroup', {name: '历史范围'})).toHaveCount(0);
-    expect(await spill(card)).toEqual([]);
+    await expect.poll(() => spill(card)).toEqual([]);
 
     await picker.click();
     const options = page.getByRole('listbox').getByRole('option');
@@ -59,15 +59,28 @@ test.describe('1440px', () => {
     await expect(picker).toHaveCount(0);
     const control = card.locator('.rp-segfit');
     const height = (await control.boundingBox())!.height;
+    // An observer created after the control's own runs after it in the same pass, before the browser paints: at that
+    // point the mode must already match the fit, so no frame shows the track spilling out or both modes at once.
+    await card.evaluate(el => {
+      const fit = el.querySelector<HTMLElement>('.rp-segfit')!;
+      const seg = fit.querySelector<HTMLElement>('.rp-seg')!;
+      const seen: string[] = [];
+      (window as unknown as {seen: string[]}).seen = seen;
+      new ResizeObserver(() => {
+        const over = seg.scrollWidth > seg.clientWidth;
+        if (over !== fit.hasAttribute('data-collapsed') || over !== !!fit.querySelector('.rp-segpick')) seen.push(`over ${over}`);
+      }).observe(el);
+    });
 
     await card.evaluate(el => (el.style.width = '300px'));
     await expect(picker).toBeVisible();
     await expect(group).toHaveCount(0);
     expect((await control.boundingBox())!.height).toBe(height);
-    expect(await spill(card)).toEqual([]);
+    await expect.poll(() => spill(card.locator('.rp-row').first())).toEqual([]);
 
     await card.evaluate(el => (el.style.width = ''));
     await expect(group).toBeVisible();
     await expect(picker).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as {seen: string[]}).seen)).toEqual([]);
   });
 });
