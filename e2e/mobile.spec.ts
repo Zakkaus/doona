@@ -40,9 +40,21 @@ test('every page is at most two taps away: its hub, then its page', async ({page
         await page.locator('.rp-hubnav').getByText(label!, {exact: true}).click();
       }
       await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-      await expect(page.locator('.rp-hubnav [data-selected]')).toHaveText((await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent())!);
+      await expect(page.locator('.rp-hubnav [aria-current="page"]')).toHaveText((await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent())!);
     }
   }
+});
+
+test('the open hub lists its pages as links, the current one marked', async ({page}) => {
+  await page.goto('/#/dns');
+  const pages = page.getByRole('navigation', {name: 'Traffic'});
+  await expect(pages.getByRole('link')).toHaveText(['Connections', 'DNS', 'Logs', 'Events']);
+  await expect(pages.getByRole('radio')).toHaveCount(0);
+  await expect(pages.locator('[aria-current]')).toHaveCount(1);
+  await expect(pages.getByRole('link', {name: 'DNS'})).toHaveAttribute('aria-current', 'page');
+  await pages.getByRole('link', {name: 'Events'}).click();
+  await expect(page).toHaveURL(/#\/events$/);
+  await expect(pages.getByRole('link', {name: 'Events'})).toHaveAttribute('aria-current', 'page');
 });
 
 test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
@@ -89,7 +101,7 @@ for (const width of [320, 360])
       test.use({viewport: {width, height: 700}, storage: {'doona-lang': lang}});
       test('fits on one row without truncating', async ({page}) => {
         await page.goto('/#/overview');
-        await expect(page.locator('.rp-top .rp-top-more button')).toBeVisible();
+        await expect(page.locator('.rp-top .rp-narrow-only button')).toBeVisible();
         const layout = await page.locator('.rp-top').evaluate(top => {
           const bounds = top.getBoundingClientRect();
           const visible = [...top.querySelectorAll<HTMLElement>('button, .rp-brand-text > span')].filter(el => el.getClientRects().length);
@@ -122,6 +134,10 @@ test.describe('desktop', () => {
       ).toEqual(hub.pages.map(route => `#/${route}`));
     await expect(page.locator('.rp-hubbar')).toBeHidden();
     await expect(page.locator('.rp-hubnav')).toBeHidden();
+    // Page actions stay separate buttons.
+    const content = page.locator('.rp-content');
+    for (const name of ['Export state JSON', 'Reload', 'Suspend']) await expect(content.getByRole('button', {name, exact: true})).toBeVisible();
+    await expect(content.getByRole('button', {name: 'More actions'})).toBeHidden();
     // The top bar keeps its separate language, palette and theme controls.
     const top = page.locator('.rp-top');
     for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeVisible();
@@ -242,4 +258,52 @@ test.describe('320px', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }
+});
+
+// A common phone width: every page's controls lie on screen or inside something that scrolls sideways, and actions a
+// toolbar collapses on a phone stay one menu away.
+test.describe('360px actions', () => {
+  test.use({viewport: {width: 360, height: 740}});
+  for (const route of routes)
+    test(`every control on ${route} is reachable`, async ({page}) => {
+      await page.goto(`/#/${route}`);
+      await expect(page.locator('.rp-content > *').first()).toBeVisible();
+      await expect(page.locator(`.rp-hubnav [href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
+      const stranded = await page.locator('.rp-content').evaluate(content =>
+        [...content.querySelectorAll<HTMLElement>('button, a[href]')]
+          .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+          .filter(el => {
+            for (let up = el.parentElement; up && up !== content; up = up.parentElement)
+              if (/auto|scroll/.test(getComputedStyle(up).overflowX) && up.scrollWidth > up.clientWidth) return false;
+            const box = el.getBoundingClientRect();
+            return box.left < 0 || box.right > innerWidth;
+          })
+          .map(el => el.getAttribute('aria-label') ?? el.textContent)
+      );
+      expect(stranded).toEqual([]);
+    });
+
+  test('toolbar actions past the first move into a menu', async ({page}) => {
+    for (const [route, visible, collapsed] of [
+      ['dns?tab=log', 'Export CSV', ['Refresh', 'Load older records']],
+      ['logs', 'Clear', ['Export']],
+      ['overview', 'Export state JSON', ['Reload', 'Suspend']]
+    ] as const) {
+      await page.goto(`/#/${route}`);
+      const content = page.locator('.rp-content');
+      // The search fields carry a Clear button of their own.
+      const action = (name: string) => content.locator('button.rp-btn').filter({hasText: new RegExp(`^${name}$`)});
+      await expect(action(visible)).toBeVisible();
+      for (const name of collapsed) await expect(action(name)).toBeHidden();
+      await content.getByRole('button', {name: 'More actions'}).click();
+      await expect(page.getByRole('menu', {name: 'More actions'}).getByRole('menuitem')).toHaveText([...collapsed]);
+      await page.keyboard.press('Escape');
+    }
+    await page.goto('/#/logs');
+    await expect(page.locator('.rp-table [role=row]').nth(1)).toBeVisible();
+    await page.locator('.rp-content').getByRole('button', {name: 'More actions'}).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('menuitem', {name: 'Export'}).click();
+    expect((await download).suggestedFilename()).toMatch(/\.(json|jsonl|txt|log|csv)$/);
+  });
 });

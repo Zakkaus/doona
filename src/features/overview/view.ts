@@ -5,6 +5,7 @@ import {operationLabels, lifecycleStates, lifecycleTone, shortId} from '../../ap
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
+import type {Action} from '../../ui/ActionGroup';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -98,16 +99,15 @@ const resourceLabels = {
   geodata: 'settings.geodata'
 } as const satisfies Record<string, Key>;
 
-export type LifecycleAction = {id: string; label: string; pending: boolean; disabled: boolean; run: () => void};
 export function lifecycleActions(
   canRun: (kind: keyof typeof operationLabels) => boolean,
   busy: string | null,
   run: (kind: keyof typeof operationLabels) => void,
   t: LabelFn
-): LifecycleAction[] {
+): Action[] {
   return (Object.keys(operationLabels) as Array<keyof typeof operationLabels>)
     .filter(kind => canRun(kind) || busy === kind)
-    .map(kind => ({id: kind, label: t(operationLabels[kind]), pending: busy === kind, disabled: !!busy, run: () => run(kind)}));
+    .map(kind => ({id: kind, label: t(operationLabels[kind]), isPending: busy === kind, isDisabled: !!busy, onAction: () => run(kind)}));
 }
 
 export function overviewView(

@@ -102,7 +102,7 @@ export const TopBar = memo(function TopBar({
           {!!held && <span className="rp-held-count">{held}</span>}
         </Button>
         {/* Below the side navigation's breakpoint, language and appearance share one overflow menu. */}
-        <span className="rp-top-wide">
+        <span className="rp-wide-only">
           <Separator orientation="vertical" className="rp-vrule" />
           <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
             <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
@@ -114,7 +114,7 @@ export const TopBar = memo(function TopBar({
             <SchemeIcon dark={ap.dark} />
           </Button>
         </span>
-        <span className="rp-top-more">
+        <span className="rp-narrow-only">
           <ChoiceMenu
             quiet
             chevron={false}

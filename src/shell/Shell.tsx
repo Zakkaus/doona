@@ -2,20 +2,20 @@ import './install';
 import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
-import {Button, ConfirmDialog, Toasts, Segmented, ErrorMessage, Loading, Empty} from '../ui/ui';
+import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
 import {SettingsContext} from './preferences';
 import type {Settings} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
-import {HubBar} from './HubBar';
+import {HubBar, HubPages} from './HubBar';
 import {TopBar} from './TopBar';
 import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
-import {isRoutePath, type PageProps} from './routes';
+import type {PageProps} from './routes';
 import {RefusalWait} from './RefusalWait';
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
 const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
@@ -117,11 +117,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               <h1 className="rp-h1">{view.current.title}</h1>
               {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
             </div>
-            {hub && (
-              <div className="rp-hubnav">
-                <Segmented label={hub.label} value={route} onChange={k => isRoutePath(k) && go(k)} items={hub.items.map(item => [item.path, item.label])} />
-              </div>
-            )}
+            {hub && <HubPages key={hub.id} hub={hub} route={route} />}
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />

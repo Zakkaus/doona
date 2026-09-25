@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import {Link as RLink} from 'react-aria-components';
 import {useT} from '../i18n';
+import {useSlider} from '../ui/hooks';
 import type {NavGroup} from './view';
 
 const key = 'doona-hub-pages';
@@ -43,6 +44,24 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
           </RLink>
         );
       })}
+    </nav>
+  );
+}
+
+// The open hub's pages, above the content: links in the segmented control's look, since picking one navigates rather
+// than sets a value, and the pages carry tabs of their own.
+export function HubPages({hub, route}: {hub: NavGroup; route: string}) {
+  const [ref, pos] = useSlider(route, '[aria-current="page"]');
+  return (
+    <nav className="rp-hubnav" aria-label={hub.label}>
+      <div ref={ref} className="rp-seg">
+        {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
+        {hub.items.map(item => (
+          <RLink key={item.id} className="rp-btn" href={item.href} aria-current={item.current ? 'page' : undefined}>
+            {item.label}
+          </RLink>
+        ))}
+      </div>
     </nav>
   );
 }

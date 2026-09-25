@@ -167,6 +167,19 @@
 .rp-grow {
   flex: 1;
 }
+/* Controls that a phone swaps for a more compact form: shown only at or above the side navigation's breakpoint, or
+   only below it. */
+.rp-wide-only {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .rp-wide-only {
+    display: contents;
+  }
+  .rp-narrow-only {
+    display: none;
+  }
+}
 /* Backend actions: one labelled row per subsystem, buttons wrapping beside the label. */
 .rp-ops {
   display: flex;

@@ -1260,6 +1260,7 @@ export const messages = {
   'ui.saved': '设置已保存。',
   'ui.state': '状态',
   'ui.actions': '操作',
+  'ui.moreActions': '更多操作',
   'ui.source': '来源',
   'ui.target': '目标',
   'ui.domain': '域名',

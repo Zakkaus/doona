@@ -57,11 +57,11 @@ it('shows the version without the runtime and formats counts for the locale', ()
 it('retains a pending operation even when lifecycle state stops offering it', () => {
   const run = vi.fn();
   const actions = lifecycleActions(kind => kind === 'resume', 'suspend', run, t);
-  expect(actions.map(action => [action.id, action.pending, action.disabled])).toEqual([
+  expect(actions.map(action => [action.id, action.isPending, action.isDisabled])).toEqual([
     ['suspend', true, true],
     ['resume', false, true]
   ]);
-  actions[1].run();
+  actions[1].onAction();
   expect(run).toHaveBeenCalledWith('resume');
 });
 

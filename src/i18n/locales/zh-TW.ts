@@ -1259,6 +1259,7 @@ export const messages = {
   'ui.saved': '設定已儲存。',
   'ui.state': '狀態',
   'ui.actions': '操作',
+  'ui.moreActions': '更多操作',
   'ui.source': '來源',
   'ui.target': '目標',
   'ui.domain': '網域',
