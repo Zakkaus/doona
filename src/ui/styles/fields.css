@@ -6,6 +6,14 @@
   margin: 4px 4px 8px;
   width: 240px;
 }
+/* Holds a long menu's full height while its search loads; a list past twelve rows always reaches the cap above. */
+.rp-menu-pending {
+  height: 360px;
+}
+/* A boxless wrapper that listens for intent on the control inside it without changing the layout around it. */
+.rp-contents {
+  display: contents;
+}
 
 .rp-muted {
   color: var(--rp-muted);
