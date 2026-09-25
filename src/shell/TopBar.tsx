@@ -5,8 +5,8 @@ import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import MoreVertical from '../ui/icons/MoreVertical';
+import DataRefresh from '../ui/icons/DataRefresh';
 import Refresh from '../ui/icons/Refresh';
-import Replay from '../ui/icons/Replay';
 import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
@@ -104,11 +104,11 @@ export const TopBar = memo(function TopBar({
           </Button>
         </span>
         <Button quiet icon label={t('refresh')} isPending={spinning} onPress={refresh}>
-          <Refresh className="rp-refresh rp-spin-on-press" />
+          <DataRefresh />
         </Button>
         {reload && (
           <Button quiet icon className="rp-held" label={reloadLabel} isPending={reloading} onPress={reload}>
-            <Replay />
+            <Refresh className="rp-refresh rp-spin-on-press" />
             {!!held && <span className="rp-held-count">{held}</span>}
           </Button>
         )}
