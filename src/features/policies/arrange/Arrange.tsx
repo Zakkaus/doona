@@ -6,7 +6,6 @@ import {
   GridList,
   GridListItem,
   ListLayout,
-  Menu,
   Virtualizer,
   isTextDropItem,
   useDragAndDrop,
@@ -22,6 +21,7 @@ import {
   Button,
   buttonClass,
   Check,
+  ChoiceMenu,
   cx,
   Disclosure,
   Empty,
@@ -30,8 +30,6 @@ import {
   Light,
   Link,
   Loading,
-  MenuButton,
-  MenuChoice,
   ModalDialog,
   Segmented,
   Tag,
@@ -312,28 +310,20 @@ function Tray({m}: {m: Model}) {
             {t('arrange.clear')}
           </Button>
         )}
-        <MenuButton
+        <ChoiceMenu
           label={t('arrange.addSelected')}
           isDisabled={locked || !targets.length}
-          content={
-            <Menu
-              aria-label={t('arrange.addSelected')}
-              onAction={group => {
-                m.place(
-                  String(group),
-                  chosen.map(row => row.item)
-                );
-                setSelected(new Set());
-              }}
-            >
-              {targets.map(group => (
-                <MenuChoice key={group.name} item={{id: group.name, label: group.name}} />
-              ))}
-            </Menu>
-          }
+          items={targets.map(group => ({id: group.name, label: group.name}))}
+          onAction={group => {
+            m.place(
+              group,
+              chosen.map(row => row.item)
+            );
+            setSelected(new Set());
+          }}
         >
           {t('arrange.addSelected')}
-        </MenuButton>
+        </ChoiceMenu>
       </div>
     </div>
   );

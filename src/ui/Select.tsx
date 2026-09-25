@@ -271,11 +271,49 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
   );
 }
 
+// The flat menu's items, read only once it opens: a table row's choices can cost a pass over the whole table.
+type Items = Item[] | (() => Item[]);
+function FlatMenu({
+  label,
+  items,
+  selectionMode,
+  value,
+  onChange,
+  onAction
+}: {
+  label: string;
+  items: Items;
+  selectionMode: 'none' | 'single' | 'multiple';
+  value?: string | string[];
+  onChange?: (key: string) => void;
+  onAction?: (key: string) => void;
+}) {
+  return (
+    <Menu
+      aria-label={label}
+      selectionMode={selectionMode}
+      selectedKeys={value == null ? undefined : typeof value === 'string' ? [value] : value}
+      onSelectionChange={onChange && pickMenuKey(onChange)}
+      // Several choices are picked one after another, so the menu stays open, as S2's does.
+      shouldCloseOnSelect={selectionMode === 'multiple' ? false : undefined}
+      onAction={onAction && (key => onAction(String(key)))}
+    >
+      {(typeof items === 'function' ? items() : items).map(item => (
+        <MenuChoice key={item.id} item={item} />
+      ))}
+    </Menu>
+  );
+}
+
+type NotFlat = {items?: never; selectionMode?: never; value?: never; onChange?: never};
 // A menu of choices: flat, in titled sections each with its own selection, or as rows that each open a submenu of
-// sections. `onAction` hears every pick, including one of the already chosen item, for menus where picking it again
+// sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
+// toggling one through `onAction`); with neither `value` nor `selectionMode` it is an action menu that only runs
+// `onAction`. `onAction` hears every pick, including one of the already chosen item, for menus where picking it again
 // clears it.
 export function ChoiceMenu({
   items,
+  selectionMode,
   value,
   onChange,
   sections,
@@ -284,12 +322,20 @@ export function ChoiceMenu({
   ...props
 }: Omit<MenuButtonProps, 'content'> &
   (
-    | {items: Item[]; value: string; onChange: (key: string) => void; sections?: never; submenus?: never}
-    | {sections: ChoiceSection[]; items?: never; value?: never; onChange?: never; submenus?: never}
-    | {submenus: ChoiceSubmenu[]; items?: never; value?: never; onChange?: never; sections?: never}
-  ) & {
-    onAction?: (key: string) => void;
-  }) {
+    | {
+        items: Items;
+        selectionMode?: 'single';
+        value: string;
+        onChange: (key: string) => void;
+        onAction?: (key: string) => void;
+        sections?: never;
+        submenus?: never;
+      }
+    | {items: Items; selectionMode: 'multiple'; value: string[]; onAction: (key: string) => void; onChange?: never; sections?: never; submenus?: never}
+    | {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never}
+    | (NotFlat & {sections: ChoiceSection[]; onAction?: (key: string) => void; submenus?: never})
+    | (NotFlat & {submenus: ChoiceSubmenu[]; onAction?: never; sections?: never})
+  )) {
   return (
     <MenuButton
       {...props}
@@ -299,17 +345,14 @@ export function ChoiceMenu({
         ) : sections ? (
           <SectionMenu label={props.label} sections={sections} onAction={onAction} />
         ) : (
-          <Menu
-            aria-label={props.label}
-            selectionMode="single"
-            selectedKeys={[value]}
-            onSelectionChange={pickMenuKey(onChange)}
-            onAction={onAction && (key => onAction(String(key)))}
-          >
-            {items.map(item => (
-              <MenuChoice key={item.id} item={item} />
-            ))}
-          </Menu>
+          <FlatMenu
+            label={props.label}
+            items={items}
+            selectionMode={selectionMode ?? (value == null ? 'none' : 'single')}
+            value={value}
+            onChange={onChange}
+            onAction={onAction}
+          />
         )
       }
     />

@@ -4,11 +4,11 @@ test('a node joins an existing group or a new one through the name filter', asyn
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Add jp-01 to a group', exact: true}).click();
   const menu = page.getByRole('menu');
-  await expect(menu.getByRole('menuitemradio', {name: /^gaming/})).toHaveCount(0);
-  await menu.getByRole('menuitemradio', {name: /^resilient/}).click();
+  await expect(menu.getByRole('menuitem', {name: /^gaming/})).toHaveCount(0);
+  await menu.getByRole('menuitem', {name: /^resilient/}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('jp-01 added to resilient');
   await page.getByRole('button', {name: 'Add sg-01 to a group', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'New group…', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('backup');
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
