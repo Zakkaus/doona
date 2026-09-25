@@ -5,7 +5,7 @@ import {useDnsCacheCard, useDnsStatsTab} from './useDns';
 import {Card, Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import type {DnsLogRecord} from '../../api/model';
 import {usePalette, Beeswarm, FactStrip, LegendItem, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
-import {dnsAnalysis, dnsOutcomes, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
+import {dnsAnalysis, dnsOutcomes, shortPage, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import Data from '../../ui/icons/Data';
@@ -24,13 +24,20 @@ export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
-  // A log read that failed or is pending shows inside the charts it feeds; the cache card reads on its own.
-  const pending = log.data ? null : log.error ? <ErrorMessage error={log.error} onRetry={log.refetch} /> : <Loading />;
-  return <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} cacheListed={cacheListed} />;
+  // A failed log read shows once above the charts it feeds, which only say they have nothing; the cache card reads
+  // on its own.
+  const failed = log.data ? null : log.error;
+  const pending = log.data ? null : failed ? <Empty>{t('dns.chart.noLog')}</Empty> : <Loading />;
+  const notice = failed ? (
+    <ErrorMessage error={failed} onRetry={log.refetch} />
+  ) : shortPage(log.data, log.limit) ? (
+    <p className="rp-note">{t('dns.chart.shortPage', {n: log.data!.records.length, limit: log.limit!})}</p>
+  ) : null;
+  return <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} notice={notice} cacheListed={cacheListed} />;
 }
 const noRecords: DnsLogRecord[] = [];
 
-function DnsAnalysis({records, pending, cacheListed}: {records: DnsLogRecord[]; pending: ReactNode; cacheListed: boolean}) {
+function DnsAnalysis({records, pending, notice, cacheListed}: {records: DnsLogRecord[]; pending: ReactNode; notice: ReactNode; cacheListed: boolean}) {
   const t = useT();
   const p = usePalette();
   const a = useMemo(() => dnsAnalysis(records), [records]);
@@ -58,6 +65,7 @@ function DnsAnalysis({records, pending, cacheListed}: {records: DnsLogRecord[]; 
   ];
   return (
     <div className="rp-chart-page">
+      {notice}
       {!standIn && <FactStrip facts={facts} />}
       <div className="rp-g21">
         <Card

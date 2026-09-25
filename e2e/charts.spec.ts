@@ -120,7 +120,7 @@ for (const count of [0, 4]) {
   });
 }
 
-test('a failed first log read shows in the charts it feeds while the cache card still reports', async ({page}) => {
+test('a failed first log read shows once above the charts it feeds while the cache card still reports', async ({page}) => {
   const backend = await mockBackend(page);
   backend.handlers['GET dns/log'] = async () => {
     throw new ApiError(500, 'internal', 'Log unavailable');
@@ -129,7 +129,25 @@ test('a failed first log read shows in the charts it feeds while the cache card 
   const card = page.getByRole('region', {name: 'Cache', exact: true});
   await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
   await expect(card.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(3);
+  await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(1);
+  await expect(page.getByText('Resolution log not loaded', {exact: true})).toHaveCount(3);
+});
+
+test('a log page an older backend refuses as too large is asked for again smaller and charted with a note', async ({page}) => {
+  const backend = await mockBackend(page);
+  const seed = await backend.api.dnsLog();
+  const limits: string[] = [];
+  backend.handlers['GET dns/log'] = async request => {
+    const limit = new URL(request.url()).searchParams.get('limit') ?? '';
+    limits.push(limit);
+    if (Number(limit) > 25) throw new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', null, null, 1);
+    return {...seed, records: seed.records.slice(0, 20), next_cursor: 'older'};
+  };
+  await page.goto('/#/dns');
+  await expect(page.locator('.rp-facts')).toBeVisible();
+  await expect(page.getByText('Page shortened to fit the response size limit: 20 of 100 records', {exact: true})).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(limits.slice(0, 2)).toEqual(['100', '25']);
 });
 
 test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
