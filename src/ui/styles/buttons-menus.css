@@ -144,6 +144,46 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.rp-subitem > .ic {
+  display: flex;
+  color: var(--rp-subtle);
+}
+.rp-subitem > .ic > :is(svg, img, .rp-icon-stack) {
+  width: 16px;
+  height: 16px;
+}
+.rp-subitem > .desc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: 16px;
+}
+.rp-chev-end.rp-icon,
+.rp-chev-start.rp-icon {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+}
+.rp-chev-start.rp-icon {
+  transform: rotate(90deg);
+}
+.rp-drill {
+  outline: none;
+}
+.rp-drill-back {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+}
+.rp-drill-back[data-focus-visible] {
+  background: var(--rp-hl-low);
+}
+.rp-subitem[data-open] {
+  background: var(--rp-hl-low);
+}
 .rp-item .desc.ok {
   color: var(--rp-positive-text);
 }

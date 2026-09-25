@@ -1228,6 +1228,7 @@ export const messages = {
   'cm.selectionDeleted': 'Selection deleted',
   'cm.controlCharacter': 'Control character',
   close: 'Close',
+  'ui.back': 'Back',
   'toast.collapse': 'Collapse',
   'toast.clearAll': 'Clear all',
   'ui.openRule': 'Open {rule} in the rule list',
