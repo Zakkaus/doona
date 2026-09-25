@@ -54,9 +54,12 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const shown = (editor.errorSource === sourceId ? editor.diagnostics : null) ?? found ?? config.diagnostics;
   // The editor holds one file; diagnostics from other sources belong to their own cards.
   const own = useMemo(() => shown.filter(item => item.source_id === sourceId), [shown, sourceId]);
-  // Placed once per set of diagnostics, against the text they describe; CodeMirror carries them through later typing.
+  // Placed once per set of diagnostics and section, against the text they describe; CodeMirror carries them through
+  // later typing. Another section of the same file keeps the same diagnostics, so the section is part of the key.
+  const sectionId = draft?.section.id;
+  const placed = useMemo(() => ({own, sectionId}), [own, sectionId]);
   const [marks, setMarks] = useState<EditorMark[]>([]);
-  useLinked(own, next => setMarks(draft ? sectionMarks(next, draft.section.source.id, draft.section.block, draft.text) : []));
+  useLinked(placed, next => setMarks(draft ? sectionMarks(next.own, draft.section.source.id, draft.section.block, draft.text) : []));
   const outbounds = useMemo(() => groupNames(fullText ?? config.sources.find(source => source.kind === 'main')?.content ?? ''), [fullText, config]);
   const cancel = () => {
     editor.cancel();

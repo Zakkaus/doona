@@ -443,6 +443,27 @@ test('module validation maps whole-file errors onto section lines and refuses an
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
 });
 
+test("opening another section of the same file places that section's diagnostics, not the previous one's", async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  const line = main.content!.split('\n').findIndex(text => /^routing\s*\{/.test(text)) + 2;
+  config.diagnostics = [{level: 'error', source_id: main.id, line, column: null, span: null, code: 'invalid', message: 'Routing problem'}];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  // Validation never answers, so only the diagnostics already loaded can place marks.
+  await page.route('**/api/v1/config/validate', () => {});
+  await page.goto('/#/config');
+  const routing = page.getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(routing.locator('.cm-diag-line-error')).toHaveCount(1);
+  const dns = page.getByRole('region', {name: 'dns', exact: true});
+  await dns.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(dns.locator('.cm-content')).toBeVisible();
+  await expect(routing.locator('.cm-content')).toHaveCount(0);
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(dns.locator('.cm-diag-line-error')).toHaveCount(0);
+});
+
 test('typing in a module keeps its diagnostics and layout until the next validation', async ({page}) => {
   await page.goto('/#/config');
   const routing = page.getByRole('region', {name: 'routing', exact: true});
