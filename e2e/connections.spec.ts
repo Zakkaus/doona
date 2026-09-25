@@ -328,6 +328,9 @@ test('phone details retain routing diagnostics and omit unsupported flow actions
 test('the connection list exports the filtered rows as CSV', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.locator('.rp-toolbar input').fill('api.telegram.org');
+  // The filter applies through a deferred value; export only once the list shows the 150 matches and its header.
+  const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
+  await expect(grid).toHaveAttribute('aria-rowcount', '151');
   const download = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export CSV', exact: true}).click();
   const file = await download;
