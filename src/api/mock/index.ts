@@ -10,10 +10,13 @@ import {createGeodataState} from './geodata';
 export function createMockApi(): Api {
   let count = 120;
   let big = false;
+  // A busy backend for tools/perf.mjs: byte counters move on every poll and logs arrive every 20 ms.
+  let busy = false;
   try {
     const value = localStorage.getItem('doona-mock-big');
     big = value !== null;
     if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
+    busy = localStorage.getItem('doona-mock-busy') !== null;
   } catch {
     /* Storage can be unavailable. */
   }
@@ -47,9 +50,10 @@ export function createMockApi(): Api {
     capabilities.resources.events,
     runtime.runtime,
     configuration.logSettings,
-    configuration.revision
+    configuration.revision,
+    busy ? 20 : 2500
   );
-  const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot);
+  const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot, busy);
   const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt, geodata);
   return {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
 }
