@@ -22,15 +22,19 @@ export function useConnectionRule(connection: Connection | undefined) {
   const open = !!draft;
   const rules = useRules(open);
   const config = useConfig(open);
-  const groups = useGroups(open && offered(resources, 'groups', {whileLoading: false}));
+  const hasGroups = offered(resources, 'groups', {whileLoading: false});
+  const groups = useGroups(open && hasGroups);
   const retry = () => {
     rules.refetch();
     config.refetch();
+    if (hasGroups) groups.refetch();
   };
   const pending = usePendingApply();
   const sources = config.data?.sources ?? [];
   const positions = rulePositions(rules.data?.rules ?? [], sources, draft?.matched ?? null, t);
   const outbounds = ruleOutbounds(groups.data ?? []);
+  // Until the groups are read the outbound the connection took may not be listed yet, so nothing is written.
+  const groupsRead = !hasGroups || !!groups.data;
   // The outbound the connection took, when the configuration names it, so the rule starts from what is routed now.
   const outbound = draft?.outbound || outbounds.find(item => item.id === draft?.current)?.id || outbounds[0].id;
   const generation = rules.data?.generation_id;
@@ -82,17 +86,21 @@ export function useConnectionRule(connection: Connection | undefined) {
     const rule = held();
     if (!rule) return;
     setFailure(null);
-    const failure = await pending.apply([{...rule, id: 0}]);
-    if (failure) setFailure({id: Date.now(), ...failure});
-    else if (failure === null) {
-      toast('positive', t('rule.added'));
-      setDraft(null);
+    const outcome = await pending.apply([{...rule, id: 0}]);
+    if (!outcome) return;
+    if (!outcome.written) {
+      setFailure({id: Date.now(), ...outcome.failure!});
+      return;
     }
+    // A rule in its file closes the dialog even when the reload failed, so it is not inserted twice.
+    toast(outcome.failure ? 'negative' : 'positive', outcome.failure ? outcome.failure.text : t('rule.added'));
+    setDraft(null);
   };
   const targets = connection ? ruleTargets(connection) : [];
   return {
     canAdd: canWrite && targets.length > 0,
-    canShow: canWrite && !!connection?.rule_id,
+    // Showing the matched rule only reads the rule list.
+    canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
     openAdd: () => {
       if (connection) setDraft({targets, matched: connection.rule_id, current: connection.outbound, target: 0, outbound: '', pin: null});
     },
@@ -108,11 +116,11 @@ export function useConnectionRule(connection: Connection | undefined) {
       setBefore: (value: string) => edit({pin: pinOf(value)}),
       preview: target ? ruleLine(target.condition, outbound) : '',
       busy: pending.busy,
-      loadError: rules.error ?? config.error,
+      loadError: rules.error ?? config.error ?? groups.error,
       retry,
       moved,
       unplaceable: !!rules.data && !!config.data && !positions.length,
-      disabled: !target || !before,
+      disabled: !target || !before || !groupsRead,
       failure,
       hold,
       applyNow: () => void applyNow(),
