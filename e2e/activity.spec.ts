@@ -1,6 +1,6 @@
 import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
-import {test as browserTest} from '@playwright/test';
+import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
@@ -212,6 +212,48 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(ready).toHaveCount(1);
+});
+
+// The live window is two minutes of ten-second history, so a curve drawn from it has a dozen points across the plot.
+async function expectLiveCurves(page: Page) {
+  const curves = page.locator('.rp-spark .recharts-area-curve');
+  await expect(curves).toHaveCount(3);
+  for (const curve of await curves.all()) await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(10);
+  const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
+  const area = traffic.locator('.recharts-area-curve').first();
+  await expect.poll(() => area.evaluate(pointCount)).toBeGreaterThanOrEqual(10);
+  // The curve spans the window rather than bunching at its newest edge.
+  const plot = await traffic.locator('.recharts-cartesian-grid').first().boundingBox();
+  const drawn = await area.boundingBox();
+  expect(drawn!.width).toBeGreaterThan(plot!.width * 0.8);
+}
+const pointCount = (path: Element) => (path.getAttribute('d')?.match(/[MLC]/g) ?? []).length;
+
+test('the live curves keep their window after the page was hidden', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/activity');
+  await expectLiveCurves(page);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(600000);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, value: false});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(1000);
+  await expectLiveCurves(page);
+});
+
+test('the live curves are drawn when the page opens after the session has run a while', async ({page}) => {
+  await page.clock.install();
+  await page.goto('/#/overview');
+  await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+  await page.clock.runFor(600000);
+  await page.goto('/#/activity');
+  await page.clock.runFor(1000);
+  await expectLiveCurves(page);
 });
 
 test.describe('many outbounds', () => {

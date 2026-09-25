@@ -129,6 +129,22 @@ it('keeps the fuller demo history, cache and rankings internally consistent', as
     expect(eventRecords.map(event => event.event)).toContain(kind);
 });
 
+it('advances the traffic history with the clock and keeps the samples it already served', async () => {
+  const api = createMockApi();
+  const before = await api.trafficHistory({window_seconds: 3600});
+  vi.useFakeTimers({now: Date.now() + 600000});
+  for (const window_seconds of [120, 21600]) {
+    const history = await api.trafficHistory({window_seconds});
+    expect(Date.now() - Date.parse(history.samples.at(-1)!.sampled_at)).toBeLessThan(history.sampled_every_seconds * 1000);
+    expect(Date.now() - Date.parse(history.samples[0].sampled_at)).toBeGreaterThanOrEqual((window_seconds - history.sampled_every_seconds) * 1000);
+  }
+  const after = await api.trafficHistory({window_seconds: 3600});
+  const served = new Map(before.samples.map(sample => [sample.sampled_at, sample]));
+  const kept = after.samples.filter(sample => served.has(sample.sampled_at));
+  expect(kept.length).toBeGreaterThan(290);
+  for (const sample of kept) expect(sample).toEqual(served.get(sample.sampled_at));
+});
+
 it('filters the history window before thinning backwards without changing samples', async () => {
   const api = createMockApi();
   const result = await api.trafficHistory({window_seconds: 60, max_points: 4});

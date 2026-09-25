@@ -2,6 +2,7 @@ import type {Api} from '../api';
 import type {Capabilities} from '../model';
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/runtime';
+import {now as loaded} from './fixtures/clock';
 
 type RuntimeApi = Pick<
   Api,
@@ -98,7 +99,8 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
         max_points > limits.max_points!
       )
         throw new ApiError(400, 'invalid_request', 'History query exceeds the advertised limits');
-      const history = fixtures.trafficHistory;
+      const elapsed = Math.floor((Date.now() - loaded) / 10000) * 10;
+      const history = fixtures.trafficHistoryAt(elapsed);
       if (window_seconds > 3600) {
         const step = Math.ceil(window_seconds / Math.max(1, max_points - 1) / 10) * 10;
         const count = Math.min(max_points, Math.floor(window_seconds / step) + 1);
@@ -106,7 +108,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
           ...history,
           window_seconds,
           sampled_every_seconds: step,
-          samples: Array.from({length: count}, (_, i) => fixtures.trafficSample((count - 1 - i) * step))
+          samples: Array.from({length: count}, (_, i) => fixtures.trafficSample((count - 1 - i) * step - elapsed))
         };
       }
       const samples = history.samples.filter(s => Date.parse(s.sampled_at) > Date.parse(history.observed_at) - window_seconds * 1000);

@@ -17,12 +17,17 @@ export function trafficSample(age: number): TrafficHistory['samples'][number] {
     connections: Math.max(2, Math.round(live.length + 8 * Math.sin(age / 9000) + 5 * (Math.cos(age / 3600) - 1) + burst * 12))
   };
 }
-export const trafficHistory: TrafficHistory = {
-  observed_at: observedAt,
-  window_seconds: 3600,
-  sampled_every_seconds: 10,
-  samples: Array.from({length: 361}, (_, i) => trafficSample(3600 - i * 10))
-};
+// The recorder's last hour `elapsed` seconds after page load, a multiple of its ten-second step: the ring advances
+// the way a backend's does, and a refetch returns the samples it already had.
+export function trafficHistoryAt(elapsed: number): TrafficHistory {
+  return {
+    observed_at: ago(-elapsed),
+    window_seconds: 3600,
+    sampled_every_seconds: 10,
+    samples: Array.from({length: 361}, (_, i) => trafficSample(3600 - i * 10 - elapsed))
+  };
+}
+export const trafficHistory = trafficHistoryAt(0);
 const counterSamples = Array.from({length: 1008}, (_, i) => trafficSample(604800 - i * 600));
 const historyBytes = (field: 'upload_bytes_per_second' | 'download_bytes_per_second') =>
   counterSamples.reduce((sum, sample) => sum + BigInt(sample[field]!) * 600n, 0n);
