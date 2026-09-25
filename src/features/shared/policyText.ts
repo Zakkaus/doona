@@ -1,4 +1,5 @@
 import {groupNameProblem, type GroupEntry} from '../../dae/groups';
+import {enumLabel} from '../../i18n/enum';
 import {isFragment} from '../../dae/text';
 import type {Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -25,7 +26,7 @@ export function policyLabel(value: string | null, t: Translator): string {
 // spelling, set only when the label differs from it.
 export function groupPolicyText(policy: Pick<Group['policy'], 'kind' | 'native'>, t: Translator): {label: string; id?: string} {
   const offered = newGroupPolicies.some(item => item.id === (policy.native ?? IMPLIED));
-  const label = policy.native && offered ? policyLabel(policy.native, t) : t(policyKindLabels[policy.kind]);
+  const label = policy.native && offered ? policyLabel(policy.native, t) : enumLabel(policyKindLabels, policy.kind, t);
   const id = policy.native || policy.kind;
   return label === id ? {label} : {label, id};
 }

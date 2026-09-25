@@ -1,4 +1,5 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
@@ -178,7 +179,7 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
 }
 
 export function sourceView(source: ConfigSource, locale: string, t: Translator): SourceView {
-  const kind = t(sourceKinds[source.kind]);
+  const kind = enumLabel(sourceKinds, source.kind, t);
   return {
     id: source.id,
     label: redacted(source) ? `${kind} ${source.id.slice(0, 8)}` : source.path,
@@ -217,7 +218,7 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
       id: String(index),
       level: item.level,
       tone: tones[item.level],
-      levelText: t(levels[item.level]),
+      levelText: enumLabel(levels, item.level, t),
       sourceId: item.source_id,
       line: item.line,
       where: item.line === null ? path : `${path}:${item.line}`,

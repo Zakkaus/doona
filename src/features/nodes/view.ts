@@ -1,4 +1,5 @@
 import type {Capabilities, Node, Provider, ProviderCreate} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import {urlHost, type SubscriptionEntry} from './subscriptions';
@@ -172,7 +173,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     id: item.id,
     name,
     url: item.url_redacted ?? undefined,
-    kind: t(kinds[item.kind]),
+    kind: enumLabel(kinds, item.kind, t),
     count: formatNumber(item.node_count, locale),
     usage:
       used === null
@@ -187,7 +188,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     hasInterval: interval !== undefined,
     intervalLabel: t('nodes.intervalOf', {name}),
     intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
-    status: pseudo ? null : t(statuses[item.status]),
+    status: pseudo ? null : enumLabel(statuses, item.status, t),
     tone: tones[item.status],
     error: item.last_error ? backendMessage(item.last_error.code, item.last_error.message, t) : undefined,
     refreshLabel: t('nodes.refresh', {name}),

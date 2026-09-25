@@ -1,4 +1,5 @@
 import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {localTime, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {csvLine} from '../../ui/ui';
@@ -12,7 +13,7 @@ export function dnsAnswerView(result: Result, t: LabelFn) {
     fields: [
       [t('ui.state'), result.status],
       [t('ui.upstream'), result.upstream ?? '—'],
-      [t('dns.routeSource'), routeSources[result.route.source] ? t(routeSources[result.route.source]) : result.route.source],
+      [t('dns.routeSource'), enumLabel(routeSources, result.route.source, t)],
       [t('dns.routeRule'), result.route.rule ?? '—'],
       [t('ui.elapsed'), formatLatency(result.elapsed_ms, t)]
     ] as Array<[string, string]>,

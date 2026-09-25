@@ -1,4 +1,5 @@
 import {formatLatency} from '../../i18n/format';
+import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
@@ -86,7 +87,10 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     // Only an observation other than the usual TCP on the data path says how it was made.
     description:
       member.health && (member.health.transport !== 'tcp' || member.health.purpose !== 'data')
-        ? t('policy.observedVia', {transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'), purpose: t(purposes[member.health.purpose])})
+        ? t('policy.observedVia', {
+            transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'),
+            purpose: enumLabel(purposes, member.health.purpose, t)
+          })
         : ' ',
     region: regionOf(member.name) ?? '?'
   }));

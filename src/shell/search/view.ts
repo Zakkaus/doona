@@ -1,4 +1,5 @@
 import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows, nodeOwner} from '../../api/selectors';
 import {features, navAvailable} from '../registry';
@@ -82,7 +83,7 @@ export function providerEntries(providers: ProviderList | undefined, t: Translat
 }
 export function sourceEntries(config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
   return (config?.sources ?? []).map(source =>
-    entry([source.path], `source:${source.id}`, source.path, t(sourceKinds[source.kind]), 'config', within('', {tab: 'source', source: source.id}))
+    entry([source.path], `source:${source.id}`, source.path, enumLabel(sourceKinds, source.kind, t), 'config', within('', {tab: 'source', source: source.id}))
   );
 }
 export function ruleEntries(rules: RuleList | undefined, lang: Lang): SearchEntry[] {

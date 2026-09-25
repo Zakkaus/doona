@@ -1,4 +1,5 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {addU64, parseU64} from '../../api/u64';
 import {
   chainLabel,
@@ -101,7 +102,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
         case 'src':
           return row.src;
         case 'state':
-          return t(connectionStates[row.state]);
+          return enumLabel(connectionStates, row.state, t);
         case 'down':
           return parseU64(row.download_bytes);
         case 'age':
@@ -172,7 +173,7 @@ export function connectionTableView(
       path: chainPath(c, t, names),
       rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
       recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
-      state: t(connectionStates[c.state]),
+      state: enumLabel(connectionStates, c.state, t),
       download: formatBytes(c.download_bytes, locale),
       startedAt: c.started_at
     };
@@ -244,7 +245,7 @@ export function connectionDetail(
         id: current.id,
         title: current.domain || current.dst || current.id,
         tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
-        status: t('ui.aside', {text: t(connectionStates[current.state]), note: current.network.toUpperCase()}),
+        status: t('ui.aside', {text: enumLabel(connectionStates, current.state, t), note: current.network.toUpperCase()}),
         chain: chainLabel(current, t, names),
         outbound: outboundLabel(current.outbound, t),
         rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},

@@ -1,4 +1,5 @@
 import {logLevelLabels} from '../../api/selectors';
+import {enumLabel} from '../../i18n/enum';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {localTime} from '../../i18n/format';
 import type {Translator as LabelFn} from '../../i18n';
@@ -25,7 +26,7 @@ function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): L
     id: record.id,
     timestamp: localTime(record.ts, locale),
     iso: record.ts,
-    levelText: t(logLevelLabels[record.level]),
+    levelText: enumLabel(logLevelLabels, record.level, t),
     tone: tones[record.level],
     target: record.target,
     gap: false,
@@ -60,8 +61,11 @@ export function logView(
       if (!gaps.has(record)) return [row];
       return [{...row, id: `gap ${record.id}`, timestamp: '', iso: '', levelText: '', target: '', gap: true, message: t('log.gap')}, row];
     }),
-    levels: levels.map(id => ({id, label: below(id) ? t('log.levelNotRecorded', {level: t(logLevelLabels[id])}) : t(logLevelLabels[id])})),
-    recordedText: recorded ? t('log.recorded', {level: t(logLevelLabels[recorded])}) : null,
+    levels: levels.map(id => ({
+      id,
+      label: below(id) ? t('log.levelNotRecorded', {level: enumLabel(logLevelLabels, id, t)}) : enumLabel(logLevelLabels, id, t)
+    })),
+    recordedText: recorded ? t('log.recorded', {level: enumLabel(logLevelLabels, recorded, t)}) : null,
     // A failed stream is not retried until asked, so it is not "connecting".
     status: failed
       ? {tone: 'err' as const, text: t('log.disconnected')}

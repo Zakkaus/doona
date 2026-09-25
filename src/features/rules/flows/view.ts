@@ -1,4 +1,5 @@
 import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
+import {enumLabel} from '../../../i18n/enum';
 import type {Key} from '../../../i18n';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
 import {chainPath, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
@@ -183,7 +184,7 @@ export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'
     summary: partial.length ? t('flow.coverageSummary', {n: partial.length}) : null,
     detail: formatList(
       lang,
-      partial.map(([scope, value]) => t('ui.valuePair', {label: scopes[scope] ? t(scopes[scope]) : scope, value: t(visibility[value])}))
+      partial.map(([scope, value]) => t('ui.valuePair', {label: enumLabel(scopes, scope, t), value: enumLabel(visibility, value, t)}))
     ),
     dropped
   };
@@ -243,7 +244,7 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
       ruleId: flow.rule_id,
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
-      state: t(connectionStates[flow.state]),
+      state: enumLabel(connectionStates, flow.state, t),
       startedAt: flow.started_at
     })),
     coverage: list ? coverageView(list, t, lang) : null,
@@ -258,11 +259,11 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
   const seed = detail.input.domain ? {kind: 'domainSuffix' as const, value: detail.input.domain} : ip ? {kind: 'dip' as const, value: ip} : null;
   return {
     title: detail.input.domain || detail.input.dst || detail.id,
-    status: t(traceStates[detail.trace.status]),
+    status: enumLabel(traceStates, detail.trace.status, t),
     tone: detail.trace.status === 'complete' ? undefined : 'warn',
     revision: t('flow.revision', {n: detail.revision}),
     fields: [
-      [t('ui.state'), t(connectionStates[detail.state])],
+      [t('ui.state'), enumLabel(connectionStates, detail.state, t)],
       [t('ui.outbound'), outboundLabel(detail.outbound, t)],
       ...(detail.trace.missing.length
         ? [
@@ -270,7 +271,7 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
               t('flow.missing'),
               formatList(
                 lang,
-                detail.trace.missing.map(gap => (traceGaps[gap] ? t(traceGaps[gap]) : gap))
+                detail.trace.missing.map(gap => enumLabel(traceGaps, gap, t))
               )
             ] as [string, string]
           ]
@@ -284,7 +285,7 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
         const fields = flowStepFields(step);
         return {
           id: step.seq,
-          stage: stages[step.stage] ? t(stages[step.stage]) : step.stage,
+          stage: enumLabel(stages, step.stage, t),
           observed: localTime(step.observed_at, locale),
           elapsed: step.elapsed_us == null ? '—' : t('ui.microseconds', {n: step.elapsed_us}),
           fields:
