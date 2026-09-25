@@ -31,7 +31,14 @@ function backend(rows: Row[], limit: number, page = 1000) {
       const selected = live.filter(matches({type: query?.type, src: query?.src}));
       const shown = selected.slice(0, query?.limit ?? page).slice(0, page);
       const list = (network: 'tcp' | 'udp') => shown.filter(row => row.network === network).map(row => ({id: row.id, src: row.src}) as unknown as Connection);
-      return {tcp: list('tcp'), udp: list('udp'), truncated: shown.length < selected.length} as unknown as ConnectionList;
+      const total = (network: 'tcp' | 'udp') => selected.filter(row => row.network === network).length;
+      return {
+        tcp: list('tcp'),
+        udp: list('udp'),
+        total_tcp: total('tcp'),
+        total_udp: total('udp'),
+        truncated: shown.length < selected.length
+      } as unknown as ConnectionList;
     }
   };
   return {api, live, calls};
@@ -75,6 +82,13 @@ it('closes connections without a visible source one by one', async () => {
 it('stops when a round closes nothing instead of retrying forever', async () => {
   const {api, live} = backend(rows('tcp', '10.0.0.1', 5, false), 2);
   expect(await closeInBatches(api, {type: 'tcp', src: '10.0.0.1'})).toEqual({closed: 0, skipped: 5});
+  expect(live).toHaveLength(5);
+});
+
+it('counts what the listing never reached as left open when a round closes nothing', async () => {
+  // The listing shows only the first rows, all kernel-direct; the closable ones behind them cannot be reached.
+  const {api, live} = backend([...rows('tcp', '10.0.0.1', 3, false), ...rows('tcp', '10.0.0.2', 2)], 2, 3);
+  expect(await closeInBatches(api, {type: 'tcp'})).toEqual({closed: 0, skipped: 5});
   expect(live).toHaveLength(5);
 });
 
