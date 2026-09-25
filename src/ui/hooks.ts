@@ -1,4 +1,4 @@
-import {type RefObject, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
 
 export function withCrossfade(fn: () => void) {
@@ -142,6 +142,39 @@ export function useDebounced<T>(value: T, ms = 300): T {
   }, [value, ms]);
   return settled;
 }
+
+// How far outside the viewport a lazy card counts as near, so it loads before it scrolls in.
+const nearMargin = 400;
+
+// Whether the element is within `nearMargin` of the viewport; `onNear` runs each time it comes near.
+export function useNearViewport(onNear?: () => void) {
+  const [near, setNear] = useState(false);
+  const ref = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element) return;
+      // An element that mounts on screen reads as near in the first frame; waiting for the observer's first report
+      // would paint the placeholder for a frame and make the page jump.
+      const box = element.getBoundingClientRect();
+      if (box.top < innerHeight + nearMargin && box.bottom > -nearMargin) {
+        setNear(true);
+        onNear?.();
+      }
+      const observer = new IntersectionObserver(
+        entries => {
+          const next = entries.at(-1)!.isIntersecting;
+          setNear(next);
+          if (next) onNear?.();
+        },
+        {rootMargin: `${nearMargin}px`}
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [onNear]
+  );
+  return [ref, near] as const;
+}
+
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
   useEffect(() => {

@@ -6,7 +6,7 @@ import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery, useTabShown} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
@@ -124,13 +124,7 @@ export function useDnsStatsTab(enabled: boolean | undefined) {
 export function useDnsCacheCard(listed: boolean) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const [near, setNear] = useState(false);
-  const ref = useCallback((element: HTMLElement | null) => {
-    if (!element) return;
-    const observer = new IntersectionObserver(entries => setNear(entries.at(-1)!.isIntersecting), {rootMargin: '400px'});
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const [ref, near] = useNearViewport();
   // Paused only once it has a reading to keep showing; before that it loads wherever it is.
   const [loaded, setLoaded] = useState(false);
   const usage = useDnsCacheUsage(listed, !near && loaded);
