@@ -1,4 +1,5 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
+import {tagId} from '../shared/taggedId';
 import {enumLabel} from '../../i18n/enum';
 import {addU64, parseU64} from '../../api/u64';
 import {
@@ -221,13 +222,17 @@ export function connectionsView(
     picks: [
       {
         title: t('ui.device'),
-        value: 'src:' + src,
-        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: 'src:' + ip, label: ip, desc: formatNumber(n, locale)}))
+        value: tagId('src', src ?? ''),
+        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: tagId('src', ip), label: ip, desc: formatNumber(n, locale)}))
       },
       {
         title: t('conn.rule'),
-        value: 'rule:' + rule,
-        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({id: 'rule:' + expression, label: expression, desc: formatNumber(n, locale)}))
+        value: tagId('rule', rule),
+        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({
+          id: tagId('rule', expression),
+          label: expression,
+          desc: formatNumber(n, locale)
+        }))
       }
     ],
     visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null

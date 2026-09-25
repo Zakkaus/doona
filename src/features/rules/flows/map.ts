@@ -1,4 +1,5 @@
 import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../../api/model';
+import {readTag, tagId} from '../../shared/taggedId';
 import {isBuiltinOutbound} from '../../../dae/vocab';
 import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../../api/selectors';
 
@@ -48,13 +49,15 @@ function stagePart(
   }
 }
 // Empty identities distinguish missing values from identifiers literally named "unknown".
-const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => stage + ':' + (part.unknown ? '' : (part.key ?? part.label));
+const stageId = (stage: Stage, part: {label: string; key?: string; unknown?: boolean}) => tagId(stage, part.unknown ? '' : (part.key ?? part.label));
+// The column a tile or link end sits in, read from its id.
+export const stageOf = (id: string): Stage | undefined => readTag(id, stages)?.kind;
 
 // Identities are keyed by node ID, not name, so matching needs no name catalogue.
 const noNames: NodeNames = new Map();
 export function flowsThrough(flows: FlowSummary[], id: string, rules: RoutingRule[]): FlowSummary[] {
-  const stage = id.slice(0, id.indexOf(':')) as Stage;
-  if (!stages.includes(stage)) return [];
+  const stage = stageOf(id);
+  if (!stage) return [];
   const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
   return flows.filter(flow => {
     const part = stagePart(flow, stage, noNames, rulesById);
