@@ -11,7 +11,7 @@
 
 [English](README.md) · 简体中文 · [繁體中文](README.zh-TW.md)
 
-[安装](#安装) • [首次使用](#首次使用) • [页面](#页面) • [开发](#开发) • [使用指南](docs/guide.zh-CN.md)
+[安装](#安装) • [首次使用](#首次使用) • [页面](#页面) • [页面导览](#页面导览) • [手机布局](#手机布局) • [开发](#开发) • [使用指南](docs/guide.zh-CN.md)
 
 </div>
 
@@ -106,6 +106,56 @@ token 模式下，doona 会提示输入 token。可在设置页填写服务器�
 只有页面需要的资源全部不可用时，页面才会标为不可用。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。各页面需要的资源与 doona 自身设置的存放位置，见[使用指南](docs/guide.zh-CN.md#页面)。
 
 <img src="docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
+
+## 页面导览
+
+### 编排群组
+
+在策略页的编排标签页，将右侧列表中的节点或订阅拖动到群组上，即可加入该群组。每行的加入菜单和键盘拖放也能完成相同操作。
+
+<img src="docs/screenshots/zh-CN/arrange.webp" alt="将节点 us-01 拖动到 gaming 群组" width="100%">
+
+### 流量与连接
+
+连接页的流量标签页用散点图展示每条连接的上传量与下载量，并按出站着色；选中数据点即可打开对应的连接。连接标签页按设备或出站对实时连接分组，可按协议和出站筛选，并导出为 CSV。
+
+<img src="docs/screenshots/zh-CN/connections-traffic.webp" alt="连接页的流量标签页" width="100%">
+
+<img src="docs/screenshots/zh-CN/connections-list.webp" alt="按设备分组的实时连接" width="100%">
+
+### DNS
+
+统计标签页显示解析时间的中位数与 P95、缓存命中率、失败率、各上游在延迟刻度上的查询分布，以及查询的结果分类。
+
+<img src="docs/screenshots/zh-CN/dns.webp" alt="DNS 页的统计标签页" width="100%">
+
+### 日志时间分布
+
+日志列表上方的热力图按时间统计各级别的记录数。点击级别的行标题，即可设置列表显示的最低级别。
+
+<img src="docs/screenshots/zh-CN/logs.webp" alt="日志时间分布热力图" width="100%">
+
+### 分流总览
+
+规则页的分流总览按规则或设备，经出站追踪到节点。将指针移到规则、出站或节点上，或选中其中一项，即可突出显示经过该项的路径。
+
+<img src="docs/screenshots/zh-CN/routing.webp" alt="在分流总览中依次选中规则与节点" width="100%">
+
+### 节点延迟
+
+节点页的延迟标签页按策略群组或协议分组，显示每个节点的当前延迟、移动平均和近 10 次平均。不可用的节点列在所属群组下方。
+
+<img src="docs/screenshots/zh-CN/latency.webp" alt="节点页的延迟标签页" width="100%">
+
+## 手机布局
+
+窗口宽度小于 1024 像素时，侧边导航改为底部栏，分为概览、流量、路由和设置四组。每组打开时显示本次会话中最后浏览的页面，组内各页排成一行，位于内容上方。语言、主题、配色和字标移入顶栏的溢出菜单，各为一个子菜单。
+
+表格按预设顺序隐藏放不下的列，工具栏换行排列。在概览、DNS 和日志页，第一个操作保留为按钮，其余收进菜单。
+
+通过 HTTPS 或在 localhost 上打开时，doona 可安装为应用。在 Chrome 和 Edge 中，设置页的关于卡片提供安装为应用按钮。Safari 没有安装提示，因此卡片改为显示操作步骤：在 iPhone 和 iPad 上轻点共享，再轻点添加到主屏幕；在 macOS 上的 Safari 26 中选取文件 > 添加到程序坞。
+
+<img src="docs/screenshots/zh-CN/phone.webp" alt="手机上的 doona：连接表格、溢出菜单及其配色子菜单" width="100%">
 
 ## 开发
 

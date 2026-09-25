@@ -11,7 +11,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · 繁體中文
 
-[安裝](#安裝) • [第一次使用](#第一次使用) • [頁面](#頁面) • [開發](#開發) • [使用指南](docs/guide.zh-TW.md)
+[安裝](#安裝) • [第一次使用](#第一次使用) • [頁面](#頁面) • [頁面導覽](#頁面導覽) • [手機版面](#手機版面) • [開發](#開發) • [使用指南](docs/guide.zh-TW.md)
 
 </div>
 
@@ -106,6 +106,56 @@ token 模式下，doona 會提示輸入 token。可在設定頁填入伺服器�
 只有頁面需要的資源全部不可用時，頁面才會標為不可用。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[使用指南](docs/guide.zh-TW.md#頁面)。
 
 <img src="docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
+
+## 頁面導覽
+
+### 編排群組
+
+在策略頁的編排分頁，將右側列表中的節點或訂閱拖曳到群組上，即可加入該群組。每列的加入選單與鍵盤拖曳也能完成相同操作。
+
+<img src="docs/screenshots/zh-TW/arrange.webp" alt="將節點 us-01 拖曳到 gaming 群組" width="100%">
+
+### 流量與連線
+
+連線頁的流量分頁以散佈圖呈現每條連線的上傳量與下載量，並依出站著色；選取資料點即可開啟對應的連線。連線分頁依裝置或出站將即時連線分組，可依協定與出站篩選，並匯出為 CSV。
+
+<img src="docs/screenshots/zh-TW/connections-traffic.webp" alt="連線頁的流量分頁" width="100%">
+
+<img src="docs/screenshots/zh-TW/connections-list.webp" alt="依裝置分組的即時連線" width="100%">
+
+### DNS
+
+統計分頁顯示解析時間的中位數與 P95、快取命中率、失敗率、各上游在延遲刻度上的查詢分布，以及查詢的結果分類。
+
+<img src="docs/screenshots/zh-TW/dns.webp" alt="DNS 頁的統計分頁" width="100%">
+
+### 日誌時間分布
+
+日誌列表上方的熱圖按時間統計各級別的記錄數。點選級別的列標題，即可設定列表顯示的最低級別。
+
+<img src="docs/screenshots/zh-TW/logs.webp" alt="日誌時間分布熱圖" width="100%">
+
+### 分流總覽
+
+規則頁的分流總覽依規則或裝置，經出站追蹤到節點。將指標移到規則、出站或節點上，或選取其中一項，即可標示經過該項的路徑。
+
+<img src="docs/screenshots/zh-TW/routing.webp" alt="在分流總覽中依序選取規則與節點" width="100%">
+
+### 節點延遲
+
+節點頁的延遲分頁依策略群組或協定分組，顯示每個節點的目前延遲、移動平均與近 10 次平均。無法使用的節點列在所屬群組下方。
+
+<img src="docs/screenshots/zh-TW/latency.webp" alt="節點頁的延遲分頁" width="100%">
+
+## 手機版面
+
+視窗寬度小於 1024 像素時，側邊導覽改為底部列，分為概覽、流量、路由與設定四組。每組開啟時顯示本次工作階段最後瀏覽的頁面，組內各頁排成一列，位於內容上方。語言、主題、配色與字標移入頂欄的溢位選單，各為一個子選單。
+
+表格依預設順序隱藏放不下的欄位，工具列換行排列。在概覽、DNS 與日誌頁，第一個操作保留為按鈕，其餘收進選單。
+
+透過 HTTPS 或在 localhost 上開啟時，doona 可安裝為應用程式。在 Chrome 與 Edge 中，設定頁的關於卡片提供安裝為應用程式按鈕。Safari 沒有安裝提示，因此卡片改為顯示操作步驟：iPhone 與 iPad 上點一下分享，再點一下加入主畫面；macOS 上的 Safari 26 選擇檔案 > 加入 Dock 中。
+
+<img src="docs/screenshots/zh-TW/phone.webp" alt="手機上的 doona：連線表格、溢位選單及其配色子選單" width="100%">
 
 ## 開發
 
