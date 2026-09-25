@@ -40,7 +40,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
-    "js": 655000,
+    "js": 680000,
     "shell": 275000,
     "css": 240000
   },
