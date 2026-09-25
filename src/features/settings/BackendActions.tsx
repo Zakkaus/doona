@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionGroup, Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionGroup, Button, Card, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './nav';
 
@@ -37,10 +37,7 @@ export function BackendActionsCard() {
     waiting
   } = useBackendActions();
   return (
-    <section className="rp-card" aria-labelledby={card.headingId}>
-      <h2 className="rp-h3" id={card.headingId}>
-        {t(card.titleKey)}
-      </h2>
+    <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
       <span className="rp-label">{waiting ? '\u00a0' : note}</span>
       <ErrorMessage error={runtimeError} onRetry={retryRuntime} />
       <div className="rp-ops">
@@ -140,6 +137,6 @@ export function BackendActionsCard() {
           />
         </div>
       )}
-    </section>
+    </Card>
   );
 }

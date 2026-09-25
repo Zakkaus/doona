@@ -24,22 +24,18 @@ export function Activity() {
       {alert}
       <div className="rp-quick">
         <ModeCards model={vm.mode} />
-        <div className="rp-card">
+        <Card>
           <div className="rp-row">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
             <Link appearance="button" quiet href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
           </div>
-        </div>
+        </Card>
       </div>
 
       <div className="rp-strip">
-        <div className="rp-card">
-          <span className="rp-tile-head rp-tint-c1">
-            <Download />
-            {t('act.download')}
-          </span>
+        <Card title={t('act.download')} tile={{icon: <Download />, tint: 1, kind: 'metric'}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.download}</span>
@@ -48,12 +44,8 @@ export function Activity() {
               <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} />
             </span>
           </div>
-        </div>
-        <div className="rp-card">
-          <span className="rp-tile-head rp-tint-c4">
-            <Upload />
-            {t('act.upload')}
-          </span>
+        </Card>
+        <Card title={t('act.upload')} tile={{icon: <Upload />, tint: 4, kind: 'metric'}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.upload}</span>
@@ -62,12 +54,8 @@ export function Activity() {
               <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} />
             </span>
           </div>
-        </div>
-        <CardLink href={href('connections')} label={t('act.active')}>
-          <span className="rp-tile-head rp-tint-c3">
-            <LinkIcon />
-            {t('act.active')}
-          </span>
+        </Card>
+        <CardLink href={href('connections')} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.connections}</span>
@@ -79,11 +67,7 @@ export function Activity() {
         </CardLink>
         <NodeCard />
         {vm.showMemory && (
-          <div className="rp-card">
-            <span className="rp-tile-head rp-tint-c2">
-              <Data />
-              {t('act.memory')}
-            </span>
+          <Card title={t('act.memory')} tile={{icon: <Data />, tint: 2, kind: 'metric'}}>
             <div className="rp-tile-body">
               <span className="rp-tile-val">
                 <span className="rp-big">{vm.rss}</span>
@@ -94,7 +78,7 @@ export function Activity() {
                 </Light>
               )}
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

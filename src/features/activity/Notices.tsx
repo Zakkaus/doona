@@ -8,12 +8,12 @@ type NoticesModel = {
 };
 import {useT} from '../../i18n';
 import {href} from '../../shell/route';
-import {Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 
 export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
   const t = useT();
   return (
-    <section className="rp-card" aria-label={t('act.issues')}>
+    <Card aria-label={t('act.issues')}>
       {/* One line in every state: the count appearing must not wrap the header and grow the row. */}
       <div className="rp-row nowrap">
         <div className="rp-cluster nowrap">
@@ -48,6 +48,6 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
           ))}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

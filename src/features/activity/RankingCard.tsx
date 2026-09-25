@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Bar, Empty, ErrorMessage, Loading, Segmented, TextTooltip} from '../../ui/ui';
+import {Badge, Bar, Card, Empty, ErrorMessage, Loading, Segmented, TextTooltip} from '../../ui/ui';
 import {useRankingCard} from './useRankingCard';
 
 // Top clients owns its own connections subscription: a 20-second poll over up to 1,000 connections
@@ -8,7 +8,7 @@ export function RankingCard() {
   const t = useT();
   const {ref, by, setBy, rows, state, error, retry, truncated} = useRankingCard();
   return (
-    <div className="rp-card" ref={ref}>
+    <Card ref={ref}>
       <div className="rp-row">
         <TextTooltip text={t('act.rankingScope')}>
           <h3 className="rp-h3">{t('act.topDevices')}</h3>
@@ -48,6 +48,6 @@ export function RankingCard() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

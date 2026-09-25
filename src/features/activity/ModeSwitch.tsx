@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {Dialog, DialogTrigger, Popover} from 'react-aria-components';
-import {Button, ErrorMessage, Light, Link, ChoiceMenu, Segmented} from '../../ui/ui';
+import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, Segmented} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -27,12 +27,10 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <div className="rp-card">
-        <div className="rp-row">
-          <span className="rp-qlabel rp-tint-c3">
-            <Shuffle />
-            {t('act.mode')}
-          </span>
+      <Card
+        title={t('act.mode')}
+        tile={{icon: <Shuffle />, tint: 3, kind: 'control'}}
+        aside={
           <span className="rp-cluster">
             <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
             {vm.writable ? (
@@ -60,19 +58,17 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
               </Light>
             )}
           </span>
-        </div>
-      </div>
-      <div className="rp-card">
-        <div className="rp-row">
-          <span className="rp-qlabel rp-tint-c2">
-            <Filter />
-            {t('act.global')}
-          </span>
+        }
+      />
+      <Card
+        title={t('act.global')}
+        tile={{icon: <Filter />, tint: 2, kind: 'control'}}
+        aside={
           <ChoiceMenu quiet isDisabled={vm.busy || !vm.writable} label={t('act.global')} value={vm.target} onChange={vm.pickTarget} items={vm.targets}>
             {vm.targetText}
           </ChoiceMenu>
-        </div>
-      </div>
+        }
+      />
     </>
   );
 }

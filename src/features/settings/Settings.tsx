@@ -1,5 +1,5 @@
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, TextField} from '../../ui/ui';
+import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -66,10 +66,7 @@ export function Settings({query}: PageProps) {
     <div className="rp-page">
       {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
       {paired && <p className="rp-note">{t('settings.paired')}</p>}
-      <section className="rp-card" aria-labelledby={cards.backend.headingId}>
-        <h2 className="rp-h3" id={cards.backend.headingId}>
-          {t(cards.backend.titleKey)}
-        </h2>
+      <Card level={2} title={t(cards.backend.titleKey)} titleId={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
         <div className="rp-toolbar">
           <LabeledSelect
@@ -142,14 +139,11 @@ export function Settings({query}: PageProps) {
             </div>
           )}
         </form>
-      </section>
+      </Card>
       <RuntimeSettingsCard />
       <GeodataSettingsCard />
       <BackendActionsCard />
-      <section className="rp-card" aria-labelledby={cards.appearance.headingId}>
-        <h2 className="rp-h3" id={cards.appearance.headingId}>
-          {t(cards.appearance.titleKey)}
-        </h2>
+      <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
         <div className="rp-toolbar">
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           <div className="rp-field">
@@ -181,11 +175,8 @@ export function Settings({query}: PageProps) {
             ]}
           />
         </div>
-      </section>
-      <section className="rp-card" aria-labelledby={cards.about.headingId}>
-        <h2 className="rp-h3" id={cards.about.headingId}>
-          {t(cards.about.titleKey)}
-        </h2>
+      </Card>
+      <Card level={2} title={t(cards.about.titleKey)} titleId={cards.about.headingId}>
         {versionWarning && (
           <Light small tone="warn">
             {versionWarning}
@@ -196,7 +187,7 @@ export function Settings({query}: PageProps) {
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
           {installHint && <p className="rp-note">{installHint}</p>}
         </div>
-      </section>
+      </Card>
       <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={switchPending}

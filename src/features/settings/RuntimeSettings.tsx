@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
+import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {settingsCard} from './nav';
 
@@ -9,13 +9,13 @@ export function RuntimeSettingsCard() {
   const t = useT();
   const m = useRuntimeSettingsForm();
   return (
-    <section className="rp-card" aria-labelledby={card.headingId}>
-      <div className="rp-row">
-        <h2 className="rp-h3" id={card.headingId}>
-          {t(card.titleKey)}
-        </h2>
-        {m.source && <Light tone={m.sourceTone}>{m.source}</Light>}
-      </div>
+    <Card
+      level={2}
+      title={t(card.titleKey)}
+      titleId={card.headingId}
+      // The row stays while the source is unknown, so the heading does not move when it arrives.
+      aside={<>{m.source && <Light tone={m.sourceTone}>{m.source}</Light>}</>}
+    >
       {m.waiting && m.capsError ? (
         <ErrorMessage error={m.capsError} onRetry={m.retryCaps} />
       ) : (
@@ -87,6 +87,6 @@ export function RuntimeSettingsCard() {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Badge, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Link, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
+import {Badge, Button, Card, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Link, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
@@ -92,7 +92,7 @@ function Modules(props: ModulesProps) {
   return (
     <div className="rp-page">
       {vm.cards.map(card => (
-        <section key={card.id} className="rp-card" aria-label={card.kind}>
+        <Card key={card.id} aria-label={card.kind}>
           <div className="rp-row">
             <span className="rp-cluster">
               <h3 className="rp-h3 rp-code">{card.kind}</h3>
@@ -162,7 +162,7 @@ function Modules(props: ModulesProps) {
               </div>
             </>
           )}
-        </section>
+        </Card>
       ))}
     </div>
   );
@@ -195,7 +195,7 @@ function SourceCard(props: SourceCardProps) {
     editTip
   } = useSourceCard(props);
   return (
-    <section className="rp-card">
+    <Card>
       <div className="rp-row">
         <span className="rp-cluster">
           <h3 className="rp-h3 rp-code">{view.label}</h3>
@@ -258,7 +258,7 @@ function SourceCard(props: SourceCardProps) {
         />
       )}
       <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
-    </section>
+    </Card>
   );
 }
 

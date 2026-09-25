@@ -4,6 +4,7 @@ import Tree from './Tree';
 import {
   Badge,
   Button,
+  Card,
   DataTable,
   DetailPanel,
   ErrorMessage,
@@ -34,9 +35,10 @@ export function RoutingMap(props: PageProps) {
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
       <ErrorMessage error={view.error} onRetry={view.retry} />
-      <section className="rp-card rp-titled rp-topology" aria-label={t('flow.topology')}>
-        <div className="rp-row">
-          <h3 className="rp-h3">{t('flow.topology')}</h3>
+      <Card
+        title={t('flow.topology')}
+        className="rp-topology"
+        aside={
           <Segmented
             label={t('flow.topology')}
             value={view.by}
@@ -46,7 +48,8 @@ export function RoutingMap(props: PageProps) {
               ['client', t('flow.byClient')]
             ]}
           />
-        </div>
+        }
+      >
         {view.state === 'loading' && <Loading />}
         {view.state === 'empty' && <Empty>{t('flow.mapEmpty')}</Empty>}
         {view.state === 'ready' && (
@@ -55,7 +58,7 @@ export function RoutingMap(props: PageProps) {
             <Tree tree={view.tree} pinned={view.pinned} onPin={view.pin} />
           </>
         )}
-      </section>
+      </Card>
       {view.pinLabel && (
         <div className="rp-toolbar">
           <Button small onPress={view.viewPinned}>

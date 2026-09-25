@@ -409,7 +409,7 @@ test('local traffic renders without history and duplicate node names retain inde
   const trigger = page.getByRole('button', {name: 'Node', exact: true});
   await trigger.click();
   await page.getByRole('menuitemradio').filter({hasText: 'provider-b'}).click();
-  const card = trigger.locator('xpath=ancestor::div[contains(@class,"rp-card")][1]');
+  const card = trigger.locator('xpath=ancestor::*[contains(@class,"rp-card")][1]');
   await expect(card.locator('.rp-big')).toHaveText('—');
   await expect(card.getByText('Unavailable', {exact: true})).toBeVisible();
   await expect(card.getByText('Timed out', {exact: true})).toHaveCount(0);

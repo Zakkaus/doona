@@ -5,10 +5,13 @@ import {useT} from '../i18n';
 import {cx} from './cx';
 import {TextTooltip} from './Button';
 import {Badge} from './Feedback';
+import {TileHead, type TileHeader} from './Card';
 
-export function CardLink({href, label, children}: {href: string; label: string; children: ReactNode}) {
+// A tile that opens a page; `tile` captions it with its label.
+export function CardLink({href, label, tile, children}: {href: string; label: string; tile?: Omit<TileHeader, 'kind'>; children: ReactNode}) {
   return (
     <RLink href={href} aria-label={label} className="rp-card rp-card-link">
+      {tile && <TileHead {...tile} kind="metric" label={label} />}
       {children}
     </RLink>
   );
