@@ -394,6 +394,29 @@ test('the dialog does not write while the top bar applies held rules', async ({p
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
 
+test('held rules cannot be discarded while they are applied', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const write = gate();
+  let writing = false;
+  handlers['PUT config/sources/src-main'] = async request => {
+    writing = true;
+    await write.wait();
+    return api.replaceConfigSource('src-main', request.postDataJSON().content, request.headers()['if-match']);
+  };
+  await hold(page, '1');
+  await hold(page, '2');
+  await page.goto('/#/rules?tab=list');
+  const held = page.getByRole('region', {name: 'Pending: 2'});
+  const discard = held.getByRole('button', {name: 'Discard held rule', exact: true});
+  await expect(discard).toHaveCount(2);
+  await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
+  await expect.poll(() => writing).toBe(true);
+  for (const button of await discard.all()) await expect(button).toBeDisabled();
+  write.open();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+});
+
 test('the dialog waits for the groups before it writes', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const groups = gate();
