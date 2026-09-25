@@ -1,26 +1,81 @@
+import type {Page} from '@playwright/test';
+import {hubs} from '../src/shell/routes';
 import {expect, mockBackend, routes, test} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
-test('mobile page select exposes and opens every page without horizontal overflow', async ({page}) => {
+const bar = (page: Page) => page.getByRole('navigation', {name: 'Sections'});
+
+test('each hub opens its first page, then the page last seen in it', async ({page}) => {
   await page.goto('/#/activity');
-  const select = page.locator('.rp-mobile-nav').getByRole('button');
-  // The mock offers every route, so the select should preserve registry order.
-  await select.click();
-  const listed = await page.getByRole('option').evaluateAll(items => items.map(item => item.getAttribute('data-key')));
-  await page.keyboard.press('Escape');
-  const shown = routes.filter(route => listed.includes(route));
-  expect(shown.length).toBe(listed.length);
-  for (const [index, route] of shown.entries()) {
-    await select.click();
-    const options = page.getByRole('option');
-    await expect(options).toHaveCount(shown.length);
-    await options.nth(index).click();
-    await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+  await expect(bar(page).getByRole('link', {name: 'Overview'})).toHaveAttribute('aria-current', 'page');
+  await bar(page).getByRole('link', {name: 'Traffic'}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await page.locator('.rp-hubnav').getByText('Logs', {exact: true}).click();
+  await expect(page).toHaveURL(/#\/logs$/);
+  await expect(bar(page).getByRole('link', {name: 'Traffic'})).toHaveAttribute('aria-current', 'page');
+  await bar(page).getByRole('link', {name: 'Routing'}).click();
+  await expect(page).toHaveURL(/#\/policies$/);
+  await expect(bar(page).locator('[aria-current]')).toHaveCount(1);
+  await bar(page).getByRole('link', {name: 'Traffic'}).click();
+  await expect(page).toHaveURL(/#\/logs$/);
+  // The memory lasts the session, through a reload.
+  await page.reload();
+  await bar(page).getByRole('link', {name: 'Overview'}).click();
+  await expect(page).toHaveURL(/#\/activity$/);
+  for (const box of await bar(page)
+    .getByRole('link')
+    .evaluateAll(links => links.map(link => link.getBoundingClientRect())))
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+});
+
+test('every page is at most two taps away: its hub, then its page', async ({page}) => {
+  for (const [index, hub] of hubs.entries()) {
+    for (const route of hub.pages) {
+      await page.goto(`/#/${index ? 'activity' : 'settings'}`);
+      await page.evaluate(() => sessionStorage.clear());
+      await bar(page).getByRole('link').nth(index).click();
+      if (!page.url().endsWith(`#/${route}`)) {
+        const label = await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent();
+        await page.locator('.rp-hubnav').getByText(label!, {exact: true}).click();
+      }
+      await expect(page).toHaveURL(new RegExp(`#/${route}$`));
+      await expect(page.locator('.rp-hubnav [data-selected]')).toHaveText((await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent())!);
+    }
   }
-  await page.goto('/#/activity');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
+  await page.goto('/#/overview');
+  await expect(page.locator('.rp-content > *').first()).toBeVisible();
+  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+  // Long enough to scroll, so the bar would sit over the end of the page without the reserved space.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  const {content, top} = await page.evaluate(() => ({
+    content: document.querySelector('.rp-content')!.getBoundingClientRect().bottom,
+    top: document.querySelector('.rp-hubbar')!.getBoundingClientRect().top
+  }));
+  expect(content).toBeLessThanOrEqual(top);
+});
+
+test.describe('desktop', () => {
+  test.use({viewport: {width: 1280, height: 900}});
+  test('groups the side navigation into the four hubs and hides the phone navigation', async ({page}) => {
+    await page.goto('/#/overview');
+    const sections = page.locator('.rp-side [data-group]');
+    await expect(sections).toHaveCount(4);
+    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Overview', 'Traffic', 'Routing', 'Settings']);
+    for (const [index, hub] of hubs.entries())
+      expect(
+        await sections
+          .nth(index)
+          .locator('.rp-nav')
+          .evaluateAll(links => links.map(link => link.getAttribute('href')))
+      ).toEqual(hub.pages.map(route => `#/${route}`));
+    await expect(page.locator('.rp-hubbar')).toBeHidden();
+    await expect(page.locator('.rp-hubnav')).toBeHidden();
+  });
 });
 
 for (const [scheme, palette] of [
@@ -98,6 +153,28 @@ for (const [scheme, palette] of [
     });
   });
 }
+
+// A common phone width: every hub's pages fit side by side in every language.
+test.describe('360px', () => {
+  test.use({viewport: {width: 360, height: 780}});
+  for (const lang of ['en', 'zh-TW', 'zh-CN'])
+    test.describe(lang, () => {
+      test.use({storage: {'doona-lang': lang}});
+      test('every hub shows all its pages above the content without scrolling sideways', async ({page}) => {
+        for (const hub of hubs) {
+          await page.goto(`/#/${hub.pages[0]}`);
+          const tabs = page.locator('.rp-hubnav .rp-btn');
+          await expect(tabs).toHaveCount(hub.pages.length);
+          const fit = await page.locator('.rp-hubnav').evaluate(nav => {
+            const box = nav.getBoundingClientRect();
+            const seg = nav.querySelector('.rp-seg')!;
+            return seg.scrollWidth <= seg.clientWidth && [...nav.querySelectorAll('.rp-btn')].every(tab => tab.getBoundingClientRect().right <= box.right + 1);
+          });
+          expect(fit, hub.id).toBe(true);
+        }
+      });
+    });
+});
 
 // The narrowest supported phone: every page fits without scrolling sideways.
 test.describe('320px', () => {

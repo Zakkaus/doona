@@ -121,7 +121,7 @@ test.describe('first-release backend', () => {
     await page.goto('/#/activity');
     await expect(page.locator('.rp-strip')).toBeVisible();
     await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
-    await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Activity', 'Overview', 'Connections', 'Settings']);
+    await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Overview', 'Activity', 'Connections', 'Settings']);
     for (const route of ['overview', 'connections', 'settings'] as const) {
       await page.goto(`/#/${route}`);
       await expect(page.locator('.rp-nav[href="#/' + route + '"]')).toHaveAttribute('aria-current', 'page');
