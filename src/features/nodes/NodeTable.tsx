@@ -1,21 +1,11 @@
 import {createContext, useContext, useMemo} from 'react';
-import {Menu} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {Button, DataTable, LabeledSelect, MenuButton, MenuChoice, TextField, TextTooltip, pickMenuKey, type TableColumn} from '../../ui/ui';
+import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import type {NodeTableView} from './useNodeTable';
 
-function JoinOptions({row}: {row: NodeTableView['rows'][number]}) {
-  return (
-    <Menu aria-label={row.joinLabel} selectionMode="single" selectedKeys={[]} onSelectionChange={pickMenuKey(row.join)}>
-      {row.menu().map(item => (
-        <MenuChoice key={item.id} item={item} />
-      ))}
-    </Menu>
-  );
-}
 // The node whose probe is running, read by the probe buttons alone, so a probe starting or ending re-renders the
 // buttons on screen rather than the rows or columns.
 const ProbeBusy = createContext<string | null>(null);
@@ -65,9 +55,9 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
             {writable && (
-              <MenuButton quiet chevron={false} label={row.joinLabel} isDisabled={sourceBusy} content={<JoinOptions row={row} />}>
+              <ChoiceMenu quiet chevron={false} label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join}>
                 <AddCircle />
-              </MenuButton>
+              </ChoiceMenu>
             )}
             {row.removable && (
               <Button small quiet icon isDisabled={busy} label={row.removeLabel} onPress={row.remove}>

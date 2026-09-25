@@ -1,4 +1,3 @@
-import {Menu} from 'react-aria-components';
 import {
   Badge,
   Button,
@@ -8,8 +7,6 @@ import {
   LabeledSelect,
   Light,
   ChoiceMenu,
-  MenuButton,
-  MenuChoice,
   RuleRef,
   Segmented,
   TextField,
@@ -51,24 +48,9 @@ export function Connections(props: PageProps) {
             {id: 'none', label: t('conn.ungrouped')}
           ]}
         />
-        <MenuButton
-          label={t('conn.columns')}
-          content={
-            <Menu
-              aria-label={t('conn.columns')}
-              selectionMode="multiple"
-              shouldCloseOnSelect={false}
-              selectedKeys={vm.visibleColumns}
-              onAction={vm.toggleColumn}
-            >
-              {vm.columns.map(column => (
-                <MenuChoice key={column.id} item={column} />
-              ))}
-            </Menu>
-          }
-        >
+        <ChoiceMenu label={t('conn.columns')} selectionMode="multiple" items={vm.columns} value={vm.visibleColumns} onAction={vm.toggleColumn}>
           {t('conn.columns')}
-        </MenuButton>
+        </ChoiceMenu>
         {vm.filtered && (
           <Button quiet onPress={vm.clear}>
             {t('ui.clearFilters')}
