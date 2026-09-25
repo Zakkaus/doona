@@ -197,6 +197,26 @@ test('with nothing held the reload button reloads the engine and reports the ope
   expect(requests.filter(request => request.method() !== 'GET').map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/reload$/)]);
 });
 
+test('the reload arrows turn once a second, like an indeterminate progress circle, and stay still with reduced motion', async ({page}) => {
+  await mockBackend(page);
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.goto('/#/connections');
+  const reload = top(page).getByRole('button', {name: 'Reload honk', exact: true});
+  const timing = () =>
+    reload.evaluate(button =>
+      button
+        .querySelector('.rp-spin-on-press')!
+        .getAnimations()
+        .map(animation => animation.effect!.getTiming().duration)
+    );
+  await reload.click();
+  expect(await timing()).toEqual([1000]);
+  await expect.poll(timing).toEqual([]);
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await reload.click();
+  expect(await timing()).toEqual([]);
+});
+
 test('the dialog starts from the outbound the connection uses', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/connections?id=2');

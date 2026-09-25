@@ -118,7 +118,8 @@
   --rp-duration-pop: 240ms;
   --rp-duration-view: 300ms;
   --rp-duration-spin: 800ms;
-  --rp-duration-refresh: 600ms;
+  /* One turn of the refresh and reload arrows, as long as one turn of S2's indeterminate ProgressCircle. */
+  --rp-duration-refresh: 1000ms;
   --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
 }
