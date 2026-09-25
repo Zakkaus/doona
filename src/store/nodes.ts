@@ -2,7 +2,7 @@ import {useCallback} from 'react';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {pageSize, useResource, walk} from './resource';
-import {finished, tcpProbe, useAction} from './action';
+import {finished, settle, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -50,7 +50,7 @@ export function useProviderRefresh(refetch: () => void) {
   const one = useCallback(
     async (id: string, signal: AbortSignal) => {
       const accepted = await api.refreshProvider(id, signal);
-      const result = await api.pollOperation(accepted, signal);
+      const result = await settle(api, accepted, signal);
       refetch();
       return finished(result, 'provider_refresh');
     },
@@ -108,7 +108,7 @@ export function useNodeProbe(refetch: () => void) {
       if (!request) return Promise.resolve(undefined);
       return run(nodeId, async signal => {
         const accepted = await api.startProbe(request, signal);
-        const result = await api.pollOperation(accepted, signal);
+        const result = await settle(api, accepted, signal);
         refetch();
         return finished(result, 'probe');
       });
@@ -126,7 +126,7 @@ export function useGeodata(enabled = true) {
     () =>
       run('update', async signal => {
         const accepted = await api.updateGeodata(signal);
-        const result = await api.pollOperation(accepted, signal);
+        const result = await settle(api, accepted, signal);
         refetch();
         return finished(result, 'geodata_update');
       }),

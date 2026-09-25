@@ -1248,6 +1248,7 @@ export const messages = {
   'ui.block': 'block',
   'ui.error': '錯誤',
   'ui.operationFailed': '操作未完成',
+  'ui.operationUnknown': '結果不明，後端已不再追蹤此操作。請先確認目前狀態再重試',
   'ui.writtenNotApplied': '已寫入組態檔，但未生效，執行中的組態未變更。請修正檔案後重載，或重新啟動 honk',
   'ui.probeUnsupported': '此後端不提供該目標的 TCP 探測',
   'ui.groupNotLoaded': '群組尚未載入',

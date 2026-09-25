@@ -1,3 +1,4 @@
+import {ApiError} from '../src/api/error';
 import {downloadText, expect, mockBackend, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
@@ -54,6 +55,30 @@ test('overview exports runtime and reports a failed accepted reload without succ
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await expect(reload).toBeEnabled();
   expect(requests.filter(request => request.method() === 'POST').map(request => new URL(request.url()).pathname)).toEqual(['/api/v1/operations/reload']);
+});
+
+test('a reload the backend forgot while polling reports an unknown result and re-reads the page', async ({page}) => {
+  const {handlers, requests} = await mockBackend(page);
+  handlers['POST operations/reload'] = async () => ({
+    operation_id: 'reload-lost',
+    kind: 'reload',
+    status: 'queued',
+    href: '/api/v1/operations/reload-lost',
+    retryAfter: 1
+  });
+  handlers['GET operations/reload-lost'] = async () => {
+    throw new ApiError(404, 'resource_not_found', 'Operation not found');
+  };
+  await page.goto('/#/overview');
+  const reload = page.getByRole('button', {name: 'Reload', exact: true});
+  await expect(reload).toBeEnabled();
+  // The version is read once and only again on a full re-read.
+  const versionReads = () => requests.filter(request => new URL(request.url()).pathname === '/api/v1/version').length;
+  await expect.poll(versionReads).toBe(1);
+  await reload.click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Result unknown; the backend no longer tracks this operation');
+  await expect(page.locator('.rp-toast.negative')).not.toContainText('Resource not found');
+  await expect.poll(versionReads).toBe(2);
 });
 
 test('overview suspend and resume follow the completed lifecycle', async ({page}) => {

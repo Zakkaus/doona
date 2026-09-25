@@ -1,7 +1,9 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {getApi} from '../api/index';
-import type {Capabilities, Operation, OperationState, ProbeRequest} from '../api/model';
-import {LocalError} from '../api/error';
+import type {Api} from '../api/api';
+import type {Capabilities, Operation, OperationAccepted, OperationState, ProbeRequest} from '../api/model';
+import {ApiError, LocalError} from '../api/error';
+import {refetchAll} from './resource';
 // One action per hook; an abort drops the late result, a failure lands in `error` and rethrows when asked.
 export function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
   const api = getApi();
@@ -41,6 +43,17 @@ export function useAction<K extends string>({scope, rethrow = false}: {scope?: u
     [rethrow]
   );
   return {busy, error, setError, run, cancel};
+}
+// The backend forgets an operation when it restarts or the record expires, so a 404 while polling leaves the
+// outcome unknown: everything shown is re-read rather than reporting the operation missing.
+export async function settle(api: Api, accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState> {
+  try {
+    return await api.pollOperation(accepted, signal);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    void refetchAll();
+    throw new LocalError('ui.operationUnknown');
+  }
 }
 // If-Match carries the revision as a quoted entity tag.
 export const etag = (revision: string) => '"' + revision + '"';

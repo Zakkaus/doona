@@ -6,7 +6,7 @@ import {LocalError} from '../api/error';
 import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
-import {etag, finished, useAction} from './action';
+import {etag, finished, settle, useAction} from './action';
 
 export function useConfig(enabled = true) {
   const api = getApi();
@@ -149,7 +149,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           });
           lastRefused.current = null;
           signal.throwIfAborted();
-          const operation = await api.pollOperation(accepted, signal);
+          const operation = await settle(api, accepted, signal);
           signal.throwIfAborted();
           refetch();
           return {result: finished(operation, 'reload', {written: true})};

@@ -1,6 +1,11 @@
-import {expect, it} from 'vitest';
-import type {OperationState} from '../api/model';
-import {finished} from './action';
+import {expect, it, vi} from 'vitest';
+import type {Api} from '../api/api';
+import type {OperationAccepted, OperationState} from '../api/model';
+import {ApiError} from '../api/error';
+import {finished, settle} from './action';
+import {refetchAll} from './resource';
+
+vi.mock('./resource', () => ({refetchAll: vi.fn(async () => [])}));
 
 const failed = (details: Record<string, unknown> | null): OperationState =>
   ({
@@ -31,4 +36,18 @@ it.each([
   ['an operation that writes nothing', null, undefined, 'ui.operationFailed']
 ])('a failed activation after %s', (_, details, written, key) => {
   expect(failure(failed(details), written)).toMatchObject({key, detail: 'Reload rejected', code: 'reload_rejected'});
+});
+
+it('reports an operation the backend no longer knows as an unknown result and re-reads the page', async () => {
+  const accepted = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1', retryAfter: 1} as OperationAccepted;
+  const pollOperation = vi.fn().mockRejectedValueOnce(new ApiError(404, 'resource_not_found', 'Operation not found'));
+  const api = {pollOperation} as unknown as Api;
+  const signal = new AbortController().signal;
+  await expect(settle(api, accepted, signal)).rejects.toMatchObject({name: 'LocalError', key: 'ui.operationUnknown'});
+  expect(pollOperation).toHaveBeenCalledWith(accepted, signal);
+  expect(refetchAll).toHaveBeenCalledOnce();
+  const other = new ApiError(503, 'temporarily_unavailable', 'busy');
+  pollOperation.mockRejectedValueOnce(other);
+  await expect(settle(api, accepted, signal)).rejects.toBe(other);
+  expect(refetchAll).toHaveBeenCalledOnce();
 });
