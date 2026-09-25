@@ -69,4 +69,5 @@ export const newGroupPolicies: Array<{id: string; label: Key; description: Key}>
 // being hijacked for that rule.
 export const builtinOutboundNames = ['direct', 'block'];
 export const builtinOutbounds = [...builtinOutboundNames, ...builtinOutboundNames.map(name => `${name}(must)`)];
-export const isBuiltinOutbound = (name: string | null | undefined): boolean => name != null && builtinOutbounds.includes(name);
+// A bare name only: where `(must)` can appear, in rule text, the callers strip or list it themselves.
+export const isBuiltinOutbound = (name: string | null | undefined): boolean => name != null && builtinOutboundNames.includes(name);

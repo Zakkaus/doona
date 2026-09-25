@@ -85,7 +85,7 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
       ];
     case 'connection':
       return [
-        ['ui.state', {key: connectionStates[step.data.state]}],
+        ['ui.state', Object.hasOwn(connectionStates, step.data.state) ? {key: connectionStates[step.data.state]} : step.data.state],
         ['flow.f.milestone', word(step.data.milestone)],
         ['flow.f.reason', word(step.data.reason)]
       ];
