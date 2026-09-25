@@ -1120,6 +1120,8 @@ export const messages = {
   'wordmark.gradient': '漸層',
   'wordmark.plain': '純色',
   lang: '語言',
+  theme: '主題',
+  moreOptions: '更多選項',
   hubs: '頁面分區',
   github: 'GitHub 儲存庫',
   'search.nodes': '節點',

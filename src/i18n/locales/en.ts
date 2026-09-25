@@ -1147,6 +1147,8 @@ export const messages = {
   'wordmark.gradient': 'Gradient',
   'wordmark.plain': 'Plain',
   lang: 'Language',
+  theme: 'Theme',
+  moreOptions: 'More options',
   hubs: 'Sections',
   github: 'GitHub repository',
   'search.nodes': 'Nodes',
