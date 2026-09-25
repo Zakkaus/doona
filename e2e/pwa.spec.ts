@@ -1,4 +1,5 @@
 import {expect, test} from './fixtures';
+import type {Page} from '@playwright/test';
 
 test('manifest describes an installable app with relative URLs', async ({request}) => {
   const response = await request.get('/manifest.webmanifest');
@@ -83,6 +84,32 @@ test('shell reloads offline and fonts and icons are cached on first use', async 
   }
 });
 
+// A list the build writes into the worker script its page is controlled by.
+async function workerList(page: Page, name: string): Promise<string[]> {
+  const url = await page.evaluate(async () => (await navigator.serviceWorker.ready).active!.scriptURL);
+  const worker = await (await page.request.get(url)).text();
+  return JSON.parse(worker.match(new RegExp(`const ${name} = (\\[.*?\\]);`))![1]);
+}
+const mockChunks = (page: Page) => workerList(page, 'MOCK');
+
+test('the mock backend is cached on first use rather than installed up front', async ({context, browserName}) => {
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  const mock = await mockChunks(page);
+  expect(mock).toHaveLength(1);
+  expect(await workerList(page, 'PRECACHE')).not.toContain(mock[0]);
+  // The mock loaded before the worker took over, so the page reports it and the worker caches it.
+  await expect.poll(() => page.evaluate(async url => (await caches.match(new URL(url, location.href).href)) !== undefined, mock[0])).toBe(true);
+  // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
+  if (browserName === 'webkit') return;
+  await context.setOffline(true);
+  const offline = await page.reload();
+  expect(offline?.headers()['x-doona-sw']).toBe('hit');
+  // The shell renders only once its backend has loaded.
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+});
+
 test('an English visit caches only English and starts offline in it', async ({context, browserName}) => {
   const page = await context.newPage();
   await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
@@ -90,6 +117,7 @@ test('an English visit caches only English and starts offline in it', async ({co
   const fetched: string[] = [];
   context.on('request', request => fetched.push(new URL(request.url()).pathname));
   await page.goto('/');
+  const [mock] = await mockChunks(page);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   const cached = () =>
     page.evaluate(async () => {
@@ -98,6 +126,7 @@ test('an English visit caches only English and starts offline in it', async ({co
     });
   // The catalogue loaded before the worker took over, so the page reports it and the worker caches it.
   await expect.poll(async () => (await cached()).some(path => path.includes('/assets/locale-en-'))).toBe(true);
+  await expect.poll(async () => (await cached()).some(path => path.endsWith(mock))).toBe(true);
   expect((await cached()).filter(path => other.test(path))).toEqual([]);
   expect(fetched.filter(path => other.test(path))).toEqual([]);
   // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
@@ -136,6 +165,8 @@ test('after an update the new build caches only the language in use and starts o
   });
   const update = first.replace(/[^:]+$/, 'update');
   await expect.poll(() => holds(update, 'zh-TW')).toBe(true);
+  const [mock] = await mockChunks(page);
+  await expect.poll(async () => (await paths(update)).some(path => path.endsWith(mock))).toBe(true);
   expect((await paths(update)).filter(path => unused.test(path))).toEqual([]);
   // Only the new build's cache is left to answer the offline start.
   await page.evaluate(first => caches.delete(first), first);

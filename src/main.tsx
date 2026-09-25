@@ -5,7 +5,7 @@ import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './api/rings';
-import {initializeApi} from './api';
+import {initializeApi, startedOnMock} from './api';
 import {Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
@@ -22,6 +22,11 @@ function startLanguage(): Promise<Lang> {
   );
 }
 let startup: Promise<unknown> | undefined;
+const start = () =>
+  (startup ??= detectHostedBackend().then(() => {
+    pruneRings();
+    return initializeApi();
+  }));
 let language: Promise<Lang> | undefined;
 function Startup() {
   const [ready, setReady] = useState(false);
@@ -30,10 +35,6 @@ function Startup() {
   const [unreadable, setUnreadable] = useState(false);
   useEffect(() => {
     let mounted = true;
-    startup ??= detectHostedBackend().then(() => {
-      pruneRings();
-      return initializeApi();
-    });
     language ??= startLanguage();
     void language.then(
       loaded => {
@@ -43,7 +44,7 @@ function Startup() {
         if (mounted) setUnreadable(true);
       }
     );
-    void startup.then(
+    void start().then(
       () => {
         if (mounted) setReady(true);
       },
@@ -96,13 +97,16 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   // A new build takes over an open tab silently; say so, since the page only changes on a reload.
   // clients.claim() fires controllerchange on first install too; only a replaced controller is a new build.
   const running = navigator.serviceWorker.controller !== null;
-  // The worker installs no language up front, so the page tells each active controller the language it shows.
+  // The worker installs no language or mock up front, so the page tells each active controller the language it shows
+  // and whether it runs on the mock.
   const report = async () => {
     if (!(await (language ??= startLanguage()).catch(() => null))) return;
+    await start().catch(() => null);
     const controller = navigator.serviceWorker.controller;
     if (!controller) return;
     if (controller.state === 'activating') await new Promise<void>(resolve => controller.addEventListener('statechange', () => resolve(), {once: true}));
-    if (controller.state === 'activated' && navigator.serviceWorker.controller === controller) controller.postMessage({language: loadedLang(readLang())});
+    if (controller.state === 'activated' && navigator.serviceWorker.controller === controller)
+      controller.postMessage({language: loadedLang(readLang()), mock: startedOnMock()});
   };
   void navigator.serviceWorker.ready.then(report);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
