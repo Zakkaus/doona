@@ -28,6 +28,32 @@ export function LogActivity({
   const map = useMemo(() => levelHeatmap(records, offered, minimum as LogLevel | ''), [records, offered, minimum]);
   const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}), [locale]);
   const span = useCallback((start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`, [clock, map.width]);
+  // A row header per level: it changes with the minimum, not with every published batch.
+  const heads = useMemo(() => {
+    const entries = (Object.keys(logLevelLabels) as LogLevel[]).map(level => {
+      const text = t(logLevelLabels[level]);
+      return [
+        level,
+        {
+          text,
+          // Every row header is the same button; the current minimum carries a check mark and changes nothing.
+          label: (
+            <Button
+              quiet
+              small
+              className={level === minimum ? 'current' : undefined}
+              label={t(level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level: text})}
+              onPress={() => setMinimum(level)}
+            >
+              {level === minimum && <Checkmark />}
+              {text}
+            </Button>
+          )
+        }
+      ] as const;
+    });
+    return new Map(entries);
+  }, [minimum, setMinimum, t]);
   // Rebuilt with the map, which is on every published batch; each bucket's span is formatted once for all the rows.
   const heat = useMemo(() => {
     const tones: Record<LogLevel, string> = {error: p.negative, warn: p.notice, info: p.info, debug: p.subtle, trace: p.muted};
@@ -35,29 +61,17 @@ export function LogActivity({
     return {
       columns: map.buckets.map(start => clock.format(start)),
       rows: map.rows.map(row => {
-        const level = t(logLevelLabels[row.level]);
+        const {text: level, label} = heads.get(row.level)!;
         return {
           id: row.level,
           color: tones[row.level],
-          // Every row header is the same button; the current minimum carries a check mark and changes nothing.
-          label: (
-            <Button
-              quiet
-              small
-              className={row.level === minimum ? 'current' : undefined}
-              label={t(row.level === minimum ? 'log.chart.current' : 'log.chart.minimum', {level})}
-              onPress={() => setMinimum(row.level)}
-            >
-              {row.level === minimum && <Checkmark />}
-              {level}
-            </Button>
-          ),
+          label,
           counts: row.counts,
           titles: row.counts.map((n, i) => t('log.chart.cell', {time: spans[i], level, n}))
         };
       })
     };
-  }, [map, span, clock, minimum, setMinimum, p, t]);
+  }, [map, span, clock, heads, p, t]);
   if (!records.length) return null;
   const busiest = map.busiest;
   const facts: ChartFact[] = !busiest
