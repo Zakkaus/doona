@@ -84,6 +84,7 @@
 }
 /* A touch leaves :hover stuck on the tapped point, so only a fine pointer highlights it. */
 @media (hover: hover) and (pointer: fine) {
+  /* stylelint-disable-next-line selector-pseudo-class-disallowed-list -- guarded by the media query above */
   .rp-scatter circle.pick:hover {
     fill-opacity: 1;
     stroke: var(--rp-text);
