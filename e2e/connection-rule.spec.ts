@@ -396,3 +396,19 @@ test('a failed groups read shows in the dialog and is retried there', async ({pa
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
+
+test.describe('phone', () => {
+  test.use({viewport: {width: 360, height: 780}});
+  test('the apply button and its count stay in the top bar', async ({page}) => {
+    await mockBackend(page);
+    await hold(page, '1');
+    const apply = top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true});
+    await expect(apply).toBeVisible();
+    const count = apply.locator('.rp-held-count');
+    await expect(count).toHaveText('1');
+    const [badge, bar] = [(await count.boundingBox())!, (await top(page).boundingBox())!];
+    expect(badge.x).toBeGreaterThanOrEqual(0);
+    expect(badge.x + badge.width).toBeLessThanOrEqual(bar.width);
+    expect(badge.y).toBeGreaterThanOrEqual(bar.y);
+  });
+});

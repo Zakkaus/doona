@@ -59,6 +59,53 @@ test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   expect(content).toBeLessThanOrEqual(top);
 });
 
+test('language, theme, palette and wordmark are one overflow menu away', async ({page}) => {
+  await page.goto('/#/overview');
+  const top = page.locator('.rp-top');
+  await expect(top.getByRole('button', {name: 'Search'})).toBeVisible();
+  await expect(top.getByRole('button', {name: 'Refresh'})).toBeVisible();
+  for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
+  const more = top.getByRole('button', {name: 'More options'});
+  const box = (await more.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
+  const pick = async (item: string) => {
+    await more.click();
+    // A palette's name continues with its variants, so the name only has to start with the item.
+    await page.getByRole('menuitemradio', {name: new RegExp(`^${item}`)}).click();
+  };
+  await pick('Dark');
+  await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
+  await pick('Nord');
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  await pick('Plain');
+  await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
+  await pick('简体中文');
+  await expect(top.getByRole('button', {name: '更多选项'})).toBeVisible();
+});
+
+for (const width of [320, 360])
+  for (const lang of ['en', 'zh-TW', 'zh-CN'])
+    test.describe(`${width}px ${lang} top bar`, () => {
+      test.use({viewport: {width, height: 700}, storage: {'doona-lang': lang}});
+      test('fits on one row without truncating', async ({page}) => {
+        await page.goto('/#/overview');
+        await expect(page.locator('.rp-top .rp-top-more button')).toBeVisible();
+        const layout = await page.locator('.rp-top').evaluate(top => {
+          const bounds = top.getBoundingClientRect();
+          const visible = [...top.querySelectorAll<HTMLElement>('button, .rp-brand-text > span')].filter(el => el.getClientRects().length);
+          return {
+            height: bounds.height,
+            inside: visible.every(el => {
+              const box = el.getBoundingClientRect();
+              return box.left >= bounds.left && box.right <= bounds.right && el.scrollWidth <= el.clientWidth + 1;
+            })
+          };
+        });
+        expect(layout.height).toBe(64);
+        expect(layout.inside).toBe(true);
+      });
+    });
+
 test.describe('desktop', () => {
   test.use({viewport: {width: 1280, height: 900}});
   test('groups the side navigation into the four hubs and hides the phone navigation', async ({page}) => {
@@ -75,6 +122,12 @@ test.describe('desktop', () => {
       ).toEqual(hub.pages.map(route => `#/${route}`));
     await expect(page.locator('.rp-hubbar')).toBeHidden();
     await expect(page.locator('.rp-hubnav')).toBeHidden();
+    // The top bar keeps its separate language, palette and theme controls.
+    const top = page.locator('.rp-top');
+    for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeVisible();
+    await expect(top.getByRole('button', {name: /^Theme: /})).toBeVisible();
+    await expect(top.locator('.rp-vrule')).toBeVisible();
+    await expect(top.getByRole('button', {name: 'More options'})).toBeHidden();
   });
 });
 
