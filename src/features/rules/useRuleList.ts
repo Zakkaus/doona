@@ -32,6 +32,8 @@ export type RuleListModel = {
   select: (row: string | null) => void;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
+  // An apply has already taken its copy of the held rules, so a discard now would still be written.
+  applying: boolean;
   canWrite: boolean;
   busy: boolean;
   addDisabled: boolean;
@@ -198,7 +200,10 @@ export function useRuleList({go, query}: PageProps) {
     selected,
     select: (row: string | null) => setPicked({landed, row}),
     held: pendingView(held.rules, held.failure, t),
-    discard: (id: number) => pendingRules.remove([id]),
+    discard: (id: number) => {
+      if (!held.applying) pendingRules.remove([id]);
+    },
+    applying: held.applying,
     canWrite,
     busy: !!editor.busy,
     addDisabled: !table.positions.length || !!editor.busy,

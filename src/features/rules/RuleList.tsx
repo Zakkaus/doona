@@ -122,7 +122,7 @@ function Dictionary({view}: {view: Model}) {
               <DaeCode text={row.line} />
               <span className="rp-label">{row.position}</span>
               <span className="rp-grow" />
-              <Button small quiet icon label={t('rule.discard')} onPress={() => view.discard(row.id)}>
+              <Button small quiet icon label={t('rule.discard')} isDisabled={view.applying} onPress={() => view.discard(row.id)}>
                 <Close />
               </Button>
             </div>
