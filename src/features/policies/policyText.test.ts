@@ -29,3 +29,8 @@ it('accepts an unchanged multi-line filter and checks only edited values', () =>
   expect(groupEditSafe(['name(a,\n  b)'], 'select', entry)).toBe(true);
   expect(groupEditSafe(['name(a) # x'], 'select', entry)).toBe(false);
 });
+
+// honk keeps the current node until it fails; a node earlier in the order that recovers does not take over again.
+it('describes fallback as staying on the current node until it fails', () => {
+  expect(translate('en', 'arrange.policy.fallbackHint')).toBe('Uses the current node until it fails, then the next in order');
+});

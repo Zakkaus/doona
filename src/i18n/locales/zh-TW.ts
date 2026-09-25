@@ -604,7 +604,7 @@ export const messages = {
   'arrange.policy.fastest': '平均最快',
   'arrange.policy.fastestHint': '自動使用近期平均延遲最低的節點（建議）',
   'arrange.policy.fallback': '依序備援',
-  'arrange.policy.fallbackHint': '使用排在最前面且可用的節點',
+  'arrange.policy.fallbackHint': '使用目前節點直到失效，再依序切換',
   'arrange.policy.spread': '輪流分散',
   'arrange.policy.spreadHint': '將連線輪流分配到所有節點',
   'arrange.policy.manual': '手動選擇',

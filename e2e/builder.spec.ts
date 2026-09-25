@@ -29,6 +29,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   // A policy the picker does not offer stays selected as written.
   await expect(policy).toContainText('min_last_delay');
   await policy.click();
+  await expect(page.getByRole('option', {name: /^First available/})).toContainText('Uses the current node until it fails, then the next in order');
   await page.getByRole('option', {name: /^First available/}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 2'}).fill("subtag('sub-c')");
