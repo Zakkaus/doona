@@ -435,6 +435,50 @@ test('a rule written whose operation the backend forgot is not held again', asyn
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
 
+test('an apply whose later file is written but not reloaded counts every rule written', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  // As in the later-file test above: the include takes rules once it has a routing section.
+  const wrap = (text: string) => 'routing {\n' + text + '}\n';
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const sources = config.sources.map(async source =>
+      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
+    );
+    return {...config, sources: await Promise.all(sources)};
+  };
+  handlers['GET rules'] = async () => {
+    const list = await api.rules();
+    return {
+      ...list,
+      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
+    };
+  };
+  handlers['PUT config/sources/src-rules'] = async () => ({
+    operation_id: 'op-rejected',
+    kind: 'reload',
+    status: 'queued',
+    href: '/api/v1/operations/op-rejected',
+    retryAfter: 0
+  });
+  handlers['GET operations/op-rejected'] = async () => ({
+    operation_id: 'op-rejected',
+    kind: 'reload',
+    status: 'failed',
+    created_at: new Date().toISOString(),
+    started_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
+    result: null,
+    error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
+  });
+  const connections = await createMockApi().connections();
+  const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
+  await hold(page, '1');
+  await hold(page, inInclude.id);
+  await top(page).getByRole('button', {name: 'Apply and reload (2); writes 2 files', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: '2 rules written; 0 still held'})).toBeVisible();
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+});
+
 test('the dialog waits for the groups before it writes', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const groups = gate();

@@ -49,7 +49,9 @@ export function usePendingApply() {
       if (!outcome) return undefined;
       if (outcome.written) pendingRules.remove(group.map(rule => rule.id));
       const done = outcome.written ? group.length : 0;
-      if (outcome.failure) return {written: written + done, failure: partialFailure(outcome.failure, written, rules.length - written - done, t)};
+      // A failed file whose rules still landed counts with the earlier ones; when it is the first, its own failure says so.
+      if (outcome.failure)
+        return {written: written + done, failure: partialFailure(outcome.failure, written && written + done, rules.length - written - done, t)};
       written += done;
     }
     return {written, failure: null};
