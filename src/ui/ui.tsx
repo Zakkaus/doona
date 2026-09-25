@@ -11,4 +11,5 @@ export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, Toasts, 
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
 export {Tag, Tags} from './Tag';
 export {ActionBar} from './ActionBar';
+export {ActionGroup, type Action} from './ActionGroup';
 export {Card} from './Card';

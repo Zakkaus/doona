@@ -4,6 +4,7 @@ import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {
+  ActionGroup,
   Badge,
   Button,
   DataTable,
@@ -212,19 +213,13 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         {vm.total && <span className="rp-label">{vm.total}</span>}
         {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
         <span className="rp-grow" />
-        <Button isDisabled={!vm.rows.length} onPress={vm.export}>
-          <Download />
-          {t('dns.exportLog')}
-        </Button>
-        <Button isPending={vm.refreshing} onPress={vm.refresh}>
-          <Refresh className="rp-spin-on-press" />
-          {t('refresh')}
-        </Button>
-        {vm.hasOlder && (
-          <Button isPending={vm.loadingOlder} onPress={vm.loadOlder}>
-            {t('dns.loadOlder')}
-          </Button>
-        )}
+        <ActionGroup
+          actions={[
+            {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+            {id: 'refresh', label: t('refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+            ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
+          ]}
+        />
       </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}

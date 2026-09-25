@@ -1,9 +1,8 @@
 import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {Badge, Card, Bar, Button, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {tableLayout} from '../../ui/Table';
-import {LifecycleActions} from './Lifecycle';
 
 // While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
 // card keeps its height when the values arrive; `extra` holds the lines below the grid.
@@ -44,11 +43,7 @@ export function Overview() {
           )}
         </div>
         <div className="rp-cluster">
-          <Button isDisabled={!vm.canExport} onPress={vm.export}>
-            <Download />
-            {t('ov.export')}
-          </Button>
-          <LifecycleActions actions={vm.actions} />
+          <ActionGroup actions={[{id: 'export', label: t('ov.export'), icon: <Download />, isDisabled: !vm.canExport, onAction: vm.export}, ...vm.actions]} />
         </div>
       </div>
       <div className="rp-g3">

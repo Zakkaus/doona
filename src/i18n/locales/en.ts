@@ -1286,6 +1286,7 @@ export const messages = {
   'ui.saved': 'Settings saved.',
   'ui.state': 'State',
   'ui.actions': 'Actions',
+  'ui.moreActions': 'More actions',
   'ui.source': 'Source',
   'ui.target': 'Target',
   'ui.domain': 'Domain',

@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
+import {ActionGroup, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
 
@@ -64,13 +64,12 @@ export function Logs() {
         </Light>
         {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
         <span className="rp-grow" />
-        <Button isDisabled={!vm.rows.length} onPress={vm.clear}>
-          {t('log.clear')}
-        </Button>
-        <Button isDisabled={!vm.rows.length} onPress={vm.export}>
-          <Download />
-          {t('log.export')}
-        </Button>
+        <ActionGroup
+          actions={[
+            {id: 'clear', label: t('log.clear'), isDisabled: !vm.rows.length, onAction: vm.clear},
+            {id: 'export', label: t('log.export'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export}
+          ]}
+        />
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
