@@ -39,10 +39,11 @@ export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const limits = capabilities?.resources.memory_history;
   const window_seconds = Math.min(600, limits?.max_window_seconds ?? 600);
   const max_points = Math.min(120, limits?.max_points ?? 120);
-  return useResource(
+  const history = useResource(
     {key: ['memoryHistory', {window_seconds, max_points}], every: poll.background, fetch: signal => api.memoryHistory({window_seconds, max_points}, signal)},
     {enabled: limits?.available === true}
   );
+  return {...history, windowSeconds: window_seconds};
 }
 export function useCapabilities() {
   const api = getApi();

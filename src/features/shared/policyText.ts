@@ -2,17 +2,10 @@ import {groupNameProblem, type GroupEntry} from '../../dae/groups';
 import {enumLabel} from '../../i18n/enum';
 import {isFragment} from '../../dae/text';
 import type {Translator} from '../../i18n';
-import type {Key} from '../../i18n';
 import {policyKindLabels} from '../../api/selectors';
+import {newGroupPolicies} from '../../dae/vocab';
 import type {Group} from '../../api/model';
 
-// The policies a new group can start with, in the order the picker offers them.
-export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
-  {id: 'min_moving_avg', label: 'arrange.policy.fastest', description: 'arrange.policy.fastestHint'},
-  {id: 'fallback', label: 'arrange.policy.fallback', description: 'arrange.policy.fallbackHint'},
-  {id: 'roundrobin', label: 'arrange.policy.spread', description: 'arrange.policy.spreadHint'},
-  {id: 'select', label: 'arrange.policy.manual', description: 'arrange.policy.manualHint'}
-];
 // A group without a policy line is a selector in honk, which is what `select` writes.
 const IMPLIED = 'select';
 

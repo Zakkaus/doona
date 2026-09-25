@@ -1,4 +1,5 @@
 import type {Group} from '../api/model';
+import type {Key} from '../i18n';
 
 // The dae configuration vocabulary the engine accepts, as honk's parser spells it (crates/honk-config/src/parser):
 // the editor's completions and the demo validator both read from here so they cannot drift apart.
@@ -57,6 +58,13 @@ export function policyKind(native: string): Group['policy']['kind'] | undefined 
   return policyKinds[native.toLowerCase().replace(/\(.*$/, '')];
 }
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
+// The policies a new group can start with, in the order the picker offers them.
+export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
+  {id: 'min_moving_avg', label: 'arrange.policy.fastest', description: 'arrange.policy.fastestHint'},
+  {id: 'fallback', label: 'arrange.policy.fallback', description: 'arrange.policy.fallbackHint'},
+  {id: 'roundrobin', label: 'arrange.policy.spread', description: 'arrange.policy.spreadHint'},
+  {id: 'select', label: 'arrange.policy.manual', description: 'arrange.policy.manualHint'}
+];
 // Built-in outbounds, as nodes, groups and rules name them; a rule may add `(must)`, which keeps DNS traffic from
 // being hijacked for that rule.
 export const builtinOutboundNames = ['direct', 'block'];
