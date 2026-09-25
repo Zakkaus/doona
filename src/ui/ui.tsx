@@ -14,3 +14,4 @@ export {Tag, Tags} from './Tag';
 export {ActionBar} from './ActionBar';
 export {ActionGroup, type Action} from './ActionGroup';
 export {Card} from './Card';
+export {Divider} from './Divider';
