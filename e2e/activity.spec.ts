@@ -322,6 +322,8 @@ test.describe('many outbounds', () => {
       await trigger.click();
       const popover = page.locator('.rp-popover');
       await expect(popover.locator('.rp-menu-pending')).toBeVisible();
+      // The popover drifts 4px as it enters; measure where it settles, not a frame of the entrance.
+      await popover.evaluate(el => Promise.all(el.getAnimations({subtree: true}).map(animation => animation.finished)));
       const pending = await popover.boundingBox();
       release();
       await expect(page.getByRole('searchbox', {name: 'Filter nodes'})).toBeFocused();
