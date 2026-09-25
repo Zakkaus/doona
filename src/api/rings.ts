@@ -1,5 +1,6 @@
 import {useEffect, useSyncExternalStore} from 'react';
 import {readProfiles} from './profiles';
+import {serverNow} from './serverClock';
 
 // Session polls extend the backend's ten-minute history: an hour at poll cadence, a week of stored minute buckets
 // per profile.
@@ -47,7 +48,7 @@ export function append<T extends Timed>(rings: Rings<T>, sample: T, fold: Fold<T
 
 // The window's samples on one axis: minute buckets, then the session's polls, then the backend's ring, each
 // winning a shared instant over the one before. Long windows are thinned to at most `maxPoints` buckets.
-export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSeconds: number, fold: Fold<T>, now = Date.now(), maxPoints = 360) {
+export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSeconds: number, fold: Fold<T>, now = serverNow(), maxPoints = 360) {
   const since = now - windowSeconds * 1000;
   const byTime = new Map<number, T>();
   for (const sample of rings.coarse) if (sample.time >= since - minute) byTime.set(sample.time, sample);
