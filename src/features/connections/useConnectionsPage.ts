@@ -1,5 +1,5 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useConnectionClose, useConnections, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
@@ -18,6 +18,7 @@ import {
   type ConnectionView
 } from './view';
 import {offered} from '../../api/capabilities';
+import {pathLatency} from './latency';
 
 const connectionTabs = ['traffic', 'list'] as const;
 // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
@@ -75,6 +76,10 @@ export function useConnectionsPage({go, query}: PageProps) {
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
+  // The node list the names above already read; a backend without it gets no latency card.
+  const nodesListed = offered(capabilities.data?.resources, 'nodes', {whileLoading: false});
+  const nodes = useNodes(nodesListed);
+  const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data) : null), [nodesListed, nodes.data, rows]);
   const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')), [rows]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
@@ -143,6 +148,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     // its colours.
     rows,
     outboundKeys,
+    latency,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
     pick: (key: string | number) => {
