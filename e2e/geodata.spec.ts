@@ -1,4 +1,5 @@
 import {expect, mockBackend, test} from './fixtures';
+import type {Page} from '@playwright/test';
 import {geodataPreset} from '../src/dae/geodata';
 import {LANGS, loadLanguage, translate} from '../src/i18n';
 import type {RuntimeSettings} from '../src/api/model';
@@ -6,66 +7,169 @@ import type {RuntimeSettings} from '../src/api/model';
 test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
 const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
 const full = geodataPreset('metacubex');
-const lite = geodataPreset('metacubex-lite');
 const loyal = geodataPreset('loyalsoldier');
-const patches = (page: import('@playwright/test').Page) =>
-  page.waitForRequest(request => request.method() === 'PATCH' && request.url().endsWith('/runtime/settings'));
+// Serves the mock over the network and records every settings PATCH and geodata update the page sends, in order.
+async function traffic(page: Page) {
+  const backend = await mockBackend(page);
+  const sent: string[] = [];
+  const bodies: unknown[] = [];
+  page.on('request', request => {
+    const url = request.url();
+    if (request.method() === 'PATCH' && url.endsWith('/runtime/settings')) {
+      sent.push('patch');
+      bodies.push(request.postDataJSON());
+    }
+    if (request.method() === 'POST' && url.endsWith('/geodata/update')) sent.push('update');
+  });
+  return {...backend, sent, bodies};
+}
+const section = (page: Page) => page.getByRole('region', {name: t('settings.geodata'), exact: true});
+const row = (page: Page, label: Parameters<typeof t>[0]) =>
+  section(page)
+    .locator('.rp-ops-group')
+    .filter({has: page.getByText(t(label), {exact: true})});
+async function pick(page: Page, label: Parameters<typeof t>[0], option: string, exact = true) {
+  await section(page)
+    .getByRole('button', {name: t(label)})
+    .first()
+    .click();
+  await page.getByRole('option', {name: option, exact}).click();
+}
 
-test('a preset is applied as both URL lists and names the current source', async ({page}) => {
-  const {api} = await mockBackend(page);
+test('choosing a preset saves it once and then updates once', async ({page}) => {
+  const {sent, bodies} = await traffic(page);
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await expect(card).toContainText(t('settings.geodataFromDefault'));
-  await expect(card).toContainText(t('settings.geodataPreset.metacubex'));
-  await card.getByRole('button', {name: t('settings.geodataSource')}).click();
-  await page.getByRole('option', {name: t('settings.geodataPreset.loyalsoldier'), exact: true}).click();
-  const saving = patches(page);
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  expect((await saving).postDataJSON()).toEqual({geodata: {geosite: {urls: loyal.urls.geosite}, geoip: {urls: loyal.urls.geoip}}});
-  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataSaved')})).toBeVisible();
-  await expect(card).toContainText(t('settings.geodataFromDb'));
-  const settings = (await api.runtimeSettings()).geodata!;
-  expect(settings.geosite.urls).toEqual(loyal.urls.geosite);
-  // The plain table left the backend actions card, which no longer offers a second update button.
-  await expect(page.getByRole('region', {name: t('settings.actions')})).not.toContainText('geosite');
+  const status = row(page, 'settings.geodataStatus');
+  await expect(status).toContainText(t('settings.geodataLastUpdated'));
+  await expect(section(page)).not.toContainText(t('settings.geodataLastError'));
+  await expect(row(page, 'settings.geodataSource')).toContainText(/geosite about/);
+  await pick(page, 'settings.geodataSource', t('settings.geodataPreset.loyalsoldier'), false);
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataUpdated')})).toBeVisible();
+  expect(sent).toEqual(['patch', 'update']);
+  expect(bodies).toEqual([{geodata: {geosite: {urls: loyal.urls.geosite}, geoip: {urls: loyal.urls.geoip}}}]);
+  await expect(section(page).getByRole('button', {name: t('settings.geodataSource')})).toContainText(t('settings.geodataPreset.loyalsoldier'));
+  // Update now is idempotent: a double click sends one update.
+  await section(page)
+    .getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true})
+    .dblclick();
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataUpdated')})).toBeVisible();
+  expect(sent).toEqual(['patch', 'update', 'update']);
 });
 
-test('the lite preset warns about the categories the rules use', async ({page}) => {
-  await mockBackend(page);
+test('a failed update keeps the old files and shows the reason in the status row', async ({page}) => {
+  const {sent} = await traffic(page);
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await card.getByRole('button', {name: t('settings.geodataSource')}).click();
-  await page.getByRole('option', {name: t('settings.geodataPreset.metacubexLite'), exact: true}).click();
-  const warning = card.getByRole('alert').filter({hasText: t('settings.geodataMissingTitle', {name: t('settings.geodataPreset.metacubexLite')})});
-  // The demo rules use geosite:discord, which the lite file lacks.
-  await expect(warning).toContainText('geosite: discord');
-  await expect(card.getByText(/geosite about 176/)).toBeVisible();
-  expect(lite.categories?.geosite).not.toContain('discord');
+  await section(page)
+    .getByRole('button', {name: t('settings.geodataSource')})
+    .first()
+    .click();
+  // The demo rules use geosite:discord, which the lite file lacks; the option says so before it is chosen.
+  const option = page.getByRole('option', {name: t('settings.geodataPreset.metacubexLite')});
+  await expect(option).toContainText('geosite:discord');
+  await option.click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'discord'})).toBeVisible();
+  expect(sent).toEqual(['patch', 'update']);
+  const status = row(page, 'settings.geodataStatus').getByRole('status');
+  await expect(status).toContainText(t('settings.geodataLastError'));
+  await expect(status).toContainText('lacks categories the configuration uses: discord');
+  await expect(status).toHaveClass(/negative/);
+  // The files are the ones loaded before.
+  await section(page)
+    .getByRole('button', {name: t('settings.geodataDetails')})
+    .click();
+  await expect(section(page).locator('.rp-kv')).toContainText('4.4 MB');
 });
 
-test('a custom URL list is saved in order and shown as custom with its host', async ({page}) => {
-  await mockBackend(page);
+test('custom URLs are edited in a dialog, saved once and then updated', async ({page}) => {
+  const {sent, bodies} = await traffic(page);
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await card.getByRole('button', {name: t('settings.geodataSource')}).click();
-  await page.getByRole('option', {name: t('settings.geodataCustom'), exact: true}).click();
-  // Custom starts from the chosen preset's links, so a mirror goes in front of them.
-  const first = card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '1'}), {exact: true});
+  await expect(row(page, 'settings.geodataCustomUrls')).toHaveCount(0);
+  await pick(page, 'settings.geodataSource', t('settings.geodataCustom'));
+  const dialog = page.getByRole('dialog', {name: t('settings.geodataCustomUrls')});
+  // The dialog starts from the chosen preset's links, so a mirror goes in front of them.
+  const first = dialog.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '1'}), {exact: true});
   await expect(first).toHaveValue(full.urls.geosite[0]);
   await first.fill('https://mirror.example.net/geosite.dat');
-  await card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '3'}), {exact: true}).fill('ftp://bad');
-  await expect(card.getByText(t('settings.geodataUrlInvalid'))).toBeVisible();
-  await expect(card.getByRole('button', {name: t('settings.apply'), exact: true})).toBeDisabled();
-  await card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '3'}), {exact: true}).fill('');
-  const saving = patches(page);
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  expect((await saving).postDataJSON()).toEqual({
-    geodata: {geosite: {urls: ['https://mirror.example.net/geosite.dat', full.urls.geosite[1]]}, geoip: {urls: full.urls.geoip}}
-  });
-  await expect(card).toContainText(t('settings.geodataCustomHost', {host: 'mirror.example.net'}));
+  const third = dialog.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '3'}), {exact: true});
+  await third.fill('ftp://bad');
+  await expect(dialog.getByText(t('settings.geodataUrlInvalid'))).toBeVisible();
+  const save = dialog.getByRole('button', {name: t('settings.geodataSaveUpdate'), exact: true});
+  await expect(save).toBeDisabled();
+  await third.fill('');
+  // The order is the fallback order: the mirror moves below the jsDelivr link, and the first URL cannot move up.
+  const url = (n: string) => t('settings.geodataUrlLabel', {kind: 'geosite', n});
+  await expect(dialog.getByRole('button', {name: t('settings.geodataMoveUp', {url: url('1')}), exact: true})).toBeDisabled();
+  await dialog.getByRole('button', {name: t('settings.geodataMoveUp', {url: url('2')}), exact: true}).click();
+  await expect(first).toHaveValue(full.urls.geosite[1]);
+  await dialog.getByRole('button', {name: t('settings.geodataMoveDown', {url: url('1')}), exact: true}).click();
+  await dialog.getByRole('button', {name: t('settings.geodataMoveUp', {url: url('2')}), exact: true}).click();
+  await save.dblclick();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataUpdated')})).toBeVisible();
+  expect(sent).toEqual(['patch', 'update']);
+  expect(bodies).toEqual([{geodata: {geosite: {urls: [full.urls.geosite[1], 'https://mirror.example.net/geosite.dat']}, geoip: {urls: full.urls.geoip}}}]);
+  const custom = row(page, 'settings.geodataCustomUrls');
+  await expect(custom).toContainText('mirror.example.net');
+  await custom.getByRole('button', {name: t('settings.geodataEdit'), exact: true}).click();
+  await expect(dialog.getByLabel(url('2'), {exact: true})).toHaveValue('https://mirror.example.net/geosite.dat');
+  await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
+  expect(sent).toEqual(['patch', 'update']);
 });
 
-test('URLs written from the config file stay editable, and a patch stores them as saved', async ({page}) => {
+test('the download route follows the routing rules by default, and a group route saves with its group', async ({page}) => {
+  const {sent, bodies} = await traffic(page);
+  await page.goto('/#/settings');
+  const route = row(page, 'settings.geodataRoute');
+  await expect(route.getByRole('button', {name: t('settings.geodataRoute')})).toContainText(t('settings.geodataRouteRouting'));
+  await pick(page, 'settings.geodataRoute', t('settings.geodataRouteGroup'));
+  // Choosing a group route only asks for the group.
+  await expect(route.getByRole('button', {name: t('settings.geodataRouteGroup')}).last()).toBeVisible();
+  expect(sent).toEqual([]);
+  await route
+    .getByRole('button', {name: t('settings.geodataRouteGroup')})
+    .last()
+    .click();
+  await page.getByRole('option', {name: 'proxy', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataAutoSaved')})).toBeVisible();
+  expect(bodies).toEqual([{geodata: {download: {route: 'group', group_id: 'proxy'}}}]);
+  await pick(page, 'settings.geodataRoute', t('settings.geodataRouteDirect'));
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toEqual({geodata: {download: {route: 'direct'}}});
+  await expect(route.getByRole('button', {name: t('settings.geodataRouteGroup')})).toHaveCount(0);
+  expect(sent).toEqual(['patch', 'patch']);
+});
+
+test('automatic updates save as they change, and the interval shows only while they are on', async ({page}) => {
+  const {bodies} = await traffic(page);
+  await page.goto('/#/settings');
+  const auto = row(page, 'settings.geodataAutoUpdate');
+  const interval = auto.getByRole('button', {name: t('settings.geodataInterval')});
+  await expect(interval).toContainText('1 day');
+  await pick(page, 'settings.geodataInterval', '3 days');
+  await expect.poll(() => bodies).toEqual([{geodata: {auto_update: {interval_hours: 72}}}]);
+  await expect(interval).toContainText('3 days');
+  await auto.getByRole('switch', {name: t('settings.geodataAutoUpdate')}).click({force: true});
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toEqual({geodata: {auto_update: {enabled: false}}});
+  await expect(interval).toHaveCount(0);
+});
+
+test('the details list each asset by host, with the full URL behind it', async ({page}) => {
+  await page.goto('/#/settings');
+  const details = section(page).getByRole('button', {name: t('settings.geodataDetails')});
+  await expect(details).toHaveAttribute('aria-expanded', 'false');
+  await details.click();
+  const geoip = section(page).locator('.rp-kv > div').filter({hasText: 'geoip'});
+  const host = new URL(full.urls.geoip[1]).host;
+  await expect(geoip).toContainText(host);
+  await expect(geoip).toContainText(t('settings.geodataRouteRouting'));
+  await expect(geoip).not.toContainText(full.urls.geoip[1]);
+  await page.mouse.move(0, 0);
+  await geoip.locator('.v').hover();
+  await expect(page.getByRole('tooltip')).toHaveText(full.urls.geoip[1]);
+});
+
+test('URLs written from the config file carry a note until the page stores its own', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   // honk wrote the config file's URLs into its stored settings at startup; the mock reports them until it stores a patch.
   let seeded = true;
@@ -80,47 +184,13 @@ test('URLs written from the config file stay editable, and a patch stores them a
     return seeded ? configured(result) : result;
   };
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await expect(card).toContainText(t('settings.geodataFromConfig'));
-  const note = card.getByRole('status').filter({hasText: t('settings.geodataConfigSeeded')});
+  const note = section(page).getByText(t('settings.geodataConfigSeeded'));
   await expect(note).toBeVisible();
-  await expect(card).toContainText(t('settings.geodataCustomHost', {host: 'files.example.org'}));
-  // Automatic updates are stored on their own and leave the URLs, and so the source, alone.
-  await card.getByText(t('settings.geodataAutoUpdate'), {exact: true}).click();
-  await card.getByLabel(t('settings.geodataInterval'), {exact: true}).fill('48');
-  let saving = patches(page);
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  expect((await saving).postDataJSON()).toEqual({geodata: {auto_update: {enabled: true, interval_hours: 48}}});
-  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataAutoSaved')})).toBeVisible();
-  await expect(note).toBeVisible();
-  const first = card.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '1'}), {exact: true});
-  await expect(first).toHaveValue('https://files.example.org/geosite.dat');
-  await first.fill('https://mirror.example.net/geosite.dat');
-  saving = patches(page);
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  expect((await saving).postDataJSON()).toEqual({geodata: {geosite: {urls: ['https://mirror.example.net/geosite.dat']}, geoip: {urls: full.urls.geoip}}});
-  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataSaved')})).toBeVisible();
-  await expect(card).toContainText(t('settings.geodataFromDb'));
-  await expect(note).toHaveCount(0);
-  expect((await api.runtimeSettings()).geodata!.geosite.urls).toEqual(['https://mirror.example.net/geosite.dat']);
-});
-
-test('update now downloads from the stored sources and reports the status', async ({page}) => {
-  await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: t('settings.geodata'), exact: true});
-  await expect(card.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
-  await expect(card.getByText(t('settings.geodataVerifiedYes'))).toHaveCount(2);
-  await card.getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true}).click();
+  await expect(row(page, 'settings.geodataCustomUrls')).toContainText('files.example.org');
+  await pick(page, 'settings.geodataSource', t('settings.geodataPreset.metacubex'), false);
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataUpdated')})).toBeVisible();
-  await expect(card.getByRole('grid').getByText(full.urls.geoip[0])).toBeVisible();
-  // The lite preset lacks a category the demo rules use, so its update fails and the error is kept.
-  await card.getByRole('button', {name: t('settings.geodataSource')}).click();
-  await page.getByRole('option', {name: t('settings.geodataPreset.metacubexLite'), exact: true}).click();
-  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataSaved')})).toBeVisible();
-  await card.getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'discord'})).toBeVisible();
-  await expect(card).toContainText('lacks categories the configuration uses: discord');
+  await expect(note).toHaveCount(0);
+  expect((await api.runtimeSettings()).geodata!.geosite.urls).toEqual(full.urls.geosite);
 });
 
 test('without configurable sources the page keeps the plain geodata table in the actions card', async ({page}) => {
@@ -132,5 +202,5 @@ test('without configurable sources the page keeps the plain geodata table in the
   const actions = page.getByRole('region', {name: t('settings.actions')});
   await expect(actions.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
   await expect(actions.getByRole('button', {name: t('settings.geodataUpdate'), exact: true})).toBeVisible();
-  await expect(actions).not.toContainText(t('settings.geodataVerified'));
+  await expect(actions).not.toContainText(t('settings.geodataVerifiedYes'));
 });

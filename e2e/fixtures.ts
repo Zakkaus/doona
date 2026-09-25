@@ -162,6 +162,7 @@ export async function mockBackend(page: Page) {
       else if (method === 'POST' && path === 'operations/suspend') result = await api.startSuspend();
       else if (method === 'POST' && path === 'operations/resume') result = await api.startResume();
       else if (method === 'POST' && path === 'dns/cache/flush') result = await api.flushDnsCache();
+      else if (method === 'POST' && path === 'geodata/update') result = await api.updateGeodata();
       else if (method === 'DELETE' && parts[0] === 'dns' && parts[1] === 'cache') result = await api.deleteDnsEntry(parts[2]);
       else throw new Error(`Unexpected request: ${method} ${path}`);
       if (result && typeof result === 'object' && 'href' in result && 'operation_id' in result) return fulfillAccepted(route, result as OperationAccepted);

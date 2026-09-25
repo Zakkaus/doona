@@ -1,20 +1,21 @@
 import {describe, expect, it} from 'vitest';
-import type {Capabilities, GeoDataSettings} from '../../api/model';
+import type {Capabilities, GeoData} from '../../api/model';
 import {capabilities, capabilitiesBase} from '../../api/mock/fixtures/capabilities';
 import {geodataPreset, geodataPresets, liteCategories} from '../../dae/geodata';
 import {translate, type Translator} from '../../i18n';
 import {
+  assetDetails,
+  cleanUrls,
   customFields,
-  draftInvalid,
+  customInvalid,
   geodataConfigurable,
-  geodataDraft,
-  geodataPatch,
-  geodataStatus,
+  intervalChoices,
   matchPreset,
   missingCategories,
-  sourceName,
-  urlProblem,
-  type GeodataDraft
+  presetNote,
+  routeLabel,
+  statusLine,
+  urlProblem
 } from './geodata';
 import {settingsCardList} from './view';
 
@@ -22,15 +23,20 @@ const t: Translator = (key, params) => translate('en', key, params);
 const full = geodataPreset('metacubex');
 const lite = geodataPreset('metacubex-lite');
 const loyal = geodataPreset('loyalsoldier');
-const settings = (over: Partial<GeoDataSettings> = {}): GeoDataSettings => ({
-  source: 'default',
-  geosite: {urls: [...full.urls.geosite]},
-  geoip: {urls: [...full.urls.geoip]},
-  auto_update: {enabled: false, interval_hours: 24},
-  download: {route: 'direct', group_id: null},
+const at = '2026-09-22T12:00:00Z';
+const now = Date.parse('2026-09-25T12:00:00Z');
+const asset = (kind: 'geosite' | 'geoip', over: Partial<GeoData['assets'][number]> = {}): GeoData['assets'][number] => ({
+  kind,
+  sha256: '0'.repeat(64),
+  size_bytes: '4404019',
+  modified_at: at,
+  source_redacted: full.urls[kind][0],
+  fetched_url_redacted: full.urls[kind][0],
+  verified: true,
+  download_route: {route: 'direct', group_id: null},
   ...over
 });
-const draft = (over: Partial<GeodataDraft> = {}): GeodataDraft => ({...geodataDraft(settings()), ...over});
+const status = (over: Partial<GeoData> = {}): GeoData => ({observed_at: '', assets: [asset('geosite'), asset('geoip')], last_updated_at: at, ...over});
 
 describe('preset matching', () => {
   it('names each preset from its direct links, raw first then jsDelivr fastly', () => {
@@ -39,21 +45,18 @@ describe('preset matching', () => {
       expect(preset.urls.geosite[1]).toMatch(/^https:\/\/fastly\.jsdelivr\.net\/gh\//);
       expect(matchPreset(preset.urls)?.id).toBe(preset.id);
     }
-    expect(sourceName(lite.urls, t)).toBe('MetaCubeX lite');
-    expect(sourceName(loyal.urls, t)).toBe('Loyalsoldier');
   });
   it('accepts a reordered list, a single link or another jsDelivr node as the same preset', () => {
     expect(matchPreset({geosite: [...full.urls.geosite].reverse(), geoip: [full.urls.geoip[0]]})?.id).toBe('metacubex');
     expect(matchPreset({geosite: [full.mirrors.geosite[0]], geoip: [full.mirrors.geoip[1]]})?.id).toBe('metacubex');
   });
-  it('shows anything else as custom with the host of its first URL', () => {
+  it('matches nothing else to a preset', () => {
     const mirror = {geosite: ['https://mirror.example.net/geo/geosite.dat'], geoip: ['https://mirror.example.net/geo/geoip.dat']};
     expect(matchPreset(mirror)).toBeNull();
-    expect(sourceName(mirror, t)).toBe('Custom (mirror.example.net)');
     // Mixing two presets, or one asset from a preset and one elsewhere, is not a preset.
     expect(matchPreset({geosite: full.urls.geosite, geoip: loyal.urls.geoip})).toBeNull();
     expect(matchPreset({geosite: full.urls.geosite, geoip: mirror.geoip})).toBeNull();
-    expect(sourceName({geosite: [], geoip: []}, t)).toBe('—');
+    expect(matchPreset({geosite: [], geoip: []})).toBeNull();
   });
 });
 
@@ -72,41 +75,13 @@ describe('lite pre-check', () => {
   });
 });
 
-describe('settings patch', () => {
-  it('sends nothing for an unchanged draft', () => {
-    expect(geodataPatch(settings(), geodataDraft(settings()))).toBeNull();
-  });
-  it('sends both URL lists when a preset or custom list changes', () => {
-    expect(geodataPatch(settings(), draft({choice: 'loyalsoldier'}))).toEqual({geosite: {urls: loyal.urls.geosite}, geoip: {urls: loyal.urls.geoip}});
-    const custom = draft({choice: 'custom', custom: {geosite: [' https://m.example/geosite.dat ', ''], geoip: [...full.urls.geoip]}});
-    expect(geodataPatch(settings(), custom)).toEqual({geosite: {urls: ['https://m.example/geosite.dat']}, geoip: {urls: full.urls.geoip}});
-  });
-  it('treats a reordered list as a change, since order is fallback order', () => {
-    const custom = draft({choice: 'custom', custom: {geosite: [...full.urls.geosite].reverse(), geoip: [...full.urls.geoip]}});
-    expect(geodataPatch(settings(), custom)?.geosite?.urls).toEqual([...full.urls.geosite].reverse());
-  });
-  it('sends only the changed auto-update fields', () => {
-    expect(geodataPatch(settings(), draft({enabled: true}))).toEqual({auto_update: {enabled: true}});
-    expect(geodataPatch(settings(), draft({interval: '48'}))).toEqual({auto_update: {interval_hours: 48}});
-    expect(geodataPatch(settings(), draft({interval: '5'}))).toBeNull();
-  });
-  it('sends and checks URLs written from the configuration file like any others', () => {
-    const seeded = settings({source: 'config', geosite: {urls: ['https://m.example/geosite.dat']}, geoip: {urls: [...full.urls.geoip]}});
-    expect(geodataPatch(seeded, {...geodataDraft(seeded), choice: 'metacubex', enabled: true})).toEqual({
-      geosite: {urls: full.urls.geosite},
-      geoip: {urls: full.urls.geoip},
-      auto_update: {enabled: true}
-    });
-    expect(geodataPatch(seeded, {...geodataDraft(seeded), enabled: true})).toEqual({auto_update: {enabled: true}});
-    expect(draftInvalid({...geodataDraft(seeded), choice: 'custom', custom: {geosite: [], geoip: []}})).toBe(true);
-  });
-  it('blocks a custom list without a URL, with a bad URL or a repeat, and an interval out of range', () => {
-    const custom = (geosite: string[]) => draft({choice: 'custom', custom: {geosite, geoip: [...full.urls.geoip]}});
-    expect(draftInvalid(custom(['https://m.example/a.dat']))).toBe(false);
-    expect(draftInvalid(custom(['']))).toBe(true);
-    expect(draftInvalid(custom(['ftp://m.example/a.dat']))).toBe(true);
-    expect(draftInvalid(custom(['https://m.example/a.dat', 'https://m.example/a.dat']))).toBe(true);
-    expect(draftInvalid(draft({interval: '169'}))).toBe(true);
+describe('custom URLs', () => {
+  it('blocks a list without a URL, with a bad URL or a repeat', () => {
+    const lists = (geosite: string[]) => ({geosite, geoip: [...full.urls.geoip]});
+    expect(customInvalid(lists(['https://m.example/a.dat']))).toBe(false);
+    expect(customInvalid(lists(['']))).toBe(true);
+    expect(customInvalid(lists(['ftp://m.example/a.dat']))).toBe(true);
+    expect(customInvalid(lists(['https://m.example/a.dat', 'https://m.example/a.dat']))).toBe(true);
     expect(urlProblem('https://user:pw@m.example/a.dat', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('https://m.example/a.dat#x', [])).toBe('settings.geodataUrlInvalid');
     expect(urlProblem('', [])).toBeNull();
@@ -115,6 +90,12 @@ describe('settings patch', () => {
     expect(urlProblem(long(4096), [])).toBeNull();
     expect(urlProblem(long(4097), [])).toBe('settings.geodataUrlInvalid');
   });
+  it('stores the lists trimmed, in order, without blanks', () => {
+    expect(cleanUrls({geosite: [' https://m.example/b.dat ', '', 'https://m.example/a.dat'], geoip: ['https://m.example/ip.dat']})).toEqual({
+      geosite: ['https://m.example/b.dat', 'https://m.example/a.dat'],
+      geoip: ['https://m.example/ip.dat']
+    });
+  });
   it('offers one blank field after the URLs until the list holds four', () => {
     expect(customFields(['a'])).toEqual(['a', '']);
     expect(customFields(['a', 'b', 'c', 'd'])).toEqual(['a', 'b', 'c', 'd']);
@@ -122,7 +103,49 @@ describe('settings patch', () => {
   });
 });
 
-describe('capability and status', () => {
+describe('rows', () => {
+  it('describes a preset by its sizes, or by the categories the rules use that it lacks', () => {
+    expect(presetNote(full, {geosite: ['discord'], geoip: []}, 'en-US', t)).toEqual({
+      text: expect.stringMatching(/^geosite about .+, geoip about /),
+      notice: false
+    });
+    expect(presetNote(lite, {geosite: ['discord', 'cn'], geoip: ['us']}, 'en-US', t)).toEqual({
+      text: 'Lacks categories the rules use: geosite:discord, geoip:us',
+      notice: true
+    });
+  });
+  it('offers five intervals and keeps a stored one outside them', () => {
+    expect(intervalChoices(24, 'en-US').map(item => item.label)).toEqual(['6 hours', '12 hours', '1 day', '3 days', '7 days']);
+    expect(intervalChoices(48, 'en-US').map(item => item.id)).toEqual(['6', '12', '24', '48', '72', '168']);
+  });
+  it('names a route by its group where it has one', () => {
+    const groups = [{id: 'proxy', name: 'Proxy'}] as Parameters<typeof routeLabel>[1];
+    expect(routeLabel({route: 'direct', group_id: null}, groups, t)).toBe('Direct');
+    expect(routeLabel({route: 'routing', group_id: null}, groups, t)).toBe('By routing rules');
+    expect(routeLabel({route: 'routing', group_id: 'proxy'}, groups, t)).toBe('By routing rules (Proxy)');
+    expect(routeLabel({route: 'group', group_id: 'proxy'}, groups, t)).toBe('Proxy');
+    expect(routeLabel({route: 'group', group_id: null}, groups, t)).toBe('Group no longer exists');
+  });
+  it('reads the status as the last update and its checksums, an update in progress, or the last error', () => {
+    expect(statusLine(status(), false, now, 'en-US', t)).toEqual({text: 'Last updated: 3 days ago, Verified', error: false});
+    expect(statusLine(status({assets: [asset('geosite'), asset('geoip', {verified: false})]}), false, now, 'en-US', t).text).toMatch(/Not verified$/);
+    expect(statusLine(status({last_updated_at: null}), false, now, 'en-US', t).text).toBe('Last updated: Never, Verified');
+    expect(statusLine(undefined, false, now, 'en-US', t)).toEqual({text: 'Last updated: —', error: false});
+    expect(statusLine(status(), true, now, 'en-US', t)).toEqual({text: 'Updating…', error: false});
+    const failed = status({last_error: {code: 'geodata_update_failed', message: 'x', details: null}});
+    expect(statusLine(failed, false, now, 'en-US', t)).toEqual({
+      text: t('ui.valuePair', {label: 'Last error', value: t('ui.backend.geodataUpdateFailed')}),
+      error: true
+    });
+  });
+  it('lists each asset with its size, host and route, and the full URL behind it', () => {
+    const details = assetDetails(status(), [], 'en-US', t);
+    expect(details[0]).toEqual(['geosite', expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full.urls.geosite[0]]);
+    expect(assetDetails(undefined, [], 'en-US', t)).toEqual([]);
+  });
+});
+
+describe('capability', () => {
   it('shows the geodata card only with configurable sources and the geodata settings field', () => {
     expect(geodataConfigurable(capabilities.resources)).toBe(true);
     expect(settingsCardList(capabilities.resources).map(card => card.id)).toContain('geodata');
@@ -131,25 +154,5 @@ describe('capability and status', () => {
     expect(settingsCardList(without).map(card => card.id)).not.toContain('geodata');
     expect(geodataConfigurable({...capabilities.resources, runtime_settings: {available: true, fields: ['log.level']}})).toBe(false);
     expect(geodataConfigurable(capabilitiesBase.resources)).toBe(false);
-  });
-  it('writes never, off and none before the first update', () => {
-    const status = geodataStatus({observed_at: '', assets: []}, false, 'en-US', t);
-    expect(status).toEqual([
-      ['Last checked', 'Never'],
-      ['Last updated', 'Never'],
-      ['Next check', 'Automatic updates off'],
-      ['Last error', 'None']
-    ]);
-  });
-  it('words the last error by its code, as other operation failures are', () => {
-    const failed = (code: string) =>
-      geodataStatus(
-        {observed_at: '', assets: [], last_error: {code, message: 'Geodata update did not complete successfully', details: null}},
-        false,
-        'en-US',
-        t
-      )[3][1];
-    expect(failed('geodata_update_failed')).toBe(t('ui.backend.geodataUpdateFailed'));
-    expect(failed('adapter_specific')).toBe(t('ui.backendMessage', {message: 'Geodata update did not complete successfully'}));
   });
 });

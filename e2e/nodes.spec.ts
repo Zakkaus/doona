@@ -222,6 +222,8 @@ test('while a cancelled removal is still pending, no other node dialog can submi
 test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 900});
   const backend = await mockBackend(page);
+  // The settings page keeps the geodata table only where the sources cannot be configured.
+  delete backend.capabilities.resources.geodata.configurable_sources;
   // Slow reads, so each table is drawn while it loads.
   const slow = (read: () => Promise<unknown>) => async () => {
     await new Promise(resolve => setTimeout(resolve, 300));

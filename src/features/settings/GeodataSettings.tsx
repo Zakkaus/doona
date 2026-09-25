@@ -1,152 +1,160 @@
 import {useT} from '../../i18n';
-import {Button, DataTable, ErrorMessage, InlineAlert, Kv, LabeledSelect, Light, Loading, Switch, TextField, TextTooltip, TimeCell} from '../../ui/ui';
+import {Button, ConfirmDialog, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
+import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './view';
 
 const card = settingsCard('geodata');
 
-// Sources, automatic updates and update status; only mounted where the backend lets them be configured.
+// Source, download route, automatic updates and status as labelled rows; each control saves as it changes. Only
+// mounted where the backend lets the sources be configured.
 export function GeodataSettingsCard() {
   const t = useT();
   const m = useGeodataSettings();
   if (!m.available) return null;
   return (
     <section className="rp-card" aria-labelledby={card.headingId}>
-      <div className="rp-row">
-        <h2 className="rp-h3" id={card.headingId}>
-          {t(card.titleKey)}
-        </h2>
-        {m.source && <Light tone={m.sourceTone}>{m.source}</Light>}
-      </div>
+      <h2 className="rp-h3" id={card.headingId}>
+        {t(card.titleKey)}
+      </h2>
       <span className="rp-label">{t('settings.geodataSourcesNote')}</span>
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
-        <div className="rp-chart-wait form">
+        <div className="rp-chart-wait ops">
           <Loading />
         </div>
       )}
-      {m.hasBaseline && (
-        <>
-          {m.conflict && (
-            <p role="alert" className="rp-alert">
-              {m.conflict}
-            </p>
-          )}
-          {m.seededFromConfig && <InlineAlert tone="informative">{t('settings.geodataConfigSeeded')}</InlineAlert>}
-          <Kv
-            row
-            items={[
-              [t('settings.geodataCurrent'), m.current],
-              ...(m.presetSize ? [[t('settings.geodataPresetSizeLabel'), m.presetSize] as [string, string]] : [])
-            ]}
-          />
-          <div className="rp-toolbar top rp-fieldgrid">
-            <LabeledSelect label={t('settings.geodataSource')} value={m.choice} onChange={m.setChoice} items={m.choices} isDisabled={m.busy} />
-            <TextField
-              width={180}
-              type="text"
-              label={t('settings.geodataInterval')}
-              value={m.interval.value}
-              isDisabled={m.busy}
-              isInvalid={m.interval.invalid}
-              onChange={m.interval.change}
-              description={m.interval.description}
-            />
-            <div className="rp-field-row rp-geodata-auto">
-              <Switch isSelected={m.enabled} isDisabled={m.busy} onChange={m.setEnabled}>
-                {t('settings.geodataAutoUpdate')}
-              </Switch>
+      {m.ready && (
+        <div className="rp-ops">
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.geodataSource')}</span>
+            <div className="rp-cluster">
+              <LabeledSelect
+                bare
+                label={t('settings.geodataSource')}
+                value={m.source.value}
+                onChange={m.source.change}
+                items={m.source.items}
+                isDisabled={m.busy}
+              />
+              {m.source.note && <span className={m.source.note.notice ? 'rp-label rp-geodata-note notice' : 'rp-label'}>{m.source.note.text}</span>}
             </div>
           </div>
-          {m.custom.length > 0 && (
-            <div className="rp-geodata-urls">
-              {m.custom.map(list => (
-                <div key={list.kind} className="rp-field" role="group" aria-label={list.kind}>
-                  {list.fields.map(field => (
-                    <TextField
-                      key={field.id}
-                      type="url"
-                      spellCheck={false}
-                      autoComplete="off"
-                      label={field.label}
-                      value={field.value}
-                      isDisabled={m.busy}
-                      error={field.error}
-                      onChange={field.change}
-                    />
-                  ))}
-                  {list.empty && <span className="rp-label">{t('settings.geodataUrlRequired')}</span>}
-                </div>
-              ))}
+          {m.customHosts && (
+            <div className="rp-ops-group">
+              <span className="rp-label">{t('settings.geodataCustomUrls')}</span>
+              <div className="rp-cluster">
+                <Button isDisabled={m.busy} onPress={m.editCustom}>
+                  {t('settings.geodataEdit')}
+                </Button>
+                <span className="rp-label">{m.customHosts}</span>
+              </div>
             </div>
           )}
-          {m.custom.length > 0 && <span className="rp-label">{t('settings.geodataUrlHelp')}</span>}
-          {m.missing && (
-            <InlineAlert title={m.missing.title}>
-              <span className="rp-geodata-lines">
-                {m.missing.lines.map(line => (
-                  <span key={line}>{line}</span>
-                ))}
-                <span>{t('settings.geodataMissingHelp')}</span>
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.geodataRoute')}</span>
+            <div className="rp-cluster">
+              <LabeledSelect
+                bare
+                label={t('settings.geodataRoute')}
+                value={m.route.value}
+                onChange={m.route.change}
+                items={m.route.items}
+                isDisabled={m.busy}
+              />
+              {m.route.group !== null && (
+                <LabeledSelect
+                  bare
+                  label={t('settings.geodataRouteGroup')}
+                  value={m.route.group}
+                  onChange={m.route.pickGroup}
+                  items={m.route.groups}
+                  isDisabled={m.busy}
+                />
+              )}
+            </div>
+          </div>
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.geodataAutoUpdate')}</span>
+            <div className="rp-cluster">
+              <Switch aria-label={t('settings.geodataAutoUpdate')} isSelected={m.auto.enabled} isDisabled={m.busy} onChange={m.auto.toggle} />
+              {m.auto.enabled && (
+                <LabeledSelect
+                  bare
+                  label={t('settings.geodataInterval')}
+                  value={m.auto.interval}
+                  onChange={m.auto.pick}
+                  items={m.auto.intervals}
+                  isDisabled={m.busy}
+                />
+              )}
+            </div>
+          </div>
+          <div className="rp-ops-group">
+            <span className="rp-label">{t('settings.geodataStatus')}</span>
+            <div className="rp-cluster">
+              <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
+                {m.status.text}
               </span>
-            </InlineAlert>
+              {m.canUpdate && (
+                <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
+                  {t('settings.geodataUpdateNow')}
+                </Button>
+              )}
+            </div>
+          </div>
+          <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
+          {m.status.details.length > 0 && (
+            <Disclosure title={t('settings.geodataDetails')}>
+              <div className="rp-geodata-details">
+                <Kv items={m.status.details} />
+              </div>
+            </Disclosure>
           )}
-          <div className="rp-toolbar">
-            <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
-              {t('settings.apply')}
-            </Button>
-            {m.dirty && (
-              <Button isDisabled={m.busy} onPress={m.discard}>
-                {t('config.discard')}
-              </Button>
-            )}
-          </div>
-        </>
-      )}
-      <div className="rp-geodata">
-        <div className="rp-ops-group">
-          <span className="rp-label">{t('settings.geodataStatus')}</span>
-          <div className="rp-cluster">
-            {m.canUpdate && (
-              <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
-                {t('settings.geodataUpdateNow')}
-              </Button>
-            )}
-          </div>
+          {m.seededFromConfig && <span className="rp-label">{t('settings.geodataConfigSeeded')}</span>}
         </div>
-        <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
-        <Kv items={m.status} />
-        <DataTable
-          label={t('settings.geodata')}
-          loading={m.rowsLoading}
-          rows={m.rows}
-          height={160}
-          fit
-          cols={[
-            {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
-            {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => asset.size},
-            {id: 'modified', label: t('nodes.updated'), minWidth: 140, grow: 0, render: asset => <TimeCell at={asset.modifiedAt} />},
-            {
-              id: 'verified',
-              label: t('settings.geodataVerified'),
-              minWidth: 120,
-              grow: 0,
-              render: asset => (
-                <Light small tone={asset.verified ? 'ok' : 'muted'}>
-                  {t(asset.verified ? 'settings.geodataVerifiedYes' : 'settings.geodataVerifiedNo')}
-                </Light>
-              )
-            },
-            {
-              id: 'fetched',
-              label: t('settings.geodataFetched'),
-              minWidth: 240,
-              grow: 2,
-              render: asset => <TextTooltip className="rp-code">{asset.fetched}</TextTooltip>
-            }
-          ]}
-        />
-      </div>
+      )}
+      {m.dialog && (
+        <ConfirmDialog
+          title={t('settings.geodataCustomUrls')}
+          tone="accent"
+          isOpen
+          onCancel={m.dialog.cancel}
+          confirmLabel={t('settings.geodataSaveUpdate')}
+          onConfirm={m.dialog.save}
+          isPending={m.dialog.pending}
+          isDisabled={m.dialog.blocked}
+        >
+          {m.dialog.lists.map(list => (
+            <div key={list.kind} className="rp-field" role="group" aria-label={list.kind}>
+              {list.fields.map(field => (
+                <TextField
+                  key={field.id}
+                  type="url"
+                  spellCheck={false}
+                  autoComplete="off"
+                  label={field.label}
+                  value={field.value}
+                  error={field.error}
+                  onChange={field.change}
+                  action={
+                    <>
+                      <Button quiet icon small label={field.upLabel} isDisabled={!field.up} onPress={field.up}>
+                        <ChevronDown className="rp-up" />
+                      </Button>
+                      <Button quiet icon small label={field.downLabel} isDisabled={!field.down} onPress={field.down}>
+                        <ChevronDown />
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+              {list.empty && <span className="rp-label">{t('settings.geodataUrlRequired')}</span>}
+            </div>
+          ))}
+          <span className="rp-label">{t('settings.geodataUrlHelp')}</span>
+        </ConfirmDialog>
+      )}
     </section>
   );
 }
