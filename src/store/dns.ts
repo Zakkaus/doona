@@ -53,7 +53,7 @@ export function dnsCacheListing(api: Api, signal?: AbortSignal) {
 export function useDnsFlush() {
   const api = getApi();
   const {busy, run, cancel} = useAction<'flush'>({rethrow: true});
-  return {busy: busy !== null, cancel, flush: useCallback(() => run('flush', signal => api.flushDnsCache(signal)), [api, run])};
+  return {busy: busy !== null, cancel, flush: useCallback(() => run('flush', signal => flushCache(api, signal)), [api, run])};
 }
 export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true) {
   const api = getApi();
@@ -83,6 +83,13 @@ export async function walkCache(api: Api, signal: AbortSignal) {
   const list = await dnsCacheListing(api, signal);
   walks.set(api, {at: Date.now(), list: {...list, entries: []}});
   return list;
+}
+// A flush or a deletion changes usage, so the next read asks again rather than reuse a walk from before it.
+export function flushCache(api: Api, signal: AbortSignal) {
+  return api.flushDnsCache(signal).finally(() => walks.delete(api));
+}
+export function deleteCacheEntry(api: Api, id: string, signal: AbortSignal) {
+  return api.deleteDnsEntry(id, signal).finally(() => walks.delete(api));
 }
 // Otherwise one entry is enough to read the usage and coverage.
 export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {
@@ -124,7 +131,7 @@ export function useDnsControl(paused = false) {
     remove: useCallback(
       (id: string) =>
         run(id, async signal => {
-          const value = await api.deleteDnsEntry(id, signal);
+          const value = await deleteCacheEntry(api, id, signal);
           refetch();
           return value;
         }),
@@ -133,7 +140,7 @@ export function useDnsControl(paused = false) {
     flush: useCallback(
       () =>
         run('flush', async signal => {
-          const value = await api.flushDnsCache(signal);
+          const value = await flushCache(api, signal);
           refetch();
           return value;
         }),

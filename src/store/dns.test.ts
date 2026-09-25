@@ -4,7 +4,7 @@ import {capabilities} from '../api/mock/fixtures';
 import type {Api} from '../api/api';
 import type {DnsCacheList, DnsCacheQuery} from '../api/model';
 import {createMockApi} from '../api/mock';
-import {dnsCacheListing, dnsLogLimit, readCacheUsage, smallerOnRefusal, walkCache} from './dns';
+import {deleteCacheEntry, dnsCacheListing, dnsLogLimit, flushCache, readCacheUsage, smallerOnRefusal, walkCache} from './dns';
 
 afterEach(() => void vi.useRealTimers());
 const budget = (retryAfter: number | null = 1) =>
@@ -111,4 +111,20 @@ it('reads cache usage from a listing walked within the last minute instead of as
   await readCacheUsage(api, signal);
   expect(listing).toHaveBeenCalledTimes(calls + 1);
   expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
+});
+
+it('reads cache usage afresh after a flush or a deletion instead of reusing the earlier walk', async () => {
+  const api = createMockApi();
+  const listing = vi.spyOn(api, 'dnsCache');
+  const signal = new AbortController().signal;
+  const walked = await walkCache(api, signal);
+  await deleteCacheEntry(api, walked.entries[0].entry_id, signal);
+  let calls = listing.mock.calls.length;
+  expect((await readCacheUsage(api, signal)).total).toBe(walked.total - 1);
+  expect(listing).toHaveBeenCalledTimes(calls + 1);
+  await walkCache(api, signal);
+  await flushCache(api, signal);
+  calls = listing.mock.calls.length;
+  expect((await readCacheUsage(api, signal)).total).toBe(0);
+  expect(listing).toHaveBeenCalledTimes(calls + 1);
 });
