@@ -161,12 +161,12 @@ export function FlowRecords(props: PageProps) {
               <Kv inline items={detail.fields} />
               <div className="rp-cluster">
                 {detail.connectionHref && (
-                  <Link appearance="button" className="sm" href={detail.connectionHref}>
+                  <Link appearance="button" small href={detail.connectionHref}>
                     {t('flow.viewConnection')}
                   </Link>
                 )}
                 {detail.seedHref && (
-                  <Link appearance="button" className="sm" href={detail.seedHref}>
+                  <Link appearance="button" small href={detail.seedHref}>
                     {t('flow.addRule')}
                   </Link>
                 )}

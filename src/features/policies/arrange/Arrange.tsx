@@ -20,7 +20,9 @@ import {
   ActionBar,
   Badge,
   Button,
+  buttonClass,
   Check,
+  cx,
   Disclosure,
   Empty,
   ErrorMessage,
@@ -285,7 +287,11 @@ function Tray({m}: {m: Model}) {
             <GridListItem id={row.id} textValue={row.label} className="rp-item rp-tray-row">
               {/* First in the row, as in S2's ListView: the keyboard's way into drag and drop, since Space and Enter
                   already toggle the row's selection. */}
-              <RButton slot="drag" className="rp-btn quiet icon sm rp-drag" aria-label={t('arrange.drag', {name: row.label})}>
+              <RButton
+                slot="drag"
+                className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-drag')}
+                aria-label={t('arrange.drag', {name: row.label})}
+              >
                 <DragHandle />
               </RButton>
               <Check />

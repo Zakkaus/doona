@@ -22,7 +22,7 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
           </h3>
           {total > 0 && <span className="rp-label">{total}</span>}
         </div>
-        <Link appearance="button" className="quiet sm" href={href('events')}>
+        <Link appearance="button" quiet small href={href('events')}>
           {t('act.viewAll')}
         </Link>
       </div>

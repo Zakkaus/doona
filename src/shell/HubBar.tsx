@@ -1,8 +1,7 @@
 import {useEffect, useState} from 'react';
-import {Link as RLink} from 'react-aria-components';
 import {useT} from '../i18n';
 import {storageKeys} from '../api/storage';
-import {useSlider} from '../ui/hooks';
+import {Link, useSlider} from '../ui/ui';
 import type {NavGroup} from './view';
 
 const key = storageKeys.hubPages;
@@ -36,7 +35,7 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
       {groups.map(group => {
         const Icon = group.items[0].Icon;
         return (
-          <RLink
+          <Link
             key={group.id}
             routerOptions={replace}
             href={(group.items.find(item => item.path === last[group.id]) ?? group.items[0]).href}
@@ -46,7 +45,7 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
               <Icon />
             </span>
             {group.label}
-          </RLink>
+          </Link>
         );
       })}
     </nav>
@@ -62,9 +61,9 @@ export function HubPages({hub, route}: {hub: NavGroup; route: string}) {
       <div ref={ref} className="rp-seg">
         {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         {hub.items.map(item => (
-          <RLink key={item.id} className="rp-btn" href={item.href} routerOptions={replace} aria-current={item.current ? 'page' : undefined}>
+          <Link key={item.id} appearance="button" href={item.href} routerOptions={replace} aria-current={item.current ? 'page' : undefined}>
             {item.label}
-          </RLink>
+          </Link>
         ))}
       </div>
     </nav>
