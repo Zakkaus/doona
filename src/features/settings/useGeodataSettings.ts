@@ -136,6 +136,7 @@ export function useGeodataSettings() {
               const swap = (to: number) =>
                 to >= 0 && to < custom[kind].length && index < custom[kind].length
                   ? () => {
+                      if (settings.busy) return;
                       const values = [...custom[kind]];
                       [values[index], values[to]] = [values[to], values[index]];
                       setCustom({...custom, [kind]: values});
@@ -152,6 +153,8 @@ export function useGeodataSettings() {
                 value,
                 error: problem ? t(problem) : undefined,
                 change: (next: string) => {
+                  // The save in flight holds the URLs as they were and closes the dialog, which would drop this edit.
+                  if (settings.busy) return;
                   const values = [...list];
                   values[index] = next;
                   // Blank fields past the last URL are dropped, so the list keeps a single empty slot.

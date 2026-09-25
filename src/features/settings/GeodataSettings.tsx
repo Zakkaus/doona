@@ -135,13 +135,14 @@ export function GeodataSettingsCard() {
                   label={field.label}
                   value={field.value}
                   error={field.error}
+                  isDisabled={m.dialog?.pending}
                   onChange={field.change}
                   action={
                     <>
-                      <Button quiet icon small label={field.upLabel} isDisabled={!field.up} onPress={field.up}>
+                      <Button quiet icon small label={field.upLabel} isDisabled={m.dialog?.pending || !field.up} onPress={field.up}>
                         <ChevronDown className="rp-up" />
                       </Button>
-                      <Button quiet icon small label={field.downLabel} isDisabled={!field.down} onPress={field.down}>
+                      <Button quiet icon small label={field.downLabel} isDisabled={m.dialog?.pending || !field.down} onPress={field.down}>
                         <ChevronDown />
                       </Button>
                     </>
