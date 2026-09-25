@@ -82,3 +82,34 @@ test('the rule actions are hidden when the configuration cannot be written', asy
   await expect(detail(page).getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
   await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
 });
+
+for (const width of [360, 768, 1440])
+  test(`the panel actions share one size, line up and keep even gaps at ${width}px`, async ({page}) => {
+    await mockBackend(page);
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/connections?id=1');
+    const close = detail(page).getByRole('button', {name: 'Close connection', exact: true});
+    await expect(close).toBeVisible();
+    const boxes = await detail(page)
+      .getByRole('button', {name: /^(Add rule|Show matched rule|View flow|Only this device|Close connection)$/})
+      .evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().toJSON() as DOMRect));
+    expect(boxes).toHaveLength(5);
+    // One button style: a quiet button beside a filled one reads as a misaligned label.
+    const fills = await detail(page)
+      .getByRole('button', {name: /^(Add rule|Show matched rule|View flow|Only this device)$/})
+      .evaluateAll(buttons => buttons.map(button => getComputedStyle(button).backgroundColor));
+    expect(new Set(fills).size).toBe(1);
+    expect(new Set(boxes.map(box => box.height)).size).toBe(1);
+    const lines: DOMRect[][] = [];
+    for (const box of boxes) {
+      const line = lines.find(line => Math.abs(line[0].top - box.top) <= 1);
+      if (line) line.push(box);
+      else lines.push([box]);
+    }
+    const gaps = lines.flatMap(line => line.slice(1).map((box, i) => box.left - line[i].right));
+    const leading = lines.slice(1).map((line, i) => line[0].top - lines[i][0].bottom);
+    for (const gap of [...gaps, ...leading]) expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(1);
+    expect(lines.every(line => Math.abs(line[0].left - boxes[0].left) <= 1)).toBe(true);
+    // The destructive action ends the group on a line of its own.
+    expect(lines.at(-1)).toEqual([boxes[4]]);
+  });
