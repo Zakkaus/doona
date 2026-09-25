@@ -6,6 +6,7 @@ import {createRequire} from 'node:module';
 import {version, repository, config} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
+import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -42,7 +43,9 @@ export default defineConfig({
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
       name: 'first-paint-stamp',
       transformIndexHtml(html) {
-        const stamp = readFileSync(new URL('tools/stamp.js', import.meta.url), 'utf8');
+        const stamp = readFileSync(new URL('tools/stamp.js', import.meta.url), 'utf8')
+          .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
+          .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE));
         const digest = createHash('sha256').update(stamp).digest('base64');
         return html
           .replace("default-src 'self';", `default-src 'self'; script-src 'self' 'sha256-${digest}';`)

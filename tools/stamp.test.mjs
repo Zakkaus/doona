@@ -1,23 +1,23 @@
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {expect, it} from 'vitest';
-import {translate} from '../src/i18n';
-import {palettes} from '../src/shell/view';
+import {DEFAULT_PALETTE, palettes} from '../src/shell/palettes';
 
-const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8');
+// The same injection vite.config.ts makes at build.
+const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8')
+  .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
+  .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE));
 const prepaint = (stored, dark) => {
   const document = {documentElement: {dataset: {}, lang: ''}};
   runInNewContext(stamp, {document, localStorage: {getItem: key => stored[key] ?? null}, matchMedia: () => ({matches: dark})});
   return document.documentElement;
 };
 
-it('accepts exactly the palettes the app offers', () => {
-  const inline = /var palettes = \[([^\]]*)\]/
-    .exec(stamp)[1]
-    .match(/'[^']+'/g)
-    .map(item => item.slice(1, -1));
-  const offered = palettes(translate.bind(null, 'en')).flatMap(section => section.items.map(item => item.id));
-  expect([...inline].sort()).toEqual([...offered].sort());
+it('accepts every palette the app offers', () => {
+  for (const {id} of palettes) {
+    const [family, flavour] = id.split('/');
+    expect(prepaint({'doona-palette': id}, false).dataset).toMatchObject({family, flavour});
+  }
 });
 
 it('falls back to the default palette for removed or malformed ids without losing dark mode', () => {

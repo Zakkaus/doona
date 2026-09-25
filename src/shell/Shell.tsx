@@ -5,14 +5,14 @@ import {LangContext, LOCALE, useT, type Lang} from '../i18n';
 import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
-import {SettingsContext} from './preferences';
+import {readSettings, SettingsContext} from './preferences';
 import type {Settings} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
 import {HubBar, HubPages} from './HubBar';
 import {TopBar} from './TopBar';
 import {AboutContext, useShell, type ShellModel} from './useShell';
-import {applyAppearance, readAppearance} from './useAppearance';
+import {applyAppearance} from './useAppearance';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import type {PageProps} from './routes';
@@ -22,7 +22,7 @@ const Login = lazy(() => import('./Login').then(module => ({default: module.Logi
 
 // The startup entry calls this before mounting React to avoid a palette flash.
 export function stampAppearance() {
-  const {scheme, palette, wordmark} = readAppearance();
+  const {scheme, palette, wordmark} = readSettings();
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   applyAppearance(dark, palette, wordmark);
 }
