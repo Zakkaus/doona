@@ -2,13 +2,14 @@ import './install';
 import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, useT, type Lang} from '../i18n';
-import {Button, ConfirmDialog, Toasts, LabeledSelect, ErrorMessage, Loading, Empty} from '../ui/ui';
+import {Button, ConfirmDialog, Toasts, Segmented, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
 import {SettingsContext} from './preferences';
 import type {Settings} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
+import {HubBar} from './HubBar';
 import {TopBar} from './TopBar';
 import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance, readAppearance} from './useAppearance';
@@ -89,6 +90,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   const t = useT();
   const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
   const Page = view.current.Page;
+  const hub = view.groups.find(group => group.items.some(item => item.current));
   return (
     <div className="rp-shell">
       <TopBar
@@ -115,9 +117,11 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               <h1 className="rp-h1">{view.current.title}</h1>
               {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
             </div>
-            <div className="rp-mobile-nav">
-              <LabeledSelect label={t('page')} value={route} onChange={k => isRoutePath(k) && go(k)} items={view.choices} bare />
-            </div>
+            {hub && (
+              <div className="rp-hubnav">
+                <Segmented label={hub.label} value={route} onChange={k => isRoutePath(k) && go(k)} items={hub.items.map(item => [item.path, item.label])} />
+              </div>
+            )}
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
@@ -143,6 +147,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           </SettingsContext.Provider>
         </div>
       </main>
+      <HubBar groups={view.groups} />
     </div>
   );
 }

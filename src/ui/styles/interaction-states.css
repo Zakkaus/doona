@@ -210,7 +210,7 @@
     display: none;
   }
   .rp-main {
-    padding: 20px 16px 40px;
+    padding: 20px 16px calc(40px + var(--rp-dock));
   }
   .rp-field {
     max-width: 100%;

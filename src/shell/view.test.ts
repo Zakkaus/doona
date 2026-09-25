@@ -4,17 +4,17 @@ import {capabilitiesBase, version} from '../api/mock/fixtures';
 import {readSettings} from './preferences';
 import {translate} from '../i18n';
 import {accessError, shellView} from './view';
+import {hubs, routePaths} from './routes';
 
 const settings = readSettings({getItem: () => null, setItem: () => {}, removeItem: () => {}});
 const t = translate.bind(null, 'en');
 beforeEach(() => vi.stubEnv('VITE_ENGINE_ORG', 'https://github.com/daeuniverse'));
 afterEach(() => vi.unstubAllEnvs());
-it('uses the same capability policy for navigation, the page select, shortcuts and content', () => {
+it('uses the same capability policy for navigation, shortcuts and content', () => {
   const capabilities = structuredClone(capabilitiesBase);
   capabilities.resources.connections.available = false;
   const view = shellView(settings, 'connections', capabilities, null, version, null, t);
   expect(view.groups.flatMap(group => group.items).find(item => item.path === 'connections')).toMatchObject({current: true, unavailable: true});
-  expect(view.choices.find(item => item.id === 'connections')?.desc).toBeDefined();
   expect(view.shortcutPaths.c).toBeUndefined();
   expect(view.content).toEqual({kind: 'unavailable'});
   expect(view.engine.text).toContain(version.engine.version);
@@ -55,4 +55,14 @@ it('asks for sign-in when a read is refused, even while discovery reports a fail
   expect(view.content.kind).toBe('login');
   expect(view.error).toBeNull();
   expect(shellView(configured, 'connections', capabilitiesBase, accessError(unavailable, null), version, null, t).error).toBe(unavailable);
+});
+it('puts every page in exactly one hub and shows the hubs as the navigation sections', () => {
+  expect(hubs.flatMap(hub => hub.pages).sort()).toEqual([...routePaths].sort());
+  const view = shellView(settings, 'dns', capabilitiesBase, null, version, null, t);
+  expect(view.groups.map(group => [group.label, group.items.map(item => item.path)])).toEqual([
+    ['Overview', ['overview', 'activity']],
+    ['Traffic', ['connections', 'dns', 'logs', 'events']],
+    ['Routing', ['policies', 'nodes', 'rules']],
+    ['Settings', ['settings', 'config']]
+  ]);
 });

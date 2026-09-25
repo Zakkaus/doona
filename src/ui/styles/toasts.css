@@ -13,7 +13,7 @@
 .rp-toasts {
   position: fixed;
   inset-inline: 0;
-  bottom: 16px;
+  bottom: calc(16px + var(--rp-dock));
   margin: 0 auto;
   width: fit-content;
   max-width: 90vw;

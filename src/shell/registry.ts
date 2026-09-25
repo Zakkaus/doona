@@ -69,7 +69,7 @@ type Feature = {
   id: string;
   path: RoutePath;
   // hintKey: the question under a page title that tells similar pages apart.
-  nav: {group: Key; titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
+  nav: {titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
   shortcut?: string;
   requires: {resources?: ReadonlyArray<keyof Capabilities['resources']>};
@@ -77,12 +77,12 @@ type Feature = {
 
 const definitions = [
   // The default page stays eager so first paint has no second round trip.
-  {id: 'activity', path: 'activity', shortcut: 'a', nav: {group: 'grp.status', titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
+  {id: 'activity', path: 'activity', shortcut: 'a', nav: {titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
   {
     id: 'overview',
     path: 'overview',
     shortcut: 'o',
-    nav: {group: 'grp.status', titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
+    nav: {titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
     Page: Overview,
     requires: {resources: ['runtime']}
   },
@@ -90,14 +90,14 @@ const definitions = [
     id: 'connections',
     path: 'connections',
     shortcut: 'c',
-    nav: {group: 'grp.network', titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
+    nav: {titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
     Page: Connections,
     requires: {resources: ['connections']}
   },
   {
     id: 'dns',
     path: 'dns',
-    nav: {group: 'grp.network', titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
+    nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
     Page: Dns,
     requires: {resources: ['dns_query', 'dns_log', 'dns_cache']}
   },
@@ -105,7 +105,7 @@ const definitions = [
     id: 'policies',
     path: 'policies',
     shortcut: 'p',
-    nav: {group: 'grp.proxy', titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
+    nav: {titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
     Page: Policies,
     requires: {resources: ['groups']}
   },
@@ -113,7 +113,7 @@ const definitions = [
     id: 'rules',
     path: 'rules',
     shortcut: 'r',
-    nav: {group: 'grp.proxy', titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
+    nav: {titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     Page: Rules,
     requires: {resources: ['routing_trace', 'flows', 'rules']}
   },
@@ -121,7 +121,7 @@ const definitions = [
     id: 'nodes',
     path: 'nodes',
     shortcut: 'n',
-    nav: {group: 'grp.proxy', titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
+    nav: {titleKey: 'nav.nodes', hintKey: 'hint.nodes', Icon: Data},
     Page: NodesPage,
     requires: {resources: ['nodes', 'providers']}
   },
@@ -129,14 +129,14 @@ const definitions = [
     id: 'config',
     path: 'config',
     shortcut: 'g',
-    nav: {group: 'grp.proxy', titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
+    nav: {titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
     Page: Config,
     requires: {resources: ['config']}
   },
   {
     id: 'events',
     path: 'events',
-    nav: {group: 'grp.system', titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
+    nav: {titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
     Page: Events,
     requires: {resources: ['events']}
   },
@@ -144,11 +144,11 @@ const definitions = [
     id: 'logs',
     path: 'logs',
     shortcut: 'l',
-    nav: {group: 'grp.system', titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
+    nav: {titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
     Page: Logs,
     requires: {resources: ['logs']}
   },
-  {id: 'settings', path: 'settings', shortcut: 's', nav: {group: 'grp.system', titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
+  {id: 'settings', path: 'settings', shortcut: 's', nav: {titleKey: 'nav.settings', Icon: SettingsIcon}, Page: Settings, requires: {}}
 ] as const satisfies ReadonlyArray<Feature>;
 
 export const features: ReadonlyArray<Feature> = definitions;
