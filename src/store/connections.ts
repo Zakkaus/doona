@@ -44,8 +44,9 @@ async function closeEach(api: CloseApi, ids: string[], signal?: AbortSignal): Pr
 // Over the advertised bulk limit the backend closes nothing (413), so the selection is narrowed to what the contract
 // can express: each network, then each source address the listing shows. A source still over the limit, and entries
 // without a visible source, close one by one. The listing stops at 1000 rows, so each round retries the whole
-// selection until it fits, and stops early once a round closes nothing. Entries that cannot be closed stay and every
-// round meets them again, so skipped is the last round's count while closed adds up.
+// selection until it fits, and stops once a round closes nothing. Entries that cannot be closed stay and every round
+// meets them again, so skipped is the last round's count while closed adds up; a round that stops counts every entry
+// the listing totals, including those past its last row, since none of them was closed.
 export async function closeInBatches(api: CloseApi, query: NonNullable<BulkCloseQuery>, signal?: AbortSignal): Promise<BulkCloseResult> {
   const type = query.type ?? 'all';
   let closed = 0;
@@ -61,7 +62,8 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
       for (const network of ['tcp', 'udp'] as const) add(round, await closeInBatches(api, {...query, type: network}, signal));
       return {closed: closed + round.closed, skipped: round.skipped};
     }
-    const listed = (await api.connections({type, src: query.src, detail: 'summary', limit: listLimit}, signal))[type];
+    const listing = await api.connections({type, src: query.src, detail: 'summary', limit: listLimit}, signal);
+    const listed = listing[type];
     const sources = new Map<string | undefined, string[]>();
     for (const row of listed) {
       const src = query.src ?? sourceIp(row.src ?? undefined);
@@ -69,7 +71,7 @@ export async function closeInBatches(api: CloseApi, query: NonNullable<BulkClose
     }
     for (const [src, ids] of sources) add(round, src && !query.src ? await closeInBatches(api, {type, src}, signal) : await closeEach(api, ids, signal));
     closed += round.closed;
-    if (!round.closed) return {closed, skipped: round.skipped};
+    if (!round.closed) return {closed, skipped: type === 'tcp' ? listing.total_tcp : listing.total_udp};
   }
 }
 
