@@ -28,7 +28,7 @@ export default defineConfig({
           // blocked; the PWA spec, which is about the worker, runs with it.
           {
             name: 'webkit',
-            testMatch: ['routes.spec.ts', 'arrange.spec.ts', 'keyboard.spec.ts', 'mobile.spec.ts', 'charts.spec.ts'],
+            testMatch: ['routes.spec.ts', 'arrange.spec.ts', 'keyboard.spec.ts', 'mobile.spec.ts', 'charts.spec.ts', 'segmented.spec.ts'],
             use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
           },
           {name: 'webkit-pwa', testMatch: 'pwa.spec.ts', use: {...devices['Desktop Safari']}}
