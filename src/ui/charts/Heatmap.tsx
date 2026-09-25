@@ -20,23 +20,26 @@ export function Heatmap({label, rows, columns}: {label: string; rows: HeatRow[];
       aria-describedby={describedBy}
       style={{['--cols' as string]: columns.length}}
     >
-      {rows.map(row => (
-        <div key={row.id} className="row">
-          <div className="head">{row.label}</div>
-          <div className="cells">
-            {row.counts.map((count, i, counts) => (
-              <span
-                key={i}
-                className={'cell t' + heatTone(count, Math.max(...counts))}
-                style={{['--tone' as string]: row.color}}
-                onPointerMove={event => showTip(event, [row.titles[i]])}
-                role="img"
-                aria-label={row.titles[i]}
-              />
-            ))}
+      {rows.map(row => {
+        const peak = Math.max(...row.counts);
+        return (
+          <div key={row.id} className="row">
+            <div className="head">{row.label}</div>
+            <div className="cells">
+              {row.counts.map((count, i) => (
+                <span
+                  key={i}
+                  className={'cell t' + heatTone(count, peak)}
+                  style={{['--tone' as string]: row.color}}
+                  onPointerMove={event => showTip(event, [row.titles[i]])}
+                  role="img"
+                  aria-label={row.titles[i]}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {columns.length > 0 && (
         <div className="row times" aria-hidden="true">
           <div className="head" />
