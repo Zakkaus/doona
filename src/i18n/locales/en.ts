@@ -622,7 +622,7 @@ export const messages = {
   'arrange.policy.fastest': 'Fastest on average',
   'arrange.policy.fastestHint': 'Uses the node with the lowest recent average latency (recommended)',
   'arrange.policy.fallback': 'First available',
-  'arrange.policy.fallbackHint': 'Uses the first node in order that is available',
+  'arrange.policy.fallbackHint': 'Uses the current node until it fails, then the next in order',
   'arrange.policy.spread': 'Round robin',
   'arrange.policy.spreadHint': 'Spreads connections across all nodes in turn',
   'arrange.policy.manual': 'Manual',
