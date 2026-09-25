@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {enumLabel} from '../../i18n/enum';
 import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -90,7 +91,7 @@ export function useRuntimeSettingsForm() {
     setLevel: (value: string) => {
       if (!settings.busy) setDraft({...edits, level: value});
     },
-    levels: (capabilities?.logs.levels ?? (['trace', 'debug', 'info', 'warn', 'error'] as const)).map(id => ({id, label: t(logLevelLabels[id])})),
+    levels: (capabilities?.logs.levels ?? (['trace', 'debug', 'info', 'warn', 'error'] as const)).map(id => ({id, label: enumLabel(logLevelLabels, id, t)})),
     hasLevel: fields.has('log.level'),
     hasBaseline: !!baseline,
     source: baseline ? t(baseline.source === 'runtime' ? 'settings.sourceRuntime' : 'settings.sourceConfig') : null,

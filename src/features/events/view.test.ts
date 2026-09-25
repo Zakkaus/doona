@@ -44,3 +44,10 @@ it('says on the ready row after lost history that events are missing', () => {
   const view = eventsView([lost, resumed], 'all', true, true, 200, 'en-US', t, ['stream.ready'], false, event => event === lost);
   expect(view.rows.map(row => row.summary)).toEqual([t('event.lostHistory'), 'instance']);
 });
+
+it('shows an event kind from a newer backend as sent, with the resource it names', () => {
+  const event = {id: 'x', event: 'policy.updated', data: {observed_at: '2026-01-01T00:00:00Z', resource_id: 'proxy'}} as unknown as ApiEvent;
+  const view = eventsView([event], 'all', true, true, 200, 'en-US', t, ['policy.updated' as ApiEvent['event']]);
+  expect(view.rows.map(row => [row.kindText, row.summary])).toEqual([['policy.updated', 'proxy']]);
+  expect(view.kinds.at(-1)).toEqual({id: 'policy.updated', label: 'policy.updated'});
+});

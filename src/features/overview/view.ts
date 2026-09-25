@@ -1,4 +1,5 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import type {Key} from '../../i18n';
 import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
@@ -114,7 +115,7 @@ export function overviewView(
   return {
     status: {
       tone: lifecycleTone(state) as 'ok' | 'err' | 'warn',
-      text: state ? t(lifecycleStates[state]) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown')
+      text: state ? enumLabel(lifecycleStates, state, t) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown')
     },
     strip: [
       [t('ov.config'), shortId(revision), revision],

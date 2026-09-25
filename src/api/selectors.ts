@@ -167,6 +167,12 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
           n: droppedCount(event.data.dropped_records)
         }
       };
+    // An event kind from a newer backend: the resource it names, when it names one.
+    default: {
+      const data = (event as {data?: {resource_id?: unknown; href?: unknown}}).data;
+      const resource = [data?.resource_id, data?.href].find(value => typeof value === 'string');
+      return {key: 'event.resource', params: {resource: resource ?? '—'}};
+    }
   }
 }
 

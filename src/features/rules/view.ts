@@ -1,4 +1,5 @@
 import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -146,7 +147,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         ruleId: row.id ?? '—',
         expression: row.expression ?? t('rule.unknownRule'),
         expressionClass: row.expression ? 'rp-code' : undefined,
-        source: t(sources[row.source]),
+        source: enumLabel(sources, row.source, t),
         hits: formatNumber(row.count, locale),
         share: t('ui.percent', {n: formatNumber(row.share * 100, locale, 1)})
       })),
@@ -258,7 +259,7 @@ export function evaluationView(
     rows: evaluation.rules.map(rule => ({
       id: rule.rule_id,
       expression: rule.expression ?? rule.rule_id,
-      outcome: outcomes[rule.result] ? t(outcomes[rule.result]) : rule.result,
+      outcome: enumLabel(outcomes, rule.result, t),
       tone: rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral',
       missing: formatList(lang, rule.missing_inputs) || '—'
     }))

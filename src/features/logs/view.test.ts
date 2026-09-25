@@ -60,3 +60,12 @@ it('marks the levels the engine does not record and states the level it records'
   expect(unknown.levels.map(level => level.label)).toEqual([t('log.level.debug'), t('log.level.info')]);
   expect(unknown.recordedText).toBeNull();
 });
+
+it('shows a log level from a newer backend as sent', () => {
+  const level = 'fatal' as 'error';
+  const record = {id: 'r', ts: '2026-01-01T00:00:00Z', level, target: 'dns', message: 'm', fields: null};
+  const view = logView([record], [level, 'error'], true, undefined, 'en-US', t, false, new Set(), level);
+  expect(view.rows[0].levelText).toBe('fatal');
+  expect(view.levels[0].label).toBe('fatal');
+  expect(view.recordedText).toBe(t('log.recorded', {level: 'fatal'}));
+});

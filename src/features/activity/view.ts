@@ -1,4 +1,5 @@
 import type {ApiEvent, ConnectionList, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {
   eventKindLabels,
@@ -67,7 +68,7 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
       id: event.id,
       tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
       kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
-      summaryText: t('ui.valuePair', {label: t(eventKindLabels[event.event]), value: t(summary.key, params)}),
+      summaryText: t('ui.valuePair', {label: enumLabel(eventKindLabels, event.event, t), value: t(summary.key, params)}),
       key,
       count: 1
     });
@@ -126,7 +127,7 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
-      text: runtime ? t(lifecycleStates[runtime.lifecycle.state]) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading')
+      text: runtime ? enumLabel(lifecycleStates, runtime.lifecycle.state, t) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading')
     },
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null, locale),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),

@@ -1,4 +1,5 @@
 import type {ApiEvent, EventKind} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
 import {eventKindLabels, eventSummary} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
@@ -15,7 +16,7 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     timestamp: localTime(event.data.observed_at, locale),
     iso: event.data.observed_at,
     kind: event.event,
-    kindText: t(eventKindLabels[event.event]),
+    kindText: enumLabel(eventKindLabels, event.event, t),
     summary: t(summary.key, summary.params)
   };
   rows.set(event, {locale, row});
@@ -44,7 +45,7 @@ export function eventsView(
     kinds: [
       {id: 'without-runtime', label: t('event.withoutRuntime')},
       {id: 'all', label: t('event.allKinds')},
-      ...advertised.map(id => ({id, label: t(eventKindLabels[id])}))
+      ...advertised.map(id => ({id, label: enumLabel(eventKindLabels, id, t)}))
     ],
     // Before capabilities answer nothing has failed yet; a warning only fits a stream that was expected. A failed
     // stream waits for a retry, so it is not reconnecting.
