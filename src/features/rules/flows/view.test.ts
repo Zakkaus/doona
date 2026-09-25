@@ -124,3 +124,12 @@ it('names the groups leading to a node tile and leaves an unmeasured step withou
   detail.trace.steps = detail.trace.steps.map(step => ({...step, elapsed_us: null}));
   expect(flowDetailView(detail, false, t, 'en')!.steps.every(step => step.elapsed === '—')).toBe(true);
 });
+
+it('shows a connection state from a newer backend as sent', async () => {
+  const api = createMockApi();
+  const detail = await api.flow((await api.flows()).flows[0].id);
+  const step = detail.trace.steps.find(step => step.stage === 'connection')!;
+  step.data = {...step.data, state: 'closing' as typeof step.data.state};
+  const view = flowDetailView(detail, false, t, 'en')!;
+  expect(view.steps.find(row => row.id === step.seq)!.fields).toContainEqual([t('ui.state'), 'closing']);
+});
