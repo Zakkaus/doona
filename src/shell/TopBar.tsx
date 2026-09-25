@@ -1,5 +1,4 @@
 import {memo, useState} from 'react';
-import {Separator} from 'react-aria-components';
 import {About} from './About';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
@@ -11,7 +10,7 @@ import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu} from '../ui/ui';
+import {Button, ChoiceMenu, Divider} from '../ui/ui';
 import type {SettingsContext} from './preferences';
 import type {PaletteId, Scheme, Wordmark} from './preferences';
 import type {AppearanceMenu, PaletteSection} from './view';
@@ -112,7 +111,7 @@ export const TopBar = memo(function TopBar({
         )}
         {/* Below the side navigation's breakpoint, language and appearance share one overflow menu, a submenu each. */}
         <span className="rp-wide-only">
-          <Separator orientation="vertical" className="rp-vrule" />
+          <Divider />
           <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
             <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
           </ChoiceMenu>
