@@ -58,11 +58,16 @@ export async function settle(api: Api, accepted: OperationAccepted, signal?: Abo
 // If-Match carries the revision as a quoted entity tag.
 export const etag = (revision: string) => '"' + revision + '"';
 type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
+// A provider publication that honk commits to a degraded runtime fails with `committed: true`: the nodes are applied.
+export type Degraded = {degraded: true};
+type Finished<K extends Operation['kind']> = K extends 'provider_refresh' ? SucceededResult<K> | Degraded : SucceededResult<K>;
 // `written`: the operation activates a file already written, which a failed activation does not roll back. The
 // backend's own `written` and `committed` details, when it sends them, override that default.
-export function finished<K extends Operation['kind']>(operation: OperationState, kind: K, {written = false} = {}): SucceededResult<K> {
-  if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as SucceededResult<K>;
+export function finished<K extends Operation['kind']>(operation: OperationState, kind: K, {written = false} = {}): Finished<K> {
+  if (operation.status === 'succeeded' && operation.kind === kind) return operation.result as Finished<K>;
   const details = (operation.error?.details ?? null) as {written?: unknown; committed?: unknown} | null;
+  if (operation.status === 'failed' && kind === 'provider_refresh' && operation.kind === kind && details?.committed === true)
+    return {degraded: true} as Finished<K>;
   const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written) && details?.committed !== true;
   throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null);
 }

@@ -85,6 +85,7 @@ export const messages = defineMessages({
     'nodes.groups': '所屬群組',
     'nodes.empty': '此來源沒有節點',
     'nodes.refreshFailed': '無法重新整理 {name}：{error}',
+    'nodes.refreshedDegraded': '{name}：節點已套用，但執行期處於降級狀態',
     'nodes.probeError': '無法測試 {name}：{error}'
   },
   'zh-CN': {
@@ -171,6 +172,7 @@ export const messages = defineMessages({
     'nodes.groups': '所属组',
     'nodes.empty': '此来源暂无节点',
     'nodes.refreshFailed': '无法刷新 {name}：{error}',
+    'nodes.refreshedDegraded': '{name}：节点已应用，但运行期处于降级状态',
     'nodes.probeError': '无法测试 {name}：{error}'
   },
   en: {
@@ -258,6 +260,7 @@ export const messages = defineMessages({
     'nodes.groups': 'Groups',
     'nodes.empty': 'This source has no nodes',
     'nodes.refreshFailed': 'Could not refresh {name}: {error}',
+    'nodes.refreshedDegraded': '{name}: nodes applied, but the runtime is degraded',
     'nodes.probeError': 'Could not test {name}: {error}'
   }
 });

@@ -35,7 +35,9 @@ export function useProviderTable(input: ProviderTableInput) {
     refresh: () =>
       void refresh.refresh(item.id).then(
         result => {
-          if (result) toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
+          if (!result) return;
+          if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name: item.name}));
+          else toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
         },
         error => toastFailure(error, t, error => t('nodes.refreshFailed', {name: item.name, error}))
       ),

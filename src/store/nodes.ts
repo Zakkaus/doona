@@ -59,13 +59,13 @@ export function useProviderRefresh(refetch: () => void) {
   const refresh = useCallback((id: string) => run(id, signal => one(id, signal)), [run, one]);
   // One batch under one signal; the result lists the refreshes that finished before an abort.
   const refreshMany = useCallback(
-    (ids: string[], onFailure: (id: string, error: unknown) => void) =>
+    (ids: string[], onFailure: (id: string, error: unknown) => void, onDegraded: (id: string) => void) =>
       run('*', async signal => {
         let done = 0;
         for (const id of ids) {
           if (signal.aborted) break;
           try {
-            await one(id, signal);
+            if ('degraded' in (await one(id, signal))) onDegraded(id);
             done += 1;
           } catch (error) {
             if (signal.aborted) break;
