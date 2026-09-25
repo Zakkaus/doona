@@ -1023,6 +1023,7 @@ export const messages = {
   'settings.geodataInterval': '更新間隔（小時）',
   'settings.geodataSaved': '地理資料來源已儲存，將在下次自動更新時下載',
   'settings.geodataAutoSaved': '自動更新設定已儲存',
+  'settings.geodataRouteSaved': '下載路由已儲存',
   'settings.geodataSaveFailed': '無法儲存地理資料設定：{error}',
   'settings.geodataStatus': '狀態',
   'settings.geodataUpdateNow': '立即更新',
