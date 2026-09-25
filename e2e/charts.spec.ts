@@ -107,6 +107,18 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   await expect(card.getByText('This backend does not provide a cache listing', {exact: true})).toBeVisible();
 });
 
+test('the DNS cache card reuses the listing the cache tab just walked', async ({page}) => {
+  const backend = await mockBackend(page);
+  await page.goto('/#/dns?tab=cache');
+  await expect(page.getByRole('tab', {name: 'Cache', exact: true})).toHaveAttribute('aria-selected', 'true');
+  const listings = () => backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/dns/cache'));
+  await expect.poll(() => listings().length).toBeGreaterThan(0);
+  await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
+  const card = page.getByRole('region', {name: 'Cache', exact: true});
+  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+  expect(listings().map(request => new URL(request.url()).searchParams.get('limit'))).not.toContain('1');
+});
+
 for (const count of [0, 4]) {
   test(`with ${count} resolution records the charts wait for more while the cache card still reports`, async ({page}) => {
     const backend = await mockBackend(page);
