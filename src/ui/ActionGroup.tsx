@@ -16,9 +16,18 @@ const ActionButton = ({action}: {action: Action}) => (
 
 // A page's actions, after S2's ActionGroup with overflowMode="collapse": below the side navigation's breakpoint the
 // first stays a button and the rest move into a trailing menu, so a toolbar does not grow a row of buttons on a
-// phone. At the breakpoint and above they are plain buttons in the parent's flow.
-export function ActionGroup({actions}: {actions: Action[]}) {
+// phone. At the breakpoint and above they are plain buttons in the parent's flow. With overflowMode="wrap" they stay
+// buttons at every width and the parent wraps them, for a card whose actions are its content.
+export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Action[]; overflowMode?: 'collapse' | 'wrap'}) {
   const t = useT();
+  if (overflowMode === 'wrap')
+    return (
+      <>
+        {actions.map(action => (
+          <ActionButton key={action.id} action={action} />
+        ))}
+      </>
+    );
   const [first, ...rest] = actions;
   if (!first) return null;
   return (

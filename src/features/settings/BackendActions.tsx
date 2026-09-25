@@ -1,6 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
-import {LifecycleActions} from '../overview/Lifecycle';
+import {ActionGroup, Button, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './nav';
 
@@ -54,7 +53,7 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.groupLifecycle')}</span>
             <div className="rp-cluster">
-              <LifecycleActions actions={lifecycle} />
+              <ActionGroup overflowMode="wrap" actions={lifecycle} />
             </div>
           </div>
         )}
