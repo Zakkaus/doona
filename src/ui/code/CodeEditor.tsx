@@ -62,7 +62,8 @@ const theme = EditorView.theme({
   },
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
-  '.cm-gutters': {backgroundColor: 'transparent', color: 'var(--rp-muted)', border: 'none'},
+  // Opaque, so a line scrolled sideways passes under the numbers rather than through them.
+  '.cm-gutters': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-muted)', border: 'none'},
   '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
   '.cm-activeLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
