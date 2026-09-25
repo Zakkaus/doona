@@ -17,12 +17,14 @@ import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
 import {useContentWidth} from './hooks';
 import {TextTooltip} from './Button';
-import {Loading} from './Feedback';
+import {Empty, Loading} from './Feedback';
 
 // Minima include padding; positive drop priorities yield in ascending order when columns cannot fit.
 type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
+// A group row in tree mode: its label under the first column, its totals under the others, then its children.
+export type TableGroup<T> = {id: number | string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
 
 export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisibleHeader?: boolean}) {
   const t = useT();
@@ -129,6 +131,9 @@ export function cachedRows<T extends object, R>(cache: WeakMap<T, R>, items: T[]
   });
 }
 const virtualiseFrom = 40;
+const isGroup = <T extends object>(row: T | TableGroup<T>): row is TableGroup<T> => 'children' in row;
+// Plain text truncates with a tooltip.
+const text = (cell: ReactNode) => (typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell);
 // Once virtualised, keep the grid mounted to preserve focus, scroll and column widths.
 export function DataTable<T extends {id: string}>({
   label,
@@ -145,11 +150,12 @@ export function DataTable<T extends {id: string}>({
   onSort,
   getTextValue,
   stream,
-  fit
+  fit,
+  tree
 }: {
   label: string;
   cols: TableColumn<T>[];
-  rows: T[];
+  rows: Array<T | TableGroup<T>>;
   height?: number;
   selected?: string | null;
   onSelect?: (id: string | null) => void;
@@ -163,45 +169,68 @@ export function DataTable<T extends {id: string}>({
   sort?: TableSort | null;
   onSort?: (sort: TableSort) => void;
   getTextValue?: (row: T) => string;
-  // Rows arrive continuously (logs, events): virtualised from the start rather than on crossing a threshold.
+  // Rows arrive continuously (logs, events, connections): virtualised from the start rather than on crossing a threshold.
   stream?: boolean;
   // A list that is often short (sources, data files, the DNS cache, events): no full-height placeholder while it loads.
   fit?: boolean;
+  // Tree mode (connections): `rows` may hold groups, which stay expanded and cannot be selected. The first visible
+  // column heads each row and, once `grouped`, holds the tree. Home and End move between rows, never within one.
+  tree?: {grouped: boolean};
 }) {
   const t = useT();
   // One set per selected key, so the table neither recomputes its selection nor re-renders every row.
   const keys: Selection = useMemo(() => (selected ? new Set([selected]) : new Set()), [selected]);
-  const [ref, width] = useContentWidth<HTMLElement>();
+  const [ref, containerWidth] = useContentWidth<HTMLElement>();
+  // A tree fits its columns to the grid, which scrolls it, so its width excludes the scrollbar gutter.
+  const [treeGridRef, gridWidth] = useContentWidth<HTMLElement>();
+  const width = tree ? gridWidth : containerWidth;
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
-  const fitted = useTableHeight(height, rows.length, loading, fit);
-  const [virtual, setVirtual] = useState(stream || rows.length >= virtualiseFrom);
-  if (!virtual && rows.length >= virtualiseFrom) setVirtual(true);
-  const at = reveal && selected ? rows.findIndex(r => r.id === selected) : -1;
+  // Groups count as rows for the height, the virtual row count and the reveal offset.
+  const flat = useMemo(() => (tree ? rows.flatMap(row => (isGroup(row) ? [row, ...row.children] : [row])) : rows), [rows, tree]);
+  const groupKeys = useMemo(() => (tree ? rows.filter(isGroup).map(row => row.id) : undefined), [rows, tree]);
+  const fitted = useTableHeight(height, flat.length, loading, fit);
+  const [virtual, setVirtual] = useState(stream || flat.length >= virtualiseFrom);
+  if (!virtual && flat.length >= virtualiseFrom) setVirtual(true);
+  const at = reveal && selected ? flat.findIndex(r => r.id === selected) : -1;
   // A virtualised grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
   useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref);
+  // Tree cells wrap their content so it truncates inside the flex cell.
+  const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
   const renderRow = (row: T) => {
     return (
       <Row key={row.id} id={row.id} textValue={getTextValue?.(row)}>
-        {shown.map(column => {
-          const cell = column.render(row);
-          return (
-            <Cell key={column.id} className={column.align}>
-              {typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell}
-            </Cell>
-          );
-        })}
+        {shown.map(column => (
+          <Cell key={column.id} className={column.align}>
+            {content(column.render(row))}
+          </Cell>
+        ))}
       </Row>
     );
   };
+  const renderGroup = (row: TableGroup<T>) => (
+    <Row key={row.id} id={row.id} textValue={row.group}>
+      {shown.map((column, index) => (
+        <Cell key={column.id} className={column.align}>
+          <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
+        </Cell>
+      ))}
+      {row.children.map(renderRow)}
+    </Row>
+  );
   const table = (
     <Table
-      style={{minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
+      // A tree measures the grid itself, so a minimum width here would feed back into that measure.
+      style={tree ? undefined : {minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
       ref={element => {
         grid.current = element;
+        if (tree) treeGridRef.current = element;
       }}
       aria-label={label}
-      aria-rowcount={virtual ? rows.length + 1 : undefined}
+      aria-rowcount={virtual ? flat.length + 1 : undefined}
+      expandedKeys={groupKeys}
+      disabledKeys={groupKeys}
+      treeColumn={tree?.grouped ? shown[0]?.id : undefined}
       selectionMode={onSelect ? 'single' : 'none'}
       selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
       selectedKeys={keys}
@@ -210,17 +239,17 @@ export function DataTable<T extends {id: string}>({
       sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
       onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
     >
-      <TableColumns cols={shown} />
-      <TableBody<T>
+      <TableColumns cols={shown} firstVisibleHeader={!!tree} />
+      <TableBody<T | TableGroup<T>>
         items={rows}
         dependencies={[shown, getTextValue]}
         renderEmptyState={() => (
           <div className="rp-table-empty" style={{width: width ?? '100%'}}>
-            {loading ? <Loading /> : <div className="rp-empty">{empty ?? t('ui.empty')}</div>}
+            {loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
           </div>
         )}
       >
-        {renderRow}
+        {row => (tree && isGroup(row) ? renderGroup(row) : renderRow(row as T))}
       </TableBody>
     </Table>
   );
@@ -231,6 +260,21 @@ export function DataTable<T extends {id: string}>({
       }}
       className="rp-table"
       style={{height: fitted}}
+      // RAC scopes Home/End to cells unless the row itself has focus. The container passes no key handlers, so a
+      // tree renders its own div to catch the key first.
+      render={
+        tree
+          ? props => (
+              <div
+                {...props}
+                onKeyDownCapture={event => {
+                  if (event.key === 'Home' || event.key === 'End')
+                    (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]')?.focus({preventScroll: true});
+                }}
+              />
+            )
+          : undefined
+      }
     >
       {virtual ? (
         <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
