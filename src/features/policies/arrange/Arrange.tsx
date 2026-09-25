@@ -1,3 +1,4 @@
+import '../../../ui/styles/arrange.css';
 import {useId, useMemo, useState} from 'react';
 import {
   Button as RButton,

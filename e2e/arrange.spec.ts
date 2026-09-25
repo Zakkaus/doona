@@ -139,3 +139,28 @@ test('a failed node list is shown with a retry instead of loading forever', asyn
   await alert.getByRole('button', {name: 'Retry'}).click();
   await expect(page.getByRole('grid', {name: 'Nodes and subscriptions'})).toBeVisible();
 });
+
+test('the arrange and routing tree styles load with their pages', async ({page}) => {
+  const styled = (selector: string) =>
+    page.evaluate(
+      selector =>
+        [...document.styleSheets].some(sheet => {
+          try {
+            return [...sheet.cssRules].some(rule => rule instanceof CSSStyleRule && rule.selectorText === selector);
+          } catch {
+            return false;
+          }
+        }),
+      selector
+    );
+  // A frozen clock holds the idle warm-up, which would load both pages ahead.
+  await page.clock.install();
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-content')).toBeVisible();
+  expect(await styled('.rp-arrange')).toBe(false);
+  expect(await styled('.rp-tree')).toBe(false);
+  await page.goto('/#/policies?tab=arrange');
+  await expect(page.locator('.rp-arrange')).toHaveCSS('flex-direction', 'column');
+  await page.goto('/#/rules?tab=map');
+  await expect(page.locator('.rp-tree')).toHaveCSS('overflow-x', 'auto');
+});
