@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- react-aria is pinned; the effect that calls it says why
 import {runAfterTransition} from 'react-aria/private/utils/runAfterTransition';
 import {consumeProfileReadError} from '../api/profiles';
 import {storageKeys} from '../api/storage';
