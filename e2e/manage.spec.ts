@@ -25,7 +25,9 @@ test('the backend actions card gathers reload, DNS, subscriptions and connection
 });
 
 test.describe('with more connections than one bulk close admits', () => {
-  test.use({storage: {'doona-mock-big': '600'}});
+  // Any value turns on the large connection set, which outnumbers the mock's bulk limit of 200; the number itself
+  // sizes only the node inventory, so it stays at the default.
+  test.use({storage: {'doona-mock-big': '120'}});
 
   test('Settings close all closes them in batches and reports the totals', async ({page}) => {
     await page.goto('/#/settings');
