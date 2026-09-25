@@ -291,14 +291,18 @@ export function ruleCondition(kind: ConditionKind, value: string): string | null
     .split(/[,\s]+/)
     .map(v => v.trim())
     .filter(Boolean);
-  if (values.some(v => v.includes(':') && !isQuotable(v))) return null;
+  if (values.some(v => syntax.test(v) || (v.includes(':') && !isQuotable(v)))) return null;
   const condition = conditionText(kind, values);
   return isFragment(condition) && !condition.includes('->') ? condition : null;
 }
+// honk splits a rule on `&&` and `->` and ends a call at `)`, and a quote, `#` or brace starts other syntax, so a value
+// holding one is refused rather than written. A colon splits an argument into key and value, so a value with one (an
+// IPv6 range) is quoted, as the presets write 'ff00::/8'.
+const syntax = /[()'"#{}]|&&|->/;
 function conditionText(kind: ConditionKind, values: string[]): string {
-  // A value with a colon (an IPv6 range) is quoted, as the presets write 'ff00::/8'; bare, dae reads it as a key.
-  const list = values.map(v => (v.includes(':') ? quote(v) : v)).join(', ');
-  const qualified = (prefix: string) => values.map(value => `${prefix}: ${value}`).join(', ');
+  const written = values.map(v => (v.includes(':') ? quote(v) : v));
+  const list = written.join(', ');
+  const qualified = (prefix: string) => written.map(value => `${prefix}: ${value}`).join(', ');
   switch (kind) {
     case 'domain':
       return `domain(${qualified('full')})`;
