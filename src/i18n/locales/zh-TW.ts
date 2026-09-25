@@ -422,6 +422,8 @@ export const messages = {
   'nodes.probe': '測試 {name}',
   'nodes.probed': '{name}：{n} ms',
   'nodes.probeFailed': '{name}：無法連線',
+  'nodes.probeUnknown': '{name}：結果不明',
+  'nodes.probeUnknownWhy': '{name}：結果不明（{error}）',
   'nodes.search': '搜尋節點',
   'nodes.group': '群組',
   'nodes.anyGroup': '全部群組',

@@ -37,6 +37,28 @@ async function backend(page: Page) {
 
 test.use({viewport: {width: 1440, height: 1000}});
 
+test('a node probe with an unknown result says so and why, instead of unreachable', async ({page}) => {
+  const api = await backend(page);
+  await page.route('**/api/v1/probes', async route => {
+    await route.fulfill({json: await api.startProbe(route.request().postDataJSON())});
+  });
+  await page.route('**/api/v1/operations/*', async route => {
+    const operation = await api.operation(new URL(route.request().url()).pathname.split('/').pop()!);
+    if (operation.status === 'succeeded' && operation.kind === 'probe') {
+      for (const result of operation.result.results) {
+        result.state = 'unknown';
+        result.latency_ms = null;
+        result.error = 'probe timed out';
+      }
+    }
+    await route.fulfill({json: operation});
+  });
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
+  await expect(page.locator('.rp-toast')).toContainText('hk-01: result unknown (probe timed out)');
+  await expect(page.locator('.rp-toast')).not.toContainText('unreachable');
+});
+
 for (const tab of ['source', 'setup']) {
   test(`${tab} drafts survive cancelled sidebar and hash navigation`, async ({page}) => {
     await page.goto(`/#/config?tab=${tab}`);
