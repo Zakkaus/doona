@@ -1196,7 +1196,6 @@ export const messages = {
   'ui.backend.probeInterrupted': '探測在完成前中斷',
   'ui.backend.probeCleanupFailed': '探測已完成，但清理失敗',
   'ui.backend.publicationRejected': '後端拒絕套用新節點，沿用目前的節點',
-  'ui.backend.publicationDegraded': '節點已套用，但資料路徑處於降級狀態',
   'ui.backend.fetchFailed': '無法下載訂閱，沿用目前的節點',
   'ui.backend.providerReplaced': '重新整理期間訂閱已變更，本次結果已捨棄',
   'ui.backend.resultTooLarge': '操作結果超過後端的記憶體上限',

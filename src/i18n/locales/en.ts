@@ -1225,7 +1225,6 @@ export const messages = {
   'ui.backend.probeInterrupted': 'The probe stopped before finishing',
   'ui.backend.probeCleanupFailed': 'The probe finished, but its cleanup failed',
   'ui.backend.publicationRejected': 'The backend rejected the new nodes and kept the active ones',
-  'ui.backend.publicationDegraded': 'The nodes are applied, but the datapath is degraded',
   'ui.backend.fetchFailed': 'Could not fetch the subscription; the active nodes are kept',
   'ui.backend.providerReplaced': 'The subscription changed during the refresh, so this result was discarded',
   'ui.backend.resultTooLarge': 'The operation result exceeds the backend memory limit',

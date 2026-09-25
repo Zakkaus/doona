@@ -13,7 +13,6 @@ const operationCodes = [
   'probe_interrupted',
   'probe_cleanup_failed',
   'publication_rejected',
-  'publication_degraded',
   'fetch_failed',
   'provider_replaced',
   'result_too_large'
