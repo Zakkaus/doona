@@ -30,7 +30,7 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   // Selection path: tick rows, then add them together from the bar under the tray.
   const tray = page.getByRole('grid', {name: 'Nodes and subscriptions'});
   await tray.getByRole('row', {name: /^sg-01/}).click();
-  await expect(page.getByText('1 selected')).toBeVisible();
+  await expect(page.getByText('1 selected', {exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Add to group'}).click();
   await page.getByRole('menuitem', {name: 'gaming'}).click();
   await expect(card('gaming')).toContainText('sg-01');
