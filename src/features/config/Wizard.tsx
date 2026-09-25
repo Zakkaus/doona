@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
-import {Button, LabeledSelect, Light, TextField} from '../../ui/ui';
+import {Button, Card, LabeledSelect, Light, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from '../../dae/setup';
@@ -33,7 +33,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
     remove
   } = useWizard(props);
   return (
-    <section className="rp-card" aria-label={t('config.wizard')}>
+    <Card aria-label={t('config.wizard')}>
       <span className="rp-label">{t('config.wizardNote')}</span>
 
       <h3 className="rp-h3">{t('config.wizardSubscriptions')}</h3>
@@ -147,6 +147,6 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
         </Button>
         {writeHelp && <span className="rp-label">{writeHelp}</span>}
       </div>
-    </section>
+    </Card>
   );
 }

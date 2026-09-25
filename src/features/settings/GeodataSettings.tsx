@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
+import {Button, Card, ConfirmDialog, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './nav';
@@ -13,10 +13,7 @@ export function GeodataSettingsCard() {
   const m = useGeodataSettings();
   if (!m.available) return null;
   return (
-    <section className="rp-card" aria-labelledby={card.headingId}>
-      <h2 className="rp-h3" id={card.headingId}>
-        {t(card.titleKey)}
-      </h2>
+    <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
       <span className="rp-label">{m.note}</span>
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
@@ -157,6 +154,6 @@ export function GeodataSettingsCard() {
           <span className="rp-label">{t('settings.geodataUrlHelp')}</span>
         </ConfirmDialog>
       )}
-    </section>
+    </Card>
   );
 }

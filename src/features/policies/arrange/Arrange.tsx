@@ -20,6 +20,8 @@ import {
   Badge,
   Button,
   buttonClass,
+  Card,
+  cardClass,
   Check,
   ChoiceMenu,
   cx,
@@ -129,7 +131,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
   );
   return (
     <DropZone
-      className="rp-card rp-drop"
+      className={cardClass('rp-drop')}
       aria-label={t('arrange.dropInto', {group: group.name})}
       isDisabled={locked || m.applying}
       getDropOperation={types => (types.has(PLACEABLE) ? 'copy' : 'cancel')}
@@ -254,10 +256,7 @@ function Tray({m}: {m: Model}) {
   // A group that already holds every chosen item is not offered.
   const targets = m.groups.filter(group => chosen.some(row => !holds(group, row.item)));
   return (
-    <div className="rp-card rp-tray">
-      <h3 className="rp-h3" id={heading}>
-        {t('arrange.tray')}
-      </h3>
+    <Card title={t('arrange.tray')} titleId={heading} className="rp-tray">
       <TextField search label={t('arrange.search')} value={m.search} onChange={m.setSearch} />
       <Segmented
         label={t('arrange.show')}
@@ -325,7 +324,7 @@ function Tray({m}: {m: Model}) {
           {t('arrange.addSelected')}
         </ChoiceMenu>
       </div>
-    </div>
+    </Card>
   );
 }
 

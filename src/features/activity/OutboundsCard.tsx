@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {Donut} from '../../ui/charts';
-import {Empty, ErrorMessage, Loading} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Loading} from '../../ui/ui';
 import {useOutboundsCard} from './useOutboundsCard';
 
 // Outbound usage polls on its own, so its tick does not re-render the charts beside it.
@@ -8,7 +8,7 @@ export function OutboundsCard() {
   const t = useT();
   const {view, state, error, retry} = useOutboundsCard();
   return (
-    <div className="rp-card">
+    <Card>
       <div className="rp-row">
         <div className="rp-cluster">
           <h3 className="rp-h3">{t('act.outUsage')}</h3>
@@ -32,6 +32,6 @@ export function OutboundsCard() {
       ) : (
         <Donut label={t('act.outUsage')} rows={view.rows} total={view.total} />
       )}
-    </div>
+    </Card>
   );
 }

@@ -4,6 +4,7 @@ import {DaeCode} from '../../ui/DaeCode';
 import {
   Badge,
   Button,
+  Card,
   DataTable,
   LabeledSelect,
   Light,
@@ -101,7 +102,7 @@ function Dictionary({view}: {view: Model}) {
       </div>
       {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       {view.held && (
-        <section className="rp-card rp-list" aria-label={view.held.title}>
+        <Card className="rp-list" aria-label={view.held.title}>
           <div className="rp-cluster">
             <h3 className="rp-h3">{view.held.title}</h3>
             {view.held.files && <span className="rp-label">{view.held.files}</span>}
@@ -126,7 +127,7 @@ function Dictionary({view}: {view: Model}) {
               </Button>
             </div>
           ))}
-        </section>
+        </Card>
       )}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable

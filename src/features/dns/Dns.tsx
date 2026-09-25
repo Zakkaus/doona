@@ -19,6 +19,8 @@ import {
   DetailPanel,
   ConfirmButton,
   Empty,
+  Card,
+  cardClass,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
@@ -36,7 +38,7 @@ export function Dns(props: PageProps) {
     <>
       {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
       <form
-        className="rp-card"
+        className={cardClass()}
         onSubmit={event => {
           event.preventDefault();
           vm.submit();
@@ -53,7 +55,7 @@ export function Dns(props: PageProps) {
       {vm.cards.length > 0 && (
         <div className="rp-col">
           {vm.cards.map(card => (
-            <section key={card.id} className="rp-card rp-col">
+            <Card key={card.id} className="rp-col">
               <div className="rp-row">
                 <div className="rp-cluster">
                   <h3 className="rp-h3">{card.title}</h3>
@@ -77,7 +79,7 @@ export function Dns(props: PageProps) {
               ) : (
                 <Empty>{t('dns.noAnswers')}</Empty>
               )}
-            </section>
+            </Card>
           ))}
         </div>
       )}

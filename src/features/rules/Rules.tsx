@@ -1,7 +1,22 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
-import {Button, DataTable, Disclosure, ErrorMessage, Loading, TextTooltip, Kv, LabeledSelect, Light, Tabs, TextField, type TableColumn} from '../../ui/ui';
+import {
+  Button,
+  Card,
+  cardClass,
+  DataTable,
+  Disclosure,
+  ErrorMessage,
+  Loading,
+  TextTooltip,
+  Kv,
+  LabeledSelect,
+  Light,
+  Tabs,
+  TextField,
+  type TableColumn
+} from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {FlowRecords, RoutingMap} from './flows/Flows';
 import type {PageProps} from '../../shell/routes';
@@ -59,7 +74,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
   return (
     <>
       <form
-        className="rp-card"
+        className={cardClass()}
         onSubmit={event => {
           event.preventDefault();
           void trace.submit();
@@ -117,7 +132,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
             </TextTooltip>
           </div>
           {trace.result.evaluations.map((evaluation, i) => (
-            <section className="rp-card" key={i}>
+            <Card key={i}>
               <div className="rp-row">
                 <h3 className="rp-h3">{evaluation.heading}</h3>
                 <Kv inline items={evaluation.fields} />
@@ -134,13 +149,13 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
               </div>
               {evaluation.hint && <p className="rp-label">{evaluation.hint}</p>}
               <DataTable label={evaluation.label} height={360} rows={evaluation.rows} cols={columns} />
-            </section>
+            </Card>
           ))}
           {trace.result.dns.map(dns => (
-            <section className="rp-card" key={dns.id}>
+            <Card key={dns.id}>
               <h3 className="rp-h3">{dns.heading}</h3>
               <Kv inline items={dns.fields} />
-            </section>
+            </Card>
           ))}
         </section>
       )}

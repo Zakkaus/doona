@@ -3,7 +3,7 @@ import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
-import {Badge, Button, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
+import {Badge, Button, Card, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import type {PageProps} from '../../shell/routes';
@@ -116,7 +116,7 @@ function PolicyDetail(props: PolicyGroupInput) {
 const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<PolicyGroupInput, 'paused'> & {focused: boolean; domId: string}) {
   const {ref, active, visible, expand} = usePolicyVisibility(focused);
   return (
-    <section ref={ref} className="rp-card" id={domId} aria-label={props.name} tabIndex={-1}>
+    <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1}>
       {active ? (
         <PolicyDetail {...props} paused={!visible} />
       ) : (
@@ -129,7 +129,7 @@ const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<Pol
           members={props.members}
         />
       )}
-    </section>
+    </Card>
   );
 });
 export function Policies(props: PageProps) {
