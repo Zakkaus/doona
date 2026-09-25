@@ -38,3 +38,30 @@ for (const path of pages) {
     }
   });
 }
+
+test('the page keeps its width while a short page gives way to a long one', async ({page}) => {
+  // Every frame, note the root's width and whether the page is taller than the window. A root scrollbar that comes and
+  // goes with the page's height moves every table sideways by its width.
+  await page.addInitScript(() => {
+    const widths = new Set<number>();
+    const heights = new Set<boolean>();
+    Object.assign(window, {widths, heights});
+    const look = () => {
+      widths.add(document.documentElement.clientWidth);
+      heights.add(document.documentElement.scrollHeight > innerHeight);
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
+  await page.goto('/#/events');
+  await expect(page.getByRole('heading', {level: 1, name: 'Events'})).toBeVisible();
+  await page.locator('.rp-side').getByRole('link', {name: 'Settings'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Settings'})).toBeVisible();
+  await page.waitForTimeout(1000);
+  const seen = await page.evaluate(() => {
+    const w = window as unknown as {widths: Set<number>; heights: Set<boolean>};
+    return {widths: [...w.widths], heights: [...w.heights].sort()};
+  });
+  expect(seen.heights, 'the route change goes from a short page to a long one').toEqual([false, true]);
+  expect(seen.widths).toHaveLength(1);
+});
