@@ -352,6 +352,32 @@ describe('native transport', () => {
     controller.abort();
     await stream;
   });
+  it.each([
+    [0, 37500],
+    [Number.NaN, 37500],
+    [1, 10000]
+  ])('keeps the silence limit sane for an advertised heartbeat of %s seconds', async (seconds, limit) => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const request = vi.fn(
+      async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(c) {
+              c.enqueue(new TextEncoder().encode('id: i:1\nevent: stream.ready\ndata: {"instance_id":"i","observed_at":"2026-09-15T14:00:00Z"}\n\n'));
+            }
+          })
+        )
+    );
+    vi.stubGlobal('fetch', request);
+    const stream = createApi('https://honk.test').subscribeEvents({signal: controller.signal, heartbeatSeconds: seconds, onEvent: () => {}});
+    await vi.advanceTimersByTimeAsync(limit - 1);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(request).toHaveBeenCalledTimes(2);
+    controller.abort();
+    await stream;
+  });
   it('reports readiness and disconnection while waiting to resume the stream', async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
