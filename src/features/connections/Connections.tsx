@@ -103,26 +103,18 @@ export function Connections(props: PageProps) {
               <Light small tone={cur.tone}>
                 {cur.status}
               </Light>
+              {/* One button style for the actions; Close connection, the destructive one, always takes the last line. */}
               <div className="rp-cluster">
-                {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
-                {vm.ruleAction.canShow && (
-                  <Button quiet onPress={vm.showRule}>
-                    {t('conn.showRule')}
-                  </Button>
-                )}
-                {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
-                {cur.source && (
-                  <Button quiet onPress={vm.onlyClient}>
-                    {t('conn.onlyThisClient')}
-                  </Button>
-                )}
+                <div className="rp-cluster">
+                  {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
+                  {vm.ruleAction.canShow && <Button onPress={vm.showRule}>{t('conn.showRule')}</Button>}
+                  {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
+                  {cur.source && <Button onPress={vm.onlyClient}>{t('conn.onlyThisClient')}</Button>}
+                </div>
                 {vm.canClose && cur.closable && (
-                  <>
-                    <span className="rp-grow" />
-                    <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled} onPress={vm.close.run}>
-                      {t('conn.close')}
-                    </Button>
-                  </>
+                  <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled} onPress={vm.close.run}>
+                    {t('conn.close')}
+                  </Button>
                 )}
               </div>
               <Kv items={cur.fields} />
