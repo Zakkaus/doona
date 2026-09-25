@@ -17,7 +17,7 @@ export function useLogs() {
   const setLevel = useCallback((value: string) => setRequestedLevel(value as LogLevel), []);
   const [target, setTarget] = useState('');
   const [paused, setPaused] = useState(false);
-  const targetFilter = useDebounced(target.trim(), 300);
+  const targetFilter = useDebounced(target.trim());
   const resource = capabilities.data?.resources.logs;
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});

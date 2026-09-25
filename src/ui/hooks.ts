@@ -132,8 +132,9 @@ export function useLinked<T>(linked: T, apply: (value: T) => void) {
   }
 }
 
-// The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it.
-export function useDebounced<T>(value: T, ms: number): T {
+// The value as it stood once `ms` passed without a change; a text filter that costs a request waits on it. The
+// default is a typing pause.
+export function useDebounced<T>(value: T, ms = 300): T {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(value), ms);

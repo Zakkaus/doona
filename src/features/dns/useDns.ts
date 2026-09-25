@@ -154,7 +154,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const [src, setSrc] = useState('');
   const api = getApi();
   const capabilities = useCapabilities();
-  const filter = {name: useDebounced(name, 300), type, src: ipLiteral(useDebounced(src, 300))};
+  const filter = {name: useDebounced(name), type, src: ipLiteral(useDebounced(src))};
   const key = JSON.stringify(filter);
   const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
