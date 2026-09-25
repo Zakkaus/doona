@@ -107,6 +107,17 @@
   --rp-r-xl: 16px;
   --rp-r-2xl: 20px;
   --rp-r-pill: 999px;
+  /* The type scale stays in px, like the icons set beside it. */
+  --rp-text-2xs: 11px;
+  --rp-text-xs: 12px;
+  --rp-text-sm: 13px;
+  --rp-text-md: 14px;
+  --rp-text-lg: 16px;
+  --rp-text-xl: 18px;
+  --rp-text-2xl: 20px;
+  --rp-text-3xl: 22px;
+  --rp-text-4xl: 24px;
+  --rp-text-5xl: 28px;
   --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
@@ -123,6 +134,7 @@
   --rp-duration-spin: 800ms;
   /* One turn of the refresh and reload arrows, as long as one turn of S2's indeterminate ProgressCircle. */
   --rp-duration-refresh: 1000ms;
+  --rp-duration-hue: 3s;
   --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
 }

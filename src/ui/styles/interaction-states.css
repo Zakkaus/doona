@@ -41,7 +41,7 @@
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   padding: 4px 8px;
   border-radius: var(--rp-r-sm);
   /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */

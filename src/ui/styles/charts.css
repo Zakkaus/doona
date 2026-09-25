@@ -26,7 +26,7 @@
 }
 .rp-fact-caption {
   color: var(--rp-subtle);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
 }
 /* A value is large text, but notice is under 3:1 in most light palettes; the icon beside it keeps the tone. */
@@ -66,7 +66,7 @@
 .rp-swarm .tick,
 .rp-scatter .tick {
   fill: var(--rp-subtle);
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
 }
 .rp-scatter circle {
   fill-opacity: 0.85;
@@ -77,7 +77,7 @@
 }
 .rp-scatter .diagonal text {
   fill: var(--rp-subtle);
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
 }
 .rp-scatter circle.pick {
   cursor: pointer;
@@ -96,12 +96,12 @@
 }
 .rp-swarm .more {
   fill: var(--rp-text);
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
   font-weight: 600;
 }
 .rp-swarm .mark text {
   fill: var(--rp-text);
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
   font-weight: 600;
 }
 .rp-strips {
@@ -111,7 +111,7 @@
   margin-top: 12px;
 }
 .rp-strip-row .name {
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
   font-weight: 600;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -142,7 +142,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
 }
 .rp-waffle .legend li {
   display: grid;
@@ -186,7 +186,7 @@
 .rp-markerplot .scale {
   position: relative;
   height: 16px;
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
   color: var(--rp-subtle);
 }
 .rp-markerplot .scale > span {
@@ -209,11 +209,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
 }
 .rp-markerplot .row .value {
   text-align: end;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
   font-variant-numeric: tabular-nums;
 }
 .rp-markerplot .track .span {
@@ -324,7 +324,7 @@
 .rp-heatmap .times .ends {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
   color: var(--rp-subtle);
   white-space: nowrap;
 }
@@ -376,10 +376,10 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   background: var(--rp-text);
   color: var(--rp-on-text);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   white-space: nowrap;
   pointer-events: none;
@@ -402,7 +402,7 @@
   display: flex;
   gap: 2px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--rp-r-md);
   overflow: hidden;
 }
 .rp-sharebar .bar > i {
@@ -416,7 +416,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: var(--rp-text-sm);
 }
 .rp-sharebar .legend li {
   display: inline-flex;

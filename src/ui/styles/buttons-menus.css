@@ -37,7 +37,7 @@
 }
 .rp-btn.sm {
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
 }
 .rp-btn.icon {
@@ -67,7 +67,7 @@
   border-color: transparent;
 }
 .rp-sec-h {
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
   padding: 8px 8px 2px 32px;
@@ -141,7 +141,7 @@
 }
 .rp-item .desc {
   color: var(--rp-subtle);
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   font-variant-numeric: tabular-nums;
 }
 .rp-subitem > .ic {

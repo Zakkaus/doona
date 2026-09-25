@@ -31,7 +31,7 @@
   flex-shrink: 0;
 }
 .rp-light.sm {
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
 }
 .rp-light.sm::before {
@@ -69,7 +69,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 14px;
+  font-size: var(--rp-text-md);
   line-height: 20px;
 }
 .rp-bar .top .l {
@@ -81,7 +81,7 @@
 .rp-bar .top .v {
   color: var(--rp-subtle);
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
 }
 .rp-bar .track {
   height: 4px;
@@ -140,7 +140,7 @@
   gap: 16px;
   align-items: center;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
 }
@@ -177,7 +177,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: var(--rp-text-2xl);
   line-height: 28px;
   font-weight: 700;
   pointer-events: none;
@@ -198,7 +198,7 @@
   align-items: center;
   gap: 8px;
   min-height: 24px;
-  font-size: 14px;
+  font-size: var(--rp-text-md);
   line-height: 20px;
   color: var(--rp-subtle);
 }
@@ -219,5 +219,5 @@
 .rp-donut .r .p {
   width: 36px;
   text-align: end;
-  font-size: 12px;
+  font-size: var(--rp-text-xs);
 }

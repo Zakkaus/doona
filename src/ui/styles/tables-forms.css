@@ -34,7 +34,7 @@
 }
 .rp-table [role='columnheader'] {
   text-align: start;
-  font-size: 14px;
+  font-size: var(--rp-text-md);
   line-height: 20px;
   font-weight: 700;
   color: var(--rp-text);
@@ -166,7 +166,7 @@
 }
 .rp-dialog h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--rp-text-xl);
   line-height: 24px;
   font-weight: 700;
 }

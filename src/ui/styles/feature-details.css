@@ -42,7 +42,7 @@
   border-radius: 4px;
   background: var(--rp-hl-med);
   color: var(--rp-subtle);
-  font-size: 11px;
+  font-size: var(--rp-text-2xs);
   white-space: nowrap;
 }
 .rp-rule {

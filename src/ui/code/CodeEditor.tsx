@@ -52,8 +52,14 @@ const phrasesFor = (t: Translator) => EditorState.phrases.of(Object.fromEntries(
 export type EditorMark = {line: number; column?: number | null; level: 'error' | 'warning' | 'info'; message: string};
 
 const theme = EditorView.theme({
-  '&': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)', border: '1px solid var(--rp-hl-high)', borderRadius: '8px', fontSize: '13px'},
-  '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-pine)', boxShadow: '0 0 0 1px var(--rp-pine)'},
+  '&': {
+    backgroundColor: 'var(--rp-base)',
+    color: 'var(--rp-text)',
+    border: '1px solid var(--rp-hl-high)',
+    borderRadius: 'var(--rp-r-md)',
+    fontSize: 'var(--rp-text-sm)'
+  },
+  '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-accent)', boxShadow: '0 0 0 1px var(--rp-accent)'},
   '.cm-scroller': {
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     lineHeight: '20px',
@@ -69,29 +75,35 @@ const theme = EditorView.theme({
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {backgroundColor: 'var(--rp-hl-high)'},
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
-  '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-pine) 20%, transparent)', outline: 'none'},
-  '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 25%, transparent)'},
+  '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-accent) 20%, transparent)', outline: 'none'},
+  '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-notice) 25%, transparent)'},
   // Diagnostics show as underlines and the list above the editor, not gutter icons; the hover tooltip is the kit's.
-  '.cm-tooltip.cm-tooltip-lint': {backgroundColor: 'var(--rp-text)', color: 'var(--rp-on-text)', border: 'none', borderRadius: '6px', padding: '2px 0'},
-  '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', fontFamily: 'inherit'},
+  '.cm-tooltip.cm-tooltip-lint': {
+    backgroundColor: 'var(--rp-text)',
+    color: 'var(--rp-on-text)',
+    border: 'none',
+    borderRadius: 'var(--rp-r-sm)',
+    padding: '2px 0'
+  },
+  '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: 'var(--rp-text-xs)', lineHeight: '16px', fontFamily: 'inherit'},
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
-  '.cm-diag-line-error': {backgroundColor: 'color-mix(in srgb, var(--rp-love) 14%, transparent)'},
-  '.cm-diag-line-warning': {backgroundColor: 'color-mix(in srgb, var(--rp-gold) 16%, transparent)'},
+  '.cm-diag-line-error': {backgroundColor: 'color-mix(in srgb, var(--rp-negative) 14%, transparent)'},
+  '.cm-diag-line-warning': {backgroundColor: 'color-mix(in srgb, var(--rp-notice) 16%, transparent)'},
   '.cm-diag-line-info': {backgroundColor: 'color-mix(in srgb, var(--rp-foam) 14%, transparent)'},
-  '.cm-lintRange-error': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-love)', textUnderlineOffset: '3px'},
-  '.cm-lintRange-warning': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-gold)', textUnderlineOffset: '3px'},
+  '.cm-lintRange-error': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-negative)', textUnderlineOffset: '3px'},
+  '.cm-lintRange-warning': {backgroundImage: 'none', textDecoration: 'underline wavy var(--rp-notice)', textUnderlineOffset: '3px'},
   '.cm-lintRange-info': {backgroundImage: 'none', textDecoration: 'underline dotted var(--rp-foam)', textUnderlineOffset: '3px'},
-  '.cm-tooltip': {backgroundColor: 'var(--rp-surface)', border: '1px solid var(--rp-hl-high)', borderRadius: '8px', color: 'var(--rp-text)'},
+  '.cm-tooltip': {backgroundColor: 'var(--rp-surface)', border: '1px solid var(--rp-hl-high)', borderRadius: 'var(--rp-r-md)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {backgroundColor: 'var(--rp-selected)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul': {
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace"
   },
   '.cm-panels': {backgroundColor: 'var(--rp-surface)', color: 'var(--rp-text)'},
   '.cm-panels-bottom': {borderTop: '1px solid var(--rp-hl-med)'},
-  '.cm-textfield': {border: '1px solid var(--rp-hl-high)', borderRadius: '6px', backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)'},
+  '.cm-textfield': {border: '1px solid var(--rp-hl-high)', borderRadius: 'var(--rp-r-sm)', backgroundColor: 'var(--rp-base)', color: 'var(--rp-text)'},
   '.cm-button': {
     border: '1px solid var(--rp-hl-high)',
-    borderRadius: '6px',
+    borderRadius: 'var(--rp-r-sm)',
     backgroundImage: 'none',
     backgroundColor: 'var(--rp-overlay)',
     color: 'var(--rp-text)'
