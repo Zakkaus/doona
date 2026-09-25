@@ -19,6 +19,7 @@ import {
 } from './view';
 import {offered} from '../../api/capabilities';
 import {pathLatency} from './latency';
+import {useConnectionRule} from './useConnectionRule';
 
 const connectionTabs = ['traffic', 'list'] as const;
 // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
@@ -98,6 +99,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     [rows, network, out, rule, needle, names, t]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
+  const ruleAction = useConnectionRule(cur);
   const model = useMemo(
     () => connectionsView(rows, cur, resource.data, src, rule, locale, t, names, rulesListed),
     [rows, cur, resource.data, src, rule, locale, t, names, rulesListed]
@@ -202,6 +204,10 @@ export function useConnectionsPage({go, query}: PageProps) {
       onAbort: closing.cancel
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
+    ruleAction,
+    editRule: () => {
+      if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id}));
+    },
     showFlow: () => {
       if (model.detail && canViewFlow) go('rules', model.detail.flowQuery);
     },

@@ -37,9 +37,13 @@ export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: Retur
   return {from, to, indent: text.slice(from, first.from), text: text.slice(from, to)};
 }
 
+export const ruleLine = (condition: string, outbound: string, must = false) => `${condition} -> ${outbound}${must ? '(must)' : ''}`;
+// What a new rule can route to: the groups the configuration defines, then the two built-in outbounds.
+export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(group => group.name), 'direct', 'block'].map(id => ({id, label: id}));
+
 export function addRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text
-    ? text.slice(0, anchor.from) + `${anchor.indent}${condition} -> ${outbound}${must ? '(must)' : ''}\n` + text.slice(anchor.from)
+    ? text.slice(0, anchor.from) + `${anchor.indent}${ruleLine(condition, outbound, must)}\n` + text.slice(anchor.from)
     : null;
 }
 
