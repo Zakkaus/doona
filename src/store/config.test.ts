@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {ApiError, LocalError} from '../api/error';
-import {exceededLimit, refusalOutcome, sizeRefusal} from './config';
+import {closestLimit, refusalOutcome, withinLimits} from './config';
 
 const source = {id: 'main', content_sha256: 'aaa'};
 const refused = new ApiError(412, 'precondition_failed', 'Precondition failed');
@@ -24,19 +24,30 @@ it('counts refusals per source and digest', () => {
   expect(refusalOutcome(refused, {id: 'main', content_sha256: 'ccc'}, 'ccc', 'main:aaa').error).toBe(refused);
 });
 
-it('names the limit a write exceeds: the content in UTF-8 bytes, then the JSON body with its escaping', () => {
-  expect(exceededLimit({content: 4, body: 100}, 'ab', {content: 'ab'})).toBeUndefined();
-  expect(exceededLimit({content: 4, body: 100}, 'äää', {content: 'äää'})).toBe(4);
-  expect(exceededLimit({content: 100, body: 20}, '"'.repeat(6), {content: '"'.repeat(6)})).toBe(20);
-  expect(exceededLimit({}, 'x'.repeat(1000), {content: 'x'.repeat(1000)})).toBeUndefined();
+it('finds the advertised limit a write uses most of, measuring content in UTF-8 bytes and the body as JSON', () => {
+  expect(closestLimit({content: 4, body: 100}, 'ab', {content: 'ab'})).toEqual({limit: 4, exceeded: false});
+  expect(closestLimit({content: 4, body: 100}, 'äää', {content: 'äää'})).toEqual({limit: 4, exceeded: true});
+  const quotes = '"'.repeat(6);
+  expect(closestLimit({content: 100, body: 20}, quotes, {content: quotes})).toEqual({limit: 20, exceeded: true});
+  expect(closestLimit({}, 'x'.repeat(1000), {content: 'x'.repeat(1000)})).toBeUndefined();
 });
 
-it('turns a 413 into the tighter advertised limit and leaves everything else as sent', () => {
+it('refuses a write over a limit before sending it and names that limit', async () => {
+  let sent = false;
+  const quotes = '"'.repeat(600);
+  const refusal = await withinLimits({content: 1000, body: 1100}, quotes, {content: quotes}, async () => (sent = true)).catch((error: unknown) => error);
+  expect(sent).toBe(false);
+  expect((refusal as ApiError).text).toEqual({key: 'config.tooLarge', params: {limit: 1100}});
+});
+
+it('names the limit a 413 most likely hit, which is not always the smaller one, and leaves other failures as sent', async () => {
   const refused = new ApiError(413, 'request_too_large', 'Request body exceeds its limit');
-  const named = sizeRefusal(refused, {content: 8388608, body: 65536});
-  expect(named).toBeInstanceOf(ApiError);
-  expect((named as ApiError).text).toEqual({key: 'config.tooLarge', params: {limit: 65536}});
-  expect(sizeRefusal(refused, {})).toBe(refused);
+  const reject = (error: ApiError) => () => Promise.reject(error);
+  // Escaping makes 500 quotes a 1,014-byte body: closer to its 1,100 limit than the 500 bytes of text to theirs.
+  const quotes = '"'.repeat(500);
+  const named = await withinLimits({content: 1000, body: 1100}, quotes, {content: quotes}, reject(refused)).catch((error: unknown) => error);
+  expect((named as ApiError).text).toEqual({key: 'config.tooLarge', params: {limit: 1100}});
+  expect(await withinLimits({}, 'x', {content: 'x'}, reject(refused)).catch((error: unknown) => error)).toBe(refused);
   const other = new ApiError(422, 'unsupported_value', 'Invalid');
-  expect(sizeRefusal(other, {body: 65536})).toBe(other);
+  expect(await withinLimits({body: 65536}, 'x', {content: 'x'}, reject(other)).catch((error: unknown) => error)).toBe(other);
 });
