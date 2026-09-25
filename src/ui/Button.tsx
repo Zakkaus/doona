@@ -56,7 +56,7 @@ export function Button({
       return;
     }
     spin.current = icon.animate([{rotate: '0deg'}, {rotate: '360deg'}], {
-      duration: motionMs('--rp-duration-refresh', 600),
+      duration: motionMs('--rp-duration-refresh', 1000),
       iterations,
       easing: iterations === 1 ? motionEase('--rp-ease-out', 'cubic-bezier(0, 0, 0.4, 1)') : 'linear'
     });
@@ -65,7 +65,7 @@ export function Button({
     if (isPending) turn(Infinity);
     else if (spin.current?.playState === 'running') {
       const elapsed = Number(spin.current.currentTime ?? 0);
-      spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / motionMs('--rp-duration-refresh', 600)))});
+      spin.current.effect?.updateTiming({iterations: Math.max(1, Math.ceil(elapsed / motionMs('--rp-duration-refresh', 1000)))});
     }
   }, [isPending]);
   useEffect(() => {
