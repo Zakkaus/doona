@@ -103,28 +103,13 @@ export function Connections(props: PageProps) {
               <Light small tone={cur.tone}>
                 {cur.status}
               </Light>
-              <Kv items={cur.fields} />
-              <Kv
-                items={[
-                  [t('ui.outbound'), cur.outbound],
-                  [t('conn.chain'), cur.chain]
-                ]}
-              />
-              <div className="rp-list">
-                <span className="rp-label">{t('conn.rule')}</span>
-                <RuleRef {...cur.rule} />
-              </div>
-              {(vm.ruleAction.canAdd || vm.ruleAction.canShow) && (
-                <div className="rp-cluster">
-                  {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
-                  {vm.ruleAction.canShow && (
-                    <Button quiet onPress={vm.showRule}>
-                      {t('conn.showRule')}
-                    </Button>
-                  )}
-                </div>
-              )}
               <div className="rp-cluster">
+                {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
+                {vm.ruleAction.canShow && (
+                  <Button quiet onPress={vm.showRule}>
+                    {t('conn.showRule')}
+                  </Button>
+                )}
                 {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
                 {cur.source && (
                   <Button quiet onPress={vm.onlyClient}>
@@ -139,6 +124,17 @@ export function Connections(props: PageProps) {
                     </Button>
                   </>
                 )}
+              </div>
+              <Kv items={cur.fields} />
+              <Kv
+                items={[
+                  [t('ui.outbound'), cur.outbound],
+                  [t('conn.chain'), cur.chain]
+                ]}
+              />
+              <div className="rp-list">
+                <span className="rp-label">{t('conn.rule')}</span>
+                <RuleRef {...cur.rule} />
               </div>
             </>
           )}
