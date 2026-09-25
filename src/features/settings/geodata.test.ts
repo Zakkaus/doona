@@ -89,6 +89,7 @@ describe('custom URLs', () => {
     const long = (length: number) => 'https://m.example/' + 'é'.repeat(length - 'https://m.example/'.length);
     expect(urlProblem(long(4096), [])).toBeNull();
     expect(urlProblem(long(4097), [])).toBe('settings.geodataUrlInvalid');
+    expect(t('settings.geodataUrlInvalid')).toContain('4096 characters');
   });
   it('stores the lists trimmed, in order, without blanks', () => {
     expect(cleanUrls({geosite: [' https://m.example/b.dat ', '', 'https://m.example/a.dat'], geoip: ['https://m.example/ip.dat']})).toEqual({
