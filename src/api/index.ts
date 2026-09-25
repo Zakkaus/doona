@@ -18,6 +18,9 @@ export async function initializeApi(): Promise<Api> {
   return getApi();
 }
 
+// Whether this page loaded the mock backend at startup, so the service worker keeps it for offline use.
+export const startedOnMock = () => mockFactory !== undefined;
+
 export function getApi(): Api {
   if (selected && checked.revision === storageRevision() && Date.now() < checked.until) return selected;
   // Another tab editing or deleting this tab's profile does not move this tab: it keeps that backend until it is reloaded.

@@ -20,6 +20,8 @@ const cssMinify = (() => {
 
 // The stylesheets each language's loader in src/i18n imports with its catalogue.
 const languageStyles: Record<string, string> = {'src/fonts-tc.css': 'zh-TW', 'src/fonts-sc.css': 'zh-CN'};
+// The mock backend, loaded only by the demo and development profiles.
+const mockEntry = /\/src\/api\/mock\/index\.ts$/;
 
 export default defineConfig({
   base: './',
@@ -70,7 +72,12 @@ export default defineConfig({
               : entry.originalFileNames.map(file => languageStyles[file]).find(Boolean);
           if (lang) (languages[lang] ??= []).push(name);
         }
-        const precache = files.filter(name => !Object.values(languages).flat().includes(name));
+        // The mock backend serves the demo and development only; the worker caches it once a page reports running on it.
+        const mock = files.filter(name => {
+          const entry = bundle[name];
+          return entry.type === 'chunk' && entry.facadeModuleId !== null && mockEntry.test(entry.facadeModuleId);
+        });
+        const precache = files.filter(name => !Object.values(languages).flat().includes(name) && !mock.includes(name));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
@@ -84,6 +91,7 @@ export default defineConfig({
             .replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16))
             .replace("'__PRECACHE__'", JSON.stringify(precache))
             .replace("'__LANGUAGES__'", JSON.stringify(languages))
+            .replace("'__MOCK__'", JSON.stringify(mock))
         });
       }
     }
