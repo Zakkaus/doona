@@ -97,6 +97,15 @@ describe('group entries', () => {
     expect(ruleCondition('dport', '80 443')).toBe('dport(80, 443)');
     expect(ruleCondition('pname', 'curl')).toBe('pname(curl)');
   });
+  it('quotes a value with a colon and refuses one the rule grammar would read as syntax', () => {
+    expect(ruleCondition('dip', '2001:db8::1, 10.0.0.0/8')).toBe("dip('2001:db8::1', 10.0.0.0/8)");
+    expect(ruleCondition('dport', '8000-9000')).toBe('dport(8000-9000)');
+    expect(ruleCondition('pname', 'caf\u00e9')).toBe('pname(caf\u00e9)');
+    expect(ruleCondition('pname', 'a&&b')).toBeNull();
+    expect(ruleCondition('pname', 'app(1)')).toBeNull();
+    expect(ruleCondition('domain', 'a&&b.example')).toBeNull();
+    expect(ruleCondition('pname', "it's")).toBeNull();
+  });
 });
 
 it('reads and expands the one-line form', () => {
