@@ -993,12 +993,10 @@ export const messages = {
   'settings.geodataSource': 'Source',
   'settings.geodataSourcesNote':
     'Download URLs and automatic updates for geosite and geoip. The backend stores them, so they survive a restart. Saving downloads nothing; press Update now.',
-  'settings.geodataFromConfig': 'Set by the config file',
+  'settings.geodataFromConfig': 'From the config file',
   'settings.geodataFromDb': 'Saved',
   'settings.geodataFromDefault': 'Built-in default',
-  'settings.geodataConfigOwned':
-    'The config file sets geosite_download_url or geoip_download_url, so it owns the download URLs and they cannot be changed here. Edit the config file and restart. Automatic updates can still be set here.',
-  'settings.geodataConfigConflict': 'Could not save the download URLs: the config file now owns them. The current settings were reloaded.',
+  'settings.geodataConfigSeeded': 'When honk restarts, the config file sets the URLs it names again and replaces changes made to them here.',
   'settings.geodataCurrent': 'Current source',
   'settings.geodataPreset.metacubex': 'MetaCubeX full',
   'settings.geodataPreset.metacubexLite': 'MetaCubeX lite',

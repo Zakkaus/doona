@@ -3,7 +3,7 @@ import {useCapabilities, useGeodata, useRuntimeSettings} from '../../store';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {formatBytes} from '../../i18n/format';
 import {toast} from '../../ui/ui';
-import {ApiError, errorText} from '../../api/error';
+import {errorText} from '../../api/error';
 import {useDraftGuard} from '../../shell/draft';
 import {geodataIntervalRange, geodataPresets} from '../../dae/geodata';
 import {
@@ -38,7 +38,6 @@ export function useGeodataSettings() {
   const baseline = settings.data?.geodata;
   const stamp = baseline ? JSON.stringify(baseline) : '';
   const [draft, setDraft] = useState<{at: string; value: GeodataDraft} | null>(null);
-  const configOwned = baseline?.source === 'config';
   const edits = draft?.value ?? (baseline ? geodataDraft(baseline) : null);
   const patch = baseline && edits ? geodataPatch(baseline, edits) : null;
   const dirty = !!draft && !!baseline && JSON.stringify(draft.value) !== JSON.stringify(geodataDraft(baseline));
@@ -61,13 +60,7 @@ export function useGeodataSettings() {
         geodata.refetch();
         toast('positive', t(patch.geosite ? 'settings.geodataSaved' : 'settings.geodataAutoSaved'));
       },
-      (error: unknown) => {
-        // The configuration file took over the URLs since the page loaded: reload them, which makes the fields read-only.
-        if (error instanceof ApiError && error.status === 409) {
-          settings.refetch();
-          toast('negative', t('settings.geodataConfigConflict'));
-        } else toast('negative', t('settings.geodataSaveFailed', {error: errorText(error, t)}));
-      }
+      (error: unknown) => toast('negative', t('settings.geodataSaveFailed', {error: errorText(error, t)}))
     );
   };
   return {
@@ -79,7 +72,7 @@ export function useGeodataSettings() {
     busy: settings.busy,
     source: baseline ? t(geodataSourceLabels[baseline.source]) : null,
     sourceTone: baseline?.source === 'db' ? ('info' as const) : ('neutral' as const),
-    configOwned,
+    seededFromConfig: baseline?.source === 'config',
     current: stored ? sourceName(stored, t) : '—',
     choice: edits?.choice ?? 'custom',
     choices: [...geodataPresets.map(item => ({id: item.id, label: t(presetLabels[item.id])})), {id: 'custom', label: t('settings.geodataCustom')}],
@@ -93,7 +86,7 @@ export function useGeodataSettings() {
       ? t('settings.geodataPresetSize', {geosite: formatBytes(preset.sizes.geosite, locale), geoip: formatBytes(preset.sizes.geoip, locale)})
       : null,
     custom:
-      edits?.choice === 'custom' && !configOwned
+      edits?.choice === 'custom'
         ? geodataKinds.map(kind => ({
             kind,
             fields: customFields(edits.custom[kind]).map((value, index, list) => {
@@ -115,7 +108,6 @@ export function useGeodataSettings() {
             empty: !edits.custom[kind].some(url => url.trim())
           }))
         : [],
-    configUrls: configOwned && stored ? geodataKinds.map(kind => ({kind, urls: stored[kind]})) : [],
     missing: missing
       ? {
           title: t('settings.geodataMissingTitle', {name: preset ? t(presetLabels[preset.id]) : ''}),
@@ -132,7 +124,7 @@ export function useGeodataSettings() {
     },
     conflict: dirty && draft.at !== stamp ? t('settings.geodataDraftConflict') : null,
     dirty,
-    blocked: !patch || (!!edits && draftInvalid(edits, baseline!.source)),
+    blocked: !patch || (!!edits && draftInvalid(edits)),
     apply,
     discard: () => {
       guard.clear();
