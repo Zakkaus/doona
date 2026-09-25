@@ -94,7 +94,10 @@
   /* Secondary text on a tile, plain or selected. Where a palette's subtle is under 4.5:1 there, the palette sets body
      text; page-level secondary text keeps reading --rp-subtle. */
   --rp-subtle-text: var(--rp-subtle);
+  /* Dividers and quiet fills (hover, empty cells, tracks) drawn on a card. A palette whose highlight low is its
+     surface points both at a step that shows; the contrast spec holds them to 1.1:1 on the surface. */
   --rp-line: var(--rp-hl-low);
+  --rp-fill: var(--rp-hl-low);
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
   --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);

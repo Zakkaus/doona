@@ -304,7 +304,7 @@
 .rp-heatmap .cell {
   height: 22px;
   border-radius: 3px;
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-heatmap .cell.t1 {
   background: color-mix(in srgb, var(--tone) 20%, transparent);

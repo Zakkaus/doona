@@ -224,7 +224,7 @@
   backdrop-filter: blur(24px) saturate(1.6);
 }
 :root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 
 /* Floating material: thicker, blurred, with the specular rim (a 1px ring cut out with a mask). */
@@ -296,7 +296,7 @@
   background: transparent;
 }
 :root[data-family='glass'] .rp-btn.quiet[data-hovered] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 :root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-accent-fill);
@@ -310,7 +310,7 @@
 }
 /* The glass rules outrank the generic disabled ones, so the disabled looks are restated here. */
 :root[data-family='glass'] .rp-btn[data-disabled] {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 :root[data-family='glass'] .rp-btn.quiet[data-disabled] {
   background: transparent;

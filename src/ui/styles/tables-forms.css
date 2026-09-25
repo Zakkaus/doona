@@ -93,7 +93,7 @@
   color: var(--rp-text);
 }
 .rp-table [role='row'][data-hovered]:not([data-selected]) {
-  background: var(--rp-hl-low);
+  background: var(--rp-fill);
 }
 .rp-table [role='row'][data-focus-visible] {
   outline: 2px solid var(--rp-accent);
