@@ -1,7 +1,7 @@
-import {expect, it, vi} from 'vitest';
+import {expect, it} from 'vitest';
 import {capabilities, datapath, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {datapathFields, datapathValue, lifecycleActions, memoryFields, overviewExport, overviewView} from './view';
+import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';
 const t: Translator = (key, params) => translate('en', key, params);
 const loading = {capabilities: false, runtime: false, version: false, memory: false, datapath: false};
@@ -52,17 +52,6 @@ it('shows the version without the runtime and formats counts for the locale', ()
   const zh: Translator = (key, params) => translate('zh-TW', key, params);
   expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', zh, 'zh-TW')).toContainEqual([zh('ov.f.connState'), '1,234／65,536']);
   expect(overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.bar?.value).toMatch(/^\S+ \S+／\S+ \S+$/);
-});
-
-it('retains a pending operation even when lifecycle state stops offering it', () => {
-  const run = vi.fn();
-  const actions = lifecycleActions(kind => kind === 'resume', 'suspend', run, t);
-  expect(actions.map(action => [action.id, action.isPending, action.isDisabled])).toEqual([
-    ['suspend', true, true],
-    ['resume', false, true]
-  ]);
-  actions[1].onAction();
-  expect(run).toHaveBeenCalledWith('resume');
 });
 
 it('exports raw diagnostic snapshots rather than formatted fields', () => {

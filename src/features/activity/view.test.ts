@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {menuViews} from '../policies/view';
+import {menuViews} from '../shared/nodeMenu';
 import {activityOutbounds, activityRanking, activityView, interestingNotice, modeView, nodeView, noticeRows, trafficState} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};

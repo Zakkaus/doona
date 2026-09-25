@@ -6,11 +6,11 @@ import {word} from '../../../api/labels';
 import {localTime, formatLatency} from '../../../i18n/format';
 import {parseU64} from '../../../api/u64';
 import {latencyTone} from '../../../ui/ui';
-import {groupPolicyText} from '../../policies/policyText';
+import {groupPolicyText} from '../../shared/policyText';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {treeIndex, treeRows} from './map';
 import {href} from '../../../shell/route';
-import {ruleSeedHref} from '../link';
+import {ruleSeedHref} from '../../shared/link';
 const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',

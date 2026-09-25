@@ -5,7 +5,7 @@ import {offered} from '../../api/capabilities';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
-import {usePendingApply} from '../rules/usePendingApply';
+import {usePendingApply} from '../shared/usePendingApply';
 import {pinnedPosition, rulePositions, ruleTargets, type RuleTarget} from './rule';
 
 type Pin = {generation: string; rule: RoutingRule};

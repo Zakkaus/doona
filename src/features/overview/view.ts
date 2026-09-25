@@ -1,11 +1,10 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n';
 import {formatDuration, localTime, formatBytes} from '../../i18n/format';
-import {operationLabels, lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
+import {lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
-import type {Action} from '../../ui/ActionGroup';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -98,17 +97,6 @@ const resourceLabels = {
   runtime_settings: 'settings.runtime',
   geodata: 'settings.geodata'
 } as const satisfies Record<string, Key>;
-
-export function lifecycleActions(
-  canRun: (kind: keyof typeof operationLabels) => boolean,
-  busy: string | null,
-  run: (kind: keyof typeof operationLabels) => void,
-  t: LabelFn
-): Action[] {
-  return (Object.keys(operationLabels) as Array<keyof typeof operationLabels>)
-    .filter(kind => canRun(kind) || busy === kind)
-    .map(kind => ({id: kind, label: t(operationLabels[kind]), isPending: busy === kind, isDisabled: !!busy, onAction: () => run(kind)}));
-}
 
 export function overviewView(
   data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath},

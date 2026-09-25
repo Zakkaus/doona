@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {Button, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
 import type {PolicyEditView} from './usePolicyEdit';
-import {PolicyPicker} from './PolicyPicker';
+import {PolicyPicker} from '../shared/PolicyPicker';
 export function PolicyEdit({model: m}: {model: PolicyEditView}) {
   const t = useT();
   return (

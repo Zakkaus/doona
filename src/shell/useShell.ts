@@ -1,6 +1,6 @@
 import {createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useApplyHeld} from '../features/rules/usePendingApply';
-import {useLifecycle} from '../features/overview/useLifecycle';
+import {useApplyHeld} from '../features/shared/usePendingApply';
+import {useLifecycle} from '../features/shared/useLifecycle';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useT} from '../i18n';

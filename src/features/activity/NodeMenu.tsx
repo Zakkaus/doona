@@ -3,7 +3,7 @@ import {Header, Menu, MenuSection} from 'react-aria-components';
 import {MenuButton, MenuChoice, pickMenuKey, TextField} from '../../ui/ui';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
-import {menuViews} from '../policies/view';
+import {menuViews} from '../shared/nodeMenu';
 import type {NodeSearch} from './NodeSearch';
 import type {ActivityNodeMenu} from './view';
 

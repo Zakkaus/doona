@@ -1,5 +1,5 @@
 import {useCapabilities, useConnectionClose, useConnectionTotals, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../store';
-import {useLifecycle} from '../overview/useLifecycle';
+import {useLifecycle} from '../shared/useLifecycle';
 import {closedAllTone} from '../../api/selectors';
 import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';

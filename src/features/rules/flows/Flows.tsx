@@ -24,7 +24,7 @@ import {useT} from '../../../i18n';
 import Close from '../../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
-import {ruleHref} from '../link';
+import {ruleHref} from '../../shared/link';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 

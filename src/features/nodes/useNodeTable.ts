@@ -7,8 +7,9 @@ import type {OutboundNames} from '../../api/selectors';
 import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
-import {collator, nodeRows, nodeRowView, probeToast} from './view';
-import {policyLabel} from '../policies/policyText';
+import {collator, nodeRows, nodeRowView} from './view';
+import {probeToast} from '../shared/probe';
+import {policyLabel} from '../shared/policyText';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {

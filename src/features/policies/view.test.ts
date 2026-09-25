@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
-import {actionErrorText, groupConfigFields, memberViews, menuViews, nodeGridView, policyCardView, probeSummary} from './view';
+import {actionErrorText, groupConfigFields, memberViews, nodeGridView, policyCardView, probeSummary} from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
@@ -15,9 +15,6 @@ it('projects nested, failed and unmeasured members without inventing latency', (
     status: {text: t('ui.group'), badge: true}
   });
   expect(members.find(member => member.id === 'hk-01')?.status).toEqual({text: '84 ms', tone: 'ok'});
-  const menu = menuViews([{name: 'unknown'}, {name: 'down', alive: false, tcp: 5}, {name: 'fast', tcp: 0}], t);
-  expect(menu.items.map(item => item.description)).toEqual(['—', t('ui.unavailable'), '0 ms']);
-  expect(menu.sections[0].items.map(item => item.id)).toEqual(['fast', 'down', 'unknown']);
 });
 it('keeps split network selection unset for both and omits mutable interrupt configuration from readonly fields', () => {
   const g = nodeFixtures(0).groups[0];
@@ -111,4 +108,36 @@ it('keeps pinning out of the page-wide note in every language', () => {
   expect(translate('en', 'policy.note')).not.toMatch(/pin/i);
   // The zh word for pinning, taken from the pinned badge.
   for (const lang of ['zh-TW', 'zh-CN'] as const) expect(translate(lang, 'policy.note')).not.toContain(translate(lang, 'policy.overridden').slice(-2));
+});
+
+it('counts each probed member once, by the row that says most', () => {
+  const row = (member_id: string, ip_version: 'ipv4' | 'ipv6', state: 'healthy' | 'unavailable' | 'unknown') => ({
+    member_id,
+    ip_version,
+    state,
+    kind: 'tcp_connect',
+    transport: 'tcp',
+    purpose: 'data',
+    warmth: 'cold',
+    latency_ms: state === 'healthy' ? 0.2 : null,
+    error: state === 'healthy' ? null : {code: state === 'unknown' ? 'address_unavailable' : 'probe_failed', message: ''},
+    health_updated: true,
+    observed_at: '2026-09-20T04:12:36.546Z',
+    resolved_leaf_node_id: member_id
+  });
+  const summary = probeSummary({
+    target: {type: 'group', group_id: 'g'},
+    selection_changed: {tcp: false, udp: false},
+    selection_before: {tcp: null, udp: null},
+    selection_after: {tcp: null, udp: null},
+    // Every member also gets an ipv6 row with no address; it must not hide the ipv4 answer.
+    results: [
+      row('a', 'ipv4', 'healthy'),
+      row('a', 'ipv6', 'unknown'),
+      row('b', 'ipv6', 'unknown'),
+      row('b', 'ipv4', 'unavailable'),
+      row('c', 'ipv4', 'unknown')
+    ]
+  } as unknown as Parameters<typeof probeSummary>[0]);
+  expect(summary).toEqual({key: 'policy.probeUnchanged', params: {healthy: 1, unavailable: 1, unknown: 1}});
 });
