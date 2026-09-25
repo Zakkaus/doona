@@ -1,7 +1,8 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {poll, useCapabilities, useConnections} from '../../store';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {usePalette} from '../../ui/charts';
+import {useNearViewport} from '../../ui/ui';
 import {activityRanking} from './view';
 
 // The poll runs every 20 seconds while the card is near the viewport; off screen it is paused and keeps its last list.
@@ -11,13 +12,7 @@ export function useRankingCard() {
   const p = usePalette();
   const [by, setBy] = useState('dev');
   const available = useCapabilities().data?.resources.connections.available;
-  const [near, setNear] = useState(false);
-  const ref = useCallback((element: HTMLElement | null) => {
-    if (!element) return;
-    const observer = new IntersectionObserver(entries => setNear(entries.at(-1)!.isIntersecting), {rootMargin: '400px'});
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const [ref, near] = useNearViewport();
   // Paused only once it has a list to keep showing; before that it loads wherever it is.
   const [loaded, setLoaded] = useState(false);
   const connections = useConnections(undefined, available === true, !near && loaded, poll.summary);
