@@ -43,3 +43,18 @@ it('marks where the stream lost records between older and newer rows', () => {
   ]);
   expect(new Set(view.rows.map(row => row.id)).size).toBe(3);
 });
+
+it('marks the levels the engine does not record and states the level it records', () => {
+  const view = logView([], ['trace', 'debug', 'info', 'warn', 'error'], true, undefined, 'en-US', t, false, new Set(), 'info');
+  expect(view.levels.map(level => level.label)).toEqual([
+    t('log.levelNotRecorded', {level: t('log.level.trace')}),
+    t('log.levelNotRecorded', {level: t('log.level.debug')}),
+    t('log.level.info'),
+    t('log.level.warn'),
+    t('log.level.error')
+  ]);
+  expect(view.recordedText).toBe(t('log.recorded', {level: t('log.level.info')}));
+  const unknown = logView([], ['debug', 'info'], true, undefined, 'en-US', t);
+  expect(unknown.levels.map(level => level.label)).toEqual([t('log.level.debug'), t('log.level.info')]);
+  expect(unknown.recordedText).toBeNull();
+});

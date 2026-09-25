@@ -62,6 +62,7 @@ export function Logs() {
         <Light small tone={vm.status.tone}>
           {vm.status.text}
         </Light>
+        {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
         <span className="rp-grow" />
         <Button isDisabled={!vm.rows.length} onPress={vm.clear}>
           {t('log.clear')}

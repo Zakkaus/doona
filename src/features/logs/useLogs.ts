@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useLogFeed, useVersion} from '../../store';
+import {useCapabilities, useLogFeed, useRuntimeSettings, useVersion} from '../../store';
 import type {LogLevel} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useDebounced} from '../../ui/ui';
@@ -21,9 +21,10 @@ export function useLogs() {
   const resource = capabilities.data?.resources.logs;
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});
+  const recorded = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false).data?.log.level;
   const view = useMemo(
-    () => logView(feed.records, resource?.levels ?? [], feed.connected, version.data?.engine.name, locale, t, !!feed.error, feed.gaps),
-    [feed.records, feed.connected, feed.error, feed.gaps, resource, version.data, locale, t]
+    () => logView(feed.records, resource?.levels ?? [], feed.connected, version.data?.engine.name, locale, t, !!feed.error, feed.gaps, recorded),
+    [feed.records, feed.connected, feed.error, feed.gaps, resource, version.data, locale, t, recorded]
   );
   return {
     ...view,
