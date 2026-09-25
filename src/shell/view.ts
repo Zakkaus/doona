@@ -2,7 +2,7 @@ import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
 import type {PaletteId, Scheme, Settings} from './preferences';
-import type {PageProps} from './routes';
+import {hubs, type PageProps} from './routes';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';
@@ -28,14 +28,12 @@ type NavItem = {
   current: boolean;
   unavailable: boolean;
   description: string | undefined;
-  desc: string | undefined;
 };
 export type NavGroup = {id: string; label: string; items: NavItem[]};
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
-  choices: Array<{id: string; label: string; desc: string | undefined}>;
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
   content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
@@ -60,11 +58,12 @@ export function shellView(
   const profile = settings.profiles.find(item => item.id === settings.activeId);
   const feature = features.find(item => item.path === route) ?? features[0];
   const offered = (path: string) => navAvailable(path, capabilities);
-  const groups = [...new Set(features.flatMap(item => (item.nav ? [item.nav.group] : [])))].map(group => ({
-    id: group.replace('grp.', ''),
-    label: t(group),
-    items: features.flatMap(item =>
-      item.nav?.group === group
+  const groups = hubs.map(hub => ({
+    id: hub.id,
+    label: t(hub.titleKey),
+    items: hub.pages.flatMap(path => {
+      const item = features.find(feature => feature.path === path);
+      return item?.nav
         ? [
             {
               id: item.id,
@@ -74,12 +73,11 @@ export function shellView(
               Icon: item.nav.Icon,
               current: item.path === route,
               unavailable: !offered(item.path),
-              description: offered(item.path) ? undefined : t('shell.notOffered'),
-              desc: offered(item.path) ? undefined : t('shell.notOfferedShort')
+              description: offered(item.path) ? undefined : t('shell.notOffered')
             }
           ]
-        : []
-    )
+        : [];
+    })
   }));
   const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
   const needsLogin = refused(capabilityError) || (capabilityError instanceof ApiError && capabilityError.status === 404);
@@ -103,7 +101,6 @@ export function shellView(
   );
   return {
     groups,
-    choices: groups.flatMap(group => group.items.map(item => ({id: item.path, label: item.label, desc: item.desc}))),
     current: {
       id: feature.id,
       path: route,

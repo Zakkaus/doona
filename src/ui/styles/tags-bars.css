@@ -30,7 +30,7 @@
   --rp-actionbar-height: calc(var(--rp-control) + 16px);
   position: fixed;
   inset-inline: 16px;
-  bottom: 16px;
+  bottom: calc(16px + var(--rp-dock));
   z-index: 3;
   max-width: 720px;
   min-height: var(--rp-actionbar-height);
@@ -48,5 +48,5 @@
 }
 /* Toasts rise above a pending action bar rather than covering it. */
 body:has(.rp-actionbar) .rp-toasts {
-  bottom: calc(32px + var(--rp-control) + 16px);
+  bottom: calc(32px + var(--rp-control) + 16px + var(--rp-dock));
 }

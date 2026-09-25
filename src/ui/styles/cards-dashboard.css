@@ -315,16 +315,16 @@
 .rp-tint-c5 > svg {
   color: var(--rp-c5);
 }
-.rp-side [data-group='status'] {
+.rp-side [data-group='overview'] {
   --rp-group: var(--rp-c1);
 }
-.rp-side [data-group='network'] {
+.rp-side [data-group='traffic'] {
   --rp-group: var(--rp-c6);
 }
-.rp-side [data-group='proxy'] {
+.rp-side [data-group='routing'] {
   --rp-group: var(--rp-c3);
 }
-.rp-side [data-group='system'] {
+.rp-side [data-group='settings'] {
   --rp-group: var(--rp-c4);
 }
 .rp-nav > svg {
@@ -336,16 +336,16 @@
   font-weight: 600;
   color: var(--rp-text);
 }
-.rp-side:has([data-group='status'] [aria-current='page']) .rp-nav-slider {
+.rp-side:has([data-group='overview'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c1);
 }
-.rp-side:has([data-group='network'] [aria-current='page']) .rp-nav-slider {
+.rp-side:has([data-group='traffic'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c6);
 }
-.rp-side:has([data-group='proxy'] [aria-current='page']) .rp-nav-slider {
+.rp-side:has([data-group='routing'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c3);
 }
-.rp-side:has([data-group='system'] [aria-current='page']) .rp-nav-slider {
+.rp-side:has([data-group='settings'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c4);
 }
 :root:not([data-wordmark='plain']) .rp-brand-text > span:first-child {
