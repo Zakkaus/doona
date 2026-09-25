@@ -17,7 +17,7 @@
 
 doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 honk，dae 實作同一份契約後亦可。它由引擎自己或任一 Web 伺服器提供，顯示引擎當下的狀態，並管理節點、群組、路由規則與組態檔。
 
-[使用範例資料體驗示範版](https://zakkaus.github.io/doona/)。
+[使用範例資料體驗示範版](https://demo.daeuniverse.org/)。
 
 ![活動頁](docs/screenshots/zh-TW/activity-light.webp)
 
