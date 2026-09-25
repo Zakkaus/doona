@@ -4,7 +4,7 @@ import type {ConfigSource} from '../../api/model';
 import {pendingRules, refetchAll, useConfigEditor, usePendingRules, type PendingFailure, type PendingRule} from '../../store';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
-import {byFile, insertRules, ruleFailure} from './pending';
+import {byFile, insertRules, partialFailure, ruleFailure} from './pending';
 
 const reread = () => void refetchAll();
 // Writes held rules one file at a time, each with its own validation, If-Match and reload, and stops at the first
@@ -16,24 +16,31 @@ export function usePendingApply() {
   // One apply at a time across all its files, so a second press while one runs does nothing.
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const writeAll = async (rules: PendingRule[]): Promise<PendingFailure | null | undefined> => {
-    for (const group of byFile(rules)) {
-      let sources: ConfigSource[] = [];
-      let text: string | null | undefined;
-      try {
-        sources = (await getApi().config()).sources;
-        const source = sources.find(source => source.id === group[0].sourceId);
-        const result = source && (await editor.apply(source, () => (text = insertRules(source, group))));
-        if (!source || text === null) {
-          reread();
-          return {text: t('rule.stale'), lines: []};
-        }
-        if (!result) return undefined;
-        if (result.diagnostics) return ruleFailure(null, result.diagnostics, sources, t);
-      } catch (error) {
-        return ruleFailure(error, null, sources, t);
+  const writeFile = async (group: PendingRule[]): Promise<PendingFailure | null | undefined> => {
+    let sources: ConfigSource[] = [];
+    let text: string | null | undefined;
+    try {
+      sources = (await getApi().config()).sources;
+      const source = sources.find(source => source.id === group[0].sourceId);
+      const result = source && (await editor.apply(source, () => (text = insertRules(source, group))));
+      if (!source || text === null) {
+        reread();
+        return {text: t('rule.stale'), lines: []};
       }
+      if (!result) return undefined;
+      return result.diagnostics ? ruleFailure(null, result.diagnostics, sources, t) : null;
+    } catch (error) {
+      return ruleFailure(error, null, sources, t);
+    }
+  };
+  const writeAll = async (rules: PendingRule[]): Promise<PendingFailure | null | undefined> => {
+    let written = 0;
+    for (const group of byFile(rules)) {
+      const failure = await writeFile(group);
+      if (failure) return partialFailure(failure, written, rules.length - written, t);
+      if (failure === undefined) return undefined;
       pendingRules.remove(group.map(rule => rule.id));
+      written += group.length;
     }
     return null;
   };

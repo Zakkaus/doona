@@ -1,14 +1,15 @@
 import {useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useGroups, useRules} from '../../store';
-import type {Connection} from '../../api/model';
+import type {Connection, RoutingRule} from '../../api/model';
 import {offered} from '../../api/capabilities';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {ruleAnchor, ruleLine, ruleOutbounds} from '../rules/source';
 import {usePendingApply} from '../rules/usePendingApply';
-import {rulePositions, ruleTargets, type RuleTarget} from './rule';
+import {pinnedPosition, rulePositions, ruleTargets, type RuleTarget} from './rule';
 
-type Draft = {targets: RuleTarget[]; matched: string | null; target: number; outbound: string; before: string};
+type Pin = {generation: string; rule: RoutingRule};
+type Draft = {targets: RuleTarget[]; matched: string | null; current: string | null; target: number; outbound: string; pin: Pin | null};
 // The add-rule dialog of one connection. It keeps the connection's targets from when it opened, since the connection
 // may leave the snapshot while the dialog is open, and reads the rules and sources only while it is open.
 export function useConnectionRule(connection: Connection | undefined) {
@@ -30,8 +31,17 @@ export function useConnectionRule(connection: Connection | undefined) {
   const sources = config.data?.sources ?? [];
   const positions = rulePositions(rules.data?.rules ?? [], sources, draft?.matched ?? null, t);
   const outbounds = ruleOutbounds(groups.data ?? []);
-  const outbound = draft?.outbound || outbounds[0].id;
-  const before = positions.some(position => position.id === draft?.before) ? draft!.before : positions[0]?.id;
+  // The outbound the connection took, when the configuration names it, so the rule starts from what is routed now.
+  const outbound = draft?.outbound || outbounds.find(item => item.id === draft?.current)?.id || outbounds[0].id;
+  const generation = rules.data?.generation_id;
+  const pinOf = (id: string | undefined): Pin | null => {
+    const rule = rules.data?.rules.find(rule => rule.rule_id === id);
+    return rule && generation ? {generation, rule} : null;
+  };
+  // The position is pinned to a rule and generation as soon as it is known, so a reload never moves it silently.
+  const {before, moved} = pinnedPosition(positions, draft?.pin ?? null, generation);
+  const firstPin = draft && !draft.pin ? pinOf(before) : null;
+  if (firstPin) setDraft({...draft!, pin: firstPin});
   const target = draft?.targets[draft.target];
   const edit = (patch: Partial<Draft>) => {
     if (draft && !pending.busy) setDraft({...draft, ...patch});
@@ -57,6 +67,8 @@ export function useConnectionRule(connection: Connection | undefined) {
       stale();
       return null;
     }
+    // Writing after the dialog said the matched rule changed takes the first position it offered instead.
+    if (moved) setDraft({...draft!, pin: pinOf(before)});
     return {condition: target.condition, outbound, must: false, before: rule, sourceId: source.id};
   };
   const hold = () => {
@@ -82,7 +94,7 @@ export function useConnectionRule(connection: Connection | undefined) {
     canAdd: canWrite && targets.length > 0,
     canShow: canWrite && !!connection?.rule_id,
     openAdd: () => {
-      if (connection) setDraft({targets, matched: connection.rule_id, target: 0, outbound: '', before: ''});
+      if (connection) setDraft({targets, matched: connection.rule_id, current: connection.outbound, target: 0, outbound: '', pin: null});
     },
     dialog: draft && {
       targets: draft.targets.length > 1 ? draft.targets.map((item, i) => [String(i), t(`rule.kind.${item.kind}`)] as [string, string]) : null,
@@ -93,11 +105,12 @@ export function useConnectionRule(connection: Connection | undefined) {
       setOutbound: (value: string) => edit({outbound: value}),
       positions,
       before: before ?? '',
-      setBefore: (value: string) => edit({before: value}),
+      setBefore: (value: string) => edit({pin: pinOf(value)}),
       preview: target ? ruleLine(target.condition, outbound) : '',
       busy: pending.busy,
       loadError: rules.error ?? config.error,
       retry,
+      moved,
       unplaceable: !!rules.data && !!config.data && !positions.length,
       disabled: !target || !before,
       failure,

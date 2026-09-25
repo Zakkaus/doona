@@ -4,7 +4,7 @@ import {backendMessage} from '../../i18n/backend';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
-import {fileName} from '../config/names';
+import {fileName, restartRequired} from '../config/names';
 import {ruleAnchor, ruleLine} from './source';
 
 // Every held rule for one source, each in front of the rule it names, in one pass over the text; rules held before
@@ -37,10 +37,10 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
     diagnostics ??
     (error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? null) : null);
   if (!found) return {text: failureNotice(error, t, error => t('ui.writeFailed', {error})).text, lines: []};
-  const errors = found.filter(item => item.level === 'error');
-  const restart = errors.filter(item => item.code === 'restart-required').length;
+  const errors = found.filter(item => item.level === 'error').length;
+  const restart = restartRequired(found);
   return {
-    text: restart ? t('config.writeRestart', {n: restart}) : t('ui.writeInvalid', {n: errors.length}),
+    text: restart ? t('config.writeRestart', {n: restart}) : errors ? t('ui.writeInvalid', {n: errors}) : t('rule.refused'),
     lines: found.map(item => {
       const message = backendMessage(item.code, item.message, t);
       const source = sources.find(source => source.id === item.source_id);
@@ -64,4 +64,9 @@ export function pendingView(rules: PendingRule[], failure: PendingFailure | null
         }))
       }
     : null;
+}
+
+// A failure after earlier files were written: those rules are in place and reloaded, so it leads with them.
+export function partialFailure(failure: PendingFailure, written: number, held: number, t: Translator): PendingFailure {
+  return written ? {text: t('rule.partial', {n: written, held}), lines: [failure.text, ...failure.lines]} : failure;
 }

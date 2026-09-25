@@ -1,4 +1,4 @@
-import type {ConfigSource, ConfigValidationRequest} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../../api/model';
 import {readGroupEntries} from '../../dae/groups';
 
 export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
@@ -20,3 +20,8 @@ export function validationSources(sources: ConfigSource[], replacement?: {id: st
     content: source.id === replacement?.id ? replacement.content : source.content!
   }));
 }
+
+// honk refuses a write that changes a setting only a restart applies, one error per setting, and names the setting in
+// the message; nothing was written, so the draft and every later write stay valid.
+export const restartRequired = (diagnostics: ConfigDiagnostic[]) =>
+  diagnostics.filter(item => item.level === 'error' && item.code === 'restart-required').length;

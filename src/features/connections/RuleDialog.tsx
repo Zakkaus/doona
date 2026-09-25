@@ -52,7 +52,8 @@ export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRul
               items={dialog.positions}
             />
           </div>
-          {dialog.unplaceable && <p className="rp-note">{t('config.incomplete')}</p>}
+          {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
+          {dialog.unplaceable && <p className="rp-note">{t('conn.ruleNoPosition')}</p>}
           <DaeCode text={dialog.preview} />
         </div>
       )}

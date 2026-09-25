@@ -3,7 +3,7 @@ import {createMockApi} from '../../api/mock';
 import {ApiError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import type {PendingRule} from '../../store';
-import {byFile, insertRules, pendingView, ruleFailure} from './pending';
+import {byFile, insertRules, partialFailure, pendingView, ruleFailure} from './pending';
 const t: Translator = (key, params) => translate('en', key, params);
 
 async function held() {
@@ -55,4 +55,19 @@ it('explains a refused write with its diagnostics, restart-only settings or the 
   });
   expect(ruleFailure(restart, null, sources, t).text).toContain('1 setting takes effect only after a restart');
   expect(ruleFailure(new Error('offline'), null, sources, t)).toEqual({text: 'Could not write the configuration: offline', lines: []});
+});
+
+it('does not count errors a refusal did not report', async () => {
+  const {sources} = await createMockApi().config();
+  const warning = {level: 'warning' as const, source_id: 'src-main', line: 44, column: 3, span: null, code: 'unused', message: 'unused'};
+  expect(ruleFailure(null, [warning], sources, t).text).toBe('Validation did not pass; nothing written');
+});
+
+it('says what an apply wrote before a later file failed, and what is still held', () => {
+  const failure = {text: 'Validation found 1 error; nothing written', lines: ['rules.dae line 7: x']};
+  expect(partialFailure(failure, 0, 1, t)).toEqual(failure);
+  expect(partialFailure(failure, 2, 1, t)).toEqual({
+    text: '2 rules written; 1 still held',
+    lines: ['Validation found 1 error; nothing written', 'rules.dae line 7: x']
+  });
 });
