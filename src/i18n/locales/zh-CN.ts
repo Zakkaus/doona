@@ -1249,6 +1249,7 @@ export const messages = {
   'ui.block': 'block',
   'ui.error': '错误',
   'ui.operationFailed': '操作未完成',
+  'ui.operationUnknown': '结果未知，后端已不再跟踪此操作。请先确认当前状态再重试',
   'ui.writtenNotApplied': '已写入配置文件，但未生效，运行中的配置未变更。请修正文件后重载，或重启 honk',
   'ui.probeUnsupported': '此后端不提供该目标的 TCP 探测',
   'ui.groupNotLoaded': '组尚未加载',

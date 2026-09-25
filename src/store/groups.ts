@@ -4,7 +4,7 @@ import type {Capabilities, Group, GroupSelectionRequest, ProbeResult} from '../a
 import type {Api} from '../api/api';
 import {LocalError} from '../api/error';
 import {useResource} from './resource';
-import {etag, finished, tcpProbe, useAction} from './action';
+import {etag, finished, settle, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
@@ -21,7 +21,7 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
       signal.throwIfAborted();
       const members = group.members.slice(offset, offset + size).map(member => member.id);
       const accepted = await api.startProbe({...request, members}, signal);
-      const batch = finished(await api.pollOperation(accepted, signal), 'probe');
+      const batch = finished(await settle(api, accepted, signal), 'probe');
       if (!result) result = batch;
       else {
         result.results.push(...batch.results);
@@ -109,7 +109,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
         run('config', async signal => {
           if (!resource.data) throw new LocalError('ui.groupNotLoaded');
           const result = await api.patchGroup(id, [{op: 'replace', path: '/config/interrupt_connections', value}], etag(resource.data.config_revision), signal);
-          if ('operation_id' in result) finished(await api.pollOperation(result, signal), 'group_update', {written: true});
+          if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
           return true;
         }),
       [api, id, resource.data, run]

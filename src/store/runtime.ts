@@ -3,7 +3,7 @@ import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
-import {finished, useAction} from './action';
+import {finished, settle, useAction} from './action';
 export function useVersion() {
   const api = getApi();
   return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)});
@@ -103,7 +103,7 @@ export function useRuntimeOperations(runtime: Runtime | undefined, capabilities:
       if (!canRun(kind)) return Promise.resolve(undefined);
       return act(kind, async signal => {
         const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal);
-        const terminal = await api.pollOperation(accepted, signal);
+        const terminal = await settle(api, accepted, signal);
         refetch();
         finished(terminal, kind);
         return terminal as Extract<Operation, {status: 'succeeded'}>;
