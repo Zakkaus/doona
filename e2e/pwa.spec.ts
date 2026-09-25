@@ -173,3 +173,24 @@ test('an early install offer is consumed on dismissal and failures are reported'
   await expect(install).toBeHidden();
   await expect(page.locator('.rp-toast.negative')).toContainText('Install prompt failed');
 });
+
+const iosSafari = (standalone: boolean) => {
+  const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1';
+  Object.defineProperty(Navigator.prototype, 'userAgent', {get: () => ua});
+  Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {get: () => 5});
+  Object.defineProperty(Navigator.prototype, 'standalone', {get: () => standalone});
+};
+
+test('Safari on iOS without an install prompt is told how to add the app to the Home Screen', async ({page}) => {
+  await page.addInitScript(iosSafari, false);
+  await page.goto('/#/settings');
+  await expect(page.getByText('To install, tap Share, then Add to Home Screen.', {exact: true})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Install as an app', exact: true})).toHaveCount(0);
+});
+
+test('Safari on iOS shows no install steps once it runs from the Home Screen', async ({page}) => {
+  await page.addInitScript(iosSafari, true);
+  await page.goto('/#/settings');
+  await expect(page.getByRole('button', {name: 'About doona', exact: true})).toBeVisible();
+  await expect(page.getByText('To install', {exact: false})).toHaveCount(0);
+});

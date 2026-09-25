@@ -1034,6 +1034,8 @@ export const messages = {
   'settings.geodataVerifiedNo': '未校驗',
   'settings.paired': '已從連結帶入後端網址與 Token；儲存後生效。',
   'settings.install': '安裝為應用程式',
+  'settings.installHintIos': '若要安裝，請點一下「分享」，然後點一下「加入主畫面」。',
+  'settings.installHintMac': '若要安裝，請在選單列選擇「檔案」>「加入 Dock 中」。',
   'settings.installed': '已安裝',
   'settings.apiMajor': '後端 API 主版本為 {major}，本面板依 API 主版本 1 的契約實作；欄位可能不相容。',
   'settings.installFailed': '無法安裝：{error}',
