@@ -116,6 +116,29 @@ test('custom URLs are edited in a dialog, saved once and then updated', async ({
   expect(sent).toEqual(['patch', 'update']);
 });
 
+test('the custom URLs cannot change while they are saved', async ({page}) => {
+  const {api, handlers} = await traffic(page);
+  let release: () => void = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  handlers['PATCH runtime/settings'] = async request => {
+    await held;
+    return api.patchRuntimeSettings(request.postDataJSON());
+  };
+  await page.goto('/#/settings');
+  await pick(page, 'settings.geodataSource', t('settings.geodataCustom'));
+  const dialog = page.getByRole('dialog', {name: t('settings.geodataCustomUrls')});
+  const url = (n: string) => t('settings.geodataUrlLabel', {kind: 'geosite', n});
+  const first = dialog.getByLabel(url('1'), {exact: true});
+  await first.fill('https://mirror.example.net/geosite.dat');
+  await dialog.getByRole('button', {name: t('settings.geodataSaveUpdate'), exact: true}).click();
+  // The request holds these URLs; an edit now would be dropped when the dialog closes.
+  await expect(first).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: t('settings.geodataMoveDown', {url: url('1')}), exact: true})).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: t('settings.geodataMoveUp', {url: url('2')}), exact: true})).toBeDisabled();
+  release();
+  await expect(dialog).toHaveCount(0);
+});
+
 test('the download route follows the routing rules by default, and a group route saves with its group', async ({page}) => {
   const {sent, bodies} = await traffic(page);
   await page.goto('/#/settings');
