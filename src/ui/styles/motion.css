@@ -158,6 +158,35 @@
   padding: 2px;
   position: relative;
 }
+/* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. */
+.rp-segfit {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-segfit > .rp-seg {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rp-segfit[data-collapsed] > .rp-seg {
+  visibility: hidden;
+  overflow: hidden;
+}
+.rp-segpick {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+}
+.rp-segpick > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-segpick .rp-selectbtn {
+  max-width: 100%;
+}
 .rp-slider {
   position: absolute;
   top: 2px;
@@ -176,8 +205,7 @@
   transition: none;
 }
 .rp-seg .rp-btn {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: none;
   padding: 0 8px;
   height: var(--rp-control);
   background: transparent;
@@ -188,15 +216,6 @@
   z-index: 1;
   /* Like a tab: the label recolours as the slider arrives. */
   transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
-}
-@media (max-width: 599px) {
-  .rp-seg {
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
-  .rp-seg .rp-btn {
-    flex: none;
-  }
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,

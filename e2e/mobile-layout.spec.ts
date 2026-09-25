@@ -19,7 +19,7 @@ for (const width of [1280, 1024, 390, 320]) {
             }));
             const toolbar = [...document.querySelectorAll<HTMLElement>('.rp-toolbar')].flatMap(container =>
               [...container.querySelectorAll<HTMLElement>('button,[role=button]')]
-                .filter(button => button.getClientRects().length)
+                .filter(button => button.checkVisibility({visibilityProperty: true}))
                 .map(button => {
                   const outer = container.getBoundingClientRect();
                   const inner = button.getBoundingClientRect();
