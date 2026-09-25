@@ -52,7 +52,7 @@ export function updateRoute(current: Route, hash: string): Route {
   return current.route === next.route && current.query === next.query ? current : next;
 }
 
-type PendingRoute = Route & {delta?: number};
+type PendingRoute = Route & {delta?: number; replace?: boolean};
 
 export function restoreDraftRoute(current: Route, position: number): number | undefined {
   const destination: unknown = history.state?.doonaPosition;
@@ -103,7 +103,7 @@ export function useRoute(api: string | null) {
     (route, query = '', options) => {
       const next = updateRoute(current.current, buildHash(route, query));
       if (next === current.current) return;
-      if (dirty.current) setPending(next);
+      if (dirty.current) setPending({...next, replace: options?.replace});
       else push(next, options?.replace);
     },
     [push]
@@ -143,8 +143,16 @@ export function useRoute(api: string | null) {
     dirty.current = false;
     setRevision(value => value + 1);
     if (pending.delta !== undefined) history.go(pending.delta);
-    else push(pending);
+    else push(pending, pending.replace);
     setPending(null);
   };
   return {...loc, go, setDirty, revision, pending, discard, cancel: () => setPending(null)};
+}
+
+// A link can ask to replace the current history entry, as the hub navigation does: moving between top-level
+// destinations does not pile up under Back.
+declare module 'react-aria-components' {
+  interface RouterConfig {
+    routerOptions: {replace?: boolean};
+  }
 }
