@@ -832,6 +832,7 @@ export const messages = {
   'rule.positionBefore': '第 {n} 條之前',
   'rule.added': '規則已寫入，正在重載',
   'rule.hold': '暫存',
+  'rule.holdHelp': '暫存的規則在右上角套用時一併寫入並重載；立即套用則現在寫入並重載。',
   'rule.addApply': '新增並立即套用',
   'rule.held': '規則已暫存，尚未寫入',
   'rule.pending': '待套用：{n}',

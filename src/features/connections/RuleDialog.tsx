@@ -38,7 +38,7 @@ export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRul
             </span>
           ))}
           <ErrorMessage error={dialog.loadError} onRetry={dialog.retry} />
-          <span className="rp-label">{t('rule.addHelp')}</span>
+          <span className="rp-label">{t('rule.holdHelp')}</span>
           {dialog.targets && (
             <Segmented isDisabled={dialog.busy} label={t('rule.kind')} value={dialog.target} onChange={dialog.setTarget} items={dialog.targets} />
           )}
