@@ -44,6 +44,9 @@
   --rp-track: rgba(118, 118, 128, 0.24);
   --rp-knob: #636366;
   --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  /* The switch knob stays white in both schemes, unlike the slider's. */
+  --rp-switch-knob: #ffffff;
+  --rp-switch-knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   --rp-underlay: rgba(0, 0, 0, 0.45);
   --rp-scrim: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%);
   --rp-sheet: rgba(0, 0, 0, 0.18);
@@ -97,6 +100,8 @@
   --rp-track: rgba(118, 118, 128, 0.12);
   --rp-knob: #ffffff;
   --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
+  --rp-switch-knob: #ffffff;
+  --rp-switch-knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   --rp-underlay: rgba(20, 20, 30, 0.3);
   --rp-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
   --rp-sheet: rgba(255, 255, 255, 0.14);
@@ -350,8 +355,8 @@
   background: var(--rp-accent);
 }
 :root[data-family='glass'] .rp-switch .track::after {
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  background: var(--rp-switch-knob);
+  box-shadow: var(--rp-switch-knob-shadow);
 }
 
 /* Toasts float like popovers, tinted by their tone. */

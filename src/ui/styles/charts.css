@@ -443,6 +443,6 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .rp-charttip-bounded {
-    transition: transform 400ms ease;
+    transition: transform var(--rp-duration-slow) ease;
   }
 }

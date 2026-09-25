@@ -6,7 +6,7 @@ import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './api/rings';
 import {initializeApi, startedOnMock} from './api';
-import {Button, Loading, ErrorMessage} from './ui/ui';
+import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
 import {LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
@@ -70,10 +70,10 @@ function Startup() {
         <main className="rp-main">
           <div className="rp-content">
             {unreadable ? (
-              <div className="rp-empty" role="alert">
+              <Empty role="alert">
                 <p>{problem}</p>
                 <Button onPress={() => location.reload()}>{retry}</Button>
-              </div>
+              </Empty>
             ) : lang && error ? (
               <ErrorMessage error={error} onRetry={() => location.reload()} />
             ) : lang ? (
