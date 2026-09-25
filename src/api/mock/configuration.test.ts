@@ -39,6 +39,15 @@ routing { domain(suffix: telegram.org) -> edited-group
   expect(flushed.evaluations).toEqual([]);
 });
 
+it('answers rules without a pinnable generation with a retryable 503, as the contract does', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, main.content.replace(/^\s*fallback:.*$/m, ''), `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(api.rules()).rejects.toMatchObject({status: 503, code: 'snapshot_unavailable', transient: true});
+});
+
 it('activates node membership and group policy with the accepted source, including group patches', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
