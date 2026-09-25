@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ErrorMessage, InlineAlert, ModalDialog, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -30,6 +30,8 @@ export function Nodes(props: PageProps) {
     submitLabel,
     groupHelp,
     groupNameError,
+    agentError,
+    options,
     policy,
     setPolicy
   } = useNodesPage(props);
@@ -90,6 +92,34 @@ export function Nodes(props: PageProps) {
               placeholder="https://example.org/sub?token=…"
               onChange={value => setForm({...form, value})}
             />
+            {options?.intervals && (
+              <LabeledSelect
+                label={t('nodes.interval')}
+                items={options.intervals}
+                value={options.interval}
+                isDisabled={pending}
+                onChange={interval => setForm({...form, interval})}
+              />
+            )}
+            {options?.agent !== undefined && (
+              <TextField
+                isDisabled={pending}
+                label={t('nodes.agent')}
+                value={form.agent}
+                placeholder={options.agent}
+                error={agentError ?? undefined}
+                spellCheck={false}
+                onChange={agent => setForm({...form, agent})}
+              />
+            )}
+            {options?.cache != null && (
+              <>
+                <Switch isSelected={options.cache} isDisabled={pending} onChange={cache => setForm({...form, cache})}>
+                  {t('nodes.cache')}
+                </Switch>
+                <span className="rp-label">{t('nodes.cacheHelp')}</span>
+              </>
+            )}
           </div>
         )}
         {dialog?.kind === 'group' && (

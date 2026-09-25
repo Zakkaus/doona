@@ -70,6 +70,46 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(sources.first()).toContainText('config.dae');
 });
 
+test('a subscription is added with its refresh interval, User-Agent and cache setting', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('sub-o');
+  await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
+  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toContainText('Every 24 hours');
+  await expect(dialog.getByLabel('User-Agent')).toHaveAttribute('placeholder', 'honk/0.0.1-alpha');
+  await expect(dialog.getByRole('switch', {name: 'Cache the subscription'})).toBeChecked();
+  await dialog.getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
+  await dialog.getByLabel('User-Agent').fill('agent\u00e9');
+  await expect(dialog.getByText('Up to 256 printable ASCII characters')).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
+  await dialog.getByLabel('User-Agent').fill('clash.meta');
+  await dialog.getByText('Cache the subscription').click();
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-o added and refreshed'})).toBeVisible();
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText(
+    "sub-o: {\n    url: 'https://example.org/sub?token=abc'\n    ua: 'clash.meta'\n    interval: '21600s'\n    cache: false\n  }"
+  );
+});
+
+test('an untouched option is left to the backend and an unadvertised one is not shown', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.providers.create_options = {user_agent: 'honk/0.0.1-alpha'};
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('User-Agent')).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toHaveCount(0);
+  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await dialog.getByLabel('Name').fill('sub-p');
+  await dialog.getByLabel('Subscription URL').fill('https://example.org/plain');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-p added and refreshed'})).toBeVisible();
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("  sub-p: 'https://example.org/plain'\n");
+});
+
 test('a node can be tested on its own', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
