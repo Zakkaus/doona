@@ -248,7 +248,7 @@ export const messages = {
   'conn.pick': 'Select',
   'conn.empty': 'No matching connections',
   'conn.viewFlow': 'View flow',
-  'conn.editRule': 'Edit matched rule',
+  'conn.showRule': 'Show matched rule',
   'conn.ruleBeforeMatched': 'Before the matched rule',
   'conn.ruleTop': 'First',
   'conn.f.dst': 'Target address',

@@ -232,7 +232,7 @@ export const messages = {
   'conn.pick': '選擇',
   'conn.empty': '沒有符合的連線',
   'conn.viewFlow': '查看流程',
-  'conn.editRule': '編輯命中的規則',
+  'conn.showRule': '查看命中的規則',
   'conn.ruleBeforeMatched': '命中規則之前',
   'conn.ruleTop': '最前',
   'conn.f.dst': '目標位址',

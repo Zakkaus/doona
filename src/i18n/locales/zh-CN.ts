@@ -233,7 +233,7 @@ export const messages = {
   'conn.pick': '选择',
   'conn.empty': '没有匹配的连接',
   'conn.viewFlow': '查看流程',
-  'conn.editRule': '编辑命中的规则',
+  'conn.showRule': '查看命中的规则',
   'conn.ruleBeforeMatched': '命中规则之前',
   'conn.ruleTop': '最前',
   'conn.f.dst': '目标地址',
